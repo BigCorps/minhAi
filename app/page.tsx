@@ -152,13 +152,24 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer className="bg-white border-t border-gray-200 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-gray-600">
-            © 2025 Gerente IA. Desenvolvido por BigCorps.
+      {/* Footer */}
+      <footer className="border-t py-8 bg-white dark:bg-[#0F140B]">
+        <div className="px-4 text-center text-gray-700 dark:text-gray-300">
+          <p>
+            &copy; {new Date().getFullYear()} Giro Digital — Tráfego pago é só o começo.
           </p>
+          <small>
+            <a
+              href="https://bigcorps.com.br"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:underline text-gray-600 dark:text-gray-400"
+            >
+              Desenvolvido por BigCorps.
+            </a>
+          </small>
         </div>
       </footer>
     </div>
-  );
+  )
 }

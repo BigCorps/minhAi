@@ -1,4 +1,4 @@
-import { createServerSupabaseClient, getUser } from '@/lib/supabase-server';
+import { createClient, getUser } from '@/lib/supabase-server';
 import { UserProfile } from '@/components/UserProfile';
 import { redirect } from 'next/navigation';
 
@@ -9,7 +9,7 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const supabase = createServerSupabaseClient();
+  const supabase = createClient();
 
   // Buscar empresa do usuário
   const { data: adminRecord } = await supabase

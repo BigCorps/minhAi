@@ -11,6 +11,11 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  // Permitir acesso ao callback sempre
+  if (req.nextUrl.pathname.startsWith('/auth/callback')) {
+    return res;
+  }
+
   // Se não tem sessão e está tentando acessar rota protegida
   if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
     const redirectUrl = req.nextUrl.clone();
@@ -30,5 +35,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/dashboard/:path*', '/login', '/auth/callback'],
 };

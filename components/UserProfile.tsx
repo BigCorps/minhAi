@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 
@@ -12,6 +12,7 @@ interface UserProfileProps {
 export function UserProfile({ user }: UserProfileProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   async function handleLogout() {
     try {

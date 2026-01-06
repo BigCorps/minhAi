@@ -156,7 +156,7 @@ export default async function Home() {
       <footer className="border-t py-8 bg-white dark:bg-[#0F140B]">
         <div className="px-4 text-center text-gray-700 dark:text-gray-300">
           <p>
-            &copy; {new Date().getFullYear()} Giro Digital — Tráfego pago é só o começo.
+            &copy; {new Date().getFullYear()} Gerente IA - Atendimento por Voz Inteligente.
           </p>
           <small>
             <a

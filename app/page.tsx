@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { getUser } from '@/lib/supabase-server';
 
-export default function Home() {
+export default async function Home() {
+  const user = await getUser();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100">
-      {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
@@ -29,16 +31,15 @@ export default function Home() {
             </nav>
             
             <Link
-              href="/dashboard"
+              href={user ? '/dashboard' : '/login'}
               className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition"
             >
-              Entrar
+              {user ? 'Dashboard' : 'Entrar'}
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
           <h2 className="text-5xl font-extrabold text-gray-900 mb-6">
@@ -55,10 +56,10 @@ export default function Home() {
           
           <div className="flex justify-center space-x-4">
             <Link
-              href="/dashboard"
+              href={user ? '/dashboard' : '/login'}
               className="bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-orange-700 transition shadow-lg"
             >
-              Começar Agora
+              {user ? 'Ir para Dashboard' : 'Começar Agora'}
             </Link>
             <button className="bg-white text-orange-600 px-8 py-4 rounded-lg text-lg font-semibold border-2 border-orange-600 hover:bg-orange-50 transition">
               Ver Demonstração
@@ -66,7 +67,6 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Demo Card */}
         <div className="mt-16 max-w-4xl mx-auto">
           <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
             <div className="flex items-center justify-center space-x-4 mb-6">
@@ -85,20 +85,21 @@ export default function Home() {
             </p>
             
             <div className="bg-gray-50 rounded-xl p-6">
-              <p className="text-gray-500 text-center mb-4">
-                Sistema pronto para configuração
-              </p>
               <div className="flex justify-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
+              <p className="text-gray-600 text-center mt-4">
+                ✅ Autenticação configurada<br/>
+                ✅ OpenAI integrada<br/>
+                🔄 Próximo: Sistema de empresas e prompts
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
       <section id="features" className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">
@@ -151,48 +152,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Status Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
-            Status do Sistema
-          </h2>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center p-6 bg-green-50 rounded-xl">
-              <div className="w-12 h-12 bg-green-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Frontend</h3>
-              <p className="text-sm text-gray-600">Next.js rodando</p>
-            </div>
-            
-            <div className="text-center p-6 bg-yellow-50 rounded-xl">
-              <div className="w-12 h-12 bg-yellow-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Supabase</h3>
-              <p className="text-sm text-gray-600">Aguardando configuração</p>
-            </div>
-            
-            <div className="text-center p-6 bg-gray-50 rounded-xl">
-              <div className="w-12 h-12 bg-gray-400 rounded-full mx-auto mb-3 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">APIs de Voz</h3>
-              <p className="text-sm text-gray-600">Próxima etapa</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-gray-600">

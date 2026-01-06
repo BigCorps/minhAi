@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Voice Assistant - Atendimento por Voz com IA",
+  title: "Gerente IA - Atendimento por Voz Inteligente",
   description: "Sistema multi-tenant de atendimento ao cliente por voz usando inteligência artificial",
 };
 

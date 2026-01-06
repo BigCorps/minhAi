@@ -41,7 +41,7 @@ export default async function DashboardPage() {
                 </svg>
               </div>
               <h1 className="text-xl font-bold text-gray-900">
-                Voice Assistant
+                Gerente IA
               </h1>
             </div>
 
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
             Olá, {user.user_metadata?.name || user.email}! 👋
           </h2>
           <p className="text-gray-600">
-            Bem-vindo ao seu dashboard do Voice Assistant
+            Bem-vindo ao seu dashboard do seu Gerente IA
           </p>
         </div>
 

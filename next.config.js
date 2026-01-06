@@ -1,12 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configurações de API
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb'
-    }
-  },
-  
   // Headers CORS
   async headers() {
     return [

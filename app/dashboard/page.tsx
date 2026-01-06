@@ -11,11 +11,23 @@ export default async function DashboardPage() {
 
   const supabase = createServerSupabaseClient();
 
+  // Buscar empresa do usuário
   const { data: adminRecord } = await supabase
     .from('company_admins')
-    .select('company_id, companies(*)')
+    .select(`
+      company_id,
+      companies (
+        id,
+        name,
+        slug
+      )
+    `)
     .eq('user_id', user.id)
     .single();
+
+  // Extrair dados da empresa
+  const company = adminRecord?.companies as any;
+  const companyName = company?.name || 'Nenhuma empresa associada';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -71,7 +83,7 @@ export default async function DashboardPage() {
               <h3 className="font-semibold text-gray-900">Empresa</h3>
             </div>
             <p className="text-sm text-gray-600">
-              {adminRecord?.companies?.name || 'Nenhuma empresa associada'}
+              {companyName}
             </p>
           </div>
 
@@ -164,7 +176,7 @@ export default async function DashboardPage() {
                   email: user.email,
                   name: user.user_metadata?.name,
                 },
-                company: adminRecord?.companies || null,
+                company: company || null,
               },
               null,
               2

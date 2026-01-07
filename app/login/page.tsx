@@ -84,8 +84,8 @@ export default function LoginPage() {
             <Image 
               src="/logo.png" 
               alt="Gerente IA" 
-              width={64} 
-              height={64}
+              width={180} 
+              height={48}
               className="mx-auto mb-4 rounded-xl"
             />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">

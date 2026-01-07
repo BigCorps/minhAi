@@ -2,24 +2,20 @@ import { createClient } from '@/lib/supabase-server';
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
 import Link from 'next/link';
 
-// Forçar sempre buscar dados novos (sem cache)
 export const revalidate = 0;
 export const dynamic = 'force-dynamic';
 
 export default async function TesteWakeWordPage() {
   const supabase = createClient();
   
-  // Buscar empresa
-  const { data: company, error } = await supabase
+  const { data: companies } = await supabase
     .from('companies')
     .select('*')
-    .limit(1)
-    .single();
+    .limit(1);
 
-  console.log('Company data:', company);
-  console.log('Error:', error);
+  const company = companies?.[0];
 
-  if (error || !company) {
+  if (!company) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -32,7 +28,7 @@ export default async function TesteWakeWordPage() {
             Empresa não encontrada
           </h1>
           <p className="text-gray-600 mb-6">
-            {error ? `Erro: ${error.message}` : 'Execute o SQL criar-empresa-FIXED.sql no Supabase.'}
+            Execute o SQL para criar empresa de teste
           </p>
           <Link
             href="/dashboard"
@@ -52,17 +48,17 @@ export default async function TesteWakeWordPage() {
           <div>
             <div className="flex items-center space-x-3 mb-2">
               <span className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                WAKE WORD ATIVO
+                WAKE WORD: {company.wake_word || 'olá assistente'}
               </span>
               <span className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
                 R$ 0 - GRÁTIS
               </span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              🎤 Assistente com Wake Word
+              🎤 {company.name}
             </h1>
             <p className="text-gray-600">
-              Diga "Olá Assistente" e comece a conversar
+              Diga "{company.wake_word || 'olá assistente'}" para começar
             </p>
           </div>
           <Link
@@ -74,26 +70,11 @@ export default async function TesteWakeWordPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto mb-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h2 className="font-semibold text-yellow-900 mb-2">
-            📋 Como usar:
-          </h2>
-          <ol className="text-sm text-yellow-800 space-y-1 ml-4">
-            <li>1. Permita acesso ao microfone</li>
-            <li>2. Aguarde indicador verde</li>
-            <li>3. Diga: <strong>"Olá Assistente"</strong></li>
-            <li>4. Ouça o beep de confirmação</li>
-            <li>5. Fale sua pergunta</li>
-            <li>6. Sistema responde automaticamente</li>
-          </ol>
-        </div>
-      </div>
-
       <VoiceAssistantWithWakeWord 
         companyId={company.id} 
         companyName={company.name}
-        wakeWord="olá assistente"
+        wakeWord={company.wake_word || 'olá assistente'}
+        greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
       />
     </div>
   );

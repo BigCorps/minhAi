@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,7 @@ export default function LoginPage() {
 
         if (error) throw error;
 
+        // Redirecionar para dashboard após login
         router.push('/dashboard');
         router.refresh();
       }
@@ -80,17 +81,19 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo/Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-            </div>
+            <Image 
+              src="/logo.png" 
+              alt="Gerente IA" 
+              width={64} 
+              height={64}
+              className="mx-auto mb-4 rounded-xl"
+            />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {mode === 'login' ? 'Entrar' : 'Criar Conta'}
             </h1>
             <p className="text-gray-600">
               {mode === 'login' 
-                ? 'Acesse sua conta do Voice Assistant' 
+                ? 'Acesse sua conta do Gerente IA' 
                 : 'Crie sua conta para começar'}
             </p>
           </div>

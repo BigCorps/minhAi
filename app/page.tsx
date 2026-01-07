@@ -1,156 +1,131 @@
 import Link from 'next/link';
-import { getUser } from '@/lib/supabase-server';
+import Image from 'next/image';
 
-export default async function Home() {
-  const user = await getUser();
-
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Gerente IA</h1>
+            <div className="flex items-center space-x-3">
+              <Image 
+                src="/logo.png" 
+                alt="Gerente IA" 
+                width={40} 
+                height={40}
+                className="rounded-lg"
+              />
+              <h1 className="text-xl font-bold text-gray-900">Gerente IA</h1>
             </div>
-            
-            <nav className="hidden md:flex space-x-6">
-              <Link href="#features" className="text-gray-600 hover:text-orange-600 transition">
-                Recursos
-              </Link>
-              <Link href="#pricing" className="text-gray-600 hover:text-orange-600 transition">
-                Preços
-              </Link>
-              <Link href="#contact" className="text-gray-600 hover:text-orange-600 transition">
-                Contato
-              </Link>
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#recursos" className="text-gray-600 hover:text-gray-900">Recursos</a>
+              <a href="#precos" className="text-gray-600 hover:text-gray-900">Preços</a>
+              <a href="#contato" className="text-gray-600 hover:text-gray-900">Contato</a>
             </nav>
-            
             <Link
-              href={user ? '/dashboard' : '/login'}
-              className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition"
+              href="/login"
+              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
             >
-              {user ? 'Dashboard' : 'Entrar'}
+              Entrar
             </Link>
           </div>
         </div>
       </header>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center">
-          <h2 className="text-5xl font-extrabold text-gray-900 mb-6">
+      {/* Hero */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 mb-4">
             Atendimento ao Cliente
-            <span className="block text-orange-600 mt-2">
-              Por Voz com IA
-            </span>
+          </h1>
+          <h2 className="text-5xl font-bold text-orange-600 mb-6">
+            Por Voz com IA
           </h2>
-          
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Transforme a experiência dos seus clientes com um assistente de voz inteligente 
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            Transforme a experiência dos seus clientes com um assistente de voz inteligente
             que responde perguntas, tira dúvidas e oferece suporte 24/7.
           </p>
-          
-          <div className="flex justify-center space-x-4">
+          <div className="flex items-center justify-center space-x-4">
             <Link
-              href={user ? '/dashboard' : '/login'}
-              className="bg-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-orange-700 transition shadow-lg"
+              href="/login"
+              className="px-8 py-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold text-lg"
             >
-              {user ? 'Ir para Dashboard' : 'Começar Agora'}
+              Começar Agora
             </Link>
-            <button className="bg-white text-orange-600 px-8 py-4 rounded-lg text-lg font-semibold border-2 border-orange-600 hover:bg-orange-50 transition">
+            <Link
+              href="/teste-wake-word"
+              className="px-8 py-4 border-2 border-orange-600 text-orange-600 rounded-lg hover:bg-orange-50 transition font-semibold text-lg"
+            >
               Ver Demonstração
-            </button>
+            </Link>
           </div>
         </div>
-        
-        <div className="mt-16 max-w-4xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-            <div className="flex items-center justify-center space-x-4 mb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center animate-pulse-slow">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+        {/* Demo Section */}
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-12">
+            <div className="flex flex-col items-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
               </div>
-            </div>
-            
-            <h3 className="text-2xl font-bold text-center text-gray-900 mb-2">
-              Diga "Olá Assistente"
-            </h3>
-            <p className="text-center text-gray-600 mb-8">
-              E comece a interagir com seu assistente de voz personalizado
-            </p>
-            
-            <div className="bg-gray-50 rounded-xl p-6">
-              <div className="flex justify-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              </div>
-              <p className="text-gray-600 text-center mt-4">
-                ✅ Autenticação configurada<br/>
-                ✅ OpenAI integrada<br/>
-                🔄 Próximo: Sistema de empresas e prompts
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Diga "Olá Assistente"
+              </h3>
+              <p className="text-gray-600 text-center mb-6">
+                E comece a interagir com seu assistente de voz personalizado
               </p>
+              <Link
+                href="/teste-wake-word"
+                className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
+              >
+                Testar Agora Gratuitamente
+              </Link>
             </div>
           </div>
         </div>
-      </section>
 
-      <section id="features" className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">
-            Recursos Principais
-          </h2>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-orange-50 rounded-xl p-8 border border-orange-100">
-              <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Multi-Tenant
-              </h3>
-              <p className="text-gray-600">
-                Gerencie múltiplas empresas em uma única plataforma, cada uma com seus próprios prompts e configurações.
-              </p>
+        {/* Features */}
+        <div className="mt-20 grid md:grid-cols-3 gap-8">
+          <div className="bg-white rounded-xl shadow-md p-8">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
-            
-            <div className="bg-orange-50 rounded-xl p-8 border border-orange-100">
-              <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Voz Natural
-              </h3>
-              <p className="text-gray-600">
-                Reconhecimento de voz em português brasileiro com síntese de fala ultra-realista.
-              </p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Custo Baixo</h3>
+            <p className="text-gray-600">
+              A partir de R$ 0,12 por interação. Economia de 90% comparado a atendimento humano.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-8">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
             </div>
-            
-            <div className="bg-orange-50 rounded-xl p-8 border border-orange-100">
-              <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Analytics Completo
-              </h3>
-              <p className="text-gray-600">
-                Dashboard com métricas detalhadas, histórico de conversas e insights para melhorar o atendimento.
-              </p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Totalmente Customizável</h3>
+            <p className="text-gray-600">
+              Configure wake words, saudações e prompts personalizados para cada empresa.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-8">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Rápido e Fácil</h3>
+            <p className="text-gray-600">
+              Configure em minutos. Sem necessidade de código ou conhecimento técnico.
+            </p>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Footer */}
       <footer className="border-t py-8 bg-white dark:bg-[#0F140B]">

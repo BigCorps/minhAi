@@ -38,9 +38,9 @@ export default async function DashboardPage() {
               <Image 
                 src="/logo.png" 
                 alt="Gerente IA" 
-                width={40} 
-                height={40}
-                className="rounded-lg"
+                width={180} 
+                height={48}
+                className="h-12 w-auto"
               />
               <h1 className="text-xl font-bold text-gray-900">
                 Gerente IA

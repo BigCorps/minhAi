@@ -4,34 +4,31 @@ import Image from 'next/image';
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <Image 
-                src="/logo.png" 
-                alt="Gerente IA" 
-                width={40} 
-                height={40}
-                className="rounded-lg"
-              />
-              <h1 className="text-xl font-bold text-gray-900">Gerente IA</h1>
-            </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="#recursos" className="text-gray-600 hover:text-gray-900">Recursos</a>
-              <a href="#precos" className="text-gray-600 hover:text-gray-900">Preços</a>
-              <a href="#contato" className="text-gray-600 hover:text-gray-900">Contato</a>
-            </nav>
-            <Link
-              href="/login"
-              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
-            >
-              Entrar
-            </Link>
-          </div>
-        </div>
-      </header>
+{/* Header */}
+<header className="bg-white border-b border-gray-200">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="flex justify-between items-center">
+      <Image 
+        src="/logo.png" 
+        alt="Gerente IA" 
+        width={180} 
+        height={48}
+        className="h-12 w-auto"
+      />
+      <nav className="hidden md:flex items-center space-x-8">
+        <a href="#recursos" className="text-gray-600 hover:text-gray-900">Recursos</a>
+        <a href="#precos" className="text-gray-600 hover:text-gray-900">Preços</a>
+        <a href="#contato" className="text-gray-600 hover:text-gray-900">Contato</a>
+      </nav>
+      <Link
+        href="/login"
+        className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
+      >
+        Entrar
+      </Link>
+    </div>
+  </div>
+</header>
 
       {/* Hero */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

@@ -1,34 +1,45 @@
+import { createClient, getUser } from '@/lib/supabase-server';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Verificar se usuário está logado
+  const user = await getUser();
+  
+  // Se está logado, redirecionar para dashboard
+  if (user) {
+    redirect('/dashboard');
+  }
+
+  // Se não está logado, mostrar landing page
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-{/* Header */}
-<header className="bg-white border-b border-gray-200">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-    <div className="flex justify-between items-center">
-      <Image 
-        src="/logo.png" 
-        alt="Gerente IA" 
-        width={180} 
-        height={48}
-        className="h-12 w-auto"
-      />
-      <nav className="hidden md:flex items-center space-x-8">
-        <a href="#recursos" className="text-gray-600 hover:text-gray-900">Recursos</a>
-        <a href="#precos" className="text-gray-600 hover:text-gray-900">Preços</a>
-        <a href="#contato" className="text-gray-600 hover:text-gray-900">Contato</a>
-      </nav>
-      <Link
-        href="/login"
-        className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
-      >
-        Entrar
-      </Link>
-    </div>
-  </div>
-</header>
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <Image 
+              src="/logo.png" 
+              alt="Gerente IA" 
+              width={180} 
+              height={48}
+              className="h-12 w-auto"
+            />
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#recursos" className="text-gray-600 hover:text-gray-900">Recursos</a>
+              <a href="#precos" className="text-gray-600 hover:text-gray-900">Preços</a>
+              <a href="#contato" className="text-gray-600 hover:text-gray-900">Contato</a>
+            </nav>
+            <Link
+              href="/login"
+              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
+            >
+              Entrar
+            </Link>
+          </div>
+        </div>
+      </header>
 
       {/* Hero */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

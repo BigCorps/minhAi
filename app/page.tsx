@@ -1,18 +1,7 @@
-import { createClient, getUser } from '@/lib/supabase-server';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default async function HomePage() {
-  // Verificar se usuário está logado
-  const user = await getUser();
-  
-  // Se está logado, redirecionar para dashboard
-  if (user) {
-    redirect('/dashboard');
-  }
-
-  // Se não está logado, mostrar landing page
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}

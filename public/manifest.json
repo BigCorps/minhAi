@@ -1,0 +1,23 @@
+{
+  "name": "Gerente IA - Atendimento por Voz Inteligente",
+  "short_name": "Gerente IA",
+  "description": "Atendimento por Voz Inteligente",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ea580c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
-        set(name: string, value: string, options: CookieOptions) {
+        set(name: string, value: string, options: any) {
           request.cookies.set({
             name,
             value,
@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
             ...options,
           });
         },
-        remove(name: string, options: CookieOptions) {
+        remove(name: string, options: any) {
           request.cookies.set({
             name,
             value: '',
@@ -54,30 +54,21 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Permitir acesso ao callback
-  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
-    return response;
+  // Proteger rotas do dashboard
+  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirecionar para login se não tem sessão e está tentando acessar dashboard
-  if (!session && request.nextUrl.pathname.startsWith('/dashboard')) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/login';
-    return NextResponse.redirect(redirectUrl);
+  // Se está logado e tenta acessar /login, redirecionar para dashboard
+  if (request.nextUrl.pathname === '/login' && user) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Redirecionar para dashboard se tem sessão e está na página de login
-  if (session && request.nextUrl.pathname === '/login') {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/dashboard';
-    return NextResponse.redirect(redirectUrl);
-  }
-
+  // Permitir acesso à landing page (/) mesmo logado
   return response;
 }
 

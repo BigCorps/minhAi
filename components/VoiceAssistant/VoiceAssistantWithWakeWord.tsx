@@ -94,11 +94,11 @@ export function VoiceAssistantWithWakeWord({
   const handleStopRecording = async () => {
     try {
       setIsProcessing(true);
-      const audioBlob = await stopRecording();
+      const recordedAudio = await stopRecording();
 
       // Criar FormData para enviar
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'audio.webm');
+      formData.append('audio', recordedAudio, 'audio.webm');
       formData.append('companyId', companyId);
       if (conversationId) {
         formData.append('conversationId', conversationId);
@@ -145,8 +145,8 @@ export function VoiceAssistantWithWakeWord({
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
       // Reproduzir áudio da resposta
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+      const responseAudioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(responseAudioBlob);
       
       if (audioRef.current) {
         audioRef.current.src = audioUrl;

@@ -1,6 +1,7 @@
 import { createClient, getUser } from '@/lib/supabase-server';
 import { UserProfile } from '@/components/UserProfile';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
 export default async function DashboardPage() {
   const user = await getUser();
@@ -11,7 +12,6 @@ export default async function DashboardPage() {
 
   const supabase = createClient();
 
-  // Buscar empresa do usuário
   const { data: adminRecord } = await supabase
     .from('company_admins')
     .select(`
@@ -25,7 +25,6 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .single();
 
-  // Extrair dados da empresa
   const company = adminRecord?.companies as any;
   const companyName = company?.name || 'Nenhuma empresa associada';
 
@@ -41,7 +40,7 @@ export default async function DashboardPage() {
                 </svg>
               </div>
               <h1 className="text-xl font-bold text-gray-900">
-                Gerente IA
+                Voice Assistant
               </h1>
             </div>
 
@@ -56,8 +55,44 @@ export default async function DashboardPage() {
             Olá, {user.user_metadata?.name || user.email}! 👋
           </h2>
           <p className="text-gray-600">
-            Bem-vindo ao seu dashboard do seu Gerente IA
+            Bem-vindo ao dashboard do Voice Assistant
           </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <Link
+            href="/dashboard/empresas"
+            className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition"
+          >
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Empresas</h3>
+            </div>
+            <p className="text-gray-600">
+              Gerenciar empresas, wake words e prompts personalizados
+            </p>
+          </Link>
+
+          <Link
+            href="/teste-wake-word"
+            className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition"
+          >
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Testar Assistente</h3>
+            </div>
+            <p className="text-gray-600">
+              Teste o assistente de voz com wake word gratuito
+            </p>
+          </Link>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -101,88 +136,6 @@ export default async function DashboardPage() {
             </p>
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">
-            Próximos Passos
-          </h3>
-
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-1">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Autenticação configurada</h4>
-                <p className="text-sm text-gray-600">Login com Google funcionando</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-1">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">OpenAI API configurada</h4>
-                <p className="text-sm text-gray-600">Pronto para integrar Whisper, GPT e TTS</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center mt-1">
-                <span className="text-white text-xs font-bold">3</span>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Criar sistema de empresas</h4>
-                <p className="text-sm text-gray-600">Permitir cadastro e gerenciamento de empresas</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mt-1">
-                <span className="text-white text-xs font-bold">4</span>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">CRUD de prompts</h4>
-                <p className="text-sm text-gray-600">Interface para gerenciar prompts customizados</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mt-1">
-                <span className="text-white text-xs font-bold">5</span>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Cliente de voz</h4>
-                <p className="text-sm text-gray-600">Implementar reconhecimento de voz e Porcupine</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <details className="mt-8 bg-gray-100 rounded-lg p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-gray-700">
-            Informações de Debug
-          </summary>
-          <pre className="mt-4 text-xs bg-white p-4 rounded overflow-auto">
-            {JSON.stringify(
-              {
-                user: {
-                  id: user.id,
-                  email: user.email,
-                  name: user.user_metadata?.name,
-                },
-                company: company || null,
-              },
-              null,
-              2
-            )}
-          </pre>
-        </details>
       </div>
     </div>
   );

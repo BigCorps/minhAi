@@ -2,6 +2,7 @@ import { createClient, getUser } from '@/lib/supabase-server';
 import { UserProfile } from '@/components/UserProfile';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default async function DashboardPage() {
   const user = await getUser();
@@ -34,13 +35,15 @@ export default async function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
+              <Image 
+                src="/logo.png" 
+                alt="Gerente IA" 
+                width={40} 
+                height={40}
+                className="rounded-lg"
+              />
               <h1 className="text-xl font-bold text-gray-900">
-                Voice Assistant
+                Gerente IA
               </h1>
             </div>
 
@@ -55,7 +58,7 @@ export default async function DashboardPage() {
             Olá, {user.user_metadata?.name || user.email}! 👋
           </h2>
           <p className="text-gray-600">
-            Bem-vindo ao dashboard do Voice Assistant
+            Bem-vindo ao dashboard do Gerente IA
           </p>
         </div>
 

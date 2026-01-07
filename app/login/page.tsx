@@ -24,18 +24,17 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { name },
-            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
           },
         });
 
         if (error) throw error;
 
-        alert('Verifique seu email para confirmar o cadastro!');
+        alert('Cadastro realizado! Verifique seu email para confirmar.');
         setMode('login');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -45,7 +44,6 @@ export default function LoginPage() {
 
         if (error) throw error;
 
-        // Redirecionar para dashboard após login
         router.push('/dashboard');
         router.refresh();
       }
@@ -64,7 +62,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -79,12 +77,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Logo/Header */}
           <div className="text-center mb-8">
             <Image 
               src="/logo.png" 
               alt="Gerente IA" 
-              width={180} 
+              width={100} 
               height={48}
               className="mx-auto mb-4 rounded-xl"
             />
@@ -104,7 +101,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {mode === 'signup' && (
               <div>
@@ -163,7 +159,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
@@ -173,7 +168,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Google Login */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -188,7 +182,6 @@ export default function LoginPage() {
             <span className="font-medium text-gray-700">Continuar com Google</span>
           </button>
 
-          {/* Toggle Mode */}
           <div className="mt-6 text-center">
             <button
               onClick={() => {

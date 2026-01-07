@@ -7,7 +7,8 @@ import { useWakeWord } from '@/hooks/useWakeWord';
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
   companyName: string;
-  wakeWord?: string;
+  wakeWord: string;
+  greetingMessage: string;
 }
 
 interface Message {
@@ -20,7 +21,8 @@ interface Message {
 export function VoiceAssistantWithWakeWord({
   companyId,
   companyName,
-  wakeWord = 'olá assistente',
+  wakeWord,
+  greetingMessage,
 }: VoiceAssistantWithWakeWordProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -36,28 +38,51 @@ export function VoiceAssistantWithWakeWord({
     stopRecording,
   } = useVoiceRecorder();
 
-  // Handler quando wake word é detectada
+  // Reproduzir greeting via TTS
+  const playGreeting = async () => {
+    try {
+      const response = await fetch('/api/voice/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: greetingMessage }),
+      });
+
+      if (response.ok) {
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          await audioRef.current.play();
+        }
+      }
+    } catch (error) {
+      console.error('Error playing greeting:', error);
+    }
+  };
+
   const handleWakeWordDetected = useCallback(() => {
     console.log('🎯 Wake word detectada! Iniciando gravação...');
     setWakeWordDetectedCount((prev) => prev + 1);
     
-    // Feedback visual/sonoro (opcional)
-    playBeep();
+    // Tocar greeting em vez de beep
+    playGreeting();
     
-    // Iniciar gravação automaticamente
     if (!isRecording) {
-      startRecording();
-      
-      // Auto-stop após 30 segundos (segurança)
+      // Aguardar greeting terminar (~2s) antes de iniciar gravação
       setTimeout(() => {
-        if (isRecording) {
-          handleStopRecording();
-        }
-      }, 30000);
+        startRecording();
+        
+        // Auto-stop após 30 segundos
+        setTimeout(() => {
+          if (isRecording) {
+            handleStopRecording();
+          }
+        }, 30000);
+      }, 2000);
     }
-  }, [isRecording, startRecording]);
+  }, [isRecording, startRecording, greetingMessage]);
 
-  // Wake word detector
   const {
     isListening,
     isSupported,
@@ -68,35 +93,14 @@ export function VoiceAssistantWithWakeWord({
     wakeWord,
     language: 'pt-BR',
     onWakeWordDetected: handleWakeWordDetected,
-    enabled: !isRecording && !isProcessing, // Só ouve quando não está gravando
+    enabled: !isRecording && !isProcessing,
   });
 
-  // Beep de feedback
-  const playBeep = () => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
-  };
-
-  // Parar gravação e processar
   const handleStopRecording = async () => {
     try {
       setIsProcessing(true);
       const recordedAudio = await stopRecording();
 
-      // Criar FormData para enviar
       const formData = new FormData();
       formData.append('audio', recordedAudio, 'audio.webm');
       formData.append('companyId', companyId);
@@ -104,7 +108,6 @@ export function VoiceAssistantWithWakeWord({
         formData.append('conversationId', conversationId);
       }
 
-      // Enviar para API
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
@@ -114,7 +117,6 @@ export function VoiceAssistantWithWakeWord({
         throw new Error('Erro ao processar áudio');
       }
 
-      // Pegar headers com transcrição e resposta
       const transcription = decodeURIComponent(
         response.headers.get('X-Transcription') || ''
       );
@@ -127,7 +129,6 @@ export function VoiceAssistantWithWakeWord({
         setConversationId(newConversationId);
       }
 
-      // Adicionar mensagens ao histórico
       const userMessage: Message = {
         id: Date.now().toString(),
         role: 'user',
@@ -144,7 +145,6 @@ export function VoiceAssistantWithWakeWord({
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
-      // Reproduzir áudio da resposta
       const responseAudioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(responseAudioBlob);
       
@@ -160,7 +160,6 @@ export function VoiceAssistantWithWakeWord({
     }
   };
 
-  // Formatar duração
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -169,7 +168,6 @@ export function VoiceAssistantWithWakeWord({
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Header */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -184,7 +182,6 @@ export function VoiceAssistantWithWakeWord({
             </div>
           </div>
 
-          {/* Status Wake Word */}
           <div className="text-right">
             <div className="flex items-center space-x-2">
               {isListening && !isRecording && !isProcessing && (
@@ -208,24 +205,21 @@ export function VoiceAssistantWithWakeWord({
         </div>
       </div>
 
-      {/* Instruções */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-6">
         <h3 className="font-semibold text-green-900 mb-2 flex items-center space-x-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Como usar com Wake Word:</span>
+          <span>Como usar:</span>
         </h3>
         <ol className="text-sm text-green-800 space-y-1 ml-7">
-          <li>1. O sistema está sempre ouvindo (sem gravar ainda)</li>
-          <li>2. Diga <strong>"{wakeWord}"</strong> para ativar</li>
-          <li>3. Após o beep, fale sua pergunta</li>
-          <li>4. Clique "Parar" ou aguarde processamento automático</li>
-          <li>5. O assistente responderá por voz</li>
+          <li>1. Diga <strong>"{wakeWord}"</strong> para ativar</li>
+          <li>2. Ouça: "{greetingMessage}"</li>
+          <li>3. Fale sua pergunta</li>
+          <li>4. O assistente responderá por voz</li>
         </ol>
       </div>
 
-      {/* Visualização de Reconhecimento */}
       {isListening && !isRecording && !isProcessing && (
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <p className="text-xs text-gray-500 mb-2">Última transcrição:</p>
@@ -235,10 +229,8 @@ export function VoiceAssistantWithWakeWord({
         </div>
       )}
 
-      {/* Status e Controles */}
       <div className="bg-white rounded-lg shadow-md p-8 mb-6">
         <div className="flex flex-col items-center space-y-6">
-          {/* Status Atual */}
           <div className="text-center min-h-[60px] flex items-center">
             {isRecording && (
               <div className="flex flex-col items-center space-y-2">
@@ -269,7 +261,6 @@ export function VoiceAssistantWithWakeWord({
             )}
           </div>
 
-          {/* Botão de Controle Manual */}
           {isRecording && (
             <button
               onClick={handleStopRecording}
@@ -289,26 +280,23 @@ export function VoiceAssistantWithWakeWord({
             </button>
           )}
 
-          {/* Erros */}
           {(recorderError || wakeWordError) && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 max-w-md">
               {recorderError || wakeWordError}
             </div>
           )}
 
-          {/* Botão de Reiniciar Wake Word */}
           {!isListening && !isRecording && !isProcessing && (
             <button
               onClick={restartWakeWord}
               className="text-sm text-gray-600 hover:text-gray-900 underline"
             >
-              🔄 Reiniciar Detecção de Wake Word
+              🔄 Reiniciar Detecção
             </button>
           )}
         </div>
       </div>
 
-      {/* Histórico de Conversas */}
       {messages.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Histórico</h2>
@@ -346,7 +334,6 @@ export function VoiceAssistantWithWakeWord({
         </div>
       )}
 
-      {/* Audio player (hidden) */}
       <audio ref={audioRef} className="hidden" />
     </div>
   );

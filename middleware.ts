@@ -54,21 +54,8 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  await supabase.auth.getUser();
 
-  // Proteger rotas do dashboard
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // Se está logado e tenta acessar /login, redirecionar para dashboard
-  if (request.nextUrl.pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Permitir acesso à landing page (/) mesmo logado
   return response;
 }
 

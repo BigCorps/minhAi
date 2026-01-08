@@ -38,8 +38,8 @@ export default async function DashboardPage() {
               <Image 
                 src="/logo.png" 
                 alt="MeAtend" 
-                width={180} 
-                height={48}
+                width={150} 
+                height={68}
                 className="h-12 w-auto"
               />
               <h1 className="text-xl font-bold text-gray-900">

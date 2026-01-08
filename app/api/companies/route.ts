@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
         slug: data.slug,
         wake_word: data.wake_word || 'olá assistente',
         greeting_message: data.greeting_message || 'Olá! Como posso ajudar você hoje?',
+        system_prompt: data.system_prompt || 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.',
       })
       .select()
       .single();

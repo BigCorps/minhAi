@@ -1,6 +1,7 @@
 import { createClient, getUser } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { CopyLinkButton } from '@/components/CopyLinkButton';
 
 export const revalidate = 0;
 
@@ -120,16 +121,7 @@ export default async function EmpresasPage() {
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-gray-100">
-                  <button
-                    onClick={() => {
-                      const url = `${window.location.origin}/assistente/${company.slug}`;
-                      navigator.clipboard.writeText(url);
-                      alert('Link copiado!');
-                    }}
-                    className="w-full text-xs text-gray-500 hover:text-gray-700 transition"
-                  >
-                    📋 Copiar Link Público
-                  </button>
+                  <CopyLinkButton slug={company.slug} />
                 </div>
               </div>
             ))}

@@ -48,6 +48,7 @@ export default function EditarEmpresaPage() {
       slug: formData.get('slug') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
+      system_prompt: formData.get('system_prompt') as string,
     };
 
     try {
@@ -173,13 +174,13 @@ export default function EditarEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Usado na URL e identificação da empresa
+                URL pública: <strong>gerente.iapos.com.br/assistente/{company.slug}</strong>
               </p>
             </div>
 
             <div>
               <label htmlFor="wake_word" className="block text-sm font-medium text-gray-900 mb-2">
-                Palavra de Ativação (Wake Word) *
+                Palavras de Ativação *
               </label>
               <input
                 type="text"
@@ -187,7 +188,7 @@ export default function EditarEmpresaPage() {
                 name="wake_word"
                 required
                 defaultValue={company.wake_word}
-                placeholder="Ex: olá assistente, oi gerente, ei computador"
+                placeholder="Ex: olá assistente, oi gerente"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500">
@@ -209,7 +210,25 @@ export default function EditarEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Frase que o assistente dirá após detectar a wake word
+                Frase após detectar palavras de ativação
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="system_prompt" className="block text-sm font-medium text-gray-900 mb-2">
+                Prompt do Assistente (Instruções) *
+              </label>
+              <textarea
+                id="system_prompt"
+                name="system_prompt"
+                required
+                rows={10}
+                defaultValue={company.system_prompt || 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.'}
+                placeholder="Defina como o assistente deve se comportar..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Instruções que definem o comportamento do assistente
               </p>
             </div>
           </div>

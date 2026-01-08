@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
   companyName: string;
-  wakeWord: string; // Pode ser múltiplas palavras separadas por vírgula
+  wakeWord: string;
   greetingMessage: string;
 }
 
@@ -30,7 +30,6 @@ export function VoiceAssistantWithWakeWord({
   const audioChunksRef = useRef<Blob[]>([]);
   const conversationIdRef = useRef<string | null>(null);
 
-  // Processar múltiplas palavras de ativação
   const wakeWords = wakeWord
     .split(',')
     .map(w => w.trim().toLowerCase())
@@ -77,7 +76,6 @@ export function VoiceAssistantWithWakeWord({
       const current = event.resultIndex;
       const transcript = event.results[current][0].transcript.toLowerCase().trim();
 
-      // Checar se alguma das palavras de ativação foi detectada
       const detectedWakeWord = wakeWords.some(word => transcript.includes(word));
 
       if (detectedWakeWord && !isRecording && !isProcessing && !isPlayingGreeting) {
@@ -96,7 +94,6 @@ export function VoiceAssistantWithWakeWord({
 
     recognition.onend = () => {
       setIsListening(false);
-      // Reiniciar apenas se não estiver gravando ou processando
       if (!isRecording && !isProcessing && !isPlayingGreeting && permissionGranted) {
         setTimeout(() => {
           try {
@@ -171,7 +168,6 @@ export function VoiceAssistantWithWakeWord({
       setIsRecording(true);
       setWakeWordDetected(false);
 
-      // Gravar por 10 segundos
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
@@ -265,37 +261,37 @@ export function VoiceAssistantWithWakeWord({
 
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão do microfone...';
-    if (isPlayingGreeting) return '🔊 Reproduzindo saudação...';
-    if (isRecording) return '🎤 Gravando sua pergunta... (10s)';
-    if (isProcessing) return '⚙️ Processando e gerando resposta...';
-    if (wakeWordDetected) return '✅ Palavra detectada!';
-    if (isListening) return `🎧 Ouvindo... Diga: "${wakeWords[0]}"`;
-    return '⏸️ Pausado';
+    if (isPlayingGreeting) return 'Reproduzindo saudação...';
+    if (isRecording) return 'Gravando sua pergunta... (10s)';
+    if (isProcessing) return 'Processando e gerando resposta...';
+    if (wakeWordDetected) return 'Palavra detectada!';
+    if (isListening) return `Sistema ativo - Diga: "${wakeWords[0]}"`;
+    return 'Sistema pausado';
   };
 
   const getStatusColor = () => {
-    if (!permissionGranted) return 'bg-gray-500';
+    if (!permissionGranted) return 'bg-gray-400';
     if (isPlayingGreeting || isProcessing) return 'bg-blue-500';
     if (isRecording) return 'bg-red-500 animate-pulse';
     if (wakeWordDetected) return 'bg-green-500';
     if (isListening) return 'bg-green-500 animate-pulse';
-    return 'bg-gray-500';
+    return 'bg-gray-400';
   };
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
         <div className="flex flex-col items-center space-y-6">
-          {/* Indicador visual */}
+          {/* Indicador visual - sem emoji */}
           <div className="relative">
-            <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all`}>
+            <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
               <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </div>
           </div>
 
-          {/* Status */}
+          {/* Status - sem emojis */}
           <div className="text-center">
             <p className="text-lg font-semibold text-gray-900">
               {getStatusMessage()}
@@ -307,17 +303,17 @@ export function VoiceAssistantWithWakeWord({
             )}
           </div>
 
-          {/* Transcrição */}
+          {/* Transcrição - sem emoji */}
           {transcript && (
-            <div className="w-full p-4 bg-blue-50 rounded-lg">
+            <div className="w-full p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm font-semibold text-blue-900 mb-1">Você disse:</p>
               <p className="text-gray-800">{transcript}</p>
             </div>
           )}
 
-          {/* Resposta */}
+          {/* Resposta - sem emoji */}
           {response && (
-            <div className="w-full p-4 bg-green-50 rounded-lg">
+            <div className="w-full p-4 bg-green-50 rounded-lg border border-green-200">
               <p className="text-sm font-semibold text-green-900 mb-1">Assistente respondeu:</p>
               <p className="text-gray-800">{response}</p>
             </div>
@@ -335,9 +331,9 @@ export function VoiceAssistantWithWakeWord({
           {isRecording && (
             <button
               onClick={stopRecording}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
+              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold shadow-md"
             >
-              ⏹️ Parar Gravação
+              Parar Gravação
             </button>
           )}
         </div>

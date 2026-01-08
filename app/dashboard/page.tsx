@@ -21,6 +21,14 @@ export default async function DashboardPage() {
 
   const totalCompanies = companies?.length || 0;
 
+  // Buscar total de conversas
+  const { data: conversations } = await supabase
+    .from('conversations')
+    .select('id')
+    .limit(100);
+
+  const totalConversations = conversations?.length || 0;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
@@ -54,7 +62,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Link
             href="/dashboard/empresas"
             className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
@@ -72,6 +80,26 @@ export default async function DashboardPage() {
             </div>
             <p className="text-gray-600">
               Gerenciar empresas, palavras de ativação e treinamentos.
+            </p>
+          </Link>
+
+          <Link
+            href="/dashboard/historico"
+            className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
+          >
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Histórico</h3>
+                <p className="text-sm text-gray-500">{totalConversations} {totalConversations === 1 ? 'conversa' : 'conversas'}</p>
+              </div>
+            </div>
+            <p className="text-gray-600">
+              Ver perguntas e respostas para ajustar o prompt
             </p>
           </Link>
 

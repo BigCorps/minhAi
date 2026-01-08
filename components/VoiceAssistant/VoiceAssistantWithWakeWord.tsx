@@ -217,8 +217,8 @@ export function VoiceAssistantWithWakeWord({
       setTranscript(transcription);
       setResponse(responseText);
 
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+      const responseAudioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(responseAudioBlob);
       const audio = new Audio(audioUrl);
       
       audio.onended = () => {

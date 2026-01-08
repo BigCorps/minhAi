@@ -90,7 +90,7 @@ export default function LoginPage() {
             </h1>
             <p className="text-gray-600">
               {mode === 'login' 
-                ? 'Acesse sua conta do Gerente IA' 
+                ? 'Acesse sua conta' 
                 : 'Crie sua conta para começar'}
             </p>
           </div>

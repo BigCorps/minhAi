@@ -28,6 +28,7 @@ export function VoiceAssistantWithWakeWord({
   const [isProcessing, setIsProcessing] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [wakeWordDetectedCount, setWakeWordDetectedCount] = useState(0);
+  const [isPlayingGreeting, setIsPlayingGreeting] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const {
@@ -38,9 +39,9 @@ export function VoiceAssistantWithWakeWord({
     stopRecording,
   } = useVoiceRecorder();
 
-  // Reproduzir greeting via TTS
   const playGreeting = async () => {
     try {
+      setIsPlayingGreeting(true);
       const response = await fetch('/api/voice/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,11 +54,15 @@ export function VoiceAssistantWithWakeWord({
         
         if (audioRef.current) {
           audioRef.current.src = audioUrl;
+          audioRef.current.onended = () => {
+            setIsPlayingGreeting(false);
+          };
           await audioRef.current.play();
         }
       }
     } catch (error) {
       console.error('Error playing greeting:', error);
+      setIsPlayingGreeting(false);
     }
   };
 
@@ -65,7 +70,7 @@ export function VoiceAssistantWithWakeWord({
     console.log('🎯 Wake word detectada! Iniciando gravação...');
     setWakeWordDetectedCount((prev) => prev + 1);
     
-    // Tocar greeting em vez de beep
+    // Tocar greeting
     playGreeting();
     
     if (!isRecording) {
@@ -79,9 +84,12 @@ export function VoiceAssistantWithWakeWord({
             handleStopRecording();
           }
         }, 30000);
-      }, 2000);
+      }, 2500);
     }
   }, [isRecording, startRecording, greetingMessage]);
+
+  // Pausar detecção durante processamento, gravação ou greeting
+  const wakeWordEnabled = !isRecording && !isProcessing && !isPlayingGreeting;
 
   const {
     isListening,
@@ -93,7 +101,7 @@ export function VoiceAssistantWithWakeWord({
     wakeWord,
     language: 'pt-BR',
     onWakeWordDetected: handleWakeWordDetected,
-    enabled: !isRecording && !isProcessing,
+    enabled: wakeWordEnabled,
   });
 
   const handleStopRecording = async () => {
@@ -150,12 +158,15 @@ export function VoiceAssistantWithWakeWord({
       
       if (audioRef.current) {
         audioRef.current.src = audioUrl;
+        audioRef.current.onended = () => {
+          // Voltar a ouvir wake word após resposta terminar
+          setIsProcessing(false);
+        };
         await audioRef.current.play();
       }
     } catch (error: any) {
       console.error('Error processing voice:', error);
       alert('Erro ao processar voz: ' + error.message);
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -184,11 +195,19 @@ export function VoiceAssistantWithWakeWord({
 
           <div className="text-right">
             <div className="flex items-center space-x-2">
-              {isListening && !isRecording && !isProcessing && (
+              {wakeWordEnabled && isListening && (
                 <>
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-sm text-green-600 font-medium">
                     Aguardando "{wakeWord}"
+                  </span>
+                </>
+              )}
+              {(isProcessing || isPlayingGreeting || isRecording) && (
+                <>
+                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-orange-600 font-medium">
+                    {isPlayingGreeting ? 'Falando...' : isRecording ? 'Gravando...' : 'Processando...'}
                   </span>
                 </>
               )}
@@ -214,20 +233,11 @@ export function VoiceAssistantWithWakeWord({
         </h3>
         <ol className="text-sm text-green-800 space-y-1 ml-7">
           <li>1. Diga <strong>"{wakeWord}"</strong> para ativar</li>
-          <li>2. Ouça: "{greetingMessage}"</li>
+          <li>2. Aguarde: "{greetingMessage}"</li>
           <li>3. Fale sua pergunta</li>
           <li>4. O assistente responderá por voz</li>
         </ol>
       </div>
-
-      {isListening && !isRecording && !isProcessing && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <p className="text-xs text-gray-500 mb-2">Última transcrição:</p>
-          <p className="text-sm text-gray-700 italic">
-            {lastTranscript || 'Aguardando fala...'}
-          </p>
-        </div>
-      )}
 
       <div className="bg-white rounded-lg shadow-md p-8 mb-6">
         <div className="flex flex-col items-center space-y-6">
@@ -248,8 +258,15 @@ export function VoiceAssistantWithWakeWord({
                 <span className="font-semibold">Processando...</span>
               </div>
             )}
+
+            {isPlayingGreeting && (
+              <div className="flex items-center space-x-2 text-orange-600">
+                <div className="w-5 h-5 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="font-semibold">Falando saudação...</span>
+              </div>
+            )}
             
-            {!isRecording && !isProcessing && (
+            {!isRecording && !isProcessing && !isPlayingGreeting && (
               <div className="text-center">
                 <p className="text-gray-700 font-medium mb-1">
                   🎤 Diga "{wakeWord}" para começar
@@ -271,7 +288,7 @@ export function VoiceAssistantWithWakeWord({
             </button>
           )}
 
-          {!isRecording && !isProcessing && (
+          {!isRecording && !isProcessing && !isPlayingGreeting && (
             <button
               onClick={startRecording}
               className="px-8 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition"
@@ -286,7 +303,7 @@ export function VoiceAssistantWithWakeWord({
             </div>
           )}
 
-          {!isListening && !isRecording && !isProcessing && (
+          {!isListening && !isRecording && !isProcessing && !isPlayingGreeting && (
             <button
               onClick={restartWakeWord}
               className="text-sm text-gray-600 hover:text-gray-900 underline"

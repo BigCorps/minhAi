@@ -24,7 +24,7 @@ export const OPENAI_CONFIG = {
   // TTS (Text-to-Speech)
   tts: {
     model: 'tts-1', // Mais rápido, boa qualidade
-    voice: 'nova', // Voz feminina natural (melhor em PT-BR)
+    voice: 'onyx', // ← MUDANÇA: Voz masculina natural (melhor em PT-BR)
     speed: 1.0,
   },
 };

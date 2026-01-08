@@ -11,8 +11,8 @@ export default function HomePage() {
             <Image 
               src="/logo.png" 
               alt="Gerente IA" 
-              width={180} 
-              height={48}
+              width={150} 
+              height={68}
               className="h-12 w-auto"
             />
             <nav className="hidden md:flex items-center space-x-8">

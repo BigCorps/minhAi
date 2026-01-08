@@ -25,62 +25,48 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     notFound();
   }
 
-  // Buscar prompt ativo da empresa
-  const { data: prompt } = await supabase
-    .from('company_prompts')
-    .select('system_prompt')
-    .eq('company_id', company.id)
-    .eq('is_active', true)
-    .single();
-
-  // Usar system_prompt da empresa ou do company_prompts
-  const systemPrompt = company.system_prompt || prompt?.system_prompt || 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.';
+  const systemPrompt = company.system_prompt || 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
+      {/* Header */}
       <div className="max-w-4xl mx-auto mb-8">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <div className="flex items-center space-x-3 mb-2">
-              <span className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                PALAVRAS DE ATIVAÇÃO: {company.wake_word}
-              </span>
-              <span className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
-                R$ 0 - GRÁTIS
-              </span>
-            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              🎤 {company.name}
+              {company.name}
             </h1>
             <p className="text-gray-600">
-              Diga "{company.wake_word}" para começar
+              Assistente Virtual com Voz
             </p>
           </div>
           <Link
-            href="/"
-            className="px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-md"
+            href="https://meatend.bigcorps.com.br/login"
+            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition shadow-md font-semibold"
           >
-            Criar Meu Assistente
+            Editar Meu Assistente
           </Link>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto mb-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h2 className="font-semibold text-yellow-900 mb-2">
-            📋 Como usar:
+      {/* Instruções */}
+      <div className="max-w-4xl mx-auto mb-8">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+          <h2 className="font-semibold text-gray-900 mb-3">
+            Como usar:
           </h2>
-          <ol className="text-sm text-yellow-800 space-y-1 ml-4">
-            <li>1. Permita acesso ao microfone</li>
-            <li>2. Aguarde indicador verde</li>
-            <li>3. Diga: <strong>"{company.wake_word}"</strong></li>
-            <li>4. Ouça a saudação</li>
-            <li>5. Fale sua pergunta</li>
+          <ol className="text-sm text-gray-700 space-y-2 ml-4">
+            <li>1. Permita acesso ao microfone quando solicitado</li>
+            <li>2. Aguarde o indicador verde (sistema pronto para ouvir)</li>
+            <li>3. Diga: <strong>"{company.wake_word || 'olá assistente'}"</strong></li>
+            <li>4. Aguarde a saudação do assistente</li>
+            <li>5. Faça sua pergunta ou solicitação</li>
             <li>6. O assistente responderá em voz</li>
           </ol>
         </div>
       </div>
 
+      {/* Voice Assistant */}
       <VoiceAssistantWithWakeWord 
         companyId={company.id} 
         companyName={company.name}
@@ -88,16 +74,17 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
         greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
       />
 
-      <div className="max-w-4xl mx-auto mt-8">
-        <div className="text-center">
-          <p className="text-sm text-gray-500 mb-2">
-            MeAtend
+      {/* Footer */}
+      <div className="max-w-4xl mx-auto mt-12">
+        <div className="text-center border-t border-gray-200 pt-8">
+          <p className="text-sm text-gray-500 mb-3">
+            Powered by MeAtend
           </p>
           <Link
-            href="/"
-            className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+            href="https://meatend.bigcorps.com.br"
+            className="text-sm text-orange-600 hover:text-orange-700 font-medium transition"
           >
-            Crie seu próprio assistente de voz →
+            Crie seu próprio assistente de voz
           </Link>
         </div>
       </div>

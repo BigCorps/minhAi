@@ -37,7 +37,7 @@ export default async function DashboardPage() {
             <div className="flex items-center space-x-3">
               <Image 
                 src="/logo.png" 
-                alt="Gerente IA" 
+                alt="MeAtend" 
                 width={180} 
                 height={48}
                 className="h-12 w-auto"
@@ -58,7 +58,7 @@ export default async function DashboardPage() {
             Olá, {user.user_metadata?.name || user.email}! 👋
           </h2>
           <p className="text-gray-600">
-            Bem-vindo ao dashboard do Gerente IA
+            Bem-vindo ao dashboard do MeAtend
           </p>
         </div>
 

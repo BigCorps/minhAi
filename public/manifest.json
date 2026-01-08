@@ -1,7 +1,7 @@
 {
-  "name": "Gerente IA - Atendimento por Voz Inteligente",
-  "short_name": "Gerente IA",
-  "description": "Atendimento por Voz Inteligente",
+  "name": "MeAtend - Atendimento por Voz Inteligente com IA",
+  "short_name": "MeAtend",
+  "description": "Atendimento por Voz Inteligente com IA",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

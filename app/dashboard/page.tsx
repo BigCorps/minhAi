@@ -34,8 +34,6 @@ export default async function DashboardPage() {
                 height={68}
                 className="rounded-lg"
               />
-              <h1 className="text-xl font-bold text-gray-900">
-                Gerente IA
               </h1>
             </div>
 

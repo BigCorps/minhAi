@@ -79,23 +79,27 @@ export default async function EmpresasPage() {
                   </span>
                 </div>
 
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">
                   {company.name}
                 </h3>
 
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">{company.slug}</code>
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded truncate">
+                      /assistente/{company.slug}
+                    </code>
                   </div>
                   
                   <div className="flex items-center text-sm text-gray-600">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
-                    <span className="text-xs">Wake: <strong>{company.wake_word || 'olá assistente'}</strong></span>
+                    <span className="text-xs truncate">
+                      Ativação: <strong>{company.wake_word || 'olá assistente'}</strong>
+                    </span>
                   </div>
                 </div>
 
@@ -107,11 +111,25 @@ export default async function EmpresasPage() {
                     Editar
                   </Link>
                   <Link
-                    href={`/teste-wake-word`}
+                    href={`/assistente/${company.slug}`}
+                    target="_blank"
                     className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-center text-sm font-medium"
                   >
-                    Testar
+                    Abrir
                   </Link>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/assistente/${company.slug}`;
+                      navigator.clipboard.writeText(url);
+                      alert('Link copiado!');
+                    }}
+                    className="w-full text-xs text-gray-500 hover:text-gray-700 transition"
+                  >
+                    📋 Copiar Link Público
+                  </button>
                 </div>
               </div>
             ))}

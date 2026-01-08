@@ -192,7 +192,10 @@ export default function EditarEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Palavra ou frase que ativa o assistente
+                ✨ <strong>Dica:</strong> Separe múltiplas palavras com vírgula (,)
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Exemplo: "olá assistente, oi gerente, ei sistema"
               </p>
             </div>
 

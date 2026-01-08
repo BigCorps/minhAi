@@ -71,7 +71,7 @@ export default async function DashboardPage() {
               </div>
             </div>
             <p className="text-gray-600">
-              Gerenciar empresas, wake words e prompts personalizados
+              Gerenciar empresas, palavras de ativação e treinamentos.
             </p>
           </Link>
 
@@ -87,11 +87,11 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">Testar Assistente</h3>
-                <p className="text-sm text-gray-500">Wake word gratuito</p>
+                <p className="text-sm text-gray-500">palavra de ativação</p>
               </div>
             </div>
             <p className="text-gray-600">
-              Teste o assistente de voz com wake word detection
+              Teste o assistente de voz com palavra de ativação
             </p>
           </Link>
         </div>

@@ -20,6 +20,7 @@ export default function NovaEmpresaPage() {
       slug: formData.get('slug') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
+      system_prompt: formData.get('system_prompt') as string,
     };
 
     try {
@@ -111,13 +112,13 @@ export default function NovaEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Será gerado automaticamente baseado no nome
+                Será usado na URL pública: gerente.iapos.com.br/assistente/<strong>seu-slug</strong>
               </p>
             </div>
 
             <div>
               <label htmlFor="wake_word" className="block text-sm font-medium text-gray-900 mb-2">
-                Palavra de Ativação (Wake Word) *
+                Palavras de Ativação *
               </label>
               <input
                 type="text"
@@ -162,27 +163,51 @@ export default function NovaEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Frase que o assistente dirá após detectar a wake word
+                Frase que o assistente dirá após detectar as palavras de ativação
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {[
-                  'Olá! Como posso ajudar você hoje?',
-                  'Oi! Em que posso ser útil?',
-                  'Olá! Estou aqui para ajudar.',
-                ].map((msg, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      const input = document.getElementById('greeting_message') as HTMLTextAreaElement;
-                      if (input) input.value = msg;
-                    }}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition"
-                  >
-                    Sugestão {i + 1}
-                  </button>
-                ))}
-              </div>
+            </div>
+
+            <div>
+              <label htmlFor="system_prompt" className="block text-sm font-medium text-gray-900 mb-2">
+                Prompt do Assistente (Instruções) *
+              </label>
+              <textarea
+                id="system_prompt"
+                name="system_prompt"
+                required
+                rows={8}
+                defaultValue="Você é um assistente virtual prestativo que ajuda os clientes. Responda de forma clara, objetiva e educada. Use um tom profissional e amigável."
+                placeholder="Defina como o assistente deve se comportar, que informações ele tem acesso, como deve responder..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Instruções que definem o comportamento do assistente. Seja específico sobre o que ele deve fazer.
+              </p>
+              <details className="mt-2">
+                <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-700">
+                  Ver exemplo de prompt completo
+                </summary>
+                <div className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-700">
+                  <p className="font-semibold mb-2">Exemplo para restaurante:</p>
+                  <pre className="whitespace-pre-wrap">
+{`Você é o assistente virtual do Restaurante Bella Vista.
+
+Sua função é ajudar os clientes com:
+- Fazer reservas de mesa
+- Informar sobre o cardápio e pratos do dia
+- Responder sobre horário de funcionamento
+- Informar localização e estacionamento
+
+Informações importantes:
+- Horário: Terça a Domingo, 12h-15h e 19h-23h
+- Localização: Av. Beira Mar, 1500 - Centro
+- Tel: (11) 98765-4321
+- Especialidade: Massas artesanais e frutos do mar
+
+Seja sempre educado e profissional.`}
+                  </pre>
+                </div>
+              </details>
             </div>
           </div>
 

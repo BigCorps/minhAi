@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AvatarFace } from './AvatarFace';
+import { AvatarFace } from '@/components/AvatarFace';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;

@@ -36,12 +36,13 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     };
   }, []);
 
-  // Animação da boca
+  // Animação da boca MELHORADA - mais rápida e sincronizada
   useEffect(() => {
     if (isSpeaking) {
+      // Alternar mais rápido para parecer mais natural
       mouthIntervalRef.current = setInterval(() => {
         setMouthOpen(prev => !prev);
-      }, 200);
+      }, 120); // MAIS RÁPIDO (era 200ms)
     } else {
       setMouthOpen(false);
       if (mouthIntervalRef.current) clearInterval(mouthIntervalRef.current);
@@ -51,12 +52,12 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     };
   }, [isSpeaking]);
 
-  // Cores: Padrão CINZA CLARO, estados com cores vivas
+  // Cores do avatar
   const getBackgroundColor = () => {
-    if (isSpeaking) return '#34d399'; // Verde (Falando)
-    if (isProcessing) return '#fbbf24'; // Amarelo (Processando)
-    if (isListening) return '#60a5fa'; // Azul (Ouvindo)
-    return '#e5e7eb'; // CINZA CLARO (Padrão)
+    if (isSpeaking) return '#34d399'; // Verde
+    if (isProcessing) return '#fbbf24'; // Amarelo
+    if (isListening) return '#60a5fa'; // Azul
+    return '#e5e7eb'; // Cinza claro
   };
 
   const featureColor = '#000000';
@@ -64,14 +65,14 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
   return (
     <div className="flex items-center justify-center h-full w-full">
       <div 
-        className="relative w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-500 shadow-lg"
+        className="relative w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-300"
         style={{ backgroundColor: getBackgroundColor() }}
       >
         <svg
           width="180"
           height="180"
           viewBox="0 0 64 64"
-          className="transition-all duration-300"
+          className="transition-all duration-100"
           shapeRendering="crispEdges"
         >
           {/* OLHO ESQUERDO */}
@@ -109,13 +110,16 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           {/* BOCA */}
           <g transform="translate(22, 40)">
             {isSpeaking && mouthOpen ? (
+              // Boca aberta quando falando
               <path 
                 d="M4,0 H16 V2 H18 V10 H16 V12 H4 V10 H2 V2 H4 Z" 
                 fill={featureColor} 
               />
             ) : isProcessing ? (
+              // Boca pensando
               <rect x="6" y="4" width="8" height="2" fill={featureColor} />
             ) : (
+              // Sorriso padrão
               <path 
                 d="M0,0 H4 V2 H16 V0 H20 V4 H18 V6 H16 V8 H4 V6 H2 V4 H0 Z" 
                 fill={featureColor} 

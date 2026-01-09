@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AvatarFace } from '@/components/AvatarFace';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -30,15 +29,16 @@ export function VoiceAssistantWithWakeWord({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const conversationIdRef = useRef<string | null>(null);
+  const silenceTimerRef = useRef<any>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const restartTimeoutRef = useRef<any>(null);
-  const isActiveRef = useRef(true);
 
+  // Processar múltiplas palavras de ativação
   const wakeWords = wakeWord
     .split(',')
     .map(w => w.trim().toLowerCase())
     .filter(w => w.length > 0);
 
+  // Comandos de encerramento
   const endCommands = [
     'tchau',
     'obrigado',
@@ -51,41 +51,30 @@ export function VoiceAssistantWithWakeWord({
   ];
 
   useEffect(() => {
-    isActiveRef.current = true;
     requestMicrophonePermission();
     
     return () => {
-      isActiveRef.current = false;
-      cleanup();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+      }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
     };
   }, []);
-
-  function cleanup() {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-    }
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-    }
-  }
 
   async function requestMicrophonePermission() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(track => track.stop()); // Liberar imediatamente
       setPermissionGranted(true);
       setError('');
-      
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          startWakeWordDetection();
-        }
-      }, 500);
+      startWakeWordDetection();
     } catch (err) {
       console.error('Erro ao solicitar microfone:', err);
       setError('Permissão do microfone negada. Por favor, permita o acesso.');
@@ -99,10 +88,6 @@ export function VoiceAssistantWithWakeWord({
       return;
     }
 
-    if (recognitionRef.current && isListening) {
-      return;
-    }
-
     try {
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
@@ -112,6 +97,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
+        console.log('Reconhecimento iniciado');
         setIsListening(true);
         setError('');
       };
@@ -120,6 +106,9 @@ export function VoiceAssistantWithWakeWord({
         const current = event.resultIndex;
         const transcript = event.results[current][0].transcript.toLowerCase().trim();
         
+        console.log('Transcrito:', transcript);
+
+        // Verificar comandos de encerramento se conversa está ativa
         if (conversationActive) {
           const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
           if (hasEndCommand) {
@@ -128,74 +117,50 @@ export function VoiceAssistantWithWakeWord({
           }
         }
 
+        // Detectar palavra de ativação
         if (!conversationActive && !isRecording && !isProcessing && !isPlayingAudio) {
           const detectedWakeWord = wakeWords.some(word => transcript.includes(word));
           if (detectedWakeWord) {
+            console.log('Palavra de ativação detectada!');
+            recognition.stop();
             activateConversation();
           }
         }
       };
 
       recognition.onerror = (event: any) => {
-        if (event.error === 'no-speech' || event.error === 'audio-capture') {
-          return;
+        console.error('Erro no reconhecimento:', event.error);
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          setError(`Erro: ${event.error}`);
         }
-        
-        if (event.error === 'not-allowed') {
-          setError('Permissão de microfone negada');
-          setPermissionGranted(false);
-          return;
-        }
-        
-        setError(`Erro: ${event.error}`);
       };
 
       recognition.onend = () => {
+        console.log('Reconhecimento encerrado');
         setIsListening(false);
         
-        if (isActiveRef.current && !isRecording && !isProcessing && !isPlayingAudio && permissionGranted) {
-          if (restartTimeoutRef.current) {
-            clearTimeout(restartTimeoutRef.current);
-          }
-          
-          restartTimeoutRef.current = setTimeout(() => {
-            if (isActiveRef.current && permissionGranted) {
-              try {
-                recognition.start();
-              } catch (err) {
-                setTimeout(() => {
-                  if (isActiveRef.current) {
-                    startWakeWordDetection();
-                  }
-                }, 2000);
-              }
+        // Reiniciar apenas se não estiver gravando/processando
+        if (!isRecording && !isProcessing && !isPlayingAudio && permissionGranted) {
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (err) {
+              console.error('Erro ao reiniciar:', err);
             }
-          }, 1000);
+          }, 500);
         }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
+      console.error('Erro ao inicializar reconhecimento:', err);
       setError('Erro ao inicializar reconhecimento de voz');
-      
-      setTimeout(() => {
-        if (isActiveRef.current && permissionGranted) {
-          startWakeWordDetection();
-        }
-      }, 3000);
     }
   }
 
   async function activateConversation() {
     setConversationActive(true);
-    
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-    
     await playGreeting();
   }
 
@@ -204,15 +169,20 @@ export function VoiceAssistantWithWakeWord({
     setTranscript('');
     setResponse('');
     
+    // Parar qualquer áudio em reprodução
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
     }
     
+    // Mensagem de despedida
     await playText('Até logo! Se precisar, é só me chamar novamente.');
     
+    // Reiniciar detecção após 2 segundos
     setTimeout(() => {
-      if (isActiveRef.current && permissionGranted) {
-        startWakeWordDetection();
+      if (recognitionRef.current && permissionGranted) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {}
       }
     }, 2000);
   }
@@ -225,6 +195,7 @@ export function VoiceAssistantWithWakeWord({
       setIsPlayingAudio(false);
       startRecording();
     } catch (err: any) {
+      console.error('Erro ao reproduzir saudação:', err);
       setIsPlayingAudio(false);
       setError('Erro ao reproduzir saudação');
       startRecording();
@@ -288,22 +259,56 @@ export function VoiceAssistantWithWakeWord({
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
 
+      // Detectar silêncio para parar automaticamente
+      startSilenceDetection(stream);
+
+      // Timeout máximo de 15 segundos
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           stopRecording();
         }
       }, 15000);
     } catch (err: any) {
+      console.error('Erro ao iniciar gravação:', err);
       setError('Erro ao iniciar gravação: ' + err.message);
       setIsRecording(false);
       setConversationActive(false);
-      
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          startWakeWordDetection();
-        }
-      }, 1000);
+      restartWakeWordDetection();
     }
+  }
+
+  function startSilenceDetection(stream: MediaStream) {
+    const audioContext = new AudioContext();
+    const analyser = audioContext.createAnalyser();
+    const microphone = audioContext.createMediaStreamSource(stream);
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    microphone.connect(analyser);
+    analyser.fftSize = 512;
+
+    let silenceStart = Date.now();
+    const SILENCE_THRESHOLD = 10;
+    const SILENCE_DURATION = 2000; // 2 segundos de silêncio
+
+    function checkAudio() {
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+      if (average < SILENCE_THRESHOLD) {
+        if (Date.now() - silenceStart > SILENCE_DURATION) {
+          stopRecording();
+          return;
+        }
+      } else {
+        silenceStart = Date.now();
+      }
+
+      if (isRecording) {
+        requestAnimationFrame(checkAudio);
+      }
+    }
+
+    checkAudio();
   }
 
   function stopRecording() {
@@ -346,12 +351,14 @@ export function VoiceAssistantWithWakeWord({
       setResponse(responseText);
       setIsProcessing(false);
 
+      // Verificar se usuário pediu para encerrar
       const hasEndCommand = endCommands.some(cmd => transcription.toLowerCase().includes(cmd));
       if (hasEndCommand) {
         endConversation();
         return;
       }
 
+      // Reproduzir resposta
       setIsPlayingAudio(true);
       const responseAudioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(responseAudioBlob);
@@ -362,6 +369,7 @@ export function VoiceAssistantWithWakeWord({
       audio.onended = () => {
         currentAudioRef.current = null;
         setIsPlayingAudio(false);
+        // Continuar conversa
         startRecording();
       };
 
@@ -374,16 +382,24 @@ export function VoiceAssistantWithWakeWord({
 
       await audio.play();
     } catch (err: any) {
+      console.error('Erro ao processar áudio:', err);
       setError('Erro ao processar áudio: ' + err.message);
       setIsProcessing(false);
       setConversationActive(false);
-      
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          startWakeWordDetection();
-        }
-      }, 1000);
+      restartWakeWordDetection();
     }
+  }
+
+  function restartWakeWordDetection() {
+    setTimeout(() => {
+      if (permissionGranted && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (err) {
+          console.error('Erro ao reiniciar:', err);
+        }
+      }
+    }, 1000);
   }
 
   const getStatusMessage = () => {
@@ -393,7 +409,7 @@ export function VoiceAssistantWithWakeWord({
     if (isRecording) return 'Escutando você...';
     if (conversationActive) return 'Pode falar...';
     if (isListening) return `Pronto! Diga: "${wakeWords[0]}"`;
-    return 'Iniciando sistema...';
+    return 'Aguarde...';
   };
 
   const getStatusColor = () => {
@@ -407,84 +423,68 @@ export function VoiceAssistantWithWakeWord({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* COLUNA ESQUERDA - AVATAR */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl shadow-2xl p-8 border border-gray-700 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10"></div>
-          <div className="relative h-96">
-            <AvatarFace
-              isListening={isListening && !conversationActive}
-              isSpeaking={isPlayingAudio}
-              isProcessing={isProcessing}
-              audioElement={currentAudioRef.current}
-            />
-          </div>
-        </div>
-
-        {/* COLUNA DIREITA - CONTROLES */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200">
-          <div className="flex flex-col items-center space-y-6">
-            {/* Indicador de Status */}
-            <div className="relative flex items-center justify-center">
-              <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
-                <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
+    <div className="w-full max-w-2xl mx-auto">
+      <div className="bg-white rounded-3xl shadow-2xl p-12 border border-gray-200">
+        <div className="flex flex-col items-center space-y-8">
+          {/* Indicador visual grande - centralizado */}
+          <div className="relative flex items-center justify-center">
+            <div className={`w-48 h-48 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-2xl`}>
+              <svg className="w-24 h-24 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
             </div>
+          </div>
 
-            {/* Status */}
-            <div className="text-center w-full">
-              <p className="text-xl font-bold text-gray-900 mb-2">
-                {getStatusMessage()}
+          {/* Status - centralizado */}
+          <div className="text-center w-full">
+            <p className="text-2xl font-bold text-gray-900 mb-2">
+              {getStatusMessage()}
+            </p>
+            {wakeWords.length > 1 && isListening && !conversationActive && (
+              <p className="text-sm text-gray-600">
+                Ou: {wakeWords.slice(1).map(w => `"${w}"`).join(', ')}
               </p>
-              {wakeWords.length > 1 && isListening && !conversationActive && (
-                <p className="text-sm text-gray-600">
-                  Ou: {wakeWords.slice(1).map(w => `"${w}"`).join(', ')}
-                </p>
-              )}
-              {conversationActive && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Diga "tchau" para encerrar
-                </p>
-              )}
-            </div>
-
-            {/* Transcrição */}
-            {transcript && (
-              <div className="w-full p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-                <p className="text-sm font-semibold text-blue-900 mb-1">Você disse:</p>
-                <p className="text-gray-800">{transcript}</p>
-              </div>
             )}
-
-            {/* Resposta */}
-            {response && (
-              <div className="w-full p-4 bg-green-50 rounded-xl border-2 border-green-200">
-                <p className="text-sm font-semibold text-green-900 mb-1">Assistente:</p>
-                <p className="text-gray-800">{response}</p>
-              </div>
-            )}
-
-            {/* Erro */}
-            {error && (
-              <div className="w-full p-4 bg-red-50 rounded-xl border-2 border-red-200">
-                <p className="text-sm font-semibold text-red-900 mb-1">Erro:</p>
-                <p className="text-red-700">{error}</p>
-              </div>
-            )}
-
-            {/* Botão Encerrar */}
-            {conversationActive && !isProcessing && !isPlayingAudio && (
-              <button
-                onClick={endConversation}
-                className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold shadow-lg"
-              >
-                Encerrar Conversa
-              </button>
+            {conversationActive && (
+              <p className="text-sm text-gray-500 mt-2">
+                Diga "tchau" ou "obrigado" para encerrar
+              </p>
             )}
           </div>
+
+          {/* Transcrição - centralizada */}
+          {transcript && (
+            <div className="w-full p-6 bg-blue-50 rounded-xl border-2 border-blue-200 text-center">
+              <p className="text-sm font-semibold text-blue-900 mb-2">Você disse:</p>
+              <p className="text-lg text-gray-800">{transcript}</p>
+            </div>
+          )}
+
+          {/* Resposta - centralizada */}
+          {response && (
+            <div className="w-full p-6 bg-green-50 rounded-xl border-2 border-green-200 text-center">
+              <p className="text-sm font-semibold text-green-900 mb-2">Assistente:</p>
+              <p className="text-lg text-gray-800">{response}</p>
+            </div>
+          )}
+
+          {/* Erro */}
+          {error && (
+            <div className="w-full p-6 bg-red-50 rounded-xl border-2 border-red-200 text-center">
+              <p className="text-sm font-semibold text-red-900 mb-2">Erro:</p>
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* Botão encerrar conversa manualmente */}
+          {conversationActive && !isProcessing && !isPlayingAudio && (
+            <button
+              onClick={endConversation}
+              className="px-8 py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold shadow-lg text-lg"
+            >
+              Encerrar Conversa
+            </button>
+          )}
         </div>
       </div>
     </div>

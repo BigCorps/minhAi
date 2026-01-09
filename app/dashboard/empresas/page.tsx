@@ -90,7 +90,7 @@ export default async function EmpresasPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                     <code className="text-xs bg-gray-100 px-2 py-1 rounded truncate">
-                      /assistente/{company.slug}
+                      /oi/{company.slug}
                     </code>
                   </div>
                   
@@ -112,7 +112,7 @@ export default async function EmpresasPage() {
                     Editar
                   </Link>
                   <Link
-                    href={`/assistente/${company.slug}`}
+                    href={`/oi/${company.slug}`}
                     target="_blank"
                     className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-center text-sm font-medium"
                   >

@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'MeAtend - Atendente de Voz Personalizado com IA',
+  title: 'iTend - Atendente de Voz Personalizado com IA',
   description: 'Assistente de voz inteligente com IA para atendimento ao cliente',
   icons: {
     icon: '/favicon.ico',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'MeAtend',
+    title: 'iTend',
   },
 };
 

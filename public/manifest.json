@@ -1,6 +1,6 @@
 {
-  "name": "MeAtend - Atendimento por Voz Inteligente com IA",
-  "short_name": "MeAtend",
+  "name": "iAtend - Atendimento por Voz Inteligente com IA",
+  "short_name": "iAtend",
   "description": "Atendimento por Voz Inteligente com IA",
   "start_url": "/",
   "display": "standalone",

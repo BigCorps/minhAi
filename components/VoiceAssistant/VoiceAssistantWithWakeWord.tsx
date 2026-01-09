@@ -34,6 +34,7 @@ export function VoiceAssistantWithWakeWord({
   const restartTimeoutRef = useRef<any>(null);
   const isActiveRef = useRef(true);
   const lastRestartAttempt = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const wakeWords = wakeWord
     .split(',')
@@ -69,6 +70,11 @@ export function VoiceAssistantWithWakeWord({
     }
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
     }
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
@@ -201,11 +207,12 @@ export function VoiceAssistantWithWakeWord({
     setTranscript('');
     setResponse('');
     
+    // PARAR ÁUDIO ATUAL
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
     
-    // Despedida rápida
     await playText('Até logo!');
     
     setTimeout(() => {
@@ -231,6 +238,12 @@ export function VoiceAssistantWithWakeWord({
   async function playText(text: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
+        // PARAR QUALQUER ÁUDIO ANTERIOR (evita duplicação)
+        if (currentAudioRef.current) {
+          currentAudioRef.current.pause();
+          currentAudioRef.current = null;
+        }
+
         const response = await fetch('/api/voice/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -294,7 +307,6 @@ export function VoiceAssistantWithWakeWord({
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         stream.getTracks().forEach(track => track.stop());
         
-        // Mostrar "Processando" IMEDIATAMENTE
         setIsRecording(false);
         setIsProcessing(true);
         
@@ -305,7 +317,7 @@ export function VoiceAssistantWithWakeWord({
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
 
-      // REDUZIDO: Silêncio mais curto para resposta mais rápida
+      // Detecção de silêncio RÁPIDA (1 segundo)
       startSilenceDetection(stream);
 
       setTimeout(() => {
@@ -327,7 +339,14 @@ export function VoiceAssistantWithWakeWord({
   }
 
   function startSilenceDetection(stream: MediaStream) {
+    // Fechar contexto anterior se existir
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+    }
+
     const audioContext = new AudioContext();
+    audioContextRef.current = audioContext;
+    
     const analyser = audioContext.createAnalyser();
     const microphone = audioContext.createMediaStreamSource(stream);
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -336,8 +355,8 @@ export function VoiceAssistantWithWakeWord({
     analyser.fftSize = 2048;
 
     let silenceStart = Date.now();
-    const SILENCE_THRESHOLD = 15;
-    const SILENCE_DURATION = 1200; // REDUZIDO: 1.2s (era 1.5s)
+    const SILENCE_THRESHOLD = 12; // Mais sensível
+    const SILENCE_DURATION = 1000; // 1 SEGUNDO (era 1200ms)
 
     function checkAudio() {
       if (!isRecording) {
@@ -406,6 +425,12 @@ export function VoiceAssistantWithWakeWord({
         return;
       }
 
+      // GARANTIR que não há áudio tocando antes
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+
       setIsPlayingAudio(true);
       const responseAudioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(responseAudioBlob);
@@ -442,7 +467,7 @@ export function VoiceAssistantWithWakeWord({
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão do microfone...';
     if (isPlayingAudio) return 'Reproduzindo resposta...';
-    if (isProcessing) return 'Processando...'; // Texto mais curto
+    if (isProcessing) return 'Processando...';
     if (isRecording) return 'Escutando você...';
     if (conversationActive) return 'Pode falar...';
     if (isListening) return `Pronto! Diga: "${wakeWords[0]}"`;

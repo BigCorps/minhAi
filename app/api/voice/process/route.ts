@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import OpenAI from 'openai';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    // Buscar empresa
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('*')
@@ -37,14 +36,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TRANSCRIÇÃO COM QUALIDADE MÁXIMA
+    // TRANSCRIÇÃO OTIMIZADA
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
       model: 'whisper-1',
-      language: 'pt', // Forçar português
-      prompt: 'Transcrever com precisão em português brasileiro.', // Melhor contexto
+      language: 'pt',
+      prompt: 'Transcrever com precisão em português brasileiro.',
       response_format: 'text',
-      temperature: 0.0, // Máxima precisão (sem criatividade)
+      temperature: 0.0,
     });
 
     const userMessage = transcription.trim();
@@ -56,7 +55,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar ou criar conversa
     let conversation;
     let conversationHistory: any[] = [];
 
@@ -86,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!conversation) {
-      const newConversationId = uuidv4();
+      const newConversationId = randomUUID();
       const { data: newConv, error: convError } = await supabase
         .from('conversations')
         .insert({
@@ -107,14 +105,12 @@ export async function POST(request: NextRequest) {
       conversation = newConv;
     }
 
-    // Salvar mensagem do usuário
     await supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'user',
       content: userMessage,
     });
 
-    // GERAR RESPOSTA COM MELHOR CONTEXTO
     const systemPrompt = company.system_prompt || 
       'Você é um assistente virtual prestativo e educado. Responda de forma clara, concisa e natural em português brasileiro.';
 
@@ -134,25 +130,23 @@ export async function POST(request: NextRequest) {
     const assistantResponse = chatCompletion.choices[0]?.message?.content || 
       'Desculpe, não consegui processar sua solicitação.';
 
-    // Salvar resposta
     await supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'assistant',
       content: assistantResponse,
     });
 
-    // GERAR ÁUDIO TTS COM MELHOR QUALIDADE
+    // TTS OTIMIZADO
     const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1', // Ou 'tts-1-hd' para qualidade ainda melhor
-      voice: 'nova', // Voz mais natural
+      model: 'tts-1',
+      voice: 'nova',
       input: assistantResponse,
       response_format: 'mp3',
-      speed: 1.0, // Velocidade normal
+      speed: 1.0,
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
 
-    // Retornar resposta com headers
     const response = new NextResponse(audioBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',

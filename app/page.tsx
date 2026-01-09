@@ -10,7 +10,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center">
             <Image 
               src="/logo.png" 
-              alt="Gerente IA" 
+              alt="iTend" 
               width={150} 
               height={68}
               className="h-12 w-auto"
@@ -106,7 +106,7 @@ export default function HomePage() {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Totalmente Customizável</h3>
             <p className="text-gray-600">
-              Configure wake words, saudações e prompts personalizados para cada empresa.
+              Configure palavras de ativação, saudações e prompts personalizados para cada empresa.
             </p>
           </div>
 
@@ -128,7 +128,7 @@ export default function HomePage() {
       <footer className="border-t py-8 bg-white dark:bg-[#0F140B]">
         <div className="px-4 text-center text-gray-700 dark:text-gray-300">
           <p>
-            &copy; {new Date().getFullYear()} MeAtend - Atendimento por Voz Inteligente.
+            &copy; {new Date().getFullYear()} iTend - Atendimento por Voz Inteligente.
           </p>
           <small>
             <a

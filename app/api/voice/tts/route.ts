@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateSpeech } from '@/lib/openai';
+import OpenAI from 'openai';
 
-export const runtime = 'nodejs';
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,23 +11,32 @@ export async function POST(request: NextRequest) {
 
     if (!text) {
       return NextResponse.json(
-        { error: 'Text is required' },
+        { error: 'Texto é obrigatório' },
         { status: 400 }
       );
     }
 
-    const audioBuffer = await generateSpeech(text);
+    // TTS com VOZ FIXA - sempre alloy
+    const ttsResponse = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'alloy', // VOZ FIXA - nunca muda
+      input: text,
+      response_format: 'mp3',
+      speed: 1.1,
+    });
+
+    const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
 
     return new NextResponse(audioBuffer, {
-      status: 200,
       headers: {
         'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'public, max-age=3600',
       },
     });
   } catch (error: any) {
-    console.error('Error generating speech:', error);
+    console.error('Erro TTS:', error);
     return NextResponse.json(
-      { error: error.message || 'Error generating speech' },
+      { error: 'Erro ao gerar áudio', details: error.message },
       { status: 500 }
     );
   }

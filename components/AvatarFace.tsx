@@ -134,7 +134,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
             <span className="px-3 py-1 bg-black/20 text-white text-xs rounded-full font-bold backdrop-blur-sm">
               {isSpeaking && 'FALANDO'}
               {isProcessing && 'PENSANDO'}
-              {isListening && 'OUVINDO'}
+              {isListening && 'A DISPOSIÇÃO'}
             </span>
            )}
         </div>

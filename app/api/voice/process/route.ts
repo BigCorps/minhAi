@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    // PARALELIZAR busca de empresa e transcrição
+    // PARALELIZAR tudo que for possível
     const [companyResult, transcriptionResult] = await Promise.all([
-      supabase.from('companies').select('*').eq('id', companyId).single(),
+      supabase.from('companies').select('id, system_prompt').eq('id', companyId).single(),
       openai.audio.transcriptions.create({
         file: audioFile,
         model: 'whisper-1',
@@ -58,22 +58,23 @@ export async function POST(request: NextRequest) {
     if (conversationId) {
       const { data: existingConv } = await supabase
         .from('conversations')
-        .select('*')
+        .select('id')
         .eq('id', conversationId)
         .single();
 
       if (existingConv) {
         conversation = existingConv;
 
+        // REDUZIR histórico para 5 mensagens (mais rápido)
         const { data: messages } = await supabase
           .from('messages')
-          .select('*')
+          .select('role, content')
           .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true })
-          .limit(10);
+          .order('created_at', { ascending: false })
+          .limit(5);
 
         if (messages) {
-          conversationHistory = messages.map(msg => ({
+          conversationHistory = messages.reverse().map(msg => ({
             role: msg.role,
             content: msg.content,
           }));
@@ -83,58 +84,57 @@ export async function POST(request: NextRequest) {
 
     if (!conversation) {
       const newConversationId = randomUUID();
-      const { data: newConv } = await supabase
-        .from('conversations')
-        .insert({
-          id: newConversationId,
-          company_id: companyId,
-        })
-        .select()
-        .single();
-
-      conversation = newConv;
+      conversation = { id: newConversationId };
+      
+      // Salvar conversa em background (não aguardar)
+      supabase.from('conversations').insert({
+        id: newConversationId,
+        company_id: companyId,
+      });
     }
 
-    // Salvar mensagem do usuário (não await)
+    // Salvar mensagem em background
     supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'user',
       content: userMessage,
     });
 
+    // Prompt otimizado para respostas CURTAS e RÁPIDAS
     const systemPrompt = company.system_prompt || 
-      'Você é um assistente virtual. Responda de forma clara e concisa em português brasileiro.';
+      'Você é um assistente virtual. Responda de forma MUITO BREVE e DIRETA em português brasileiro. Máximo 2 frases.';
 
     const chatMessages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: systemPrompt + ' IMPORTANTE: Seja MUITO conciso e direto.' },
       ...conversationHistory,
       { role: 'user', content: userMessage },
     ];
 
+    // GPT com tokens REDUZIDOS para resposta mais rápida
     const chatCompletion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: chatMessages as any,
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: 150, // MUITO REDUZIDO (era 300)
     });
 
     const assistantResponse = chatCompletion.choices[0]?.message?.content || 
-      'Desculpe, não consegui processar sua solicitação.';
+      'Desculpe, não consegui processar.';
 
-    // Salvar resposta (não await)
+    // Salvar resposta em background
     supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'assistant',
       content: assistantResponse,
     });
 
-    // TTS RÁPIDO
+    // TTS ultra-rápido
     const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1',
+      model: 'tts-1', // Modelo rápido
       voice: 'alloy',
       input: assistantResponse,
       response_format: 'mp3',
-      speed: 1.05,
+      speed: 1.1, // Levemente mais rápido
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());

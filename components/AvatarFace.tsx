@@ -14,7 +14,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
   const blinkIntervalRef = useRef<any>(null);
   const mouthIntervalRef = useRef<any>(null);
 
-  // Piscadas automáticas
+  // Piscadas automáticas (Lógica mantida)
   useEffect(() => {
     const blink = () => {
       setIsBlinking(true);
@@ -22,7 +22,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     };
 
     const scheduleNextBlink = () => {
-      const delay = 3000 + Math.random() * 2000;
+      const delay = 2000 + Math.random() * 3000;
       blinkIntervalRef.current = setTimeout(() => {
         blink();
         scheduleNextBlink();
@@ -32,114 +32,122 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     scheduleNextBlink();
 
     return () => {
-      if (blinkIntervalRef.current) {
-        clearTimeout(blinkIntervalRef.current);
-      }
+      if (blinkIntervalRef.current) clearTimeout(blinkIntervalRef.current);
     };
   }, []);
 
-  // Boca mexendo quando está falando (simples)
+  // Animação da boca (Lógica mantida)
   useEffect(() => {
     if (isSpeaking) {
-      // Alternar boca aberta/fechada rapidamente
       mouthIntervalRef.current = setInterval(() => {
         setMouthOpen(prev => !prev);
-      }, 150);
+      }, 200);
     } else {
       setMouthOpen(false);
-      if (mouthIntervalRef.current) {
-        clearInterval(mouthIntervalRef.current);
-      }
+      if (mouthIntervalRef.current) clearInterval(mouthIntervalRef.current);
     }
-
     return () => {
-      if (mouthIntervalRef.current) {
-        clearInterval(mouthIntervalRef.current);
-      }
+      if (mouthIntervalRef.current) clearInterval(mouthIntervalRef.current);
     };
   }, [isSpeaking]);
 
-  // Cor de fundo baseada no estado
+  // Cores atualizadas: Padrão Branco, estados com cores vivas
   const getBackgroundColor = () => {
-    if (isSpeaking) return '#10b981'; // Verde
-    if (isProcessing) return '#f59e0b'; // Amarelo
-    if (isListening) return '#3b82f6'; // Azul
-    return '#6b7280'; // Cinza
+    if (isSpeaking) return '#34d399'; // Verde Esmeralda (Falando)
+    if (isProcessing) return '#fbbf24'; // Amarelo (Processando)
+    if (isListening) return '#60a5fa'; // Azul (Ouvindo)
+    return '#ffffff'; // Branco (Padrão)
   };
 
+  // Define a cor dos traços (Olhos/Boca)
+  // Se o fundo for muito escuro, poderíamos mudar para branco, 
+  // mas com essas cores acima, preto funciona bem.
+  const featureColor = '#000000';
+
   return (
-    <div className="flex items-center justify-center h-full">
+    // Container externo agora pode ser transparente ou ter a cor do card pai
+    <div className="flex items-center justify-center h-full w-full">
       <div 
-        className="w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-500"
+        className="relative w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-500 shadow-xl border-4 border-gray-100"
         style={{ backgroundColor: getBackgroundColor() }}
       >
         <svg
-          width="200"
-          height="200"
-          viewBox="0 0 100 100"
+          width="180"
+          height="180"
+          viewBox="0 0 64 64" // Grid de 64x64 para mais detalhes ("mais bits")
           className="transition-all duration-300"
+          shapeRendering="crispEdges" // Garante o visual Pixel Art nítido
         >
-          {/* Olho esquerdo */}
-          <rect
-            x="25"
-            y={isBlinking ? "40" : "35"}
-            width="15"
-            height={isBlinking ? "5" : "15"}
-            fill="#000000"
-            className="transition-all duration-150"
-          />
+          {/* --- OLHO ESQUERDO --- */}
+          <g transform="translate(14, 20)">
+            {isBlinking ? (
+              // Olho Fechado (Linha pixelada)
+              <rect x="0" y="6" width="14" height="2" fill={featureColor} />
+            ) : (
+              // Olho Aberto "Kawaii"
+              <>
+                {/* Base do olho (arredondado pixelado) */}
+                <path 
+                  d="M2,0 H12 V2 H14 V12 H12 V14 H2 V12 H0 V2 H2 Z" 
+                  fill={featureColor} 
+                />
+                {/* Brilho grande (Canto superior esquerdo) */}
+                <rect x="2" y="2" width="4" height="4" fill="white" />
+                {/* Brilho pequeno (Canto direito) */}
+                <rect x="9" y="8" width="2" height="2" fill="white" />
+              </>
+            )}
+          </g>
 
-          {/* Olho direito */}
-          <rect
-            x="60"
-            y={isBlinking ? "40" : "35"}
-            width="15"
-            height={isBlinking ? "5" : "15"}
-            fill="#000000"
-            className="transition-all duration-150"
-          />
+          {/* --- OLHO DIREITO --- */}
+          <g transform="translate(36, 20)">
+            {isBlinking ? (
+               <rect x="0" y="6" width="14" height="2" fill={featureColor} />
+            ) : (
+              <>
+                <path 
+                  d="M2,0 H12 V2 H14 V12 H12 V14 H2 V12 H0 V2 H2 Z" 
+                  fill={featureColor} 
+                />
+                <rect x="2" y="2" width="4" height="4" fill="white" />
+                <rect x="9" y="8" width="2" height="2" fill="white" />
+              </>
+            )}
+          </g>
 
-          {/* Boca - muda quando está falando */}
-          {isSpeaking && mouthOpen ? (
-            // Boca aberta (quadrado)
-            <rect
-              x="35"
-              y="65"
-              width="30"
-              height="20"
-              fill="#000000"
-              className="transition-all duration-100"
-            />
-          ) : isProcessing ? (
-            // Boca pensativa (linha menor)
-            <rect
-              x="40"
-              y="70"
-              width="20"
-              height="5"
-              fill="#000000"
-            />
-          ) : (
-            // Boca sorrindo (retângulo horizontal)
-            <rect
-              x="30"
-              y="70"
-              width="40"
-              height="8"
-              fill="#000000"
-            />
-          )}
+          {/* --- BOCA --- */}
+          <g transform="translate(22, 40)">
+            {isSpeaking && mouthOpen ? (
+              // Boca Falando (Quadrado aberto arredondado)
+              <path 
+                d="M4,0 H16 V2 H18 V10 H16 V12 H4 V10 H2 V2 H4 Z" 
+                fill={featureColor} 
+              />
+            ) : isProcessing ? (
+              // Boca Pensando (Linha pequena reta)
+              <rect x="6" y="4" width="8" height="2" fill={featureColor} />
+            ) : (
+              // Sorriso (Estilo do print 2)
+              // Formato de "tigela" pixelada
+              <path 
+                d="M0,0 H4 V2 H16 V0 H20 V4 H18 V6 H16 V8 H4 V6 H2 V4 H0 Z" 
+                fill={featureColor} 
+              />
+            )}
+          </g>
         </svg>
-      </div>
 
-      {/* Label do estado */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-        <span className="px-3 py-1 bg-black/70 text-white text-xs rounded-full font-medium">
-          {isSpeaking && '🗣️ Falando'}
-          {isProcessing && '🤔 Pensando'}
-          {isListening && '👂 Ouvindo'}
-          {!isSpeaking && !isProcessing && !isListening && '😊 Pronto'}
-        </span>
+        {/* Label do estado (Opcional - ajustado para o novo design) */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+           {/* Só mostra badge se não estiver no estado padrão (branco) */}
+           {(isListening || isSpeaking || isProcessing) && (
+            <span className="px-3 py-1 bg-black/20 text-white text-xs rounded-full font-bold backdrop-blur-sm">
+              {isSpeaking && 'FALANDO'}
+              {isProcessing && 'PENSANDO'}
+              {isListening && 'OUVINDO'}
+            </span>
+           )}
+        </div>
       </div>
     </div>
   );

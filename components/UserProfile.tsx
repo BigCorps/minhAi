@@ -17,14 +17,12 @@ export function UserProfile({ user }: UserProfileProps) {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    window.location.href = 'https://itend.com.br';
   }
 
   const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário';
   const initial = displayName.charAt(0).toUpperCase();
   
-  // Foto do Google OAuth
   const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
   const showImage = avatarUrl && !imageError;
 
@@ -34,7 +32,6 @@ export function UserProfile({ user }: UserProfileProps) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
       >
-        {/* Avatar - Foto ou Inicial */}
         {showImage ? (
           <div className="w-10 h-10 rounded-full overflow-hidden shadow-md ring-2 ring-orange-500">
             <Image
@@ -55,7 +52,6 @@ export function UserProfile({ user }: UserProfileProps) {
           </div>
         )}
         
-        {/* Nome e email - desktop */}
         <div className="hidden md:block text-left">
           <p className="text-sm font-semibold text-gray-900">
             {displayName}
@@ -65,7 +61,6 @@ export function UserProfile({ user }: UserProfileProps) {
           </p>
         </div>
         
-        {/* Seta dropdown */}
         <svg 
           className={`w-4 h-4 text-gray-500 transition-transform hidden md:block ${isOpen ? 'rotate-180' : ''}`} 
           fill="none" 
@@ -76,18 +71,14 @@ export function UserProfile({ user }: UserProfileProps) {
         </svg>
       </button>
 
-      {/* Dropdown menu */}
       {isOpen && (
         <>
-          {/* Overlay para fechar ao clicar fora */}
           <div 
             className="fixed inset-0 z-10" 
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Menu */}
           <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
-            {/* Header do menu com foto */}
             <div className="px-4 py-3 border-b border-gray-100 flex items-center space-x-3">
               {showImage ? (
                 <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-orange-500">
@@ -117,7 +108,6 @@ export function UserProfile({ user }: UserProfileProps) {
               </div>
             </div>
 
-            {/* Botão sair */}
             <button
               onClick={handleLogout}
               className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition flex items-center space-x-2"

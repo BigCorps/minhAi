@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userMessage = transcriptionResult.trim();
+    const userMessage = (transcriptionResult.text || '').trim();
 
     if (!userMessage) {
       return NextResponse.json(
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           .select('*')
           .eq('conversation_id', conversationId)
           .order('created_at', { ascending: true })
-          .limit(10); // LIMITAR histórico para resposta mais rápida
+          .limit(10);
 
         if (messages) {
           conversationHistory = messages.map(msg => ({
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       conversation = newConv;
     }
 
-    // Salvar mensagem do usuário (não await - deixar em background)
+    // Salvar mensagem do usuário (não await)
     supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'user',
@@ -111,12 +111,11 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: userMessage },
     ];
 
-    // PARALELIZAR GPT e salvamento da mensagem do usuário
     const chatCompletion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: chatMessages as any,
       temperature: 0.7,
-      max_tokens: 300, // REDUZIDO de 500 para resposta mais rápida
+      max_tokens: 300,
     });
 
     const assistantResponse = chatCompletion.choices[0]?.message?.content || 
@@ -129,13 +128,13 @@ export async function POST(request: NextRequest) {
       content: assistantResponse,
     });
 
-    // TTS MAIS RÁPIDO - voz alloy (mais estável que nova)
+    // TTS RÁPIDO
     const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1', // Modelo rápido (não HD)
-      voice: 'alloy', // VOZ CONSISTENTE (nova tem bugs)
+      model: 'tts-1',
+      voice: 'alloy',
       input: assistantResponse,
       response_format: 'mp3',
-      speed: 1.05, // Levemente mais rápido
+      speed: 1.05,
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());

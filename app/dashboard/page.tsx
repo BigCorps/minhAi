@@ -37,7 +37,7 @@ export default async function DashboardPage() {
             <div className="flex items-center space-x-3">
               <Image 
                 src="/logo.png" 
-                alt="MeAtend" 
+                alt="iTend" 
                 width={150} 
                 height={68}
                 className="rounded-lg"
@@ -58,7 +58,7 @@ export default async function DashboardPage() {
             Olá, {user.user_metadata?.name || user.email}!
           </h2>
           <p className="text-gray-600">
-            Bem-vindo ao Painel de Controle do MeAtend
+            Bem-vindo ao Painel de Controle do iTend
           </p>
         </div>
 

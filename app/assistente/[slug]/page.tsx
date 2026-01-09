@@ -28,64 +28,78 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
   const systemPrompt = company.system_prompt || 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
-      {/* Header */}
-      <div className="max-w-4xl mx-auto mb-8">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 flex flex-col">
+      {/* Header - centralizado */}
+      <div className="w-full py-6 px-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold text-gray-900 mb-1">
               {company.name}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-lg">
               Assistente Virtual com Voz
             </p>
           </div>
           <Link
             href="https://meatend.bigcorps.com.br/login"
-            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition shadow-md font-semibold"
+            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition shadow-md font-semibold whitespace-nowrap"
           >
             Editar Meu Assistente
           </Link>
         </div>
       </div>
 
-      {/* Instruções */}
-      <div className="max-w-4xl mx-auto mb-8">
-        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-3">
-            Como usar:
-          </h2>
-          <ol className="text-sm text-gray-700 space-y-2 ml-4">
-            <li>1. Permita acesso ao microfone quando solicitado</li>
-            <li>2. Aguarde o indicador verde (sistema pronto para ouvir)</li>
-            <li>3. Diga: <strong>"{company.wake_word || 'olá assistente'}"</strong></li>
-            <li>4. Aguarde a saudação do assistente</li>
-            <li>5. Faça sua pergunta ou solicitação</li>
-            <li>6. O assistente responderá em voz</li>
-          </ol>
+      {/* Conteúdo Principal - centralizado verticalmente */}
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-4xl">
+          <VoiceAssistantWithWakeWord 
+            companyId={company.id} 
+            companyName={company.name}
+            wakeWord={company.wake_word || 'olá assistente'}
+            greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
+          />
         </div>
       </div>
 
-      {/* Voice Assistant */}
-      <VoiceAssistantWithWakeWord 
-        companyId={company.id} 
-        companyName={company.name}
-        wakeWord={company.wake_word || 'olá assistente'}
-        greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
-      />
+      {/* Instruções - fixas embaixo */}
+      <div className="w-full py-6 px-4 bg-white border-t border-gray-200">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Como usar o assistente:
+            </h2>
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-700">
+              <div className="flex items-center space-x-2">
+                <span className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">1</span>
+                <span>Permita o microfone</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">2</span>
+                <span>Diga: "{company.wake_word || 'olá assistente'}"</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">3</span>
+                <span>Faça sua pergunta</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">4</span>
+                <span>Diga "tchau" para encerrar</span>
+              </div>
+            </div>
+          </div>
 
-      {/* Footer */}
-      <div className="max-w-4xl mx-auto mt-12">
-        <div className="text-center border-t border-gray-200 pt-8">
-          <p className="text-sm text-gray-500 mb-3">
-            Powered by MeAtend
-          </p>
-          <Link
-            href="https://meatend.bigcorps.com.br"
-            className="text-sm text-orange-600 hover:text-orange-700 font-medium transition"
-          >
-            Crie seu próprio assistente de voz
-          </Link>
+          {/* Footer */}
+          <div className="text-center border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-500 mb-2">
+              Powered by MeAtend
+            </p>
+            <Link
+              href="https://meatend.bigcorps.com.br"
+              className="text-sm text-orange-600 hover:text-orange-700 font-medium transition"
+            >
+              Crie seu próprio assistente de voz →
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -112,7 +112,7 @@ export default function NovaEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Será usado na URL pública: gerente.iapos.com.br/assistente/<strong>seu-slug</strong>
+                Será usado na URL pública: <strong>itend.com.br/oi/seu-slug</strong>
               </p>
             </div>
 
@@ -192,31 +192,6 @@ export default function NovaEmpresaPage() {
               <p className="mt-1 text-xs text-gray-500">
                 Instruções que definem o comportamento do assistente. Seja específico sobre o que ele deve fazer.
               </p>
-              <details className="mt-2">
-                <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-700">
-                  Ver exemplo de prompt completo
-                </summary>
-                <div className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-700">
-                  <p className="font-semibold mb-2">Exemplo para restaurante:</p>
-                  <pre className="whitespace-pre-wrap">
-{`Você é o assistente virtual do Restaurante Bella Vista.
-
-Sua função é ajudar os clientes com:
-- Fazer reservas de mesa
-- Informar sobre o cardápio e pratos do dia
-- Responder sobre horário de funcionamento
-- Informar localização e estacionamento
-
-Informações importantes:
-- Horário: Terça a Domingo, 12h-15h e 19h-23h
-- Localização: Av. Beira Mar, 1500 - Centro
-- Tel: (11) 98765-4321
-- Especialidade: Massas artesanais e frutos do mar
-
-Seja sempre educado e profissional.`}
-                  </pre>
-                </div>
-              </details>
             </div>
           </div>
 

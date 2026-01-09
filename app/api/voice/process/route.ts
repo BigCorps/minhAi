@@ -23,12 +23,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('id', companyId)
-      .single();
+    // PARALELIZAR busca de empresa e transcrição
+    const [companyResult, transcriptionResult] = await Promise.all([
+      supabase.from('companies').select('*').eq('id', companyId).single(),
+      openai.audio.transcriptions.create({
+        file: audioFile,
+        model: 'whisper-1',
+        language: 'pt',
+        temperature: 0.0,
+      })
+    ]);
 
+    const { data: company, error: companyError } = companyResult;
+    
     if (companyError || !company) {
       return NextResponse.json(
         { error: 'Empresa não encontrada' },
@@ -36,17 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TRANSCRIÇÃO OTIMIZADA
-    const transcription = await openai.audio.transcriptions.create({
-      file: audioFile,
-      model: 'whisper-1',
-      language: 'pt',
-      prompt: 'Transcrever com precisão em português brasileiro.',
-      response_format: 'text',
-      temperature: 0.0,
-    });
-
-    const userMessage = transcription.trim();
+    const userMessage = transcriptionResult.trim();
 
     if (!userMessage) {
       return NextResponse.json(
@@ -72,7 +69,8 @@ export async function POST(request: NextRequest) {
           .from('messages')
           .select('*')
           .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: true })
+          .limit(10); // LIMITAR histórico para resposta mais rápida
 
         if (messages) {
           conversationHistory = messages.map(msg => ({
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     if (!conversation) {
       const newConversationId = randomUUID();
-      const { data: newConv, error: convError } = await supabase
+      const { data: newConv } = await supabase
         .from('conversations')
         .insert({
           id: newConversationId,
@@ -94,25 +92,18 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (convError) {
-        console.error('Erro ao criar conversa:', convError);
-        return NextResponse.json(
-          { error: 'Erro ao criar conversa' },
-          { status: 500 }
-        );
-      }
-
       conversation = newConv;
     }
 
-    await supabase.from('messages').insert({
+    // Salvar mensagem do usuário (não await - deixar em background)
+    supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'user',
       content: userMessage,
     });
 
     const systemPrompt = company.system_prompt || 
-      'Você é um assistente virtual prestativo e educado. Responda de forma clara, concisa e natural em português brasileiro.';
+      'Você é um assistente virtual. Responda de forma clara e concisa em português brasileiro.';
 
     const chatMessages = [
       { role: 'system', content: systemPrompt },
@@ -120,29 +111,31 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: userMessage },
     ];
 
+    // PARALELIZAR GPT e salvamento da mensagem do usuário
     const chatCompletion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: chatMessages as any,
       temperature: 0.7,
-      max_tokens: 500,
+      max_tokens: 300, // REDUZIDO de 500 para resposta mais rápida
     });
 
     const assistantResponse = chatCompletion.choices[0]?.message?.content || 
       'Desculpe, não consegui processar sua solicitação.';
 
-    await supabase.from('messages').insert({
+    // Salvar resposta (não await)
+    supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'assistant',
       content: assistantResponse,
     });
 
-    // TTS OTIMIZADO
+    // TTS MAIS RÁPIDO - voz alloy (mais estável que nova)
     const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'nova',
+      model: 'tts-1', // Modelo rápido (não HD)
+      voice: 'alloy', // VOZ CONSISTENTE (nova tem bugs)
       input: assistantResponse,
       response_format: 'mp3',
-      speed: 1.0,
+      speed: 1.05, // Levemente mais rápido
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());

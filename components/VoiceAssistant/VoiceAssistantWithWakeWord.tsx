@@ -100,7 +100,6 @@ export function VoiceAssistantWithWakeWord({
       return;
     }
 
-    // Evitar múltiplas tentativas de restart simultâneas
     const now = Date.now();
     if (now - lastRestartAttempt.current < 500) {
       return;
@@ -108,7 +107,6 @@ export function VoiceAssistantWithWakeWord({
     lastRestartAttempt.current = now;
 
     if (recognitionRef.current && isListening) {
-      console.log('Reconhecimento já ativo');
       return;
     }
 
@@ -116,14 +114,12 @@ export function VoiceAssistantWithWakeWord({
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      // Configurações otimizadas
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'pt-BR';
-      recognition.maxAlternatives = 3; // Melhor precisão
+      recognition.maxAlternatives = 3;
 
       recognition.onstart = () => {
-        console.log('🎤 Reconhecimento ATIVO');
         setIsListening(true);
         setError('');
       };
@@ -131,8 +127,6 @@ export function VoiceAssistantWithWakeWord({
       recognition.onresult = (event: any) => {
         const current = event.resultIndex;
         const transcript = event.results[current][0].transcript.toLowerCase().trim();
-        
-        console.log('Detectado:', transcript);
         
         if (conversationActive) {
           const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
@@ -145,17 +139,13 @@ export function VoiceAssistantWithWakeWord({
         if (!conversationActive && !isRecording && !isProcessing && !isPlayingAudio) {
           const detectedWakeWord = wakeWords.some(word => transcript.includes(word));
           if (detectedWakeWord) {
-            console.log('✅ Palavra de ativação!');
             activateConversation();
           }
         }
       };
 
       recognition.onerror = (event: any) => {
-        console.error('Erro reconhecimento:', event.error);
-        
-        if (event.error === 'no-speech' || event.error === 'audio-capture') {
-          // Ignorar - são normais
+        if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
           return;
         }
         
@@ -164,31 +154,21 @@ export function VoiceAssistantWithWakeWord({
           setPermissionGranted(false);
           return;
         }
-        
-        if (event.error === 'aborted') {
-          // Reconhecimento foi parado intencionalmente
-          return;
-        }
       };
 
       recognition.onend = () => {
-        console.log('🔴 Reconhecimento PAROU');
         setIsListening(false);
         
-        // REINICIAR SEMPRE se deve estar ativo
         if (isActiveRef.current && !isRecording && !isProcessing && !isPlayingAudio && permissionGranted) {
-          console.log('⚡ Agendando restart...');
-          
           if (restartTimeoutRef.current) {
             clearTimeout(restartTimeoutRef.current);
           }
           
           restartTimeoutRef.current = setTimeout(() => {
             if (isActiveRef.current && permissionGranted) {
-              console.log('🔄 REINICIANDO...');
               startWakeWordDetection();
             }
-          }, 500); // Reduzido para 500ms
+          }, 500);
         }
       };
 
@@ -196,10 +176,6 @@ export function VoiceAssistantWithWakeWord({
       recognition.start();
       
     } catch (err) {
-      console.error('Erro ao inicializar:', err);
-      setError('Erro ao inicializar reconhecimento');
-      
-      // Retry após erro
       setTimeout(() => {
         if (isActiveRef.current && permissionGranted) {
           startWakeWordDetection();
@@ -229,13 +205,14 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current.pause();
     }
     
-    await playText('Até logo! Se precisar, é só me chamar novamente.');
+    // Despedida rápida
+    await playText('Até logo!');
     
     setTimeout(() => {
       if (isActiveRef.current && permissionGranted) {
         startWakeWordDetection();
       }
-    }, 1000);
+    }, 500);
   }
 
   async function playGreeting() {
@@ -246,7 +223,6 @@ export function VoiceAssistantWithWakeWord({
       setIsPlayingAudio(false);
       startRecording();
     } catch (err: any) {
-      console.error('Erro saudação:', err);
       setIsPlayingAudio(false);
       startRecording();
     }
@@ -288,24 +264,22 @@ export function VoiceAssistantWithWakeWord({
 
   async function startRecording() {
     try {
-      // QUALIDADE MÁXIMA de áudio
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 48000, // Alta qualidade
+          sampleRate: 48000,
         }
       });
       
-      // Usar codec de melhor qualidade disponível
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : 'audio/webm';
       
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        audioBitsPerSecond: 128000, // 128 kbps - alta qualidade
+        audioBitsPerSecond: 128000,
       });
       
       audioChunksRef.current = [];
@@ -319,6 +293,11 @@ export function VoiceAssistantWithWakeWord({
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         stream.getTracks().forEach(track => track.stop());
+        
+        // Mostrar "Processando" IMEDIATAMENTE
+        setIsRecording(false);
+        setIsProcessing(true);
+        
         await processAudio(audioBlob);
       };
 
@@ -326,17 +305,15 @@ export function VoiceAssistantWithWakeWord({
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
 
-      // Detecção de silêncio melhorada
+      // REDUZIDO: Silêncio mais curto para resposta mais rápida
       startSilenceDetection(stream);
 
-      // Timeout máximo de 20 segundos (aumentado)
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           stopRecording();
         }
-      }, 20000);
+      }, 15000);
     } catch (err: any) {
-      console.error('Erro gravação:', err);
       setError('Erro ao gravar: ' + err.message);
       setIsRecording(false);
       setConversationActive(false);
@@ -356,11 +333,11 @@ export function VoiceAssistantWithWakeWord({
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
     microphone.connect(analyser);
-    analyser.fftSize = 2048; // Mais preciso
+    analyser.fftSize = 2048;
 
     let silenceStart = Date.now();
-    const SILENCE_THRESHOLD = 15; // Mais sensível
-    const SILENCE_DURATION = 1500; // 1.5 segundos
+    const SILENCE_THRESHOLD = 15;
+    const SILENCE_DURATION = 1200; // REDUZIDO: 1.2s (era 1.5s)
 
     function checkAudio() {
       if (!isRecording) {
@@ -390,14 +367,10 @@ export function VoiceAssistantWithWakeWord({
   function stopRecording() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
     }
   }
 
   async function processAudio(audioBlob: Blob) {
-    setIsProcessing(true);
-    setError('');
-
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
@@ -449,13 +422,11 @@ export function VoiceAssistantWithWakeWord({
       audio.onerror = () => {
         currentAudioRef.current = null;
         setIsPlayingAudio(false);
-        setError('Erro ao reproduzir');
         startRecording();
       };
 
       await audio.play();
     } catch (err: any) {
-      console.error('Erro processamento:', err);
       setError('Erro: ' + err.message);
       setIsProcessing(false);
       setConversationActive(false);
@@ -471,7 +442,7 @@ export function VoiceAssistantWithWakeWord({
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão do microfone...';
     if (isPlayingAudio) return 'Reproduzindo resposta...';
-    if (isProcessing) return 'Processando sua pergunta...';
+    if (isProcessing) return 'Processando...'; // Texto mais curto
     if (isRecording) return 'Escutando você...';
     if (conversationActive) return 'Pode falar...';
     if (isListening) return `Pronto! Diga: "${wakeWords[0]}"`;
@@ -491,7 +462,6 @@ export function VoiceAssistantWithWakeWord({
   return (
     <div className="w-full max-w-6xl mx-auto">
       <div className="grid md:grid-cols-2 gap-8">
-        {/* COLUNA ESQUERDA - AVATAR (BRANCO) */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200 relative overflow-hidden">
           <div className="relative h-96">
             <AvatarFace
@@ -502,10 +472,8 @@ export function VoiceAssistantWithWakeWord({
           </div>
         </div>
 
-        {/* COLUNA DIREITA - CONTROLES */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200">
           <div className="flex flex-col items-center space-y-6">
-            {/* Indicador */}
             <div className="relative flex items-center justify-center">
               <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
                 <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -514,7 +482,6 @@ export function VoiceAssistantWithWakeWord({
               </div>
             </div>
 
-            {/* Status */}
             <div className="text-center w-full">
               <p className="text-xl font-bold text-gray-900 mb-2">
                 {getStatusMessage()}
@@ -531,7 +498,6 @@ export function VoiceAssistantWithWakeWord({
               )}
             </div>
 
-            {/* Transcrição */}
             {transcript && (
               <div className="w-full p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
                 <p className="text-sm font-semibold text-blue-900 mb-1">Você disse:</p>
@@ -539,7 +505,6 @@ export function VoiceAssistantWithWakeWord({
               </div>
             )}
 
-            {/* Resposta */}
             {response && (
               <div className="w-full p-4 bg-green-50 rounded-xl border-2 border-green-200">
                 <p className="text-sm font-semibold text-green-900 mb-1">Assistente:</p>
@@ -547,7 +512,6 @@ export function VoiceAssistantWithWakeWord({
               </div>
             )}
 
-            {/* Erro */}
             {error && (
               <div className="w-full p-4 bg-red-50 rounded-xl border-2 border-red-200">
                 <p className="text-sm font-semibold text-red-900 mb-1">Erro:</p>
@@ -555,7 +519,6 @@ export function VoiceAssistantWithWakeWord({
               </div>
             )}
 
-            {/* Botão */}
             {conversationActive && !isProcessing && !isPlayingAudio && (
               <button
                 onClick={endConversation}

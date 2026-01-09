@@ -8,6 +8,8 @@ const openai = new OpenAI({
 });
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
@@ -23,7 +25,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    // PARALELIZAR tudo que for possível
+    // FASE 1: Transcrição + Busca empresa (PARALELO)
+    console.log('⚡ Fase 1: Iniciando transcrição + busca');
     const [companyResult, transcriptionResult] = await Promise.all([
       supabase.from('companies').select('id, system_prompt').eq('id', companyId).single(),
       openai.audio.transcriptions.create({
@@ -33,6 +36,7 @@ export async function POST(request: NextRequest) {
         temperature: 0.0,
       })
     ]);
+    console.log(`✅ Fase 1 completa: ${Date.now() - startTime}ms`);
 
     const { data: company, error: companyError } = companyResult;
     
@@ -52,6 +56,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // FASE 2: Buscar/criar conversa + histórico
+    console.log('⚡ Fase 2: Conversa + histórico');
     let conversation;
     let conversationHistory: any[] = [];
 
@@ -65,19 +71,16 @@ export async function POST(request: NextRequest) {
       if (existingConv) {
         conversation = existingConv;
 
-        // REDUZIR histórico para 5 mensagens (mais rápido)
+        // Apenas últimas 3 mensagens (mais rápido)
         const { data: messages } = await supabase
           .from('messages')
           .select('role, content')
           .eq('conversation_id', conversationId)
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(3);
 
         if (messages) {
-          conversationHistory = messages.reverse().map(msg => ({
-            role: msg.role,
-            content: msg.content,
-          }));
+          conversationHistory = messages.reverse();
         }
       }
     }
@@ -86,60 +89,66 @@ export async function POST(request: NextRequest) {
       const newConversationId = randomUUID();
       conversation = { id: newConversationId };
       
-      // Salvar conversa em background (não aguardar)
+      // Background - não aguardar
       supabase.from('conversations').insert({
         id: newConversationId,
         company_id: companyId,
       });
     }
 
-    // Salvar mensagem em background
+    // Background - salvar mensagem usuário
     supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'user',
       content: userMessage,
     });
 
-    // Prompt otimizado para respostas CURTAS e RÁPIDAS
+    console.log(`✅ Fase 2 completa: ${Date.now() - startTime}ms`);
+
+    // FASE 3: Gerar resposta GPT
+    console.log('⚡ Fase 3: GPT');
     const systemPrompt = company.system_prompt || 
-      'Você é um assistente virtual. Responda de forma MUITO BREVE e DIRETA em português brasileiro. Máximo 2 frases.';
+      'Você é um assistente virtual. Seja MUITO breve e direto. Máximo 2 frases curtas.';
 
     const chatMessages = [
-      { role: 'system', content: systemPrompt + ' IMPORTANTE: Seja MUITO conciso e direto.' },
+      { role: 'system', content: systemPrompt + ' Responda em no máximo 2 frases.' },
       ...conversationHistory,
       { role: 'user', content: userMessage },
     ];
 
-    // GPT com tokens REDUZIDOS para resposta mais rápida
     const chatCompletion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: chatMessages as any,
       temperature: 0.7,
-      max_tokens: 150, // MUITO REDUZIDO (era 300)
+      max_tokens: 120, // MUITO CURTO
     });
 
     const assistantResponse = chatCompletion.choices[0]?.message?.content || 
-      'Desculpe, não consegui processar.';
+      'Desculpe, não entendi.';
 
-    // Salvar resposta em background
+    console.log(`✅ Fase 3 completa: ${Date.now() - startTime}ms`);
+
+    // Background - salvar resposta
     supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'assistant',
       content: assistantResponse,
     });
 
-    // TTS ultra-rápido
+    // FASE 4: TTS (VOZ SEMPRE ALLOY)
+    console.log('⚡ Fase 4: TTS');
     const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1', // Modelo rápido
-      voice: 'alloy',
+      model: 'tts-1',
+      voice: 'alloy', // VOZ FIXA
       input: assistantResponse,
       response_format: 'mp3',
-      speed: 1.1, // Levemente mais rápido
+      speed: 1.1,
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+    console.log(`✅ Total: ${Date.now() - startTime}ms`);
 
-    const response = new NextResponse(audioBuffer, {
+    return new NextResponse(audioBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Transcription': encodeURIComponent(userMessage),
@@ -147,10 +156,8 @@ export async function POST(request: NextRequest) {
         'X-Conversation-Id': conversation.id,
       },
     });
-
-    return response;
   } catch (error: any) {
-    console.error('Erro no processamento:', error);
+    console.error('❌ Erro:', error);
     return NextResponse.json(
       { error: 'Erro ao processar áudio', details: error.message },
       { status: 500 }

@@ -30,22 +30,14 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 flex flex-col">
       {/* Header - centralizado */}
-      <div className="w-full py-6 px-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold text-gray-900 mb-1">
-              {company.name}
-            </h1>
-            <p className="text-gray-600 text-lg">
-              Assistente Virtual com Voz
-            </p>
-          </div>
-          <Link
-            href="https://itend.com.br/login"
-            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition shadow-md font-semibold whitespace-nowrap"
-          >
-            Editar Meu Assistente
-          </Link>
+      <div className="w-full py-8 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            {company.name}
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Assistente Virtual com Voz
+          </p>
         </div>
       </div>
 
@@ -88,16 +80,30 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="text-center border-t border-gray-200 pt-4">
-            <p className="text-sm text-gray-500 mb-2">
-              Powered by iTend
-            </p>
+          {/* Footer com Links */}
+          <div className="text-center border-t border-gray-200 pt-6">
+            <div className="flex items-center justify-center space-x-4 mb-3">
+              <Link
+                href="https://itend.com.br"
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium transition"
+              >
+                Crie seu próprio assistente de voz
+              </Link>
+              <span className="text-gray-400">|</span>
+              <Link
+                href="https://itend.com.br/login"
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium transition"
+              >
+                Editar Meu Assistente
+              </Link>
+            </div>
             <Link
-              href="https://itend.com.br"
-              className="text-sm text-orange-600 hover:text-orange-700 font-medium transition"
+              href="https://bigcorps.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-500 hover:text-gray-700 transition"
             >
-              Crie seu próprio assistente de voz →
+              iTend - Desenvolvido por Bigcorps
             </Link>
           </div>
         </div>

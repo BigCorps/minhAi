@@ -14,7 +14,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
   const blinkIntervalRef = useRef<any>(null);
   const mouthIntervalRef = useRef<any>(null);
 
-  // Piscadas automáticas (Lógica mantida)
+  // Piscadas automáticas
   useEffect(() => {
     const blink = () => {
       setIsBlinking(true);
@@ -36,7 +36,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     };
   }, []);
 
-  // Animação da boca (Lógica mantida)
+  // Animação da boca
   useEffect(() => {
     if (isSpeaking) {
       mouthIntervalRef.current = setInterval(() => {
@@ -51,55 +51,46 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     };
   }, [isSpeaking]);
 
-  // Cores atualizadas: Padrão Branco, estados com cores vivas
+  // Cores: Padrão CINZA CLARO, estados com cores vivas
   const getBackgroundColor = () => {
-    if (isSpeaking) return '#34d399'; // Verde Esmeralda (Falando)
+    if (isSpeaking) return '#34d399'; // Verde (Falando)
     if (isProcessing) return '#fbbf24'; // Amarelo (Processando)
     if (isListening) return '#60a5fa'; // Azul (Ouvindo)
-    return '#ffffff'; // Branco (Padrão)
+    return '#e5e7eb'; // CINZA CLARO (Padrão)
   };
 
-  // Define a cor dos traços (Olhos/Boca)
-  // Se o fundo for muito escuro, poderíamos mudar para branco, 
-  // mas com essas cores acima, preto funciona bem.
   const featureColor = '#000000';
 
   return (
-    // Container externo agora pode ser transparente ou ter a cor do card pai
     <div className="flex items-center justify-center h-full w-full">
       <div 
-        className="relative w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-500 shadow-xl border-4 border-gray-100"
+        className="relative w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-500 shadow-lg"
         style={{ backgroundColor: getBackgroundColor() }}
       >
         <svg
           width="180"
           height="180"
-          viewBox="0 0 64 64" // Grid de 64x64 para mais detalhes ("mais bits")
+          viewBox="0 0 64 64"
           className="transition-all duration-300"
-          shapeRendering="crispEdges" // Garante o visual Pixel Art nítido
+          shapeRendering="crispEdges"
         >
-          {/* --- OLHO ESQUERDO --- */}
+          {/* OLHO ESQUERDO */}
           <g transform="translate(14, 20)">
             {isBlinking ? (
-              // Olho Fechado (Linha pixelada)
               <rect x="0" y="6" width="14" height="2" fill={featureColor} />
             ) : (
-              // Olho Aberto "Kawaii"
               <>
-                {/* Base do olho (arredondado pixelado) */}
                 <path 
                   d="M2,0 H12 V2 H14 V12 H12 V14 H2 V12 H0 V2 H2 Z" 
                   fill={featureColor} 
                 />
-                {/* Brilho grande (Canto superior esquerdo) */}
                 <rect x="2" y="2" width="4" height="4" fill="white" />
-                {/* Brilho pequeno (Canto direito) */}
                 <rect x="9" y="8" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* --- OLHO DIREITO --- */}
+          {/* OLHO DIREITO */}
           <g transform="translate(36, 20)">
             {isBlinking ? (
                <rect x="0" y="6" width="14" height="2" fill={featureColor} />
@@ -115,20 +106,16 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
             )}
           </g>
 
-          {/* --- BOCA --- */}
+          {/* BOCA */}
           <g transform="translate(22, 40)">
             {isSpeaking && mouthOpen ? (
-              // Boca Falando (Quadrado aberto arredondado)
               <path 
                 d="M4,0 H16 V2 H18 V10 H16 V12 H4 V10 H2 V2 H4 Z" 
                 fill={featureColor} 
               />
             ) : isProcessing ? (
-              // Boca Pensando (Linha pequena reta)
               <rect x="6" y="4" width="8" height="2" fill={featureColor} />
             ) : (
-              // Sorriso (Estilo do print 2)
-              // Formato de "tigela" pixelada
               <path 
                 d="M0,0 H4 V2 H16 V0 H20 V4 H18 V6 H16 V8 H4 V6 H2 V4 H0 Z" 
                 fill={featureColor} 
@@ -137,9 +124,8 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           </g>
         </svg>
 
-        {/* Label do estado (Opcional - ajustado para o novo design) */}
+        {/* Label do estado */}
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-           {/* Só mostra badge se não estiver no estado padrão (branco) */}
            {(isListening || isSpeaking || isProcessing) && (
             <span className="px-3 py-1 bg-black/20 text-white text-xs rounded-full font-bold backdrop-blur-sm">
               {isSpeaking && 'FALANDO'}

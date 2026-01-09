@@ -174,7 +174,7 @@ export default function EditarEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
-                URL pública: <strong>gerente.iapos.com.br/assistente/{company.slug}</strong>
+                URL pública: <strong>itend.com.br/oi/{company.slug}</strong>
               </p>
             </div>
 

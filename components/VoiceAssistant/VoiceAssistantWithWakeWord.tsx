@@ -207,7 +207,6 @@ export function VoiceAssistantWithWakeWord({
     setTranscript('');
     setResponse('');
     
-    // PARAR ÁUDIO ATUAL
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
@@ -223,14 +222,10 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function playGreeting() {
-    setIsPlayingAudio(true);
-    
     try {
       await playText(greetingMessage);
-      setIsPlayingAudio(false);
       startRecording();
     } catch (err: any) {
-      setIsPlayingAudio(false);
       startRecording();
     }
   }
@@ -238,7 +233,7 @@ export function VoiceAssistantWithWakeWord({
   async function playText(text: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
-        // PARAR QUALQUER ÁUDIO ANTERIOR (evita duplicação)
+        // Parar qualquer áudio anterior
         if (currentAudioRef.current) {
           currentAudioRef.current.pause();
           currentAudioRef.current = null;
@@ -258,18 +253,30 @@ export function VoiceAssistantWithWakeWord({
         
         currentAudioRef.current = audio;
 
+        // SINCRONIZAR BOCA: só ativar quando áudio começar a tocar
+        audio.onplay = () => {
+          setIsPlayingAudio(true);
+        };
+
         audio.onended = () => {
+          setIsPlayingAudio(false);
           currentAudioRef.current = null;
           resolve();
         };
 
         audio.onerror = () => {
+          setIsPlayingAudio(false);
           currentAudioRef.current = null;
           reject(new Error('Erro ao reproduzir'));
         };
 
+        audio.onpause = () => {
+          setIsPlayingAudio(false);
+        };
+
         await audio.play();
       } catch (err) {
+        setIsPlayingAudio(false);
         reject(err);
       }
     });
@@ -317,7 +324,7 @@ export function VoiceAssistantWithWakeWord({
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
 
-      // Detecção de silêncio RÁPIDA (1 segundo)
+      // SILÊNCIO 0.2s (200ms) - TESTE ULTRA RÁPIDO
       startSilenceDetection(stream);
 
       setTimeout(() => {
@@ -339,7 +346,6 @@ export function VoiceAssistantWithWakeWord({
   }
 
   function startSilenceDetection(stream: MediaStream) {
-    // Fechar contexto anterior se existir
     if (audioContextRef.current) {
       audioContextRef.current.close();
     }
@@ -355,8 +361,8 @@ export function VoiceAssistantWithWakeWord({
     analyser.fftSize = 2048;
 
     let silenceStart = Date.now();
-    const SILENCE_THRESHOLD = 12; // Mais sensível
-    const SILENCE_DURATION = 1000; // 1 SEGUNDO (era 1200ms)
+    const SILENCE_THRESHOLD = 10; // MUITO sensível
+    const SILENCE_DURATION = 200; // 0.2 SEGUNDOS - TESTE
 
     function checkAudio() {
       if (!isRecording) {
@@ -425,29 +431,38 @@ export function VoiceAssistantWithWakeWord({
         return;
       }
 
-      // GARANTIR que não há áudio tocando antes
+      // Garantir que não há áudio tocando
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
       }
 
-      setIsPlayingAudio(true);
+      // Tocar resposta
       const responseAudioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(responseAudioBlob);
       const audio = new Audio(audioUrl);
       
       currentAudioRef.current = audio;
       
+      // SINCRONIZAR BOCA com evento onplay
+      audio.onplay = () => {
+        setIsPlayingAudio(true);
+      };
+      
       audio.onended = () => {
-        currentAudioRef.current = null;
         setIsPlayingAudio(false);
+        currentAudioRef.current = null;
         startRecording();
       };
 
       audio.onerror = () => {
-        currentAudioRef.current = null;
         setIsPlayingAudio(false);
+        currentAudioRef.current = null;
         startRecording();
+      };
+
+      audio.onpause = () => {
+        setIsPlayingAudio(false);
       };
 
       await audio.play();

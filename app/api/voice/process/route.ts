@@ -47,21 +47,36 @@ function normalizeText(text: string): string {
 }
 
 async function findMatchingFAQ(supabase: any, companyId: string, question: string) {
-  const { data: faqs } = await supabase
+  console.log('=== FAQ MATCHING DEBUG ===');
+  console.log('🏢 Company ID:', companyId);
+  console.log('❓ Pergunta:', question);
+  
+  const { data: faqs, error } = await supabase
     .from('faq_entries')
     .select('*')
     .eq('company_id', companyId)
     .eq('is_active', true);
 
+  console.log('📊 FAQs query result:', { 
+    count: faqs?.length || 0, 
+    error: error?.message 
+  });
+
   if (!faqs || faqs.length === 0) {
-    console.log('📭 Sem FAQs');
+    console.log('❌ SEM FAQs cadastradas!');
     return null;
   }
 
-  console.log(`🔍 ${faqs.length} FAQs`);
+  console.log('📋 FAQs disponíveis:');
+  faqs.forEach((faq, i) => {
+    console.log(`  ${i+1}. "${faq.question}"`);
+  });
 
   const questionNormalized = normalizeText(question);
   const questionWords = questionNormalized.split(' ').filter(w => w.length > 2);
+  
+  console.log('🔤 Pergunta normalizada:', questionNormalized);
+  console.log('🔤 Palavras:', questionWords);
   
   let bestMatch: any = null;
   let bestScore = 0;
@@ -128,9 +143,13 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   }
 
   if (bestMatch) {
-    console.log(`✅ "${bestMatch.question}" ${bestMethod}`);
+    console.log(`✅ MATCH ENCONTRADO!`);
+    console.log(`   Pergunta FAQ: "${bestMatch.question}"`);
+    console.log(`   Score: ${(bestScore * 100).toFixed(1)}%`);
+    console.log(`   Método: ${bestMethod}`);
   } else {
-    console.log('❌ Sem match');
+    console.log('❌ NENHUM MATCH (threshold mínimo: 45%)');
+    console.log('🤖 Vai usar GPT');
   }
 
   return bestMatch;

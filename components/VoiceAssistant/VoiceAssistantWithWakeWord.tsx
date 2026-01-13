@@ -322,6 +322,8 @@ export function VoiceAssistantWithWakeWord({
     const recordStartTime = Date.now();
     
     try {
+      let vadInstance: any = null;
+      
       // Função auxiliar para criar VAD
       const createVAD = async (useCDN: boolean = false) => {
         const config: any = {
@@ -335,7 +337,7 @@ export function VoiceAssistantWithWakeWord({
             console.log(useCDN ? `⚡ Fim (CDN)! ${recordTime}ms` : `⚡ Fim! ${recordTime}ms`);
             
             setIsRecording(false);
-            vad.pause();
+            if (vadInstance) vadInstance.pause();
             
             const wavBlob = floatArrayToWav(audio);
             
@@ -365,18 +367,17 @@ export function VoiceAssistantWithWakeWord({
       };
 
       // Tentar local primeiro, depois CDN
-      let vad;
       try {
-        vad = await createVAD(false);
+        vadInstance = await createVAD(false);
         console.log('✅ VAD local');
       } catch (localError) {
         console.log('⚠️ Local falhou, tentando CDN...');
-        vad = await createVAD(true);
+        vadInstance = await createVAD(true);
         console.log('✅ VAD CDN');
       }
 
-      vadRef.current = vad;
-      await vad.start();
+      vadRef.current = vadInstance;
+      await vadInstance.start();
       console.log('🎧 VAD ativo');
       
     } catch (err: any) {

@@ -24,6 +24,7 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [conversationActive, setConversationActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [lastTranscript, setLastTranscript] = useState('');
 
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -53,7 +54,9 @@ export function VoiceAssistantWithWakeWord({
     'finalizar',
     'pode parar',
     'pare',
-    'desligar'
+    'desligar',
+    'adeus',
+    'valeu',
   ];
 
   useEffect(() => {
@@ -186,7 +189,7 @@ export function VoiceAssistantWithWakeWord({
         if (conversationActive) {
           const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
           if (hasEndCommand) {
-            console.log('🔚 Encerrando');
+            console.log('🔚 Comando encerrar:', transcript);
             endConversation();
             return;
           }
@@ -199,7 +202,7 @@ export function VoiceAssistantWithWakeWord({
           });
           
           if (detectedWakeWord) {
-            console.log('✅ Wake word detectada!');
+            console.log('✅ Wake word:', transcript);
             activateConversation();
           }
         }
@@ -259,7 +262,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function endConversation() {
-    console.log('🔴 Encerrando');
+    console.log('🔴 Encerrando conversa');
     setConversationActive(false);
     
     if (currentAudioRef.current) {
@@ -267,13 +270,23 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current = null;
     }
     
-    await playText('Até logo!');
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
     
+    try {
+      await playText('Até logo!');
+    } catch (e) {
+      console.log('Erro despedida:', e);
+    }
+    
+    // Voltar para detecção de wake word
     setTimeout(() => {
       if (isActiveRef.current && permissionGranted) {
+        console.log('🔄 Reiniciando detecção wake word');
         startWakeWordDetection();
       }
-    }, 500);
+    }, 1000);
   }
 
   async function playGreeting() {
@@ -333,6 +346,13 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startRecording() {
+    // Verificar se último transcript foi comando de encerramento
+    if (lastTranscript && endCommands.some(cmd => lastTranscript.includes(cmd))) {
+      console.log('🛑 Última frase foi despedida, não gravar');
+      await endConversation();
+      return;
+    }
+
     console.log('🎙️ Gravando');
     const recordStartTime = Date.now();
     
@@ -425,12 +445,12 @@ export function VoiceAssistantWithWakeWord({
     let hasSpoken = false;
     let lastSoundTime = Date.now();
     
-    // CONFIGURAÇÕES ULTRA-RÁPIDAS
-    const SILENCE_THRESHOLD = 15; // Um pouco mais sensível
-    const SILENCE_DURATION = 300; // 0.3 SEGUNDOS - ULTRA RÁPIDO
-    const MIN_SPEECH_DURATION = 200; // Mínimo 0.2s de fala
+    // ULTRA-RÁPIDO: 200ms (0.2s)
+    const SILENCE_THRESHOLD = 15;
+    const SILENCE_DURATION = 100; // 0.2 SEGUNDOS ⚡⚡⚡
+    const MIN_SPEECH_DURATION = 150; // Mínimo 0.15s
 
-    console.log(`🎯 Detecção: ${SILENCE_DURATION}ms silêncio`);
+    console.log(`🎯 Silêncio: ${SILENCE_DURATION}ms`);
 
     function checkAudio() {
       if (!isRecording) {
@@ -444,12 +464,10 @@ export function VoiceAssistantWithWakeWord({
       const now = Date.now();
 
       if (average > SILENCE_THRESHOLD) {
-        // Tem som
         hasSpoken = true;
         lastSoundTime = now;
         silenceStart = now;
       } else if (hasSpoken) {
-        // Silêncio após fala
         const silenceDuration = now - lastSoundTime;
         const totalSpeechTime = now - silenceStart;
         
@@ -499,8 +517,16 @@ export function VoiceAssistantWithWakeWord({
       const newConversationId = response.headers.get('X-Conversation-Id');
       const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
       const apiTime = response.headers.get('X-Processing-Time');
+      const transcript = response.headers.get('X-Transcription');
 
-      console.log(`⏱️ Total Frontend: ${processingTime}ms`);
+      // Salvar transcript para verificar comando de encerramento
+      if (transcript) {
+        const decodedTranscript = decodeURIComponent(transcript);
+        setLastTranscript(decodedTranscript.toLowerCase());
+        console.log('📝 Transcript:', decodedTranscript);
+      }
+
+      console.log(`⏱️ Frontend: ${processingTime}ms`);
       console.log(`⏱️ API: ${apiTime}ms`);
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
 
@@ -522,15 +548,23 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current = audio;
       
       audio.onplay = () => {
-        const totalTime = Date.now() - startTime + processingTime;
-        console.log(`✅ RESPOSTA TOTAL: ${totalTime}ms`);
+        const totalTime = Date.now() - startTime;
+        console.log(`✅ TOTAL: ${totalTime}ms`);
         setIsPlayingAudio(true);
       };
       
       audio.onended = () => {
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
-        startRecording();
+        
+        // Verificar se foi comando de encerramento
+        if (lastTranscript && endCommands.some(cmd => lastTranscript.includes(cmd))) {
+          console.log('👋 Detectado despedida, encerrando...');
+          endConversation();
+        } else {
+          // Continuar conversação
+          startRecording();
+        }
       };
 
       audio.onerror = (e) => {
@@ -602,14 +636,6 @@ export function VoiceAssistantWithWakeWord({
             </p>
             {error && (
               <p className="text-red-400 text-sm">{error}</p>
-            )}
-            {(isProcessing || isRecording) && (
-              <button
-                onClick={forceReset}
-                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
-              >
-                Reiniciar
-              </button>
             )}
           </div>
         </div>

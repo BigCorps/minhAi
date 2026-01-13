@@ -322,41 +322,65 @@ export function VoiceAssistantWithWakeWord({
     const recordStartTime = Date.now();
     
     try {
-      // Configurar VAD - APENAS parâmetros suportados
-      const vad = await MicVAD.new({
-        onSpeechStart: () => {
-          console.log('🗣️ Fala');
-          setIsRecording(true);
-        },
-        
-        onSpeechEnd: async (audio: Float32Array) => {
-          const recordTime = Date.now() - recordStartTime;
-          console.log(`⚡ Fim! (${recordTime}ms)`);
+      // Função auxiliar para criar VAD
+      const createVAD = async (useCDN: boolean = false) => {
+        const config: any = {
+          onSpeechStart: () => {
+            console.log(useCDN ? '🗣️ Fala (CDN)' : '🗣️ Fala');
+            setIsRecording(true);
+          },
           
-          setIsRecording(false);
-          vad.pause();
+          onSpeechEnd: async (audio: Float32Array) => {
+            const recordTime = Date.now() - recordStartTime;
+            console.log(useCDN ? `⚡ Fim (CDN)! ${recordTime}ms` : `⚡ Fim! ${recordTime}ms`);
+            
+            setIsRecording(false);
+            vad.pause();
+            
+            const wavBlob = floatArrayToWav(audio);
+            
+            setIsProcessing(true);
+            await processAudio(wavBlob);
+          },
           
-          const wavBlob = floatArrayToWav(audio);
+          positiveSpeechThreshold: 0.5,
+          negativeSpeechThreshold: 0.35,
           
-          setIsProcessing(true);
-          await processAudio(wavBlob);
-        },
-        
-        // Apenas thresholds (sem frames - deprecated)
-        positiveSpeechThreshold: 0.5,
-        negativeSpeechThreshold: 0.35,
-        
-        onVADMisfire: () => {
-          console.log('⚠️ Misfire');
-        },
-      });
+          onVADMisfire: () => {
+            console.log('⚠️ Misfire');
+          },
+        };
+
+        // Se usar CDN, adicionar URLs
+        if (useCDN) {
+          console.log('🌐 Carregando de CDN...');
+          config.modelURL = 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/silero_vad.onnx';
+          config.workletURL = 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.7/dist/vad.worklet.bundle.min.js';
+          config.ortConfig = {
+            wasmPaths: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/',
+          };
+        }
+
+        return await MicVAD.new(config);
+      };
+
+      // Tentar local primeiro, depois CDN
+      let vad;
+      try {
+        vad = await createVAD(false);
+        console.log('✅ VAD local');
+      } catch (localError) {
+        console.log('⚠️ Local falhou, tentando CDN...');
+        vad = await createVAD(true);
+        console.log('✅ VAD CDN');
+      }
 
       vadRef.current = vad;
       await vad.start();
-      console.log('✅ VAD ativo');
+      console.log('🎧 VAD ativo');
       
     } catch (err: any) {
-      console.error('Erro VAD:', err);
+      console.error('❌ VAD falhou:', err.message);
       setError('Erro VAD');
       setIsRecording(false);
       setConversationActive(false);

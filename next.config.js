@@ -1,23 +1,68 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Headers CORS
+  // Otimizações experimentais
+  experimental: {
+    optimizePackageImports: ['@ricky0123/vad-web'],
+  },
+
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Fallbacks necessários para browser
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+      };
+
+      // Regra para arquivos .onnx (modelo VAD)
+      config.module.rules.push({
+        test: /\.onnx$/,
+        type: 'asset/resource',
+      });
+
+      // Regra para arquivos .wasm (runtime)
+      config.module.rules.push({
+        test: /\.wasm$/,
+        type: 'asset/resource',
+      });
+    }
+
+    return config;
+  },
+
+  // Headers para servir assets corretamente
   async headers() {
     return [
       {
-        source: '/api/:path*',
+        source: '/:path*.onnx',
         headers: [
+          { key: 'Content-Type', value: 'application/octet-stream' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' }
-        ]
-      }
+        ],
+      },
+      {
+        source: '/:path*.wasm',
+        headers: [
+          { key: 'Content-Type', value: 'application/wasm' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+        ],
+      },
+      {
+        source: '/:path*.mjs',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+        ],
+      },
     ];
   },
-  
-  // Otimizações
-  compress: true,
-  poweredByHeader: false,
-  reactStrictMode: true,
+
+  // Transpile packages necessários
+  transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
 };
 
 module.exports = nextConfig;

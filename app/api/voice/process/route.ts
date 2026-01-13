@@ -68,7 +68,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   }
 
   console.log('📋 FAQs disponíveis:');
-  faqs.forEach((faq, i) => {
+  faqs.forEach((faq: any, i: number) => {
     console.log(`  ${i+1}. "${faq.question}"`);
   });
 
@@ -164,11 +164,41 @@ export async function POST(request: NextRequest) {
     const companyId = formData.get('companyId') as string;
     const conversationId = formData.get('conversationId') as string | null;
 
+    console.log('📊 Áudio:', {
+      size: audioFile?.size || 0,
+      type: audioFile?.type || 'unknown',
+      name: audioFile?.name || 'unknown'
+    });
+
     if (!audioFile || !companyId) {
       return NextResponse.json(
         { error: 'Áudio e ID obrigatórios' },
         { status: 400 }
       );
+    }
+
+    // CRÍTICO: Rejeitar áudio muito pequeno (corrompido/vazio)
+    if (audioFile.size < 3000) {
+      console.log('❌ Áudio muito pequeno:', audioFile.size, 'bytes');
+      
+      // Gerar áudio de erro
+      const errorTTS = await openai.audio.speech.create({
+        model: 'tts-1',
+        voice: 'nova',
+        input: 'Não consegui te ouvir. Pode repetir mais alto?',
+        speed: 1.15,
+      });
+      
+      const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
+      
+      return new Response(errorBuffer, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'X-Transcription': encodeURIComponent('[áudio inválido]'),
+          'X-Used-FAQ': 'false',
+          'X-Processing-Time': String(Date.now() - startTime),
+        },
+      });
     }
 
     const supabase = createClient();

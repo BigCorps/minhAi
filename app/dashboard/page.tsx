@@ -29,6 +29,14 @@ export default async function DashboardPage() {
 
   const totalConversations = conversations?.length || 0;
 
+  // Buscar total de FAQs
+  const { data: faqs } = await supabase
+    .from('faq_entries')
+    .select('id')
+    .eq('is_active', true);
+
+  const totalFAQs = faqs?.length || 0;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
@@ -62,7 +70,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Link
             href="/dashboard/empresas"
             className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
@@ -80,6 +88,26 @@ export default async function DashboardPage() {
             </div>
             <p className="text-gray-600">
               Gerenciar empresas, palavras de ativação e treinamentos.
+            </p>
+          </Link>
+
+          <Link
+            href="/dashboard/faqs"
+            className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
+          >
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Respostas Rápidas</h3>
+                <p className="text-sm text-gray-500">{totalFAQs} {totalFAQs === 1 ? 'FAQ ativa' : 'FAQs ativas'}</p>
+              </div>
+            </div>
+            <p className="text-gray-600">
+              Configure respostas automáticas para perguntas frequentes
             </p>
           </Link>
 

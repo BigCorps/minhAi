@@ -66,7 +66,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     // Verificar se contém palavras-chave
     const faqWords = faq.question.toLowerCase().split(' ');
     const questionWords = questionLower.split(' ');
-    const commonWords = faqWords.filter(word => 
+    const commonWords = faqWords.filter((word: string) => 
       word.length > 3 && questionWords.includes(word)
     );
     

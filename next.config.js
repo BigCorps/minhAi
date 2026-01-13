@@ -1,13 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Otimizações experimentais
+  // Silenciar warning webpack vs turbopack
+  turbopack: {},
+
+  // Otimizações
   experimental: {
     optimizePackageImports: ['@ricky0123/vad-web'],
   },
 
+  // Webpack ainda necessário para .onnx e .wasm
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Fallbacks necessários para browser
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -16,13 +19,11 @@ const nextConfig = {
         crypto: false,
       };
 
-      // Regra para arquivos .onnx (modelo VAD)
       config.module.rules.push({
         test: /\.onnx$/,
         type: 'asset/resource',
       });
 
-      // Regra para arquivos .wasm (runtime)
       config.module.rules.push({
         test: /\.wasm$/,
         type: 'asset/resource',
@@ -32,7 +33,7 @@ const nextConfig = {
     return config;
   },
 
-  // Headers para servir assets corretamente
+  // Headers para assets
   async headers() {
     return [
       {
@@ -61,7 +62,7 @@ const nextConfig = {
     ];
   },
 
-  // Transpile packages necessários
+  // Transpile packages
   transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
 };
 

@@ -7,13 +7,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Função melhorada de similaridade
+// Funções de similaridade...
 function similarity(s1: string, s2: string): number {
   const longer = s1.length > s2.length ? s1 : s2;
   const shorter = s1.length > s2.length ? s2 : s1;
-  
   if (longer.length === 0) return 1.0;
-  
   const editDistance = levenshteinDistance(longer, shorter);
   return (longer.length - editDistance) / longer.length;
 }
@@ -39,7 +37,6 @@ function levenshteinDistance(s1: string, s2: string): number {
   return costs[s2.length];
 }
 
-// Normalizar texto (remover acentos, pontuação)
 function normalizeText(text: string): string {
   return text
     .toLowerCase()
@@ -49,7 +46,6 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-// Buscar FAQ com matching melhorado
 async function findMatchingFAQ(supabase: any, companyId: string, question: string) {
   const { data: faqs } = await supabase
     .from('faq_entries')
@@ -58,11 +54,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     .eq('is_active', true);
 
   if (!faqs || faqs.length === 0) {
-    console.log('📭 Nenhuma FAQ');
+    console.log('📭 Sem FAQs');
     return null;
   }
 
-  console.log(`🔍 Buscando em ${faqs.length} FAQs...`);
+  console.log(`🔍 ${faqs.length} FAQs`);
 
   const questionNormalized = normalizeText(question);
   const questionWords = questionNormalized.split(' ').filter(w => w.length > 2);
@@ -75,23 +71,20 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     let score = 0;
     let method = '';
     
-    // MÉTODO 1: Similaridade pergunta principal
     const mainSimilarity = similarity(questionNormalized, normalizeText(faq.question));
     if (mainSimilarity > score) {
       score = mainSimilarity;
-      method = `main (${(mainSimilarity * 100).toFixed(0)}%)`;
+      method = `main(${(mainSimilarity * 100).toFixed(0)}%)`;
     }
     
-    // MÉTODO 2: Similaridade variações
     for (const variation of faq.variations || []) {
       const varSimilarity = similarity(questionNormalized, normalizeText(variation));
       if (varSimilarity > score) {
         score = varSimilarity;
-        method = `var "${variation}" (${(varSimilarity * 100).toFixed(0)}%)`;
+        method = `var(${(varSimilarity * 100).toFixed(0)}%)`;
       }
     }
     
-    // MÉTODO 3: Palavras-chave
     const faqWords = normalizeText(faq.question).split(' ').filter(w => w.length > 2);
     const commonWords = questionWords.filter(word => 
       faqWords.some(faqWord => 
@@ -103,33 +96,31 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       const keywordScore = (commonWords.length / Math.max(questionWords.length, faqWords.length)) * 0.8;
       if (keywordScore > score) {
         score = keywordScore;
-        method = `keywords [${commonWords.join(',')}] (${(keywordScore * 100).toFixed(0)}%)`;
+        method = `key(${(keywordScore * 100).toFixed(0)}%)`;
       }
     }
     
-    // MÉTODO 4: Contém frase
     if (questionNormalized.includes(normalizeText(faq.question)) || 
         normalizeText(faq.question).includes(questionNormalized)) {
       const containsScore = 0.9;
       if (containsScore > score) {
         score = containsScore;
-        method = 'contains (90%)';
+        method = 'contains(90%)';
       }
     }
     
-    // MÉTODO 5: Variações contém
     for (const variation of faq.variations || []) {
       const varNormalized = normalizeText(variation);
       if (questionNormalized.includes(varNormalized) || varNormalized.includes(questionNormalized)) {
         const containsScore = 0.85;
         if (containsScore > score) {
           score = containsScore;
-          method = `contains var "${variation}" (85%)`;
+          method = 'contains-var(85%)';
         }
       }
     }
 
-    if (score > bestScore && score > 0.45) { // Threshold 45%
+    if (score > bestScore && score > 0.45) {
       bestScore = score;
       bestMatch = faq;
       bestMethod = method;
@@ -137,10 +128,9 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   }
 
   if (bestMatch) {
-    console.log(`✅ FAQ: "${bestMatch.question}"`);
-    console.log(`   ${bestMethod} - ${(bestScore * 100).toFixed(1)}%`);
+    console.log(`✅ "${bestMatch.question}" ${bestMethod}`);
   } else {
-    console.log('❌ Sem FAQ');
+    console.log('❌ Sem match');
   }
 
   return bestMatch;
@@ -157,23 +147,24 @@ export async function POST(request: NextRequest) {
 
     if (!audioFile || !companyId) {
       return NextResponse.json(
-        { error: 'Áudio e ID da empresa são obrigatórios' },
+        { error: 'Áudio e ID obrigatórios' },
         { status: 400 }
       );
     }
 
     const supabase = createClient();
 
-    console.log('⚡ Processando...');
+    console.log('⚡ Iniciando...');
     
-    // FASE 1: Transcrição + Company (PARALELO)
+    // FASE 1: Transcrição TURBO + Company (PARALELO)
     const [companyResult, transcriptionResult] = await Promise.all([
       supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
       openai.audio.transcriptions.create({
         file: audioFile,
-        model: 'whisper-1',
+        model: 'whisper-1', // NOTA: whisper-turbo ainda não disponível, mas quando sair trocar aqui
         language: 'pt',
         temperature: 0.0,
+        prompt: 'Transcrição em português brasileiro. FAQ, horário, preço, localização.', // Context hint
       })
     ]);
 
@@ -181,13 +172,13 @@ export async function POST(request: NextRequest) {
     const userMessage = (transcriptionResult.text || '').trim();
 
     if (!userMessage || !company) {
-      return NextResponse.json({ error: 'Erro no processamento' }, { status: 400 });
+      return NextResponse.json({ error: 'Erro processamento' }, { status: 400 });
     }
 
     console.log(`👂 "${userMessage}"`);
     console.log(`⏱️ Whisper: ${Date.now() - startTime}ms`);
 
-    // FASE 2: Criar/Buscar Conversation
+    // FASE 2: Conversation
     let conversation: any;
     
     if (conversationId) {
@@ -208,32 +199,29 @@ export async function POST(request: NextRequest) {
         id: newConversationId,
         company_id: companyId,
       });
-      
-      console.log('🆕 Nova conversa');
     }
 
-    // FASE 3: Salvar mensagem usuário
+    // FASE 3: Salvar user message
     await supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'user',
       content: userMessage,
     });
 
-    // FASE 4: Buscar FAQ
+    // FASE 4: FAQ search
     const faqStartTime = Date.now();
     const matchedFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
-    console.log(`⏱️ FAQ Search: ${Date.now() - faqStartTime}ms`);
+    console.log(`⏱️ FAQ: ${Date.now() - faqStartTime}ms`);
 
     let assistantResponse: string;
     let usedFAQ = false;
 
     if (matchedFAQ) {
-      // FAQ ENCONTRADA
+      // FAQ
       assistantResponse = matchedFAQ.answer;
       usedFAQ = true;
-      console.log('⚡ FAQ usada!');
+      console.log('⚡ FAQ!');
 
-      // Atualizar contador
       supabase
         .from('faq_entries')
         .update({
@@ -241,13 +229,12 @@ export async function POST(request: NextRequest) {
           last_used_at: new Date().toISOString(),
         })
         .eq('id', matchedFAQ.id)
-        .then(() => console.log('📊 +1 contador'));
+        .then(() => console.log('📊 +1'));
         
     } else {
-      // SEM FAQ - GPT
+      // GPT
       console.log('🤖 GPT...');
       
-      // Buscar histórico
       let conversationHistory: any[] = [];
       const { data: messages } = await supabase
         .from('messages')
@@ -261,7 +248,7 @@ export async function POST(request: NextRequest) {
       }
 
       const systemPrompt = company.system_prompt || 
-        `Você é o assistente virtual da ${company.name}. Seja profissional, educado e direto. Responda em no máximo 2 frases curtas.`;
+        `Você é assistente da ${company.name}. Seja direto, máximo 2 frases.`;
 
       const chatMessages = [
         { role: 'system', content: systemPrompt },
@@ -274,7 +261,8 @@ export async function POST(request: NextRequest) {
         model: 'gpt-4o-mini',
         messages: chatMessages as any,
         temperature: 0.7,
-        max_tokens: 120,
+        max_tokens: 100, // Reduzido de 120 para 100
+        presence_penalty: 0.1, // Evita repetição
       });
       console.log(`⏱️ GPT: ${Date.now() - gptStartTime}ms`);
 
@@ -282,30 +270,28 @@ export async function POST(request: NextRequest) {
         'Desculpe, não entendi.';
     }
 
-    // FASE 5: Salvar resposta assistente (SEMPRE)
+    // FASE 5: Salvar assistant response
     await supabase.from('messages').insert({
       conversation_id: conversation.id,
       role: 'assistant',
       content: assistantResponse,
     });
-    
-    console.log('💾 Histórico salvo');
 
     // FASE 6: TTS
     const ttsStartTime = Date.now();
     const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1',
+      model: 'tts-1', // Se quiser mais rápido: tts-1-hd é melhor qualidade mas mais lento
       voice: 'alloy',
       input: assistantResponse,
       response_format: 'mp3',
-      speed: 1.1,
+      speed: 1.15, // Aumentado de 1.1 para 1.15 (5% mais rápido)
     });
     console.log(`⏱️ TTS: ${Date.now() - ttsStartTime}ms`);
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
     
     const totalTime = Date.now() - startTime;
-    console.log(`✅ TOTAL: ${totalTime}ms ${usedFAQ ? '⚡' : '🤖'}`);
+    console.log(`✅ ${totalTime}ms ${usedFAQ ? '⚡' : '🤖'}`);
 
     return new NextResponse(audioBuffer, {
       headers: {
@@ -315,12 +301,13 @@ export async function POST(request: NextRequest) {
         'X-Conversation-Id': conversation.id,
         'X-Used-FAQ': usedFAQ ? 'true' : 'false',
         'X-Processing-Time': totalTime.toString(),
+        'Cache-Control': 'no-cache', // Não cachear para ter tempos reais
       },
     });
   } catch (error: any) {
-    console.error('❌ ERRO:', error);
+    console.error('❌', error.message);
     return NextResponse.json(
-      { error: 'Erro ao processar', details: error.message },
+      { error: 'Erro processar', details: error.message },
       { status: 500 }
     );
   }

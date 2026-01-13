@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
+import { MicVAD } from '@ricky0123/vad-web';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -27,16 +28,13 @@ export function VoiceAssistantWithWakeWord({
   const [lastTranscript, setLastTranscript] = useState('');
 
   const recognitionRef = useRef<any>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const vadRef = useRef<any>(null);
   const conversationIdRef = useRef<string | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const restartTimeoutRef = useRef<any>(null);
   const isActiveRef = useRef(true);
   const lastRestartAttempt = useRef<number>(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const recordingTimeoutRef = useRef<any>(null);
-  const stuckTimeoutRef = useRef<any>(null);
+  const recordedChunksRef = useRef<Float32Array[]>([]);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -69,47 +67,23 @@ export function VoiceAssistantWithWakeWord({
     };
   }, []);
 
-  useEffect(() => {
-    if (isProcessing || isRecording) {
-      stuckTimeoutRef.current = setTimeout(() => {
-        console.warn('⚠️ Sistema travado, resetando...');
-        forceReset();
-      }, 10000);
-    } else {
-      if (stuckTimeoutRef.current) {
-        clearTimeout(stuckTimeoutRef.current);
-      }
-    }
-    
-    return () => {
-      if (stuckTimeoutRef.current) {
-        clearTimeout(stuckTimeoutRef.current);
-      }
-    };
-  }, [isProcessing, isRecording]);
-
   function cleanup() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
     }
+    if (vadRef.current) {
+      try {
+        vadRef.current.pause();
+      } catch (e) {}
+    }
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
     }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
-    }
-    if (recordingTimeoutRef.current) {
-      clearTimeout(recordingTimeoutRef.current);
-    }
-    if (stuckTimeoutRef.current) {
-      clearTimeout(stuckTimeoutRef.current);
     }
   }
 
@@ -126,8 +100,8 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current = null;
     }
     
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
+    if (vadRef.current) {
+      vadRef.current.pause();
     }
     
     setTimeout(() => {
@@ -177,7 +151,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.maxAlternatives = 5;
 
       recognition.onstart = () => {
-        console.log('🎤 Detecção ativa');
+        console.log('🎤 Detecção wake word ativa');
         setIsListening(true);
         setError('');
       };
@@ -270,8 +244,8 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current = null;
     }
     
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
+    if (vadRef.current) {
+      vadRef.current.pause();
     }
     
     try {
@@ -280,10 +254,9 @@ export function VoiceAssistantWithWakeWord({
       console.log('Erro despedida:', e);
     }
     
-    // Voltar para detecção de wake word
     setTimeout(() => {
       if (isActiveRef.current && permissionGranted) {
-        console.log('🔄 Reiniciando detecção wake word');
+        console.log('🔄 Reiniciando wake word');
         startWakeWordDetection();
       }
     }, 1000);
@@ -292,10 +265,10 @@ export function VoiceAssistantWithWakeWord({
   async function playGreeting() {
     try {
       await playText(greetingMessage);
-      startRecording();
+      startVADRecording();
     } catch (err: any) {
       console.error('Erro saudação:', err);
-      startRecording();
+      startVADRecording();
     }
   }
 
@@ -345,75 +318,65 @@ export function VoiceAssistantWithWakeWord({
     });
   }
 
-  async function startRecording() {
-    // Verificar se último transcript foi comando de encerramento
-    if (lastTranscript && endCommands.some(cmd => lastTranscript.includes(cmd))) {
-      console.log('🛑 Última frase foi despedida, não gravar');
-      await endConversation();
-      return;
-    }
-
-    console.log('🎙️ Gravando');
+  async function startVADRecording() {
+    console.log('🎤 Iniciando VAD...');
     const recordStartTime = Date.now();
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-        }
+      recordedChunksRef.current = [];
+      
+      // Configurar VAD
+      const vad = await MicVAD.new({
+        // Quando começa a falar
+        onSpeechStart: () => {
+          console.log('🗣️ Fala detectada');
+          setIsRecording(true);
+        },
+        
+        // Quando termina de falar (CHAVE!)
+        onSpeechEnd: async (audio: Float32Array) => {
+          const recordTime = Date.now() - recordStartTime;
+          console.log(`⚡ Fim detectado! (${recordTime}ms)`);
+          
+          setIsRecording(false);
+          
+          // Pausar VAD
+          vad.pause();
+          
+          // Converter para WAV
+          const wavBlob = floatArrayToWav(audio);
+          
+          setIsProcessing(true);
+          await processAudio(wavBlob);
+        },
+        
+        // Frame de áudio recebido (salvar para debugging)
+        onFrameProcessed: (probs: any) => {
+          // Opcional: mostrar probabilidade de fala
+          // console.log('Prob:', probs.isSpeech);
+        },
+        
+        // Configurações de sensibilidade
+        positiveSpeechThreshold: 0.5,    // 50% confiança para INÍCIO
+        negativeSpeechThreshold: 0.35,   // 35% confiança para FIM
+        redemptionFrames: 8,              // Frames para confirmar fim
+        minSpeechFrames: 3,               // Mínimo 3 frames com fala
+        preSpeechPadFrames: 1,            // Padding antes da fala
+        
+        // Callbacks de erro
+        onVADMisfire: () => {
+          console.log('⚠️ VAD misfire (ignorar)');
+        },
       });
+
+      vadRef.current = vad;
       
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
+      // Iniciar detecção
+      await vad.start();
+      console.log('✅ VAD ativo');
       
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        audioBitsPerSecond: 128000,
-      });
-      
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const recordTime = Date.now() - recordStartTime;
-        console.log(`⏱️ Gravação: ${recordTime}ms`);
-        
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (recordingTimeoutRef.current) {
-          clearTimeout(recordingTimeoutRef.current);
-        }
-        
-        setIsRecording(false);
-        setIsProcessing(true);
-        
-        await processAudio(audioBlob);
-      };
-
-      mediaRecorder.start();
-      mediaRecorderRef.current = mediaRecorder;
-      setIsRecording(true);
-
-      startSilenceDetection(stream);
-
-      recordingTimeoutRef.current = setTimeout(() => {
-        console.log('⏱️ Timeout 8s');
-        if (mediaRecorder.state === 'recording') {
-          stopRecording();
-        }
-      }, 8000);
     } catch (err: any) {
-      console.error('Erro gravar:', err);
+      console.error('Erro VAD:', err);
       setError('Erro ao gravar');
       setIsRecording(false);
       setConversationActive(false);
@@ -426,69 +389,48 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  function startSilenceDetection(stream: MediaStream) {
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
-
-    const audioContext = new AudioContext();
-    audioContextRef.current = audioContext;
+  // Converter Float32Array para WAV Blob
+  function floatArrayToWav(audioData: Float32Array): Blob {
+    const sampleRate = 16000; // VAD usa 16kHz
+    const numChannels = 1; // Mono
+    const bitsPerSample = 16;
     
-    const analyser = audioContext.createAnalyser();
-    const microphone = audioContext.createMediaStreamSource(stream);
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    microphone.connect(analyser);
-    analyser.fftSize = 2048;
-
-    let silenceStart = Date.now();
-    let hasSpoken = false;
-    let lastSoundTime = Date.now();
+    const bytesPerSample = bitsPerSample / 8;
+    const blockAlign = numChannels * bytesPerSample;
     
-    // ULTRA-RÁPIDO: 200ms (0.2s)
-    const SILENCE_THRESHOLD = 15;
-    const SILENCE_DURATION = 100; // 0.2 SEGUNDOS ⚡⚡⚡
-    const MIN_SPEECH_DURATION = 150; // Mínimo 0.15s
-
-    console.log(`🎯 Silêncio: ${SILENCE_DURATION}ms`);
-
-    function checkAudio() {
-      if (!isRecording) {
-        audioContext.close();
-        return;
+    const dataLength = audioData.length * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
+    
+    // WAV Header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
       }
-      
-      analyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-
-      const now = Date.now();
-
-      if (average > SILENCE_THRESHOLD) {
-        hasSpoken = true;
-        lastSoundTime = now;
-        silenceStart = now;
-      } else if (hasSpoken) {
-        const silenceDuration = now - lastSoundTime;
-        const totalSpeechTime = now - silenceStart;
-        
-        if (silenceDuration >= SILENCE_DURATION && totalSpeechTime >= MIN_SPEECH_DURATION) {
-          console.log(`🤫 Silêncio: ${silenceDuration}ms`);
-          stopRecording();
-          audioContext.close();
-          return;
-        }
-      }
-
-      requestAnimationFrame(checkAudio);
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true); // fmt chunk size
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataLength, true);
+    
+    // Convert float to int16
+    const offset = 44;
+    for (let i = 0; i < audioData.length; i++) {
+      const sample = Math.max(-1, Math.min(1, audioData[i]));
+      view.setInt16(offset + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
     }
-
-    checkAudio();
-  }
-
-  function stopRecording() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
+    
+    return new Blob([buffer], { type: 'audio/wav' });
   }
 
   async function processAudio(audioBlob: Blob) {
@@ -496,13 +438,13 @@ export function VoiceAssistantWithWakeWord({
     
     try {
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('audio', audioBlob, 'recording.wav');
       formData.append('companyId', companyId);
       if (conversationIdRef.current) {
         formData.append('conversationId', conversationIdRef.current);
       }
 
-      console.log('⚙️ Processando...');
+      console.log('⚙️ Processando API...');
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
@@ -519,11 +461,10 @@ export function VoiceAssistantWithWakeWord({
       const apiTime = response.headers.get('X-Processing-Time');
       const transcript = response.headers.get('X-Transcription');
 
-      // Salvar transcript para verificar comando de encerramento
       if (transcript) {
         const decodedTranscript = decodeURIComponent(transcript);
         setLastTranscript(decodedTranscript.toLowerCase());
-        console.log('📝 Transcript:', decodedTranscript);
+        console.log('📝', decodedTranscript);
       }
 
       console.log(`⏱️ Frontend: ${processingTime}ms`);
@@ -557,13 +498,13 @@ export function VoiceAssistantWithWakeWord({
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         
-        // Verificar se foi comando de encerramento
+        // Verificar comando encerrar
         if (lastTranscript && endCommands.some(cmd => lastTranscript.includes(cmd))) {
-          console.log('👋 Detectado despedida, encerrando...');
+          console.log('👋 Despedida detectada');
           endConversation();
         } else {
-          // Continuar conversação
-          startRecording();
+          // Continuar gravando
+          startVADRecording();
         }
       };
 
@@ -571,7 +512,7 @@ export function VoiceAssistantWithWakeWord({
         console.error('Erro áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
-        startRecording();
+        startVADRecording();
       };
 
       await audio.play();

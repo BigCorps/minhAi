@@ -37,7 +37,6 @@ export function VoiceAssistantWithWakeWord({
   const recordingTimeoutRef = useRef<any>(null);
   const stuckTimeoutRef = useRef<any>(null);
 
-  // Wake words: customizadas + padrão
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
     'oi',
@@ -67,13 +66,12 @@ export function VoiceAssistantWithWakeWord({
     };
   }, []);
 
-  // Auto-reset se ficar preso em "Aguarde" por mais de 10s
   useEffect(() => {
     if (isProcessing || isRecording) {
       stuckTimeoutRef.current = setTimeout(() => {
-        console.warn('⚠️ Sistema travado, forçando reset...');
+        console.warn('⚠️ Sistema travado, resetando...');
         forceReset();
-      }, 10000); // 10 segundos
+      }, 10000);
     } else {
       if (stuckTimeoutRef.current) {
         clearTimeout(stuckTimeoutRef.current);
@@ -113,9 +111,8 @@ export function VoiceAssistantWithWakeWord({
   }
 
   function forceReset() {
-    console.log('🔄 Forçando reset do sistema...');
+    console.log('🔄 Reset forçado');
     
-    // Limpar tudo
     setIsRecording(false);
     setIsProcessing(false);
     setIsPlayingAudio(false);
@@ -130,7 +127,6 @@ export function VoiceAssistantWithWakeWord({
       mediaRecorderRef.current.stop();
     }
     
-    // Reiniciar detecção
     setTimeout(() => {
       if (isActiveRef.current && permissionGranted) {
         startWakeWordDetection();
@@ -175,7 +171,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'pt-BR';
-      recognition.maxAlternatives = 5; // Mais alternativas para melhor detecção
+      recognition.maxAlternatives = 5;
 
       recognition.onstart = () => {
         console.log('🎤 Detecção ativa');
@@ -187,21 +183,17 @@ export function VoiceAssistantWithWakeWord({
         const current = event.resultIndex;
         const transcript = event.results[current][0].transcript.toLowerCase().trim();
         
-        console.log('👂 Ouvi:', transcript);
-        
         if (conversationActive) {
           const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
           if (hasEndCommand) {
-            console.log('🔚 Comando de encerramento');
+            console.log('🔚 Encerrando');
             endConversation();
             return;
           }
         }
 
         if (!conversationActive && !isRecording && !isProcessing && !isPlayingAudio) {
-          // Verificar wake words de forma mais flexível
           const detectedWakeWord = wakeWords.some(word => {
-            // Checar se contém a palavra inteira
             const regex = new RegExp(`\\b${word}\\b`, 'i');
             return regex.test(transcript) || transcript.includes(word);
           });
@@ -214,8 +206,6 @@ export function VoiceAssistantWithWakeWord({
       };
 
       recognition.onerror = (event: any) => {
-        console.log('⚠️ Erro reconhecimento:', event.error);
-        
         if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
           return;
         }
@@ -227,7 +217,6 @@ export function VoiceAssistantWithWakeWord({
       };
 
       recognition.onend = () => {
-        console.log('🔴 Detecção parou');
         setIsListening(false);
         
         if (isActiveRef.current && !isRecording && !isProcessing && !isPlayingAudio && permissionGranted) {
@@ -247,7 +236,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.start();
       
     } catch (err) {
-      console.error('Erro ao iniciar:', err);
+      console.error('Erro iniciar:', err);
       setTimeout(() => {
         if (isActiveRef.current && permissionGranted) {
           startWakeWordDetection();
@@ -344,7 +333,9 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startRecording() {
-    console.log('🎙️ Iniciando gravação');
+    console.log('🎙️ Gravando');
+    const recordStartTime = Date.now();
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -373,7 +364,9 @@ export function VoiceAssistantWithWakeWord({
       };
 
       mediaRecorder.onstop = async () => {
-        console.log('⏹️ Gravação parou');
+        const recordTime = Date.now() - recordStartTime;
+        console.log(`⏱️ Gravação: ${recordTime}ms`);
+        
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         stream.getTracks().forEach(track => track.stop());
         
@@ -394,7 +387,7 @@ export function VoiceAssistantWithWakeWord({
       startSilenceDetection(stream);
 
       recordingTimeoutRef.current = setTimeout(() => {
-        console.log('⏱️ Timeout gravação');
+        console.log('⏱️ Timeout 8s');
         if (mediaRecorder.state === 'recording') {
           stopRecording();
         }
@@ -430,9 +423,14 @@ export function VoiceAssistantWithWakeWord({
 
     let silenceStart = Date.now();
     let hasSpoken = false;
+    let lastSoundTime = Date.now();
     
-    const SILENCE_THRESHOLD = 12;
-    const SILENCE_DURATION = 700; // 0.7s
+    // CONFIGURAÇÕES ULTRA-RÁPIDAS
+    const SILENCE_THRESHOLD = 15; // Um pouco mais sensível
+    const SILENCE_DURATION = 300; // 0.3 SEGUNDOS - ULTRA RÁPIDO
+    const MIN_SPEECH_DURATION = 200; // Mínimo 0.2s de fala
+
+    console.log(`🎯 Detecção: ${SILENCE_DURATION}ms silêncio`);
 
     function checkAudio() {
       if (!isRecording) {
@@ -443,12 +441,20 @@ export function VoiceAssistantWithWakeWord({
       analyser.getByteFrequencyData(dataArray);
       const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
 
+      const now = Date.now();
+
       if (average > SILENCE_THRESHOLD) {
+        // Tem som
         hasSpoken = true;
-        silenceStart = Date.now();
+        lastSoundTime = now;
+        silenceStart = now;
       } else if (hasSpoken) {
-        if (Date.now() - silenceStart > SILENCE_DURATION) {
-          console.log('🤫 Silêncio detectado');
+        // Silêncio após fala
+        const silenceDuration = now - lastSoundTime;
+        const totalSpeechTime = now - silenceStart;
+        
+        if (silenceDuration >= SILENCE_DURATION && totalSpeechTime >= MIN_SPEECH_DURATION) {
+          console.log(`🤫 Silêncio: ${silenceDuration}ms`);
           stopRecording();
           audioContext.close();
           return;
@@ -485,7 +491,6 @@ export function VoiceAssistantWithWakeWord({
       });
 
       const processingTime = Date.now() - startTime;
-      console.log(`⏱️ Processamento: ${processingTime}ms`);
 
       if (!response.ok) {
         throw new Error(`Erro: ${response.status}`);
@@ -493,8 +498,11 @@ export function VoiceAssistantWithWakeWord({
 
       const newConversationId = response.headers.get('X-Conversation-Id');
       const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
+      const apiTime = response.headers.get('X-Processing-Time');
 
-      console.log(usedFAQ ? '⚡ FAQ usada!' : '🤖 OpenAI usada');
+      console.log(`⏱️ Total Frontend: ${processingTime}ms`);
+      console.log(`⏱️ API: ${apiTime}ms`);
+      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
 
       if (newConversationId && newConversationId !== 'new') {
         conversationIdRef.current = newConversationId;
@@ -514,12 +522,12 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current = audio;
       
       audio.onplay = () => {
-        console.log('🔊 Reproduzindo');
+        const totalTime = Date.now() - startTime + processingTime;
+        console.log(`✅ RESPOSTA TOTAL: ${totalTime}ms`);
         setIsPlayingAudio(true);
       };
       
       audio.onended = () => {
-        console.log('✅ Finalizado');
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         startRecording();
@@ -534,7 +542,7 @@ export function VoiceAssistantWithWakeWord({
 
       await audio.play();
     } catch (err: any) {
-      console.error('❌ Erro processar:', err);
+      console.error('❌ Erro:', err);
       setError('Erro ao processar');
       setIsProcessing(false);
       setConversationActive(false);
@@ -600,7 +608,7 @@ export function VoiceAssistantWithWakeWord({
                 onClick={forceReset}
                 className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
               >
-                Reiniciar Sistema
+                Reiniciar
               </button>
             )}
           </div>
@@ -651,11 +659,6 @@ export function VoiceAssistantWithWakeWord({
                   Diga "tchau" para encerrar
                 </p>
               )}
-              {(wakeWords.length > 4) && isListening && !conversationActive && (
-                <p className="text-xs text-gray-400 mt-2">
-                  Wake words: {wakeWords.slice(0, 4).join(', ')}
-                </p>
-              )}
             </div>
 
             {error && (
@@ -670,7 +673,7 @@ export function VoiceAssistantWithWakeWord({
                   onClick={endConversation}
                   className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold shadow-lg"
                 >
-                  Encerrar Conversa
+                  Encerrar
                 </button>
               )}
               

@@ -44,8 +44,8 @@ function normalizeText(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^\w\s]/g, '') // Remove pontuação
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, '')
     .trim();
 }
 
@@ -58,7 +58,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     .eq('is_active', true);
 
   if (!faqs || faqs.length === 0) {
-    console.log('📭 Nenhuma FAQ cadastrada');
+    console.log('📭 Nenhuma FAQ');
     return null;
   }
 
@@ -75,23 +75,23 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     let score = 0;
     let method = '';
     
-    // MÉTODO 1: Similaridade exata com pergunta principal
+    // MÉTODO 1: Similaridade pergunta principal
     const mainSimilarity = similarity(questionNormalized, normalizeText(faq.question));
     if (mainSimilarity > score) {
       score = mainSimilarity;
-      method = `main_question (${(mainSimilarity * 100).toFixed(0)}%)`;
+      method = `main (${(mainSimilarity * 100).toFixed(0)}%)`;
     }
     
-    // MÉTODO 2: Similaridade com variações
+    // MÉTODO 2: Similaridade variações
     for (const variation of faq.variations || []) {
       const varSimilarity = similarity(questionNormalized, normalizeText(variation));
       if (varSimilarity > score) {
         score = varSimilarity;
-        method = `variation "${variation}" (${(varSimilarity * 100).toFixed(0)}%)`;
+        method = `var "${variation}" (${(varSimilarity * 100).toFixed(0)}%)`;
       }
     }
     
-    // MÉTODO 3: Palavras-chave em comum
+    // MÉTODO 3: Palavras-chave
     const faqWords = normalizeText(faq.question).split(' ').filter(w => w.length > 2);
     const commonWords = questionWords.filter(word => 
       faqWords.some(faqWord => 
@@ -103,28 +103,28 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       const keywordScore = (commonWords.length / Math.max(questionWords.length, faqWords.length)) * 0.8;
       if (keywordScore > score) {
         score = keywordScore;
-        method = `keywords [${commonWords.join(', ')}] (${(keywordScore * 100).toFixed(0)}%)`;
+        method = `keywords [${commonWords.join(',')}] (${(keywordScore * 100).toFixed(0)}%)`;
       }
     }
     
-    // MÉTODO 4: Contém frase inteira
+    // MÉTODO 4: Contém frase
     if (questionNormalized.includes(normalizeText(faq.question)) || 
         normalizeText(faq.question).includes(questionNormalized)) {
       const containsScore = 0.9;
       if (containsScore > score) {
         score = containsScore;
-        method = 'contains_phrase (90%)';
+        method = 'contains (90%)';
       }
     }
     
-    // MÉTODO 5: Variações contém a pergunta
+    // MÉTODO 5: Variações contém
     for (const variation of faq.variations || []) {
       const varNormalized = normalizeText(variation);
       if (questionNormalized.includes(varNormalized) || varNormalized.includes(questionNormalized)) {
         const containsScore = 0.85;
         if (containsScore > score) {
           score = containsScore;
-          method = `contains_variation "${variation}" (85%)`;
+          method = `contains var "${variation}" (85%)`;
         }
       }
     }
@@ -137,11 +137,10 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   }
 
   if (bestMatch) {
-    console.log(`✅ FAQ encontrada: "${bestMatch.question}"`);
-    console.log(`   Método: ${bestMethod}`);
-    console.log(`   Score: ${(bestScore * 100).toFixed(1)}%`);
+    console.log(`✅ FAQ: "${bestMatch.question}"`);
+    console.log(`   ${bestMethod} - ${(bestScore * 100).toFixed(1)}%`);
   } else {
-    console.log('❌ Nenhuma FAQ correspondente encontrada');
+    console.log('❌ Sem FAQ');
   }
 
   return bestMatch;
@@ -165,9 +164,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    console.log('⚡ Iniciando processamento...');
+    console.log('⚡ Processando...');
     
-    // FASE 1: Transcrição + Busca empresa (PARALELO)
+    // FASE 1: Transcrição + Company (PARALELO)
     const [companyResult, transcriptionResult] = await Promise.all([
       supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
       openai.audio.transcriptions.create({
@@ -185,23 +184,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erro no processamento' }, { status: 400 });
     }
 
-    console.log(`👂 Pergunta: "${userMessage}"`);
-    console.log(`⏱️  Transcrição: ${Date.now() - startTime}ms`);
+    console.log(`👂 "${userMessage}"`);
+    console.log(`⏱️ Whisper: ${Date.now() - startTime}ms`);
 
-    // FASE 2: Buscar FAQ correspondente
+    // FASE 2: Criar/Buscar Conversation
+    let conversation: any;
+    
+    if (conversationId) {
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .single();
+
+      conversation = existingConv;
+    }
+
+    if (!conversation) {
+      const newConversationId = randomUUID();
+      conversation = { id: newConversationId };
+      
+      await supabase.from('conversations').insert({
+        id: newConversationId,
+        company_id: companyId,
+      });
+      
+      console.log('🆕 Nova conversa');
+    }
+
+    // FASE 3: Salvar mensagem usuário
+    await supabase.from('messages').insert({
+      conversation_id: conversation.id,
+      role: 'user',
+      content: userMessage,
+    });
+
+    // FASE 4: Buscar FAQ
     const faqStartTime = Date.now();
     const matchedFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
-    console.log(`⏱️  Busca FAQ: ${Date.now() - faqStartTime}ms`);
+    console.log(`⏱️ FAQ Search: ${Date.now() - faqStartTime}ms`);
 
     let assistantResponse: string;
     let usedFAQ = false;
 
     if (matchedFAQ) {
-      // FAQ ENCONTRADA - Resposta instantânea!
+      // FAQ ENCONTRADA
       assistantResponse = matchedFAQ.answer;
       usedFAQ = true;
+      console.log('⚡ FAQ usada!');
 
-      // Atualizar contador (background)
+      // Atualizar contador
       supabase
         .from('faq_entries')
         .update({
@@ -209,53 +241,24 @@ export async function POST(request: NextRequest) {
           last_used_at: new Date().toISOString(),
         })
         .eq('id', matchedFAQ.id)
-        .then(() => console.log('📊 Contador FAQ atualizado'));
-    } else {
-      // FAQ NÃO ENCONTRADA - Usar OpenAI
-      console.log('🤖 Usando OpenAI...');
-      
-      let conversation;
-      let conversationHistory: any[] = [];
-
-      if (conversationId) {
-        const { data: existingConv } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('id', conversationId)
-          .single();
-
-        if (existingConv) {
-          conversation = existingConv;
-
-          const { data: messages } = await supabase
-            .from('messages')
-            .select('role, content')
-            .eq('conversation_id', conversationId)
-            .order('created_at', { ascending: false })
-            .limit(3);
-
-          if (messages) {
-            conversationHistory = messages.reverse();
-          }
-        }
-      }
-
-      if (!conversation) {
-        const newConversationId = randomUUID();
-        conversation = { id: newConversationId };
+        .then(() => console.log('📊 +1 contador'));
         
-        supabase.from('conversations').insert({
-          id: newConversationId,
-          company_id: companyId,
-        });
-      }
+    } else {
+      // SEM FAQ - GPT
+      console.log('🤖 GPT...');
+      
+      // Buscar histórico
+      let conversationHistory: any[] = [];
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('role, content')
+        .eq('conversation_id', conversation.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
 
-      // Salvar mensagem (background)
-      supabase.from('messages').insert({
-        conversation_id: conversation.id,
-        role: 'user',
-        content: userMessage,
-      });
+      if (messages) {
+        conversationHistory = messages.reverse();
+      }
 
       const systemPrompt = company.system_prompt || 
         `Você é o assistente virtual da ${company.name}. Seja profissional, educado e direto. Responda em no máximo 2 frases curtas.`;
@@ -273,22 +276,22 @@ export async function POST(request: NextRequest) {
         temperature: 0.7,
         max_tokens: 120,
       });
-      console.log(`⏱️  GPT: ${Date.now() - gptStartTime}ms`);
+      console.log(`⏱️ GPT: ${Date.now() - gptStartTime}ms`);
 
       assistantResponse = chatCompletion.choices[0]?.message?.content || 
         'Desculpe, não entendi.';
-
-      // Salvar resposta (background)
-      supabase.from('messages').insert({
-        conversation_id: conversation.id,
-        role: 'assistant',
-        content: assistantResponse,
-      });
     }
 
-    console.log(`💬 Resposta: "${assistantResponse.substring(0, 50)}..."`);
+    // FASE 5: Salvar resposta assistente (SEMPRE)
+    await supabase.from('messages').insert({
+      conversation_id: conversation.id,
+      role: 'assistant',
+      content: assistantResponse,
+    });
+    
+    console.log('💾 Histórico salvo');
 
-    // FASE 3: TTS
+    // FASE 6: TTS
     const ttsStartTime = Date.now();
     const ttsResponse = await openai.audio.speech.create({
       model: 'tts-1',
@@ -297,19 +300,19 @@ export async function POST(request: NextRequest) {
       response_format: 'mp3',
       speed: 1.1,
     });
-    console.log(`⏱️  TTS: ${Date.now() - ttsStartTime}ms`);
+    console.log(`⏱️ TTS: ${Date.now() - ttsStartTime}ms`);
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
     
     const totalTime = Date.now() - startTime;
-    console.log(`✅ TOTAL: ${totalTime}ms ${usedFAQ ? '(⚡ FAQ)' : '(🤖 GPT)'}`);
+    console.log(`✅ TOTAL: ${totalTime}ms ${usedFAQ ? '⚡' : '🤖'}`);
 
     return new NextResponse(audioBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Transcription': encodeURIComponent(userMessage),
         'X-Response-Text': encodeURIComponent(assistantResponse),
-        'X-Conversation-Id': conversationId || 'new',
+        'X-Conversation-Id': conversation.id,
         'X-Used-FAQ': usedFAQ ? 'true' : 'false',
         'X-Processing-Time': totalTime.toString(),
       },
@@ -317,7 +320,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ ERRO:', error);
     return NextResponse.json(
-      { error: 'Erro ao processar áudio', details: error.message },
+      { error: 'Erro ao processar', details: error.message },
       { status: 500 }
     );
   }

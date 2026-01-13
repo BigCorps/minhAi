@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
-import { Maximize2, Minimize2 } from 'lucide-react';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -57,7 +56,6 @@ export function VoiceAssistantWithWakeWord({
     'desligar'
   ];
 
-  // Feedback messages aleatórias
   const feedbackMessages = [
     'Entendi!',
     'Certo!',
@@ -323,11 +321,9 @@ export function VoiceAssistantWithWakeWord({
         
         setIsRecording(false);
         
-        // FEEDBACK IMEDIATO
         const randomFeedback = feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
         setShowFeedback(true);
         
-        // Falar feedback
         try {
           await playText(randomFeedback);
         } catch (e) {}
@@ -381,7 +377,7 @@ export function VoiceAssistantWithWakeWord({
     let hasSpoken = false;
     
     const SILENCE_THRESHOLD = 12;
-    const SILENCE_DURATION = 600; // 0.6s
+    const SILENCE_DURATION = 600;
 
     function checkAudio() {
       if (!isRecording) {
@@ -434,7 +430,6 @@ export function VoiceAssistantWithWakeWord({
       }
 
       const newConversationId = response.headers.get('X-Conversation-Id');
-      const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
 
       if (newConversationId && newConversationId !== 'new') {
         conversationIdRef.current = newConversationId;
@@ -512,7 +507,9 @@ export function VoiceAssistantWithWakeWord({
           onClick={() => setIsFullscreen(false)}
           className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"
         >
-          <Minimize2 className="w-6 h-6 text-white" />
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
 
         <div className="flex flex-col items-center gap-8">
@@ -546,7 +543,9 @@ export function VoiceAssistantWithWakeWord({
             className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition z-10"
             title="Tela cheia"
           >
-            <Maximize2 className="w-5 h-5 text-gray-600" />
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
           </button>
 
           <div className="relative h-96">

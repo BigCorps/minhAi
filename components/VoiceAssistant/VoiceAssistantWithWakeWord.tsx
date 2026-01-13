@@ -34,7 +34,6 @@ export function VoiceAssistantWithWakeWord({
   const restartTimeoutRef = useRef<any>(null);
   const isActiveRef = useRef(true);
   const lastRestartAttempt = useRef<number>(0);
-  const recordedChunksRef = useRef<Float32Array[]>([]);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -88,7 +87,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   function forceReset() {
-    console.log('🔄 Reset forçado');
+    console.log('🔄 Reset');
     
     setIsRecording(false);
     setIsProcessing(false);
@@ -124,14 +123,14 @@ export function VoiceAssistantWithWakeWord({
         }
       }, 500);
     } catch (err) {
-      setError('Permissão do microfone negada. Por favor, permita o acesso.');
+      setError('Permissão do microfone negada.');
       setPermissionGranted(false);
     }
   }
 
   function startWakeWordDetection() {
     if (!('webkitSpeechRecognition' in window)) {
-      setError('Reconhecimento de voz não suportado. Use Chrome ou Edge.');
+      setError('Use Chrome ou Edge.');
       return;
     }
 
@@ -151,7 +150,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.maxAlternatives = 5;
 
       recognition.onstart = () => {
-        console.log('🎤 Detecção wake word ativa');
+        console.log('🎤 Wake word');
         setIsListening(true);
         setError('');
       };
@@ -163,7 +162,7 @@ export function VoiceAssistantWithWakeWord({
         if (conversationActive) {
           const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
           if (hasEndCommand) {
-            console.log('🔚 Comando encerrar:', transcript);
+            console.log('🔚 Encerrar:', transcript);
             endConversation();
             return;
           }
@@ -176,7 +175,7 @@ export function VoiceAssistantWithWakeWord({
           });
           
           if (detectedWakeWord) {
-            console.log('✅ Wake word:', transcript);
+            console.log('✅ Wake:', transcript);
             activateConversation();
           }
         }
@@ -188,7 +187,7 @@ export function VoiceAssistantWithWakeWord({
         }
         
         if (event.error === 'not-allowed') {
-          setError('Permissão de microfone negada');
+          setError('Permissão negada');
           setPermissionGranted(false);
         }
       };
@@ -213,7 +212,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.start();
       
     } catch (err) {
-      console.error('Erro iniciar:', err);
+      console.error('Erro:', err);
       setTimeout(() => {
         if (isActiveRef.current && permissionGranted) {
           startWakeWordDetection();
@@ -223,7 +222,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function activateConversation() {
-    console.log('🟢 Conversa ativada');
+    console.log('🟢 Ativa');
     setConversationActive(true);
     
     if (recognitionRef.current) {
@@ -236,7 +235,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function endConversation() {
-    console.log('🔴 Encerrando conversa');
+    console.log('🔴 Encerra');
     setConversationActive(false);
     
     if (currentAudioRef.current) {
@@ -251,12 +250,12 @@ export function VoiceAssistantWithWakeWord({
     try {
       await playText('Até logo!');
     } catch (e) {
-      console.log('Erro despedida:', e);
+      console.log('Erro despedida');
     }
     
     setTimeout(() => {
       if (isActiveRef.current && permissionGranted) {
-        console.log('🔄 Reiniciando wake word');
+        console.log('🔄 Restart wake');
         startWakeWordDetection();
       }
     }, 1000);
@@ -267,7 +266,7 @@ export function VoiceAssistantWithWakeWord({
       await playText(greetingMessage);
       startVADRecording();
     } catch (err: any) {
-      console.error('Erro saudação:', err);
+      console.error('Erro saudação');
       startVADRecording();
     }
   }
@@ -307,7 +306,7 @@ export function VoiceAssistantWithWakeWord({
         audio.onerror = () => {
           setIsPlayingAudio(false);
           currentAudioRef.current = null;
-          reject(new Error('Erro ao reproduzir'));
+          reject(new Error('Erro reproduzir'));
         };
 
         await audio.play();
@@ -319,65 +318,46 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startVADRecording() {
-    console.log('🎤 Iniciando VAD...');
+    console.log('🎤 VAD init...');
     const recordStartTime = Date.now();
     
     try {
-      recordedChunksRef.current = [];
-      
-      // Configurar VAD
+      // Configurar VAD - APENAS parâmetros suportados
       const vad = await MicVAD.new({
-        // Quando começa a falar
         onSpeechStart: () => {
-          console.log('🗣️ Fala detectada');
+          console.log('🗣️ Fala');
           setIsRecording(true);
         },
         
-        // Quando termina de falar (CHAVE!)
         onSpeechEnd: async (audio: Float32Array) => {
           const recordTime = Date.now() - recordStartTime;
-          console.log(`⚡ Fim detectado! (${recordTime}ms)`);
+          console.log(`⚡ Fim! (${recordTime}ms)`);
           
           setIsRecording(false);
-          
-          // Pausar VAD
           vad.pause();
           
-          // Converter para WAV
           const wavBlob = floatArrayToWav(audio);
           
           setIsProcessing(true);
           await processAudio(wavBlob);
         },
         
-        // Frame de áudio recebido (salvar para debugging)
-        onFrameProcessed: (probs: any) => {
-          // Opcional: mostrar probabilidade de fala
-          // console.log('Prob:', probs.isSpeech);
-        },
+        // Apenas thresholds (sem frames - deprecated)
+        positiveSpeechThreshold: 0.5,
+        negativeSpeechThreshold: 0.35,
         
-        // Configurações de sensibilidade
-        positiveSpeechThreshold: 0.5,    // 50% confiança para INÍCIO
-        negativeSpeechThreshold: 0.35,   // 35% confiança para FIM
-        redemptionFrames: 8,              // Frames para confirmar fim
-        minSpeechFrames: 3,               // Mínimo 3 frames com fala
-        preSpeechPadFrames: 1,            // Padding antes da fala
-        
-        // Callbacks de erro
         onVADMisfire: () => {
-          console.log('⚠️ VAD misfire (ignorar)');
+          console.log('⚠️ Misfire');
         },
       });
 
       vadRef.current = vad;
-      
-      // Iniciar detecção
       await vad.start();
       console.log('✅ VAD ativo');
       
     } catch (err: any) {
       console.error('Erro VAD:', err);
-      setError('Erro ao gravar');
+      setError('Erro VAD');
       setIsRecording(false);
       setConversationActive(false);
       
@@ -389,10 +369,9 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  // Converter Float32Array para WAV Blob
   function floatArrayToWav(audioData: Float32Array): Blob {
-    const sampleRate = 16000; // VAD usa 16kHz
-    const numChannels = 1; // Mono
+    const sampleRate = 16000;
+    const numChannels = 1;
     const bitsPerSample = 16;
     
     const bytesPerSample = bitsPerSample / 8;
@@ -402,7 +381,6 @@ export function VoiceAssistantWithWakeWord({
     const buffer = new ArrayBuffer(44 + dataLength);
     const view = new DataView(buffer);
     
-    // WAV Header
     const writeString = (offset: number, string: string) => {
       for (let i = 0; i < string.length; i++) {
         view.setUint8(offset + i, string.charCodeAt(i));
@@ -413,8 +391,8 @@ export function VoiceAssistantWithWakeWord({
     view.setUint32(4, 36 + dataLength, true);
     writeString(8, 'WAVE');
     writeString(12, 'fmt ');
-    view.setUint32(16, 16, true); // fmt chunk size
-    view.setUint16(20, 1, true); // PCM
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
     view.setUint16(22, numChannels, true);
     view.setUint32(24, sampleRate, true);
     view.setUint32(28, sampleRate * blockAlign, true);
@@ -423,7 +401,6 @@ export function VoiceAssistantWithWakeWord({
     writeString(36, 'data');
     view.setUint32(40, dataLength, true);
     
-    // Convert float to int16
     const offset = 44;
     for (let i = 0; i < audioData.length; i++) {
       const sample = Math.max(-1, Math.min(1, audioData[i]));
@@ -444,7 +421,7 @@ export function VoiceAssistantWithWakeWord({
         formData.append('conversationId', conversationIdRef.current);
       }
 
-      console.log('⚙️ Processando API...');
+      console.log('⚙️ API...');
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
@@ -462,9 +439,9 @@ export function VoiceAssistantWithWakeWord({
       const transcript = response.headers.get('X-Transcription');
 
       if (transcript) {
-        const decodedTranscript = decodeURIComponent(transcript);
-        setLastTranscript(decodedTranscript.toLowerCase());
-        console.log('📝', decodedTranscript);
+        const decoded = decodeURIComponent(transcript);
+        setLastTranscript(decoded.toLowerCase());
+        console.log('📝', decoded);
       }
 
       console.log(`⏱️ Frontend: ${processingTime}ms`);
@@ -498,12 +475,10 @@ export function VoiceAssistantWithWakeWord({
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         
-        // Verificar comando encerrar
         if (lastTranscript && endCommands.some(cmd => lastTranscript.includes(cmd))) {
-          console.log('👋 Despedida detectada');
+          console.log('👋 Despedida');
           endConversation();
         } else {
-          // Continuar gravando
           startVADRecording();
         }
       };
@@ -517,8 +492,8 @@ export function VoiceAssistantWithWakeWord({
 
       await audio.play();
     } catch (err: any) {
-      console.error('❌ Erro:', err);
-      setError('Erro ao processar');
+      console.error('❌', err);
+      setError('Erro processar');
       setIsProcessing(false);
       setConversationActive(false);
       

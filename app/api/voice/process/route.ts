@@ -129,9 +129,9 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     
     // Similaridade
     const score = similarity(questionNormalized, faqQuestionNormalized);
-    console.log(`  📊 Similarity: ${(score * 100).toFixed(1)}% (threshold: 35%)`);
+    console.log(`  📊 Similarity: ${(score * 100).toFixed(1)}% (threshold: 40%)`);
     
-    if (score > bestScore && score > 0.35) {
+    if (score > bestScore && score > 0.40) {
       bestScore = score;
       bestMatch = faq;
       bestMethod = 'similarity';
@@ -154,11 +154,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
         }
         
         const varScore = similarity(questionNormalized, variationNormalized);
-        if (varScore > 0.35) {
+        if (varScore > 0.40) {
           console.log(`    - "${variation}": ${(varScore * 100).toFixed(1)}%`);
         }
         
-        if (varScore > bestScore && varScore > 0.35) {
+        if (varScore > bestScore && varScore > 0.40) {
           bestScore = varScore;
           bestMatch = faq;
           bestMethod = 'variation-similarity';
@@ -176,7 +176,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       console.log(`  🔤 Keywords comuns: [${commonWords.join(', ')}] = ${(keywordScore * 100).toFixed(1)}%`);
     }
     
-    if (keywordScore > bestScore && keywordScore > 0.35) {
+    if (keywordScore > bestScore && keywordScore > 0.40) {
       bestScore = keywordScore;
       bestMatch = faq;
       bestMethod = 'keywords';
@@ -190,7 +190,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     console.log(`   Score: ${(bestScore * 100).toFixed(1)}%`);
     console.log(`   Método: ${bestMethod}`);
   } else {
-    console.log('❌ NENHUM MATCH (threshold mínimo: 35%)');
+    console.log('❌ NENHUM MATCH (threshold mínimo: 40%)');
     console.log('🤖 Vai usar GPT');
   }
 

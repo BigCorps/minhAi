@@ -184,7 +184,18 @@ export function VoiceAssistantWithWakeWord({
               cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
             }
             
-            const hasQuestion = cleanTranscript.split(' ').length >= 2;
+            // Remover palavras comuns
+            cleanTranscript = cleanTranscript.replace(/assistente|assis|hey|olá|ola|ei/gi, '').trim();
+            
+            const words = cleanTranscript.split(' ').filter(w => w.length > 2);
+            const hasQuestion = words.length >= 2;
+            
+            console.log('🔍 Análise wake word:');
+            console.log('  Original:', transcript);
+            console.log('  Limpo:', cleanTranscript);
+            console.log('  Palavras:', words);
+            console.log('  Count:', words.length);
+            console.log('  Tem pergunta?', hasQuestion);
             
             if (hasQuestion) {
               console.log('💬 Pergunta detectada:', cleanTranscript);
@@ -349,7 +360,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startManualRecording() {
-    console.log('🎤 Gravando (silêncio: 800ms)...');
+    console.log('🎤 Gravando (silêncio: 600ms)...');
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -368,7 +379,7 @@ export function VoiceAssistantWithWakeWord({
       let silenceStart: number | null = null;
       let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 800; // 800ms - TEMPO MAIOR!
+      const SILENCE_DURATION = 600; // 800ms - TEMPO MAIOR!
       const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
 
       const recordStartTime = Date.now();

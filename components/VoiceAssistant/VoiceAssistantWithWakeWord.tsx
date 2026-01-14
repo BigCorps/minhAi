@@ -36,6 +36,7 @@ export function VoiceAssistantWithWakeWord({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastWakeWordTranscript = useRef<string>('');
+  const audioUnlocked = useRef<boolean>(false);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -110,6 +111,26 @@ export function VoiceAssistantWithWakeWord({
     }, 1000);
   }
 
+  async function unlockAudio() {
+    if (audioUnlocked.current) return;
+    
+    try {
+      console.log('🔓 Unlocking audio...');
+      
+      // Criar e tocar áudio silencioso para unlock
+      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+      silentAudio.volume = 0.01;
+      
+      await silentAudio.play();
+      silentAudio.pause();
+      
+      audioUnlocked.current = true;
+      console.log('✅ Audio unlocked!');
+    } catch (e) {
+      console.log('⚠️ Audio unlock failed (will try on first recording)');
+    }
+  }
+
   async function requestMicrophonePermission() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -177,6 +198,11 @@ export function VoiceAssistantWithWakeWord({
           
           if (detectedWakeWord) {
             console.log('✅ Wake:', transcript, isFinal ? '(final)' : '(interim)');
+            
+            // Unlock audio na primeira detecção
+            if (!audioUnlocked.current) {
+              unlockAudio();
+            }
             
             // Sempre salvar o último transcript
             lastWakeWordTranscript.current = transcript;
@@ -369,7 +395,29 @@ export function VoiceAssistantWithWakeWord({
           reject(new Error('Erro reproduzir'));
         };
 
-        await audio.play();
+        try {
+          await audio.play();
+        } catch (playError: any) {
+          console.error('❌ Erro playText:', playError.message);
+          
+          if (playError.name === 'NotAllowedError') {
+            console.log('🔓 Tentando unlock e retry...');
+            
+            try {
+              await unlockAudio();
+              await audio.play();
+              console.log('✅ Retry bem sucedido!');
+            } catch (retryError) {
+              setIsPlayingAudio(false);
+              currentAudioRef.current = null;
+              reject(retryError);
+            }
+          } else {
+            setIsPlayingAudio(false);
+            currentAudioRef.current = null;
+            reject(playError);
+          }
+        }
       } catch (err) {
         setIsPlayingAudio(false);
         reject(err);
@@ -379,6 +427,11 @@ export function VoiceAssistantWithWakeWord({
 
   async function startManualRecording() {
     console.log('🎤 Gravando (silêncio: 600ms)...');
+    
+    // Garantir audio unlock
+    if (!audioUnlocked.current) {
+      await unlockAudio();
+    }
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -569,7 +622,38 @@ export function VoiceAssistantWithWakeWord({
         }, 300);
       };
 
-      await audio.play();
+      try {
+        await audio.play();
+      } catch (playError: any) {
+        console.error('❌ Erro ao tocar áudio:', playError.message);
+        
+        // Se for erro de autoplay, tentar unlock e retry
+        if (playError.name === 'NotAllowedError') {
+          console.log('🔓 Tentando unlock e retry...');
+          
+          try {
+            await unlockAudio();
+            await audio.play();
+            console.log('✅ Retry bem sucedido!');
+          } catch (retryError) {
+            console.error('❌ Retry falhou, continuando gravação');
+            setIsPlayingAudio(false);
+            currentAudioRef.current = null;
+            
+            setTimeout(() => {
+              startManualRecording();
+            }, 300);
+          }
+        } else {
+          // Outro erro, continuar gravação
+          setIsPlayingAudio(false);
+          currentAudioRef.current = null;
+          
+          setTimeout(() => {
+            startManualRecording();
+          }, 300);
+        }
+      }
     } catch (err: any) {
       console.error('❌', err);
       setError('Erro processar');

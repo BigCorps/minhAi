@@ -187,11 +187,13 @@ export async function POST(request: NextRequest) {
     const audioFile = formData.get('audio') as File;
     const companyId = formData.get('companyId') as string;
     const conversationId = formData.get('conversationId') as string | null;
+    const directQuestion = formData.get('directQuestion') as string | null;
 
     console.log('📊 Áudio:', {
       size: audioFile?.size || 0,
       type: audioFile?.type || 'unknown',
-      name: audioFile?.name || 'unknown'
+      name: audioFile?.name || 'unknown',
+      directQuestion: directQuestion ? 'SIM' : 'NÃO'
     });
 
     if (!audioFile || !companyId) {
@@ -203,42 +205,51 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    console.log('⚡ Iniciando... (Deepgram)');
+    console.log('⚡ Iniciando...', directQuestion ? '(Direct Question)' : '(Deepgram)');
     
-    // FASE 1: Transcrição DEEPGRAM + Company (PARALELO)
+    // FASE 1: Transcrição ou Direct Question
     const sttStart = Date.now();
     
     let userMessage = '';
     let company: any = null;
     let transcriptionError = null;
     
-    try {
-      const [companyResult, transcript] = await Promise.all([
-        supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
-        transcribeWithDeepgram(audioFile)
-      ]);
-      
-      userMessage = transcript;
+    if (directQuestion) {
+      // Pergunta direta (veio com wake word)
+      console.log('💬 Direct:', directQuestion);
+      const companyResult = await supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single();
+      userMessage = directQuestion;
       company = companyResult.data;
-    } catch (error: any) {
-      transcriptionError = error;
-      console.error('❌ Erro Deepgram:', error.message);
-      
-      // Se Deepgram falhar, tentar Whisper fallback
-      console.log('🔄 Fallback para Whisper...');
-      
-      const [companyResult, whisperResult] = await Promise.all([
-        supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
-        openai.audio.transcriptions.create({
-          file: audioFile,
-          model: 'whisper-1',
-          language: 'pt',
-          temperature: 0.0,
-        })
-      ]);
-      
-      userMessage = whisperResult.text || '';
-      company = companyResult.data;
+    } else {
+      // Transcrição normal
+      try {
+        const [companyResult, transcript] = await Promise.all([
+          supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
+          transcribeWithDeepgram(audioFile)
+        ]);
+        
+        userMessage = transcript;
+        company = companyResult.data;
+      } catch (error: any) {
+        transcriptionError = error;
+        console.error('❌ Erro Deepgram:', error.message);
+        
+        // Se Deepgram falhar, tentar Whisper fallback
+        console.log('🔄 Fallback para Whisper...');
+        
+        const [companyResult, whisperResult] = await Promise.all([
+          supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
+          openai.audio.transcriptions.create({
+            file: audioFile,
+            model: 'whisper-1',
+            language: 'pt',
+            temperature: 0.0,
+          })
+        ]);
+        
+        userMessage = whisperResult.text || '';
+        company = companyResult.data;
+      }
     }
 
     const transcriptionTime = Date.now() - sttStart;
@@ -266,7 +277,11 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`👂 "${userMessage}"`);
-    console.log(`⏱️ ${transcriptionError ? 'Whisper' : 'Deepgram'}: ${transcriptionTime}ms`);
+    if (directQuestion) {
+      console.log(`⏱️ Direct: ${transcriptionTime}ms`);
+    } else {
+      console.log(`⏱️ ${transcriptionError ? 'Whisper' : 'Deepgram'}: ${transcriptionTime}ms`);
+    }
 
     // FASE 2: FAQ Matching
     const faqStart = Date.now();

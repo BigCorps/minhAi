@@ -25,10 +25,8 @@ export function VoiceAssistantWithWakeWord({
   const [conversationActive, setConversationActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [lastTranscript, setLastTranscript] = useState('');
-  const [useVAD, setUseVAD] = useState(true); // Tentar VAD primeiro
 
   const recognitionRef = useRef<any>(null);
-  const vadRef = useRef<any>(null);
   const conversationIdRef = useRef<string | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const restartTimeoutRef = useRef<any>(null);
@@ -36,8 +34,8 @@ export function VoiceAssistantWithWakeWord({
   const lastRestartAttempt = useRef<number>(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const silenceTimeoutRef = useRef<any>(null);
-  const recordStartTimeRef = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const wakeWordTranscriptRef = useRef<string>('');
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -76,14 +74,14 @@ export function VoiceAssistantWithWakeWord({
         recognitionRef.current.stop();
       } catch (e) {}
     }
-    if (vadRef.current) {
-      try {
-        vadRef.current.pause();
-      } catch (e) {}
-    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         mediaRecorderRef.current.stop();
+      } catch (e) {}
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      try {
+        audioContextRef.current.close();
       } catch (e) {}
     }
     if (currentAudioRef.current) {
@@ -92,9 +90,6 @@ export function VoiceAssistantWithWakeWord({
     }
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
-    }
-    if (silenceTimeoutRef.current) {
-      clearTimeout(silenceTimeoutRef.current);
     }
   }
 
@@ -180,7 +175,8 @@ export function VoiceAssistantWithWakeWord({
           });
           
           if (detectedWakeWord) {
-            console.log('✅ Wake');
+            console.log('✅ Wake:', transcript);
+            wakeWordTranscriptRef.current = transcript;
             activateConversation();
           }
         }
@@ -236,7 +232,119 @@ export function VoiceAssistantWithWakeWord({
       } catch (e) {}
     }
     
-    await playGreeting();
+    // Verificar se wake word veio com pergunta
+    const wakeTranscript = wakeWordTranscriptRef.current;
+    const hasQuestion = checkIfHasQuestion(wakeTranscript);
+    
+    if (hasQuestion) {
+      // Extrair pergunta (remover wake word)
+      const question = extractQuestion(wakeTranscript);
+      console.log('💬 Pergunta detectada:', question);
+      
+      // Processar direto sem saudação
+      const audioBlob = textToSpeechBlob(question);
+      setIsProcessing(true);
+      await processDirectQuestion(question);
+    } else {
+      // Só wake word → dar saudação e aguardar
+      console.log('👋 Só wake word');
+      await playGreeting();
+    }
+  }
+
+  function checkIfHasQuestion(transcript: string): boolean {
+    // Remover wake words
+    let cleaned = transcript;
+    for (const word of wakeWords) {
+      cleaned = cleaned.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+    }
+    
+    // Se sobrou texto (> 3 caracteres) = pergunta
+    return cleaned.length > 3;
+  }
+
+  function extractQuestion(transcript: string): string {
+    let cleaned = transcript;
+    for (const word of wakeWords) {
+      cleaned = cleaned.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+    }
+    return cleaned;
+  }
+
+  async function processDirectQuestion(question: string) {
+    try {
+      const formData = new FormData();
+      
+      // Criar blob de áudio fake para API (API espera áudio, mas já temos texto)
+      const blob = new Blob([question], { type: 'text/plain' });
+      formData.append('audio', blob, 'direct.txt');
+      formData.append('companyId', companyId);
+      formData.append('directQuestion', question); // Flag especial
+      if (conversationIdRef.current) {
+        formData.append('conversationId', conversationIdRef.current);
+      }
+
+      const response = await fetch('/api/voice/process', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      const newConversationId = response.headers.get('X-Conversation-Id');
+      const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
+
+      if (newConversationId && newConversationId !== 'new') {
+        conversationIdRef.current = newConversationId;
+      }
+
+      setIsProcessing(false);
+
+      const responseAudioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(responseAudioBlob);
+      const audio = new Audio(audioUrl);
+      
+      currentAudioRef.current = audio;
+      
+      audio.onplay = () => {
+        console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
+        setIsPlayingAudio(true);
+      };
+      
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        
+        // Continuar ouvindo
+        startManualRecording();
+      };
+
+      audio.onerror = (e) => {
+        console.error('Erro áudio:', e);
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        startManualRecording();
+      };
+
+      await audio.play();
+    } catch (err: any) {
+      console.error('❌', err);
+      setError('Erro processar');
+      setIsProcessing(false);
+      setConversationActive(false);
+      
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 1000);
+    }
+  }
+
+  function textToSpeechBlob(text: string): Blob {
+    return new Blob([text], { type: 'text/plain' });
   }
 
   async function endConversation() {
@@ -262,22 +370,10 @@ export function VoiceAssistantWithWakeWord({
   async function playGreeting() {
     try {
       await playText(greetingMessage);
-      
-      // Tentar VAD, fallback para manual
-      if (useVAD) {
-        try {
-          await startVADRecording();
-        } catch (vadError) {
-          console.log('⚠️ VAD falhou, usando manual');
-          setUseVAD(false); // Desabilitar VAD permanentemente
-          startManualRecording();
-        }
-      } else {
-        startManualRecording();
-      }
+      console.log('🎧 Saudação ok');
+      startManualRecording();
     } catch (err: any) {
-      console.error('Erro saudação:', err);
-      // Mesmo com erro, tentar gravar
+      console.error('Erro saudação:', err.message);
       startManualRecording();
     }
   }
@@ -330,40 +426,8 @@ export function VoiceAssistantWithWakeWord({
     });
   }
 
-  async function startVADRecording() {
-    console.log('🎤 VAD...');
-    
-    // Importar dinamicamente
-    const { MicVAD } = await import('@ricky0123/vad-web');
-    
-    const vad = await MicVAD.new({
-      onSpeechStart: () => {
-        console.log('🗣️ Fala');
-        setIsRecording(true);
-      },
-      
-      onSpeechEnd: async (audio: Float32Array) => {
-        console.log(`⚡ Fim VAD`);
-        setIsRecording(false);
-        vad.pause();
-        
-        const wavBlob = floatArrayToWav(audio);
-        setIsProcessing(true);
-        await processAudio(wavBlob);
-      },
-      
-      positiveSpeechThreshold: 0.5,
-      negativeSpeechThreshold: 0.35,
-    });
-
-    vadRef.current = vad;
-    await vad.start();
-    console.log('✅ VAD ativo');
-  }
-
   async function startManualRecording() {
-    console.log('🎤 Manual...');
-    recordStartTimeRef.current = Date.now();
+    console.log('🎤 Manual (300ms)...');
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -372,6 +436,7 @@ export function VoiceAssistantWithWakeWord({
       audioChunksRef.current = [];
 
       const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
@@ -380,7 +445,7 @@ export function VoiceAssistantWithWakeWord({
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       let silenceStart: number | null = null;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 200; // 0.2s
+      const SILENCE_DURATION = 300; // 300ms (era 200ms)
 
       const checkSilence = () => {
         if (mediaRecorder.state !== 'recording') return;
@@ -411,7 +476,9 @@ export function VoiceAssistantWithWakeWord({
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
-        audioContext.close();
+        if (audioContext.state !== 'closed') {
+          audioContext.close();
+        }
 
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         
@@ -437,47 +504,6 @@ export function VoiceAssistantWithWakeWord({
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-  }
-
-  function floatArrayToWav(audioData: Float32Array): Blob {
-    const sampleRate = 16000;
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    
-    const bytesPerSample = bitsPerSample / 8;
-    const blockAlign = numChannels * bytesPerSample;
-    
-    const dataLength = audioData.length * bytesPerSample;
-    const buffer = new ArrayBuffer(44 + dataLength);
-    const view = new DataView(buffer);
-    
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-    
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + dataLength, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * blockAlign, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-    writeString(36, 'data');
-    view.setUint32(40, dataLength, true);
-    
-    const offset = 44;
-    for (let i = 0; i < audioData.length; i++) {
-      const sample = Math.max(-1, Math.min(1, audioData[i]));
-      view.setInt16(offset + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-    }
-    
-    return new Blob([buffer], { type: 'audio/wav' });
   }
 
   async function processAudio(audioBlob: Blob) {
@@ -549,16 +575,7 @@ export function VoiceAssistantWithWakeWord({
           console.log('👋 Despedida');
           endConversation();
         } else {
-          // Continuar com método atual
-          if (useVAD && vadRef.current) {
-            try {
-              vadRef.current.start();
-            } catch (e) {
-              startManualRecording();
-            }
-          } else {
-            startManualRecording();
-          }
+          startManualRecording();
         }
       };
 
@@ -566,12 +583,7 @@ export function VoiceAssistantWithWakeWord({
         console.error('Erro áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
-        
-        if (useVAD && vadRef.current) {
-          vadRef.current.start();
-        } else {
-          startManualRecording();
-        }
+        startManualRecording();
       };
 
       await audio.play();
@@ -683,11 +695,6 @@ export function VoiceAssistantWithWakeWord({
               {conversationActive && (
                 <p className="text-sm text-gray-500 mt-2">
                   Diga "tchau" para encerrar
-                </p>
-              )}
-              {!useVAD && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Modo manual (200ms)
                 </p>
               )}
             </div>

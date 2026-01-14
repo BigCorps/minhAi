@@ -116,9 +116,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
 
   for (const faq of faqs) {
     const faqQuestionNormalized = normalizeText(faq.question);
+    console.log(`\n🔍 Testando FAQ: "${faq.question}"`);
     
     // Match exato
     if (questionNormalized === faqQuestionNormalized) {
+      console.log(`  ✅ EXACT MATCH!`);
       bestScore = 1.0;
       bestMatch = faq;
       bestMethod = 'exact-match';
@@ -127,18 +129,24 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     
     // Similaridade
     const score = similarity(questionNormalized, faqQuestionNormalized);
-    if (score > bestScore && score > 0.45) {
+    console.log(`  📊 Similarity: ${(score * 100).toFixed(1)}% (threshold: 35%)`);
+    
+    if (score > bestScore && score > 0.35) {
       bestScore = score;
       bestMatch = faq;
       bestMethod = 'similarity';
+      console.log(`  ⭐ Melhor até agora!`);
     }
     
     // Variações
     if (faq.variations && Array.isArray(faq.variations)) {
+      console.log(`  🔄 Testando ${faq.variations.length} variações...`);
+      
       for (const variation of faq.variations) {
         const variationNormalized = normalizeText(variation);
         
         if (questionNormalized === variationNormalized) {
+          console.log(`  ✅ VARIATION EXACT MATCH: "${variation}"`);
           bestScore = 1.0;
           bestMatch = faq;
           bestMethod = 'variation-exact';
@@ -146,10 +154,15 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
         }
         
         const varScore = similarity(questionNormalized, variationNormalized);
-        if (varScore > bestScore && varScore > 0.45) {
+        if (varScore > 0.35) {
+          console.log(`    - "${variation}": ${(varScore * 100).toFixed(1)}%`);
+        }
+        
+        if (varScore > bestScore && varScore > 0.35) {
           bestScore = varScore;
           bestMatch = faq;
           bestMethod = 'variation-similarity';
+          console.log(`    ⭐ Nova melhor variação!`);
         }
       }
     }
@@ -159,10 +172,15 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     const commonWords = questionWords.filter((w: string) => faqWords.includes(w));
     const keywordScore = commonWords.length / Math.max(questionWords.length, faqWords.length);
     
-    if (keywordScore > bestScore && keywordScore > 0.45) {
+    if (commonWords.length > 0) {
+      console.log(`  🔤 Keywords comuns: [${commonWords.join(', ')}] = ${(keywordScore * 100).toFixed(1)}%`);
+    }
+    
+    if (keywordScore > bestScore && keywordScore > 0.35) {
       bestScore = keywordScore;
       bestMatch = faq;
       bestMethod = 'keywords';
+      console.log(`  ⭐ Melhor por keywords!`);
     }
   }
 
@@ -172,7 +190,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     console.log(`   Score: ${(bestScore * 100).toFixed(1)}%`);
     console.log(`   Método: ${bestMethod}`);
   } else {
-    console.log('❌ NENHUM MATCH (threshold mínimo: 45%)');
+    console.log('❌ NENHUM MATCH (threshold mínimo: 35%)');
     console.log('🤖 Vai usar GPT');
   }
 
@@ -277,10 +295,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`👂 "${userMessage}"`);
+    console.log(`📏 Tamanho: ${userMessage.length} caracteres`);
+    console.log(`🔤 Normalizado: "${normalizeText(userMessage)}"`);
+    
     if (directQuestion) {
       console.log(`⏱️ Direct: ${transcriptionTime}ms`);
     } else {
-      console.log(`⏱️ ${transcriptionError ? 'Whisper' : 'Deepgram'}: ${transcriptionTime}ms`);
+      console.log(`⏱️ ${transcriptionError ? 'Whisper (fallback)' : 'Deepgram'}: ${transcriptionTime}ms`);
+      
+      if (transcriptionError) {
+        console.log(`⚠️ Deepgram falhou, usando Whisper`);
+      }
     }
 
     // FASE 2: FAQ Matching

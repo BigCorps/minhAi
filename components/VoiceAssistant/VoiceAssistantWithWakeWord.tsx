@@ -35,7 +35,6 @@ export function VoiceAssistantWithWakeWord({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const wakeWordTranscriptRef = useRef<string>('');
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -176,7 +175,6 @@ export function VoiceAssistantWithWakeWord({
           
           if (detectedWakeWord) {
             console.log('✅ Wake:', transcript);
-            wakeWordTranscriptRef.current = transcript;
             activateConversation();
           }
         }
@@ -232,119 +230,8 @@ export function VoiceAssistantWithWakeWord({
       } catch (e) {}
     }
     
-    // Verificar se wake word veio com pergunta
-    const wakeTranscript = wakeWordTranscriptRef.current;
-    const hasQuestion = checkIfHasQuestion(wakeTranscript);
-    
-    if (hasQuestion) {
-      // Extrair pergunta (remover wake word)
-      const question = extractQuestion(wakeTranscript);
-      console.log('💬 Pergunta detectada:', question);
-      
-      // Processar direto sem saudação
-      const audioBlob = textToSpeechBlob(question);
-      setIsProcessing(true);
-      await processDirectQuestion(question);
-    } else {
-      // Só wake word → dar saudação e aguardar
-      console.log('👋 Só wake word');
-      await playGreeting();
-    }
-  }
-
-  function checkIfHasQuestion(transcript: string): boolean {
-    // Remover wake words
-    let cleaned = transcript;
-    for (const word of wakeWords) {
-      cleaned = cleaned.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
-    }
-    
-    // Se sobrou texto (> 3 caracteres) = pergunta
-    return cleaned.length > 3;
-  }
-
-  function extractQuestion(transcript: string): string {
-    let cleaned = transcript;
-    for (const word of wakeWords) {
-      cleaned = cleaned.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
-    }
-    return cleaned;
-  }
-
-  async function processDirectQuestion(question: string) {
-    try {
-      const formData = new FormData();
-      
-      // Criar blob de áudio fake para API (API espera áudio, mas já temos texto)
-      const blob = new Blob([question], { type: 'text/plain' });
-      formData.append('audio', blob, 'direct.txt');
-      formData.append('companyId', companyId);
-      formData.append('directQuestion', question); // Flag especial
-      if (conversationIdRef.current) {
-        formData.append('conversationId', conversationIdRef.current);
-      }
-
-      const response = await fetch('/api/voice/process', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro: ${response.status}`);
-      }
-
-      const newConversationId = response.headers.get('X-Conversation-Id');
-      const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
-
-      if (newConversationId && newConversationId !== 'new') {
-        conversationIdRef.current = newConversationId;
-      }
-
-      setIsProcessing(false);
-
-      const responseAudioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(responseAudioBlob);
-      const audio = new Audio(audioUrl);
-      
-      currentAudioRef.current = audio;
-      
-      audio.onplay = () => {
-        console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
-        setIsPlayingAudio(true);
-      };
-      
-      audio.onended = () => {
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-        
-        // Continuar ouvindo
-        startManualRecording();
-      };
-
-      audio.onerror = (e) => {
-        console.error('Erro áudio:', e);
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-        startManualRecording();
-      };
-
-      await audio.play();
-    } catch (err: any) {
-      console.error('❌', err);
-      setError('Erro processar');
-      setIsProcessing(false);
-      setConversationActive(false);
-      
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          startWakeWordDetection();
-        }
-      }, 1000);
-    }
-  }
-
-  function textToSpeechBlob(text: string): Blob {
-    return new Blob([text], { type: 'text/plain' });
+    // Sempre dar saudação e aguardar (SIMPLIFICADO)
+    await playGreeting();
   }
 
   async function endConversation() {
@@ -371,10 +258,18 @@ export function VoiceAssistantWithWakeWord({
     try {
       await playText(greetingMessage);
       console.log('🎧 Saudação ok');
-      startManualRecording();
+      
+      // Aguardar 500ms antes de começar a gravar (dar tempo pro áudio terminar)
+      setTimeout(() => {
+        startManualRecording();
+      }, 500);
     } catch (err: any) {
       console.error('Erro saudação:', err.message);
-      startManualRecording();
+      
+      // Mesmo com erro, começar a gravar
+      setTimeout(() => {
+        startManualRecording();
+      }, 500);
     }
   }
 
@@ -427,7 +322,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startManualRecording() {
-    console.log('🎤 Manual (300ms)...');
+    console.log('🎤 Gravando (silêncio: 800ms)...');
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -444,8 +339,12 @@ export function VoiceAssistantWithWakeWord({
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       let silenceStart: number | null = null;
+      let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 300; // 300ms (era 200ms)
+      const SILENCE_DURATION = 800; // 800ms - TEMPO MAIOR!
+      const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
+
+      const recordStartTime = Date.now();
 
       const checkSilence = () => {
         if (mediaRecorder.state !== 'recording') return;
@@ -453,16 +352,24 @@ export function VoiceAssistantWithWakeWord({
         analyser.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
 
-        if (average < SILENCE_THRESHOLD) {
-          if (silenceStart === null) {
-            silenceStart = Date.now();
-          } else if (Date.now() - silenceStart > SILENCE_DURATION) {
-            console.log(`🤫 Silêncio: ${Date.now() - silenceStart}ms`);
-            stopManualRecording();
-            return;
-          }
-        } else {
+        // Detectar se está falando
+        if (average > SILENCE_THRESHOLD) {
+          speechDetected = true;
           silenceStart = null;
+        } else {
+          // Silêncio
+          // Só detectar silêncio se já falou por pelo menos 300ms
+          const elapsed = Date.now() - recordStartTime;
+          if (speechDetected && elapsed > MIN_SPEECH_DURATION) {
+            if (silenceStart === null) {
+              silenceStart = Date.now();
+              console.log('🤫 Silêncio começou');
+            } else if (Date.now() - silenceStart > SILENCE_DURATION) {
+              console.log(`🤫 Silêncio confirmado: ${Date.now() - silenceStart}ms`);
+              stopManualRecording();
+              return;
+            }
+          }
         }
 
         requestAnimationFrame(checkSilence);
@@ -482,6 +389,11 @@ export function VoiceAssistantWithWakeWord({
 
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         
+        console.log('📊 Áudio capturado:', {
+          size: audioBlob.size,
+          duration: Date.now() - recordStartTime
+        });
+        
         setIsRecording(false);
         setIsProcessing(true);
         await processAudio(audioBlob);
@@ -489,7 +401,7 @@ export function VoiceAssistantWithWakeWord({
 
       mediaRecorder.start();
       setIsRecording(true);
-      console.log('🎙️ Gravando');
+      console.log('🎙️ Gravando... (fale agora)');
       
       checkSilence();
     } catch (err) {
@@ -575,7 +487,10 @@ export function VoiceAssistantWithWakeWord({
           console.log('👋 Despedida');
           endConversation();
         } else {
-          startManualRecording();
+          // Continuar ouvindo
+          setTimeout(() => {
+            startManualRecording();
+          }, 300);
         }
       };
 
@@ -583,7 +498,10 @@ export function VoiceAssistantWithWakeWord({
         console.error('Erro áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
-        startManualRecording();
+        
+        setTimeout(() => {
+          startManualRecording();
+        }, 300);
       };
 
       await audio.play();
@@ -697,6 +615,9 @@ export function VoiceAssistantWithWakeWord({
                   Diga "tchau" para encerrar
                 </p>
               )}
+              <p className="text-xs text-gray-400 mt-1">
+                Silêncio: 800ms
+              </p>
             </div>
 
             {error && (

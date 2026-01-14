@@ -187,7 +187,7 @@ export function VoiceAssistantWithWakeWord({
             // Remover palavras comuns
             cleanTranscript = cleanTranscript.replace(/assistente|assis|hey|olá|ola|ei/gi, '').trim();
             
-            const words = cleanTranscript.split(' ').filter(w => w.length > 2);
+            const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
             const hasQuestion = words.length >= 2;
             
             console.log('🔍 Análise wake word:');

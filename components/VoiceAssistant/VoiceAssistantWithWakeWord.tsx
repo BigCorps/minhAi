@@ -149,13 +149,17 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function handleStart() {
-    console.log('🚀 Iniciando assistente...');
+    console.log('🚀 Iniciando assistente de voz...');
+    console.log('🔓 Desbloqueando áudio para autoplay...');
     
     // Unlock audio com user interaction
     unlockAudio();
     
     // Esconder botão
     setShowStartButton(false);
+    
+    console.log('🎤 Ativando detecção de wake word...');
+    console.log(`👂 Aguardando você dizer: "${wakeWords[0]}" ou "oi"`);
     
     // Iniciar wake word detection
     setTimeout(() => {
@@ -319,6 +323,9 @@ export function VoiceAssistantWithWakeWord({
     
     console.log('🟢 Ativa', hasQuestion ? '(com pergunta)' : '(sem pergunta)');
     setConversationActive(true);
+    
+    // Resetar flag IMEDIATAMENTE (já foi processado o wake word)
+    processingWakeWord.current = false;
     
     if (recognitionRef.current) {
       try {
@@ -527,6 +534,7 @@ export function VoiceAssistantWithWakeWord({
       console.error('Erro gravar:', err);
       setError('Erro gravar');
       setConversationActive(false);
+      processingWakeWord.current = false; // Reset flag em erro
       startWakeWordDetection();
     }
   }
@@ -627,6 +635,7 @@ export function VoiceAssistantWithWakeWord({
         console.error('Erro áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
+        processingWakeWord.current = false; // Reset em erro também
         
         setTimeout(() => {
           startManualRecording();
@@ -637,6 +646,9 @@ export function VoiceAssistantWithWakeWord({
         await audio.play();
       } catch (playError: any) {
         console.error('❌ Erro ao tocar áudio:', playError.message);
+        
+        // Resetar flag em erro
+        processingWakeWord.current = false;
         
         // Não bloquear - continuar gravação
         setIsPlayingAudio(false);
@@ -651,6 +663,7 @@ export function VoiceAssistantWithWakeWord({
       setError('Erro processar');
       setIsProcessing(false);
       setConversationActive(false);
+      processingWakeWord.current = false; // Reset flag em erro
       
       setTimeout(() => {
         if (isActiveRef.current) {

@@ -158,6 +158,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.onresult = (event: any) => {
         const current = event.resultIndex;
         const transcript = event.results[current][0].transcript.toLowerCase().trim();
+        const isFinal = event.results[current].isFinal;
         
         if (conversationActive) {
           const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
@@ -175,33 +176,16 @@ export function VoiceAssistantWithWakeWord({
           });
           
           if (detectedWakeWord) {
-            console.log('✅ Wake:', transcript);
+            console.log('✅ Wake:', transcript, isFinal ? '(final)' : '(interim)');
+            
+            // Sempre salvar o último transcript
             lastWakeWordTranscript.current = transcript;
             
-            // Checar se tem pergunta junto (mais de 2 palavras além do wake word)
-            let cleanTranscript = transcript;
-            for (const word of wakeWords) {
-              cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+            // Se for resultado final, processar
+            if (isFinal) {
+              console.log('📋 Transcript final capturado:', transcript);
+              processWakeWordTranscript(transcript);
             }
-            
-            // Remover palavras comuns
-            cleanTranscript = cleanTranscript.replace(/assistente|assis|hey|olá|ola|ei/gi, '').trim();
-            
-            const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
-            const hasQuestion = words.length >= 2;
-            
-            console.log('🔍 Análise wake word:');
-            console.log('  Original:', transcript);
-            console.log('  Limpo:', cleanTranscript);
-            console.log('  Palavras:', words);
-            console.log('  Count:', words.length);
-            console.log('  Tem pergunta?', hasQuestion);
-            
-            if (hasQuestion) {
-              console.log('💬 Pergunta detectada:', cleanTranscript);
-            }
-            
-            activateConversation(hasQuestion);
           }
         }
       };
@@ -246,8 +230,44 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
+  function processWakeWordTranscript(transcript: string) {
+    // Limpar transcript removendo wake words
+    let cleanTranscript = transcript;
+    for (const word of wakeWords) {
+      cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+    }
+    
+    // Remover palavras comuns que não são pergunta
+    cleanTranscript = cleanTranscript.replace(/assistente|assis|hey|olá|ola|ei/gi, '').trim();
+    
+    const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
+    const hasQuestion = words.length >= 2;
+    
+    console.log('🔍 Análise wake word:');
+    console.log('  Original:', transcript);
+    console.log('  Limpo:', cleanTranscript);
+    console.log('  Palavras:', words);
+    console.log('  Count:', words.length);
+    console.log('  Tem pergunta?', hasQuestion);
+    
+    if (hasQuestion) {
+      console.log('💬 Pergunta detectada:', cleanTranscript);
+      activateConversation(true);
+    } else {
+      console.log('👋 Só wake word, aguardando mais conteúdo...');
+      // Aguardar mais um pouco para ver se usuário continua falando
+      setTimeout(() => {
+        // Se ainda não ativou (nenhum novo transcript veio), ativar com saudação
+        if (!conversationActive && !isRecording && !isProcessing) {
+          console.log('⏰ Timeout: nada mais foi dito, dando saudação');
+          activateConversation(false);
+        }
+      }, 1500); // 1.5s de timeout
+    }
+  }
+
   async function activateConversation(hasQuestion: boolean = false) {
-    console.log('🟢 Ativa');
+    console.log('🟢 Ativa', hasQuestion ? '(com pergunta)' : '(sem pergunta)');
     setConversationActive(true);
     
     if (recognitionRef.current) {
@@ -257,16 +277,14 @@ export function VoiceAssistantWithWakeWord({
     }
     
     if (hasQuestion) {
-      // Tem pergunta junto com wake word
+      // Tem pergunta: começar a gravar IMEDIATAMENTE (sem saudação)
       console.log('⚡ Tem pergunta, gravando direto (sem saudação)');
-      
-      // Aguardar 300ms para garantir que usuário terminou de falar
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Começar a gravar
-      startManualRecording();
+      // Pequeno delay para garantir que speech recognition parou
+      setTimeout(() => {
+        startManualRecording();
+      }, 200);
     } else {
-      // Só wake word, dar saudação
+      // Só wake word: dar saudação e depois gravar
       console.log('👋 Só wake word, dando saudação');
       await playGreeting();
     }

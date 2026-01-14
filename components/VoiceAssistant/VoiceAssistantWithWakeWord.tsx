@@ -35,6 +35,7 @@ export function VoiceAssistantWithWakeWord({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const lastWakeWordTranscript = useRef<string>('');
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -175,7 +176,21 @@ export function VoiceAssistantWithWakeWord({
           
           if (detectedWakeWord) {
             console.log('✅ Wake:', transcript);
-            activateConversation();
+            lastWakeWordTranscript.current = transcript;
+            
+            // Checar se tem pergunta junto (mais de 2 palavras além do wake word)
+            let cleanTranscript = transcript;
+            for (const word of wakeWords) {
+              cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+            }
+            
+            const hasQuestion = cleanTranscript.split(' ').length >= 2;
+            
+            if (hasQuestion) {
+              console.log('💬 Pergunta detectada:', cleanTranscript);
+            }
+            
+            activateConversation(hasQuestion);
           }
         }
       };
@@ -220,7 +235,7 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  async function activateConversation() {
+  async function activateConversation(hasQuestion: boolean = false) {
     console.log('🟢 Ativa');
     setConversationActive(true);
     
@@ -230,8 +245,20 @@ export function VoiceAssistantWithWakeWord({
       } catch (e) {}
     }
     
-    // Sempre dar saudação e aguardar (SIMPLIFICADO)
-    await playGreeting();
+    if (hasQuestion) {
+      // Tem pergunta junto com wake word
+      console.log('⚡ Tem pergunta, gravando direto (sem saudação)');
+      
+      // Aguardar 300ms para garantir que usuário terminou de falar
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Começar a gravar
+      startManualRecording();
+    } else {
+      // Só wake word, dar saudação
+      console.log('👋 Só wake word, dando saudação');
+      await playGreeting();
+    }
   }
 
   async function endConversation() {
@@ -422,6 +449,8 @@ export function VoiceAssistantWithWakeWord({
     const startTime = Date.now();
     
     try {
+      console.log('⏱️ [0ms] Iniciando processamento');
+      
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.wav');
       formData.append('companyId', companyId);
@@ -429,11 +458,17 @@ export function VoiceAssistantWithWakeWord({
         formData.append('conversationId', conversationIdRef.current);
       }
 
+      console.log(`⏱️ [${Date.now() - startTime}ms] FormData pronto, enviando...`);
       console.log('⚙️ API...');
+      
+      const fetchStart = Date.now();
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
       });
+      const fetchTime = Date.now() - fetchStart;
+
+      console.log(`⏱️ [${Date.now() - startTime}ms] Response recebido (fetch: ${fetchTime}ms)`);
 
       const processingTime = Date.now() - startTime;
 
@@ -452,8 +487,9 @@ export function VoiceAssistantWithWakeWord({
         console.log('📝', decoded);
       }
 
-      console.log(`⏱️ Frontend: ${processingTime}ms`);
-      console.log(`⏱️ API: ${apiTime}ms`);
+      console.log(`⏱️ Frontend total: ${processingTime}ms`);
+      console.log(`⏱️ API interno: ${apiTime}ms`);
+      console.log(`⏱️ Network: ${processingTime - parseInt(apiTime || '0')}ms`);
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
 
       if (newConversationId && newConversationId !== 'new') {

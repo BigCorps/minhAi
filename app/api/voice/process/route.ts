@@ -201,14 +201,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar tamanho mínimo
-    if (audioFile.size < 3000) {
-      console.log('❌ Áudio muito pequeno:', audioFile.size, 'bytes');
+    const supabase = createClient();
+
+    console.log('⚡ Iniciando... (Deepgram)');
+    
+    // FASE 1: Transcrição DEEPGRAM + Company (PARALELO)
+    const sttStart = Date.now();
+    
+    let userMessage = '';
+    let company: any = null;
+    let transcriptionError = null;
+    
+    try {
+      const [companyResult, transcript] = await Promise.all([
+        supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
+        transcribeWithDeepgram(audioFile)
+      ]);
+      
+      userMessage = transcript;
+      company = companyResult.data;
+    } catch (error: any) {
+      transcriptionError = error;
+      console.error('❌ Erro Deepgram:', error.message);
+      
+      // Se Deepgram falhar, tentar Whisper fallback
+      console.log('🔄 Fallback para Whisper...');
+      
+      const [companyResult, whisperResult] = await Promise.all([
+        supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
+        openai.audio.transcriptions.create({
+          file: audioFile,
+          model: 'whisper-1',
+          language: 'pt',
+          temperature: 0.0,
+        })
+      ]);
+      
+      userMessage = whisperResult.text || '';
+      company = companyResult.data;
+    }
+
+    const transcriptionTime = Date.now() - sttStart;
+
+    if (!userMessage || !company) {
+      console.log('❌ Transcrição vazia ou company não encontrada');
       
       const errorTTS = await openai.audio.speech.create({
         model: 'tts-1',
         voice: 'nova',
-        input: 'Não consegui te ouvir. Pode repetir mais alto?',
+        input: 'Não consegui te ouvir. Pode repetir?',
         speed: 1.15,
       });
       
@@ -217,34 +258,15 @@ export async function POST(request: NextRequest) {
       return new Response(errorBuffer, {
         headers: {
           'Content-Type': 'audio/mpeg',
-          'X-Transcription': encodeURIComponent('[áudio inválido]'),
+          'X-Transcription': encodeURIComponent('[vazio]'),
           'X-Used-FAQ': 'false',
           'X-Processing-Time': String(Date.now() - startTime),
         },
       });
     }
 
-    const supabase = createClient();
-
-    console.log('⚡ Iniciando... (Deepgram)');
-    
-    // FASE 1: Transcrição DEEPGRAM + Company (PARALELO)
-    const sttStart = Date.now();
-    const [companyResult, userMessage] = await Promise.all([
-      supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
-      transcribeWithDeepgram(audioFile)
-    ]);
-
-    const { data: company } = companyResult;
-    const transcriptionTime = Date.now() - sttStart;
-
-    if (!userMessage || !company) {
-      console.log('❌ Transcrição vazia ou company não encontrada');
-      return NextResponse.json({ error: 'Erro processamento' }, { status: 400 });
-    }
-
     console.log(`👂 "${userMessage}"`);
-    console.log(`⏱️ Deepgram: ${transcriptionTime}ms`);
+    console.log(`⏱️ ${transcriptionError ? 'Whisper' : 'Deepgram'}: ${transcriptionTime}ms`);
 
     // FASE 2: FAQ Matching
     const faqStart = Date.now();

@@ -14,7 +14,6 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
   const blinkIntervalRef = useRef<any>(null);
   const mouthIntervalRef = useRef<any>(null);
 
-  // --- LÓGICA DE PISCAR (MANTIDA) ---
   useEffect(() => {
     const blink = () => {
       setIsBlinking(true);
@@ -33,7 +32,6 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     };
   }, []);
 
-  // --- LÓGICA DE FALAR (MANTIDA) ---
   useEffect(() => {
     if (isSpeaking) {
       mouthIntervalRef.current = setInterval(() => {
@@ -49,21 +47,19 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
   }, [isSpeaking]);
 
   const getBackgroundColor = () => {
-    if (isSpeaking) return '#34d399'; // Verde
-    if (isProcessing) return '#fbbf24'; // Amarelo
-    if (isListening) return '#60a5fa'; // Azul
-    return '#e5e7eb'; // Cinza claro (Default)
+    if (isSpeaking) return '#34d399'; 
+    if (isProcessing) return '#fbbf24'; 
+    if (isListening) return '#60a5fa'; 
+    return '#ffffff'; // Fundo branco conforme solicitado anteriormente
   };
 
   const featureColor = '#000000';
-
-  // --- LÓGICA DO OLHAR PARA CIMA (MANTIDA) ---
-  const eyeOffsetY = isProcessing ? -5 : 0;
+  const eyeOffsetY = isProcessing ? -4 : 0;
 
   return (
     <div className="flex items-center justify-center h-full w-full">
       <div 
-        className="relative w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-500 shadow-lg"
+        className="relative w-64 h-64 rounded-3xl flex items-center justify-center transition-colors duration-500 shadow-sm border border-gray-100"
         style={{ backgroundColor: getBackgroundColor() }}
       >
         <svg
@@ -71,59 +67,54 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           height="200"
           viewBox="0 0 64 64"
           className="transition-all duration-300"
-          shapeRendering="crispEdges" // Essencial para o visual pixel perfect
+          shapeRendering="crispEdges"
         >
-          {/* NOVAS PROPORÇÕES BASEADAS NA REFERÊNCIA (Print 1):
-             Olhos menores (8x12) e Boca mais larga (36 de largura)
+          {/* AJUSTES DE POSICIONAMENTO:
+            - Olhos aproximados (x: 22 e x: 34)
+            - Olhos centralizados verticalmente um pouco mais acima
+            - Boca descida para aumentar o espaço entre os olhos e ela
           */}
 
-          {/* OLHO ESQUERDO - Diminuído para 8x12 */}
+          {/* OLHO ESQUERDO */}
           <g 
-            transform={`translate(18, ${18 + eyeOffsetY})`} 
+            transform={`translate(22, ${20 + eyeOffsetY})`} 
             className="transition-transform duration-500 ease-in-out"
           >
             {isBlinking ? (
               <rect x="0" y="5" width="8" height="2" fill={featureColor} />
             ) : (
               <>
-                {/* Base do olho 8x12 */}
-                <path d="M2,0 H6 V2 H8 V10 H6 V12 H2 V12 H0 V10 V2 H2 Z" fill={featureColor} />
-                {/* Brilhos ajustados para o tamanho menor */}
-                <rect x="1" y="1" width="3" height="3" fill="white" />
-                <rect x="5" y="8" width="2" height="2" fill="white" />
+                <path d="M1,0 H7 V1 H8 V11 H7 V12 H1 V11 H0 V1 H1 Z" fill={featureColor} />
+                <rect x="1" y="1" width="3" height="4" fill="white" />
+                <rect x="5" y="7" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* OLHO DIREITO - Diminuído para 8x12 */}
+          {/* OLHO DIREITO */}
           <g 
-            transform={`translate(38, ${18 + eyeOffsetY})`}
+            transform={`translate(34, ${20 + eyeOffsetY})`}
             className="transition-transform duration-500 ease-in-out"
           >
             {isBlinking ? (
                <rect x="0" y="5" width="8" height="2" fill={featureColor} />
             ) : (
               <>
-                 {/* Base do olho 8x12 */}
-                <path d="M2,0 H6 V2 H8 V10 H6 V12 H2 V12 H0 V10 V2 H2 Z" fill={featureColor} />
-                 {/* Brilhos ajustados */}
-                <rect x="1" y="1" width="3" height="3" fill="white" />
-                <rect x="5" y="8" width="2" height="2" fill="white" />
+                <path d="M1,0 H7 V1 H8 V11 H7 V12 H1 V11 H0 V1 H1 Z" fill={featureColor} />
+                <rect x="1" y="1" width="3" height="4" fill="white" />
+                <rect x="5" y="7" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* GRUPO DA BOCA - Centralizado e posicionado mais acima */}
-          <g transform="translate(14, 34)">
+          {/* GRUPO DA BOCA - Posicionado mais abaixo (y: 40) e largura proporcional */}
+          <g transform="translate(14, 40)">
             {isSpeaking && mouthOpen ? (
-              // Boca Falando (Quadrado largo)
-              <rect x="8" y="0" width="20" height="10" fill={featureColor} rx="2" />
+              <rect x="6" y="0" width="24" height="8" fill={featureColor} />
             ) : isProcessing ? (
-              // Boca Pensando (Biquinho pequeno)
               <rect x="16" y="2" width="4" height="4" fill={featureColor} />
             ) : (
-              // SORRISO PADRÃO - REDESENHADO PARA SER EXATAMENTE IGUAL AO PRINT 1
-              // Largura total: 36 pixels. Altura: 8 pixels.
+              // Sorriso Largo e proporcional à nova distância dos olhos
               <path 
                 d="M0,0 H4 V2 H8 V4 H28 V2 H32 V0 H36 V4 H32 V6 H28 V8 H8 V6 H4 V4 H0 Z" 
                 fill={featureColor} 
@@ -132,10 +123,9 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           </g>
         </svg>
 
-        {/* Label do estado */}
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
            {(isListening || isSpeaking || isProcessing) && (
-            <span className="px-3 py-1 bg-black/10 text-black/60 text-xs rounded-full font-bold backdrop-blur-sm">
+            <span className="px-3 py-1 bg-black/5 text-black/40 text-[10px] rounded-full font-bold tracking-widest">
               {isSpeaking && 'FALANDO'}
               {isProcessing && 'PENSANDO'}
               {isListening && 'OUVINDO'}

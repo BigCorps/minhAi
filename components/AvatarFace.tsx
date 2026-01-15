@@ -58,7 +58,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
   const featureColor = '#000000';
 
   // --- LÓGICA DO OLHAR PARA CIMA (MANTIDA) ---
-  const eyeOffsetY = isProcessing ? -6 : 0;
+  const eyeOffsetY = isProcessing ? -5 : 0;
 
   return (
     <div className="flex items-center justify-center h-full w-full">
@@ -71,56 +71,61 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           height="200"
           viewBox="0 0 64 64"
           className="transition-all duration-300"
-          shapeRendering="crispEdges"
+          shapeRendering="crispEdges" // Essencial para o visual pixel perfect
         >
-          {/* OLHO ESQUERDO */}
+          {/* NOVAS PROPORÇÕES BASEADAS NA REFERÊNCIA (Print 1):
+             Olhos menores (8x12) e Boca mais larga (36 de largura)
+          */}
+
+          {/* OLHO ESQUERDO - Diminuído para 8x12 */}
           <g 
-            transform={`translate(16, ${20 + eyeOffsetY})`} 
+            transform={`translate(18, ${18 + eyeOffsetY})`} 
             className="transition-transform duration-500 ease-in-out"
           >
             {isBlinking ? (
-              <rect x="0" y="7" width="10" height="2" fill={featureColor} />
+              <rect x="0" y="5" width="8" height="2" fill={featureColor} />
             ) : (
               <>
-                <path d="M2,0 H8 V2 H10 V12 H8 V14 H2 V12 H0 V2 H2 Z" fill={featureColor} />
-                <rect x="2" y="2" width="3" height="3" fill="white" />
-                <rect x="6" y="7" width="2" height="2" fill="white" />
+                {/* Base do olho 8x12 */}
+                <path d="M2,0 H6 V2 H8 V10 H6 V12 H2 V12 H0 V10 V2 H2 Z" fill={featureColor} />
+                {/* Brilhos ajustados para o tamanho menor */}
+                <rect x="1" y="1" width="3" height="3" fill="white" />
+                <rect x="5" y="8" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* OLHO DIREITO */}
+          {/* OLHO DIREITO - Diminuído para 8x12 */}
           <g 
-            transform={`translate(38, ${20 + eyeOffsetY})`}
+            transform={`translate(38, ${18 + eyeOffsetY})`}
             className="transition-transform duration-500 ease-in-out"
           >
             {isBlinking ? (
-               <rect x="0" y="7" width="10" height="2" fill={featureColor} />
+               <rect x="0" y="5" width="8" height="2" fill={featureColor} />
             ) : (
               <>
-                <path d="M2,0 H8 V2 H10 V12 H8 V14 H2 V12 H0 V2 H2 Z" fill={featureColor} />
-                <rect x="2" y="2" width="3" height="3" fill="white" />
-                <rect x="6" y="7" width="2" height="2" fill="white" />
+                 {/* Base do olho 8x12 */}
+                <path d="M2,0 H6 V2 H8 V10 H6 V12 H2 V12 H0 V10 V2 H2 Z" fill={featureColor} />
+                 {/* Brilhos ajustados */}
+                <rect x="1" y="1" width="3" height="3" fill="white" />
+                <rect x="5" y="8" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* BOCA - Ajustada para ser mais larga */}
-          {/* Mudamos o translate X de 22 para 16 para centralizar a nova boca mais larga */}
-          <g transform="translate(16, 42)">
+          {/* GRUPO DA BOCA - Centralizado e posicionado mais acima */}
+          <g transform="translate(14, 34)">
             {isSpeaking && mouthOpen ? (
-              // Boca Falando (Quadrado) - Também alarguei um pouco para acompanhar
-              <path 
-                d="M4,0 H28 V2 H30 V10 H28 V12 H4 V10 H2 V2 H4 Z" 
-                fill={featureColor} 
-              />
+              // Boca Falando (Quadrado largo)
+              <rect x="8" y="0" width="20" height="10" fill={featureColor} rx="2" />
             ) : isProcessing ? (
-              // Boca Pensando (Biquinho olhando pra cima)
-              <rect x="14" y="2" width="4" height="4" fill={featureColor} />
+              // Boca Pensando (Biquinho pequeno)
+              <rect x="16" y="2" width="4" height="4" fill={featureColor} />
             ) : (
-              // SORRISO PADRÃO - REDESENHADO PARA SER MAIS LARGO (32 pixels de largura)
+              // SORRISO PADRÃO - REDESENHADO PARA SER EXATAMENTE IGUAL AO PRINT 1
+              // Largura total: 36 pixels. Altura: 8 pixels.
               <path 
-                d="M0,0 H6 V2 H10 V4 H22 V2 H26 V0 H32 V4 H26 V6 H22 V8 H10 V6 H6 V4 H0 Z" 
+                d="M0,0 H4 V2 H8 V4 H28 V2 H32 V0 H36 V4 H32 V6 H28 V8 H8 V6 H4 V4 H0 Z" 
                 fill={featureColor} 
               />
             )}

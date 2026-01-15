@@ -69,61 +69,61 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           className="transition-all duration-300"
           shapeRendering="crispEdges"
         >
-          {/* GRUPO PRINCIPAL COM ESCALA DE 150% (1.5)
-             Agrupamos tudo e aplicamos a escala para aumentar o rosto inteiro
-             mantendo a proporção exata. Usamos transformOrigin no centro (32px 32px)
-             para que ele cresça a partir do meio.
+          {/* AJUSTE FINALISSIMO BASEADO NO OVERLAY VERMELHO:
+             - Olhos reduzidos para 6x10.
+             - Posições Y subidas para 20.
+             - Posições X ajustadas para 23 e 35.
           */}
-          <g style={{ transform: 'scale(1.5)', transformOrigin: '32px 32px' }}>
-            
-            {/* Conteúdo original mantido intacto dentro do grupo escalado */}
 
-            {/* OLHO ESQUERDO (8x12) */}
-            <g 
-              transform={`translate(21, ${22 + eyeOffsetY})`} 
-              className="transition-transform duration-500 ease-in-out"
-            >
-              {isBlinking ? (
-                <rect x="0" y="5" width="8" height="2" fill={featureColor} />
-              ) : (
-                <>
-                  <path d="M1,0 H7 V1 H8 V11 H7 V12 H1 V11 H0 V1 H1 Z" fill={featureColor} />
-                  <rect x="1" y="1" width="3" height="4" fill="white" />
-                  <rect x="5" y="8" width="2" height="2" fill="white" />
-                </>
-              )}
-            </g>
+          {/* OLHO ESQUERDO (6x10) */}
+          <g 
+            transform={`translate(23, ${20 + eyeOffsetY})`} 
+            className="transition-transform duration-500 ease-in-out"
+          >
+            {isBlinking ? (
+              <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+            ) : (
+              <>
+                {/* Base do olho 6x10 */}
+                <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
+                {/* Brilhos para o tamanho 6x10 */}
+                <rect x="1" y="1" width="2" height="3" fill="white" />
+                <rect x="4" y="6" width="1" height="1" fill="white" />
+              </>
+            )}
+          </g>
 
-            {/* OLHO DIREITO (8x12) */}
-            <g 
-              transform={`translate(35, ${22 + eyeOffsetY})`}
-              className="transition-transform duration-500 ease-in-out"
-            >
-              {isBlinking ? (
-                 <rect x="0" y="5" width="8" height="2" fill={featureColor} />
-              ) : (
-                <>
-                  <path d="M1,0 H7 V1 H8 V11 H7 V12 H1 V11 H0 V1 H1 Z" fill={featureColor} />
-                  <rect x="1" y="1" width="3" height="4" fill="white" />
-                  <rect x="5" y="8" width="2" height="2" fill="white" />
-                </>
-              )}
-            </g>
+          {/* OLHO DIREITO (6x10) */}
+          <g 
+            transform={`translate(35, ${20 + eyeOffsetY})`}
+            className="transition-transform duration-500 ease-in-out"
+          >
+            {isBlinking ? (
+               <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+            ) : (
+              <>
+                {/* Base do olho 6x10 */}
+                <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
+                {/* Brilhos */}
+                <rect x="1" y="1" width="2" height="3" fill="white" />
+                <rect x="4" y="6" width="1" height="1" fill="white" />
+              </>
+            )}
+          </g>
 
-            {/* GRUPO DA BOCA (Y=38, Largura=32) */}
-            <g transform="translate(16, 38)">
-              {isSpeaking && mouthOpen ? (
-                <rect x="4" y="0" width="24" height="8" fill={featureColor} rx="1" />
-              ) : isProcessing ? (
-                <rect x="14" y="2" width="4" height="4" fill={featureColor} />
-              ) : (
-                <path 
-                  d="M0,0 H4 V2 H8 V4 H24 V2 H28 V0 H32 V4 H28 V6 H24 V8 H8 V6 H4 V4 H0 Z" 
-                  fill={featureColor} 
-                />
-              )}
-            </g>
-          </g> {/* Fim do grupo de escala */}
+          {/* GRUPO DA BOCA - Mantido (Y=38, Largura=32) */}
+          <g transform="translate(16, 38)">
+            {isSpeaking && mouthOpen ? (
+              <rect x="4" y="0" width="24" height="8" fill={featureColor} rx="1" />
+            ) : isProcessing ? (
+              <rect x="14" y="2" width="4" height="4" fill={featureColor} />
+            ) : (
+              <path 
+                d="M0,0 H4 V2 H8 V4 H24 V2 H28 V0 H32 V4 H28 V6 H24 V8 H8 V6 H4 V4 H0 Z" 
+                fill={featureColor} 
+              />
+            )}
+          </g>
         </svg>
 
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">

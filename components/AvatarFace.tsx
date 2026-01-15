@@ -120,7 +120,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
             ) : (
               // SORRISO PADRÃO - REDESENHADO PARA SER MAIS LARGO (32 pixels de largura)
               <path 
-                d="M0,0 H6 V2 H10 V4 H22 V2 H26 V0 H45 V4 H26 V6 H22 V8 H10 V6 H6 V4 H0 Z" 
+                d="M0,0 H6 V2 H10 V4 H22 V2 H26 V0 H32 V4 H26 V6 H22 V8 H10 V6 H6 V4 H0 Z" 
                 fill={featureColor} 
               />
             )}

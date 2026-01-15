@@ -69,37 +69,41 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           className="transition-all duration-300"
           shapeRendering="crispEdges"
         >
-          {/* RESTAURADO: Escala de 150% para manter o rosto grande */}
+          {/* GRUPO DE ESCALA 1.5x MANTIDO */}
           <g style={{ transform: 'scale(1.5)', transformOrigin: '32px 32px' }}>
             
-            {/* OLHO ESQUERDO: Ajustado para 6x10 e posicionado em Y=20 */}
+            {/* OLHO ESQUERDO: Ajustado para o tamanho médio 7x11 */}
             <g 
-              transform={`translate(23, ${20 + eyeOffsetY})`} 
+              transform={`translate(22, ${20 + eyeOffsetY})`} 
               className="transition-transform duration-500 ease-in-out"
             >
               {isBlinking ? (
-                <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+                <rect x="0" y="5" width="7" height="2" fill={featureColor} />
               ) : (
                 <>
-                  <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
-                  <rect x="1" y="1" width="2" height="3" fill="white" />
-                  <rect x="4" y="6" width="1" height="1" fill="white" />
+                  {/* Path do olho 7x11 */}
+                  <path d="M1,0 H6 V1 H7 V10 H6 V11 H1 V10 H0 V1 H1 Z" fill={featureColor} />
+                  {/* Brilhos proporcionais ao 7x11 */}
+                  <rect x="1" y="1" width="3" height="4" fill="white" />
+                  <rect x="5" y="8" width="1" height="1" fill="white" />
                 </>
               )}
             </g>
 
-            {/* OLHO DIREITO: Ajustado para 6x10 e posicionado em Y=20 */}
+            {/* OLHO DIREITO: Ajustado para o tamanho médio 7x11 */}
             <g 
               transform={`translate(35, ${20 + eyeOffsetY})`}
               className="transition-transform duration-500 ease-in-out"
             >
               {isBlinking ? (
-                 <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+                 <rect x="0" y="5" width="7" height="2" fill={featureColor} />
               ) : (
                 <>
-                  <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
-                  <rect x="1" y="1" width="2" height="3" fill="white" />
-                  <rect x="4" y="6" width="1" height="1" fill="white" />
+                  {/* Path do olho 7x11 */}
+                  <path d="M1,0 H6 V1 H7 V10 H6 V11 H1 V10 H0 V1 H1 Z" fill={featureColor} />
+                  {/* Brilhos proporcionais ao 7x11 */}
+                  <rect x="1" y="1" width="3" height="4" fill="white" />
+                  <rect x="5" y="8" width="1" height="1" fill="white" />
                 </>
               )}
             </g>

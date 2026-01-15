@@ -57,8 +57,7 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
 
   const featureColor = '#000000';
 
-  // --- LÓGICA DO OLHAR PARA CIMA ---
-  // Se estiver pensando, sobe 6 pixels (-6). Se não, fica na posição 0.
+  // --- LÓGICA DO OLHAR PARA CIMA (MANTIDA) ---
   const eyeOffsetY = isProcessing ? -6 : 0;
 
   return (
@@ -72,11 +71,8 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           height="200"
           viewBox="0 0 64 64"
           className="transition-all duration-300"
-          shapeRendering="crispEdges" // Garante o visual pixelado perfeito
+          shapeRendering="crispEdges"
         >
-          {/* GRUPO DOS OLHOS - Mover ambos juntos facilita o alinhamento */}
-          {/* Aplicamos a transição Y aqui para o efeito de "olhar para cima" */}
-          
           {/* OLHO ESQUERDO */}
           <g 
             transform={`translate(16, ${20 + eyeOffsetY})`} 
@@ -86,14 +82,8 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
               <rect x="0" y="7" width="10" height="2" fill={featureColor} />
             ) : (
               <>
-                {/* Base do olho (Oval Vertical 10x14) */}
-                <path 
-                  d="M2,0 H8 V2 H10 V12 H8 V14 H2 V12 H0 V2 H2 Z" 
-                  fill={featureColor} 
-                />
-                {/* Brilho Grande (Canto Top-Esq) */}
+                <path d="M2,0 H8 V2 H10 V12 H8 V14 H2 V12 H0 V2 H2 Z" fill={featureColor} />
                 <rect x="2" y="2" width="3" height="3" fill="white" />
-                {/* Brilho Pequeno (Meio-Dir) */}
                 <rect x="6" y="7" width="2" height="2" fill="white" />
               </>
             )}
@@ -108,32 +98,29 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
                <rect x="0" y="7" width="10" height="2" fill={featureColor} />
             ) : (
               <>
-                <path 
-                  d="M2,0 H8 V2 H10 V12 H8 V14 H2 V12 H0 V2 H2 Z" 
-                  fill={featureColor} 
-                />
+                <path d="M2,0 H8 V2 H10 V12 H8 V14 H2 V12 H0 V2 H2 Z" fill={featureColor} />
                 <rect x="2" y="2" width="3" height="3" fill="white" />
                 <rect x="6" y="7" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* BOCA - Fica parada, ou se quiser que ela suba junto, use eyeOffsetY aqui também */}
-          <g transform="translate(22, 42)">
+          {/* BOCA - Ajustada para ser mais larga */}
+          {/* Mudamos o translate X de 22 para 16 para centralizar a nova boca mais larga */}
+          <g transform="translate(16, 42)">
             {isSpeaking && mouthOpen ? (
-              // Boca Falando (Quadrado)
+              // Boca Falando (Quadrado) - Também alarguei um pouco para acompanhar
               <path 
-                d="M4,0 H16 V2 H18 V8 H16 V10 H4 V8 H2 V2 H4 Z" 
+                d="M4,0 H28 V2 H30 V10 H28 V12 H4 V10 H2 V2 H4 Z" 
                 fill={featureColor} 
               />
             ) : isProcessing ? (
-              // Boca Pensando (Pequena bolinha ou linha)
-              <rect x="8" y="2" width="4" height="4" fill={featureColor} />
+              // Boca Pensando (Biquinho olhando pra cima)
+              <rect x="14" y="2" width="4" height="4" fill={featureColor} />
             ) : (
-              // Sorriso (Estilo Imagem de Referência)
-              // Pixel art exato do sorriso largo
+              // SORRISO PADRÃO - REDESENHADO PARA SER MAIS LARGO (32 pixels de largura)
               <path 
-                d="M0,0 H4 V2 H6 V4 H14 V2 H16 V0 H20 V4 H16 V6 H14 V8 H6 V6 H4 V4 H0 Z" 
+                d="M0,0 H6 V2 H10 V4 H22 V2 H26 V0 H32 V4 H26 V6 H22 V8 H10 V6 H6 V4 H0 Z" 
                 fill={featureColor} 
               />
             )}

@@ -69,60 +69,54 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           className="transition-all duration-300"
           shapeRendering="crispEdges"
         >
-          {/* AJUSTE FINALISSIMO BASEADO NO OVERLAY VERMELHO:
-             - Olhos reduzidos para 6x10.
-             - Posições Y subidas para 20.
-             - Posições X ajustadas para 23 e 35.
-          */}
+          {/* RESTAURADO: Escala de 150% para manter o rosto grande */}
+          <g style={{ transform: 'scale(1.5)', transformOrigin: '32px 32px' }}>
+            
+            {/* OLHO ESQUERDO: Ajustado para 6x10 e posicionado em Y=20 */}
+            <g 
+              transform={`translate(23, ${20 + eyeOffsetY})`} 
+              className="transition-transform duration-500 ease-in-out"
+            >
+              {isBlinking ? (
+                <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+              ) : (
+                <>
+                  <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
+                  <rect x="1" y="1" width="2" height="3" fill="white" />
+                  <rect x="4" y="6" width="1" height="1" fill="white" />
+                </>
+              )}
+            </g>
 
-          {/* OLHO ESQUERDO (6x10) */}
-          <g 
-            transform={`translate(23, ${20 + eyeOffsetY})`} 
-            className="transition-transform duration-500 ease-in-out"
-          >
-            {isBlinking ? (
-              <rect x="0" y="4" width="6" height="2" fill={featureColor} />
-            ) : (
-              <>
-                {/* Base do olho 6x10 */}
-                <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
-                {/* Brilhos para o tamanho 6x10 */}
-                <rect x="1" y="1" width="2" height="3" fill="white" />
-                <rect x="4" y="6" width="1" height="1" fill="white" />
-              </>
-            )}
-          </g>
+            {/* OLHO DIREITO: Ajustado para 6x10 e posicionado em Y=20 */}
+            <g 
+              transform={`translate(35, ${20 + eyeOffsetY})`}
+              className="transition-transform duration-500 ease-in-out"
+            >
+              {isBlinking ? (
+                 <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+              ) : (
+                <>
+                  <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
+                  <rect x="1" y="1" width="2" height="3" fill="white" />
+                  <rect x="4" y="6" width="1" height="1" fill="white" />
+                </>
+              )}
+            </g>
 
-          {/* OLHO DIREITO (6x10) */}
-          <g 
-            transform={`translate(35, ${20 + eyeOffsetY})`}
-            className="transition-transform duration-500 ease-in-out"
-          >
-            {isBlinking ? (
-               <rect x="0" y="4" width="6" height="2" fill={featureColor} />
-            ) : (
-              <>
-                {/* Base do olho 6x10 */}
-                <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
-                {/* Brilhos */}
-                <rect x="1" y="1" width="2" height="3" fill="white" />
-                <rect x="4" y="6" width="1" height="1" fill="white" />
-              </>
-            )}
-          </g>
-
-          {/* GRUPO DA BOCA - Mantido (Y=38, Largura=32) */}
-          <g transform="translate(16, 38)">
-            {isSpeaking && mouthOpen ? (
-              <rect x="4" y="0" width="24" height="8" fill={featureColor} rx="1" />
-            ) : isProcessing ? (
-              <rect x="14" y="2" width="4" height="4" fill={featureColor} />
-            ) : (
-              <path 
-                d="M0,0 H4 V2 H8 V4 H24 V2 H28 V0 H32 V4 H28 V6 H24 V8 H8 V6 H4 V4 H0 Z" 
-                fill={featureColor} 
-              />
-            )}
+            {/* BOCA: Mantida em Y=38 e largura 32 */}
+            <g transform="translate(16, 38)">
+              {isSpeaking && mouthOpen ? (
+                <rect x="4" y="0" width="24" height="8" fill={featureColor} rx="1" />
+              ) : isProcessing ? (
+                <rect x="14" y="2" width="4" height="4" fill={featureColor} />
+              ) : (
+                <path 
+                  d="M0,0 H4 V2 H8 V4 H24 V2 H28 V0 H32 V4 H28 V6 H24 V8 H8 V6 H4 V4 H0 Z" 
+                  fill={featureColor} 
+                />
+              )}
+            </g>
           </g>
         </svg>
 

@@ -50,12 +50,10 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
     if (isSpeaking) return '#34d399'; 
     if (isProcessing) return '#fbbf24'; 
     if (isListening) return '#60a5fa'; 
-    // CORRIGIDO: Volta para o cinza claro padrão do estilo original
     return '#e5e7eb'; 
   };
 
   const featureColor = '#000000';
-  // Ajuste fino do olhar para cima
   const eyeOffsetY = isProcessing ? -4 : 0;
 
   return (
@@ -71,56 +69,55 @@ export function AvatarFace({ isListening, isSpeaking, isProcessing }: AvatarFace
           className="transition-all duration-300"
           shapeRendering="crispEdges"
         >
-          {/* AJUSTE FINO BASEADO NO OVERLAY:
-             - Olhos reduzidos para 6x10.
-             - Posições X ajustadas para 23 e 35. Posição Y ajustada para 19.
-             - Boca reduzida para largura 32 e subida para Y=38.
+          {/* AJUSTE FINAL BASEADO NO OVERLAY:
+             - Olhos aumentados para 8x12.
+             - Posições Y descidas para 22.
+             - Posições X ajustadas para 21 e 35 para manter a centralização.
           */}
 
-          {/* OLHO ESQUERDO (6x10) */}
+          {/* OLHO ESQUERDO (8x12) */}
           <g 
-            transform={`translate(23, ${19 + eyeOffsetY})`} 
+            transform={`translate(21, ${22 + eyeOffsetY})`} 
             className="transition-transform duration-500 ease-in-out"
           >
             {isBlinking ? (
-              <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+              <rect x="0" y="5" width="8" height="2" fill={featureColor} />
             ) : (
               <>
-                {/* Base do olho 6x10 */}
-                <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
-                {/* Brilhos para o tamanho 6x10 */}
-                <rect x="1" y="1" width="2" height="3" fill="white" />
-                <rect x="4" y="6" width="1" height="1" fill="white" />
+                {/* Base do olho 8x12 */}
+                <path d="M1,0 H7 V1 H8 V11 H7 V12 H1 V11 H0 V1 H1 Z" fill={featureColor} />
+                {/* Brilhos ajustados para o tamanho 8x12 */}
+                <rect x="1" y="1" width="3" height="4" fill="white" />
+                <rect x="5" y="8" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* OLHO DIREITO (6x10) */}
+          {/* OLHO DIREITO (8x12) */}
           <g 
-            transform={`translate(35, ${19 + eyeOffsetY})`}
+            transform={`translate(35, ${22 + eyeOffsetY})`}
             className="transition-transform duration-500 ease-in-out"
           >
             {isBlinking ? (
-               <rect x="0" y="4" width="6" height="2" fill={featureColor} />
+               <rect x="0" y="5" width="8" height="2" fill={featureColor} />
             ) : (
               <>
-                {/* Base do olho 6x10 */}
-                <path d="M1,0 H5 V1 H6 V9 H5 V10 H1 V9 H0 V1 H1 Z" fill={featureColor} />
+                {/* Base do olho 8x12 */}
+                <path d="M1,0 H7 V1 H8 V11 H7 V12 H1 V11 H0 V1 H1 Z" fill={featureColor} />
                 {/* Brilhos */}
-                <rect x="1" y="1" width="2" height="3" fill="white" />
-                <rect x="4" y="6" width="1" height="1" fill="white" />
+                <rect x="1" y="1" width="3" height="4" fill="white" />
+                <rect x="5" y="8" width="2" height="2" fill="white" />
               </>
             )}
           </g>
 
-          {/* GRUPO DA BOCA - Largura 32, Posição Y 38 */}
+          {/* GRUPO DA BOCA - Mantido exatamente igual (Y=38, Largura=32) */}
           <g transform="translate(16, 38)">
             {isSpeaking && mouthOpen ? (
               <rect x="4" y="0" width="24" height="8" fill={featureColor} rx="1" />
             ) : isProcessing ? (
               <rect x="14" y="2" width="4" height="4" fill={featureColor} />
             ) : (
-              // Sorriso largura 32 (volta ao padrão anterior que era mais preciso)
               <path 
                 d="M0,0 H4 V2 H8 V4 H24 V2 H28 V0 H32 V4 H28 V6 H24 V8 H8 V6 H4 V4 H0 Z" 
                 fill={featureColor} 

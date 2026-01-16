@@ -438,6 +438,14 @@ export function VoiceAssistantWithWakeWord({
 
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
 
+      // PARAR RECONHECIMENTO DE VOZ antes de tocar TTS (evitar captar própria resposta)
+      if (recognitionRef.current) {
+        console.log('🛑 Parando wake word detection durante TTS');
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+
       // PARAR MICROFONE antes de tocar resposta (evitar feedback!)
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         console.log('🛑 Parando microfone para evitar feedback');
@@ -515,7 +523,18 @@ export function VoiceAssistantWithWakeWord({
 
   async function endConversation() {
     console.log('🔴 Encerra');
+    
+    // PARAR qualquer áudio tocando ANTES de encerrar
+    if (currentAudioRef.current) {
+      console.log('🛑 Parando áudio atual');
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      } catch (e) {}
+    }
+    
     setConversationActive(false);
+    setIsPlayingAudio(false);
     processingWakeWord.current = false; // Reset flag
     cancelInactivityTimeout(); // Cancelar timeout
     
@@ -610,7 +629,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startManualRecording() {
-    console.log('🎤 Gravando (silêncio: 300ms)...');
+    console.log('🎤 Gravando (silêncio: 600ms)...');
     
     // Reiniciar timeout de inatividade
     startInactivityTimeout();
@@ -637,7 +656,7 @@ export function VoiceAssistantWithWakeWord({
       let silenceStart: number | null = null;
       let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 300; // 800ms - TEMPO MAIOR!
+      const SILENCE_DURATION = 600; // 800ms - TEMPO MAIOR!
       const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
 
       const recordStartTime = Date.now();
@@ -774,6 +793,14 @@ export function VoiceAssistantWithWakeWord({
       }
 
       setIsProcessing(false);
+
+      // PARAR RECONHECIMENTO DE VOZ antes de tocar TTS (evitar captar própria resposta)
+      if (recognitionRef.current) {
+        console.log('🛑 Parando wake word detection durante TTS');
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
 
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
@@ -957,7 +984,7 @@ export function VoiceAssistantWithWakeWord({
                 </p>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                Silêncio: 300ms
+                Silêncio: 800ms
               </p>
             </div>
 

@@ -317,13 +317,9 @@ export async function POST(request: NextRequest) {
 
     // FASE 2: FAQ Matching
     const faqStart = Date.now();
-    const faqStart = Date.now();
     const matchingFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
     const faqTime = Date.now() - faqStart;
-    faqTime = Date.now() - faqStart;
-    console.log(`⏱️ FAQ matching: ${faqTime}ms`);
     
-    console.log(`⏱️ FAQ matching: ${faqTime}ms`);
 
     let responseText = '';
     let usedFAQ = false;
@@ -415,9 +411,7 @@ export async function POST(request: NextRequest) {
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ TOTAL: ${totalTime}ms`);
 
-    const totalTime = Date.now() - startTime;
     
     console.log('\n=== ⏱️ RESUMO DE TEMPOS ===');
     console.log(`STT: ${sttTime}ms`);

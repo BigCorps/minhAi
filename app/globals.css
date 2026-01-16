@@ -6,6 +6,9 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 255, 255, 255;
   --background-end-rgb: 255, 255, 255;
+  --primary-blue: 162, 217, 247;
+  --primary-green: 176, 203, 31;
+  --primary-green-dark: 140, 162, 20;
 }
 
 body {
@@ -21,5 +24,84 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  
+  /* Cores primárias - Backgrounds */
+  .bg-primary-blue {
+    background-color: rgb(var(--primary-blue));
+  }
+  
+  .bg-primary-green {
+    background-color: rgb(var(--primary-green));
+  }
+  
+  .bg-primary-green-dark {
+    background-color: rgb(var(--primary-green-dark));
+  }
+  
+  /* Cores primárias - Text */
+  .text-primary-blue {
+    color: rgb(var(--primary-blue));
+  }
+  
+  .text-primary-green {
+    color: rgb(var(--primary-green));
+  }
+  
+  .text-primary-green-dark {
+    color: rgb(var(--primary-green-dark));
+  }
+  
+  /* Cores primárias - Borders */
+  .border-primary-blue {
+    border-color: rgb(var(--primary-blue));
+  }
+  
+  .border-primary-green {
+    border-color: rgb(var(--primary-green));
+  }
+  
+  /* Hover states - Background */
+  .hover\:bg-primary-blue:hover {
+    background-color: rgb(var(--primary-blue));
+  }
+  
+  .hover\:bg-primary-green:hover {
+    background-color: rgb(var(--primary-green));
+  }
+  
+  .hover\:bg-primary-green-dark:hover {
+    background-color: rgb(var(--primary-green-dark));
+  }
+  
+  /* Hover states - Text */
+  .hover\:text-primary-green:hover {
+    color: rgb(var(--primary-green));
+  }
+  
+  .hover\:text-primary-green-dark:hover {
+    color: rgb(var(--primary-green-dark));
+  }
+  
+  /* Focus states */
+  .focus\:ring-primary-green:focus {
+    --tw-ring-color: rgb(var(--primary-green));
+  }
+  
+  .focus\:ring-primary-blue:focus {
+    --tw-ring-color: rgb(var(--primary-blue));
+  }
+  
+  /* Gradientes */
+  .bg-gradient-primary {
+    background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(220, 240, 250));
+  }
+  
+  .bg-gradient-green {
+    background: linear-gradient(to bottom right, rgb(var(--primary-green)), rgb(200, 220, 50));
+  }
+  
+  .bg-gradient-blue {
+    background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(200, 230, 245));
   }
 }

@@ -40,6 +40,7 @@ export function VoiceAssistantWithWakeWord({
   const audioUnlocked = useRef<boolean>(false);
   const processingWakeWord = useRef<boolean>(false);
   const inactivityTimeoutRef = useRef<any>(null);
+  const lastTranscriptRef = useRef<string>(''); // Para verificação imediata
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -401,6 +402,7 @@ export function VoiceAssistantWithWakeWord({
     // Normalizar e salvar transcrição para verificação de comandos de fim
     const normalized = questionText.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
     setLastTranscript(normalized);
+    lastTranscriptRef.current = normalized; // Salvar em ref para acesso imediato
     console.log('📝 Direct question normalizada:', normalized);
     
     try {
@@ -467,12 +469,14 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingWakeWord.current = false;
         
-        // Usar lastTranscript que já foi normalizado
-        console.log('🔍 Verificando fim (direct):', lastTranscript);
+        // Usar ref para verificação imediata
+        const transcriptToCheck = lastTranscriptRef.current;
+        
+        console.log('🔍 Verificando fim (direct):', transcriptToCheck);
         console.log('🔍 Comandos de fim:', endCommands);
         
         const hasEndCommand = endCommands.some(cmd => {
-          const match = lastTranscript.includes(cmd);
+          const match = transcriptToCheck.includes(cmd);
           if (match) console.log(`✅ Match encontrado: "${cmd}"`);
           return match;
         });
@@ -610,7 +614,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startManualRecording() {
-    console.log('🎤 Gravando (silêncio: 500ms)...');
+    console.log('🎤 Gravando (silêncio: 300ms)...');
     
     // Reiniciar timeout de inatividade
     startInactivityTimeout();
@@ -637,7 +641,7 @@ export function VoiceAssistantWithWakeWord({
       let silenceStart: number | null = null;
       let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 500; // 800ms - TEMPO MAIOR!
+      const SILENCE_DURATION = 300; // 800ms - TEMPO MAIOR!
       const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
 
       const recordStartTime = Date.now();
@@ -756,8 +760,13 @@ export function VoiceAssistantWithWakeWord({
         // Normalizar: minúsculo, sem pontuação
         const normalized = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
         setLastTranscript(normalized);
+        lastTranscriptRef.current = normalized; // Salvar em ref para acesso imediato
         console.log('📝', decoded);
         console.log('🔤 Normalizado:', normalized);
+      } else {
+        console.log('⚠️ Transcript vazio!');
+        setLastTranscript('');
+        lastTranscriptRef.current = '';
       }
 
       console.log(`⏱️ Frontend total: ${processingTime}ms`);
@@ -793,18 +802,20 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingWakeWord.current = false; // Pronto para próximo wake word
         
-        // Verificar comando de fim com a transcrição real
-        console.log('🔍 Verificando fim com lastTranscript:', lastTranscript);
+        // Usar ref para verificação imediata (não depende de state)
+        const transcriptToCheck = lastTranscriptRef.current;
+        
+        console.log('🔍 Verificando fim com lastTranscriptRef:', transcriptToCheck);
         console.log('🔍 Comandos de fim:', endCommands);
         
         const hasEndCommand = endCommands.some(cmd => {
-          const match = lastTranscript.includes(cmd);
+          const match = transcriptToCheck.includes(cmd);
           if (match) console.log(`✅ Match encontrado: "${cmd}"`);
           return match;
         });
         
         if (hasEndCommand) {
-          console.log('👋 Comando de fim detectado:', lastTranscript);
+          console.log('👋 Comando de fim detectado:', transcriptToCheck);
           endConversation();
         } else {
           console.log('➡️ Sem comando de fim, continuando...');

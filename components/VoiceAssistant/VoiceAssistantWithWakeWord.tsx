@@ -40,6 +40,7 @@ export function VoiceAssistantWithWakeWord({
   const audioUnlocked = useRef<boolean>(false);
   const processingWakeWord = useRef<boolean>(false);
   const inactivityTimeoutRef = useRef<any>(null);
+  const isProcessingAudio = useRef<boolean>(false); // Flag para prevenir duplicação
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -396,6 +397,13 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function processDirectQuestion(questionText: string) {
+    // Prevenir múltiplas execuções simultâneas
+    if (isProcessingAudio.current) {
+      console.log('⚠️ Já processando outro áudio, ignorando direct question');
+      return;
+    }
+    
+    isProcessingAudio.current = true;
     setIsProcessing(true);
     
     // Normalizar ANTES de tudo
@@ -474,6 +482,7 @@ export function VoiceAssistantWithWakeWord({
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingWakeWord.current = false;
+        isProcessingAudio.current = false; // Liberar flag
         
         // Usar normalized capturado ANTES (closure funciona aqui)
         console.log('🔍 Verificando fim (direct):', normalizedQuestion);
@@ -500,6 +509,7 @@ export function VoiceAssistantWithWakeWord({
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingWakeWord.current = false;
+        isProcessingAudio.current = false; // Liberar flag
         
         // Continuar mesmo com erro
         startManualRecording();
@@ -512,6 +522,7 @@ export function VoiceAssistantWithWakeWord({
       setIsProcessing(false);
       setConversationActive(false);
       processingWakeWord.current = false;
+      isProcessingAudio.current = false; // Liberar flag
       
       setTimeout(() => {
         if (isActiveRef.current) {
@@ -735,6 +746,13 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function processAudio(audioBlob: Blob) {
+    // Prevenir múltiplas execuções simultâneas
+    if (isProcessingAudio.current) {
+      console.log('⚠️ Já processando outro áudio, ignorando');
+      return;
+    }
+    
+    isProcessingAudio.current = true;
     const startTime = Date.now();
     
     try {
@@ -823,6 +841,7 @@ export function VoiceAssistantWithWakeWord({
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingWakeWord.current = false; // Pronto para próximo wake word
+        isProcessingAudio.current = false; // Liberar para próximo processamento
         
         // Usar transcript capturado ANTES (não depende de state async)
         console.log('🔍 Verificando fim:', normalizedTranscript);
@@ -849,6 +868,7 @@ export function VoiceAssistantWithWakeWord({
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingWakeWord.current = false; // Reset em erro também
+        isProcessingAudio.current = false; // Liberar flag
         
         setTimeout(() => {
           startManualRecording();
@@ -862,6 +882,7 @@ export function VoiceAssistantWithWakeWord({
         
         // Resetar flag em erro
         processingWakeWord.current = false;
+        isProcessingAudio.current = false; // Liberar flag
         
         // Não bloquear - continuar gravação
         setIsPlayingAudio(false);
@@ -877,6 +898,7 @@ export function VoiceAssistantWithWakeWord({
       setIsProcessing(false);
       setConversationActive(false);
       processingWakeWord.current = false; // Reset flag em erro
+      isProcessingAudio.current = false; // Liberar flag
       
       setTimeout(() => {
         if (isActiveRef.current) {

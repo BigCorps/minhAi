@@ -398,8 +398,10 @@ export function VoiceAssistantWithWakeWord({
   async function processDirectQuestion(questionText: string) {
     setIsProcessing(true);
     
-    // Salvar transcrição para verificação de comandos de fim
-    setLastTranscript(questionText.toLowerCase());
+    // Normalizar e salvar transcrição para verificação de comandos de fim
+    const normalized = questionText.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    setLastTranscript(normalized);
+    console.log('📝 Direct question normalizada:', normalized);
     
     try {
       const formData = new FormData();
@@ -436,6 +438,20 @@ export function VoiceAssistantWithWakeWord({
 
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
 
+      // PARAR MICROFONE antes de tocar resposta (evitar feedback!)
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        console.log('🛑 Parando microfone para evitar feedback');
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (e) {}
+      }
+      
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        try {
+          audioContextRef.current.close();
+        } catch (e) {}
+      }
+
       const responseAudioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(responseAudioBlob);
       const audio = new Audio(audioUrl);
@@ -451,13 +467,21 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingWakeWord.current = false;
         
-        // Verificar comando de fim
-        const hasEndCommand = endCommands.some(cmd => questionText.toLowerCase().includes(cmd));
+        // Usar lastTranscript que já foi normalizado
+        console.log('🔍 Verificando fim (direct):', lastTranscript);
+        console.log('🔍 Comandos de fim:', endCommands);
+        
+        const hasEndCommand = endCommands.some(cmd => {
+          const match = lastTranscript.includes(cmd);
+          if (match) console.log(`✅ Match encontrado: "${cmd}"`);
+          return match;
+        });
         
         if (hasEndCommand) {
           console.log('👋 Comando de fim detectado na pergunta direta');
           endConversation();
         } else {
+          console.log('➡️ Sem comando de fim, continuando...');
           // Continuar ouvindo
           startManualRecording();
         }
@@ -770,12 +794,20 @@ export function VoiceAssistantWithWakeWord({
         processingWakeWord.current = false; // Pronto para próximo wake word
         
         // Verificar comando de fim com a transcrição real
-        const hasEndCommand = endCommands.some(cmd => lastTranscript.includes(cmd));
+        console.log('🔍 Verificando fim com lastTranscript:', lastTranscript);
+        console.log('🔍 Comandos de fim:', endCommands);
+        
+        const hasEndCommand = endCommands.some(cmd => {
+          const match = lastTranscript.includes(cmd);
+          if (match) console.log(`✅ Match encontrado: "${cmd}"`);
+          return match;
+        });
         
         if (hasEndCommand) {
           console.log('👋 Comando de fim detectado:', lastTranscript);
           endConversation();
         } else {
+          console.log('➡️ Sem comando de fim, continuando...');
           // Continuar ouvindo
           startManualRecording();
         }

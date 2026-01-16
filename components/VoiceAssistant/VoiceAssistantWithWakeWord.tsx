@@ -40,7 +40,6 @@ export function VoiceAssistantWithWakeWord({
   const audioUnlocked = useRef<boolean>(false);
   const processingWakeWord = useRef<boolean>(false);
   const inactivityTimeoutRef = useRef<any>(null);
-  const lastTranscriptRef = useRef<string>(''); // Para verificação imediata
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -399,11 +398,10 @@ export function VoiceAssistantWithWakeWord({
   async function processDirectQuestion(questionText: string) {
     setIsProcessing(true);
     
-    // Normalizar e salvar transcrição para verificação de comandos de fim
-    const normalized = questionText.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-    setLastTranscript(normalized);
-    lastTranscriptRef.current = normalized; // Salvar em ref para acesso imediato
-    console.log('📝 Direct question normalizada:', normalized);
+    // Normalizar ANTES de tudo
+    const normalizedQuestion = questionText.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    setLastTranscript(normalizedQuestion);
+    console.log('📝 Direct question normalizada:', normalizedQuestion);
     
     try {
       const formData = new FormData();
@@ -469,14 +467,12 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingWakeWord.current = false;
         
-        // Usar ref para verificação imediata
-        const transcriptToCheck = lastTranscriptRef.current;
-        
-        console.log('🔍 Verificando fim (direct):', transcriptToCheck);
+        // Usar normalized capturado ANTES (closure funciona aqui)
+        console.log('🔍 Verificando fim (direct):', normalizedQuestion);
         console.log('🔍 Comandos de fim:', endCommands);
         
         const hasEndCommand = endCommands.some(cmd => {
-          const match = transcriptToCheck.includes(cmd);
+          const match = normalizedQuestion.includes(cmd);
           if (match) console.log(`✅ Match encontrado: "${cmd}"`);
           return match;
         });
@@ -614,7 +610,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startManualRecording() {
-    console.log('🎤 Gravando (silêncio: 400ms)...');
+    console.log('🎤 Gravando (silêncio: 300ms)...');
     
     // Reiniciar timeout de inatividade
     startInactivityTimeout();
@@ -641,7 +637,7 @@ export function VoiceAssistantWithWakeWord({
       let silenceStart: number | null = null;
       let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 400; // 800ms - TEMPO MAIOR!
+      const SILENCE_DURATION = 300; // 800ms - TEMPO MAIOR!
       const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
 
       const recordStartTime = Date.now();
@@ -755,18 +751,17 @@ export function VoiceAssistantWithWakeWord({
       const apiTime = response.headers.get('X-Processing-Time');
       const transcript = response.headers.get('X-Transcription');
 
+      // CAPTURAR E NORMALIZAR TRANSCRIPT ANTES DE TUDO
+      let normalizedTranscript = '';
       if (transcript) {
         const decoded = decodeURIComponent(transcript);
-        // Normalizar: minúsculo, sem pontuação
-        const normalized = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-        setLastTranscript(normalized);
-        lastTranscriptRef.current = normalized; // Salvar em ref para acesso imediato
+        normalizedTranscript = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+        setLastTranscript(normalizedTranscript);
         console.log('📝', decoded);
-        console.log('🔤 Normalizado:', normalized);
+        console.log('🔤 Normalizado:', normalizedTranscript);
       } else {
         console.log('⚠️ Transcript vazio!');
         setLastTranscript('');
-        lastTranscriptRef.current = '';
       }
 
       console.log(`⏱️ Frontend total: ${processingTime}ms`);
@@ -802,20 +797,18 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingWakeWord.current = false; // Pronto para próximo wake word
         
-        // Usar ref para verificação imediata (não depende de state)
-        const transcriptToCheck = lastTranscriptRef.current;
-        
-        console.log('🔍 Verificando fim com lastTranscriptRef:', transcriptToCheck);
+        // Usar transcript capturado ANTES (não depende de state async)
+        console.log('🔍 Verificando fim:', normalizedTranscript);
         console.log('🔍 Comandos de fim:', endCommands);
         
         const hasEndCommand = endCommands.some(cmd => {
-          const match = transcriptToCheck.includes(cmd);
+          const match = normalizedTranscript.includes(cmd);
           if (match) console.log(`✅ Match encontrado: "${cmd}"`);
           return match;
         });
         
         if (hasEndCommand) {
-          console.log('👋 Comando de fim detectado:', transcriptToCheck);
+          console.log('👋 Comando de fim detectado:', normalizedTranscript);
           endConversation();
         } else {
           console.log('➡️ Sem comando de fim, continuando...');
@@ -964,7 +957,7 @@ export function VoiceAssistantWithWakeWord({
                 </p>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                Silêncio: 400ms
+                Silêncio: 300ms
               </p>
             </div>
 

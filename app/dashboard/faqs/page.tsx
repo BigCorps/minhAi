@@ -48,7 +48,7 @@ export default async function FAQsPage() {
         <div className="mb-8">
           <Link
             href="/dashboard"
-            className="inline-flex items-center text-orange-600 hover:text-orange-700 mb-4"
+            className="inline-flex items-center text-primary-green hover:text-primary-green-dark mb-4"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -78,7 +78,7 @@ export default async function FAQsPage() {
               </p>
               <Link
                 href="/dashboard/empresas/nova"
-                className="inline-block px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
+                className="inline-block px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
               >
                 + Criar Primeira Empresa
               </Link>
@@ -94,7 +94,7 @@ export default async function FAQsPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-green transition">
                       {company.name}
                     </h3>
                     {company.wake_word && (
@@ -103,7 +103,7 @@ export default async function FAQsPage() {
                       </p>
                     )}
                   </div>
-                  <svg className="w-6 h-6 text-gray-400 group-hover:text-orange-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-gray-400 group-hover:text-primary-green transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>

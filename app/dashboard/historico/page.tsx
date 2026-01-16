@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface MessagePair {
   id: string;
@@ -159,17 +160,29 @@ export default function HistoricoPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/dashboard"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                ← Voltar
+            <div className="flex items-center space-x-3">
+              <Link href="/dashboard">
+                <Image 
+                  src="/logo.png" 
+                  alt="iTend" 
+                  width={150} 
+                  height={68}
+                  className="rounded-lg cursor-pointer"
+                />
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-gray-900">
                 Histórico de Conversas
               </h1>
             </div>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center text-primary-green hover:text-primary-green-dark"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Voltar
+            </Link>
           </div>
         </div>
       </header>
@@ -207,7 +220,7 @@ export default function HistoricoPage() {
                 placeholder="Buscar por pergunta, resposta ou empresa..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               />
             </div>
 
@@ -219,7 +232,7 @@ export default function HistoricoPage() {
                 id="company"
                 value={selectedCompany}
                 onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               >
                 <option value="all">Todas as empresas</option>
                 {companies.map((company) => (
@@ -247,7 +260,7 @@ export default function HistoricoPage() {
 
         {loading ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-16 h-16 border-4 border-primary-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Carregando...</p>
           </div>
         ) : filteredPairs.length === 0 && !error ? (
@@ -265,7 +278,7 @@ export default function HistoricoPage() {
             </p>
             <Link
               href="/dashboard/empresas"
-              className="inline-block px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+              className="inline-block px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
             >
               Ver Empresas
             </Link>
@@ -310,7 +323,7 @@ export default function HistoricoPage() {
                           <Link
                             href={`/assistente/${pair.companySlug}`}
                             target="_blank"
-                            className="text-sm font-medium text-orange-600 hover:text-orange-700"
+                            className="text-sm font-medium text-primary-green hover:text-primary-green-dark"
                           >
                             {pair.companyName}
                           </Link>
@@ -349,11 +362,11 @@ export default function HistoricoPage() {
               </div>
             </div>
 
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">
+            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4" style={{ backgroundColor: 'rgba(162, 217, 247, 0.2)', borderColor: 'rgba(162, 217, 247, 0.5)' }}>
+              <h3 className="font-semibold text-gray-900 mb-2">
                 💡 Dica: Use o histórico para melhorar o prompt
               </h3>
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-gray-700">
                 Analise as respostas do assistente. Se não estiverem adequadas, vá em <strong>Empresas → Editar</strong> e ajuste o <strong>Prompt do Assistente</strong> com mais detalhes.
               </p>
             </div>

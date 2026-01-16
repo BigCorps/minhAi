@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
@@ -55,22 +56,37 @@ export default function NovaEmpresaPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/dashboard/empresas"
-              className="text-gray-600 hover:text-gray-900"
-            >
-              ← Voltar
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Nova Empresa
-            </h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <Link href="/dashboard">
+                <Image 
+                  src="/logo.png" 
+                  alt="iTend" 
+                  width={150} 
+                  height={68}
+                  className="rounded-lg cursor-pointer"
+                />
+              </Link>
+              <h1 className="text-xl font-bold text-gray-900">
+                Nova Empresa
+              </h1>
+            </div>
           </div>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Link
+          href="/dashboard/empresas"
+          className="inline-flex items-center text-primary-green hover:text-primary-green-dark mb-6"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Voltar para Empresas
+        </Link>
+
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -89,7 +105,7 @@ export default function NovaEmpresaPage() {
                 name="name"
                 required
                 placeholder="Ex: Restaurante Bella Vista"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
                 onChange={(e) => {
                   const slugInput = document.getElementById('slug') as HTMLInputElement;
                   if (slugInput) {
@@ -109,7 +125,7 @@ export default function NovaEmpresaPage() {
                 name="slug"
                 required
                 placeholder="restaurante-bella-vista"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
                 Será usado na URL pública: <strong>itend.com.br/oi/seu-slug</strong>
@@ -127,7 +143,7 @@ export default function NovaEmpresaPage() {
                 required
                 defaultValue="olá assistente"
                 placeholder="Ex: olá assistente, oi gerente, ei computador"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500">
                 ✨ <strong>Dica:</strong> Separe múltiplas palavras com vírgula (,)
@@ -169,7 +185,7 @@ export default function NovaEmpresaPage() {
                 rows={3}
                 defaultValue="Olá! Como posso ajudar você hoje?"
                 placeholder="Ex: Olá! Como posso ajudar você hoje?"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500">
                 Frase que o assistente dirá após detectar as palavras de ativação
@@ -187,7 +203,7 @@ export default function NovaEmpresaPage() {
                 rows={8}
                 defaultValue="Você é um assistente virtual prestativo que ajuda os clientes. Responda de forma clara, objetiva e educada. Use um tom profissional e amigável."
                 placeholder="Defina como o assistente deve se comportar, que informações ele tem acesso, como deve responder..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
                 Instruções que definem o comportamento do assistente. Seja específico sobre o que ele deve fazer.
@@ -199,13 +215,13 @@ export default function NovaEmpresaPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="flex-1 px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {loading ? 'Criando...' : 'Criar Empresa'}
             </button>
             <Link
               href="/dashboard/empresas"
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-semibold"
             >
               Cancelar
             </Link>

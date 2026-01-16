@@ -44,7 +44,9 @@ export default async function CompanyFAQsPage({ params }: { params: { id: string
                 <h1 className="text-xl font-bold text-gray-900">
                   {company.name}
                 </h1>
-                <p className="text-sm text-gray-500">Respostas Rápidas</p>
+                <p className="text-sm text-gray-500">
+                  Respostas Rápidas
+                </p>
               </div>
             </div>
 
@@ -57,7 +59,7 @@ export default async function CompanyFAQsPage({ params }: { params: { id: string
         <div className="mb-8">
           <Link
             href="/dashboard/faqs"
-            className="inline-flex items-center text-orange-600 hover:text-orange-700 mb-4"
+            className="inline-flex items-center text-primary-green hover:text-primary-green-dark mb-4"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -66,7 +68,7 @@ export default async function CompanyFAQsPage({ params }: { params: { id: string
           </Link>
         </div>
 
-        <FAQManager companyId={company.id} companyName={company.name} />
+        <FAQManager companyId={params.id} />
       </div>
     </div>
   );

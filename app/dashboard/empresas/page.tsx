@@ -1,6 +1,7 @@
 import { createClient, getUser } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import Image from 'next/image';
 import { CopyLinkButton } from '@/components/CopyLinkButton';
 
 export const revalidate = 0;
@@ -20,19 +21,33 @@ export default async function EmpresasPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Empresas
-            </h1>
+            <div className="flex items-center space-x-3">
+              <Link href="/dashboard">
+                <Image 
+                  src="/logo.png" 
+                  alt="iTend" 
+                  width={150} 
+                  height={68}
+                  className="rounded-lg cursor-pointer"
+                />
+              </Link>
+              <h1 className="text-xl font-bold text-gray-900">
+                Empresas
+              </h1>
+            </div>
             <div className="flex items-center space-x-4">
               <Link
                 href="/dashboard"
-                className="text-gray-600 hover:text-gray-900"
+                className="inline-flex items-center text-primary-green hover:text-primary-green-dark"
               >
-                ← Voltar
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Voltar
               </Link>
               <Link
                 href="/dashboard/empresas/nova"
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+                className="px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
               >
                 + Nova Empresa
               </Link>
@@ -57,7 +72,7 @@ export default async function EmpresasPage() {
             </p>
             <Link
               href="/dashboard/empresas/nova"
-              className="inline-block px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+              className="inline-block px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
             >
               Criar Primeira Empresa
             </Link>
@@ -70,7 +85,7 @@ export default async function EmpresasPage() {
                 className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-green rounded-lg flex items-center justify-center">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
@@ -114,7 +129,7 @@ export default async function EmpresasPage() {
                   <Link
                     href={`/oi/${company.slug}`}
                     target="_blank"
-                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-center text-sm font-medium"
+                    className="flex-1 px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition text-center text-sm font-medium"
                   >
                     Abrir
                   </Link>

@@ -127,6 +127,7 @@ export function VoiceAssistantWithWakeWord({
     console.log('🔴 Encerra silenciosamente (timeout)');
     setConversationActive(false);
     processingWakeWord.current = false;
+    isProcessingAudio.current = false; // Liberar flag
     
     cleanup();
     
@@ -147,6 +148,7 @@ export function VoiceAssistantWithWakeWord({
     setIsPlayingAudio(false);
     setConversationActive(false);
     processingWakeWord.current = false; // Reset flag
+    isProcessingAudio.current = false; // Liberar flag
     cancelInactivityTimeout(); // Cancelar timeout
     
     cleanup();
@@ -547,6 +549,7 @@ export function VoiceAssistantWithWakeWord({
     setConversationActive(false);
     setIsPlayingAudio(false);
     processingWakeWord.current = false; // Reset flag
+    isProcessingAudio.current = false; // Liberar flag ANTES de tocar despedida
     cancelInactivityTimeout(); // Cancelar timeout
     
     cleanup();
@@ -560,7 +563,14 @@ export function VoiceAssistantWithWakeWord({
     setTimeout(() => {
       if (isActiveRef.current && permissionGranted) {
         console.log('🔄 Restart wake');
+        console.log('  isActiveRef:', isActiveRef.current);
+        console.log('  permissionGranted:', permissionGranted);
+        console.log('  isListening:', isListening);
         startWakeWordDetection();
+      } else {
+        console.log('⚠️ Não pode reiniciar wake word:');
+        console.log('  isActiveRef:', isActiveRef.current);
+        console.log('  permissionGranted:', permissionGranted);
       }
     }, 1000);
   }
@@ -667,7 +677,7 @@ export function VoiceAssistantWithWakeWord({
       let silenceStart: number | null = null;
       let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 600; // 800ms - TEMPO MAIOR!
+      const SILENCE_DURATION = 400; // 800ms - TEMPO MAIOR!
       const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
 
       const recordStartTime = Date.now();
@@ -1006,7 +1016,7 @@ export function VoiceAssistantWithWakeWord({
                 </p>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                Silêncio: 800ms
+                Silêncio: 400ms
               </p>
             </div>
 

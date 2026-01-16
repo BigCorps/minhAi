@@ -76,8 +76,8 @@ export default async function DashboardPage() {
             className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition group"
           >
             <div className="flex items-center space-x-4 mb-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition" style={{ backgroundColor: 'rgba(162, 217, 247, 0.3)' }}>
+                <svg className="w-6 h-6 text-primary-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
@@ -153,21 +153,21 @@ export default async function DashboardPage() {
         </div>
 
         {totalCompanies === 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6" style={{ backgroundColor: 'rgba(162, 217, 247, 0.2)', borderColor: 'rgba(162, 217, 247, 0.5)' }}>
             <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 mt-0.5" style={{ color: 'rgb(162, 217, 247)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
-                <h3 className="font-semibold text-blue-900 mb-1">
+                <h3 className="font-semibold text-gray-900 mb-1">
                   Comece Agora
                 </h3>
-                <p className="text-sm text-blue-800 mb-3">
+                <p className="text-sm text-gray-700 mb-3">
                   Crie sua primeira empresa para começar a usar o assistente de voz
                 </p>
                 <Link
                   href="/dashboard/empresas/nova"
-                  className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-semibold"
+                  className="inline-block px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition text-sm font-semibold"
                 >
                   + Criar Primeira Empresa
                 </Link>

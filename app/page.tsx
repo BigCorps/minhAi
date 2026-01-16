@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+    <div className="min-h-screen bg-gradient-primary">
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -22,7 +22,7 @@ export default function HomePage() {
             </nav>
             <Link
               href="/login"
-              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
+              className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
             >
               Entrar
             </Link>
@@ -36,7 +36,7 @@ export default function HomePage() {
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
             Atendimento ao Cliente
           </h1>
-          <h2 className="text-5xl font-bold text-orange-600 mb-6">
+          <h2 className="text-5xl font-bold text-primary-green mb-6">
             Por Voz com IA
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
@@ -46,13 +46,13 @@ export default function HomePage() {
           <div className="flex items-center justify-center space-x-4">
             <Link
               href="/login"
-              className="px-8 py-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold text-lg"
+              className="px-8 py-4 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold text-lg"
             >
               Começar Agora
             </Link>
             <Link
               href="/teste-wake-word"
-              className="px-8 py-4 border-2 border-orange-600 text-orange-600 rounded-lg hover:bg-orange-50 transition font-semibold text-lg"
+              className="px-8 py-4 border-2 border-primary-green text-primary-green rounded-lg hover:bg-primary-green hover:text-white transition font-semibold text-lg"
             >
               Ver Demonstração
             </Link>
@@ -63,7 +63,7 @@ export default function HomePage() {
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-12">
             <div className="flex flex-col items-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mb-6">
+              <div className="w-24 h-24 bg-gradient-green rounded-full flex items-center justify-center mb-6">
                 <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
@@ -76,7 +76,7 @@ export default function HomePage() {
               </p>
               <Link
                 href="/teste-wake-word"
-                className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
+                className="px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
               >
                 Testar Agora Gratuitamente
               </Link>

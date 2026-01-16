@@ -74,7 +74,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-primary flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
@@ -113,7 +113,7 @@ export default function LoginPage() {
                   name="name"
                   required={mode === 'signup'}
                   placeholder="Seu nome"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
                 />
               </div>
             )}
@@ -128,7 +128,7 @@ export default function LoginPage() {
                 name="email"
                 required
                 placeholder="seu@email.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               />
             </div>
 
@@ -143,7 +143,7 @@ export default function LoginPage() {
                 required
                 placeholder="••••••••"
                 minLength={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
               />
               {mode === 'signup' && (
                 <p className="mt-1 text-xs text-gray-500">Mínimo 6 caracteres</p>
@@ -153,7 +153,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="w-full px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar Conta'}
             </button>
@@ -188,7 +188,7 @@ export default function LoginPage() {
                 setMode(mode === 'login' ? 'signup' : 'login');
                 setError(null);
               }}
-              className="text-sm text-orange-600 hover:text-orange-700"
+              className="text-sm text-primary-green hover:text-primary-green-dark"
             >
               {mode === 'login' 
                 ? 'Não tem conta? Criar conta' 

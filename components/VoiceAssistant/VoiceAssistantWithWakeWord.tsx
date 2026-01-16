@@ -39,6 +39,7 @@ export function VoiceAssistantWithWakeWord({
   const lastWakeWordTranscript = useRef<string>('');
   const audioUnlocked = useRef<boolean>(false);
   const processingWakeWord = useRef<boolean>(false);
+  const inactivityTimeoutRef = useRef<any>(null);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -94,6 +95,47 @@ export function VoiceAssistantWithWakeWord({
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
     }
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
+  }
+
+  function startInactivityTimeout() {
+    // Limpar timeout anterior
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
+    
+    // 30 segundos de inatividade
+    console.log('⏱️ Timeout de inatividade: 30s');
+    inactivityTimeoutRef.current = setTimeout(() => {
+      console.log('⏰ 30s sem atividade, encerrando silenciosamente...');
+      endConversationSilent();
+    }, 30000);
+  }
+
+  function cancelInactivityTimeout() {
+    if (inactivityTimeoutRef.current) {
+      console.log('✅ Atividade detectada, cancelando timeout');
+      clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+  }
+
+  async function endConversationSilent() {
+    console.log('🔴 Encerra silenciosamente (timeout)');
+    setConversationActive(false);
+    processingWakeWord.current = false;
+    
+    cleanup();
+    
+    // NÃO tocar despedida, só voltar para wake word
+    setTimeout(() => {
+      if (isActiveRef.current && permissionGranted) {
+        console.log('🔄 Voltando para wake word detection');
+        startWakeWordDetection();
+      }
+    }, 500);
   }
 
   function forceReset() {
@@ -104,6 +146,7 @@ export function VoiceAssistantWithWakeWord({
     setIsPlayingAudio(false);
     setConversationActive(false);
     processingWakeWord.current = false; // Reset flag
+    cancelInactivityTimeout(); // Cancelar timeout
     
     cleanup();
     
@@ -310,11 +353,11 @@ export function VoiceAssistantWithWakeWord({
       console.log('👋 Só wake word');
     }
     
-    // SIMPLIFICADO: sempre ativar imediatamente
-    activateConversation(hasQuestion);
+    // SIMPLIFICADO: sempre ativar imediatamente, passando texto da pergunta
+    activateConversation(hasQuestion, cleanTranscript);
   }
 
-  async function activateConversation(hasQuestion: boolean = false) {
+  async function activateConversation(hasQuestion: boolean = false, questionText: string = '') {
     // Proteção: se já está ativo ou processando, não ativar novamente
     if (conversationActive || isRecording || isProcessing || isPlayingAudio) {
       console.log('⚠️ Já ativo, ignorando');
@@ -327,19 +370,19 @@ export function VoiceAssistantWithWakeWord({
     // Resetar flag IMEDIATAMENTE (já foi processado o wake word)
     processingWakeWord.current = false;
     
+    // Iniciar timeout de inatividade
+    startInactivityTimeout();
+    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
     }
     
-    if (hasQuestion) {
-      // Tem pergunta: começar a gravar IMEDIATAMENTE (sem saudação)
-      console.log('⚡ Tem pergunta, gravando direto (sem saudação)');
-      // Pequeno delay para garantir que speech recognition parou
-      setTimeout(() => {
-        startManualRecording();
-      }, 200);
+    if (hasQuestion && questionText) {
+      // Tem pergunta: processar DIRETO o texto que já capturamos (NÃO gravar!)
+      console.log('⚡ Processando pergunta direta:', questionText);
+      await processDirectQuestion(questionText);
     } else {
       // Só wake word: dar saudação e depois gravar
       console.log('👋 Só wake word, dando saudação');
@@ -347,10 +390,105 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
+  async function processDirectQuestion(questionText: string) {
+    setIsProcessing(true);
+    
+    // Salvar transcrição para verificação de comandos de fim
+    setLastTranscript(questionText.toLowerCase());
+    
+    try {
+      const formData = new FormData();
+      
+      // Criar blob de texto (não precisa de áudio real)
+      const textBlob = new Blob([questionText], { type: 'text/plain' });
+      formData.append('audio', textBlob, 'direct-question.txt');
+      formData.append('companyId', companyId);
+      formData.append('directQuestion', questionText);
+      
+      if (conversationIdRef.current) {
+        formData.append('conversationId', conversationIdRef.current);
+      }
+
+      console.log('⚙️ Enviando pergunta direta para API...');
+      
+      const response = await fetch('/api/voice/process', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      const newConversationId = response.headers.get('X-Conversation-Id');
+      const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
+
+      if (newConversationId && newConversationId !== 'new') {
+        conversationIdRef.current = newConversationId;
+      }
+
+      setIsProcessing(false);
+
+      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
+
+      const responseAudioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(responseAudioBlob);
+      const audio = new Audio(audioUrl);
+      
+      currentAudioRef.current = audio;
+      
+      audio.onplay = () => {
+        setIsPlayingAudio(true);
+      };
+      
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        processingWakeWord.current = false;
+        
+        // Verificar comando de fim
+        const hasEndCommand = endCommands.some(cmd => questionText.toLowerCase().includes(cmd));
+        
+        if (hasEndCommand) {
+          console.log('👋 Comando de fim detectado na pergunta direta');
+          endConversation();
+        } else {
+          // Continuar ouvindo
+          startManualRecording();
+        }
+      };
+
+      audio.onerror = (e) => {
+        console.error('Erro áudio:', e);
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        processingWakeWord.current = false;
+        
+        // Continuar mesmo com erro
+        startManualRecording();
+      };
+
+      await audio.play();
+      
+    } catch (err: any) {
+      console.error('❌ Erro processar pergunta direta:', err);
+      setIsProcessing(false);
+      setConversationActive(false);
+      processingWakeWord.current = false;
+      
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 1000);
+    }
+  }
+
   async function endConversation() {
     console.log('🔴 Encerra');
     setConversationActive(false);
     processingWakeWord.current = false; // Reset flag
+    cancelInactivityTimeout(); // Cancelar timeout
     
     cleanup();
     
@@ -444,6 +582,9 @@ export function VoiceAssistantWithWakeWord({
 
   async function startManualRecording() {
     console.log('🎤 Gravando (silêncio: 600ms)...');
+    
+    // Reiniciar timeout de inatividade
+    startInactivityTimeout();
     
     // Garantir audio unlock (não-bloqueante)
     if (!audioUnlocked.current) {
@@ -620,14 +761,15 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingWakeWord.current = false; // Pronto para próximo wake word
         
-        if (lastTranscript && endCommands.some(cmd => lastTranscript.includes(cmd))) {
-          console.log('👋 Despedida');
+        // Verificar comando de fim com a transcrição real
+        const hasEndCommand = endCommands.some(cmd => lastTranscript.includes(cmd));
+        
+        if (hasEndCommand) {
+          console.log('👋 Comando de fim detectado:', lastTranscript);
           endConversation();
         } else {
           // Continuar ouvindo
-          setTimeout(() => {
-            startManualRecording();
-          }, 300);
+          startManualRecording();
         }
       };
 

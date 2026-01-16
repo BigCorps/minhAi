@@ -199,6 +199,13 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  let sttTime = 0;
+  let faqTime = 0;
+  let gptTime = 0;
+  let ttsTime = 0;
+  
+  console.log('\n=== 🎯 NOVA REQUISIÇÃO ===');
+  console.log(`⏰ Start: ${new Date().toISOString()}`);
   
   try {
     const formData = await request.formData();
@@ -310,8 +317,11 @@ export async function POST(request: NextRequest) {
 
     // FASE 2: FAQ Matching
     const faqStart = Date.now();
+    const faqStart = Date.now();
     const matchingFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
     const faqTime = Date.now() - faqStart;
+    faqTime = Date.now() - faqStart;
+    console.log(`⏱️ FAQ matching: ${faqTime}ms`);
     
     console.log(`⏱️ FAQ matching: ${faqTime}ms`);
 
@@ -365,7 +375,8 @@ export async function POST(request: NextRequest) {
         temperature: 0.7,
         presence_penalty: 0.1,
       });
-      console.log(`⏱️ GPT: ${Date.now() - gptStart}ms`);
+      gptTime = Date.now() - gptStart;
+      console.log(`⏱️ GPT: ${gptTime}ms`);
       
       responseText = completion.choices[0]?.message?.content || 'Desculpe, não entendi.';
     }
@@ -376,9 +387,9 @@ export async function POST(request: NextRequest) {
       model: 'tts-1',
       voice: 'nova',
       input: responseText,
-      speed: 1.15,
+      speed: 1.25, // Mais rápido: 1.15 → 1.25
     });
-    const ttsTime = Date.now() - ttsStart;
+    ttsTime = Date.now() - ttsStart;
     console.log(`⏱️ TTS: ${ttsTime}ms`);
 
     const audioBuffer = Buffer.from(await tts.arrayBuffer());
@@ -405,6 +416,16 @@ export async function POST(request: NextRequest) {
 
     const totalTime = Date.now() - startTime;
     console.log(`✅ TOTAL: ${totalTime}ms`);
+
+    const totalTime = Date.now() - startTime;
+    
+    console.log('\n=== ⏱️ RESUMO DE TEMPOS ===');
+    console.log(`STT: ${sttTime}ms`);
+    console.log(`FAQ: ${faqTime}ms`);
+    console.log(`GPT: ${gptTime}ms`);
+    console.log(`TTS: ${ttsTime}ms`);
+    console.log(`TOTAL: ${totalTime}ms`);
+    console.log('========================\n');
 
     return new Response(audioBuffer, {
       headers: {

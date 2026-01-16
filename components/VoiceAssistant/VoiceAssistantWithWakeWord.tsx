@@ -328,14 +328,19 @@ export function VoiceAssistantWithWakeWord({
   }
 
   function processWakeWordTranscript(transcript: string) {
-    // Limpar transcript removendo wake words
-    let cleanTranscript = transcript;
+    // 1. Remover pontuação PRIMEIRO
+    let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    // 2. Depois remover wake words
     for (const word of wakeWords) {
       cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
     }
     
-    // Remover palavras comuns que não são pergunta
-    cleanTranscript = cleanTranscript.replace(/assistente|assis|hey|olá|ola|ei/gi, '').trim();
+    // 3. Remover palavras comuns
+    cleanTranscript = cleanTranscript.replace(/\bassistente\b|\bassis\b|\bhey\b/gi, '').trim();
+    
+    // 4. Limpar espaços extras novamente
+    cleanTranscript = cleanTranscript.replace(/\s+/g, ' ').trim();
     
     const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
     const hasQuestion = words.length >= 2;
@@ -724,8 +729,11 @@ export function VoiceAssistantWithWakeWord({
 
       if (transcript) {
         const decoded = decodeURIComponent(transcript);
-        setLastTranscript(decoded.toLowerCase());
+        // Normalizar: minúsculo, sem pontuação
+        const normalized = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+        setLastTranscript(normalized);
         console.log('📝', decoded);
+        console.log('🔤 Normalizado:', normalized);
       }
 
       console.log(`⏱️ Frontend total: ${processingTime}ms`);

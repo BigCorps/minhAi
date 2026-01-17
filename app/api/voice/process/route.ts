@@ -91,8 +91,13 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
 
   console.log('📊 FAQs query result:', { 
     count: faqs?.length || 0, 
-    error: error?.message 
+    error: error?.message,
+    errorDetails: error ? JSON.stringify(error) : null
   });
+
+  if (error) {
+    console.error('❌ ERRO AO BUSCAR FAQs:', error);
+  }
 
   if (!faqs || faqs.length === 0) {
     console.log('❌ SEM FAQs cadastradas!');
@@ -213,12 +218,14 @@ export async function POST(request: NextRequest) {
     const companyId = formData.get('companyId') as string;
     const conversationId = formData.get('conversationId') as string | null;
     const directQuestion = formData.get('directQuestion') as string | null;
+    const checkEndOnly = formData.get('checkEndOnly') as string | null;
 
     console.log('📊 Áudio:', {
       size: audioFile?.size || 0,
       type: audioFile?.type || 'unknown',
       name: audioFile?.name || 'unknown',
-      directQuestion: directQuestion ? 'SIM' : 'NÃO'
+      directQuestion: directQuestion ? 'SIM' : 'NÃO',
+      checkEndOnly: checkEndOnly ? 'SIM' : 'NÃO'
     });
 
     if (!audioFile || !companyId) {
@@ -315,10 +322,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Se for checkEndOnly, retornar só transcrição (sem FAQ/GPT/TTS)
+    if (checkEndOnly) {
+      console.log('✅ Check-only mode: retornando só transcrição');
+      
+      // Criar áudio vazio
+      const silentBuffer = Buffer.from([]);
+      
+      return new Response(silentBuffer, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'X-Transcription': encodeURIComponent(userMessage),
+          'X-Processing-Time': `${Date.now() - startTime}`,
+        },
+      });
+    }
+
     // FASE 2: FAQ Matching
     const faqStart = Date.now();
     const matchingFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
     const faqTime = Date.now() - faqStart;
+    console.log(`⏱️ FAQ matching: ${faqTime}ms`);
+    console.log(`📊 FAQ result:`, matchingFAQ ? `FOUND: "${matchingFAQ.question}"` : 'NOT FOUND');
     
 
     let responseText = '';

@@ -8,6 +8,7 @@ interface VoiceAssistantWithWakeWordProps {
   companyName: string;
   wakeWord: string;
   greetingMessage: string;
+  theme?: 'dark' | 'light';
 }
 
 export function VoiceAssistantWithWakeWord({
@@ -15,6 +16,7 @@ export function VoiceAssistantWithWakeWord({
   companyName,
   wakeWord,
   greetingMessage,
+  theme = 'dark',
 }: VoiceAssistantWithWakeWordProps) {
   // Detectar se é mobile
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -1009,6 +1011,7 @@ export function VoiceAssistantWithWakeWord({
               isListening={isListening && !conversationActive}
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
+              theme={theme}
             />
           </div>
 
@@ -1044,6 +1047,7 @@ export function VoiceAssistantWithWakeWord({
               isListening={isListening && !conversationActive}
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
+              theme={theme}
             />
           </div>
         </div>

@@ -1031,13 +1031,21 @@ export function VoiceAssistantWithWakeWord({
   return (
     <div className="w-full max-w-6xl mx-auto">
       <div className="grid md:grid-cols-2 gap-8">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200 relative overflow-hidden">
+        <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
+          theme === 'dark'
+            ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
+            : 'bg-white border-gray-200'
+        }`}>
           <button
             onClick={() => setIsFullscreen(true)}
-            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition z-10"
+            className={`absolute top-4 right-4 p-2 rounded-lg transition z-10 ${
+              theme === 'dark'
+                ? 'hover:bg-white/5 text-white/60'
+                : 'hover:bg-gray-100 text-gray-600'
+            }`}
             title="Tela cheia"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
           </button>
@@ -1052,7 +1060,11 @@ export function VoiceAssistantWithWakeWord({
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200">
+        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${
+          theme === 'dark'
+            ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
+            : 'bg-white border-gray-200'
+        }`}>
           <div className="flex flex-col items-center space-y-6">
             <div className="relative flex items-center justify-center">
               <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
@@ -1063,22 +1075,32 @@ export function VoiceAssistantWithWakeWord({
             </div>
 
             <div className="text-center w-full">
-              <p className="text-xl font-bold text-gray-900 mb-2">
+              <p className={`text-xl font-bold mb-2 transition-colors ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
                 {getStatusMessage()}
               </p>
               {conversationActive && (
-                <p className="text-sm text-gray-500 mt-2">
+                <p className={`text-sm mt-2 transition-colors ${
+                  theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+                }`}>
                   Diga "tchau" para encerrar
                 </p>
               )}
-              <p className="text-xs text-gray-400 mt-1">
+              <p className={`text-xs mt-1 transition-colors ${
+                theme === 'dark' ? 'text-white/30' : 'text-gray-400'
+              }`}>
                 Silêncio: 800ms
               </p>
             </div>
 
             {error && (
-              <div className="w-full p-4 bg-red-50 rounded-xl border-2 border-red-200">
-                <p className="text-red-700 text-sm">{error}</p>
+              <div className={`w-full p-4 rounded-xl border-2 transition-colors ${
+                theme === 'dark'
+                  ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}>
+                <p className="text-sm">{error}</p>
               </div>
             )}
 

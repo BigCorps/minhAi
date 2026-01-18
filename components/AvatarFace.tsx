@@ -287,9 +287,9 @@ export function AvatarFace({
                   </filter>
                 </defs>
 
-                {/* Base escura (sombra de fundo) */}
+                {/* Base escura (sombra de fundo) - 10% mais curvada */}
                 <path
-                  d="M 66 137 Q 100 149 134 137"
+                  d="M 66 137 Q 100 152 134 137"
                   stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'}
                   strokeWidth="10"
                   fill="none"
@@ -297,9 +297,9 @@ export function AvatarFace({
                   opacity="0.6"
                 />
 
-                {/* Camada principal com gradiente de profundidade */}
+                {/* Camada principal com gradiente de profundidade - 10% mais curvada */}
                 <path
-                  d="M 68 136 Q 100 147 132 136"
+                  d="M 68 136 Q 100 150 132 136"
                   stroke="url(#mouthDepth)"
                   strokeWidth="8"
                   fill="none"
@@ -308,15 +308,15 @@ export function AvatarFace({
                 >
                   <animate 
                     attributeName="d" 
-                    values="M 68 136 Q 100 147 132 136;M 68 136 Q 100 150 132 136;M 68 136 Q 100 147 132 136" 
+                    values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
 
-                {/* Highlight superior (reflexo de luz) */}
+                {/* Highlight superior (reflexo de luz) - 10% mais curvado */}
                 <path
-                  d="M 70 135 Q 100 144 130 135"
+                  d="M 70 135 Q 100 147 130 135"
                   stroke="white"
                   strokeWidth="3"
                   fill="none"
@@ -331,9 +331,9 @@ export function AvatarFace({
                   />
                 </path>
 
-                {/* Sombra inferior (profundidade embaixo) */}
+                {/* Sombra inferior (profundidade embaixo) - 10% mais curvada */}
                 <path
-                  d="M 72 138 Q 100 148 128 138"
+                  d="M 72 138 Q 100 151 128 138"
                   stroke={isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)'}
                   strokeWidth="2"
                   fill="none"

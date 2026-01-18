@@ -114,7 +114,7 @@ export function AvatarFace({
   const orbSize = isSpeaking ? 'scale-150' : isProcessing ? 'scale-125' : isListening ? 'scale-110' : 'scale-100';
 
   return (
-    <div className={`flex items-center justify-center h-full w-full transition-colors duration-1000 ${isDark ? 'bg-slate-950' : 'bg-gray-50'}`}>
+    <div className="flex items-center justify-center h-full w-full">
       <div className="relative w-full h-full max-w-[500px] max-h-[500px] flex items-center justify-center">
         
         {/* Camada 0: Canvas de ondas (background) */}
@@ -194,6 +194,13 @@ export function AvatarFace({
                   <stop offset="0%" stopColor={colors.secondary} stopOpacity="0.6" />
                   <stop offset="100%" stopColor={colors.secondary} stopOpacity="0.1" />
                 </radialGradient>
+                <filter id="mouthGlow">
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
               </defs>
 
               {/* Olho esquerdo - círculo translúcido simples */}
@@ -220,19 +227,51 @@ export function AvatarFace({
                 <animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="4s" begin="0.1s" repeatCount="indefinite" />
               </circle>
 
-              {/* Boca - círculo translúcido horizontal (elipse) igual aos olhos */}
-              <ellipse
-                cx="100"
-                cy="140"
-                rx="25"
-                ry="12"
-                fill="url(#mouthGradient)"
-                opacity="0.7"
-                className="transition-all duration-500"
-              >
-                <animate attributeName="ry" values="12;15;12" dur="3s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.7;0.9;0.7" dur="3s" repeatCount="indefinite" />
-              </ellipse>
+              {/* Boca - arco sorridente translúcido (camadas para profundidade) */}
+              <g opacity="0.8">
+                {/* Camada de fundo (mais espessa) */}
+                <path
+                  d="M 65 130 Q 100 150 135 130"
+                  stroke={colors.secondary}
+                  strokeWidth="8"
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity="0.3"
+                  filter="url(#mouthGlow)"
+                />
+                {/* Camada principal */}
+                <path
+                  d="M 70 132 Q 100 148 130 132"
+                  stroke={colors.secondary}
+                  strokeWidth="5"
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity="0.7"
+                >
+                  <animate 
+                    attributeName="d" 
+                    values="M 70 132 Q 100 148 130 132;M 70 132 Q 100 152 130 132;M 70 132 Q 100 148 130 132" 
+                    dur="3s" 
+                    repeatCount="indefinite" 
+                  />
+                </path>
+                {/* Highlight sutil */}
+                <path
+                  d="M 75 134 Q 100 146 125 134"
+                  stroke={colors.primary}
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity="0.4"
+                >
+                  <animate 
+                    attributeName="opacity" 
+                    values="0.4;0.6;0.4" 
+                    dur="3s" 
+                    repeatCount="indefinite" 
+                  />
+                </path>
+              </g>
 
               {/* Partículas de ambiente ao redor do rosto */}
               {[...Array(3)].map((_, i) => (

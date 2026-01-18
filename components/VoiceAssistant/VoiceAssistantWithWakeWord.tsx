@@ -995,12 +995,20 @@ export function VoiceAssistantWithWakeWord({
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-800 to-slate-900 z-50 flex items-center justify-center">
+      <div className={`fixed inset-0 z-50 flex items-center justify-center transition-colors duration-500 ${
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900'
+          : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
+      }`}>
         <button
           onClick={() => setIsFullscreen(false)}
-          className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"
+          className={`absolute top-4 right-4 p-3 rounded-full transition ${
+            theme === 'dark'
+              ? 'bg-white/10 hover:bg-white/20 text-white'
+              : 'bg-black/10 hover:bg-black/20 text-black'
+          }`}
         >
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -1016,11 +1024,15 @@ export function VoiceAssistantWithWakeWord({
           </div>
 
           <div className="text-center">
-            <p className="text-3xl font-bold text-white mb-2">
+            <p className={`text-3xl font-bold mb-2 transition-colors ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
               {getStatusMessage()}
             </p>
             {error && (
-              <p className="text-red-400 text-sm">{error}</p>
+              <p className={`text-sm transition-colors ${
+                theme === 'dark' ? 'text-red-400' : 'text-red-600'
+              }`}>{error}</p>
             )}
           </div>
         </div>

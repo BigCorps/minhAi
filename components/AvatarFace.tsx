@@ -63,8 +63,8 @@ export function AvatarFace({
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
     const newParticles = Array.from({ length: particleCount }, () => ({
-      x: Math.random() * 600,
-      y: Math.random() * 600,
+      x: Math.random() * 500,
+      y: Math.random() * 500,
       size: Math.random() * 4 + 2,
       speed: Math.random() * 0.8 + 0.3
     }));
@@ -83,17 +83,17 @@ export function AvatarFace({
     let time = 0;
 
     const animate = () => {
-      ctx.clearRect(0, 0, 600, 600);
+      ctx.clearRect(0, 0, 500, 500);
       time += 0.02;
 
-      // Desenhar ondas circulares MAIORES
+      // Desenhar ondas circulares
       const waveCount = isSpeaking ? 8 : isProcessing ? 5 : isListening ? 4 : 3;
       for (let i = 0; i < waveCount; i++) {
-        const radius = 80 + i * 40 + Math.sin(time + i) * 15;
+        const radius = 60 + i * 35 + Math.sin(time + i) * 12;
         const alpha = 0.25 - (i * 0.03);
         
         ctx.beginPath();
-        ctx.arc(300, 300, radius, 0, Math.PI * 2);
+        ctx.arc(250, 250, radius, 0, Math.PI * 2);
         ctx.strokeStyle = `${colors.primary}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
         ctx.lineWidth = 3;
         ctx.stroke();
@@ -114,20 +114,20 @@ export function AvatarFace({
 
   return (
     <div className={`flex items-center justify-center h-full w-full transition-colors duration-1000 ${isDark ? 'bg-slate-950' : 'bg-gray-50'}`}>
-      <div className="relative w-[600px] h-[600px] flex items-center justify-center">
+      <div className="relative w-full h-full max-w-[500px] max-h-[500px] flex items-center justify-center">
         
         {/* Camada 0: Canvas de ondas (background) */}
         <canvas 
           ref={canvasRef}
-          width={600}
-          height={600}
+          width={500}
+          height={500}
           className="absolute inset-0 opacity-40"
         />
 
-        {/* Camada 1: Rings rotativos externos MAIORES */}
+        {/* Camada 1: Rings rotativos externos */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div 
-            className="absolute w-[500px] h-[500px] rounded-full border-2 opacity-20 animate-spin-slow"
+            className="absolute w-[90%] h-[90%] rounded-full border-2 opacity-20 animate-spin-slow"
             style={{ 
               borderColor: colors.ring,
               borderStyle: 'dashed',
@@ -135,25 +135,18 @@ export function AvatarFace({
             }}
           />
           <div 
-            className="absolute w-[450px] h-[450px] rounded-full border-2 opacity-15 animate-spin-reverse"
+            className="absolute w-[80%] h-[80%] rounded-full border-2 opacity-15 animate-spin-reverse"
             style={{ 
               borderColor: colors.ring,
               borderStyle: 'dotted',
               animationDuration: '25s'
             }}
           />
-          <div 
-            className="absolute w-[550px] h-[550px] rounded-full border opacity-10"
-            style={{ 
-              borderColor: colors.ring,
-              animationDuration: '30s'
-            }}
-          />
         </div>
 
-        {/* Camada 2: Aura pulsante GIGANTE */}
+        {/* Camada 2: Aura pulsante */}
         <div 
-          className={`absolute w-[480px] h-[480px] rounded-full blur-[100px] transition-all duration-1000 ${
+          className={`absolute w-[85%] h-[85%] rounded-full blur-[80px] transition-all duration-1000 ${
             isSpeaking ? 'animate-pulse-fast' : 'animate-pulse-slow'
           }`}
           style={{ 
@@ -168,8 +161,8 @@ export function AvatarFace({
               key={i}
               className="absolute rounded-full opacity-70 animate-float blur-[1px]"
               style={{
-                left: `${particle.x}px`,
-                top: `${particle.y}px`,
+                left: `${(particle.x / 500) * 100}%`,
+                top: `${(particle.y / 500) * 100}%`,
                 width: `${particle.size}px`,
                 height: `${particle.size}px`,
                 backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
@@ -181,53 +174,99 @@ export function AvatarFace({
           ))}
         </div>
 
-        {/* Camada 4: Container do orbe GIGANTE com transformação */}
+        {/* Camada 4: Container do orbe com transformação */}
         <div 
-          className={`relative w-[400px] h-[400px] flex items-center justify-center rounded-full border shadow-2xl overflow-visible transition-all duration-700 ease-out ${
+          className={`relative w-[70%] h-[70%] flex items-center justify-center rounded-full border shadow-2xl overflow-visible transition-all duration-700 ease-out ${
             isDark ? 'border-white/5' : 'border-black/5'
           } ${orbSize}`}
         >
           
-          {/* MODO ROSTO (Idle - Aguardando) */}
+          {/* MODO ROSTO (Idle - Aguardando) - MINIMALISTA */}
           {showFace && (
-            <svg viewBox="0 0 300 300" className="w-full h-full absolute z-20">
-              {/* Olho esquerdo */}
-              <g className="animate-blink">
-                <ellipse cx="100" cy="120" rx="25" ry="35" fill={colors.primary} opacity="0.9">
-                  <animate attributeName="ry" values="35;35;5;35;35" dur="4s" repeatCount="indefinite" />
-                </ellipse>
-                <circle cx="100" cy="115" r="12" fill={isDark ? '#1e293b' : '#f8fafc'} />
-                <circle cx="103" cy="113" r="6" fill={colors.secondary}>
-                  <animate attributeName="cx" values="103;97;103" dur="3s" repeatCount="indefinite" />
-                </circle>
-              </g>
+            <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20">
+              <defs>
+                <radialGradient id="eyeGradient">
+                  <stop offset="0%" stopColor={colors.primary} stopOpacity="0.8" />
+                  <stop offset="100%" stopColor={colors.primary} stopOpacity="0.2" />
+                </radialGradient>
+                <radialGradient id="mouthGradient">
+                  <stop offset="0%" stopColor={colors.secondary} stopOpacity="0.6" />
+                  <stop offset="100%" stopColor={colors.secondary} stopOpacity="0.1" />
+                </radialGradient>
+              </defs>
 
-              {/* Olho direito */}
-              <g className="animate-blink">
-                <ellipse cx="200" cy="120" rx="25" ry="35" fill={colors.primary} opacity="0.9">
-                  <animate attributeName="ry" values="35;35;5;35;35" dur="4s" begin="0.1s" repeatCount="indefinite" />
-                </ellipse>
-                <circle cx="200" cy="115" r="12" fill={isDark ? '#1e293b' : '#f8fafc'} />
-                <circle cx="203" cy="113" r="6" fill={colors.secondary}>
-                  <animate attributeName="cx" values="203;197;203" dur="3s" repeatCount="indefinite" />
-                </circle>
-              </g>
+              {/* Olho esquerdo - círculo translúcido simples */}
+              <circle 
+                cx="70" 
+                cy="80" 
+                r="15" 
+                fill="url(#eyeGradient)"
+                className="transition-all duration-500"
+              >
+                <animate attributeName="r" values="15;15;3;15;15" dur="4s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="4s" repeatCount="indefinite" />
+              </circle>
 
-              {/* Boca sorrindo */}
+              {/* Olho direito - círculo translúcido simples */}
+              <circle 
+                cx="130" 
+                cy="80" 
+                r="15" 
+                fill="url(#eyeGradient)"
+                className="transition-all duration-500"
+              >
+                <animate attributeName="r" values="15;15;3;15;15" dur="4s" begin="0.1s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="4s" begin="0.1s" repeatCount="indefinite" />
+              </circle>
+
+              {/* Boca - linha curva sutil translúcida */}
               <path
-                d="M 100 200 Q 150 230 200 200"
-                stroke={colors.primary}
-                strokeWidth="8"
+                d="M 70 130 Q 100 145 130 130"
+                stroke={colors.secondary}
+                strokeWidth="4"
                 fill="none"
                 strokeLinecap="round"
-                opacity="0.9"
+                opacity="0.6"
+                className="transition-all duration-500"
               >
-                <animate attributeName="d" values="M 100 200 Q 150 230 200 200;M 100 200 Q 150 240 200 200;M 100 200 Q 150 230 200 200" dur="3s" repeatCount="indefinite" />
+                <animate 
+                  attributeName="d" 
+                  values="M 70 130 Q 100 145 130 130;M 70 130 Q 100 150 130 130;M 70 130 Q 100 145 130 130" 
+                  dur="3s" 
+                  repeatCount="indefinite" 
+                />
+                <animate 
+                  attributeName="opacity" 
+                  values="0.6;0.8;0.6" 
+                  dur="3s" 
+                  repeatCount="indefinite" 
+                />
               </path>
 
-              {/* Detalhes de brilho */}
-              <circle cx="90" cy="110" r="4" fill="white" opacity="0.6" />
-              <circle cx="190" cy="110" r="4" fill="white" opacity="0.6" />
+              {/* Partículas de ambiente ao redor do rosto */}
+              {[...Array(3)].map((_, i) => (
+                <circle
+                  key={`ambient-${i}`}
+                  cx={50 + i * 50}
+                  cy={60}
+                  r="2"
+                  fill={colors.primary}
+                  opacity="0.4"
+                >
+                  <animate 
+                    attributeName="cy" 
+                    values="60;50;60" 
+                    dur={`${2 + i * 0.5}s`} 
+                    repeatCount="indefinite" 
+                  />
+                  <animate 
+                    attributeName="opacity" 
+                    values="0.2;0.6;0.2" 
+                    dur={`${2 + i * 0.5}s`} 
+                    repeatCount="indefinite" 
+                  />
+                </circle>
+              ))}
             </svg>
           )}
 

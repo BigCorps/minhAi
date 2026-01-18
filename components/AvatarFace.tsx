@@ -203,153 +203,105 @@ export function AvatarFace({
                 </filter>
               </defs>
 
-              {/* Olho esquerdo - formato original */}
+              {/* Olho esquerdo - 20% menor, sem piscar */}
               <g filter="url(#softGlow)">
-                {/* Base do olho */}
+                {/* Base do olho (14.4 × 17.6) */}
                 <ellipse 
                   cx="70" 
                   cy="85" 
-                  rx="18" 
-                  ry="22" 
+                  rx="14.4" 
+                  ry="17.6" 
                   fill="url(#eyeGradient)"
                   opacity="0.85"
                 />
-                {/* Brilho superior */}
+                {/* Brilho superior (6.4 × 8) */}
                 <ellipse 
-                  cx="66" 
-                  cy="78" 
-                  rx="8" 
-                  ry="10" 
-                  fill="url(#glowGradient)"
-                  opacity="0.6"
-                />
-                {/* Brilho pequeno */}
-                <circle 
                   cx="67" 
-                  cy="80" 
-                  r="4" 
+                  cy="79" 
+                  rx="6.4" 
+                  ry="8" 
+                  fill="url(#glowGradient)"
+                  opacity="0.6"
+                />
+                {/* Brilho pequeno (3.2) */}
+                <circle 
+                  cx="68" 
+                  cy="81" 
+                  r="3.2" 
                   fill="white"
                   opacity="0.7"
                 />
-                
-                {/* Piscada - elipse que fecha */}
-                <ellipse 
-                  cx="70" 
-                  cy="85" 
-                  rx="18" 
-                  ry="22" 
-                  fill={isDark ? '#0f172a' : '#f8fafc'}
-                  opacity="0"
-                >
-                  <animate 
-                    attributeName="ry" 
-                    values="22;22;2;22;22" 
-                    dur="4s" 
-                    repeatCount="indefinite" 
-                  />
-                  <animate 
-                    attributeName="opacity" 
-                    values="0;0;0.95;0;0" 
-                    dur="4s" 
-                    repeatCount="indefinite" 
-                  />
-                </ellipse>
               </g>
 
-              {/* Olho direito - formato original */}
+              {/* Olho direito - 20% menor, sem piscar */}
               <g filter="url(#softGlow)">
                 {/* Base do olho */}
                 <ellipse 
                   cx="130" 
                   cy="85" 
-                  rx="18" 
-                  ry="22" 
+                  rx="14.4" 
+                  ry="17.6" 
                   fill="url(#eyeGradient)"
                   opacity="0.85"
                 />
                 {/* Brilho superior */}
                 <ellipse 
-                  cx="126" 
-                  cy="78" 
-                  rx="8" 
-                  ry="10" 
+                  cx="127" 
+                  cy="79" 
+                  rx="6.4" 
+                  ry="8" 
                   fill="url(#glowGradient)"
                   opacity="0.6"
                 />
                 {/* Brilho pequeno */}
                 <circle 
-                  cx="127" 
-                  cy="80" 
-                  r="4" 
+                  cx="128" 
+                  cy="81" 
+                  r="3.2" 
                   fill="white"
                   opacity="0.7"
                 />
-                
-                {/* Piscada */}
-                <ellipse 
-                  cx="130" 
-                  cy="85" 
-                  rx="18" 
-                  ry="22" 
-                  fill={isDark ? '#0f172a' : '#f8fafc'}
-                  opacity="0"
-                >
-                  <animate 
-                    attributeName="ry" 
-                    values="22;22;2;22;22" 
-                    dur="4s" 
-                    begin="0.1s"
-                    repeatCount="indefinite" 
-                  />
-                  <animate 
-                    attributeName="opacity" 
-                    values="0;0;0.95;0;0" 
-                    dur="4s" 
-                    begin="0.1s"
-                    repeatCount="indefinite" 
-                  />
-                </ellipse>
               </g>
 
-              {/* Boca - formato original (arco largo) */}
+              {/* Boca - maior que os olhos, completa */}
               <g filter="url(#softGlow)">
                 {/* Camada de glow */}
                 <path
-                  d="M 60 140 Q 100 165 140 140"
+                  d="M 55 138 Q 100 168 145 138"
                   stroke={colors.secondary}
-                  strokeWidth="12"
+                  strokeWidth="14"
                   fill="none"
                   strokeLinecap="round"
-                  opacity="0.2"
+                  opacity="0.25"
                 />
                 {/* Camada principal */}
                 <path
-                  d="M 65 142 Q 100 162 135 142"
+                  d="M 60 140 Q 100 165 140 140"
                   stroke={colors.secondary}
-                  strokeWidth="8"
+                  strokeWidth="10"
                   fill="none"
                   strokeLinecap="round"
-                  opacity="0.7"
+                  opacity="0.75"
                 >
                   <animate 
                     attributeName="d" 
-                    values="M 65 142 Q 100 162 135 142;M 65 142 Q 100 167 135 142;M 65 142 Q 100 162 135 142" 
+                    values="M 60 140 Q 100 165 140 140;M 60 140 Q 100 170 140 140;M 60 140 Q 100 165 140 140" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
                 {/* Highlight */}
                 <path
-                  d="M 70 144 Q 100 160 130 144"
+                  d="M 65 142 Q 100 162 135 142"
                   stroke={colors.primary}
-                  strokeWidth="3"
+                  strokeWidth="4"
                   fill="none"
                   strokeLinecap="round"
-                  opacity="0.4"
+                  opacity="0.45"
                 >
                   <animate 
                     attributeName="opacity" 
-                    values="0.3;0.5;0.3" 
+                    values="0.35;0.55;0.35" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />

@@ -265,36 +265,36 @@ export function AvatarFace({
 
               {/* Boca - mesma cor dos olhos, mais achatada, mais próxima */}
               <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
-                {/* Camada de glow */}
+                {/* Camada de glow - reduzida */}
                 <path
-                  d="M 64 130 Q 100 145 136 130"
+                  d="M 64 132 Q 100 143 136 132"
                   stroke={colors.primary}
-                  strokeWidth="12.6"
+                  strokeWidth="6"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.25"
                 />
-                {/* Camada principal */}
+                {/* Camada principal - reduzida */}
                 <path
-                  d="M 68 132 Q 100 143 132 132"
+                  d="M 68 133 Q 100 142 132 133"
                   stroke={colors.primary}
-                  strokeWidth="9"
+                  strokeWidth="4"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.75"
                 >
                   <animate 
                     attributeName="d" 
-                    values="M 68 132 Q 100 143 132 132;M 68 132 Q 100 146 132 132;M 68 132 Q 100 143 132 132" 
+                    values="M 68 133 Q 100 142 132 133;M 68 133 Q 100 144 132 133;M 68 133 Q 100 142 132 133" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
-                {/* Highlight */}
+                {/* Highlight - reduzido */}
                 <path
-                  d="M 72 134 Q 100 141 128 134"
+                  d="M 72 134 Q 100 140 128 134"
                   stroke="white"
-                  strokeWidth="3.6"
+                  strokeWidth="2"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.45"

@@ -109,8 +109,6 @@ export function AvatarFace({
 
     return () => cancelAnimationFrame(animationId);
   }, [colors, isSpeaking, isProcessing, isListening]);
-
-  const isDark = theme === 'dark';
   
   // Tamanho do orbe muda com estado
   const orbSize = isSpeaking ? 'scale-150' : isProcessing ? 'scale-125' : isListening ? 'scale-110' : 'scale-100';

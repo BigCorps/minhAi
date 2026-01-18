@@ -203,41 +203,11 @@ export function AvatarFace({
                 </filter>
               </defs>
 
-              {/* Olho esquerdo - 20% menor, sem piscar */}
+              {/* Olho esquerdo - mais próximo do centro */}
               <g filter="url(#softGlow)">
-                {/* Base do olho (14.4 × 17.6) */}
+                {/* Base do olho - movido 6 units para direita (80→86) */}
                 <ellipse 
-                  cx="70" 
-                  cy="85" 
-                  rx="14.4" 
-                  ry="17.6" 
-                  fill="url(#eyeGradient)"
-                  opacity="0.85"
-                />
-                {/* Brilho superior (6.4 × 8) */}
-                <ellipse 
-                  cx="67" 
-                  cy="79" 
-                  rx="6.4" 
-                  ry="8" 
-                  fill="url(#glowGradient)"
-                  opacity="0.6"
-                />
-                {/* Brilho pequeno (3.2) */}
-                <circle 
-                  cx="68" 
-                  cy="81" 
-                  r="3.2" 
-                  fill="white"
-                  opacity="0.7"
-                />
-              </g>
-
-              {/* Olho direito - 20% menor, sem piscar */}
-              <g filter="url(#softGlow)">
-                {/* Base do olho */}
-                <ellipse 
-                  cx="130" 
+                  cx="76" 
                   cy="85" 
                   rx="14.4" 
                   ry="17.6" 
@@ -246,7 +216,7 @@ export function AvatarFace({
                 />
                 {/* Brilho superior */}
                 <ellipse 
-                  cx="127" 
+                  cx="73" 
                   cy="79" 
                   rx="6.4" 
                   ry="8" 
@@ -255,7 +225,7 @@ export function AvatarFace({
                 />
                 {/* Brilho pequeno */}
                 <circle 
-                  cx="128" 
+                  cx="74" 
                   cy="81" 
                   r="3.2" 
                   fill="white"
@@ -263,38 +233,68 @@ export function AvatarFace({
                 />
               </g>
 
-              {/* Boca - maior que os olhos, completa */}
+              {/* Olho direito - mais próximo do centro */}
+              <g filter="url(#softGlow)">
+                {/* Base do olho - movido 6 units para esquerda (130→124) */}
+                <ellipse 
+                  cx="124" 
+                  cy="85" 
+                  rx="14.4" 
+                  ry="17.6" 
+                  fill="url(#eyeGradient)"
+                  opacity="0.85"
+                />
+                {/* Brilho superior */}
+                <ellipse 
+                  cx="121" 
+                  cy="79" 
+                  rx="6.4" 
+                  ry="8" 
+                  fill="url(#glowGradient)"
+                  opacity="0.6"
+                />
+                {/* Brilho pequeno */}
+                <circle 
+                  cx="122" 
+                  cy="81" 
+                  r="3.2" 
+                  fill="white"
+                  opacity="0.7"
+                />
+              </g>
+
+              {/* Boca - 10% menor (81 units de largura, 27 de altura) */}
               <g filter="url(#softGlow)">
                 {/* Camada de glow */}
                 <path
-                  d="M 55 138 Q 100 168 145 138"
+                  d="M 59.5 142 Q 100 169 140.5 142"
                   stroke={colors.secondary}
-                  strokeWidth="14"
+                  strokeWidth="12.6"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.25"
                 />
                 {/* Camada principal */}
                 <path
-                  d="M 60 140 Q 100 165 140 140"
+                  d="M 64 144 Q 100 166 136 144"
                   stroke={colors.secondary}
-                  strokeWidth="10"
+                  strokeWidth="9"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.75"
                 >
                   <animate 
                     attributeName="d" 
-                    values="M 60 140 Q 100 165 140 140;M 60 140 Q 100 170 140 140;M 60 140 Q 100 165 140 140" 
+                    values="M 64 144 Q 100 166 136 144;M 64 144 Q 100 170 136 144;M 64 144 Q 100 166 136 144" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
                 {/* Highlight */}
                 <path
-                  d="M 65 142 Q 100 162 135 142"
+                  d="M 68 146 Q 100 164 132 146"
                   stroke={colors.primary}
-                  strokeWidth="4"
+                  strokeWidth="3.6"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.45"

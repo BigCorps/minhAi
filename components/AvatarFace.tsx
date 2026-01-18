@@ -16,19 +16,21 @@ export function AvatarFace({
   theme = 'dark' 
 }: AvatarFaceProps) {
   
-  // Cores baseadas no status
+  const isDark = theme === 'dark';
+
+  // Cores baseadas no status e tema
   const statusColors = useMemo(() => ({
     idle: { 
-      primary: '#A2D9F7', 
-      secondary: '#B0CB1F',
-      glow: 'rgba(162, 217, 247, 0.4)',
-      ring: '#60A5FA'
+      primary: isDark ? '#60a5fa' : '#10b981',  // Dark: azul, Light: verde
+      secondary: isDark ? '#93c5fd' : '#34d399',
+      glow: isDark ? 'rgba(96, 165, 250, 0.4)' : 'rgba(16, 185, 129, 0.4)',
+      ring: isDark ? '#60A5FA' : '#10B981'
     },
     listening: { 
-      primary: '#3b82f6', 
-      secondary: '#A2D9F7',
-      glow: 'rgba(59, 130, 246, 0.6)',
-      ring: '#2563EB'
+      primary: isDark ? '#3b82f6' : '#059669',  // Dark: azul, Light: verde escuro
+      secondary: isDark ? '#60a5fa' : '#10b981',
+      glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(5, 150, 105, 0.6)',
+      ring: isDark ? '#2563EB' : '#059669'
     },
     processing: { 
       primary: '#fbbf24', 
@@ -37,12 +39,12 @@ export function AvatarFace({
       ring: '#F59E0B'
     },
     speaking: { 
-      primary: '#B0CB1F', 
-      secondary: '#34d399',
-      glow: 'rgba(176, 203, 31, 0.6)',
-      ring: '#10B981'
+      primary: isDark ? '#4ade80' : '#10b981',  // Dark: verde claro, Light: verde
+      secondary: isDark ? '#34d399' : '#059669',
+      glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(16, 185, 129, 0.6)',
+      ring: isDark ? '#10B981' : '#059669'
     },
-  }), []);
+  }), [isDark]);
 
   const [colors, setColors] = useState(statusColors.idle);
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
@@ -184,7 +186,7 @@ export function AvatarFace({
           
           {/* MODO ROSTO (Idle - Aguardando) - MINIMALISTA */}
           {showFace && (
-            <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20">
+            <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
               <defs>
                 <radialGradient id="eyeGradient">
                   <stop offset="0%" stopColor={colors.primary} stopOpacity="0.9" />
@@ -263,45 +265,45 @@ export function AvatarFace({
                 />
               </g>
 
-              {/* Boca - mesma cor dos olhos, mais achatada, mais próxima */}
+              {/* Boca - espessura original, mais espaço */}
               <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
-                {/* Camada de glow - reduzida */}
+                {/* Camada de glow */}
                 <path
-                  d="M 64 132 Q 100 143 136 132"
+                  d="M 64 135 Q 100 148 136 135"
                   stroke={colors.primary}
-                  strokeWidth="6"
+                  strokeWidth="12"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.25"
                 />
-                {/* Camada principal - reduzida */}
+                {/* Camada principal */}
                 <path
-                  d="M 68 133 Q 100 142 132 133"
+                  d="M 68 136 Q 100 146 132 136"
                   stroke={colors.primary}
-                  strokeWidth="4"
+                  strokeWidth="9"
                   fill="none"
                   strokeLinecap="round"
                   opacity="0.75"
                 >
                   <animate 
                     attributeName="d" 
-                    values="M 68 133 Q 100 142 132 133;M 68 133 Q 100 144 132 133;M 68 133 Q 100 142 132 133" 
+                    values="M 68 136 Q 100 146 132 136;M 68 136 Q 100 149 132 136;M 68 136 Q 100 146 132 136" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
-                {/* Highlight - reduzido */}
+                {/* Highlight */}
                 <path
-                  d="M 72 134 Q 100 140 128 134"
+                  d="M 72 137 Q 100 144 128 137"
                   stroke="white"
-                  strokeWidth="2"
+                  strokeWidth="3.5"
                   fill="none"
                   strokeLinecap="round"
-                  opacity="0.45"
+                  opacity="0.5"
                 >
                   <animate 
                     attributeName="opacity" 
-                    values="0.35;0.55;0.35" 
+                    values="0.4;0.6;0.4" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />

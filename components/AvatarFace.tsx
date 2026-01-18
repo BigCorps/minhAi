@@ -190,10 +190,13 @@ export function AvatarFace({
                   <stop offset="0%" stopColor={colors.primary} stopOpacity="0.8" />
                   <stop offset="100%" stopColor={colors.primary} stopOpacity="0.2" />
                 </radialGradient>
-                <radialGradient id="mouthGradient">
-                  <stop offset="0%" stopColor={colors.secondary} stopOpacity="0.6" />
-                  <stop offset="100%" stopColor={colors.secondary} stopOpacity="0.1" />
-                </radialGradient>
+                <filter id="pixelGlow">
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
                 <filter id="mouthGlow">
                   <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
                   <feMerge>
@@ -203,74 +206,110 @@ export function AvatarFace({
                 </filter>
               </defs>
 
-              {/* Olho esquerdo - círculo translúcido simples */}
-              <circle 
-                cx="70" 
-                cy="80" 
-                r="15" 
-                fill="url(#eyeGradient)"
-                className="transition-all duration-500"
-              >
-                <animate attributeName="r" values="15;15;3;15;15" dur="4s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="4s" repeatCount="indefinite" />
-              </circle>
+              {/* Olho esquerdo - PIXEL ART 16-bit */}
+              <g opacity="0.85" filter="url(#pixelGlow)">
+                {/* Estrutura do olho em blocos */}
+                {/* Linha 1 - topo */}
+                <rect x="55" y="70" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                <rect x="63" y="70" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="71" y="70" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                
+                {/* Linha 2 */}
+                <rect x="47" y="78" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="55" y="78" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="63" y="78" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="71" y="78" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="79" y="78" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                
+                {/* Linha 3 - centro */}
+                <rect x="47" y="86" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="55" y="86" width="8" height="8" fill={colors.primary} opacity="0.95" />
+                <rect x="63" y="86" width="8" height="8" fill={colors.primary} opacity="0.95" />
+                <rect x="71" y="86" width="8" height="8" fill={colors.primary} opacity="0.95" />
+                <rect x="79" y="86" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                
+                {/* Linha 4 */}
+                <rect x="47" y="94" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="55" y="94" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="63" y="94" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="71" y="94" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="79" y="94" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                
+                {/* Linha 5 - base */}
+                <rect x="55" y="102" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                <rect x="63" y="102" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="71" y="102" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                
+                {/* Piscar - retângulo que cobre */}
+                <rect x="47" y="70" width="40" height="40" fill={isDark ? '#1e293b' : '#f8fafc'} opacity="0">
+                  <animate attributeName="opacity" values="0;0;0.9;0;0" dur="4s" repeatCount="indefinite" />
+                </rect>
+              </g>
 
-              {/* Olho direito - círculo translúcido simples */}
-              <circle 
-                cx="130" 
-                cy="80" 
-                r="15" 
-                fill="url(#eyeGradient)"
-                className="transition-all duration-500"
-              >
-                <animate attributeName="r" values="15;15;3;15;15" dur="4s" begin="0.1s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="4s" begin="0.1s" repeatCount="indefinite" />
-              </circle>
+              {/* Olho direito - PIXEL ART 16-bit */}
+              <g opacity="0.85" filter="url(#pixelGlow)">
+                {/* Linha 1 - topo */}
+                <rect x="113" y="70" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                <rect x="121" y="70" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="129" y="70" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                
+                {/* Linha 2 */}
+                <rect x="105" y="78" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="113" y="78" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="121" y="78" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="129" y="78" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="137" y="78" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                
+                {/* Linha 3 - centro */}
+                <rect x="105" y="86" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="113" y="86" width="8" height="8" fill={colors.primary} opacity="0.95" />
+                <rect x="121" y="86" width="8" height="8" fill={colors.primary} opacity="0.95" />
+                <rect x="129" y="86" width="8" height="8" fill={colors.primary} opacity="0.95" />
+                <rect x="137" y="86" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                
+                {/* Linha 4 */}
+                <rect x="105" y="94" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="113" y="94" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="121" y="94" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="129" y="94" width="8" height="8" fill={colors.primary} opacity="0.9" />
+                <rect x="137" y="94" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                
+                {/* Linha 5 - base */}
+                <rect x="113" y="102" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                <rect x="121" y="102" width="8" height="8" fill={colors.primary} opacity="0.7" />
+                <rect x="129" y="102" width="8" height="8" fill={colors.primary} opacity="0.6" />
+                
+                {/* Piscar */}
+                <rect x="105" y="70" width="40" height="40" fill={isDark ? '#1e293b' : '#f8fafc'} opacity="0">
+                  <animate attributeName="opacity" values="0;0;0.9;0;0" dur="4s" begin="0.1s" repeatCount="indefinite" />
+                </rect>
+              </g>
 
-              {/* Boca - arco sorridente translúcido (camadas para profundidade) */}
-              <g opacity="0.8">
-                {/* Camada de fundo (mais espessa) */}
-                <path
-                  d="M 65 130 Q 100 150 135 130"
-                  stroke={colors.secondary}
-                  strokeWidth="8"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.3"
-                  filter="url(#mouthGlow)"
+              {/* Boca - PIXEL ART 16-bit sorriso */}
+              <g opacity="0.8" filter="url(#mouthGlow)">
+                {/* Pontas do sorriso */}
+                <rect x="60" y="132" width="8" height="8" fill={colors.secondary} opacity="0.7" />
+                <rect x="124" y="132" width="8" height="8" fill={colors.secondary} opacity="0.7" />
+                
+                {/* Segunda linha */}
+                <rect x="68" y="140" width="8" height="8" fill={colors.secondary} opacity="0.8" />
+                <rect x="116" y="140" width="8" height="8" fill={colors.secondary} opacity="0.8" />
+                
+                {/* Linha do meio - base do sorriso */}
+                <rect x="76" y="148" width="8" height="8" fill={colors.secondary} opacity="0.85" />
+                <rect x="84" y="148" width="8" height="8" fill={colors.secondary} opacity="0.9" />
+                <rect x="92" y="148" width="8" height="8" fill={colors.secondary} opacity="0.9" />
+                <rect x="100" y="148" width="8" height="8" fill={colors.secondary} opacity="0.9" />
+                <rect x="108" y="148" width="8" height="8" fill={colors.secondary} opacity="0.85" />
+                
+                {/* Animação sutil */}
+                <animateTransform
+                  attributeName="transform"
+                  type="translate"
+                  values="0,0; 0,2; 0,0"
+                  dur="3s"
+                  repeatCount="indefinite"
                 />
-                {/* Camada principal */}
-                <path
-                  d="M 70 132 Q 100 148 130 132"
-                  stroke={colors.secondary}
-                  strokeWidth="5"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.7"
-                >
-                  <animate 
-                    attributeName="d" 
-                    values="M 70 132 Q 100 148 130 132;M 70 132 Q 100 152 130 132;M 70 132 Q 100 148 130 132" 
-                    dur="3s" 
-                    repeatCount="indefinite" 
-                  />
-                </path>
-                {/* Highlight sutil */}
-                <path
-                  d="M 75 134 Q 100 146 125 134"
-                  stroke={colors.primary}
-                  strokeWidth="2"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.4"
-                >
-                  <animate 
-                    attributeName="opacity" 
-                    values="0.4;0.6;0.4" 
-                    dur="3s" 
-                    repeatCount="indefinite" 
-                  />
-                </path>
               </g>
 
               {/* Partículas de ambiente ao redor do rosto */}

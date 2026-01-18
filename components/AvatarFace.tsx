@@ -48,8 +48,9 @@ export function AvatarFace({
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Mostrar rosto apenas no idle (aguardando ativação)
-  const showFace = !isListening && !isSpeaking && !isProcessing;
+  // Mostrar rosto: idle OU listening (aguardando wake word)
+  // Orbe: processing (pensando) OU speaking (falando)
+  const showFace = !isProcessing && !isSpeaking;
 
   // Atualizar cores
   useEffect(() => {
@@ -219,29 +220,19 @@ export function AvatarFace({
                 <animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="4s" begin="0.1s" repeatCount="indefinite" />
               </circle>
 
-              {/* Boca - linha curva sutil translúcida */}
-              <path
-                d="M 70 130 Q 100 145 130 130"
-                stroke={colors.secondary}
-                strokeWidth="4"
-                fill="none"
-                strokeLinecap="round"
-                opacity="0.6"
+              {/* Boca - círculo translúcido horizontal (elipse) igual aos olhos */}
+              <ellipse
+                cx="100"
+                cy="140"
+                rx="25"
+                ry="12"
+                fill="url(#mouthGradient)"
+                opacity="0.7"
                 className="transition-all duration-500"
               >
-                <animate 
-                  attributeName="d" 
-                  values="M 70 130 Q 100 145 130 130;M 70 130 Q 100 150 130 130;M 70 130 Q 100 145 130 130" 
-                  dur="3s" 
-                  repeatCount="indefinite" 
-                />
-                <animate 
-                  attributeName="opacity" 
-                  values="0.6;0.8;0.6" 
-                  dur="3s" 
-                  repeatCount="indefinite" 
-                />
-              </path>
+                <animate attributeName="ry" values="12;15;12" dur="3s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;0.9;0.7" dur="3s" repeatCount="indefinite" />
+              </ellipse>
 
               {/* Partículas de ambiente ao redor do rosto */}
               {[...Array(3)].map((_, i) => (
@@ -394,7 +385,7 @@ export function AvatarFace({
                 }}
               />
               <span className={`text-xs font-bold tracking-[0.3em] uppercase ${isDark ? 'text-white/60' : 'text-black/60'}`}>
-                {isSpeaking ? 'Sintetizando' : isProcessing ? 'Processando' : isListening ? 'Escutando' : 'Aguardando Ativação'}
+                {isSpeaking ? 'Sintetizando' : isProcessing ? 'Processando' : isListening ? 'Aguardando Palavra' : 'Aguardando Ativação'}
               </span>
             </div>
           </div>

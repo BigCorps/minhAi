@@ -204,7 +204,7 @@ export function AvatarFace({
               </defs>
 
               {/* Olho esquerdo - mais próximo do centro */}
-              <g filter="url(#softGlow)">
+              <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
                 {/* Base do olho - movido 6 units para direita (80→86) */}
                 <ellipse 
                   cx="76" 
@@ -234,7 +234,7 @@ export function AvatarFace({
               </g>
 
               {/* Olho direito - mais próximo do centro */}
-              <g filter="url(#softGlow)">
+              <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
                 {/* Base do olho - movido 6 units para esquerda (130→124) */}
                 <ellipse 
                   cx="124" 
@@ -263,12 +263,12 @@ export function AvatarFace({
                 />
               </g>
 
-              {/* Boca - 10% menor (81 units de largura, 27 de altura) */}
-              <g filter="url(#softGlow)">
+              {/* Boca - mesma cor dos olhos, mais achatada, mais próxima */}
+              <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
                 {/* Camada de glow */}
                 <path
-                  d="M 59.5 142 Q 100 169 140.5 142"
-                  stroke={colors.secondary}
+                  d="M 64 130 Q 100 145 136 130"
+                  stroke={colors.primary}
                   strokeWidth="12.6"
                   fill="none"
                   strokeLinecap="round"
@@ -276,8 +276,8 @@ export function AvatarFace({
                 />
                 {/* Camada principal */}
                 <path
-                  d="M 64 144 Q 100 166 136 144"
-                  stroke={colors.secondary}
+                  d="M 68 132 Q 100 143 132 132"
+                  stroke={colors.primary}
                   strokeWidth="9"
                   fill="none"
                   strokeLinecap="round"
@@ -285,15 +285,15 @@ export function AvatarFace({
                 >
                   <animate 
                     attributeName="d" 
-                    values="M 64 144 Q 100 166 136 144;M 64 144 Q 100 170 136 144;M 64 144 Q 100 166 136 144" 
+                    values="M 68 132 Q 100 143 132 132;M 68 132 Q 100 146 132 132;M 68 132 Q 100 143 132 132" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
                 {/* Highlight */}
                 <path
-                  d="M 68 146 Q 100 164 132 146"
-                  stroke={colors.primary}
+                  d="M 72 134 Q 100 141 128 134"
+                  stroke="white"
                   strokeWidth="3.6"
                   fill="none"
                   strokeLinecap="round"
@@ -337,7 +337,7 @@ export function AvatarFace({
 
           {/* MODO ORBE (Ativo - Listening/Processing/Speaking) */}
           {!showFace && (
-            <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl">
+            <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
               <defs>
                 {/* Filtro Gooey */}
                 <filter id="gooey">

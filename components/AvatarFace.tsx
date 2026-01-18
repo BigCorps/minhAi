@@ -21,16 +21,16 @@ export function AvatarFace({
   // Cores baseadas no status e tema
   const statusColors = useMemo(() => ({
     idle: { 
-      primary: isDark ? '#60a5fa' : '#10b981',  // Dark: azul, Light: verde
-      secondary: isDark ? '#93c5fd' : '#34d399',
-      glow: isDark ? 'rgba(96, 165, 250, 0.4)' : 'rgba(16, 185, 129, 0.4)',
-      ring: isDark ? '#60A5FA' : '#10B981'
+      primary: isDark ? '#60a5fa' : '#2563eb',  // Dark: azul claro, Light: azul escuro
+      secondary: isDark ? '#93c5fd' : '#3b82f6',
+      glow: isDark ? 'rgba(96, 165, 250, 0.4)' : 'rgba(37, 99, 235, 0.4)',
+      ring: isDark ? '#60A5FA' : '#2563eb'
     },
     listening: { 
-      primary: isDark ? '#3b82f6' : '#059669',  // Dark: azul, Light: verde escuro
-      secondary: isDark ? '#60a5fa' : '#10b981',
-      glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(5, 150, 105, 0.6)',
-      ring: isDark ? '#2563EB' : '#059669'
+      primary: isDark ? '#3b82f6' : '#1d4ed8',  // Dark: azul, Light: azul mais escuro
+      secondary: isDark ? '#60a5fa' : '#2563eb',
+      glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(29, 78, 216, 0.6)',
+      ring: isDark ? '#2563EB' : '#1d4ed8'
     },
     processing: { 
       primary: '#fbbf24', 
@@ -39,7 +39,7 @@ export function AvatarFace({
       ring: '#F59E0B'
     },
     speaking: { 
-      primary: isDark ? '#4ade80' : '#10b981',  // Dark: verde claro, Light: verde
+      primary: isDark ? '#4ade80' : '#10b981',
       secondary: isDark ? '#34d399' : '#059669',
       glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(16, 185, 129, 0.6)',
       ring: isDark ? '#10B981' : '#059669'
@@ -263,49 +263,83 @@ export function AvatarFace({
                 />
               </g>
 
-              {/* Boca - espessura original, mais espaço */}
-              <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
-                {/* Camada de glow */}
+              {/* Boca 3D - com efeito de profundidade */}
+              <g opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
+                <defs>
+                  {/* Gradiente vertical para profundidade */}
+                  <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" />
+                    <stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" />
+                    <stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
+                  </linearGradient>
+                  
+                  {/* Sombra interna para profundidade */}
+                  <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                    <feOffset dx="0" dy="2" result="offsetblur"/>
+                    <feComponentTransfer>
+                      <feFuncA type="linear" slope="0.5"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {/* Base escura (sombra de fundo) */}
                 <path
-                  d="M 64 135 Q 100 148 136 135"
-                  stroke={colors.primary}
-                  strokeWidth="12"
+                  d="M 66 137 Q 100 149 134 137"
+                  stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'}
+                  strokeWidth="10"
                   fill="none"
                   strokeLinecap="round"
-                  opacity="0.25"
+                  opacity="0.6"
                 />
-                {/* Camada principal */}
+
+                {/* Camada principal com gradiente de profundidade */}
                 <path
-                  d="M 68 136 Q 100 146 132 136"
-                  stroke={colors.primary}
-                  strokeWidth="9"
+                  d="M 68 136 Q 100 147 132 136"
+                  stroke="url(#mouthDepth)"
+                  strokeWidth="8"
                   fill="none"
                   strokeLinecap="round"
-                  opacity="0.75"
+                  filter="url(#mouthDepthShadow)"
                 >
                   <animate 
                     attributeName="d" 
-                    values="M 68 136 Q 100 146 132 136;M 68 136 Q 100 149 132 136;M 68 136 Q 100 146 132 136" 
+                    values="M 68 136 Q 100 147 132 136;M 68 136 Q 100 150 132 136;M 68 136 Q 100 147 132 136" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
-                {/* Highlight */}
+
+                {/* Highlight superior (reflexo de luz) */}
                 <path
-                  d="M 72 137 Q 100 144 128 137"
+                  d="M 70 135 Q 100 144 130 135"
                   stroke="white"
-                  strokeWidth="3.5"
+                  strokeWidth="3"
                   fill="none"
                   strokeLinecap="round"
-                  opacity="0.5"
+                  opacity="0.6"
                 >
                   <animate 
                     attributeName="opacity" 
-                    values="0.4;0.6;0.4" 
+                    values="0.5;0.7;0.5" 
                     dur="3s" 
                     repeatCount="indefinite" 
                   />
                 </path>
+
+                {/* Sombra inferior (profundidade embaixo) */}
+                <path
+                  d="M 72 138 Q 100 148 128 138"
+                  stroke={isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)'}
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity="0.5"
+                />
               </g>
 
               {/* Partículas de ambiente ao redor do rosto */}

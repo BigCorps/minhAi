@@ -128,7 +128,7 @@ export default function NovaEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Será usado na URL pública: <strong>itend.com.br/oi/seu-slug</strong>
+                Será usado na URL pública: <strong>itend.com.br/ia/seu-slug</strong>
               </p>
             </div>
 

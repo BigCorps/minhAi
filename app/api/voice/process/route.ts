@@ -297,15 +297,14 @@ export async function POST(request: NextRequest) {
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
-      const base64Audio = errorBuffer.toString('base64');
-      const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
       
-      return NextResponse.json({
-        audioUrl,
-        transcript: '[vazio]',
-        usedFAQ: false,
-        processingTime: Date.now() - startTime,
-        conversationId: conversationId || null
+      return new Response(errorBuffer, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'X-Transcription': encodeURIComponent('[vazio]'),
+          'X-Used-FAQ': 'false',
+          'X-Processing-Time': String(Date.now() - startTime),
+        },
       });
     }
 
@@ -327,13 +326,15 @@ export async function POST(request: NextRequest) {
     if (checkEndOnly) {
       console.log('✅ Check-only mode: retornando só transcrição');
       
-      return NextResponse.json({
-        audioUrl: null,
-        transcript: userMessage,
-        usedFAQ: false,
-        processingTime: Date.now() - startTime,
-        conversationId: conversationId || null,
-        checkOnly: true
+      // Criar áudio vazio
+      const silentBuffer = Buffer.from([]);
+      
+      return new Response(silentBuffer, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'X-Transcription': encodeURIComponent(userMessage),
+          'X-Processing-Time': `${Date.now() - startTime}`,
+        },
       });
     }
 
@@ -413,10 +414,6 @@ export async function POST(request: NextRequest) {
     console.log(`⏱️ TTS: ${ttsTime}ms`);
 
     const audioBuffer = Buffer.from(await tts.arrayBuffer());
-    
-    // 🎯 MUDANÇA: Converter para base64 data URL
-    const base64Audio = audioBuffer.toString('base64');
-    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
 
     // FASE 4: Salvar histórico (não bloqueia response)
     let finalConversationId = conversationId || randomUUID();
@@ -448,20 +445,20 @@ export async function POST(request: NextRequest) {
     console.log(`TOTAL: ${totalTime}ms`);
     console.log('========================\n');
 
-    // 🎯 MUDANÇA: Retornar JSON ao invés de binário
-    return NextResponse.json({
-      audioUrl,
-      transcript: userMessage,
-      usedFAQ,
-      processingTime: totalTime,
-      conversationId: finalConversationId,
-      responseText
+    return new Response(audioBuffer, {
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'X-Conversation-Id': finalConversationId,
+        'X-Used-FAQ': String(usedFAQ),
+        'X-Processing-Time': String(totalTime),
+        'X-Transcription': encodeURIComponent(userMessage),
+      },
     });
 
   } catch (error: any) {
     console.error('❌ Erro:', error.message, error.stack);
     
-    // 🎯 MUDANÇA: Retornar JSON de erro
+    // TTS de erro
     try {
       const errorTTS = await openai.audio.speech.create({
         model: 'tts-1',
@@ -471,24 +468,16 @@ export async function POST(request: NextRequest) {
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
-      const base64Audio = errorBuffer.toString('base64');
-      const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
       
-      return NextResponse.json({
-        audioUrl,
-        transcript: '',
-        usedFAQ: false,
-        error: true,
-        errorMessage: error.message
-      }, { status: 500 });
-
+      return new Response(errorBuffer, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'X-Error': 'true',
+        },
+      });
     } catch (ttsError) {
       return NextResponse.json(
-        { 
-          error: true,
-          errorMessage: 'Erro interno',
-          details: error.message 
-        },
+        { error: 'Erro interno' },
         { status: 500 }
       );
     }

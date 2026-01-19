@@ -496,43 +496,33 @@ export function VoiceAssistantWithWakeWord({
         body: formData,
       });
 
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', response.headers.get('content-type'));
-
       if (!response.ok) {
-        let errorMessage = 'Erro ao processar';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // Se não for JSON, pegar texto
-          const errorText = await response.text();
-          console.error('❌ Erro não-JSON da API:', errorText.substring(0, 200));
-          errorMessage = `Erro ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
       }
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonError) {
-        console.error('❌ Resposta não é JSON válido');
-        const responseText = await response.text();
-        console.error('📄 Resposta recebida (primeiros 500 chars):', responseText.substring(0, 500));
-        throw new Error('API retornou resposta inválida (não-JSON)');
+      // Pegar dados dos headers
+      const conversationIdHeader = response.headers.get('X-Conversation-Id');
+      const transcriptHeader = response.headers.get('X-Transcription');
+      const usedFAQHeader = response.headers.get('X-Used-FAQ');
+      
+      if (conversationIdHeader && !conversationIdRef.current) {
+        conversationIdRef.current = conversationIdHeader;
+        console.log('🆔 Conversation ID:', conversationIdHeader);
       }
 
-      console.log('✅ Resposta recebida:', data);
+      const transcript = transcriptHeader ? decodeURIComponent(transcriptHeader) : '';
+      const usedFAQ = usedFAQHeader === 'true';
 
-      if (!conversationIdRef.current && data.conversationId) {
-        conversationIdRef.current = data.conversationId;
-        console.log('🆔 Conversation ID:', data.conversationId);
-      }
+      console.log('✅ Resposta recebida');
+      console.log('📝 Transcript:', transcript);
+      console.log('📊 Used FAQ:', usedFAQ);
 
       setIsProcessing(false);
 
-      if (!data.audioUrl) {
+      // Converter resposta binária em blob de áudio
+      const audioBlob = await response.blob();
+      
+      if (audioBlob.size === 0) {
         console.log('⚠️ Sem áudio na resposta');
         setError('Sem resposta de áudio');
         isProcessingAudio.current = false;
@@ -540,10 +530,12 @@ export function VoiceAssistantWithWakeWord({
         return;
       }
 
+      const audioUrl = URL.createObjectURL(audioBlob);
+
       console.log('🔊 Tocando resposta...');
       setIsPlayingAudio(true);
 
-      const audio = new Audio(data.audioUrl);
+      const audio = new Audio(audioUrl);
       currentAudioRef.current = audio;
 
       audio.onended = () => {
@@ -552,7 +544,6 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingWakeWord.current = false;
         
-        const transcript = data.transcript?.toLowerCase() || '';
         console.log('🔍 Verificando comando de fim no transcript:', transcript);
         
         const normalizedTranscript = transcript

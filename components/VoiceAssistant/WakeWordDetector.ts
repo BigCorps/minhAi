@@ -141,6 +141,7 @@ export interface WakeWordConfig {
   contextWindow?: number;       // Quantas palavras analisar (padrão: 5)
   caseSensitive?: boolean;      // Case sensitive (padrão: false)
   usePhoneticMatching?: boolean; // Usar matching fonético (padrão: true)
+  excludeWords?: string[];      // Palavras a excluir (ex: comandos de fim)
 }
 
 export class WakeWordDetector {
@@ -149,6 +150,7 @@ export class WakeWordDetector {
   private contextWindow: number;
   private caseSensitive: boolean;
   private usePhoneticMatching: boolean;
+  private excludeWords: string[];
   private wordBuffer: string[] = [];
   private keywordVariations: Map<string, string[]> = new Map();
   
@@ -158,6 +160,7 @@ export class WakeWordDetector {
     this.contextWindow = config.contextWindow ?? 5;
     this.caseSensitive = config.caseSensitive ?? false;
     this.usePhoneticMatching = config.usePhoneticMatching ?? true;
+    this.excludeWords = config.excludeWords ?? [];
     
     // Pré-computar variações fonéticas
     if (this.usePhoneticMatching) {
@@ -180,6 +183,20 @@ export class WakeWordDetector {
     matchedText?: string;
   } {
     const normalized = normalizeText(transcript);
+    
+    // 🎯 NOVO: Verificar se contém palavras excluídas
+    if (this.excludeWords.length > 0) {
+      const hasExcludedWord = this.excludeWords.some(word => {
+        const normalizedExclude = normalizeText(word);
+        return normalized.includes(normalizedExclude);
+      });
+      
+      if (hasExcludedWord) {
+        console.log('⛔ Texto contém palavra excluída, ignorando wake word');
+        return { detected: false, confidence: 0 };
+      }
+    }
+    
     const words = normalized.split(/\s+/);
     
     // Adicionar palavras ao buffer

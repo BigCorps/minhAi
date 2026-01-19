@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
+import { WakeWordDetector } from './WakeWordDetector';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -46,6 +47,7 @@ export function VoiceAssistantWithWakeWord({
   const processingWakeWord = useRef<boolean>(false);
   const inactivityTimeoutRef = useRef<any>(null);
   const isProcessingAudio = useRef<boolean>(false); // Flag para prevenir duplicação
+  const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null); // 🎯 NOVO
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -67,6 +69,17 @@ export function VoiceAssistantWithWakeWord({
     'adeus',
     'valeu',
   ];
+
+  // 🎯 NOVO: Inicializar WakeWordDetector
+  useEffect(() => {
+    console.log('🎯 Inicializando WakeWordDetector com keywords:', wakeWords);
+    wakeWordDetectorRef.current = new WakeWordDetector({
+      keywords: wakeWords,
+      threshold: 0.7,
+      contextWindow: 5,
+      usePhoneticMatching: true
+    });
+  }, [wakeWords.join(',')]);
 
   useEffect(() => {
     isActiveRef.current = true;
@@ -268,13 +281,17 @@ export function VoiceAssistantWithWakeWord({
         }
 
         if (!conversationActive && !isRecording && !isProcessing && !isPlayingAudio) {
-          const detectedWakeWord = wakeWords.some(word => {
-            const regex = new RegExp(`\\b${word}\\b`, 'i');
-            return regex.test(transcript) || transcript.includes(word);
-          });
+          // 🎯 NOVO: Usar WakeWordDetector com fuzzy matching
+          const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
           
-          if (detectedWakeWord) {
-            console.log('✅ Wake:', transcript, isFinal ? '(final)' : '(interim)');
+          if (detectionResult?.detected && detectionResult.keyword) {
+            console.log('✅ Wake word detectada!', {
+              keyword: detectionResult.keyword,
+              confidence: Math.round(detectionResult.confidence * 100) + '%',
+              matchedText: detectionResult.matchedText,
+              originalTranscript: transcript,
+              isFinal: isFinal ? '(final)' : '(interim)'
+            });
             
             // Sempre salvar o último transcript
             lastWakeWordTranscript.current = transcript;

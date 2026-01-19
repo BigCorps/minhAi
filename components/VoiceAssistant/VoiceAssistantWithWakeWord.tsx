@@ -520,9 +520,9 @@ export function VoiceAssistantWithWakeWord({
       setIsProcessing(false);
 
       // Converter resposta binária em blob de áudio
-      const audioBlob = await response.blob();
+      const responseBlob = await response.blob();
       
-      if (audioBlob.size === 0) {
+      if (responseBlob.size === 0) {
         console.log('⚠️ Sem áudio na resposta');
         setError('Sem resposta de áudio');
         isProcessingAudio.current = false;
@@ -530,7 +530,7 @@ export function VoiceAssistantWithWakeWord({
         return;
       }
 
-      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioUrl = URL.createObjectURL(responseBlob);
 
       console.log('🔊 Tocando resposta...');
       setIsPlayingAudio(true);

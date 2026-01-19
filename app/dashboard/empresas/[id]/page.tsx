@@ -190,7 +190,7 @@ export default function EditarEmpresaPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
-                URL pública: <strong>itend.com.br/oi/{company.slug}</strong>
+                URL pública: <strong>itend.com.br/ia/{company.slug}</strong>
               </p>
             </div>
 

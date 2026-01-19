@@ -297,14 +297,15 @@ export async function POST(request: NextRequest) {
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
+      const base64Audio = errorBuffer.toString('base64');
+      const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
       
-      return new Response(errorBuffer, {
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'X-Transcription': encodeURIComponent('[vazio]'),
-          'X-Used-FAQ': 'false',
-          'X-Processing-Time': String(Date.now() - startTime),
-        },
+      return NextResponse.json({
+        audioUrl,
+        transcript: '[vazio]',
+        usedFAQ: false,
+        processingTime: Date.now() - startTime,
+        conversationId: conversationId || null
       });
     }
 
@@ -326,22 +327,20 @@ export async function POST(request: NextRequest) {
     if (checkEndOnly) {
       console.log('✅ Check-only mode: retornando só transcrição');
       
-      // Criar áudio vazio
-      const silentBuffer = Buffer.from([]);
-      
-      return new Response(silentBuffer, {
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'X-Transcription': encodeURIComponent(userMessage),
-          'X-Processing-Time': `${Date.now() - startTime}`,
-        },
+      return NextResponse.json({
+        audioUrl: null,
+        transcript: userMessage,
+        usedFAQ: false,
+        processingTime: Date.now() - startTime,
+        conversationId: conversationId || null,
+        checkOnly: true
       });
     }
 
     // FASE 2: FAQ Matching
     const faqStart = Date.now();
     const matchingFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
-    const faqTime = Date.now() - faqStart;
+    faqTime = Date.now() - faqStart;
     console.log(`⏱️ FAQ matching: ${faqTime}ms`);
     console.log(`📊 FAQ result:`, matchingFAQ ? `FOUND: "${matchingFAQ.question}"` : 'NOT FOUND');
     
@@ -408,12 +407,16 @@ export async function POST(request: NextRequest) {
       model: 'tts-1',
       voice: 'nova',
       input: responseText,
-      speed: 1.25, // Mais rápido: 1.15 → 1.25
+      speed: 1.25,
     });
     ttsTime = Date.now() - ttsStart;
     console.log(`⏱️ TTS: ${ttsTime}ms`);
 
     const audioBuffer = Buffer.from(await tts.arrayBuffer());
+    
+    // 🎯 MUDANÇA: Converter para base64 data URL
+    const base64Audio = audioBuffer.toString('base64');
+    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
 
     // FASE 4: Salvar histórico (não bloqueia response)
     let finalConversationId = conversationId || randomUUID();
@@ -437,7 +440,6 @@ export async function POST(request: NextRequest) {
 
     const totalTime = Date.now() - startTime;
 
-    
     console.log('\n=== ⏱️ RESUMO DE TEMPOS ===');
     console.log(`STT: ${sttTime}ms`);
     console.log(`FAQ: ${faqTime}ms`);
@@ -446,19 +448,20 @@ export async function POST(request: NextRequest) {
     console.log(`TOTAL: ${totalTime}ms`);
     console.log('========================\n');
 
-    return new Response(audioBuffer, {
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'X-Conversation-Id': finalConversationId,
-        'X-Used-FAQ': String(usedFAQ),
-        'X-Processing-Time': String(totalTime),
-        'X-Transcription': encodeURIComponent(userMessage),
-      },
+    // 🎯 MUDANÇA: Retornar JSON ao invés de binário
+    return NextResponse.json({
+      audioUrl,
+      transcript: userMessage,
+      usedFAQ,
+      processingTime: totalTime,
+      conversationId: finalConversationId,
+      responseText
     });
+
   } catch (error: any) {
     console.error('❌ Erro:', error.message, error.stack);
     
-    // TTS de erro
+    // 🎯 MUDANÇA: Retornar JSON de erro
     try {
       const errorTTS = await openai.audio.speech.create({
         model: 'tts-1',
@@ -468,16 +471,24 @@ export async function POST(request: NextRequest) {
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
+      const base64Audio = errorBuffer.toString('base64');
+      const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
       
-      return new Response(errorBuffer, {
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'X-Error': 'true',
-        },
-      });
+      return NextResponse.json({
+        audioUrl,
+        transcript: '',
+        usedFAQ: false,
+        error: true,
+        errorMessage: error.message
+      }, { status: 500 });
+
     } catch (ttsError) {
       return NextResponse.json(
-        { error: 'Erro interno' },
+        { 
+          error: true,
+          errorMessage: 'Erro interno',
+          details: error.message 
+        },
         { status: 500 }
       );
     }

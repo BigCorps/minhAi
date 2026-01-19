@@ -184,11 +184,19 @@ export class WakeWordDetector {
   } {
     const normalized = normalizeText(transcript);
     
-    // 🎯 NOVO: Verificar se contém palavras excluídas
+    // 🎯 NOVO: Verificar se contém palavras excluídas (palavras completas)
     if (this.excludeWords.length > 0) {
-      const hasExcludedWord = this.excludeWords.some(word => {
-        const normalizedExclude = normalizeText(word);
-        return normalized.includes(normalizedExclude);
+      const words = normalized.split(/\s+/);
+      const hasExcludedWord = this.excludeWords.some(excludeWord => {
+        const normalizedExclude = normalizeText(excludeWord);
+        
+        // Se for frase (múltiplas palavras), verificar se contém
+        if (normalizedExclude.includes(' ')) {
+          return normalized.includes(normalizedExclude);
+        }
+        
+        // Se for palavra única, verificar match exato
+        return words.includes(normalizedExclude);
       });
       
       if (hasExcludedWord) {

@@ -496,12 +496,33 @@ export function VoiceAssistantWithWakeWord({
         body: formData,
       });
 
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', response.headers.get('content-type'));
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao processar');
+        let errorMessage = 'Erro ao processar';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Se não for JSON, pegar texto
+          const errorText = await response.text();
+          console.error('❌ Erro não-JSON da API:', errorText.substring(0, 200));
+          errorMessage = `Erro ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('❌ Resposta não é JSON válido');
+        const responseText = await response.text();
+        console.error('📄 Resposta recebida (primeiros 500 chars):', responseText.substring(0, 500));
+        throw new Error('API retornou resposta inválida (não-JSON)');
+      }
+
       console.log('✅ Resposta recebida:', data);
 
       if (!conversationIdRef.current && data.conversationId) {

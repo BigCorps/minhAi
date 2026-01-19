@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
     '/',
     '/login',
     '/auth/callback',
-    '/oi', // Assistentes públicos
+    '/ia', // Assistentes públicos
   ];
 
   // Verificar se é rota pública

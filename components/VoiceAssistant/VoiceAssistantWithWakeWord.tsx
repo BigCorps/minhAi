@@ -689,7 +689,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startManualRecording() {
-    console.log('🎤 Gravando (silêncio detectado)...');
+    console.log('🎤 Gravando (silêncio: 800ms)...');
     
     // Reiniciar timeout de inatividade
     startInactivityTimeout();
@@ -724,8 +724,8 @@ export function VoiceAssistantWithWakeWord({
       let silenceStart: number | null = null;
       let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 500; // 🎯 AUMENTADO: 600ms → 800ms
-      const MIN_SPEECH_DURATION = 400; // 🎯 AUMENTADO: 300ms → 500ms
+      const SILENCE_DURATION = 800; // 🎯 AUMENTADO: 600ms → 800ms
+      const MIN_SPEECH_DURATION = 500; // 🎯 AUMENTADO: 300ms → 500ms
 
       const recordStartTime = Date.now();
 
@@ -1097,7 +1097,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-xs mt-1 transition-colors ${
                 theme === 'dark' ? 'text-white/30' : 'text-gray-400'
               }`}>
-                Silêncio detectado
+                Silêncio: 800ms
               </p>
             </div>
 

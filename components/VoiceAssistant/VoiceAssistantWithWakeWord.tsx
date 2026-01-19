@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
-import { WakeWordDetector } from './WakeWordDetector';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -46,10 +45,7 @@ export function VoiceAssistantWithWakeWord({
   const audioUnlocked = useRef<boolean>(false);
   const processingWakeWord = useRef<boolean>(false);
   const inactivityTimeoutRef = useRef<any>(null);
-  const isProcessingAudio = useRef<boolean>(false);
-  
-  // 🎯 NOVO: Referência para o detector de wake word
-  const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null);
+  const isProcessingAudio = useRef<boolean>(false); // Flag para prevenir duplicação
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -71,17 +67,6 @@ export function VoiceAssistantWithWakeWord({
     'adeus',
     'valeu',
   ];
-
-  // 🎯 NOVO: Inicializar o WakeWordDetector
-  useEffect(() => {
-    console.log('🎯 Inicializando WakeWordDetector com keywords:', wakeWords);
-    wakeWordDetectorRef.current = new WakeWordDetector({
-      keywords: wakeWords,
-      threshold: 0.7, // 70% de similaridade
-      contextWindow: 5,
-      usePhoneticMatching: true
-    });
-  }, [wakeWords.join(',')]); // Re-criar quando keywords mudarem
 
   useEffect(() => {
     isActiveRef.current = true;
@@ -122,10 +107,12 @@ export function VoiceAssistantWithWakeWord({
   }
 
   function startInactivityTimeout() {
+    // Limpar timeout anterior
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current);
     }
     
+    // 30 segundos de inatividade
     console.log('⏱️ Timeout de inatividade: 30s');
     inactivityTimeoutRef.current = setTimeout(() => {
       console.log('⏰ 30s sem atividade, encerrando silenciosamente...');
@@ -145,10 +132,11 @@ export function VoiceAssistantWithWakeWord({
     console.log('🔴 Encerra silenciosamente (timeout)');
     setConversationActive(false);
     processingWakeWord.current = false;
-    isProcessingAudio.current = false;
+    isProcessingAudio.current = false; // Liberar flag
     
     cleanup();
     
+    // NÃO tocar despedida, só voltar para wake word
     setTimeout(() => {
       if (isActiveRef.current && permissionGranted) {
         console.log('🔄 Voltando para wake word detection');
@@ -164,9 +152,9 @@ export function VoiceAssistantWithWakeWord({
     setIsProcessing(false);
     setIsPlayingAudio(false);
     setConversationActive(false);
-    processingWakeWord.current = false;
-    isProcessingAudio.current = false;
-    cancelInactivityTimeout();
+    processingWakeWord.current = false; // Reset flag
+    isProcessingAudio.current = false; // Liberar flag
+    cancelInactivityTimeout(); // Cancelar timeout
     
     cleanup();
     
@@ -181,6 +169,7 @@ export function VoiceAssistantWithWakeWord({
     if (audioUnlocked.current) return;
     
     try {
+      // Criar e tocar áudio silencioso para unlock (não-bloqueante)
       const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
       silentAudio.volume = 0.01;
       
@@ -202,6 +191,8 @@ export function VoiceAssistantWithWakeWord({
       stream.getTracks().forEach(track => track.stop());
       setPermissionGranted(true);
       setError('');
+      
+      // NÃO inicia automaticamente - aguarda botão
     } catch (err) {
       setError('Permissão do microfone negada.');
       setPermissionGranted(false);
@@ -213,12 +204,16 @@ export function VoiceAssistantWithWakeWord({
     console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
     console.log('🔓 Desbloqueando áudio para autoplay...');
     
+    // Unlock audio com user interaction
     unlockAudio();
+    
+    // Esconder botão
     setShowStartButton(false);
     
     console.log('🎤 Ativando detecção de wake word...');
     console.log(`👂 Aguardando você dizer: "${wakeWords[0]}" ou "oi"`);
     
+    // Iniciar wake word detection
     setTimeout(() => {
       if (isActiveRef.current) {
         startWakeWordDetection();
@@ -226,7 +221,6 @@ export function VoiceAssistantWithWakeWord({
     }, 500);
   }
 
-  // 🎯 FUNÇÃO MELHORADA: startWakeWordDetection com WakeWordDetector
   function startWakeWordDetection() {
     if (!('webkitSpeechRecognition' in window)) {
       setError('Use Chrome ou Edge.');
@@ -246,250 +240,204 @@ export function VoiceAssistantWithWakeWord({
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'pt-BR';
-      recognition.maxAlternatives = 3; // 🎯 IMPORTANTE: pegar múltiplas alternativas
+      recognition.maxAlternatives = isMobile ? 3 : 5; // Mobile: menos alternativas
+      
+      // Mobile: configuração específica
+      if (isMobile) {
+        console.log('📱 Configuração MOBILE ativada');
+      }
 
       recognition.onstart = () => {
-        console.log('🎤 Wake word detection ativo');
+        console.log('🎤 Wake word');
         setIsListening(true);
+        setError('');
       };
 
       recognition.onresult = (event: any) => {
-        if (processingWakeWord.current) return;
-
-        const results = Array.from(event.results);
-        const lastResult = results[results.length - 1] as any;
+        const current = event.resultIndex;
+        const transcript = event.results[current][0].transcript.toLowerCase().trim();
+        const isFinal = event.results[current].isFinal;
         
-        if (!lastResult) return;
+        if (conversationActive) {
+          const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
+          if (hasEndCommand) {
+            console.log('🔚 Encerrar');
+            endConversation();
+            return;
+          }
+        }
 
-        // 🎯 NOVO: Processar todas as alternativas de transcrição
-        const transcripts = Array.from(lastResult).map((alt: any) => alt.transcript);
-        
-        transcripts.forEach((transcript: string) => {
-          if (!transcript || transcript.trim().length === 0) return;
+        if (!conversationActive && !isRecording && !isProcessing && !isPlayingAudio) {
+          const detectedWakeWord = wakeWords.some(word => {
+            const regex = new RegExp(`\\b${word}\\b`, 'i');
+            return regex.test(transcript) || transcript.includes(word);
+          });
           
-          const normalizedTranscript = transcript.toLowerCase().trim();
-          setLastTranscript(normalizedTranscript);
-          
-          // 🎯 NOVO: Usar o WakeWordDetector com fuzzy matching
-          const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
-          
-          if (detectionResult?.detected && detectionResult.keyword) {
-            console.log('✅ Wake word detectada!', {
-              keyword: detectionResult.keyword,
-              confidence: Math.round(detectionResult.confidence * 100) + '%',
-              matchedText: detectionResult.matchedText,
-              originalTranscript: transcript
-            });
+          if (detectedWakeWord) {
+            console.log('✅ Wake:', transcript, isFinal ? '(final)' : '(interim)');
             
-            if (processingWakeWord.current) {
-              console.log('⚠️ Já processando wake word, ignorando...');
-              return;
-            }
-            
-            processingWakeWord.current = true;
+            // Sempre salvar o último transcript
             lastWakeWordTranscript.current = transcript;
             
-            try {
-              recognition.stop();
-            } catch (e) {
-              console.log('Recognition já parado');
+            // Unlock audio SOMENTE no primeiro wake word FINAL
+            if (isFinal && !audioUnlocked.current) {
+              console.log('🔓 Unlocking audio...');
+              unlockAudio();
             }
             
-            setIsListening(false);
-            setConversationActive(true);
-            
-            console.log('🎤 Iniciando gravação após wake word...');
-            setTimeout(() => {
-              startManualRecording();
-            }, 100);
+            // Se for resultado final, processar
+            if (isFinal) {
+              console.log('📋 Transcript final capturado:', transcript);
+              
+              // Proteção contra processamento duplicado
+              if (!processingWakeWord.current) {
+                processingWakeWord.current = true;
+                processWakeWordTranscript(transcript);
+              } else {
+                console.log('⚠️ Já processando wake word, ignorando');
+              }
+            }
           }
-        });
+        }
       };
 
       recognition.onerror = (event: any) => {
-        console.error('Erro no reconhecimento:', event.error);
-        
-        if (event.error === 'not-allowed') {
-          setError('Permissão negada. Recarregue a página.');
-          setPermissionGranted(false);
+        if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
           return;
         }
         
-        if (event.error === 'aborted') return;
-        
-        setIsListening(false);
-        
-        if (isActiveRef.current && !conversationActive) {
-          restartTimeoutRef.current = setTimeout(() => {
-            startWakeWordDetection();
-          }, 1000);
+        if (event.error === 'not-allowed') {
+          setError('Permissão negada');
+          setPermissionGranted(false);
         }
       };
 
       recognition.onend = () => {
-        console.log('🔴 Recognition parou');
         setIsListening(false);
         
-        if (isActiveRef.current && !conversationActive && !processingWakeWord.current) {
-          console.log('🔄 Reiniciando wake word detection...');
+        if (isActiveRef.current && !isRecording && !isProcessing && !isPlayingAudio && permissionGranted) {
+          if (restartTimeoutRef.current) {
+            clearTimeout(restartTimeoutRef.current);
+          }
+          
           restartTimeoutRef.current = setTimeout(() => {
-            startWakeWordDetection();
+            if (isActiveRef.current && permissionGranted) {
+              startWakeWordDetection();
+            }
           }, 500);
         }
       };
 
-      recognition.start();
       recognitionRef.current = recognition;
+      recognition.start();
       
-    } catch (err: any) {
-      console.error('Erro ao iniciar reconhecimento:', err);
-      setError(`Erro: ${err.message}`);
-      
-      if (isActiveRef.current && !conversationActive) {
-        restartTimeoutRef.current = setTimeout(() => {
+    } catch (err) {
+      console.error('Erro:', err);
+      setTimeout(() => {
+        if (isActiveRef.current && permissionGranted) {
           startWakeWordDetection();
-        }, 2000);
-      }
+        }
+      }, 2000);
     }
   }
 
-  async function startManualRecording() {
-    if (isProcessingAudio.current) {
-      console.log('⚠️ Já está processando áudio, aguarde...');
-      return;
-    }
-
-    isProcessingAudio.current = true;
-    cancelInactivityTimeout();
+  function processWakeWordTranscript(transcript: string) {
+    // 1. Remover pontuação PRIMEIRO
+    let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
     
-    console.log('🎙️ Iniciando gravação manual...');
-    setIsRecording(true);
-    setError('');
-    audioChunksRef.current = [];
+    // 2. Depois remover wake words
+    for (const word of wakeWords) {
+      cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+    }
+    
+    // 3. Remover palavras comuns
+    cleanTranscript = cleanTranscript.replace(/\bassistente\b|\bassis\b|\bhey\b/gi, '').trim();
+    
+    // 4. Limpar espaços extras novamente
+    cleanTranscript = cleanTranscript.replace(/\s+/g, ' ').trim();
+    
+    const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
+    const hasQuestion = words.length >= 2;
+    
+    console.log('🔍 Análise wake word:');
+    console.log('  Original:', transcript);
+    console.log('  Limpo:', cleanTranscript);
+    console.log('  Palavras:', words);
+    console.log('  Count:', words.length);
+    console.log('  Tem pergunta?', hasQuestion);
+    
+    if (hasQuestion) {
+      console.log('💬 Pergunta detectada:', cleanTranscript);
+    } else {
+      console.log('👋 Só wake word');
+    }
+    
+    // SIMPLIFICADO: sempre ativar imediatamente, passando texto da pergunta
+    activateConversation(hasQuestion, cleanTranscript);
+  }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        } 
-      });
-
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
-
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      let silenceTimer: any = null;
-      let hasSpoken = false;
-
-      if (audioContextRef.current?.state === 'closed') {
-        audioContextRef.current = null;
-      }
-      
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-
-      const audioContext = audioContextRef.current;
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const checkAudioLevel = () => {
-        if (mediaRecorder.state !== 'recording') return;
-
-        analyser.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-
-        if (average > 15) {
-          hasSpoken = true;
-          if (silenceTimer) {
-            clearTimeout(silenceTimer);
-            silenceTimer = null;
-          }
-        } else if (hasSpoken && !silenceTimer) {
-          silenceTimer = setTimeout(() => {
-            console.log('🔇 Silêncio detectado (800ms), parando gravação...');
-            if (mediaRecorder.state === 'recording') {
-              mediaRecorder.stop();
-            }
-          }, 800);
-        }
-
-        requestAnimationFrame(checkAudioLevel);
-      };
-
-      mediaRecorder.onstop = async () => {
-        console.log('⏹️ Gravação parou');
-        setIsRecording(false);
-        
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (silenceTimer) {
-          clearTimeout(silenceTimer);
-        }
-
-        if (audioChunksRef.current.length === 0) {
-          console.log('⚠️ Nenhum áudio capturado');
-          setError('Nenhum áudio capturado');
-          isProcessingAudio.current = false;
-          startInactivityTimeout();
-          return;
-        }
-
-        console.log(`📦 ${audioChunksRef.current.length} chunks capturados`);
-        await processAudio();
-      };
-
-      mediaRecorder.start(100);
-      console.log('✅ Gravação iniciada');
-      checkAudioLevel();
-
-    } catch (err: any) {
-      console.error('Erro ao iniciar gravação:', err);
-      setError('Erro ao acessar microfone');
-      setIsRecording(false);
-      isProcessingAudio.current = false;
-      startInactivityTimeout();
+  async function activateConversation(hasQuestion: boolean = false, questionText: string = '') {
+    // Proteção: se já está ativo ou processando, não ativar novamente
+    if (conversationActive || isRecording || isProcessing || isPlayingAudio) {
+      console.log('⚠️ Já ativo, ignorando');
+      return;
+    }
+    
+    console.log('🟢 Ativa', hasQuestion ? '(com pergunta)' : '(sem pergunta)');
+    setConversationActive(true);
+    
+    // Resetar flag IMEDIATAMENTE (já foi processado o wake word)
+    processingWakeWord.current = false;
+    
+    // Iniciar timeout de inatividade
+    startInactivityTimeout();
+    
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+    
+    if (hasQuestion && questionText) {
+      // Tem pergunta: processar DIRETO o texto que já capturamos (NÃO gravar!)
+      console.log('⚡ Processando pergunta direta:', questionText);
+      await processDirectQuestion(questionText);
+    } else {
+      // Só wake word: dar saudação e depois gravar
+      console.log('👋 Só wake word, dando saudação');
+      await playGreeting();
     }
   }
 
-  async function processAudio() {
-    if (!audioChunksRef.current.length) {
-      console.log('⚠️ Sem áudio para processar');
-      isProcessingAudio.current = false;
+  async function processDirectQuestion(questionText: string) {
+    // Prevenir múltiplas execuções simultâneas
+    if (isProcessingAudio.current) {
+      console.log('⚠️ Já processando outro áudio, ignorando direct question');
       return;
     }
-
-    console.log('⚙️ Processando áudio...');
+    
+    isProcessingAudio.current = true;
     setIsProcessing(true);
-
+    
+    // Normalizar ANTES de tudo
+    const normalizedQuestion = questionText.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    setLastTranscript(normalizedQuestion);
+    console.log('📝 Direct question normalizada:', normalizedQuestion);
+    
     try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
-      console.log(`📊 Tamanho do áudio: ${(audioBlob.size / 1024).toFixed(2)}KB`);
-
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'audio.webm');
+      
+      // Criar blob de texto (não precisa de áudio real)
+      const textBlob = new Blob([questionText], { type: 'text/plain' });
+      formData.append('audio', textBlob, 'direct-question.txt');
       formData.append('companyId', companyId);
+      formData.append('directQuestion', questionText);
       
       if (conversationIdRef.current) {
         formData.append('conversationId', conversationIdRef.current);
       }
 
-      console.log('📤 Enviando para API...');
+      console.log('⚙️ Enviando pergunta direta para API...');
       
       const response = await fetch('/api/voice/process', {
         method: 'POST',
@@ -497,61 +445,470 @@ export function VoiceAssistantWithWakeWord({
       });
 
       if (!response.ok) {
-        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        throw new Error(`Erro: ${response.status}`);
       }
 
-      // Pegar dados dos headers
-      const conversationIdHeader = response.headers.get('X-Conversation-Id');
-      const transcriptHeader = response.headers.get('X-Transcription');
-      const usedFAQHeader = response.headers.get('X-Used-FAQ');
-      
-      if (conversationIdHeader && !conversationIdRef.current) {
-        conversationIdRef.current = conversationIdHeader;
-        console.log('🆔 Conversation ID:', conversationIdHeader);
+      const newConversationId = response.headers.get('X-Conversation-Id');
+      const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
+
+      if (newConversationId && newConversationId !== 'new') {
+        conversationIdRef.current = newConversationId;
       }
-
-      const transcript = transcriptHeader ? decodeURIComponent(transcriptHeader) : '';
-      const usedFAQ = usedFAQHeader === 'true';
-
-      console.log('✅ Resposta recebida');
-      console.log('📝 Transcript:', transcript);
-      console.log('📊 Used FAQ:', usedFAQ);
 
       setIsProcessing(false);
 
-      // Converter resposta binária em blob de áudio
-      const responseBlob = await response.blob();
-      
-      if (responseBlob.size === 0) {
-        console.log('⚠️ Sem áudio na resposta');
-        setError('Sem resposta de áudio');
-        isProcessingAudio.current = false;
-        startInactivityTimeout();
-        return;
+      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
+
+      // PARAR RECONHECIMENTO DE VOZ antes de tocar TTS (evitar captar própria resposta)
+      if (recognitionRef.current) {
+        console.log('🛑 Parando wake word detection durante TTS');
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
       }
 
-      const audioUrl = URL.createObjectURL(responseBlob);
+      // PARAR MICROFONE antes de tocar resposta (evitar feedback!)
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        console.log('🛑 Parando microfone para evitar feedback');
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (e) {}
+      }
+      
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        try {
+          audioContextRef.current.close();
+        } catch (e) {}
+      }
 
-      console.log('🔊 Tocando resposta...');
-      setIsPlayingAudio(true);
-
+      const responseAudioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(responseAudioBlob);
       const audio = new Audio(audioUrl);
+      
       currentAudioRef.current = audio;
-
+      
+      audio.onplay = () => {
+        setIsPlayingAudio(true);
+      };
+      
       audio.onended = () => {
-        console.log('✅ Áudio terminou');
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingWakeWord.current = false;
+        isProcessingAudio.current = false; // Liberar flag
         
-        console.log('🔍 Verificando comando de fim no transcript:', transcript);
+        // Usar normalized capturado ANTES (closure funciona aqui)
+        console.log('🔍 Verificando fim (direct):', normalizedQuestion);
+        console.log('🔍 Comandos de fim:', endCommands);
         
-        const normalizedTranscript = transcript
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase();
+        const hasEndCommand = endCommands.some(cmd => {
+          const match = normalizedQuestion.includes(cmd);
+          if (match) console.log(`✅ Match encontrado: "${cmd}"`);
+          return match;
+        });
         
-        console.log('📝 Transcript normalizado:', normalizedTranscript);
+        if (hasEndCommand) {
+          console.log('👋 Comando de fim detectado na pergunta direta');
+          endConversation();
+        } else {
+          console.log('➡️ Sem comando de fim, continuando...');
+          // Continuar ouvindo
+          startManualRecording();
+        }
+      };
+
+      audio.onerror = (e) => {
+        console.error('Erro áudio:', e);
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        processingWakeWord.current = false;
+        isProcessingAudio.current = false; // Liberar flag
+        
+        // Continuar mesmo com erro
+        startManualRecording();
+      };
+
+      await audio.play();
+      
+    } catch (err: any) {
+      console.error('❌ Erro processar pergunta direta:', err);
+      setIsProcessing(false);
+      setConversationActive(false);
+      processingWakeWord.current = false;
+      isProcessingAudio.current = false; // Liberar flag
+      
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 1000);
+    }
+  }
+
+  async function endConversation() {
+    console.log('🔴 Encerra');
+    
+    // PARAR qualquer áudio tocando ANTES de encerrar
+    if (currentAudioRef.current) {
+      console.log('🛑 Parando áudio atual');
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      } catch (e) {}
+    }
+    
+    setConversationActive(false);
+    setIsPlayingAudio(false);
+    processingWakeWord.current = false; // Reset flag
+    isProcessingAudio.current = false; // Liberar flag ANTES de tocar despedida
+    cancelInactivityTimeout(); // Cancelar timeout
+    
+    cleanup();
+    
+    try {
+      await playText('Até logo!');
+    } catch (e) {
+      console.log('Erro despedida');
+    }
+    
+    setTimeout(() => {
+      if (isActiveRef.current && permissionGranted) {
+        console.log('🔄 Restart wake');
+        console.log('  isActiveRef:', isActiveRef.current);
+        console.log('  permissionGranted:', permissionGranted);
+        console.log('  isListening:', isListening);
+        startWakeWordDetection();
+      } else {
+        console.log('⚠️ Não pode reiniciar wake word:');
+        console.log('  isActiveRef:', isActiveRef.current);
+        console.log('  permissionGranted:', permissionGranted);
+      }
+    }, 1000);
+  }
+
+  async function playGreeting() {
+    try {
+      await playText(greetingMessage);
+      console.log('🎧 Saudação ok');
+      
+      // Aguardar 500ms antes de começar a gravar (dar tempo pro áudio terminar)
+      setTimeout(() => {
+        startManualRecording();
+      }, 500);
+    } catch (err: any) {
+      console.error('Erro saudação:', err.message);
+      
+      // Mesmo com erro, começar a gravar
+      setTimeout(() => {
+        startManualRecording();
+      }, 500);
+    }
+  }
+
+  async function playText(text: string): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        if (currentAudioRef.current) {
+          currentAudioRef.current.pause();
+          currentAudioRef.current = null;
+        }
+
+        const response = await fetch('/api/voice/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`TTS ${response.status}`);
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        currentAudioRef.current = audio;
+
+        audio.onplay = () => {
+          setIsPlayingAudio(true);
+        };
+
+        audio.onended = () => {
+          setIsPlayingAudio(false);
+          currentAudioRef.current = null;
+          resolve();
+        };
+
+        audio.onerror = () => {
+          setIsPlayingAudio(false);
+          currentAudioRef.current = null;
+          reject(new Error('Erro reproduzir'));
+        };
+
+        try {
+          await audio.play();
+        } catch (playError: any) {
+          console.error('❌ Erro playText:', playError.message);
+          setIsPlayingAudio(false);
+          currentAudioRef.current = null;
+          reject(playError);
+        }
+      } catch (err) {
+        setIsPlayingAudio(false);
+        reject(err);
+      }
+    });
+  }
+
+  async function startManualRecording() {
+    console.log('🎤 Gravando (silêncio: 600ms)...');
+    
+    // Reiniciar timeout de inatividade
+    startInactivityTimeout();
+    
+    // Garantir audio unlock (não-bloqueante)
+    if (!audioUnlocked.current) {
+      unlockAudio();
+    }
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      let silenceStart: number | null = null;
+      let speechDetected = false;
+      const SILENCE_THRESHOLD = 15;
+      const SILENCE_DURATION = 600; // 800ms - TEMPO MAIOR!
+      const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
+
+      const recordStartTime = Date.now();
+
+      const checkSilence = () => {
+        if (mediaRecorder.state !== 'recording') return;
+
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+        // Detectar se está falando
+        if (average > SILENCE_THRESHOLD) {
+          speechDetected = true;
+          silenceStart = null;
+        } else {
+          // Silêncio
+          // Só detectar silêncio se já falou por pelo menos 300ms
+          const elapsed = Date.now() - recordStartTime;
+          if (speechDetected && elapsed > MIN_SPEECH_DURATION) {
+            if (silenceStart === null) {
+              silenceStart = Date.now();
+              console.log('🤫 Silêncio começou');
+            } else if (Date.now() - silenceStart > SILENCE_DURATION) {
+              console.log(`🤫 Silêncio confirmado: ${Date.now() - silenceStart}ms`);
+              stopManualRecording();
+              return;
+            }
+          }
+        }
+
+        requestAnimationFrame(checkSilence);
+      };
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        if (audioContext.state !== 'closed') {
+          audioContext.close();
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        console.log('📊 Áudio capturado:', {
+          size: audioBlob.size,
+          duration: Date.now() - recordStartTime
+        });
+        
+        setIsRecording(false);
+        
+        // VERIFICAÇÃO RÁPIDA: Se áudio muito curto (<2s), pode ser comando de fim
+        const audioDuration = Date.now() - recordStartTime;
+        if (audioDuration < 2000 && audioBlob.size < 50000) {
+          console.log('🔍 Áudio curto detectado, verificando comando de fim...');
+          
+          // Enviar para transcrição rápida
+          setIsProcessing(true);
+          
+          try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'check-end.wav');
+            formData.append('companyId', companyId);
+            formData.append('checkEndOnly', 'true'); // Flag especial
+            
+            const response = await fetch('/api/voice/process', {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (response.ok) {
+              const transcript = response.headers.get('X-Transcription');
+              if (transcript) {
+                const decoded = decodeURIComponent(transcript);
+                const normalized = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+                const hasEndCommand = endCommands.some(cmd => normalized.includes(cmd));
+                
+                console.log('🔍 Transcript:', normalized);
+                
+                if (hasEndCommand) {
+                  console.log('👋 Comando de fim detectado!');
+                  setIsProcessing(false);
+                  endConversation();
+                  return; // NÃO processar!
+                }
+              }
+            }
+          } catch (e) {
+            console.log('⚠️ Erro na verificação, processando normal');
+          }
+        }
+        
+        // Processar normalmente
+        setIsProcessing(true);
+        await processAudio(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      console.log('🎙️ Gravando... (fale agora)');
+      
+      checkSilence();
+    } catch (err) {
+      console.error('Erro gravar:', err);
+      setError('Erro gravar');
+      setConversationActive(false);
+      processingWakeWord.current = false; // Reset flag em erro
+      startWakeWordDetection();
+    }
+  }
+
+  function stopManualRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+  }
+
+  async function processAudio(audioBlob: Blob) {
+    // Prevenir múltiplas execuções simultâneas
+    if (isProcessingAudio.current) {
+      console.log('⚠️ Já processando outro áudio, ignorando');
+      return;
+    }
+    
+    isProcessingAudio.current = true;
+    const startTime = Date.now();
+    
+    try {
+      console.log('⏱️ [0ms] Iniciando processamento');
+      
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.wav');
+      formData.append('companyId', companyId);
+      if (conversationIdRef.current) {
+        formData.append('conversationId', conversationIdRef.current);
+      }
+
+      console.log(`⏱️ [${Date.now() - startTime}ms] FormData pronto, enviando...`);
+      console.log('⚙️ API...');
+      
+      const fetchStart = Date.now();
+      const response = await fetch('/api/voice/process', {
+        method: 'POST',
+        body: formData,
+      });
+      const fetchTime = Date.now() - fetchStart;
+
+      console.log(`⏱️ [${Date.now() - startTime}ms] Response recebido (fetch: ${fetchTime}ms)`);
+
+      const processingTime = Date.now() - startTime;
+
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
+      }
+
+      const newConversationId = response.headers.get('X-Conversation-Id');
+      const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
+      const apiTime = response.headers.get('X-Processing-Time');
+      const transcript = response.headers.get('X-Transcription');
+
+      // CAPTURAR E NORMALIZAR TRANSCRIPT ANTES DE TUDO
+      let normalizedTranscript = '';
+      if (transcript) {
+        const decoded = decodeURIComponent(transcript);
+        normalizedTranscript = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+        setLastTranscript(normalizedTranscript);
+        console.log('📝', decoded);
+        console.log('🔤 Normalizado:', normalizedTranscript);
+      } else {
+        console.log('⚠️ Transcript vazio!');
+        setLastTranscript('');
+      }
+
+      console.log(`⏱️ Frontend total: ${processingTime}ms`);
+      console.log(`⏱️ API interno: ${apiTime}ms`);
+      console.log(`⏱️ Network: ${processingTime - parseInt(apiTime || '0')}ms`);
+      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
+
+      if (newConversationId && newConversationId !== 'new') {
+        conversationIdRef.current = newConversationId;
+      }
+
+      setIsProcessing(false);
+
+      // PARAR RECONHECIMENTO DE VOZ antes de tocar TTS (evitar captar própria resposta)
+      if (recognitionRef.current) {
+        console.log('🛑 Parando wake word detection durante TTS');
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+
+      const responseAudioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(responseAudioBlob);
+      const audio = new Audio(audioUrl);
+      
+      currentAudioRef.current = audio;
+      
+      audio.onplay = () => {
+        const totalTime = Date.now() - startTime;
+        console.log(`✅ TOTAL: ${totalTime}ms`);
+        setIsPlayingAudio(true);
+      };
+      
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        processingWakeWord.current = false; // Pronto para próximo wake word
+        isProcessingAudio.current = false; // Liberar para próximo processamento
+        
+        // Usar transcript capturado ANTES (não depende de state async)
+        console.log('🔍 Verificando fim:', normalizedTranscript);
         console.log('🔍 Comandos de fim:', endCommands);
         
         const hasEndCommand = endCommands.some(cmd => {
@@ -565,6 +922,7 @@ export function VoiceAssistantWithWakeWord({
           endConversation();
         } else {
           console.log('➡️ Sem comando de fim, continuando...');
+          // Continuar ouvindo
           startManualRecording();
         }
       };
@@ -573,8 +931,8 @@ export function VoiceAssistantWithWakeWord({
         console.error('Erro áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
-        processingWakeWord.current = false;
-        isProcessingAudio.current = false;
+        processingWakeWord.current = false; // Reset em erro também
+        isProcessingAudio.current = false; // Liberar flag
         
         setTimeout(() => {
           startManualRecording();
@@ -586,9 +944,11 @@ export function VoiceAssistantWithWakeWord({
       } catch (playError: any) {
         console.error('❌ Erro ao tocar áudio:', playError.message);
         
+        // Resetar flag em erro
         processingWakeWord.current = false;
-        isProcessingAudio.current = false;
+        isProcessingAudio.current = false; // Liberar flag
         
+        // Não bloquear - continuar gravação
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         
@@ -601,8 +961,8 @@ export function VoiceAssistantWithWakeWord({
       setError('Erro processar');
       setIsProcessing(false);
       setConversationActive(false);
-      processingWakeWord.current = false;
-      isProcessingAudio.current = false;
+      processingWakeWord.current = false; // Reset flag em erro
+      isProcessingAudio.current = false; // Liberar flag
       
       setTimeout(() => {
         if (isActiveRef.current) {
@@ -610,87 +970,6 @@ export function VoiceAssistantWithWakeWord({
         }
       }, 1000);
     }
-  }
-
-  async function endConversation() {
-    console.log('👋 Encerrando conversa...');
-    
-    cancelInactivityTimeout();
-    
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    
-    setIsPlayingAudio(false);
-    setIsProcessing(false);
-    setIsRecording(false);
-    
-    try {
-      const response = await fetch('/api/voice/goodbye', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId,
-          conversationId: conversationIdRef.current
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.audioUrl) {
-          console.log('🔊 Tocando despedida...');
-          
-          const goodbyeAudio = new Audio(data.audioUrl);
-          currentAudioRef.current = goodbyeAudio;
-          
-          goodbyeAudio.onended = () => {
-            console.log('✅ Despedida concluída');
-            currentAudioRef.current = null;
-            finishEndConversation();
-          };
-          
-          goodbyeAudio.onerror = () => {
-            console.error('Erro ao tocar despedida');
-            currentAudioRef.current = null;
-            finishEndConversation();
-          };
-          
-          try {
-            await goodbyeAudio.play();
-          } catch (e) {
-            console.error('Erro play despedida:', e);
-            finishEndConversation();
-          }
-        } else {
-          finishEndConversation();
-        }
-      } else {
-        finishEndConversation();
-      }
-    } catch (err) {
-      console.error('Erro ao buscar despedida:', err);
-      finishEndConversation();
-    }
-  }
-
-  function finishEndConversation() {
-    console.log('🏁 Finalizando conversa completamente');
-    
-    setConversationActive(false);
-    conversationIdRef.current = null;
-    processingWakeWord.current = false;
-    isProcessingAudio.current = false;
-    
-    cleanup();
-    
-    setTimeout(() => {
-      if (isActiveRef.current && permissionGranted) {
-        console.log('🔄 Reiniciando wake word detection...');
-        startWakeWordDetection();
-      }
-    }, 1000);
   }
 
   const getStatusMessage = () => {

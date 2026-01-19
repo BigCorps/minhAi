@@ -341,7 +341,7 @@ export async function POST(request: NextRequest) {
     // FASE 2: FAQ Matching
     const faqStart = Date.now();
     const matchingFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
-    faqTime = Date.now() - faqStart;
+    const faqTime = Date.now() - faqStart;
     console.log(`⏱️ FAQ matching: ${faqTime}ms`);
     console.log(`📊 FAQ result:`, matchingFAQ ? `FOUND: "${matchingFAQ.question}"` : 'NOT FOUND');
     
@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
       model: 'tts-1',
       voice: 'nova',
       input: responseText,
-      speed: 1.25,
+      speed: 1.25, // Mais rápido: 1.15 → 1.25
     });
     ttsTime = Date.now() - ttsStart;
     console.log(`⏱️ TTS: ${ttsTime}ms`);
@@ -437,6 +437,7 @@ export async function POST(request: NextRequest) {
 
     const totalTime = Date.now() - startTime;
 
+    
     console.log('\n=== ⏱️ RESUMO DE TEMPOS ===');
     console.log(`STT: ${sttTime}ms`);
     console.log(`FAQ: ${faqTime}ms`);
@@ -454,7 +455,6 @@ export async function POST(request: NextRequest) {
         'X-Transcription': encodeURIComponent(userMessage),
       },
     });
-
   } catch (error: any) {
     console.error('❌ Erro:', error.message, error.stack);
     

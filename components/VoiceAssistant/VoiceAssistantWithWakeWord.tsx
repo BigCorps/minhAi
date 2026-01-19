@@ -77,9 +77,10 @@ export function VoiceAssistantWithWakeWord({
       keywords: wakeWords,
       threshold: 0.7,
       contextWindow: 5,
-      usePhoneticMatching: true
+      usePhoneticMatching: true,
+      excludeWords: endCommands // 🎯 Excluir comandos de fim!
     });
-  }, [wakeWords.join(',')]);
+  }, [wakeWords.join(','), endCommands.join(',')]);
 
   useEffect(() => {
     isActiveRef.current = true;
@@ -361,6 +362,16 @@ export function VoiceAssistantWithWakeWord({
   function processWakeWordTranscript(transcript: string) {
     // 1. Remover pontuação PRIMEIRO
     let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    // 🎯 NOVO: Verificar se é comando de encerramento ANTES de processar
+    const normalizedForEndCheck = cleanTranscript.toLowerCase();
+    const hasEndCommand = endCommands.some(cmd => normalizedForEndCheck.includes(cmd));
+    
+    if (hasEndCommand) {
+      console.log('🔚 Comando de encerramento detectado na wake word:', cleanTranscript);
+      console.log('❌ Ignorando (não é wake word válida)');
+      return;
+    }
     
     // 2. Depois remover wake words
     for (const word of wakeWords) {

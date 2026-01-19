@@ -54,7 +54,7 @@ export function VoiceAssistantWithWakeWord({
     'oi',
     'olá',
     'ola',
-    'ei',
+    // 'ei' removido - causa muitos falsos positivos em "é", "de", etc
   ];
 
   const endCommands = [
@@ -689,10 +689,18 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function startManualRecording() {
-    console.log('🎤 Gravando (silêncio: 400ms)...');
+    console.log('🎤 Gravando (silêncio detectado)...');
     
     // Reiniciar timeout de inatividade
     startInactivityTimeout();
+    
+    // 🎯 NOVO: Parar wake word detection durante gravação
+    if (recognitionRef.current) {
+      console.log('🛑 Parando wake word durante gravação');
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
     
     // Garantir audio unlock (não-bloqueante)
     if (!audioUnlocked.current) {
@@ -716,8 +724,8 @@ export function VoiceAssistantWithWakeWord({
       let silenceStart: number | null = null;
       let speechDetected = false;
       const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 400; // 800ms - TEMPO MAIOR!
-      const MIN_SPEECH_DURATION = 300; // Mínimo 300ms de fala antes de detectar silêncio
+      const SILENCE_DURATION = 500; // 🎯 AUMENTADO: 600ms → 800ms
+      const MIN_SPEECH_DURATION = 400; // 🎯 AUMENTADO: 300ms → 500ms
 
       const recordStartTime = Date.now();
 
@@ -771,48 +779,7 @@ export function VoiceAssistantWithWakeWord({
         
         setIsRecording(false);
         
-        // VERIFICAÇÃO RÁPIDA: Se áudio muito curto (<2s), pode ser comando de fim
-        const audioDuration = Date.now() - recordStartTime;
-        if (audioDuration < 2000 && audioBlob.size < 50000) {
-          console.log('🔍 Áudio curto detectado, verificando comando de fim...');
-          
-          // Enviar para transcrição rápida
-          setIsProcessing(true);
-          
-          try {
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'check-end.wav');
-            formData.append('companyId', companyId);
-            formData.append('checkEndOnly', 'true'); // Flag especial
-            
-            const response = await fetch('/api/voice/process', {
-              method: 'POST',
-              body: formData,
-            });
-            
-            if (response.ok) {
-              const transcript = response.headers.get('X-Transcription');
-              if (transcript) {
-                const decoded = decodeURIComponent(transcript);
-                const normalized = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-                const hasEndCommand = endCommands.some(cmd => normalized.includes(cmd));
-                
-                console.log('🔍 Transcript:', normalized);
-                
-                if (hasEndCommand) {
-                  console.log('👋 Comando de fim detectado!');
-                  setIsProcessing(false);
-                  endConversation();
-                  return; // NÃO processar!
-                }
-              }
-            }
-          } catch (e) {
-            console.log('⚠️ Erro na verificação, processando normal');
-          }
-        }
-        
-        // Processar normalmente
+        // Processar normalmente (sem verificação rápida)
         setIsProcessing(true);
         await processAudio(audioBlob);
       };
@@ -1130,7 +1097,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-xs mt-1 transition-colors ${
                 theme === 'dark' ? 'text-white/30' : 'text-gray-400'
               }`}>
-                Silêncio: 400ms
+                Silêncio detectado
               </p>
             </div>
 

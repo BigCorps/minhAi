@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       voice: 'alloy', // VOZ FIXA - nunca muda
       input: text,
       response_format: 'mp3',
-      speed: 0.95,
+      speed: 0.85,
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());

@@ -309,13 +309,6 @@ export function VoiceAssistantWithWakeWord({
     
     setIsProcessing(true);
     
-    // 🎯 SEMPRE TOCAR FEEDBACK (garante consistência)
-    playProcessingFeedback().then(audio => {
-      feedbackAudioRef.current = audio;
-    }).catch(e => {
-      console.log('⚠️ Feedback áudio falhou:', e.message);
-    });
-    
     try {
       const startTime = Date.now();
       
@@ -326,6 +319,21 @@ export function VoiceAssistantWithWakeWord({
       formData.append('directQuestion', questionText);
 
       console.log('📤 Enviando para API...');
+      
+      // 🎯 Iniciar feedback em paralelo, mas NÃO aguardar
+      let feedbackStarted = false;
+      const feedbackTimeout = setTimeout(() => {
+        // Só toca feedback se demorar mais de 1 segundo
+        if (!feedbackStarted) {
+          feedbackStarted = true;
+          console.log('⏱️ API demorando, tocando feedback...');
+          playProcessingFeedback().then(audio => {
+            feedbackAudioRef.current = audio;
+          }).catch(e => {
+            console.log('⚠️ Feedback áudio falhou:', e.message);
+          });
+        }
+      }, 1000); // Aguarda 1s antes de tocar feedback
       
       const response = await fetch('/api/voice/process', {
         method: 'POST',
@@ -342,18 +350,21 @@ export function VoiceAssistantWithWakeWord({
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
       console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
-      // 🎯 AGUARDAR MÍNIMO 800ms antes de parar feedback (garante que usuário sempre ouve)
-      const minFeedbackTime = 800;
-      const elapsedTime = Date.now() - startTime;
-      
-      if (elapsedTime < minFeedbackTime) {
-        const waitTime = minFeedbackTime - elapsedTime;
-        console.log(`⏳ Aguardando ${waitTime}ms para garantir feedback completo...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
+      // Limpar timeout se API foi rápida
+      clearTimeout(feedbackTimeout);
 
-      // 🎯 PARAR FEEDBACK se ainda estiver tocando
-      if (feedbackAudioRef.current) {
+      // 🎯 Se feedback começou, aguardar ele terminar
+      if (feedbackStarted && feedbackAudioRef.current) {
+        const minFeedbackTime = 1200; // Tempo mínimo para ouvir feedback completo
+        const elapsedTime = Date.now() - startTime;
+        
+        if (elapsedTime < minFeedbackTime) {
+          const waitTime = minFeedbackTime - elapsedTime;
+          console.log(`⏳ Aguardando ${waitTime}ms para feedback completo...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+
+        // Parar feedback
         console.log('🛑 Parando feedback...');
         try {
           feedbackAudioRef.current.pause();
@@ -369,7 +380,7 @@ export function VoiceAssistantWithWakeWord({
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // 🎯 Controlar velocidade de reprodução (0.95 = 95% da velocidade normal)
+      // 🎯 Controlar velocidade de reprodução
       audio.playbackRate = 0.95; // Levemente mais lento para clareza
       
       currentAudioRef.current = audio;
@@ -465,6 +476,7 @@ export function VoiceAssistantWithWakeWord({
         const audio = new Audio(audioUrl);
         
         audio.volume = 0.9;
+        audio.playbackRate = 0.85; // 🎯 Mais lento para clareza (era muito rápido)
         
         audio.onplay = () => {
           setIsPlayingAudio(true);
@@ -572,9 +584,9 @@ export function VoiceAssistantWithWakeWord({
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
-    if (isPlayingAudio) return 'bg-blue-500';
-    if (isProcessing) return 'bg-yellow-500 animate-pulse';
-    if (isListening) return 'bg-green-500 animate-pulse';
+    if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // 🎯 AZUL ao responder
+    if (isProcessing) return 'bg-green-500 animate-pulse'; // 🎯 VERDE ao processar
+    if (isListening) return 'bg-yellow-500 animate-pulse'; // 🎯 AMARELO aguardando
     return 'bg-gray-400';
   };
 
@@ -680,7 +692,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: utilize uma palavra de ativação.
+                Modo Alexa: sempre use wake word
               </p>
             </div>
 

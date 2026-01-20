@@ -32,20 +32,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Gerar TTS com configurações otimizadas para clareza
+    // Gerar TTS com configurações otimizadas para clareza PT-BR
     const startTime = Date.now();
     
     const tts = await openai.audio.speech.create({
-      model: 'tts-1', // Modelo rápido
-      voice: 'nova',
+      model: 'tts-1',
+      voice: 'nova', // Melhor voz para português
       input: text,
-      speed: 1.0, // Velocidade normal para clareza
+      speed: 0.85, // Mais lento para clareza (pt-BR precisa ser mais claro)
     });
 
     const buffer = Buffer.from(await tts.arrayBuffer());
     const processingTime = Date.now() - startTime;
     
-    console.log(`⏱️ TTS gerado em ${processingTime}ms`);
+    console.log(`⏱️ TTS PT-BR gerado em ${processingTime}ms`);
 
     // Cachear apenas textos curtos e comuns
     if (text.length < 30 && AUDIO_CACHE.size < 10) {
@@ -80,22 +80,22 @@ const COMMON_PHRASES = [
 // Inicializar cache (opcional - só em produção)
 if (process.env.NODE_ENV === 'production') {
   (async () => {
-    console.log('🔥 Pre-aquecendo cache TTS...');
+    console.log('🔥 Pre-aquecendo cache TTS PT-BR...');
     for (const phrase of COMMON_PHRASES) {
       try {
         const tts = await openai.audio.speech.create({
           model: 'tts-1',
           voice: 'nova',
           input: phrase,
-          speed: 0.95, // Velocidade normal
+          speed: 0.85, // PT-BR precisa ser mais lento
         });
         const buffer = Buffer.from(await tts.arrayBuffer());
         AUDIO_CACHE.set(phrase.toLowerCase().trim(), buffer);
-        console.log(`✅ Cached: "${phrase}"`);
+        console.log(`✅ Cached PT-BR: "${phrase}"`);
       } catch (e) {
         console.log(`⚠️ Failed to cache: "${phrase}"`);
       }
     }
-    console.log('✅ Cache TTS pronto!');
+    console.log('✅ Cache TTS PT-BR pronto!');
   })();
 }

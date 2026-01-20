@@ -309,7 +309,7 @@ export function VoiceAssistantWithWakeWord({
     
     setIsProcessing(true);
     
-    // 🎯 FEEDBACK INSTANTÂNEO: Tocar "processando" imediatamente (não bloqueia API)
+    // 🎯 SEMPRE TOCAR FEEDBACK (garante consistência)
     playProcessingFeedback().then(audio => {
       feedbackAudioRef.current = audio;
     }).catch(e => {
@@ -342,6 +342,16 @@ export function VoiceAssistantWithWakeWord({
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
       console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
+      // 🎯 AGUARDAR MÍNIMO 800ms antes de parar feedback (garante que usuário sempre ouve)
+      const minFeedbackTime = 800;
+      const elapsedTime = Date.now() - startTime;
+      
+      if (elapsedTime < minFeedbackTime) {
+        const waitTime = minFeedbackTime - elapsedTime;
+        console.log(`⏳ Aguardando ${waitTime}ms para garantir feedback completo...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+
       // 🎯 PARAR FEEDBACK se ainda estiver tocando
       if (feedbackAudioRef.current) {
         console.log('🛑 Parando feedback...');
@@ -354,10 +364,13 @@ export function VoiceAssistantWithWakeWord({
 
       setIsProcessing(false);
 
-      // 🎯 TOCAR RESPOSTA DIRETO
+      // 🎯 TOCAR RESPOSTA COM VELOCIDADE CONTROLADA
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      
+      // 🎯 Controlar velocidade de reprodução (0.95 = 95% da velocidade normal)
+      audio.playbackRate = 0.95; // Levemente mais lento para clareza
       
       currentAudioRef.current = audio;
       

@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
         model: 'tts-1',
         voice: 'nova',
         input: 'Não consegui te ouvir. Pode repetir?',
-        speed: 0.90, // 🎯 Ajustado para PT-BR
+        speed: 1.0, // 🎯 Velocidade normal
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
       model: 'tts-1',
       voice: 'nova', // 🎯 Melhor para PT-BR
       input: responseText,
-      speed: 0.90, // 🎯 90% da velocidade (claro e natural)
+      speed: 1.0, // 🎯 Velocidade normal (natural para PT-BR)
     });
     ttsTime = Date.now() - ttsStart;
     console.log(`⏱️ TTS: ${ttsTime}ms`);
@@ -464,7 +464,7 @@ export async function POST(request: NextRequest) {
         model: 'tts-1',
         voice: 'nova',
         input: 'Desculpe, ocorreu um erro. Tente novamente.',
-        speed: 0.90,
+        speed: 1.0,
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());

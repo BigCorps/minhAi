@@ -375,13 +375,13 @@ export function VoiceAssistantWithWakeWord({
 
       setIsProcessing(false);
 
-      // 🎯 TOCAR RESPOSTA COM VELOCIDADE CONTROLADA
+      // 🎯 TOCAR RESPOSTA COM VELOCIDADE NATURAL
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // 🎯 Controlar velocidade de reprodução
-      audio.playbackRate = 0.95; // Levemente mais lento para clareza
+      // 🎯 Velocidade levemente acelerada (mais natural para PT-BR)
+      audio.playbackRate = 1.05;
       
       currentAudioRef.current = audio;
       
@@ -476,7 +476,7 @@ export function VoiceAssistantWithWakeWord({
         const audio = new Audio(audioUrl);
         
         audio.volume = 0.9;
-        audio.playbackRate = 0.85; // 🎯 Mais lento para clareza (era muito rápido)
+        audio.playbackRate = 1.0; // 🎯 Velocidade normal (era 0.85, estava muito lento)
         
         audio.onplay = () => {
           setIsPlayingAudio(true);
@@ -692,7 +692,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: utilize palavra de ativação!
+                Modo Alexa: sempre use wake word
               </p>
             </div>
 

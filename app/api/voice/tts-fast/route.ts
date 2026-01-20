@@ -32,14 +32,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Gerar TTS com configurações otimizadas para clareza PT-BR
+    // Gerar TTS com configurações otimizadas para PT-BR
     const startTime = Date.now();
     
     const tts = await openai.audio.speech.create({
       model: 'tts-1',
       voice: 'nova', // Melhor voz para português
       input: text,
-      speed: 0.85, // Mais lento para clareza (pt-BR precisa ser mais claro)
+      speed: 1.0, // Velocidade normal (natural)
     });
 
     const buffer = Buffer.from(await tts.arrayBuffer());
@@ -87,7 +87,7 @@ if (process.env.NODE_ENV === 'production') {
           model: 'tts-1',
           voice: 'nova',
           input: phrase,
-          speed: 0.85, // PT-BR precisa ser mais lento
+          speed: 1.0, // Velocidade normal
         });
         const buffer = Buffer.from(await tts.arrayBuffer());
         AUDIO_CACHE.set(phrase.toLowerCase().trim(), buffer);

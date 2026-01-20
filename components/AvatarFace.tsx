@@ -21,28 +21,28 @@ export function AvatarFace({
   // 🎯 CORES CORRIGIDAS: Verde claro (aguardando), Verde escuro (processando), Azul (respondendo)
   const statusColors = useMemo(() => ({
     idle: { 
-      primary: isDark ? '#4ade80' : '#22c55e',    // Verde claro
-      secondary: isDark ? '#86efac' : '#4ade80',
+      primary: '#3b82f6',    // 🔵 AZUL para olhos/boca
+      secondary: '#60a5fa',
       glow: isDark ? 'rgba(74, 222, 128, 0.4)' : 'rgba(34, 197, 94, 0.4)',
-      ring: isDark ? '#4ade80' : '#22c55e'
+      ring: isDark ? '#4ade80' : '#22c55e'  // Verde para rings
     },
     listening: { 
-      primary: isDark ? '#4ade80' : '#22c55e',    // 🟢 Verde claro (aguardando)
-      secondary: isDark ? '#86efac' : '#4ade80',
+      primary: '#3b82f6',    // 🔵 AZUL para olhos/boca (aguardando)
+      secondary: '#60a5fa',
       glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(34, 197, 94, 0.6)',
-      ring: isDark ? '#4ade80' : '#22c55e'
+      ring: isDark ? '#4ade80' : '#22c55e'  // 🟢 Verde claro para rings
     },
     processing: { 
-      primary: '#16a34a',                          // 🟢 Verde escuro (processando)
-      secondary: '#15803d',
+      primary: '#3b82f6',    // 🔵 AZUL para olhos/boca (processando)
+      secondary: '#60a5fa',
       glow: 'rgba(22, 163, 74, 0.6)',
-      ring: '#16a34a'
+      ring: '#16a34a'  // 🟢 Verde escuro para rings
     },
     speaking: { 
-      primary: isDark ? '#3b82f6' : '#2563eb',    // 🔵 Azul (respondendo)
-      secondary: isDark ? '#60a5fa' : '#3b82f6',
+      primary: '#3b82f6',    // 🔵 AZUL para olhos/boca (respondendo)
+      secondary: '#60a5fa',
       glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(37, 99, 235, 0.6)',
-      ring: isDark ? '#3b82f6' : '#2563eb'
+      ring: isDark ? '#3b82f6' : '#2563eb'  // 🔵 Azul para rings
     },
   }), [isDark]);
 

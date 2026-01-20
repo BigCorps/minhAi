@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       voice: 'nova', // 🎯 Melhor voz para português brasileiro
       input: text,
       response_format: 'mp3',
-      speed: 1.0, // 🎯 Velocidade normal (natural)
+      speed: 1.2, // 🎯 Velocidade normal (natural)
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());

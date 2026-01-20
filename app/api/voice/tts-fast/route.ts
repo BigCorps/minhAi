@@ -87,7 +87,7 @@ if (process.env.NODE_ENV === 'production') {
           model: 'tts-1',
           voice: 'nova',
           input: phrase,
-          speed: 1.0, // Velocidade normal
+          speed: 0.80, // Velocidade normal
         });
         const buffer = Buffer.from(await tts.arrayBuffer());
         AUDIO_CACHE.set(phrase.toLowerCase().trim(), buffer);

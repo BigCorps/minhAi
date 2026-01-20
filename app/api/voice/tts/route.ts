@@ -16,13 +16,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TTS com VOZ FIXA - sempre alloy
+    // 🎯 TTS otimizado para PT-BR
     const ttsResponse = await openai.audio.speech.create({
       model: 'tts-1',
-      voice: 'alloy', // VOZ FIXA - nunca muda
+      voice: 'nova', // 🎯 Melhor voz para português brasileiro
       input: text,
       response_format: 'mp3',
-      speed: 0.85,
+      speed: 0.90, // 🎯 90% da velocidade (claro e natural para PT-BR)
     });
 
     const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());

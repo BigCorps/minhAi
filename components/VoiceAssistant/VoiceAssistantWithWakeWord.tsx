@@ -584,9 +584,9 @@ export function VoiceAssistantWithWakeWord({
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
-    if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // 🎯 AZUL ao responder
-    if (isProcessing) return 'bg-green-500 animate-pulse'; // 🎯 VERDE ao processar
-    if (isListening) return 'bg-yellow-500 animate-pulse'; // 🎯 AMARELO aguardando
+    if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // 🔵 AZUL ao responder
+    if (isProcessing) return 'bg-green-600 animate-pulse'; // 🟢 VERDE ESCURO ao processar
+    if (isListening) return 'bg-green-400 animate-pulse'; // 🟢 VERDE CLARO aguardando
     return 'bg-gray-400';
   };
 

@@ -5,16 +5,13 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
 export default function HomePage() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark'); // SEMPRE inicia dark
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-  
-    // Só muda para light se o SISTEMA estiver em light mode
     if (mediaQuery.matches) {
       setTheme('light');
     }
-    // Se for dark ou sem preferência, mantém dark (padrão)
   }, []);
 
   return (
@@ -23,28 +20,8 @@ export default function HomePage() {
         ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
         : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
     }`}>
-      
-      {/* Botão de Toggle de Tema */}
-      <button
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className={`fixed top-6 right-6 z-50 p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
-          theme === 'dark'
-            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-            : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-        }`}
-      >
-        {theme === 'dark' ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        )}
-      </button>
 
-      {/* Header */}
+      {/* Header COM BOTÃO DE TEMA INTEGRADO */}
       <header className={`border-b transition-colors ${
         theme === 'dark' 
           ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' 
@@ -52,13 +29,39 @@ export default function HomePage() {
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <Image 
-              src="/logo.png" 
-              alt="iTend" 
-              width={150} 
-              height={68}
-              className="h-12 w-auto"
-            />
+            {/* Logo + Botão de Tema Juntos */}
+            <div className="flex items-center space-x-3">
+              <Image 
+                src="/logo.png" 
+                alt="iTend" 
+                width={150} 
+                height={68}
+                className="h-12 w-auto"
+              />
+              
+              {/* Botão de Tema INTEGRADO */}
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={`p-2 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 ${
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                    : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                }`}
+                aria-label="Alternar tema"
+              >
+                {theme === 'dark' ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            {/* Navegação Desktop */}
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#recursos" className={`transition-colors ${
                 theme === 'dark' ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'
@@ -70,6 +73,8 @@ export default function HomePage() {
                 theme === 'dark' ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'
               }`}>Contato</a>
             </nav>
+
+            {/* Botão Entrar */}
             <Link
               href="/login"
               className="px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
@@ -99,16 +104,16 @@ export default function HomePage() {
             Transforme a experiência dos seus clientes com um assistente de voz inteligente
             que responde perguntas, tira dúvidas e oferece suporte 24/7.
           </p>
-          <div className="flex items-center justify-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/login"
-              className="px-8 py-4 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold text-lg"
+              className="w-full sm:w-auto px-8 py-4 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold text-lg text-center"
             >
               Começar Agora
             </Link>
             <Link
               href="/teste-wake-word"
-              className={`px-8 py-4 border-2 rounded-lg transition font-semibold text-lg ${
+              className={`w-full sm:w-auto px-8 py-4 border-2 rounded-lg transition font-semibold text-lg text-center ${
                 theme === 'dark'
                   ? 'border-blue-400 text-blue-400 hover:bg-blue-400/10'
                   : 'border-blue-600 text-blue-600 hover:bg-blue-50'

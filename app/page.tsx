@@ -5,11 +5,16 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
 export default function HomePage() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark'); // SEMPRE inicia dark
 
   useEffect(() => {
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setTheme(isDark ? 'dark' : 'light');
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+  
+    // Só muda para light se o SISTEMA estiver em light mode
+    if (mediaQuery.matches) {
+      setTheme('light');
+    }
+    // Se for dark ou sem preferência, mantém dark (padrão)
   }, []);
 
   return (

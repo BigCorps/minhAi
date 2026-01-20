@@ -422,13 +422,24 @@ export function VoiceAssistantWithWakeWord({
   async function playProcessingFeedback(): Promise<HTMLAudioElement> {
     return new Promise(async (resolve, reject) => {
       try {
-        console.log('💬 Tocando feedback "Processando..."');
+        // 🎯 VARIAÇÃO: Escolher resposta aleatória
+        const feedbackMessages = [
+          'Entendi!',
+          'Processando...',
+          'Um momento!',
+          'Aguarde...',
+          'Um instante!',
+        ];
         
-        // 🎯 OPÇÃO 1: TTS rápido (ideal se tiver endpoint otimizado)
+        const randomMessage = feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
+        
+        console.log(`💬 Tocando feedback: "${randomMessage}"`);
+        
+        // 🎯 TTS rápido (ideal se tiver endpoint otimizado)
         const response = await fetch('/api/voice/tts-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: 'Entendi!' }), // Texto curto = rápido
+          body: JSON.stringify({ text: randomMessage }),
         });
 
         if (!response.ok) {
@@ -440,7 +451,7 @@ export function VoiceAssistantWithWakeWord({
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
         
-        audio.volume = 0.8; // Um pouco mais baixo
+        audio.volume = 0.9;
         
         audio.onplay = () => {
           setIsPlayingAudio(true);
@@ -464,7 +475,7 @@ export function VoiceAssistantWithWakeWord({
         
         try {
           // Áudio curto "beep" como fallback
-          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU='); // Beep curto
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU=');
           audio.volume = 0.5;
           await audio.play();
           resolve(audio);

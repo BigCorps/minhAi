@@ -32,14 +32,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Gerar TTS com configurações otimizadas para velocidade
+    // Gerar TTS com configurações otimizadas para clareza
     const startTime = Date.now();
     
     const tts = await openai.audio.speech.create({
       model: 'tts-1', // Modelo rápido
       voice: 'nova',
       input: text,
-      speed: 1.3, // Mais rápido
+      speed: 1.0, // Velocidade normal para clareza
     });
 
     const buffer = Buffer.from(await tts.arrayBuffer());
@@ -74,6 +74,7 @@ const COMMON_PHRASES = [
   'Processando...',
   'Um momento!',
   'Aguarde...',
+  'Um instante!',
 ];
 
 // Inicializar cache (opcional - só em produção)
@@ -86,7 +87,7 @@ if (process.env.NODE_ENV === 'production') {
           model: 'tts-1',
           voice: 'nova',
           input: phrase,
-          speed: 1.3,
+          speed: 1.0, // Velocidade normal
         });
         const buffer = Buffer.from(await tts.arrayBuffer());
         AUDIO_CACHE.set(phrase.toLowerCase().trim(), buffer);

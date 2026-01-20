@@ -310,7 +310,8 @@ export function VoiceAssistantWithWakeWord({
     
     // 🎯 FEEDBACK INSTANTÂNEO: Tocar "processando" imediatamente (não bloqueia API)
     let feedbackAudio: HTMLAudioElement | null = null;
-    const feedbackPromise = playProcessingFeedback().then(audio => {
+    
+    playProcessingFeedback().then(audio => {
       feedbackAudio = audio;
     }).catch(e => {
       console.log('⚠️ Feedback áudio falhou:', e.message);
@@ -654,7 +655,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Aguardando palavra de ativação
+                Modo Alexa: sempre use wake word
               </p>
             </div>
 

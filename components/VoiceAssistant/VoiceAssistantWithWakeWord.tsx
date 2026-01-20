@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
 import { WakeWordDetector } from './WakeWordDetector';
 
-interface VoiceAssistantAlexaProps {
+interface VoiceAssistantWithWakeWordProps {
   companyId: string;
   companyName: string;
   wakeWord: string;
@@ -12,13 +12,13 @@ interface VoiceAssistantAlexaProps {
   theme?: 'dark' | 'light';
 }
 
-export function VoiceAssistantAlexa({
+export function VoiceAssistantWithWakeWord({
   companyId,
   companyName,
   wakeWord,
   greetingMessage,
   theme = 'dark',
-}: VoiceAssistantAlexaProps) {
+}: VoiceAssistantWithWakeWordProps) {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   const [isListening, setIsListening] = useState(false);

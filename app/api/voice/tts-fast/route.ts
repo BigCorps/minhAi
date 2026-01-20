@@ -70,11 +70,11 @@ export async function POST(request: NextRequest) {
 
 // Pre-aquecer cache com frases comuns
 const COMMON_PHRASES = [
-  'Entendi!',
-  'Processando...',
-  'Um momento!',
-  'Aguarde...',
-  'Um instante!',
+  'Entendi sua pergunta!',
+  'Processando sua resposta.',
+  'Um momento por favor!',
+  'Certo, Aguarde um pouco.',
+  'Tudo bem, só um instante!',
 ];
 
 // Inicializar cache (opcional - só em produção)

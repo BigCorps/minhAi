@@ -263,16 +263,33 @@ export function VoiceAssistantWithWakeWord({
 
       recognition.onend = () => {
         console.log('🔴 Recognition parou');
-        setIsListening(false);
         
-        // Só reiniciar se não estiver processando
-        if (isActiveRef.current && !processingQuestion.current && !isProcessing && !isPlayingAudio && permissionGranted) {
+        // 🎯 MOBILE FIX: Não mudar isListening se estiver processando/tocando
+        if (!processingQuestion.current && !isProcessing && !isPlayingAudio) {
+          setIsListening(false);
+        }
+        
+        // 🎯 CRÍTICO: Só reiniciar se NÃO estiver processando/tocando
+        if (isActiveRef.current && 
+            !processingQuestion.current && 
+            !isProcessing && 
+            !isPlayingAudio && 
+            permissionGranted) {
+          
           console.log('🔄 Auto-restart em 500ms...');
           setTimeout(() => {
-            if (isActiveRef.current && !processingQuestion.current) {
+            // Verificar novamente antes de reiniciar
+            if (isActiveRef.current && 
+                !processingQuestion.current && 
+                !isProcessing && 
+                !isPlayingAudio) {
               startWakeWordDetection();
+            } else {
+              console.log('⏸️ Restart cancelado: sistema ocupado');
             }
           }, 500);
+        } else {
+          console.log('⏸️ Restart suspenso: processando ou tocando áudio');
         }
       };
 
@@ -293,6 +310,16 @@ export function VoiceAssistantWithWakeWord({
     console.log('📋 processWakeWordQuestion chamada');
     console.log('  transcript:', transcript);
     console.log('  processingQuestion.current:', processingQuestion.current);
+    
+    // 🎯 MOBILE FIX: PARAR RECOGNITION IMEDIATAMENTE
+    if (recognitionRef.current) {
+      try {
+        console.log('🛑 Parando recognition antes de processar');
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.log('⚠️ Erro ao parar recognition:', e);
+      }
+    }
     
     // Limpar transcript
     let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -792,7 +819,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: sempre use wake word
+                Modo Alexa: use a palavra de ativação!
               </p>
             </div>
 

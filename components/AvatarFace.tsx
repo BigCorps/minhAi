@@ -18,16 +18,15 @@ export function AvatarFace({
   
   const isDark = theme === 'dark';
 
-  // Cores baseadas no status e tema
   const statusColors = useMemo(() => ({
     idle: { 
-      primary: isDark ? '#60a5fa' : '#2563eb',  // Dark: azul claro, Light: azul escuro
+      primary: isDark ? '#60a5fa' : '#2563eb',
       secondary: isDark ? '#93c5fd' : '#3b82f6',
       glow: isDark ? 'rgba(96, 165, 250, 0.4)' : 'rgba(37, 99, 235, 0.4)',
       ring: isDark ? '#60A5FA' : '#2563eb'
     },
     listening: { 
-      primary: isDark ? '#3b82f6' : '#1d4ed8',  // Dark: azul, Light: azul mais escuro
+      primary: isDark ? '#3b82f6' : '#1d4ed8',
       secondary: isDark ? '#60a5fa' : '#2563eb',
       glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(29, 78, 216, 0.6)',
       ring: isDark ? '#2563EB' : '#1d4ed8'
@@ -50,11 +49,8 @@ export function AvatarFace({
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Mostrar rosto: idle OU listening (aguardando wake word)
-  // Orbe: processing (pensando) OU speaking (falando)
   const showFace = !isProcessing && !isSpeaking;
 
-  // Atualizar cores
   useEffect(() => {
     if (isSpeaking) setColors(statusColors.speaking);
     else if (isProcessing) setColors(statusColors.processing);
@@ -62,7 +58,6 @@ export function AvatarFace({
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
 
-  // Criar partículas flutuantes
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
     const newParticles = Array.from({ length: particleCount }, () => ({
@@ -74,7 +69,6 @@ export function AvatarFace({
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
-  // Canvas animation para ondas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -89,7 +83,6 @@ export function AvatarFace({
       ctx.clearRect(0, 0, 500, 500);
       time += 0.02;
 
-      // Desenhar ondas circulares
       const waveCount = isSpeaking ? 8 : isProcessing ? 5 : isListening ? 4 : 3;
       for (let i = 0; i < waveCount; i++) {
         const radius = 60 + i * 35 + Math.sin(time + i) * 12;
@@ -110,14 +103,12 @@ export function AvatarFace({
     return () => cancelAnimationFrame(animationId);
   }, [colors, isSpeaking, isProcessing, isListening]);
   
-  // Tamanho do orbe muda com estado
   const orbSize = isSpeaking ? 'scale-150' : isProcessing ? 'scale-125' : isListening ? 'scale-110' : 'scale-100';
 
   return (
-    <div className="flex items-center justify-center h-full w-full">
-      <div className="relative w-full h-full max-w-[500px] max-h-[500px] flex items-center justify-center">
+    <div className="flex items-center justify-center h-full w-full overflow-visible">
+      <div className="relative w-full h-full max-w-[500px] max-h-[500px] flex items-center justify-center overflow-visible">
         
-        {/* Camada 0: Canvas de ondas (background) */}
         <canvas 
           ref={canvasRef}
           width={500}
@@ -125,8 +116,7 @@ export function AvatarFace({
           className="absolute inset-0 opacity-40"
         />
 
-        {/* Camada 1: Rings rotativos externos */}
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div 
             className="absolute w-[90%] h-[90%] rounded-full border-2 opacity-20 animate-spin-slow"
             style={{ 
@@ -145,7 +135,6 @@ export function AvatarFace({
           />
         </div>
 
-        {/* Camada 2: Aura pulsante */}
         <div 
           className={`absolute w-[85%] h-[85%] rounded-full blur-[80px] transition-all duration-1000 ${
             isSpeaking ? 'animate-pulse-fast' : 'animate-pulse-slow'
@@ -155,8 +144,7 @@ export function AvatarFace({
           }}
         />
 
-        {/* Camada 3: Partículas flutuantes */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           {particles.map((particle, i) => (
             <div
               key={i}
@@ -175,14 +163,13 @@ export function AvatarFace({
           ))}
         </div>
 
-        {/* Camada 4: Container do orbe com transformação */}
+        {/* Camada 4: Container do orbe - CORREÇÃO: Adicionado aspect-square e h-auto para círculo perfeito */}
         <div 
-          className={`relative w-[70%] h-[70%] flex items-center justify-center rounded-full border shadow-2xl overflow-visible transition-all duration-700 ease-out ${
+          className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full border shadow-2xl overflow-visible transition-all duration-700 ease-out ${
             isDark ? 'border-white/5' : 'border-black/5'
           } ${orbSize}`}
         >
           
-          {/* MODO ROSTO (Idle - Aguardando) - MINIMALISTA */}
           {showFace && (
             <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
               <defs>
@@ -203,184 +190,59 @@ export function AvatarFace({
                 </filter>
               </defs>
 
-              {/* Olho esquerdo - mais próximo do centro */}
               <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
-                {/* Base do olho - movido 6 units para direita (80→86) */}
-                <ellipse 
-                  cx="76" 
-                  cy="85" 
-                  rx="14.4" 
-                  ry="17.6" 
-                  fill="url(#eyeGradient)"
-                  opacity="0.85"
-                />
-                {/* Brilho superior */}
-                <ellipse 
-                  cx="73" 
-                  cy="79" 
-                  rx="6.4" 
-                  ry="8" 
-                  fill="url(#glowGradient)"
-                  opacity="0.6"
-                />
-                {/* Brilho pequeno */}
-                <circle 
-                  cx="74" 
-                  cy="81" 
-                  r="3.2" 
-                  fill="white"
-                  opacity="0.7"
-                />
+                <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
+                <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
               </g>
 
-              {/* Olho direito - mais próximo do centro */}
               <g filter="url(#softGlow)" opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
-                {/* Base do olho - movido 6 units para esquerda (130→124) */}
-                <ellipse 
-                  cx="124" 
-                  cy="85" 
-                  rx="14.4" 
-                  ry="17.6" 
-                  fill="url(#eyeGradient)"
-                  opacity="0.85"
-                />
-                {/* Brilho superior */}
-                <ellipse 
-                  cx="121" 
-                  cy="79" 
-                  rx="6.4" 
-                  ry="8" 
-                  fill="url(#glowGradient)"
-                  opacity="0.6"
-                />
-                {/* Brilho pequeno */}
-                <circle 
-                  cx="122" 
-                  cy="81" 
-                  r="3.2" 
-                  fill="white"
-                  opacity="0.7"
-                />
+                <ellipse cx="124" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
+                <ellipse cx="121" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                <circle cx="122" cy="81" r="3.2" fill="white" opacity="0.7" />
               </g>
 
-              {/* Boca 3D - com efeito de profundidade */}
               <g opacity={showFace ? 1 : 0} className="transition-opacity duration-700">
                 <defs>
-                  {/* Gradiente vertical para profundidade */}
                   <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" />
                     <stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" />
                     <stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
                   </linearGradient>
-                  
-                  {/* Sombra interna para profundidade */}
                   <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%">
                     <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
                     <feOffset dx="0" dy="2" result="offsetblur"/>
-                    <feComponentTransfer>
-                      <feFuncA type="linear" slope="0.5"/>
-                    </feComponentTransfer>
-                    <feMerge>
-                      <feMergeNode/>
-                      <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
+                    <feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+                    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
                   </filter>
                 </defs>
-
-                {/* Base escura (sombra de fundo) - 10% mais curvada */}
-                <path
-                  d="M 66 137 Q 100 152 134 137"
-                  stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'}
-                  strokeWidth="10"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.6"
-                />
-
-                {/* Camada principal com gradiente de profundidade - 10% mais curvada */}
-                <path
-                  d="M 68 136 Q 100 150 132 136"
-                  stroke="url(#mouthDepth)"
-                  strokeWidth="8"
-                  fill="none"
-                  strokeLinecap="round"
-                  filter="url(#mouthDepthShadow)"
-                >
-                  <animate 
-                    attributeName="d" 
-                    values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" 
-                    dur="3s" 
-                    repeatCount="indefinite" 
-                  />
+                <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
+                <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
+                  <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
                 </path>
-
-                {/* Highlight superior (reflexo de luz) - 10% mais curvado */}
-                <path
-                  d="M 70 135 Q 100 147 130 135"
-                  stroke="white"
-                  strokeWidth="3"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.6"
-                >
-                  <animate 
-                    attributeName="opacity" 
-                    values="0.5;0.7;0.5" 
-                    dur="3s" 
-                    repeatCount="indefinite" 
-                  />
+                <path d="M 70 135 Q 100 147 130 135" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6">
+                  <animate attributeName="opacity" values="0.5;0.7;0.5" dur="3s" repeatCount="indefinite" />
                 </path>
-
-                {/* Sombra inferior (profundidade embaixo) - 10% mais curvada */}
-                <path
-                  d="M 72 138 Q 100 151 128 138"
-                  stroke={isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)'}
-                  strokeWidth="2"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.5"
-                />
+                <path d="M 72 138 Q 100 151 128 138" stroke={isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)'} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
               </g>
 
-              {/* Partículas de ambiente ao redor do rosto */}
               {[...Array(3)].map((_, i) => (
-                <circle
-                  key={`ambient-${i}`}
-                  cx={50 + i * 50}
-                  cy={60}
-                  r="2"
-                  fill={colors.primary}
-                  opacity="0.4"
-                >
-                  <animate 
-                    attributeName="cy" 
-                    values="60;50;60" 
-                    dur={`${2 + i * 0.5}s`} 
-                    repeatCount="indefinite" 
-                  />
-                  <animate 
-                    attributeName="opacity" 
-                    values="0.2;0.6;0.2" 
-                    dur={`${2 + i * 0.5}s`} 
-                    repeatCount="indefinite" 
-                  />
+                <circle key={`ambient-${i}`} cx={50 + i * 50} cy={60} r="2" fill={colors.primary} opacity="0.4">
+                  <animate attributeName="cy" values="60;50;60" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.2;0.6;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
                 </circle>
               ))}
             </svg>
           )}
 
-          {/* MODO ORBE (Ativo - Listening/Processing/Speaking) */}
           {!showFace && (
             <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
               <defs>
-                {/* Filtro Gooey */}
                 <filter id="gooey">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
                   <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo" />
                   <feBlend in="SourceGraphic" in2="goo" />
                 </filter>
-
-                {/* Gradiente animado */}
                 <radialGradient id="coreGradient">
                   <stop offset="0%" stopColor={colors.primary} stopOpacity="1" />
                   <stop offset="50%" stopColor={colors.secondary} stopOpacity="0.9" />
@@ -389,62 +251,17 @@ export function AvatarFace({
                   </stop>
                 </radialGradient>
               </defs>
-
               <g filter="url(#gooey)">
-                {/* Núcleo central GIGANTE pulsante */}
-                <circle 
-                  cx="100" 
-                  cy="100" 
-                  r={isSpeaking ? "70" : isProcessing ? "58" : "50"} 
-                  fill="url(#coreGradient)"
-                  className="transition-all duration-500"
-                >
-                  {isSpeaking && (
-                    <animate attributeName="r" values="65;75;65" dur="0.5s" repeatCount="indefinite" />
-                  )}
+                <circle cx="100" cy="100" r={isSpeaking ? "70" : isProcessing ? "58" : "50"} fill="url(#coreGradient)" className="transition-all duration-500">
+                  {isSpeaking && <animate attributeName="r" values="65;75;65" dur="0.5s" repeatCount="indefinite" />}
                 </circle>
-                
-                {/* Satélites orbitando MAIORES */}
                 {[...Array(4)].map((_, i) => (
-                  <circle 
-                    key={i}
-                    cx="100" 
-                    cy="100" 
-                    r={38 - i * 6} 
-                    fill={i % 2 === 0 ? colors.secondary : colors.primary} 
-                    opacity={0.8 - i * 0.1}
-                  >
+                  <circle key={i} cx="100" cy="100" r={38 - i * 6} fill={i % 2 === 0 ? colors.secondary : colors.primary} opacity={0.8 - i * 0.1}>
                     <animateTransform
                       attributeName="transform"
                       type="translate"
-                      values={
-                        isSpeaking 
-                          ? `0,0; ${30 + i * 8},${25 + i * 6}; ${-25 - i * 6},${30 + i * 8}; 0,0`
-                          : isProcessing
-                          ? `0,0; ${20 + i * 5},${18 + i * 4}; ${-18 - i * 4},${20 + i * 5}; 0,0`
-                          : `0,0; ${15 + i * 3},${15 + i * 3}; ${-15 - i * 3},${15 + i * 3}; 0,0`
-                      }
+                      values={isSpeaking ? `0,0; ${30 + i * 8},${25 + i * 6}; ${-25 - i * 6},${30 + i * 8}; 0,0` : isProcessing ? `0,0; ${20 + i * 5},${18 + i * 4}; ${-18 - i * 4},${20 + i * 5}; 0,0` : `0,0; ${15 + i * 3},${15 + i * 3}; ${-15 - i * 3},${15 + i * 3}; 0,0`}
                       dur={`${2.5 - i * 0.4}s`}
-                      repeatCount="indefinite"
-                    />
-                  </circle>
-                ))}
-
-                {/* Energia explosiva quando falando */}
-                {isSpeaking && [...Array(8)].map((_, i) => (
-                  <circle
-                    key={`energy-${i}`}
-                    cx="100"
-                    cy="100"
-                    r="5"
-                    fill={colors.primary}
-                    opacity="0.6"
-                  >
-                    <animateTransform
-                      attributeName="transform"
-                      type="translate"
-                      values={`0,0; ${Math.cos(i * Math.PI / 4) * 45},${Math.sin(i * Math.PI / 4) * 45}; 0,0`}
-                      dur="0.8s"
                       repeatCount="indefinite"
                     />
                   </circle>
@@ -453,45 +270,22 @@ export function AvatarFace({
             </svg>
           )}
 
-          {/* Camada 6: Glass refraction overlay */}
           <div className="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-br from-white/20 to-transparent border border-white/30 backdrop-blur-[1px]" />
           
-          {/* Camada 7: Light flares MAIORES */}
-          <div 
-            className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full blur-2xl opacity-50 animate-pulse"
-            style={{ backgroundColor: colors.primary }}
-          />
-          <div 
-            className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full blur-2xl opacity-40 animate-pulse"
-            style={{ 
-              backgroundColor: colors.secondary,
-              animationDelay: '0.5s'
-            }}
-          />
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full blur-2xl opacity-50 animate-pulse pointer-events-none" style={{ backgroundColor: colors.primary }} />
+          <div className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full blur-2xl opacity-40 animate-pulse pointer-events-none" style={{ backgroundColor: colors.secondary, animationDelay: '0.5s' }} />
         </div>
 
-        {/* Camada 8: Scan line effect */}
         {(isProcessing || isSpeaking) && (
-          <div className="absolute inset-0 overflow-hidden rounded-full opacity-30">
-            <div 
-              className="absolute w-full h-2 bg-gradient-to-r from-transparent via-white to-transparent animate-scan"
-              style={{ top: 0 }}
-            />
+          <div className="absolute inset-0 overflow-hidden rounded-full opacity-30 pointer-events-none">
+            <div className="absolute w-full h-2 bg-gradient-to-r from-transparent via-white to-transparent animate-scan" style={{ top: 0 }} />
           </div>
         )}
 
-        {/* Camada 9: Status badge */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30">
           <div className={`px-8 py-3 rounded-full backdrop-blur-xl border transition-all ${isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}>
             <div className="flex items-center gap-3">
-              {/* Status dot animado MAIOR */}
-              <div 
-                className="w-3 h-3 rounded-full animate-pulse"
-                style={{ 
-                  backgroundColor: colors.primary,
-                  boxShadow: `0 0 10px ${colors.primary}`
-                }}
-              />
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: colors.primary, boxShadow: `0 0 10px ${colors.primary}` }} />
               <span className={`text-xs font-bold tracking-[0.3em] uppercase ${isDark ? 'text-white/60' : 'text-black/60'}`}>
                 {isSpeaking ? 'Sintetizando' : isProcessing ? 'Processando' : isListening ? 'Aguardando Palavra' : 'Aguardando Ativação'}
               </span>
@@ -499,81 +293,29 @@ export function AvatarFace({
           </div>
         </div>
 
-        {/* Camada 10: Waveform GIGANTE quando falando */}
         {isSpeaking && (
-          <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 flex gap-2">
+          <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 flex gap-2 z-30">
             {[...Array(7)].map((_, i) => (
-              <div
-                key={i}
-                className="w-2 rounded-full transition-all"
-                style={{
-                  height: '30px',
-                  backgroundColor: colors.primary,
-                  boxShadow: `0 0 8px ${colors.primary}`,
-                  animation: `wave 0.5s ease-in-out infinite`,
-                  animationDelay: `${i * 0.08}s`
-                }}
-              />
+              <div key={i} className="w-2 rounded-full transition-all" style={{ height: '30px', backgroundColor: colors.primary, boxShadow: `0 0 8px ${colors.primary}`, animation: `wave 0.5s ease-in-out infinite`, animationDelay: `${i * 0.08}s` }} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Estilos CSS customizados */}
       <style jsx>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes spin-reverse {
-          from { transform: rotate(360deg); }
-          to { transform: rotate(0deg); }
-        }
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(1.08); }
-        }
-        @keyframes pulse-fast {
-          0%, 100% { opacity: 0.6; transform: scale(1); }
-          50% { opacity: 0.9; transform: scale(1.15); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-30px); }
-        }
-        @keyframes scan {
-          0% { top: 0; }
-          100% { top: 100%; }
-        }
-        @keyframes wave {
-          0%, 100% { height: 12px; }
-          50% { height: 36px; }
-        }
-        @keyframes blink {
-          0%, 90%, 100% { opacity: 1; }
-          95% { opacity: 0.3; }
-        }
-        .animate-spin-slow {
-          animation: spin-slow linear infinite;
-        }
-        .animate-spin-reverse {
-          animation: spin-reverse linear infinite;
-        }
-        .animate-pulse-slow {
-          animation: pulse-slow ease-in-out 3s infinite;
-        }
-        .animate-pulse-fast {
-          animation: pulse-fast ease-in-out 1s infinite;
-        }
-        .animate-float {
-          animation: float ease-in-out infinite;
-        }
-        .animate-scan {
-          animation: scan 2s linear infinite;
-        }
-        .animate-blink {
-          animation: blink 4s ease-in-out infinite;
-        }
+        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        @keyframes pulse-slow { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.08); } }
+        @keyframes pulse-fast { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.15); } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-30px); } }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes wave { 0%, 100% { height: 12px; } 50% { height: 36px; } }
+        .animate-spin-slow { animation: spin-slow linear infinite; }
+        .animate-spin-reverse { animation: spin-reverse linear infinite; }
+        .animate-pulse-slow { animation: pulse-slow ease-in-out 3s infinite; }
+        .animate-pulse-fast { animation: pulse-fast ease-in-out 1s infinite; }
+        .animate-float { animation: float ease-in-out infinite; }
+        .animate-scan { animation: scan 2s linear infinite; }
       `}</style>
     </div>
   );

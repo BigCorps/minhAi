@@ -143,10 +143,22 @@ export function VoiceAssistantWithWakeWord({
     }
 
     const now = Date.now();
-    if (now - lastRestartAttempt.current < 500) return;
+    if (now - lastRestartAttempt.current < 500) {
+      console.log('⚠️ Tentativa de restart muito rápida, aguardando...');
+      return;
+    }
     lastRestartAttempt.current = now;
 
-    if (recognitionRef.current && isListening) return;
+    // Limpar recognition anterior
+    if (recognitionRef.current) {
+      try {
+        console.log('🧹 Limpando recognition anterior');
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      } catch (e) {
+        console.log('⚠️ Erro ao limpar recognition:', e);
+      }
+    }
 
     try {
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
@@ -158,7 +170,7 @@ export function VoiceAssistantWithWakeWord({
       recognition.maxAlternatives = isMobile ? 3 : 5;
 
       recognition.onstart = () => {
-        console.log('🎤 Aguardando wake word...');
+        console.log('🎤 Wake word detection ATIVA');
         setIsListening(true);
         setError('');
       };
@@ -168,12 +180,17 @@ export function VoiceAssistantWithWakeWord({
         const transcript = event.results[current][0].transcript.toLowerCase().trim();
         const isFinal = event.results[current].isFinal;
         
+        // Só processar se NÃO estiver processando
+        if (processingQuestion.current || isProcessing || isPlayingAudio) {
+          return;
+        }
+        
         // 🎯 MODELO ALEXA: Detectar wake word + pergunta
         const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
         
         if (detectionResult?.detected && detectionResult.keyword) {
           if (isFinal) {
-            console.log('✅ Wake word detectada:', transcript);
+            console.log('✅ Wake word + pergunta:', transcript);
             
             // Unlock audio
             if (!audioUnlocked.current) {
@@ -183,6 +200,14 @@ export function VoiceAssistantWithWakeWord({
             // Processar pergunta completa
             if (!processingQuestion.current) {
               processingQuestion.current = true;
+              
+              // Parar recognition IMEDIATAMENTE
+              if (recognitionRef.current) {
+                try {
+                  recognitionRef.current.stop();
+                } catch (e) {}
+              }
+              
               processWakeWordQuestion(transcript);
             }
           }
@@ -190,7 +215,10 @@ export function VoiceAssistantWithWakeWord({
       };
 
       recognition.onerror = (event: any) => {
+        console.log('⚠️ Recognition error:', event.error);
+        
         if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
+          // Erros normais, ignorar
           return;
         }
         
@@ -201,11 +229,14 @@ export function VoiceAssistantWithWakeWord({
       };
 
       recognition.onend = () => {
+        console.log('🔴 Recognition parou');
         setIsListening(false);
         
-        if (isActiveRef.current && !isProcessing && !isPlayingAudio && permissionGranted) {
+        // Só reiniciar se não estiver processando
+        if (isActiveRef.current && !processingQuestion.current && !isProcessing && !isPlayingAudio && permissionGranted) {
+          console.log('🔄 Auto-restart em 500ms...');
           setTimeout(() => {
-            if (isActiveRef.current) {
+            if (isActiveRef.current && !processingQuestion.current) {
               startWakeWordDetection();
             }
           }, 500);
@@ -216,9 +247,9 @@ export function VoiceAssistantWithWakeWord({
       recognition.start();
       
     } catch (err) {
-      console.error('Erro:', err);
+      console.error('❌ Erro iniciar recognition:', err);
       setTimeout(() => {
-        if (isActiveRef.current && permissionGranted) {
+        if (isActiveRef.current && permissionGranted && !processingQuestion.current) {
           startWakeWordDetection();
         }
       }, 2000);
@@ -226,6 +257,10 @@ export function VoiceAssistantWithWakeWord({
   }
 
   function processWakeWordQuestion(transcript: string) {
+    console.log('📋 processWakeWordQuestion chamada');
+    console.log('  transcript:', transcript);
+    console.log('  processingQuestion.current:', processingQuestion.current);
+    
     // Limpar transcript
     let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
     
@@ -250,11 +285,17 @@ export function VoiceAssistantWithWakeWord({
     const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
     
     console.log('🔍 Pergunta extraída:', cleanTranscript);
-    console.log('📊 Palavras:', words.length);
+    console.log('📊 Palavras:', words.length, words);
     
     if (words.length === 0) {
-      console.log('❌ Sem pergunta, ignorando');
+      console.log('❌ Sem pergunta, resetando e voltando para wake word');
       processingQuestion.current = false;
+      
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 300);
       return;
     }
     
@@ -265,17 +306,9 @@ export function VoiceAssistantWithWakeWord({
   async function processQuestion(questionText: string) {
     console.log('⚡ Processando:', questionText);
     
-    // Parar reconhecimento durante processamento
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-    
     setIsProcessing(true);
     
     try {
-      // 🎯 FEEDBACK IMEDIATO
       const startTime = Date.now();
       
       const formData = new FormData();
@@ -299,16 +332,11 @@ export function VoiceAssistantWithWakeWord({
       const processingTime = Date.now() - startTime;
 
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
-      console.log(`⏱️ Tempo: ${processingTime}ms`);
+      console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
       setIsProcessing(false);
 
-      // 🎯 SE FOR GPT E DEMORAR, DAR FEEDBACK
-      if (!usedFAQ && processingTime > 1000) {
-        console.log('💬 Feedback: Processando...');
-        await playText('Entendi, processando sua resposta!');
-      }
-
+      // 🎯 TOCAR RESPOSTA DIRETO (sem feedback intermediário - mais rápido!)
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
@@ -326,37 +354,39 @@ export function VoiceAssistantWithWakeWord({
         processingQuestion.current = false;
         
         // 🎯 MODELO ALEXA: Voltar para wake word imediatamente
+        console.log('🔄 Reiniciando wake word detection...');
         setTimeout(() => {
           if (isActiveRef.current) {
-            console.log('🔄 Pronto para próxima wake word');
             startWakeWordDetection();
           }
-        }, 300);
+        }, 200);
       };
 
       audio.onerror = (e) => {
-        console.error('Erro áudio:', e);
+        console.error('❌ Erro ao tocar áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
         setTimeout(() => {
           if (isActiveRef.current) {
+            console.log('🔄 Reiniciando após erro...');
             startWakeWordDetection();
           }
-        }, 300);
+        }, 200);
       };
 
       await audio.play();
       
     } catch (err: any) {
-      console.error('❌', err);
+      console.error('❌ Erro processar:', err);
       setError('Erro processar');
       setIsProcessing(false);
       processingQuestion.current = false;
       
       setTimeout(() => {
         if (isActiveRef.current) {
+          console.log('🔄 Reiniciando após erro...');
           startWakeWordDetection();
         }
       }, 1000);
@@ -544,7 +574,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: sempre use wake word
+                Aguardando palavra de ativação
               </p>
             </div>
 

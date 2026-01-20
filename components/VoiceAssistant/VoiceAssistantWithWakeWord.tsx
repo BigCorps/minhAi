@@ -37,6 +37,7 @@ export function VoiceAssistantWithWakeWord({
   const audioUnlocked = useRef<boolean>(false);
   const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null);
   const processingQuestion = useRef<boolean>(false);
+  const accumulatedTranscript = useRef<string>(''); // 🎯 MOBILE: Acumular transcrição
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -206,15 +207,31 @@ export function VoiceAssistantWithWakeWord({
         console.log('🎤 Wake word detection ATIVA');
         setIsListening(true);
         setError('');
+        accumulatedTranscript.current = ''; // 🎯 Limpar acumulador
       };
 
       recognition.onresult = (event: any) => {
+        // 🎯 MOBILE: Acumular TODA a transcrição (não só current)
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript + ' ';
+        }
+        fullTranscript = fullTranscript.toLowerCase().trim();
+        
         const current = event.resultIndex;
-        const transcript = event.results[current][0].transcript.toLowerCase().trim();
+        const transcript = fullTranscript; // Usar transcrição completa
         const isFinal = event.results[current].isFinal;
+        
+        // 🎯 MOBILE DEBUG: Log todas transcrições
+        if (!isFinal) {
+          console.log('📝 Interim:', transcript);
+        } else {
+          console.log('✅ Final:', transcript);
+        }
         
         // Só processar se NÃO estiver processando
         if (processingQuestion.current || isProcessing || isPlayingAudio) {
+          console.log('⏸️ Ignorando: sistema ocupado');
           return;
         }
         
@@ -222,7 +239,17 @@ export function VoiceAssistantWithWakeWord({
         const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
         
         if (detectionResult?.detected && detectionResult.keyword) {
-          if (isFinal) {
+          console.log(`🔍 Wake word detectada: "${detectionResult.keyword}"`);
+          console.log(`📝 Transcrição completa: "${transcript}"`);
+          console.log(`✓ isFinal: ${isFinal}`);
+          
+          // 🎯 MOBILE FIX: Processar SEMPRE que detectar wake word + ter pelo menos 3 palavras
+          const words = transcript.split(' ').filter(w => w.length > 1);
+          const hasEnoughWords = words.length >= 3; // Wake word + pelo menos 2 palavras
+          
+          console.log(`📊 Palavras: ${words.length} → ${hasEnoughWords ? 'OK' : 'POUCO'}`);
+          
+          if (isFinal || (hasEnoughWords && !processingQuestion.current)) {
             console.log('✅ Wake word + pergunta:', transcript);
             
             // Unlock audio
@@ -243,6 +270,8 @@ export function VoiceAssistantWithWakeWord({
               
               processWakeWordQuestion(transcript);
             }
+          } else {
+            console.log('⏳ Aguardando mais palavras ou isFinal...');
           }
         }
       };
@@ -819,7 +848,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: use a palavra de ativação!
+                Modo Alexa: sempre use wake word
               </p>
             </div>
 

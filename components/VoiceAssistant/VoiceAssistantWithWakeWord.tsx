@@ -308,6 +308,14 @@ export function VoiceAssistantWithWakeWord({
     
     setIsProcessing(true);
     
+    // 🎯 FEEDBACK INSTANTÂNEO: Tocar "processando" imediatamente (não bloqueia API)
+    let feedbackAudio: HTMLAudioElement | null = null;
+    const feedbackPromise = playProcessingFeedback().then(audio => {
+      feedbackAudio = audio;
+    }).catch(e => {
+      console.log('⚠️ Feedback áudio falhou:', e.message);
+    });
+    
     try {
       const startTime = Date.now();
       
@@ -334,9 +342,18 @@ export function VoiceAssistantWithWakeWord({
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
       console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
+      // 🎯 PARAR FEEDBACK se ainda estiver tocando
+      if (feedbackAudio) {
+        console.log('🛑 Parando feedback...');
+        try {
+          feedbackAudio.pause();
+          feedbackAudio.currentTime = 0;
+        } catch (e) {}
+      }
+
       setIsProcessing(false);
 
-      // 🎯 TOCAR RESPOSTA DIRETO (sem feedback intermediário - mais rápido!)
+      // 🎯 TOCAR RESPOSTA DIRETO
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
@@ -384,6 +401,13 @@ export function VoiceAssistantWithWakeWord({
       setIsProcessing(false);
       processingQuestion.current = false;
       
+      // Parar feedback em caso de erro
+      if (feedbackAudio) {
+        try {
+          feedbackAudio.pause();
+        } catch (e) {}
+      }
+      
       setTimeout(() => {
         if (isActiveRef.current) {
           console.log('🔄 Reiniciando após erro...');
@@ -391,6 +415,62 @@ export function VoiceAssistantWithWakeWord({
         }
       }, 1000);
     }
+  }
+
+  async function playProcessingFeedback(): Promise<HTMLAudioElement> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        console.log('💬 Tocando feedback "Processando..."');
+        
+        // 🎯 OPÇÃO 1: TTS rápido (ideal se tiver endpoint otimizado)
+        const response = await fetch('/api/voice/tts-fast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: 'Entendi!' }), // Texto curto = rápido
+        });
+
+        if (!response.ok) {
+          // Fallback: tentar TTS normal
+          throw new Error('Fast TTS não disponível');
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        audio.volume = 0.8; // Um pouco mais baixo
+        
+        audio.onplay = () => {
+          setIsPlayingAudio(true);
+        };
+
+        audio.onended = () => {
+          setIsPlayingAudio(false);
+        };
+
+        audio.onerror = () => {
+          setIsPlayingAudio(false);
+          reject(new Error('Erro ao tocar feedback'));
+        };
+
+        await audio.play();
+        resolve(audio);
+        
+      } catch (err) {
+        // Se TTS falhar, usar áudio inline base64 (backup)
+        console.log('⚠️ TTS feedback falhou, usando backup');
+        
+        try {
+          // Áudio curto "beep" como fallback
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU='); // Beep curto
+          audio.volume = 0.5;
+          await audio.play();
+          resolve(audio);
+        } catch (beepErr) {
+          reject(beepErr);
+        }
+      }
+    });
   }
 
   async function playGoodbye() {

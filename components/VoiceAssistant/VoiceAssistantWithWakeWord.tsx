@@ -692,7 +692,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: sempre use wake word
+                Modo Alexa: utilize palavra de ativação.
               </p>
             </div>
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
 import { WakeWordDetector } from './WakeWordDetector';
 
-interface VoiceAssistantWithWakeWordProps {
+interface VoiceAssistantAlexaProps {
   companyId: string;
   companyName: string;
   wakeWord: string;
@@ -12,49 +12,36 @@ interface VoiceAssistantWithWakeWordProps {
   theme?: 'dark' | 'light';
 }
 
-export function VoiceAssistantWithWakeWord({
+export function VoiceAssistantAlexa({
   companyId,
   companyName,
   wakeWord,
   greetingMessage,
   theme = 'dark',
-}: VoiceAssistantWithWakeWordProps) {
-  // Detectar se é mobile
+}: VoiceAssistantAlexaProps) {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   const [isListening, setIsListening] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const [conversationActive, setConversationActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [lastTranscript, setLastTranscript] = useState('');
   const [showStartButton, setShowStartButton] = useState(true);
 
   const recognitionRef = useRef<any>(null);
-  const conversationIdRef = useRef<string | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const restartTimeoutRef = useRef<any>(null);
   const isActiveRef = useRef(true);
   const lastRestartAttempt = useRef<number>(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const lastWakeWordTranscript = useRef<string>('');
   const audioUnlocked = useRef<boolean>(false);
-  const processingWakeWord = useRef<boolean>(false);
-  const inactivityTimeoutRef = useRef<any>(null);
-  const isProcessingAudio = useRef<boolean>(false); // Flag para prevenir duplicação
-  const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null); // 🎯 NOVO
+  const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null);
+  const processingQuestion = useRef<boolean>(false);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
     'oi',
     'olá',
     'ola',
-    // 'ei' removido - causa muitos falsos positivos em "é", "de", etc
   ];
 
   const endCommands = [
@@ -70,15 +57,15 @@ export function VoiceAssistantWithWakeWord({
     'valeu',
   ];
 
-  // 🎯 NOVO: Inicializar WakeWordDetector
+  // Inicializar WakeWordDetector
   useEffect(() => {
-    console.log('🎯 Inicializando WakeWordDetector com keywords:', wakeWords);
+    console.log('🎯 Inicializando WakeWordDetector...');
     wakeWordDetectorRef.current = new WakeWordDetector({
       keywords: wakeWords,
       threshold: 0.7,
       contextWindow: 5,
       usePhoneticMatching: true,
-      excludeWords: endCommands // 🎯 Excluir comandos de fim!
+      excludeWords: endCommands
     });
   }, [wakeWords.join(','), endCommands.join(',')]);
 
@@ -98,92 +85,16 @@ export function VoiceAssistantWithWakeWord({
         recognitionRef.current.stop();
       } catch (e) {}
     }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (e) {}
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      try {
-        audioContextRef.current.close();
-      } catch (e) {}
-    }
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
     }
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-    }
-    if (inactivityTimeoutRef.current) {
-      clearTimeout(inactivityTimeoutRef.current);
-    }
-  }
-
-  function startInactivityTimeout() {
-    // Limpar timeout anterior
-    if (inactivityTimeoutRef.current) {
-      clearTimeout(inactivityTimeoutRef.current);
-    }
-    
-    // 30 segundos de inatividade
-    console.log('⏱️ Timeout de inatividade: 30s');
-    inactivityTimeoutRef.current = setTimeout(() => {
-      console.log('⏰ 30s sem atividade, encerrando silenciosamente...');
-      endConversationSilent();
-    }, 30000);
-  }
-
-  function cancelInactivityTimeout() {
-    if (inactivityTimeoutRef.current) {
-      console.log('✅ Atividade detectada, cancelando timeout');
-      clearTimeout(inactivityTimeoutRef.current);
-      inactivityTimeoutRef.current = null;
-    }
-  }
-
-  async function endConversationSilent() {
-    console.log('🔴 Encerra silenciosamente (timeout)');
-    setConversationActive(false);
-    processingWakeWord.current = false;
-    isProcessingAudio.current = false; // Liberar flag
-    
-    cleanup();
-    
-    // NÃO tocar despedida, só voltar para wake word
-    setTimeout(() => {
-      if (isActiveRef.current && permissionGranted) {
-        console.log('🔄 Voltando para wake word detection');
-        startWakeWordDetection();
-      }
-    }, 500);
-  }
-
-  function forceReset() {
-    console.log('🔄 Reset');
-    
-    setIsRecording(false);
-    setIsProcessing(false);
-    setIsPlayingAudio(false);
-    setConversationActive(false);
-    processingWakeWord.current = false; // Reset flag
-    isProcessingAudio.current = false; // Liberar flag
-    cancelInactivityTimeout(); // Cancelar timeout
-    
-    cleanup();
-    
-    setTimeout(() => {
-      if (isActiveRef.current && permissionGranted) {
-        startWakeWordDetection();
-      }
-    }, 1000);
   }
 
   function unlockAudio() {
     if (audioUnlocked.current) return;
     
     try {
-      // Criar e tocar áudio silencioso para unlock (não-bloqueante)
       const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
       silentAudio.volume = 0.01;
       
@@ -192,7 +103,7 @@ export function VoiceAssistantWithWakeWord({
         audioUnlocked.current = true;
         console.log('✅ Audio unlocked!');
       }).catch(e => {
-        console.log('⚠️ Audio unlock failed:', e.message);
+        console.log('⚠️ Audio unlock failed');
       });
     } catch (e) {
       console.log('⚠️ Audio unlock error');
@@ -205,8 +116,6 @@ export function VoiceAssistantWithWakeWord({
       stream.getTracks().forEach(track => track.stop());
       setPermissionGranted(true);
       setError('');
-      
-      // NÃO inicia automaticamente - aguarda botão
     } catch (err) {
       setError('Permissão do microfone negada.');
       setPermissionGranted(false);
@@ -214,20 +123,12 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function handleStart() {
-    console.log('🚀 Iniciando assistente de voz...');
+    console.log('🚀 Iniciando assistente estilo Alexa...');
     console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
-    console.log('🔓 Desbloqueando áudio para autoplay...');
     
-    // Unlock audio com user interaction
     unlockAudio();
-    
-    // Esconder botão
     setShowStartButton(false);
     
-    console.log('🎤 Ativando detecção de wake word...');
-    console.log(`👂 Aguardando você dizer: "${wakeWords[0]}" ou "oi"`);
-    
-    // Iniciar wake word detection
     setTimeout(() => {
       if (isActiveRef.current) {
         startWakeWordDetection();
@@ -254,15 +155,10 @@ export function VoiceAssistantWithWakeWord({
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'pt-BR';
-      recognition.maxAlternatives = isMobile ? 3 : 5; // Mobile: menos alternativas
-      
-      // Mobile: configuração específica
-      if (isMobile) {
-        console.log('📱 Configuração MOBILE ativada');
-      }
+      recognition.maxAlternatives = isMobile ? 3 : 5;
 
       recognition.onstart = () => {
-        console.log('🎤 Wake word');
+        console.log('🎤 Aguardando wake word...');
         setIsListening(true);
         setError('');
       };
@@ -272,48 +168,22 @@ export function VoiceAssistantWithWakeWord({
         const transcript = event.results[current][0].transcript.toLowerCase().trim();
         const isFinal = event.results[current].isFinal;
         
-        if (conversationActive) {
-          const hasEndCommand = endCommands.some(cmd => transcript.includes(cmd));
-          if (hasEndCommand) {
-            console.log('🔚 Encerrar');
-            endConversation();
-            return;
-          }
-        }
-
-        if (!conversationActive && !isRecording && !isProcessing && !isPlayingAudio) {
-          // 🎯 NOVO: Usar WakeWordDetector com fuzzy matching
-          const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
-          
-          if (detectionResult?.detected && detectionResult.keyword) {
-            console.log('✅ Wake word detectada!', {
-              keyword: detectionResult.keyword,
-              confidence: Math.round(detectionResult.confidence * 100) + '%',
-              matchedText: detectionResult.matchedText,
-              originalTranscript: transcript,
-              isFinal: isFinal ? '(final)' : '(interim)'
-            });
+        // 🎯 MODELO ALEXA: Detectar wake word + pergunta
+        const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
+        
+        if (detectionResult?.detected && detectionResult.keyword) {
+          if (isFinal) {
+            console.log('✅ Wake word detectada:', transcript);
             
-            // Sempre salvar o último transcript
-            lastWakeWordTranscript.current = transcript;
-            
-            // Unlock audio SOMENTE no primeiro wake word FINAL
-            if (isFinal && !audioUnlocked.current) {
-              console.log('🔓 Unlocking audio...');
+            // Unlock audio
+            if (!audioUnlocked.current) {
               unlockAudio();
             }
             
-            // Se for resultado final, processar
-            if (isFinal) {
-              console.log('📋 Transcript final capturado:', transcript);
-              
-              // Proteção contra processamento duplicado
-              if (!processingWakeWord.current) {
-                processingWakeWord.current = true;
-                processWakeWordTranscript(transcript);
-              } else {
-                console.log('⚠️ Já processando wake word, ignorando');
-              }
+            // Processar pergunta completa
+            if (!processingQuestion.current) {
+              processingQuestion.current = true;
+              processWakeWordQuestion(transcript);
             }
           }
         }
@@ -333,13 +203,9 @@ export function VoiceAssistantWithWakeWord({
       recognition.onend = () => {
         setIsListening(false);
         
-        if (isActiveRef.current && !isRecording && !isProcessing && !isPlayingAudio && permissionGranted) {
-          if (restartTimeoutRef.current) {
-            clearTimeout(restartTimeoutRef.current);
-          }
-          
-          restartTimeoutRef.current = setTimeout(() => {
-            if (isActiveRef.current && permissionGranted) {
+        if (isActiveRef.current && !isProcessing && !isPlayingAudio && permissionGranted) {
+          setTimeout(() => {
+            if (isActiveRef.current) {
               startWakeWordDetection();
             }
           }, 500);
@@ -359,113 +225,66 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  function processWakeWordTranscript(transcript: string) {
-    // 1. Remover pontuação PRIMEIRO
+  function processWakeWordQuestion(transcript: string) {
+    // Limpar transcript
     let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
     
-    // 🎯 NOVO: Verificar se é comando de encerramento ANTES de processar
+    // Verificar se é comando de encerramento
     const normalizedForEndCheck = cleanTranscript.toLowerCase();
     const hasEndCommand = endCommands.some(cmd => normalizedForEndCheck.includes(cmd));
     
     if (hasEndCommand) {
-      console.log('🔚 Comando de encerramento detectado na wake word:', cleanTranscript);
-      console.log('❌ Ignorando (não é wake word válida)');
+      console.log('👋 Comando de encerramento:', cleanTranscript);
+      processingQuestion.current = false;
+      playGoodbye();
       return;
     }
     
-    // 2. Depois remover wake words
+    // Remover wake words
     for (const word of wakeWords) {
       cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
     }
     
-    // 3. Remover palavras comuns
-    cleanTranscript = cleanTranscript.replace(/\bassistente\b|\bassis\b|\bhey\b/gi, '').trim();
-    
-    // 4. Limpar espaços extras novamente
     cleanTranscript = cleanTranscript.replace(/\s+/g, ' ').trim();
     
     const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
-    const hasQuestion = words.length >= 2;
     
-    console.log('🔍 Análise wake word:');
-    console.log('  Original:', transcript);
-    console.log('  Limpo:', cleanTranscript);
-    console.log('  Palavras:', words);
-    console.log('  Count:', words.length);
-    console.log('  Tem pergunta?', hasQuestion);
+    console.log('🔍 Pergunta extraída:', cleanTranscript);
+    console.log('📊 Palavras:', words.length);
     
-    if (hasQuestion) {
-      console.log('💬 Pergunta detectada:', cleanTranscript);
-    } else {
-      console.log('👋 Só wake word');
-    }
-    
-    // SIMPLIFICADO: sempre ativar imediatamente, passando texto da pergunta
-    activateConversation(hasQuestion, cleanTranscript);
-  }
-
-  async function activateConversation(hasQuestion: boolean = false, questionText: string = '') {
-    // Proteção: se já está ativo ou processando, não ativar novamente
-    if (conversationActive || isRecording || isProcessing || isPlayingAudio) {
-      console.log('⚠️ Já ativo, ignorando');
+    if (words.length === 0) {
+      console.log('❌ Sem pergunta, ignorando');
+      processingQuestion.current = false;
       return;
     }
     
-    console.log('🟢 Ativa', hasQuestion ? '(com pergunta)' : '(sem pergunta)');
-    setConversationActive(true);
+    // Processar pergunta
+    processQuestion(cleanTranscript);
+  }
+
+  async function processQuestion(questionText: string) {
+    console.log('⚡ Processando:', questionText);
     
-    // Resetar flag IMEDIATAMENTE (já foi processado o wake word)
-    processingWakeWord.current = false;
-    
-    // Iniciar timeout de inatividade
-    startInactivityTimeout();
-    
+    // Parar reconhecimento durante processamento
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
     }
     
-    if (hasQuestion && questionText) {
-      // Tem pergunta: processar DIRETO o texto que já capturamos (NÃO gravar!)
-      console.log('⚡ Processando pergunta direta:', questionText);
-      await processDirectQuestion(questionText);
-    } else {
-      // Só wake word: dar saudação e depois gravar
-      console.log('👋 Só wake word, dando saudação');
-      await playGreeting();
-    }
-  }
-
-  async function processDirectQuestion(questionText: string) {
-    // Prevenir múltiplas execuções simultâneas
-    if (isProcessingAudio.current) {
-      console.log('⚠️ Já processando outro áudio, ignorando direct question');
-      return;
-    }
-    
-    isProcessingAudio.current = true;
     setIsProcessing(true);
     
-    // Normalizar ANTES de tudo
-    const normalizedQuestion = questionText.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-    setLastTranscript(normalizedQuestion);
-    console.log('📝 Direct question normalizada:', normalizedQuestion);
-    
     try {
-      const formData = new FormData();
+      // 🎯 FEEDBACK IMEDIATO
+      const startTime = Date.now();
       
-      // Criar blob de texto (não precisa de áudio real)
+      const formData = new FormData();
       const textBlob = new Blob([questionText], { type: 'text/plain' });
-      formData.append('audio', textBlob, 'direct-question.txt');
+      formData.append('audio', textBlob, 'question.txt');
       formData.append('companyId', companyId);
       formData.append('directQuestion', questionText);
-      
-      if (conversationIdRef.current) {
-        formData.append('conversationId', conversationIdRef.current);
-      }
 
-      console.log('⚙️ Enviando pergunta direta para API...');
+      console.log('📤 Enviando para API...');
       
       const response = await fetch('/api/voice/process', {
         method: 'POST',
@@ -476,41 +295,22 @@ export function VoiceAssistantWithWakeWord({
         throw new Error(`Erro: ${response.status}`);
       }
 
-      const newConversationId = response.headers.get('X-Conversation-Id');
       const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
+      const processingTime = Date.now() - startTime;
 
-      if (newConversationId && newConversationId !== 'new') {
-        conversationIdRef.current = newConversationId;
-      }
+      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
+      console.log(`⏱️ Tempo: ${processingTime}ms`);
 
       setIsProcessing(false);
 
-      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
-
-      // PARAR RECONHECIMENTO DE VOZ antes de tocar TTS (evitar captar própria resposta)
-      if (recognitionRef.current) {
-        console.log('🛑 Parando wake word detection durante TTS');
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
+      // 🎯 SE FOR GPT E DEMORAR, DAR FEEDBACK
+      if (!usedFAQ && processingTime > 1000) {
+        console.log('💬 Feedback: Processando...');
+        await playText('Entendi, processando sua resposta!');
       }
 
-      // PARAR MICROFONE antes de tocar resposta (evitar feedback!)
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        console.log('🛑 Parando microfone para evitar feedback');
-        try {
-          mediaRecorderRef.current.stop();
-        } catch (e) {}
-      }
-      
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        try {
-          audioContextRef.current.close();
-        } catch (e) {}
-      }
-
-      const responseAudioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(responseAudioBlob);
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
       currentAudioRef.current = audio;
@@ -520,50 +320,40 @@ export function VoiceAssistantWithWakeWord({
       };
       
       audio.onended = () => {
+        console.log('✅ Resposta concluída');
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
-        processingWakeWord.current = false;
-        isProcessingAudio.current = false; // Liberar flag
+        processingQuestion.current = false;
         
-        // Usar normalized capturado ANTES (closure funciona aqui)
-        console.log('🔍 Verificando fim (direct):', normalizedQuestion);
-        console.log('🔍 Comandos de fim:', endCommands);
-        
-        const hasEndCommand = endCommands.some(cmd => {
-          const match = normalizedQuestion.includes(cmd);
-          if (match) console.log(`✅ Match encontrado: "${cmd}"`);
-          return match;
-        });
-        
-        if (hasEndCommand) {
-          console.log('👋 Comando de fim detectado na pergunta direta');
-          endConversation();
-        } else {
-          console.log('➡️ Sem comando de fim, continuando...');
-          // Continuar ouvindo
-          startManualRecording();
-        }
+        // 🎯 MODELO ALEXA: Voltar para wake word imediatamente
+        setTimeout(() => {
+          if (isActiveRef.current) {
+            console.log('🔄 Pronto para próxima wake word');
+            startWakeWordDetection();
+          }
+        }, 300);
       };
 
       audio.onerror = (e) => {
         console.error('Erro áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
-        processingWakeWord.current = false;
-        isProcessingAudio.current = false; // Liberar flag
+        processingQuestion.current = false;
         
-        // Continuar mesmo com erro
-        startManualRecording();
+        setTimeout(() => {
+          if (isActiveRef.current) {
+            startWakeWordDetection();
+          }
+        }, 300);
       };
 
       await audio.play();
       
     } catch (err: any) {
-      console.error('❌ Erro processar pergunta direta:', err);
+      console.error('❌', err);
+      setError('Erro processar');
       setIsProcessing(false);
-      setConversationActive(false);
-      processingWakeWord.current = false;
-      isProcessingAudio.current = false; // Liberar flag
+      processingQuestion.current = false;
       
       setTimeout(() => {
         if (isActiveRef.current) {
@@ -573,26 +363,7 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  async function endConversation() {
-    console.log('🔴 Encerra');
-    
-    // PARAR qualquer áudio tocando ANTES de encerrar
-    if (currentAudioRef.current) {
-      console.log('🛑 Parando áudio atual');
-      try {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      } catch (e) {}
-    }
-    
-    setConversationActive(false);
-    setIsPlayingAudio(false);
-    processingWakeWord.current = false; // Reset flag
-    isProcessingAudio.current = false; // Liberar flag ANTES de tocar despedida
-    cancelInactivityTimeout(); // Cancelar timeout
-    
-    cleanup();
-    
+  async function playGoodbye() {
     try {
       await playText('Até logo!');
     } catch (e) {
@@ -600,37 +371,10 @@ export function VoiceAssistantWithWakeWord({
     }
     
     setTimeout(() => {
-      if (isActiveRef.current && permissionGranted) {
-        console.log('🔄 Restart wake');
-        console.log('  isActiveRef:', isActiveRef.current);
-        console.log('  permissionGranted:', permissionGranted);
-        console.log('  isListening:', isListening);
+      if (isActiveRef.current) {
         startWakeWordDetection();
-      } else {
-        console.log('⚠️ Não pode reiniciar wake word:');
-        console.log('  isActiveRef:', isActiveRef.current);
-        console.log('  permissionGranted:', permissionGranted);
       }
     }, 1000);
-  }
-
-  async function playGreeting() {
-    try {
-      await playText(greetingMessage);
-      console.log('🎧 Saudação ok');
-      
-      // Aguardar 500ms antes de começar a gravar (dar tempo pro áudio terminar)
-      setTimeout(() => {
-        startManualRecording();
-      }, 500);
-    } catch (err: any) {
-      console.error('Erro saudação:', err.message);
-      
-      // Mesmo com erro, começar a gravar
-      setTimeout(() => {
-        startManualRecording();
-      }, 500);
-    }
   }
 
   async function playText(text: string): Promise<void> {
@@ -673,14 +417,7 @@ export function VoiceAssistantWithWakeWord({
           reject(new Error('Erro reproduzir'));
         };
 
-        try {
-          await audio.play();
-        } catch (playError: any) {
-          console.error('❌ Erro playText:', playError.message);
-          setIsPlayingAudio(false);
-          currentAudioRef.current = null;
-          reject(playError);
-        }
+        await audio.play();
       } catch (err) {
         setIsPlayingAudio(false);
         reject(err);
@@ -688,293 +425,12 @@ export function VoiceAssistantWithWakeWord({
     });
   }
 
-  async function startManualRecording() {
-    console.log('🎤 Gravando (silêncio: 800ms)...');
-    
-    // Reiniciar timeout de inatividade
-    startInactivityTimeout();
-    
-    // 🎯 NOVO: Parar wake word detection durante gravação
-    if (recognitionRef.current) {
-      console.log('🛑 Parando wake word durante gravação');
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-    
-    // Garantir audio unlock (não-bloqueante)
-    if (!audioUnlocked.current) {
-      unlockAudio();
-    }
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      const audioContext = new AudioContext();
-      audioContextRef.current = audioContext;
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      source.connect(analyser);
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      let silenceStart: number | null = null;
-      let speechDetected = false;
-      const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 800; // 🎯 AUMENTADO: 600ms → 800ms
-      const MIN_SPEECH_DURATION = 500; // 🎯 AUMENTADO: 300ms → 500ms
-
-      const recordStartTime = Date.now();
-
-      const checkSilence = () => {
-        if (mediaRecorder.state !== 'recording') return;
-
-        analyser.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-
-        // Detectar se está falando
-        if (average > SILENCE_THRESHOLD) {
-          speechDetected = true;
-          silenceStart = null;
-        } else {
-          // Silêncio
-          // Só detectar silêncio se já falou por pelo menos 300ms
-          const elapsed = Date.now() - recordStartTime;
-          if (speechDetected && elapsed > MIN_SPEECH_DURATION) {
-            if (silenceStart === null) {
-              silenceStart = Date.now();
-              console.log('🤫 Silêncio começou');
-            } else if (Date.now() - silenceStart > SILENCE_DURATION) {
-              console.log(`🤫 Silêncio confirmado: ${Date.now() - silenceStart}ms`);
-              stopManualRecording();
-              return;
-            }
-          }
-        }
-
-        requestAnimationFrame(checkSilence);
-      };
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
-        if (audioContext.state !== 'closed') {
-          audioContext.close();
-        }
-
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        
-        console.log('📊 Áudio capturado:', {
-          size: audioBlob.size,
-          duration: Date.now() - recordStartTime
-        });
-        
-        setIsRecording(false);
-        
-        // Processar normalmente (sem verificação rápida)
-        setIsProcessing(true);
-        await processAudio(audioBlob);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      console.log('🎙️ Gravando... (fale agora)');
-      
-      checkSilence();
-    } catch (err) {
-      console.error('Erro gravar:', err);
-      setError('Erro gravar');
-      setConversationActive(false);
-      processingWakeWord.current = false; // Reset flag em erro
-      startWakeWordDetection();
-    }
-  }
-
-  function stopManualRecording() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-  }
-
-  async function processAudio(audioBlob: Blob) {
-    // Prevenir múltiplas execuções simultâneas
-    if (isProcessingAudio.current) {
-      console.log('⚠️ Já processando outro áudio, ignorando');
-      return;
-    }
-    
-    isProcessingAudio.current = true;
-    const startTime = Date.now();
-    
-    try {
-      console.log('⏱️ [0ms] Iniciando processamento');
-      
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.wav');
-      formData.append('companyId', companyId);
-      if (conversationIdRef.current) {
-        formData.append('conversationId', conversationIdRef.current);
-      }
-
-      console.log(`⏱️ [${Date.now() - startTime}ms] FormData pronto, enviando...`);
-      console.log('⚙️ API...');
-      
-      const fetchStart = Date.now();
-      const response = await fetch('/api/voice/process', {
-        method: 'POST',
-        body: formData,
-      });
-      const fetchTime = Date.now() - fetchStart;
-
-      console.log(`⏱️ [${Date.now() - startTime}ms] Response recebido (fetch: ${fetchTime}ms)`);
-
-      const processingTime = Date.now() - startTime;
-
-      if (!response.ok) {
-        throw new Error(`Erro: ${response.status}`);
-      }
-
-      const newConversationId = response.headers.get('X-Conversation-Id');
-      const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
-      const apiTime = response.headers.get('X-Processing-Time');
-      const transcript = response.headers.get('X-Transcription');
-
-      // CAPTURAR E NORMALIZAR TRANSCRIPT ANTES DE TUDO
-      let normalizedTranscript = '';
-      if (transcript) {
-        const decoded = decodeURIComponent(transcript);
-        normalizedTranscript = decoded.toLowerCase().replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
-        setLastTranscript(normalizedTranscript);
-        console.log('📝', decoded);
-        console.log('🔤 Normalizado:', normalizedTranscript);
-      } else {
-        console.log('⚠️ Transcript vazio!');
-        setLastTranscript('');
-      }
-
-      console.log(`⏱️ Frontend total: ${processingTime}ms`);
-      console.log(`⏱️ API interno: ${apiTime}ms`);
-      console.log(`⏱️ Network: ${processingTime - parseInt(apiTime || '0')}ms`);
-      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
-
-      if (newConversationId && newConversationId !== 'new') {
-        conversationIdRef.current = newConversationId;
-      }
-
-      setIsProcessing(false);
-
-      // PARAR RECONHECIMENTO DE VOZ antes de tocar TTS (evitar captar própria resposta)
-      if (recognitionRef.current) {
-        console.log('🛑 Parando wake word detection durante TTS');
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
-
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-
-      const responseAudioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(responseAudioBlob);
-      const audio = new Audio(audioUrl);
-      
-      currentAudioRef.current = audio;
-      
-      audio.onplay = () => {
-        const totalTime = Date.now() - startTime;
-        console.log(`✅ TOTAL: ${totalTime}ms`);
-        setIsPlayingAudio(true);
-      };
-      
-      audio.onended = () => {
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-        processingWakeWord.current = false; // Pronto para próximo wake word
-        isProcessingAudio.current = false; // Liberar para próximo processamento
-        
-        // Usar transcript capturado ANTES (não depende de state async)
-        console.log('🔍 Verificando fim:', normalizedTranscript);
-        console.log('🔍 Comandos de fim:', endCommands);
-        
-        const hasEndCommand = endCommands.some(cmd => {
-          const match = normalizedTranscript.includes(cmd);
-          if (match) console.log(`✅ Match encontrado: "${cmd}"`);
-          return match;
-        });
-        
-        if (hasEndCommand) {
-          console.log('👋 Comando de fim detectado:', normalizedTranscript);
-          endConversation();
-        } else {
-          console.log('➡️ Sem comando de fim, continuando...');
-          // Continuar ouvindo
-          startManualRecording();
-        }
-      };
-
-      audio.onerror = (e) => {
-        console.error('Erro áudio:', e);
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-        processingWakeWord.current = false; // Reset em erro também
-        isProcessingAudio.current = false; // Liberar flag
-        
-        setTimeout(() => {
-          startManualRecording();
-        }, 300);
-      };
-
-      try {
-        await audio.play();
-      } catch (playError: any) {
-        console.error('❌ Erro ao tocar áudio:', playError.message);
-        
-        // Resetar flag em erro
-        processingWakeWord.current = false;
-        isProcessingAudio.current = false; // Liberar flag
-        
-        // Não bloquear - continuar gravação
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-        
-        setTimeout(() => {
-          startManualRecording();
-        }, 300);
-      }
-    } catch (err: any) {
-      console.error('❌', err);
-      setError('Erro processar');
-      setIsProcessing(false);
-      setConversationActive(false);
-      processingWakeWord.current = false; // Reset flag em erro
-      isProcessingAudio.current = false; // Liberar flag
-      
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          startWakeWordDetection();
-        }
-      }, 1000);
-    }
-  }
-
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
-    if (showStartButton) return 'Clique em "Iniciar Assistente"';
+    if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isRecording) return 'Ouvindo você...';
-    if (conversationActive) return 'Pode falar!';
-    if (isListening) return `Diga: "${wakeWords[0]}" ou "oi"`;
+    if (isListening) return `Diga: "${wakeWords[0]}" + sua pergunta`;
     return 'Aguarde...';
   };
 
@@ -982,8 +438,6 @@ export function VoiceAssistantWithWakeWord({
     if (!permissionGranted) return 'bg-gray-400';
     if (isPlayingAudio) return 'bg-blue-500';
     if (isProcessing) return 'bg-yellow-500 animate-pulse';
-    if (isRecording) return 'bg-red-500 animate-pulse';
-    if (conversationActive) return 'bg-orange-500';
     if (isListening) return 'bg-green-500 animate-pulse';
     return 'bg-gray-400';
   };
@@ -1011,7 +465,7 @@ export function VoiceAssistantWithWakeWord({
         <div className="flex flex-col items-center gap-8">
           <div className="relative w-96 h-96">
             <AvatarFace
-              isListening={isListening && !conversationActive}
+              isListening={isListening}
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
               theme={theme}
@@ -1059,7 +513,7 @@ export function VoiceAssistantWithWakeWord({
 
           <div className="relative h-96">
             <AvatarFace
-              isListening={isListening && !conversationActive}
+              isListening={isListening}
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
               theme={theme}
@@ -1087,17 +541,10 @@ export function VoiceAssistantWithWakeWord({
               }`}>
                 {getStatusMessage()}
               </p>
-              {conversationActive && (
-                <p className={`text-sm mt-2 transition-colors ${
-                  theme === 'dark' ? 'text-white/50' : 'text-gray-500'
-                }`}>
-                  Diga "tchau" para encerrar
-                </p>
-              )}
-              <p className={`text-xs mt-1 transition-colors ${
-                theme === 'dark' ? 'text-white/30' : 'text-gray-400'
+              <p className={`text-sm mt-2 transition-colors ${
+                theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Silêncio: 800ms
+                Modo Alexa: sempre use wake word
               </p>
             </div>
 
@@ -1119,26 +566,6 @@ export function VoiceAssistantWithWakeWord({
                 🎤 Iniciar Assistente
               </button>
             )}
-
-            <div className="flex gap-3">
-              {conversationActive && !isProcessing && !isPlayingAudio && (
-                <button
-                  onClick={endConversation}
-                  className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold shadow-lg"
-                >
-                  Encerrar
-                </button>
-              )}
-              
-              {(isProcessing || isRecording) && (
-                <button
-                  onClick={forceReset}
-                  className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition font-bold shadow-lg"
-                >
-                  Reiniciar
-                </button>
-              )}
-            </div>
           </div>
         </div>
       </div>

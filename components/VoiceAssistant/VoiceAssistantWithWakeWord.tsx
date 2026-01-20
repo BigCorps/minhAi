@@ -31,6 +31,7 @@ export function VoiceAssistantWithWakeWord({
 
   const recognitionRef = useRef<any>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const feedbackAudioRef = useRef<HTMLAudioElement | null>(null); // 🎯 NOVO
   const isActiveRef = useRef(true);
   const lastRestartAttempt = useRef<number>(0);
   const audioUnlocked = useRef<boolean>(false);
@@ -309,10 +310,8 @@ export function VoiceAssistantWithWakeWord({
     setIsProcessing(true);
     
     // 🎯 FEEDBACK INSTANTÂNEO: Tocar "processando" imediatamente (não bloqueia API)
-    let feedbackAudio: HTMLAudioElement | null = null;
-    
     playProcessingFeedback().then(audio => {
-      feedbackAudio = audio;
+      feedbackAudioRef.current = audio;
     }).catch(e => {
       console.log('⚠️ Feedback áudio falhou:', e.message);
     });
@@ -344,11 +343,12 @@ export function VoiceAssistantWithWakeWord({
       console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
       // 🎯 PARAR FEEDBACK se ainda estiver tocando
-      if (feedbackAudio) {
+      if (feedbackAudioRef.current) {
         console.log('🛑 Parando feedback...');
         try {
-          feedbackAudio.pause();
-          feedbackAudio.currentTime = 0;
+          feedbackAudioRef.current.pause();
+          feedbackAudioRef.current.currentTime = 0;
+          feedbackAudioRef.current = null;
         } catch (e) {}
       }
 
@@ -403,9 +403,10 @@ export function VoiceAssistantWithWakeWord({
       processingQuestion.current = false;
       
       // Parar feedback em caso de erro
-      if (feedbackAudio) {
+      if (feedbackAudioRef.current) {
         try {
-          feedbackAudio.pause();
+          feedbackAudioRef.current.pause();
+          feedbackAudioRef.current = null;
         } catch (e) {}
       }
       

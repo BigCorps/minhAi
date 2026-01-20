@@ -18,30 +18,31 @@ export function AvatarFace({
   
   const isDark = theme === 'dark';
 
+  // 🎯 CORES CORRIGIDAS: Verde claro (aguardando), Verde escuro (processando), Azul (respondendo)
   const statusColors = useMemo(() => ({
     idle: { 
-      primary: isDark ? '#60a5fa' : '#2563eb',
-      secondary: isDark ? '#93c5fd' : '#3b82f6',
-      glow: isDark ? 'rgba(96, 165, 250, 0.4)' : 'rgba(37, 99, 235, 0.4)',
-      ring: isDark ? '#60A5FA' : '#2563eb'
+      primary: isDark ? '#4ade80' : '#22c55e',    // Verde claro
+      secondary: isDark ? '#86efac' : '#4ade80',
+      glow: isDark ? 'rgba(74, 222, 128, 0.4)' : 'rgba(34, 197, 94, 0.4)',
+      ring: isDark ? '#4ade80' : '#22c55e'
     },
     listening: { 
-      primary: isDark ? '#3b82f6' : '#1d4ed8',
-      secondary: isDark ? '#60a5fa' : '#2563eb',
-      glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(29, 78, 216, 0.6)',
-      ring: isDark ? '#2563EB' : '#1d4ed8'
+      primary: isDark ? '#4ade80' : '#22c55e',    // 🟢 Verde claro (aguardando)
+      secondary: isDark ? '#86efac' : '#4ade80',
+      glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(34, 197, 94, 0.6)',
+      ring: isDark ? '#4ade80' : '#22c55e'
     },
     processing: { 
-      primary: '#fbbf24', 
-      secondary: '#f59e0b',
-      glow: 'rgba(251, 191, 36, 0.6)',
-      ring: '#F59E0B'
+      primary: '#16a34a',                          // 🟢 Verde escuro (processando)
+      secondary: '#15803d',
+      glow: 'rgba(22, 163, 74, 0.6)',
+      ring: '#16a34a'
     },
     speaking: { 
-      primary: isDark ? '#4ade80' : '#10b981',
-      secondary: isDark ? '#34d399' : '#059669',
-      glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(16, 185, 129, 0.6)',
-      ring: isDark ? '#10B981' : '#059669'
+      primary: isDark ? '#3b82f6' : '#2563eb',    // 🔵 Azul (respondendo)
+      secondary: isDark ? '#60a5fa' : '#3b82f6',
+      glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(37, 99, 235, 0.6)',
+      ring: isDark ? '#3b82f6' : '#2563eb'
     },
   }), [isDark]);
 
@@ -163,7 +164,6 @@ export function AvatarFace({
           ))}
         </div>
 
-        {/* Camada 4: Container do orbe - CORREÇÃO: Adicionado aspect-square e h-auto para círculo perfeito */}
         <div 
           className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full border shadow-2xl overflow-visible transition-all duration-700 ease-out ${
             isDark ? 'border-white/5' : 'border-black/5'

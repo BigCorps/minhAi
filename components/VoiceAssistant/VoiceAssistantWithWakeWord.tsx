@@ -584,9 +584,9 @@ export function VoiceAssistantWithWakeWord({
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
-    if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // 🔵 AZUL ao responder
-    if (isProcessing) return 'bg-green-600 animate-pulse'; // 🟢 VERDE ESCURO ao processar
-    if (isListening) return 'bg-green-400 animate-pulse'; // 🟢 VERDE CLARO aguardando
+    if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // 🔵 Azul ao responder
+    if (isProcessing) return 'bg-green-600 animate-pulse'; // 🟢 Verde escuro ao processar
+    if (isListening) return 'bg-green-400 animate-pulse'; // 🟢 Verde claro aguardando
     return 'bg-gray-400';
   };
 
@@ -692,7 +692,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: utilize palavra de ativação.
+                Modo Alexa: utilize palavra de ativação!
               </p>
             </div>
 

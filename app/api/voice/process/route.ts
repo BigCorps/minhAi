@@ -132,11 +132,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       break;
     }
     
-    // Similaridade
+    // Similaridade - 🎯 THRESHOLD AUMENTADO: 40% → 85%
     const score = similarity(questionNormalized, faqQuestionNormalized);
-    console.log(`  📊 Similarity: ${(score * 100).toFixed(1)}% (threshold: 40%)`);
+    console.log(`  📊 Similarity: ${(score * 100).toFixed(1)}% (threshold: 85%)`);
     
-    if (score > bestScore && score > 0.40) {
+    if (score > bestScore && score > 0.85) { // 🎯 MUDADO: 0.40 → 0.85
       bestScore = score;
       bestMatch = faq;
       bestMethod = 'similarity';
@@ -159,11 +159,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
         }
         
         const varScore = similarity(questionNormalized, variationNormalized);
-        if (varScore > 0.40) {
+        if (varScore > 0.85) { // 🎯 MUDADO: 0.40 → 0.85
           console.log(`    - "${variation}": ${(varScore * 100).toFixed(1)}%`);
         }
         
-        if (varScore > bestScore && varScore > 0.40) {
+        if (varScore > bestScore && varScore > 0.85) { // 🎯 MUDADO: 0.40 → 0.85
           bestScore = varScore;
           bestMatch = faq;
           bestMethod = 'variation-similarity';
@@ -172,7 +172,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       }
     }
     
-    // Keywords
+    // Keywords - 🎯 THRESHOLD AUMENTADO: 40% → 70%
     const faqWords = faqQuestionNormalized.split(' ').filter((w: string) => w.length > 2);
     const commonWords = questionWords.filter((w: string) => faqWords.includes(w));
     const keywordScore = commonWords.length / Math.max(questionWords.length, faqWords.length);
@@ -181,7 +181,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       console.log(`  🔤 Keywords comuns: [${commonWords.join(', ')}] = ${(keywordScore * 100).toFixed(1)}%`);
     }
     
-    if (keywordScore > bestScore && keywordScore > 0.40) {
+    if (keywordScore > bestScore && keywordScore > 0.70) { // 🎯 MUDADO: 0.40 → 0.70
       bestScore = keywordScore;
       bestMatch = faq;
       bestMethod = 'keywords';
@@ -195,7 +195,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     console.log(`   Score: ${(bestScore * 100).toFixed(1)}%`);
     console.log(`   Método: ${bestMethod}`);
   } else {
-    console.log('❌ NENHUM MATCH (threshold mínimo: 40%)');
+    console.log('❌ NENHUM MATCH (threshold: 85% similarity, 70% keywords)');
     console.log('🤖 Vai usar GPT');
   }
 
@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
         model: 'tts-1',
         voice: 'nova',
         input: 'Não consegui te ouvir. Pode repetir?',
-        speed: 1.15,
+        speed: 0.90, // 🎯 Ajustado para PT-BR
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
@@ -341,7 +341,7 @@ export async function POST(request: NextRequest) {
     // FASE 2: FAQ Matching
     const faqStart = Date.now();
     const matchingFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
-    const faqTime = Date.now() - faqStart;
+    faqTime = Date.now() - faqStart;
     console.log(`⏱️ FAQ matching: ${faqTime}ms`);
     console.log(`📊 FAQ result:`, matchingFAQ ? `FOUND: "${matchingFAQ.question}"` : 'NOT FOUND');
     
@@ -402,13 +402,13 @@ export async function POST(request: NextRequest) {
       responseText = completion.choices[0]?.message?.content || 'Desculpe, não entendi.';
     }
 
-    // FASE 3: TTS
+    // FASE 3: TTS - 🎯 OTIMIZADO PARA PT-BR
     const ttsStart = Date.now();
     const tts = await openai.audio.speech.create({
       model: 'tts-1',
-      voice: 'nova',
+      voice: 'nova', // 🎯 Melhor para PT-BR
       input: responseText,
-      speed: 1.25, // Mais rápido: 1.15 → 1.25
+      speed: 0.90, // 🎯 90% da velocidade (claro e natural)
     });
     ttsTime = Date.now() - ttsStart;
     console.log(`⏱️ TTS: ${ttsTime}ms`);
@@ -464,7 +464,7 @@ export async function POST(request: NextRequest) {
         model: 'tts-1',
         voice: 'nova',
         input: 'Desculpe, ocorreu um erro. Tente novamente.',
-        speed: 1.15,
+        speed: 0.90,
       });
       
       const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());

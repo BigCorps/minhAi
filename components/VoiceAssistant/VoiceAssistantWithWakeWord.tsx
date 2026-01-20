@@ -95,19 +95,36 @@ export function VoiceAssistantWithWakeWord({
   function unlockAudio() {
     if (audioUnlocked.current) return;
     
+    console.log('🔓 Tentando unlock áudio...');
+    
     try {
+      // 🎯 MOBILE: Criar áudio silencioso e tentar tocar
       const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
       silentAudio.volume = 0.01;
       
-      silentAudio.play().then(() => {
-        silentAudio.pause();
-        audioUnlocked.current = true;
-        console.log('✅ Audio unlocked!');
-      }).catch(e => {
-        console.log('⚠️ Audio unlock failed');
-      });
-    } catch (e) {
-      console.log('⚠️ Audio unlock error');
+      const playPromise = silentAudio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            silentAudio.pause();
+            audioUnlocked.current = true;
+            console.log('✅ Audio unlocked!');
+          })
+          .catch(e => {
+            console.log('⚠️ Audio unlock failed:', e.message);
+            
+            // 🎯 MOBILE FIX: Tentar novamente em 1s
+            setTimeout(() => {
+              if (!audioUnlocked.current) {
+                console.log('🔄 Retry unlock...');
+                unlockAudio();
+              }
+            }, 1000);
+          });
+      }
+    } catch (e: any) {
+      console.log('⚠️ Audio unlock error:', e.message);
     }
   }
 
@@ -127,7 +144,22 @@ export function VoiceAssistantWithWakeWord({
     console.log('🚀 Iniciando assistente estilo Alexa...');
     console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
     
+    // 🎯 MOBILE: Garantir unlock de áudio ANTES de iniciar
     unlockAudio();
+    
+    // 🎯 MOBILE: Criar áudio de teste para garantir contexto
+    if (isMobile) {
+      try {
+        const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+        testAudio.volume = 0.01;
+        await testAudio.play();
+        testAudio.pause();
+        console.log('✅ Mobile: Contexto de áudio estabelecido');
+      } catch (e) {
+        console.log('⚠️ Mobile: Falha no contexto de áudio');
+      }
+    }
+    
     setShowStartButton(false);
     
     setTimeout(() => {
@@ -386,6 +418,7 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current = audio;
       
       audio.onplay = () => {
+        console.log('🔊 Áudio iniciou');
         setIsPlayingAudio(true);
       };
       
@@ -418,7 +451,72 @@ export function VoiceAssistantWithWakeWord({
         }, 200);
       };
 
-      await audio.play();
+      // 🎯 TIMEOUT DE SEGURANÇA: Se áudio não começar em 3s, reiniciar
+      const safetyTimeout = setTimeout(() => {
+        if (!isPlayingAudio && currentAudioRef.current === audio) {
+          console.log('⚠️ Áudio não iniciou em 3s, forçando reinício');
+          setIsPlayingAudio(false);
+          currentAudioRef.current = null;
+          processingQuestion.current = false;
+          
+          if (isActiveRef.current) {
+            startWakeWordDetection();
+          }
+        }
+      }, 3000);
+
+      // 🎯 MOBILE FIX: Garantir que play() seja executado
+      try {
+        console.log('▶️ Tentando tocar áudio...');
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('✅ Áudio tocando com sucesso');
+              clearTimeout(safetyTimeout); // Limpar timeout se sucesso
+            })
+            .catch(err => {
+              console.error('❌ Erro play():', err);
+              
+              // 🎯 RETRY no mobile se falhar
+              setTimeout(() => {
+                console.log('🔄 Retry play()...');
+                audio.play()
+                  .then(() => {
+                    clearTimeout(safetyTimeout);
+                  })
+                  .catch(e => {
+                    console.error('❌ Retry falhou:', e);
+                    clearTimeout(safetyTimeout);
+                    
+                    // Se ainda falhar, reiniciar wake word
+                    setIsPlayingAudio(false);
+                    currentAudioRef.current = null;
+                    processingQuestion.current = false;
+                    
+                    setTimeout(() => {
+                      if (isActiveRef.current) {
+                        startWakeWordDetection();
+                      }
+                    }, 200);
+                  });
+              }, 100);
+            });
+        }
+      } catch (err) {
+        console.error('❌ Erro crítico play():', err);
+        clearTimeout(safetyTimeout);
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+        processingQuestion.current = false;
+        
+        setTimeout(() => {
+          if (isActiveRef.current) {
+            startWakeWordDetection();
+          }
+        }, 200);
+      }
       
     } catch (err: any) {
       console.error('❌ Erro processar:', err);
@@ -599,7 +697,7 @@ export function VoiceAssistantWithWakeWord({
       }`}>
         <button
           onClick={() => setIsFullscreen(false)}
-          className={`absolute top-4 right-4 p-3 rounded-full transition ${
+          className={`absolute top-4 right-4 p-3 rounded-full transition z-50 ${
             theme === 'dark'
               ? 'bg-white/10 hover:bg-white/20 text-white'
               : 'bg-black/10 hover:bg-black/20 text-black'
@@ -610,8 +708,9 @@ export function VoiceAssistantWithWakeWord({
           </svg>
         </button>
 
-        <div className="flex flex-col items-center gap-8">
-          <div className="relative w-96 h-96">
+        <div className="flex flex-col items-center gap-4 md:gap-8 w-full px-4">
+          {/* Avatar - Responsivo: menor no mobile */}
+          <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
             <AvatarFace
               isListening={isListening}
               isSpeaking={isPlayingAudio}
@@ -620,14 +719,15 @@ export function VoiceAssistantWithWakeWord({
             />
           </div>
 
-          <div className="text-center">
-            <p className={`text-3xl font-bold mb-2 transition-colors ${
+          {/* Status - Responsivo: texto menor no mobile */}
+          <div className="text-center px-4 max-w-md">
+            <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 transition-colors ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}>
               {getStatusMessage()}
             </p>
             {error && (
-              <p className={`text-sm transition-colors ${
+              <p className={`text-xs sm:text-sm transition-colors ${
                 theme === 'dark' ? 'text-red-400' : 'text-red-600'
               }`}>{error}</p>
             )}
@@ -692,7 +792,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: utilize a palavra de ativação!
+                Modo Alexa: sempre use wake word
               </p>
             </div>
 

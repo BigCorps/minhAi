@@ -195,19 +195,18 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* 🔮 ORB PRINCIPAL - CORREÇÃO DEFINITIVA DE CÍRCULO */}
+      {/* 🔮 ORB PRINCIPAL */}
       <div 
-        // 🛠 FIX: Removido h-[70%]. Agora ele usa apenas w-[70%] e aspectRatio para ser um quadrado perfeito.
         className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`}
         style={{
           background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)',
           boxShadow: `0 0 40px ${colors.glow}`,
           backdropFilter: 'blur(8px)',
-          aspectRatio: '1 / 1' // 🎯 Garante círculo perfeito
+          aspectRatio: '1 / 1' 
         }}
       >
         
-        {/* FACE */}
+        {/* FACE (Mantida intacta) */}
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -264,7 +263,7 @@ export function AvatarFace({
           </svg>
         )}
 
-        {/* ORB LÍQUIDO */}
+        {/* 🛠️ ORB LÍQUIDO MAIOR E COM MÚLTIPLAS FORMAS */}
         {!showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
@@ -279,12 +278,49 @@ export function AvatarFace({
               </radialGradient>
             </defs>
             <g filter="url(#gooey)">
-              <circle cx="100" cy="100" r="45" fill="url(#coreGradient)">
-                <animate attributeName="r" values="45;50;45" dur="2s" repeatCount="indefinite" />
+              {/* Núcleo Central Principal (Aumentado de r=45 para r=60) */}
+              <circle cx="100" cy="100" r="60" fill="url(#coreGradient)">
+                <animate attributeName="r" values="58;63;58" dur="3s" repeatCount="indefinite" />
               </circle>
+              
+              {/* Segundo Núcleo para criar forma orgânica */}
+              <circle cx="95" cy="105" r="55" fill="url(#coreGradient)" opacity="0.9">
+                 <animate attributeName="r" values="52;60;52" dur="4s" repeatCount="indefinite" />
+                 <animate attributeName="cx" values="95;105;95" dur="5s" repeatCount="indefinite" />
+              </circle>
+
+               {/* Terceiro Núcleo para mais complexidade */}
+               <circle cx="105" cy="95" r="50" fill="url(#coreGradient)" opacity="0.8">
+                 <animate attributeName="r" values="48;55;48" dur="2.5s" repeatCount="indefinite" />
+                 <animate attributeName="cy" values="95;105;95" dur="4.5s" repeatCount="indefinite" />
+              </circle>
+
+              {/* Satélites (Aumentados proporcionalmente) */}
               {[...Array(isSpeaking ? 8 : 5)].map((_, i) => (
-                <circle key={i} cx="100" cy="100" r={isSpeaking ? "25" : "20"} fill={i % 2 === 0 ? colors.primary : colors.secondary} opacity="0.7">
-                  <animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(i * Math.PI / 4) * 30},${Math.sin(i * Math.PI / 4) * 30}; 0,0`} dur={`${1.5 + i * 0.2}s`} repeatCount="indefinite" />
+                <circle
+                  key={i}
+                  cx="100"
+                  cy="100"
+                  // Aumentado de 25/20 para 35/28
+                  r={isSpeaking ? "35" : "28"} 
+                  fill={i % 2 === 0 ? colors.primary : colors.secondary}
+                  opacity="0.7"
+                >
+                  <animateTransform
+                    attributeName="transform"
+                    type="translate"
+                    // Distância aumentada de 30 para 40
+                    values={`0,0; ${Math.cos(i * Math.PI / 4) * 40},${Math.sin(i * Math.PI / 4) * 40}; 0,0`} 
+                    dur={`${1.5 + i * 0.2}s`}
+                    repeatCount="indefinite"
+                  />
+                  <animate
+                    attributeName="r"
+                    // Animação de tamanho aumentada proporcionalmente
+                    values={isSpeaking ? "32;40;32" : "25;32;25"}
+                    dur={`${1.5 + i * 0.2}s`}
+                    repeatCount="indefinite"
+                  />
                 </circle>
               ))}
             </g>

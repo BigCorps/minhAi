@@ -546,4 +546,41 @@ export function AvatarFace({
         <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
           {[1, 2, 3].map(ring => (
             <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping"
-              style={{ borderColor: colors.ring, animationDuration: `${1
+              style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
+          ))}
+        </div>
+
+        {/* 🎵 GRÁFICO DE ÁUDIO - 10 Barras NA FRENTE (só quando speaking) */}
+        {isSpeaking && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
+            <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
+              {audioLevels.map((level, i) => (
+                <div
+                  key={`audio-bar-${i}`}
+                  className="flex-1 rounded-t-sm transition-all duration-75"
+                  style={{
+                    height: `${Math.max(5, level * 100)}%`,
+                    backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
+                    opacity: 0.7 + level * 0.3,
+                    boxShadow: `0 0 ${level * 12}px ${i % 2 === 0 ? colors.primary : colors.secondary}`,
+                    filter: `blur(${0.3}px)`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          33% { transform: translateY(-20px) translateX(10px); }
+          66% { transform: translateY(-10px) translateX(-10px); }
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-float { animation: float ease-in-out infinite; }
+      `}</style>
+    </div>
+  );
+}

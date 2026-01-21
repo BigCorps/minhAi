@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Check, Copy, X, Loader2 } from 'lucide-react';
-import Image from 'next/image';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -39,7 +38,6 @@ export default function PaymentModal({
     setConfirming(true);
     
     try {
-      // Chamar API para verificar pagamento
       const response = await fetch('/api/credits/verify-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +49,7 @@ export default function PaymentModal({
       if (data.success && data.status === 'paid') {
         setConfirmed(true);
         setTimeout(() => {
-          window.location.reload(); // Recarrega para atualizar créditos
+          window.location.reload();
         }, 2000);
       } else {
         alert('Pagamento ainda não confirmado. Por favor, aguarde alguns segundos após realizar o pagamento.');
@@ -64,12 +62,12 @@ export default function PaymentModal({
     }
   };
 
-  // URL do QR Code (usa api.qrserver.com se não tiver qrCodeUrl)
+  // ✅ FIX: Usar img normal ao invés de Next Image para evitar erro 406
   const qrImageUrl = qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative w-full max-w-md mx-4 bg-gradient-to-br from-teal-900 to-teal-950 rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md mx-4 bg-gradient-to-br from-slate-900 to-blue-950 rounded-3xl shadow-2xl overflow-hidden">
         
         {/* Botão Fechar */}
         <button
@@ -80,9 +78,9 @@ export default function PaymentModal({
         </button>
 
         {/* Header */}
-        <div className="p-6 text-center border-b border-teal-700/30">
+        <div className="p-6 text-center border-b border-blue-700/30">
           <h2 className="text-2xl font-bold text-white mb-1">Pagar com PIX</h2>
-          <p className="text-teal-200 text-sm">
+          <p className="text-blue-200 text-sm">
             Escaneie o QR Code ou copie o código PIX para pagar
           </p>
         </div>
@@ -93,7 +91,8 @@ export default function PaymentModal({
           {/* QR Code */}
           <div className="flex justify-center">
             <div className="bg-white p-4 rounded-2xl shadow-lg">
-              <Image
+              {/* ✅ FIX: Usar img normal */}
+              <img
                 src={qrImageUrl}
                 alt="QR Code PIX"
                 width={250}
@@ -105,7 +104,7 @@ export default function PaymentModal({
 
           {/* Valor */}
           <div className="text-center">
-            <p className="text-teal-300 text-sm mb-1">{packageName}</p>
+            <p className="text-blue-300 text-sm mb-1">{packageName}</p>
             <p className="text-4xl font-bold text-white">
               R$ {amount.toFixed(2).replace('.', ',')}
             </p>
@@ -113,7 +112,7 @@ export default function PaymentModal({
 
           {/* Código PIX */}
           <div>
-            <label className="block text-sm font-medium text-teal-200 mb-2">
+            <label className="block text-sm font-medium text-blue-200 mb-2">
               Ou copie o código:
             </label>
             <div className="flex gap-2">
@@ -121,11 +120,11 @@ export default function PaymentModal({
                 type="text"
                 value={pixCode}
                 readOnly
-                className="flex-1 px-4 py-3 bg-teal-950/50 border border-teal-700/30 rounded-xl text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="flex-1 px-4 py-3 bg-slate-950/50 border border-blue-700/30 rounded-xl text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={handleCopy}
-                className="px-4 py-3 bg-teal-700 hover:bg-teal-600 text-white rounded-xl transition flex items-center gap-2"
+                className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition flex items-center gap-2 whitespace-nowrap"
               >
                 {copied ? (
                   <>
@@ -143,12 +142,12 @@ export default function PaymentModal({
           </div>
 
           {/* Info */}
-          <div className="bg-teal-950/50 border border-teal-700/30 rounded-xl p-4">
-            <p className="text-teal-200 text-sm text-center">
+          <div className="bg-blue-950/50 border border-blue-700/30 rounded-xl p-4">
+            <p className="text-blue-200 text-sm text-center">
               Aguardando confirmação do pagamento...
               <br />
-              <span className="text-teal-300 font-medium">
-                Sua assinatura será ativada automaticamente
+              <span className="text-blue-300 font-medium">
+                Seus créditos serão ativados automaticamente
               </span>
             </p>
           </div>
@@ -165,7 +164,7 @@ export default function PaymentModal({
               <button
                 onClick={handleConfirmPayment}
                 disabled={confirming}
-                className="w-full bg-lime-500 hover:bg-lime-400 text-teal-950 font-bold px-6 py-4 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-4 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {confirming ? (
                   <>
@@ -182,12 +181,12 @@ export default function PaymentModal({
             )}
 
             {/* Já pagou? */}
-            <p className="text-center text-sm text-teal-300">
+            <p className="text-center text-sm text-blue-300">
               Já pagou?{' '}
               <button
                 onClick={handleConfirmPayment}
                 disabled={confirming || confirmed}
-                className="text-lime-400 hover:text-lime-300 font-medium underline disabled:opacity-50"
+                className="text-blue-400 hover:text-blue-300 font-medium underline disabled:opacity-50"
               >
                 Confirme manualmente
               </button>
@@ -196,7 +195,7 @@ export default function PaymentModal({
             {/* Botão Fechar */}
             <button
               onClick={onClose}
-              className="w-full text-teal-300 hover:text-white px-6 py-3 rounded-xl transition text-sm"
+              className="w-full text-blue-300 hover:text-white px-6 py-3 rounded-xl transition text-sm"
             >
               Fechar
             </button>

@@ -114,12 +114,14 @@ export function AvatarFace({
   }, [particles, colors]);
 
   const orbSize = isSpeaking 
-    ? 'scale-105' 
+    ? 'scale-[1.15]' // 🎯 15% MAIOR quando fala (bem visível!)
     : isProcessing 
     ? 'scale-100' 
     : isListening 
     ? 'scale-95'
     : 'scale-90';
+
+  const orbTransition = 'transition-all duration-500 ease-out'; // 🎯 Transição suave
 
   return (
     <div className={`relative w-full h-full flex items-center justify-center overflow-visible ${
@@ -128,6 +130,24 @@ export function AvatarFace({
         : 'bg-gradient-to-br from-gray-100 via-white to-gray-100'
     }`}>
       
+      {/* 🌊 ONDAS DE FUNDO - RINGS CONCÊNTRICOS */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {[1, 2, 3, 4].map((ring) => (
+          <div
+            key={`wave-${ring}`}
+            className="absolute rounded-full border-2"
+            style={{
+              width: `${60 + ring * 15}%`,
+              height: `${60 + ring * 15}%`,
+              borderColor: colors.ring,
+              opacity: isSpeaking ? 0.4 : 0.2, // 🎯 Mais visível quando fala
+              animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`, // 🎯 Mais rápido quando fala
+              animationDelay: `${ring * 0.3}s`,
+            }}
+          />
+        ))}
+      </div>
+
       {/* 🌟 HALO DINÂMICO - LAYER 1 (Externa) */}
       <div 
         className="absolute inset-0 flex items-center justify-center"
@@ -243,9 +263,9 @@ export function AvatarFace({
 
       {/* ORB PRINCIPAL */}
       <div 
-        className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full border shadow-2xl overflow-visible transition-all duration-700 ease-out ${
+        className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full border shadow-2xl overflow-visible ${
           isDark ? 'border-white/5' : 'border-black/5'
-        } ${orbSize}`}
+        } ${orbSize} ${orbTransition}`}
         style={{
           background: isDark 
             ? 'radial-gradient(circle at 40% 40%, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.8))' 

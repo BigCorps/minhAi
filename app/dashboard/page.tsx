@@ -5,7 +5,7 @@ import DashboardClient from './DashboardClient';
 
 export default async function DashboardPage() {
   const user = await getUser();
-
+  
   if (!user) {
     redirect('/login');
   }
@@ -20,16 +20,7 @@ export default async function DashboardPage() {
 
   const totalCompanies = companies?.length || 0;
 
-  // Buscar ID da primeira empresa do usuário (para o CreditsCard)
-  const { data: userCompany } = await supabase
-    .from('companies')
-    .select('id')
-    .limit(1)
-    .single();
-
-  const companyId = userCompany?.id || null;
-
-  // Buscar total de conversas
+  // ✅ Buscar total de conversas
   const { data: conversations } = await supabase
     .from('conversations')
     .select('id')
@@ -37,7 +28,7 @@ export default async function DashboardPage() {
 
   const totalConversations = conversations?.length || 0;
 
-  // Buscar total de FAQs
+  // ✅ Buscar total de FAQs
   const { data: faqs } = await supabase
     .from('faq_entries')
     .select('id')
@@ -45,10 +36,11 @@ export default async function DashboardPage() {
 
   const totalFAQs = faqs?.length || 0;
 
+  // ✅ MUDOU! Passa userId ao invés de companyId
   return (
     <DashboardClient 
       user={user}
-      companyId={companyId}
+      userId={user.id}  // ← MUDOU! Agora passa o ID do usuário
       totalCompanies={totalCompanies}
       totalConversations={totalConversations}
       totalFAQs={totalFAQs}

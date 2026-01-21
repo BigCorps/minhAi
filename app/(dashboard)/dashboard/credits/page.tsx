@@ -142,8 +142,8 @@ export default function CreditsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-8">
             <div className={`h-32 rounded-2xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1,2,3].map(i => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1,2,3,4].map(i => (
                 <div key={i} className={`h-96 rounded-2xl ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}></div>
               ))}
             </div>
@@ -281,7 +281,7 @@ export default function CreditsPage() {
               Planos Disponíveis
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {mainPlans.map((pkg) => (
                 <div
                   key={pkg.id}

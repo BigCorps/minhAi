@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase-client';
+import { createClient } from '@/lib/supabase-browser'; // ← USANDO O ARQUIVO QUE JÁ EXISTE!
 import { User } from '@supabase/supabase-js';
 
 interface Package {
@@ -82,7 +82,6 @@ export default function CreditsPage() {
     try {
       setPurchasing(packageId);
 
-      // Chamar API (agora NÃO precisa de company_id!)
       const response = await fetch('/api/credits/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,11 +94,7 @@ export default function CreditsPage() {
         throw new Error(data.error || 'Erro ao processar compra');
       }
 
-      // Mostrar QR Code do PIX
       alert(`PIX gerado! Código: ${data.pix_code}`);
-      
-      // TODO: Mostrar modal com QR Code e botão copiar
-      // Você pode criar um componente PaymentModal aqui
 
     } catch (error) {
       console.error('Erro ao comprar:', error);
@@ -191,7 +186,6 @@ export default function CreditsPage() {
         <h2 className="text-2xl font-bold mb-6">Histórico de Transações</h2>
         <div className="bg-white rounded-lg shadow-lg p-6">
           <p className="text-gray-500">Em breve...</p>
-          {/* TODO: Listar transações de user_credits_history */}
         </div>
       </div>
     </div>

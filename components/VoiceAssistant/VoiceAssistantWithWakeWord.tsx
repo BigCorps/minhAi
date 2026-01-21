@@ -65,8 +65,11 @@ export function VoiceAssistantWithWakeWord({
     'pare',
     'parar',
     'stop',
+    'silencio',
     'silêncio',
     'cala boca',
+    'cala a boca',
+    'calça boca', // reconhecimento pode confundir
     'chega',
     'obrigado',
     'obrigada',
@@ -289,44 +292,62 @@ export function VoiceAssistantWithWakeWord({
         console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${transcript}"`);
         
         // 🎯 PRIORIDADE 1: Detectar comandos de STOP (mesmo se ocupado!)
-        const normalizedTranscript = transcript.toLowerCase();
-        const hasStopCommand = stopCommands.some(cmd => normalizedTranscript.includes(cmd));
+        const normalizedTranscript = transcript.toLowerCase()
+          .replace(/[.,!?]/g, '') // Remove pontuação
+          .trim();
         
-        if (hasStopCommand && isFinal && (isProcessing || isPlayingAudio)) {
-          console.log('🛑 COMANDO STOP DETECTADO:', transcript);
+        // Frases explícitas de parada (completo e permissivo)
+        const explicitStopPhrases = [
+          'pare',
+          'para',
+          'parar',
+          'cala boca',
+          'cala a boca',
+          'calça boca', // reconhecimento pode confundir
+          'silencio',
+          'silêncio',
+          'stop',
+          'chega',
+          'para de falar',
+          'pare de falar',
+          'para ai',
+          'para aí'
+        ];
+        
+        const hasExplicitStop = explicitStopPhrases.some(phrase => {
+          const normalizedPhrase = phrase.replace(/[.,!?]/g, '').trim();
+          return normalizedTranscript.includes(normalizedPhrase);
+        });
+        
+        console.log('🔍 Verificando comandos de stop:', {
+          transcript: normalizedTranscript,
+          hasExplicitStop,
+          isProcessing,
+          isPlayingAudio,
+          isFinal
+        });
+        
+        if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio)) {
+          console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO:', transcript);
           
-          // Verificar se tem wake word OU se está explicitamente pedindo para parar
+          // Verificar se tem wake word (opcional, mas ajuda a confirmar)
           const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
-          const explicitStopPhrases = [
-            'pare',
-            'para',
-            'para de falar',
-            'pare de falar',
-            'cale a boca',
-            'silêncio',
-            'stop',
-            'chega'
-          ];
           
-          const hasExplicitStop = explicitStopPhrases.some(phrase => 
-            normalizedTranscript.includes(phrase)
-          );
+          console.log('🔍 Análise de stop:', {
+            hasWakeWord: detectionResult?.detected,
+            hasExplicitStop,
+            transcript: normalizedTranscript
+          });
           
-          // Parar se: tem wake word OU tem comando explícito de parada
-          if (detectionResult?.detected || hasExplicitStop) {
-            console.log('✅ PARANDO áudio...', {
-              hasWakeWord: detectionResult?.detected,
-              hasExplicitStop
-            });
-            stopAudioImmediately();
-            return;
-          } else {
-            console.log('⚠️ Stop muito genérico, ignorando para evitar falso positivo');
-          }
+          // Parar SEMPRE que tiver comando explícito (com ou sem wake word)
+          console.log('✅ PARANDO áudio imediatamente!');
+          stopAudioImmediately();
+          return;
         }
         
         // 🎯 PRIORIDADE 2: Se estiver ocupado, ignorar outras capturas
         if (processingQuestion.current || isProcessing || isPlayingAudio) {
+          console.log('⏸️ Ocupado, ignorando captura:', normalizedTranscript);
           return;
         }
         
@@ -983,7 +1004,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: use palavra de ativação!
+                Modo Alexa: use palavra de ativação
               </p>
             </div>
 

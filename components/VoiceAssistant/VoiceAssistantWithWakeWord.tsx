@@ -891,10 +891,10 @@ export function VoiceAssistantWithWakeWord({
   return (
     <div className="w-full max-w-6xl mx-auto">
       <div className="grid md:grid-cols-2 gap-8">
-        <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
+        <div className={`rounded-full shadow-2xl p-8 relative overflow-hidden transition-colors aspect-square flex items-center justify-center ${
           theme === 'dark'
-            ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
-            : 'bg-white border-gray-200'
+            ? 'bg-transparent border-transparent backdrop-blur-xl'
+            : 'bg-transparent border-transparent'
         }`}>
           <button
             onClick={() => setIsFullscreen(true)}

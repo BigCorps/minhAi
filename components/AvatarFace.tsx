@@ -53,8 +53,10 @@ export function AvatarFace({
   const [colors, setColors] = useState(statusColors.idle);
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0)); // 🎵 10 barras
+  const [isBlinking, setIsBlinking] = useState(false); // 👁️ Estado de piscada
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const showFace = !isProcessing && !isSpeaking;
 
@@ -64,6 +66,49 @@ export function AvatarFace({
     else if (isListening) setColors(statusColors.listening);
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
+
+  // 👁️ SISTEMA DE PISCADAS ALEATÓRIAS E NATURAIS
+  useEffect(() => {
+    const scheduleNextBlink = () => {
+      // Intervalo aleatório entre 2 e 6 segundos
+      const nextBlinkDelay = Math.random() * 4000 + 2000;
+      
+      blinkTimeoutRef.current = setTimeout(() => {
+        // Inicia a piscada
+        setIsBlinking(true);
+        
+        // Duração da piscada: 120-180ms (natural)
+        const blinkDuration = Math.random() * 60 + 120;
+        
+        setTimeout(() => {
+          setIsBlinking(false);
+          
+          // Chance de piscada dupla (15% das vezes)
+          if (Math.random() < 0.15) {
+            setTimeout(() => {
+              setIsBlinking(true);
+              setTimeout(() => {
+                setIsBlinking(false);
+                scheduleNextBlink();
+              }, blinkDuration);
+            }, 200); // Pequeno intervalo entre piscadas duplas
+          } else {
+            scheduleNextBlink();
+          }
+        }, blinkDuration);
+      }, nextBlinkDelay);
+    };
+
+    if (showFace) {
+      scheduleNextBlink();
+    }
+
+    return () => {
+      if (blinkTimeoutRef.current) {
+        clearTimeout(blinkTimeoutRef.current);
+      }
+    };
+  }, [showFace]);
 
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
@@ -237,7 +282,7 @@ export function AvatarFace({
         }}
       >
         
-        {/* FACE (Mantida intacta) */}
+        {/* FACE (Com Piscadas) */}
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -266,13 +311,41 @@ export function AvatarFace({
             </defs>
 
             <g filter="url(#softGlow)" className="transition-opacity duration-700">
-              <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-              <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-              <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
+              {/* Olho Esquerdo */}
+              {!isBlinking ? (
+                <>
+                  <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
+                  <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                  <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
+                </>
+              ) : (
+                <path 
+                  d="M 62 85 Q 76 87 90 85" 
+                  stroke={colors.primary} 
+                  strokeWidth="3.5" 
+                  fill="none" 
+                  strokeLinecap="round" 
+                  opacity="0.85"
+                />
+              )}
               
-              <ellipse cx="124" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-              <ellipse cx="121" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-              <circle cx="122" cy="81" r="3.2" fill="white" opacity="0.7" />
+              {/* Olho Direito */}
+              {!isBlinking ? (
+                <>
+                  <ellipse cx="124" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
+                  <ellipse cx="121" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                  <circle cx="122" cy="81" r="3.2" fill="white" opacity="0.7" />
+                </>
+              ) : (
+                <path 
+                  d="M 110 85 Q 124 87 138 85" 
+                  stroke={colors.primary} 
+                  strokeWidth="3.5" 
+                  fill="none" 
+                  strokeLinecap="round" 
+                  opacity="0.85"
+                />
+              )}
             </g>
 
             <g className="transition-opacity duration-700">
@@ -429,7 +502,7 @@ export function AvatarFace({
 
               {/* 🌟 ORBS EXTRAS para ainda mais densidade quando speaking */}
               {isSpeaking && [...Array(12)].map((_, i) => {
-                const angle = (i * Math.PI * 2) / 12 + Math.PI / 12; // Offset para intercalar
+                const angle = (i * Math.PI * 2) / 12 + Math.PI / 12;
                 const radius = 35;
                 const cx = 100 + Math.cos(angle) * radius;
                 const cy = 100 + Math.sin(angle) * radius;
@@ -473,41 +546,4 @@ export function AvatarFace({
         <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
           {[1, 2, 3].map(ring => (
             <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping"
-              style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
-          ))}
-        </div>
-
-        {/* 🎵 GRÁFICO DE ÁUDIO - 10 Barras NA FRENTE (só quando speaking) */}
-        {isSpeaking && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
-            <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
-              {audioLevels.map((level, i) => (
-                <div
-                  key={`audio-bar-${i}`}
-                  className="flex-1 rounded-t-sm transition-all duration-75"
-                  style={{
-                    height: `${Math.max(5, level * 100)}%`,
-                    backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
-                    opacity: 0.7 + level * 0.3, // 🎯 Mais opaco (0.7-1.0)
-                    boxShadow: `0 0 ${level * 12}px ${i % 2 === 0 ? colors.primary : colors.secondary}`, // 🎯 Glow maior
-                    filter: `blur(${0.3}px)`, // 🎯 Menos blur
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          33% { transform: translateY(-20px) translateX(10px); }
-          66% { transform: translateY(-10px) translateX(-10px); }
-        }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-float { animation: float ease-in-out infinite; }
-      `}</style>
-    </div>
-  );
-}
+              style={{ borderColor: colors.ring, animationDuration: `${1

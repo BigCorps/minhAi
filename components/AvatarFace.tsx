@@ -477,9 +477,9 @@ export function AvatarFace({
           ))}
         </div>
 
-        {/* 🎵 GRÁFICO DE ÁUDIO - 10 Barras Pequenas (só quando speaking) */}
+        {/* 🎵 GRÁFICO DE ÁUDIO - 10 Barras NA FRENTE (só quando speaking) */}
         {isSpeaking && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
             <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
               {audioLevels.map((level, i) => (
                 <div
@@ -488,9 +488,9 @@ export function AvatarFace({
                   style={{
                     height: `${Math.max(5, level * 100)}%`,
                     backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
-                    opacity: 0.5 + level * 0.5,
-                    boxShadow: `0 0 ${level * 8}px ${i % 2 === 0 ? colors.primary : colors.secondary}`,
-                    filter: `blur(${0.5}px)`,
+                    opacity: 0.7 + level * 0.3, // 🎯 Mais opaco (0.7-1.0)
+                    boxShadow: `0 0 ${level * 12}px ${i % 2 === 0 ? colors.primary : colors.secondary}`, // 🎯 Glow maior
+                    filter: `blur(${0.3}px)`, // 🎯 Menos blur
                   }}
                 />
               ))}

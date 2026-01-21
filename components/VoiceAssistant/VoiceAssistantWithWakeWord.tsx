@@ -828,7 +828,7 @@ export function VoiceAssistantWithWakeWord({
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) return `Diga: "${wakeWords[0]}" + sua pergunta`;
+    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
     return 'Aguarde...';
   };
 

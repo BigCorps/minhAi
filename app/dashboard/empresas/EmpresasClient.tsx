@@ -166,7 +166,7 @@ export default function EmpresasClient({ companies }: EmpresasClientProps) {
                     <code className={`text-xs px-2 py-1 rounded truncate ${
                       theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'
                     }`}>
-                      /oi/{company.slug}
+                      /ia/{company.slug}
                     </code>
                   </div>
                   
@@ -194,7 +194,7 @@ export default function EmpresasClient({ companies }: EmpresasClientProps) {
                     Editar
                   </Link>
                   <Link
-                    href={`/oi/${company.slug}`}
+                    href={`/ia/${company.slug}`}
                     target="_blank"
                     className="flex-1 px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition text-center text-sm font-medium"
                   >

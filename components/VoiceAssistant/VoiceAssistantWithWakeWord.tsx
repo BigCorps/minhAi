@@ -319,34 +319,29 @@ export function VoiceAssistantWithWakeWord({
           return normalizedTranscript.includes(normalizedPhrase);
         });
         
+        // 🎯 Verificar se está REALMENTE tocando áudio (via ref, não state)
+        const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
+        
         console.log('🔍 Verificando comandos de stop:', {
           transcript: normalizedTranscript,
           hasExplicitStop,
           isProcessing,
           isPlayingAudio,
-          isFinal
+          isActuallyPlaying, // 🎯 Estado real!
+          isFinal,
+          hasAudioRef: currentAudioRef.current !== null
         });
         
-        if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio)) {
+        // 🎯 Parar se tiver comando explícito E (processando OU tocando)
+        if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
           console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO:', transcript);
-          
-          // Verificar se tem wake word (opcional, mas ajuda a confirmar)
-          const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
-          
-          console.log('🔍 Análise de stop:', {
-            hasWakeWord: detectionResult?.detected,
-            hasExplicitStop,
-            transcript: normalizedTranscript
-          });
-          
-          // Parar SEMPRE que tiver comando explícito (com ou sem wake word)
           console.log('✅ PARANDO áudio imediatamente!');
           stopAudioImmediately();
           return;
         }
         
         // 🎯 PRIORIDADE 2: Se estiver ocupado, ignorar outras capturas
-        if (processingQuestion.current || isProcessing || isPlayingAudio) {
+        if (processingQuestion.current || isProcessing || isPlayingAudio || isActuallyPlaying) {
           console.log('⏸️ Ocupado, ignorando captura:', normalizedTranscript);
           return;
         }
@@ -618,9 +613,12 @@ export function VoiceAssistantWithWakeWord({
       
       currentAudioRef.current = audio;
       
+      // 🎯 DEFINIR isPlayingAudio ANTES de tocar (para detecção imediata)
+      setIsPlayingAudio(true);
+      
       audio.onplay = () => {
         console.log('🔊 Áudio iniciou (reconhecimento ATIVO)');
-        setIsPlayingAudio(true);
+        setIsPlayingAudio(true); // Garantir
       };
       
       audio.onended = () => {
@@ -877,7 +875,7 @@ export function VoiceAssistantWithWakeWord({
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
+    if (isListening) return `Diga: "${wakeWords[0]}" + sua pergunta`;
     return 'Aguarde...';
   };
 
@@ -1004,7 +1002,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: use palavra de ativação
+                Modo Alexa: sempre use wake word
               </p>
             </div>
 

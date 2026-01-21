@@ -295,14 +295,33 @@ export function VoiceAssistantWithWakeWord({
         if (hasStopCommand && isFinal && (isProcessing || isPlayingAudio)) {
           console.log('🛑 COMANDO STOP DETECTADO:', transcript);
           
-          // Verificar se tem wake word (para evitar falsos positivos)
+          // Verificar se tem wake word OU se está explicitamente pedindo para parar
           const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
-          if (detectionResult?.detected) {
-            console.log('✅ Wake word confirmada, PARANDO áudio...');
+          const explicitStopPhrases = [
+            'pare',
+            'para',
+            'para de falar',
+            'pare de falar',
+            'cale a boca',
+            'silêncio',
+            'stop',
+            'chega'
+          ];
+          
+          const hasExplicitStop = explicitStopPhrases.some(phrase => 
+            normalizedTranscript.includes(phrase)
+          );
+          
+          // Parar se: tem wake word OU tem comando explícito de parada
+          if (detectionResult?.detected || hasExplicitStop) {
+            console.log('✅ PARANDO áudio...', {
+              hasWakeWord: detectionResult?.detected,
+              hasExplicitStop
+            });
             stopAudioImmediately();
             return;
           } else {
-            console.log('⚠️ Stop sem wake word, ignorando (evitar falso positivo)');
+            console.log('⚠️ Stop muito genérico, ignorando para evitar falso positivo');
           }
         }
         
@@ -559,6 +578,15 @@ export function VoiceAssistantWithWakeWord({
 
       setIsProcessing(false);
 
+      // 🎯 REINICIAR WAKE WORD DETECTION ANTES de tocar o áudio
+      // Isso permite interrupção durante a fala!
+      console.log('🔄 Reiniciando wake word detection ANTES do áudio...');
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 100);
+
       // 🎯 TOCAR RESPOSTA COM VELOCIDADE NATURAL
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -570,7 +598,7 @@ export function VoiceAssistantWithWakeWord({
       currentAudioRef.current = audio;
       
       audio.onplay = () => {
-        console.log('🔊 Áudio iniciou');
+        console.log('🔊 Áudio iniciou (reconhecimento ATIVO)');
         setIsPlayingAudio(true);
       };
       
@@ -580,10 +608,10 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
-        // 🎯 MODELO ALEXA: Voltar para wake word imediatamente
-        console.log('🔄 Reiniciando wake word detection...');
+        // 🎯 Garantir que wake word detection está ativa
+        console.log('🔄 Garantindo wake word detection ativa...');
         setTimeout(() => {
-          if (isActiveRef.current) {
+          if (isActiveRef.current && !recognitionRef.current) {
             startWakeWordDetection();
           }
         }, 200);

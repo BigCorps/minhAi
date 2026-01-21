@@ -18,7 +18,7 @@ export function AvatarFace({
   
   const isDark = theme === 'dark';
 
-  // 🎯 CORES ORIGINAIS PRESERVADAS (Conforme seu código anterior)
+  // 🎯 CORES ORIGINAIS PRESERVADAS
   const statusColors = useMemo(() => ({
     idle: { 
       primary: '#3b82f6',
@@ -63,7 +63,6 @@ export function AvatarFace({
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
 
-  // Partículas
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
     const newParticles = Array.from({ length: particleCount }, () => ({
@@ -75,35 +74,36 @@ export function AvatarFace({
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
-  // Animação do Canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
     let animationId: number;
     let time = 0;
+
     const animate = () => {
-      ctx.clearRect(0, 0, 500, 500);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       time += 0.01;
-      particles.forEach((p, i) => {
-        const x = p.x + Math.sin(time + i) * 40;
-        const y = p.y + Math.cos(time + i * 0.5) * 40;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, p.size * 3);
-        grad.addColorStop(0, i % 2 === 0 ? colors.primary : colors.secondary);
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
+      particles.forEach((particle, i) => {
+        const x = particle.x + Math.sin(time + i) * 40;
+        const y = particle.y + Math.cos(time + i * 0.5) * 40;
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, particle.size * 3);
+        gradient.addColorStop(0, i % 2 === 0 ? colors.primary : colors.secondary);
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(x, y, p.size * 3, 0, Math.PI * 2);
+        ctx.arc(x, y, particle.size * 3, 0, Math.PI * 2);
         ctx.fill();
       });
       animationId = requestAnimationFrame(animate);
     };
     animate();
-    return () => cancelAnimationFrame(animationId);
+    return () => { if (animationId) cancelAnimationFrame(animationId); };
   }, [particles, colors]);
 
-  const orbScale = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
+  const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
@@ -126,30 +126,78 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* 🔄 ANÉIS PONTILHADOS/TRACEJADOS (Recuperados) */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="absolute w-[92%] h-[92%] rounded-full border-2 opacity-20 animate-spin-slow"
-          style={{ borderColor: colors.ring, borderStyle: 'dashed', animationDuration: '20s', aspectRatio: '1/1' }} />
-        <div className="absolute w-[82%] h-[82%] rounded-full border-2 opacity-15 animate-spin-reverse"
-          style={{ borderColor: colors.ring, borderStyle: 'dotted', animationDuration: '25s', aspectRatio: '1/1' }} />
+      {/* 🌟 HALOS DINÂMICOS (Camadas de Luz) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
+        <div 
+          className="rounded-full opacity-20" 
+          style={{ 
+            width: '95%',
+            aspectRatio: '1 / 1',
+            background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, 
+            filter: 'blur(20px)' 
+          }} 
+        />
       </div>
 
-      {/* 🌟 HALOS DINÂMICOS */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
-        <div className="rounded-full opacity-20" style={{ width: '95%', aspectRatio: '1/1', background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, filter: 'blur(20px)' }} />
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 15s linear infinite reverse' }}>
+        <div 
+          className="rounded-full opacity-30" 
+          style={{ 
+            width: '90%',
+            aspectRatio: '1 / 1',
+            background: `conic-gradient(from 45deg, transparent 0%, ${colors.halo} 20%, transparent 40%, ${colors.halo} 60%, transparent 80%, ${colors.halo} 100%)`, 
+            filter: 'blur(15px)' 
+          }} 
+        />
+      </div>
+
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 10s linear infinite' }}>
+        <div 
+          className="rounded-full opacity-40" 
+          style={{ 
+            width: '85%',
+            aspectRatio: '1 / 1',
+            background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, 
+            filter: 'blur(10px)' 
+          }} 
+        />
       </div>
 
       {/* 🌟 PULSO DO HALO */}
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
-        <div className="rounded-full" style={{ width: '80%', aspectRatio: '1/1', boxShadow: `0 0 40px ${colors.halo}40, 0 0 80px ${colors.halo}20, 0 0 120px ${colors.halo}10` }} />
+        <div 
+          className="rounded-full" 
+          style={{ 
+            width: '80%',
+            aspectRatio: '1 / 1',
+            boxShadow: `0 0 40px ${colors.halo}40, 0 0 80px ${colors.halo}20, 0 0 120px ${colors.halo}10` 
+          }} 
+        />
       </div>
 
-      {/* Canvas Decorativo */}
+      {/* Canvas e Partículas decorativas */}
       <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
+      
+      <div className="absolute w-full h-full overflow-visible pointer-events-none">
+        {particles.map((particle, i) => (
+          <div key={i} className="absolute rounded-full opacity-70 animate-float blur-[1px]"
+            style={{
+              left: `${(particle.x / 500) * 100}%`,
+              top: `${(particle.y / 500) * 100}%`,
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
+              backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
+              animationDuration: `${2 + particle.speed * 2}s`,
+              animationDelay: `${i * 0.1}s`,
+              boxShadow: `0 0 ${particle.size * 2}px ${i % 2 === 0 ? colors.primary : colors.secondary}`
+            }}
+          />
+        ))}
+      </div>
 
-      {/* 🔮 ORB PRINCIPAL (CONTAINER) */}
+      {/* 🔮 ORB PRINCIPAL */}
       <div 
-        className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-hidden ${orbScale} transition-all duration-500 ease-out`}
+        className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`}
         style={{
           background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)',
           boxShadow: `0 0 40px ${colors.glow}`,
@@ -158,7 +206,7 @@ export function AvatarFace({
         }}
       >
         
-        {/* FACE ORIGINAL REESTABELECIDA */}
+        {/* FACE (Mantida intacta) */}
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -171,53 +219,107 @@ export function AvatarFace({
                 <stop offset="100%" stopColor="white" stopOpacity="0" />
               </radialGradient>
               <filter id="softGlow">
-                <feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
               <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" />
                 <stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" />
                 <stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
               </linearGradient>
+              <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/>
+                <feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
             </defs>
 
             <g filter="url(#softGlow)" className="transition-opacity duration-700">
               <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
+              <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
               <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
+              
               <ellipse cx="124" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
+              <ellipse cx="121" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
               <circle cx="122" cy="81" r="3.2" fill="white" opacity="0.7" />
             </g>
 
-            <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round">
-              <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
-            </path>
+            <g className="transition-opacity duration-700">
+              <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
+              <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
+                <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
+              </path>
+              <path d="M 70 135 Q 100 147 130 135" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6">
+                <animate attributeName="opacity" values="0.5;0.7;0.5" dur="3s" repeatCount="indefinite" />
+              </path>
+            </g>
+
+            {[...Array(3)].map((_, i) => (
+              <circle key={`ambient-${i}`} cx={50 + i * 50} cy={60} r="2" fill={colors.primary} opacity="0.4">
+                <animate attributeName="cy" values="60;50;60" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.2;0.6;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+              </circle>
+            ))}
           </svg>
         )}
 
-        {/* 🛠️ ORB LÍQUIDO (GOOEY) - MAIS RÁPIDO E PULSANTE */}
+        {/* 🛠️ ORB LÍQUIDO MAIOR E COM MÚLTIPLAS FORMAS */}
         {!showFace && (
-          <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl">
+          <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
-              <filter id="gooey-orb">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10" result="goo" />
+              <filter id="gooey">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo" />
               </filter>
-              <radialGradient id="gooeyGrad">
+              <radialGradient id="coreGradient">
                 <stop offset="0%" stopColor={colors.primary} />
-                <stop offset="100%" stopColor={colors.secondary} stopOpacity="0.8" />
+                <stop offset="50%" stopColor={colors.secondary} />
+                <stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
               </radialGradient>
             </defs>
-            <g filter="url(#gooey-orb)">
-              <circle cx="100" cy="100" r={isSpeaking ? "65" : "55"} fill="url(#gooeyGrad)">
-                <animate attributeName="r" values={isSpeaking ? "60;70;60" : "53;57;53"} dur={isSpeaking ? "0.8s" : "2s"} repeatCount="indefinite" />
+            <g filter="url(#gooey)">
+              {/* Núcleo Central Principal (Aumentado de r=45 para r=60) */}
+              <circle cx="100" cy="100" r="60" fill="url(#coreGradient)">
+                <animate attributeName="r" values="58;63;58" dur="3s" repeatCount="indefinite" />
               </circle>
-              {[...Array(6)].map((_, i) => (
-                <circle key={i} cx="100" cy="100" r={isSpeaking ? "45" : "35"} fill="url(#gooeyGrad)">
+              
+              {/* Segundo Núcleo para criar forma orgânica */}
+              <circle cx="95" cy="105" r="55" fill="url(#coreGradient)" opacity="0.9">
+                 <animate attributeName="r" values="52;60;52" dur="4s" repeatCount="indefinite" />
+                 <animate attributeName="cx" values="95;105;95" dur="5s" repeatCount="indefinite" />
+              </circle>
+
+               {/* Terceiro Núcleo para mais complexidade */}
+               <circle cx="105" cy="95" r="50" fill="url(#coreGradient)" opacity="0.8">
+                 <animate attributeName="r" values="48;55;48" dur="2.5s" repeatCount="indefinite" />
+                 <animate attributeName="cy" values="95;105;95" dur="4.5s" repeatCount="indefinite" />
+              </circle>
+
+              {/* Satélites (Aumentados proporcionalmente) */}
+              {[...Array(isSpeaking ? 8 : 5)].map((_, i) => (
+                <circle
+                  key={i}
+                  cx="100"
+                  cy="100"
+                  // Aumentado de 25/20 para 35/28
+                  r={isSpeaking ? "35" : "28"} 
+                  fill={i % 2 === 0 ? colors.primary : colors.secondary}
+                  opacity="0.7"
+                >
                   <animateTransform
-                    attributeName="transform" type="translate"
-                    values={`0,0; ${Math.cos(i * 60) * (isSpeaking ? 50 : 30)},${Math.sin(i * 60) * (isSpeaking ? 50 : 30)}; 0,0`}
-                    dur={isSpeaking ? "0.6s" : "1.5s"}
+                    attributeName="transform"
+                    type="translate"
+                    // Distância aumentada de 30 para 40
+                    values={`0,0; ${Math.cos(i * Math.PI / 4) * 40},${Math.sin(i * Math.PI / 4) * 40}; 0,0`} 
+                    dur={`${1.5 + i * 0.2}s`}
                     repeatCount="indefinite"
-                    begin={`${i * 0.1}s`}
+                  />
+                  <animate
+                    attributeName="r"
+                    // Animação de tamanho aumentada proporcionalmente
+                    values={isSpeaking ? "32;40;32" : "25;32;25"}
+                    dur={`${1.5 + i * 0.2}s`}
+                    repeatCount="indefinite"
                   />
                 </circle>
               ))}
@@ -225,37 +327,23 @@ export function AvatarFace({
           </svg>
         )}
 
-        {/* ⚡ EFEITO DE RAIO (Scan Line) */}
-        {(isProcessing || isSpeaking) && (
-          <div className="absolute inset-0 z-30 pointer-events-none overflow-hidden rounded-full">
-            <div className="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-white/60 to-transparent animate-scan" />
-          </div>
-        )}
-      </div>
-
-      {/* 📊 WAVEFORM DE ÁUDIO (Recuperado) */}
-      {isSpeaking && (
-        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-1 h-6 items-center z-40">
-          {[...Array(7)].map((_, i) => (
-            <div key={i} className="w-1 rounded-full bg-white animate-wave-bars" 
-              style={{ animationDelay: `${i * 0.1}s`, height: '8px', boxShadow: `0 0 10px ${colors.primary}` }} />
+        {/* Anéis de Status Internos (Ping) */}
+        <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
+          {[1, 2, 3].map(ring => (
+            <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping"
+              style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
           ))}
         </div>
-      )}
+      </div>
 
       <style jsx>{`
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        @keyframes float {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          33% { transform: translateY(-20px) translateX(10px); }
+          66% { transform: translateY(-10px) translateX(-10px); }
+        }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
-        @keyframes wave-bars { 0%, 100% { height: 6px; } 50% { height: 20px; } }
-        
         .animate-float { animation: float ease-in-out infinite; }
-        .animate-spin-slow { animation: spin-slow linear infinite; }
-        .animate-spin-reverse { animation: spin-reverse linear infinite; }
-        .animate-scan { animation: scan 1.8s linear infinite; }
-        .animate-wave-bars { animation: wave-bars 0.5s ease-in-out infinite; }
       `}</style>
     </div>
   );

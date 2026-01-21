@@ -58,6 +58,23 @@ export function VoiceAssistantWithWakeWord({
     'valeu',
   ];
 
+  // 🎯 NOVO: Comandos de INTERRUPÇÃO (para parar áudio)
+  const stopCommands = [
+    'para',
+    'pare',
+    'parar',
+    'stop',
+    'silêncio',
+    'cala boca',
+    'chega',
+    'obrigado',
+    'obrigada',
+    'tá bom',
+    'ta bom',
+    'beleza',
+    'ok entendi',
+  ];
+
   // Inicializar WakeWordDetector
   useEffect(() => {
     console.log('🎯 Inicializando WakeWordDetector...');
@@ -138,6 +155,44 @@ export function VoiceAssistantWithWakeWord({
       setError('Permissão do microfone negada.');
       setPermissionGranted(false);
     }
+  }
+
+  // 🎯 NOVO: Função para parar áudio imediatamente
+  function stopAudioImmediately() {
+    console.log('🛑 STOP: Parando áudio imediatamente');
+    
+    // Parar áudio atual
+    if (currentAudioRef.current) {
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        currentAudioRef.current = null;
+      } catch (e) {
+        console.log('⚠️ Erro ao parar áudio:', e);
+      }
+    }
+    
+    // Parar feedback se estiver tocando
+    if (feedbackAudioRef.current) {
+      try {
+        feedbackAudioRef.current.pause();
+        feedbackAudioRef.current.currentTime = 0;
+        feedbackAudioRef.current = null;
+      } catch (e) {}
+    }
+    
+    // Resetar estados
+    setIsPlayingAudio(false);
+    setIsProcessing(false);
+    processingQuestion.current = false;
+    
+    // Reiniciar wake word detection imediatamente
+    console.log('🔄 Reiniciando wake word após interrupção...');
+    setTimeout(() => {
+      if (isActiveRef.current) {
+        startWakeWordDetection();
+      }
+    }, 200);
   }
 
   async function handleStart() {
@@ -232,13 +287,30 @@ export function VoiceAssistantWithWakeWord({
         // 🎯 DEBUG
         console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${transcript}"`);
         
-        // Só processar se NÃO estiver processando
+        // 🎯 PRIORIDADE 1: Detectar comandos de STOP (mesmo se ocupado!)
+        const normalizedTranscript = transcript.toLowerCase();
+        const hasStopCommand = stopCommands.some(cmd => normalizedTranscript.includes(cmd));
+        
+        if (hasStopCommand && isFinal && (isProcessing || isPlayingAudio)) {
+          console.log('🛑 COMANDO STOP DETECTADO:', transcript);
+          
+          // Verificar se tem wake word (para evitar falsos positivos)
+          const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
+          if (detectionResult?.detected) {
+            console.log('✅ Wake word confirmada, PARANDO áudio...');
+            stopAudioImmediately();
+            return;
+          } else {
+            console.log('⚠️ Stop sem wake word, ignorando (evitar falso positivo)');
+          }
+        }
+        
+        // 🎯 PRIORIDADE 2: Se estiver ocupado, ignorar outras capturas
         if (processingQuestion.current || isProcessing || isPlayingAudio) {
-          console.log('⏸️ Ignorando: sistema ocupado');
           return;
         }
         
-        // 🎯 MODELO ALEXA: Detectar wake word + pergunta
+        // 🎯 PRIORIDADE 3: MODELO ALEXA: Detectar wake word + pergunta
         const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
         
         if (detectionResult?.detected && detectionResult.keyword) {

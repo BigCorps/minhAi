@@ -52,7 +52,7 @@ export function AvatarFace({
 
   const [colors, setColors] = useState(statusColors.idle);
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
-  const [audioLevels, setAudioLevels] = useState<number[]>(Array(32).fill(0));
+  const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0)); // 🎵 10 barras
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -76,13 +76,13 @@ export function AvatarFace({
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
-  // 🎵 SIMULAR AUDIOLEVELS (Gráfico de áudio)
+  // 🎵 SIMULAR AUDIOLEVELS (Gráfico de áudio) - SÓ QUANDO FALANDO
   useEffect(() => {
-    if (isSpeaking || isProcessing) {
+    if (isSpeaking) {
       audioIntervalRef.current = setInterval(() => {
         setAudioLevels(prev => {
           const newLevels = prev.map((_, i) => {
-            const base = Math.random() * (isSpeaking ? 0.8 : 0.5);
+            const base = Math.random() * 0.8;
             const wave = Math.sin(Date.now() / 200 + i * 0.5) * 0.3;
             return Math.max(0, Math.min(1, base + wave));
           });
@@ -94,7 +94,7 @@ export function AvatarFace({
         clearInterval(audioIntervalRef.current);
         audioIntervalRef.current = null;
       }
-      setAudioLevels(Array(32).fill(0));
+      setAudioLevels(Array(10).fill(0)); // 🎵 10 barras zeradas
     }
     
     return () => {
@@ -103,7 +103,7 @@ export function AvatarFace({
         audioIntervalRef.current = null;
       }
     };
-  }, [isSpeaking, isProcessing]);
+  }, [isSpeaking]); // 🎯 SÓ isSpeaking (não processing)
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -477,10 +477,10 @@ export function AvatarFace({
           ))}
         </div>
 
-        {/* 🎵 GRÁFICO DE ÁUDIO - Barras Verticais */}
-        {(isSpeaking || isProcessing) && (
+        {/* 🎵 GRÁFICO DE ÁUDIO - 10 Barras Pequenas (só quando speaking) */}
+        {isSpeaking && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
-            <div className="flex items-end justify-center gap-[2px] h-[60%] w-[80%]">
+            <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
               {audioLevels.map((level, i) => (
                 <div
                   key={`audio-bar-${i}`}
@@ -488,8 +488,8 @@ export function AvatarFace({
                   style={{
                     height: `${Math.max(5, level * 100)}%`,
                     backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
-                    opacity: 0.6 + level * 0.4,
-                    boxShadow: `0 0 ${level * 10}px ${i % 2 === 0 ? colors.primary : colors.secondary}`,
+                    opacity: 0.5 + level * 0.5,
+                    boxShadow: `0 0 ${level * 8}px ${i % 2 === 0 ? colors.primary : colors.secondary}`,
                     filter: `blur(${0.5}px)`,
                   }}
                 />

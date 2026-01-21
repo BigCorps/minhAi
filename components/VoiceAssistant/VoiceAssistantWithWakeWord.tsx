@@ -227,7 +227,7 @@ export function VoiceAssistantWithWakeWord({
       if (isActiveRef.current) {
         startWakeWordDetection();
       }
-    }, 500);
+    }, 300);
   }
 
   function startWakeWordDetection() {
@@ -469,7 +469,7 @@ export function VoiceAssistantWithWakeWord({
                   lastRestartTime.current = Date.now();
                   startWakeWordDetection();
                 }
-              }, 3000);
+              }, 1500);
               return;
             }
             
@@ -487,7 +487,7 @@ export function VoiceAssistantWithWakeWord({
               } else {
                 console.log('⏸️ Restart cancelado: sistema ocupado');
               }
-            }, 500);
+            }, 300);
           } else {
             console.log('⏸️ Restart suspenso: processando ou tocando áudio');
           }
@@ -703,7 +703,7 @@ export function VoiceAssistantWithWakeWord({
             startWakeWordDetection();
           }
         }
-      }, 3000);
+      }, 1500);
 
       // 🎯 MOBILE FIX: Garantir que play() seja executado
       try {

@@ -125,7 +125,7 @@ export function AvatarFace({
 
   return (
     <div className={`relative w-full h-full flex items-center justify-center overflow-visible ${
-      isDark ? 'bg-slate-900' : 'bg-gray-100'
+      isDark ? 'bg-slate-900' : 'bg-slate-50'
     }`}>
       
       {/* 🌊 ONDAS DE FUNDO - APENAS 2 RINGS INTERNOS */}
@@ -264,8 +264,8 @@ export function AvatarFace({
         className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full overflow-visible ${orbSize} ${orbTransition}`}
         style={{
           background: isDark 
-            ? 'rgba(15, 23, 42, 0.5)'  // 🎯 MESMO que bg-slate-900/50
-            : 'rgba(255, 255, 255, 1)', // 🎯 MESMO que bg-white
+            ? 'rgba(15, 23, 42, 0.5)'   // Dark: bg-slate-900/50
+            : 'rgba(248, 250, 252, 0.8)', // Light: bg-slate-50/80 (mais neutro)
           boxShadow: `0 0 40px ${colors.glow}`
         }}
       >

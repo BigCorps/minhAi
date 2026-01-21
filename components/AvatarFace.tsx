@@ -18,7 +18,6 @@ export function AvatarFace({
   
   const isDark = theme === 'dark';
 
-  // 🎯 CORES ORIGINAIS PRESERVADAS
   const statusColors = useMemo(() => ({
     idle: { 
       primary: '#3b82f6',
@@ -74,41 +73,12 @@ export function AvatarFace({
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationId: number;
-    let time = 0;
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      time += 0.01;
-      particles.forEach((particle, i) => {
-        const x = particle.x + Math.sin(time + i) * 40;
-        const y = particle.y + Math.cos(time + i * 0.5) * 40;
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, particle.size * 3);
-        gradient.addColorStop(0, i % 2 === 0 ? colors.primary : colors.secondary);
-        gradient.addColorStop(1, 'transparent');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(x, y, particle.size * 3, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      animationId = requestAnimationFrame(animate);
-    };
-    animate();
-    return () => { if (animationId) cancelAnimationFrame(animationId); };
-  }, [particles, colors]);
-
-  const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
+  const orbSize = isSpeaking ? 'scale-[1.2]' : isProcessing ? 'scale-110' : 'scale-95';
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
       
-      {/* 🌊 ONDAS DE FUNDO (Anéis de Borda) */}
+      {/* 🌊 ANÉIS EXTERNOS (Padrão Original) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
           <div
@@ -126,87 +96,31 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* 🌟 HALOS DINÂMICOS (Camadas de Luz) */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
-        <div 
-          className="rounded-full opacity-20" 
-          style={{ 
-            width: '95%',
-            aspectRatio: '1 / 1',
-            background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, 
-            filter: 'blur(20px)' 
-          }} 
-        />
-      </div>
-
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 15s linear infinite reverse' }}>
-        <div 
-          className="rounded-full opacity-30" 
-          style={{ 
-            width: '90%',
-            aspectRatio: '1 / 1',
-            background: `conic-gradient(from 45deg, transparent 0%, ${colors.halo} 20%, transparent 40%, ${colors.halo} 60%, transparent 80%, ${colors.halo} 100%)`, 
-            filter: 'blur(15px)' 
-          }} 
-        />
-      </div>
-
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 10s linear infinite' }}>
-        <div 
-          className="rounded-full opacity-40" 
-          style={{ 
-            width: '85%',
-            aspectRatio: '1 / 1',
-            background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, 
-            filter: 'blur(10px)' 
-          }} 
-        />
-      </div>
-
-      {/* 🌟 PULSO DO HALO */}
+      {/* 🌟 HALOS DE LUZ */}
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
         <div 
           className="rounded-full" 
           style={{ 
-            width: '80%',
+            width: '85%',
             aspectRatio: '1 / 1',
-            boxShadow: `0 0 40px ${colors.halo}40, 0 0 80px ${colors.halo}20, 0 0 120px ${colors.halo}10` 
+            boxShadow: `0 0 50px ${colors.halo}50, inset 0 0 30px ${colors.halo}20`,
+            filter: 'blur(15px)'
           }} 
         />
       </div>
 
-      {/* Canvas e Partículas decorativas */}
-      <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
-      
-      <div className="absolute w-full h-full overflow-visible pointer-events-none">
-        {particles.map((particle, i) => (
-          <div key={i} className="absolute rounded-full opacity-70 animate-float blur-[1px]"
-            style={{
-              left: `${(particle.x / 500) * 100}%`,
-              top: `${(particle.y / 500) * 100}%`,
-              width: `${particle.size}px`,
-              height: `${particle.size}px`,
-              backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
-              animationDuration: `${2 + particle.speed * 2}s`,
-              animationDelay: `${i * 0.1}s`,
-              boxShadow: `0 0 ${particle.size * 2}px ${i % 2 === 0 ? colors.primary : colors.secondary}`
-            }}
-          />
-        ))}
-      </div>
-
-      {/* 🔮 ORB PRINCIPAL */}
+      {/* 🔮 CONTAINER DO ORBE PRINCIPAL */}
       <div 
-        className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`}
+        className={`absolute inset-0 m-auto w-[75%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-700 ease-out`}
         style={{
-          background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)',
-          boxShadow: `0 0 40px ${colors.glow}`,
-          backdropFilter: 'blur(8px)',
+          background: isDark ? 'rgba(15, 23, 42, 0.3)' : 'rgba(248, 250, 252, 0.5)',
+          boxShadow: `0 0 60px ${colors.glow}`,
+          backdropFilter: 'blur(12px)',
           aspectRatio: '1 / 1' 
         }}
       >
         
-        {/* FACE (Mantida intacta) */}
+        {/* MODO ROSTO (Perfeito) */}
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -214,135 +128,98 @@ export function AvatarFace({
                 <stop offset="0%" stopColor={colors.primary} stopOpacity="0.9" />
                 <stop offset="100%" stopColor={colors.primary} stopOpacity="0.3" />
               </radialGradient>
-              <radialGradient id="glowGradient">
-                <stop offset="0%" stopColor="white" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="white" stopOpacity="0" />
-              </radialGradient>
-              <filter id="softGlow">
-                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-              <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" />
-                <stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" />
-                <stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
-              </linearGradient>
-              <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/>
-                <feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
-                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
+              <filter id="softGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
-
-            <g filter="url(#softGlow)" className="transition-opacity duration-700">
-              <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-              <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-              <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
-              
-              <ellipse cx="124" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-              <ellipse cx="121" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-              <circle cx="122" cy="81" r="3.2" fill="white" opacity="0.7" />
+            <g filter="url(#softGlow)">
+              <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" />
+              <ellipse cx="124" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" />
             </g>
-
-            <g className="transition-opacity duration-700">
-              <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
-              <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
-                <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
-              </path>
-              <path d="M 70 135 Q 100 147 130 135" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6">
-                <animate attributeName="opacity" values="0.5;0.7;0.5" dur="3s" repeatCount="indefinite" />
-              </path>
-            </g>
-
-            {[...Array(3)].map((_, i) => (
-              <circle key={`ambient-${i}`} cx={50 + i * 50} cy={60} r="2" fill={colors.primary} opacity="0.4">
-                <animate attributeName="cy" values="60;50;60" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.2;0.6;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
-              </circle>
-            ))}
+            <path d="M 68 136 Q 100 150 132 136" stroke={colors.primary} strokeWidth="8" fill="none" strokeLinecap="round" opacity="0.8">
+               <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 155 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
+            </path>
           </svg>
         )}
 
-        {/* 🛠️ ORB LÍQUIDO MAIOR E COM MÚLTIPLAS FORMAS */}
+        {/* 🛠️ NOVO MODO ORBE DINÂMICO (Várias Formas Fluidas) */}
         {!showFace && (
-          <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
+          <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl">
             <defs>
-              <filter id="gooey">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
-                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo" />
+              {/* Filtro Gooey Potencializado */}
+              <filter id="gooey-intense">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="goo" />
               </filter>
-              <radialGradient id="coreGradient">
+              <radialGradient id="liquidGradient">
                 <stop offset="0%" stopColor={colors.primary} />
-                <stop offset="50%" stopColor={colors.secondary} />
-                <stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
+                <stop offset="70%" stopColor={colors.secondary} />
+                <stop offset="100%" stopColor={colors.primary} stopOpacity="0.6" />
               </radialGradient>
             </defs>
-            <g filter="url(#gooey)">
-              {/* Núcleo Central Principal (Aumentado de r=45 para r=60) */}
-              <circle cx="100" cy="100" r="60" fill="url(#coreGradient)">
-                <animate attributeName="r" values="58;63;58" dur="3s" repeatCount="indefinite" />
-              </circle>
-              
-              {/* Segundo Núcleo para criar forma orgânica */}
-              <circle cx="95" cy="105" r="55" fill="url(#coreGradient)" opacity="0.9">
-                 <animate attributeName="r" values="52;60;52" dur="4s" repeatCount="indefinite" />
-                 <animate attributeName="cx" values="95;105;95" dur="5s" repeatCount="indefinite" />
-              </circle>
-
-               {/* Terceiro Núcleo para mais complexidade */}
-               <circle cx="105" cy="95" r="50" fill="url(#coreGradient)" opacity="0.8">
-                 <animate attributeName="r" values="48;55;48" dur="2.5s" repeatCount="indefinite" />
-                 <animate attributeName="cy" values="95;105;95" dur="4.5s" repeatCount="indefinite" />
-              </circle>
-
-              {/* Satélites (Aumentados proporcionalmente) */}
-              {[...Array(isSpeaking ? 8 : 5)].map((_, i) => (
+            
+            <g filter="url(#gooey-intense)">
+              {/* Criamos 6 orbes independentes que se fundem */}
+              {[...Array(6)].map((_, i) => (
                 <circle
                   key={i}
                   cx="100"
                   cy="100"
-                  // Aumentado de 25/20 para 35/28
-                  r={isSpeaking ? "35" : "28"} 
-                  fill={i % 2 === 0 ? colors.primary : colors.secondary}
-                  opacity="0.7"
+                  r={isSpeaking ? 45 : 35}
+                  fill="url(#liquidGradient)"
+                  opacity="0.9"
                 >
                   <animateTransform
                     attributeName="transform"
                     type="translate"
-                    // Distância aumentada de 30 para 40
-                    values={`0,0; ${Math.cos(i * Math.PI / 4) * 40},${Math.sin(i * Math.PI / 4) * 40}; 0,0`} 
-                    dur={`${1.5 + i * 0.2}s`}
+                    // Movimento circular/errático mais intenso
+                    values={`
+                      0,0; 
+                      ${Math.cos(i * 60) * (isSpeaking ? 50 : 30)},${Math.sin(i * 60) * (isSpeaking ? 50 : 30)}; 
+                      ${Math.cos(i * 60 + 120) * (isSpeaking ? 45 : 25)},${Math.sin(i * 60 + 120) * (isSpeaking ? 45 : 25)}; 
+                      0,0
+                    `}
+                    dur={`${1.5 + i * 0.3}s`}
                     repeatCount="indefinite"
                   />
                   <animate
                     attributeName="r"
-                    // Animação de tamanho aumentada proporcionalmente
-                    values={isSpeaking ? "32;40;32" : "25;32;25"}
-                    dur={`${1.5 + i * 0.2}s`}
+                    values={isSpeaking ? "40;55;40" : "30;42;30"}
+                    dur={`${2 + i * 0.5}s`}
                     repeatCount="indefinite"
                   />
                 </circle>
               ))}
+
+              {/* Núcleo central de "cola" para garantir unidade */}
+              <circle cx="100" cy="100" r={isSpeaking ? 50 : 40} fill="url(#liquidGradient)">
+                <animate attributeName="r" values="40;55;40" dur="2s" repeatCount="indefinite" />
+              </circle>
             </g>
           </svg>
         )}
 
-        {/* Anéis de Status Internos (Ping) */}
-        <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
-          {[1, 2, 3].map(ring => (
-            <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping"
-              style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
-          ))}
-        </div>
+        {/* Camada de Brilho de Vidro (Refração) */}
+        <div className="absolute inset-0 rounded-full pointer-events-none border border-white/20 bg-gradient-to-tr from-white/10 to-transparent" />
+      </div>
+
+      {/* Partículas flutuantes externas */}
+      <div className="absolute inset-0 pointer-events-none">
+        {particles.map((p, i) => (
+          <div key={i} className="absolute rounded-full blur-[1px] animate-float"
+            style={{
+              left: `${(p.x / 500) * 100}%`, top: `${(p.y / 500) * 100}%`,
+              width: `${p.size}px`, height: `${p.size}px`,
+              backgroundColor: colors.primary, boxShadow: `0 0 10px ${colors.primary}`,
+              animationDuration: `${2 + p.speed * 2}s`
+            }}
+          />
+        ))}
       </div>
 
       <style jsx>{`
         @keyframes float {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          33% { transform: translateY(-20px) translateX(10px); }
-          66% { transform: translateY(-10px) translateX(-10px); }
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(10px, -20px); }
         }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-float { animation: float ease-in-out infinite; }
       `}</style>
     </div>

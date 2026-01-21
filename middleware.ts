@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
     '/',
     '/login',
     '/auth/callback',
-    '/ia', // Assistentes públicos
+    '/ia', // Assistentes públicos (verificação de créditos feita na página)
   ];
 
   // Verificar se é rota pública
@@ -21,6 +21,7 @@ export async function middleware(request: NextRequest) {
   );
 
   // Se for rota pública, permitir acesso
+  // (A verificação de créditos é feita dentro da página do slug)
   if (isPublicRoute) {
     console.log('Rota pública, permitindo acesso');
     return NextResponse.next();

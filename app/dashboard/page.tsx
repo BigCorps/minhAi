@@ -1,6 +1,5 @@
 // app/dashboard/page.tsx (Server Component)
 import { createClient, getUser } from '@/lib/supabase-server';
-import { UserProfile } from '@/components/UserProfile';
 import { redirect } from 'next/navigation';
 import DashboardClient from './DashboardClient';
 
@@ -21,6 +20,15 @@ export default async function DashboardPage() {
 
   const totalCompanies = companies?.length || 0;
 
+  // Buscar ID da primeira empresa do usuário (para o CreditsCard)
+  const { data: userCompany } = await supabase
+    .from('companies')
+    .select('id')
+    .limit(1)
+    .single();
+
+  const companyId = userCompany?.id || null;
+
   // Buscar total de conversas
   const { data: conversations } = await supabase
     .from('conversations')
@@ -40,6 +48,7 @@ export default async function DashboardPage() {
   return (
     <DashboardClient 
       user={user}
+      companyId={companyId}
       totalCompanies={totalCompanies}
       totalConversations={totalConversations}
       totalFAQs={totalFAQs}

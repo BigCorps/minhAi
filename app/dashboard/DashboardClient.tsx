@@ -5,16 +5,19 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { UserProfile } from '@/components/UserProfile';
+import { CreditsCard } from '@/components/CreditsCard';
 
 interface DashboardClientProps {
   user: any;
+  companyId: string | null;
   totalCompanies: number;
   totalConversations: number;
   totalFAQs: number;
 }
 
 export default function DashboardClient({ 
-  user, 
+  user,
+  companyId,
   totalCompanies, 
   totalConversations, 
   totalFAQs 
@@ -99,6 +102,13 @@ export default function DashboardClient({
             Bem-vindo ao Painel de Controle do iTend
           </p>
         </div>
+
+        {/* 💳 CARD DE CRÉDITOS - DESTAQUE NO TOPO */}
+        {companyId && (
+          <div className="mb-8">
+            <CreditsCard companyId={companyId} theme={theme} />
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Link

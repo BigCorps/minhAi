@@ -263,8 +263,10 @@ export function AvatarFace({
       <div 
         className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full overflow-visible ${orbSize} ${orbTransition}`}
         style={{
-          background: 'transparent', // 🎯 TRANSPARENTE - sem degradê!
-          boxShadow: `0 0 40px ${colors.glow}` // Só o glow externo
+          background: isDark 
+            ? 'rgba(15, 23, 42, 0.5)'  // 🎯 MESMO que bg-slate-900/50
+            : 'rgba(255, 255, 255, 1)', // 🎯 MESMO que bg-white
+          boxShadow: `0 0 40px ${colors.glow}`
         }}
       >
         

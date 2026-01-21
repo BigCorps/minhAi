@@ -31,13 +31,12 @@ export function VoiceAssistantWithWakeWord({
 
   const recognitionRef = useRef<any>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const feedbackAudioRef = useRef<HTMLAudioElement | null>(null); // 🎯 NOVO
+  const feedbackAudioRef = useRef<HTMLAudioElement | null>(null);
   const isActiveRef = useRef(true);
   const lastRestartAttempt = useRef<number>(0);
   const audioUnlocked = useRef<boolean>(false);
   const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null);
   const processingQuestion = useRef<boolean>(false);
-  const accumulatedTranscript = useRef<string>(''); // 🎯 MOBILE: Acumular transcrição
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -198,36 +197,40 @@ export function VoiceAssistantWithWakeWord({
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      recognition.continuous = true;
+      // 🎯 MOBILE: continuous=false para resetar contexto entre perguntas
+      recognition.continuous = isMobile ? false : true;
       recognition.interimResults = true;
       recognition.lang = 'pt-BR';
       recognition.maxAlternatives = isMobile ? 3 : 5;
 
       recognition.onstart = () => {
-        console.log('🎤 Wake word detection ATIVA');
+        console.log(`🎤 Wake word detection ATIVA (continuous=${recognition.continuous})`);
         setIsListening(true);
         setError('');
-        accumulatedTranscript.current = ''; // 🎯 Limpar acumulador
       };
 
       recognition.onresult = (event: any) => {
-        // 🎯 MOBILE: Acumular TODA a transcrição (não só current)
-        let fullTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          fullTranscript += event.results[i][0].transcript + ' ';
-        }
-        fullTranscript = fullTranscript.toLowerCase().trim();
+        // 🎯 MOBILE: Pegar a transcrição mais recente E completa
+        let transcript = '';
         
-        const current = event.resultIndex;
-        const transcript = fullTranscript; // Usar transcrição completa
-        const isFinal = event.results[current].isFinal;
-        
-        // 🎯 MOBILE DEBUG: Log todas transcrições
-        if (!isFinal) {
-          console.log('📝 Interim:', transcript);
-        } else {
-          console.log('✅ Final:', transcript);
+        // Tentar pegar a última transcrição final disponível
+        for (let i = event.results.length - 1; i >= 0; i--) {
+          if (event.results[i].isFinal) {
+            transcript = event.results[i][0].transcript;
+            break;
+          }
         }
+        
+        // Se não tiver final, pegar a mais recente (interim)
+        if (!transcript) {
+          transcript = event.results[event.results.length - 1][0].transcript;
+        }
+        
+        transcript = transcript.toLowerCase().trim();
+        const isFinal = event.results[event.results.length - 1].isFinal;
+        
+        // 🎯 DEBUG
+        console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${transcript}"`);
         
         // Só processar se NÃO estiver processando
         if (processingQuestion.current || isProcessing || isPlayingAudio) {
@@ -240,17 +243,11 @@ export function VoiceAssistantWithWakeWord({
         
         if (detectionResult?.detected && detectionResult.keyword) {
           console.log(`🔍 Wake word detectada: "${detectionResult.keyword}"`);
-          console.log(`📝 Transcrição completa: "${transcript}"`);
-          console.log(`✓ isFinal: ${isFinal}`);
+          console.log(`📝 Transcrição: "${transcript}"`);
           
-          // 🎯 MOBILE FIX: Processar SEMPRE que detectar wake word + ter pelo menos 3 palavras
-          const words = transcript.split(' ').filter(w => w.length > 1);
-          const hasEnoughWords = words.length >= 3; // Wake word + pelo menos 2 palavras
-          
-          console.log(`📊 Palavras: ${words.length} → ${hasEnoughWords ? 'OK' : 'POUCO'}`);
-          
-          if (isFinal || (hasEnoughWords && !processingQuestion.current)) {
-            console.log('✅ Wake word + pergunta:', transcript);
+          // 🎯 Só processar se for FINAL (mais confiável)
+          if (isFinal) {
+            console.log('✅ Processando pergunta completa');
             
             // Unlock audio
             if (!audioUnlocked.current) {
@@ -271,7 +268,7 @@ export function VoiceAssistantWithWakeWord({
               processWakeWordQuestion(transcript);
             }
           } else {
-            console.log('⏳ Aguardando mais palavras ou isFinal...');
+            console.log('⏳ Aguardando transcrição final...');
           }
         }
       };
@@ -293,32 +290,58 @@ export function VoiceAssistantWithWakeWord({
       recognition.onend = () => {
         console.log('🔴 Recognition parou');
         
-        // 🎯 MOBILE FIX: Não mudar isListening se estiver processando/tocando
-        if (!processingQuestion.current && !isProcessing && !isPlayingAudio) {
-          setIsListening(false);
-        }
+        // 🎯 MOBILE (continuous=false): Sempre reinicia automaticamente
+        // 🎯 DESKTOP (continuous=true): Só reinicia se não estiver ocupado
         
-        // 🎯 CRÍTICO: Só reiniciar se NÃO estiver processando/tocando
-        if (isActiveRef.current && 
-            !processingQuestion.current && 
-            !isProcessing && 
-            !isPlayingAudio && 
-            permissionGranted) {
+        if (isMobile) {
+          // Mobile: Sempre desliga isListening quando parar
+          setIsListening(false);
           
-          console.log('🔄 Auto-restart em 500ms...');
-          setTimeout(() => {
-            // Verificar novamente antes de reiniciar
-            if (isActiveRef.current && 
-                !processingQuestion.current && 
-                !isProcessing && 
-                !isPlayingAudio) {
-              startWakeWordDetection();
-            } else {
-              console.log('⏸️ Restart cancelado: sistema ocupado');
-            }
-          }, 500);
+          // Reiniciar SEMPRE (exceto se processando/tocando)
+          if (isActiveRef.current && 
+              !processingQuestion.current && 
+              !isProcessing && 
+              !isPlayingAudio && 
+              permissionGranted) {
+            
+            console.log('📱 Mobile: Auto-restart em 300ms...');
+            setTimeout(() => {
+              if (isActiveRef.current && 
+                  !processingQuestion.current && 
+                  !isProcessing && 
+                  !isPlayingAudio) {
+                startWakeWordDetection();
+              }
+            }, 300);
+          } else {
+            console.log('⏸️ Mobile: Restart suspenso (ocupado)');
+          }
         } else {
-          console.log('⏸️ Restart suspenso: processando ou tocando áudio');
+          // Desktop: Comportamento original
+          if (!processingQuestion.current && !isProcessing && !isPlayingAudio) {
+            setIsListening(false);
+          }
+          
+          if (isActiveRef.current && 
+              !processingQuestion.current && 
+              !isProcessing && 
+              !isPlayingAudio && 
+              permissionGranted) {
+            
+            console.log('🔄 Desktop: Auto-restart em 500ms...');
+            setTimeout(() => {
+              if (isActiveRef.current && 
+                  !processingQuestion.current && 
+                  !isProcessing && 
+                  !isPlayingAudio) {
+                startWakeWordDetection();
+              } else {
+                console.log('⏸️ Restart cancelado: sistema ocupado');
+              }
+            }, 500);
+          } else {
+            console.log('⏸️ Restart suspenso: processando ou tocando áudio');
+          }
         }
       };
 

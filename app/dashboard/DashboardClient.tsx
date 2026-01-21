@@ -9,7 +9,7 @@ import { CreditsCard } from '@/components/CreditsCard';
 
 interface DashboardClientProps {
   user: any;
-  companyId: string | null;
+  userId: string; // ← MUDOU! Agora é userId
   totalCompanies: number;
   totalConversations: number;
   totalFAQs: number;
@@ -17,23 +17,18 @@ interface DashboardClientProps {
 
 export default function DashboardClient({ 
   user,
-  companyId,
+  userId, // ← MUDOU!
   totalCompanies, 
   totalConversations, 
   totalFAQs 
 }: DashboardClientProps) {
-  // SEMPRE inicia com dark, só muda se o sistema for explicitamente light
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
-    // Detecta APENAS se o sistema está explicitamente em light mode
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-    
-    // Se o sistema está em light mode, usa light. Caso contrário, mantém dark
     if (mediaQuery.matches) {
       setTheme('light');
     }
-    // Se for dark ou não houver preferência, mantém dark (que já é o padrão)
   }, []);
 
   return (
@@ -104,9 +99,9 @@ export default function DashboardClient({
         </div>
 
         {/* 💳 CARD DE CRÉDITOS - DESTAQUE NO TOPO */}
-        {companyId && (
+        {userId && (
           <div className="mb-8">
-            <CreditsCard companyId={companyId} theme={theme} />
+            <CreditsCard userId={userId} theme={theme} />
           </div>
         )}
 
@@ -271,7 +266,7 @@ export default function DashboardClient({
                 </p>
                 <Link
                   href="/dashboard/empresas/nova"
-                  className="inline-block px-4 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition text-sm font-semibold"
+                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold"
                 >
                   + Criar Primeira Empresa
                 </Link>

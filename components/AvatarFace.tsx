@@ -130,9 +130,9 @@ export function AvatarFace({
         : 'bg-gradient-to-br from-gray-100 via-white to-gray-100'
     }`}>
       
-      {/* 🌊 ONDAS DE FUNDO - RINGS CONCÊNTRICOS */}
+      {/* 🌊 ONDAS DE FUNDO - APENAS 2 RINGS INTERNOS */}
       <div className="absolute inset-0 flex items-center justify-center">
-        {[1, 2, 3, 4].map((ring) => (
+        {[1, 2].map((ring) => (
           <div
             key={`wave-${ring}`}
             className="absolute rounded-full border-2"
@@ -263,9 +263,7 @@ export function AvatarFace({
 
       {/* ORB PRINCIPAL */}
       <div 
-        className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full border shadow-2xl overflow-visible ${
-          isDark ? 'border-white/5' : 'border-black/5'
-        } ${orbSize} ${orbTransition}`}
+        className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full shadow-2xl overflow-visible ${orbSize} ${orbTransition}`}
         style={{
           background: isDark 
             ? 'radial-gradient(circle at 40% 40%, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.8))' 

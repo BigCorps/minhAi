@@ -38,6 +38,8 @@ export function VoiceAssistantWithWakeWord({
   const audioUnlocked = useRef<boolean>(false);
   const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null);
   const processingQuestion = useRef<boolean>(false);
+  const consecutiveRestarts = useRef<number>(0);
+  const lastRestartTime = useRef<number>(0);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -396,7 +398,14 @@ export function VoiceAssistantWithWakeWord({
       };
 
       recognition.onend = () => {
-        console.log('🔴 Recognition parou');
+        console.log('🔴 Recognition parou', {
+          isActive: isActiveRef.current,
+          processingQuestion: processingQuestion.current,
+          isProcessing,
+          isPlayingAudio,
+          hasAudioRef: currentAudioRef.current !== null,
+          permissionGranted
+        });
         
         // 🎯 MOBILE (continuous=false): Sempre reinicia automaticamente
         // 🎯 DESKTOP (continuous=true): Só reinicia se não estiver ocupado
@@ -436,12 +445,44 @@ export function VoiceAssistantWithWakeWord({
               !isPlayingAudio && 
               permissionGranted) {
             
-            console.log('🔄 Desktop: Auto-restart em 500ms...');
+            // 🎯 PREVENIR LOOP INFINITO
+            const now = Date.now();
+            const timeSinceLastRestart = now - lastRestartTime.current;
+            
+            // Se último restart foi há menos de 2 segundos, é loop
+            if (timeSinceLastRestart < 2000) {
+              consecutiveRestarts.current += 1;
+            } else {
+              consecutiveRestarts.current = 0; // Reset se passou tempo suficiente
+            }
+            
+            // Se mais de 3 restarts consecutivos rápidos, aguardar mais
+            if (consecutiveRestarts.current >= 3) {
+              console.log('⚠️ Loop detectado! Aguardando 3s antes de reiniciar...');
+              consecutiveRestarts.current = 0;
+              
+              setTimeout(() => {
+                if (isActiveRef.current && 
+                    !processingQuestion.current && 
+                    !isProcessing && 
+                    !isPlayingAudio) {
+                  lastRestartTime.current = Date.now();
+                  startWakeWordDetection();
+                }
+              }, 3000);
+              return;
+            }
+            
+            console.log('🔄 Desktop: Auto-restart em 500ms...', {
+              consecutiveRestarts: consecutiveRestarts.current
+            });
+            
             setTimeout(() => {
               if (isActiveRef.current && 
                   !processingQuestion.current && 
                   !isProcessing && 
                   !isPlayingAudio) {
+                lastRestartTime.current = Date.now();
                 startWakeWordDetection();
               } else {
                 console.log('⏸️ Restart cancelado: sistema ocupado');
@@ -875,7 +916,7 @@ export function VoiceAssistantWithWakeWord({
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) return `Diga: "${wakeWords[0]}" + sua pergunta`;
+    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
     return 'Aguarde...';
   };
 
@@ -1002,7 +1043,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: sempre use wake word
+                Modo Alexa: use palavra de ativação
               </p>
             </div>
 

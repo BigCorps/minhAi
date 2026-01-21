@@ -27,6 +27,7 @@ export function VoiceAssistantWithWakeWord({
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showCloseButton, setShowCloseButton] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
 
   const recognitionRef = useRef<any>(null);
@@ -827,7 +828,7 @@ export function VoiceAssistantWithWakeWord({
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
+    if (isListening) return `Diga: "${wakeWords[0]}" + sua pergunta`;
     return 'Aguarde...';
   };
 
@@ -841,14 +842,25 @@ export function VoiceAssistantWithWakeWord({
 
   if (isFullscreen) {
     return (
-      <div className={`fixed inset-0 z-50 flex items-center justify-center transition-colors duration-500 ${
-        theme === 'dark'
-          ? 'bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900'
-          : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
-      }`}>
+      <div 
+        className={`fixed inset-0 z-50 flex items-center justify-center transition-colors duration-500 ${
+          theme === 'dark'
+            ? 'bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900'
+            : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
+        }`}
+        onMouseMove={(e) => {
+          // Mostrar botão X quando mouse está no canto superior direito
+          const isNearTopRight = e.clientX > window.innerWidth - 150 && e.clientY < 150;
+          setShowCloseButton(isNearTopRight);
+        }}
+        onMouseLeave={() => setShowCloseButton(false)}
+      >
+        {/* Botão X - Aparece só com hover */}
         <button
           onClick={() => setIsFullscreen(false)}
-          className={`absolute top-4 right-4 p-3 rounded-full transition z-50 ${
+          className={`absolute top-4 right-4 p-3 rounded-full transition-all duration-300 z-50 ${
+            showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          } ${
             theme === 'dark'
               ? 'bg-white/10 hover:bg-white/20 text-white'
               : 'bg-black/10 hover:bg-black/20 text-black'
@@ -870,16 +882,16 @@ export function VoiceAssistantWithWakeWord({
             />
           </div>
 
-          {/* Status - Responsivo: texto menor no mobile */}
+          {/* Status - 50% translúcido em ambos os temas */}
           <div className="text-center px-4 max-w-md">
             <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 transition-colors ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
             }`}>
               {getStatusMessage()}
             </p>
             {error && (
               <p className={`text-xs sm:text-sm transition-colors ${
-                theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
               }`}>{error}</p>
             )}
           </div>
@@ -943,7 +955,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: use a palavra de ativação!
+                Modo Alexa: use palavra de ativação!
               </p>
             </div>
 

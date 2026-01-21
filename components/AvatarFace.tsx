@@ -106,10 +106,9 @@ export function AvatarFace({
   const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
 
   return (
-    /* 🛠 CORREÇÃO DO QUADRADO: Alterado de bg-slate para bg-transparent */
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
       
-      {/* 🌊 ONDAS DE FUNDO ORIGINAIS */}
+      {/* 🌊 ONDAS DE FUNDO (Anéis de Borda) - CORRIGIDO */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
           <div
@@ -117,7 +116,8 @@ export function AvatarFace({
             className="absolute rounded-full border-2"
             style={{
               width: `${60 + ring * 15}%`,
-              height: `${60 + ring * 15}%`,
+              // height removido, aspectRatio adicionado para garantir círculo perfeito
+              aspectRatio: '1 / 1',
               borderColor: colors.ring,
               opacity: isSpeaking ? 0.4 : 0.2,
               animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`,
@@ -127,27 +127,60 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* 🌟 HALO DINÂMICO - LAYER 1 (Externa) - TODAS PRESERVADAS */}
+      {/* 🌟 HALOS DINÂMICOS (Camadas de Luz) - CORRIGIDOS PARA CÍRCULOS PERFEITOS */}
+      
+      {/* Layer 1 (Externa) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
-        <div className="w-[95%] h-[95%] rounded-full opacity-20" style={{ background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, filter: 'blur(20px)' }} />
+        <div 
+          className="rounded-full opacity-20" 
+          style={{ 
+            width: '95%',
+            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, 
+            filter: 'blur(20px)' 
+          }} 
+        />
       </div>
 
-      {/* 🌟 HALO DINÂMICO - LAYER 2 (Média) */}
+      {/* Layer 2 (Média) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 15s linear infinite reverse' }}>
-        <div className="w-[90%] h-[90%] rounded-full opacity-30" style={{ background: `conic-gradient(from 45deg, transparent 0%, ${colors.halo} 20%, transparent 40%, ${colors.halo} 60%, transparent 80%, ${colors.halo} 100%)`, filter: 'blur(15px)' }} />
+        <div 
+          className="rounded-full opacity-30" 
+          style={{ 
+            width: '90%',
+            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            background: `conic-gradient(from 45deg, transparent 0%, ${colors.halo} 20%, transparent 40%, ${colors.halo} 60%, transparent 80%, ${colors.halo} 100%)`, 
+            filter: 'blur(15px)' 
+          }} 
+        />
       </div>
 
-      {/* 🌟 HALO DINÂMICO - LAYER 3 (Interna) */}
+      {/* Layer 3 (Interna) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 10s linear infinite' }}>
-        <div className="w-[85%] h-[85%] rounded-full opacity-40" style={{ background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, filter: 'blur(10px)' }} />
+        <div 
+          className="rounded-full opacity-40" 
+          style={{ 
+            width: '85%',
+            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, 
+            filter: 'blur(10px)' 
+          }} 
+        />
       </div>
 
-      {/* 🌟 PULSO DO HALO */}
+      {/* 🌟 PULSO DO HALO - CORRIGIDO */}
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
-        <div className="w-[80%] h-[80%] rounded-full" style={{ boxShadow: `0 0 40px ${colors.halo}40, 0 0 80px ${colors.halo}20, 0 0 120px ${colors.halo}10` }} />
+        <div 
+          className="rounded-full" 
+          style={{ 
+            width: '80%',
+            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            boxShadow: `0 0 40px ${colors.halo}40, 0 0 80px ${colors.halo}20, 0 0 120px ${colors.halo}10` 
+          }} 
+        />
       </div>
 
-      {/* Canvas e Partículas decorativas (Absolutamente todas) */}
+      {/* Canvas e Partículas decorativas */}
       <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
       
       <div className="absolute w-full h-full overflow-visible pointer-events-none">
@@ -167,19 +200,18 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* 🔮 ORB PRINCIPAL - CÍRCULO PERFEITO */}
+      {/* 🔮 ORB PRINCIPAL (Já estava corrigido, mantido) */}
       <div 
         className={`absolute inset-0 m-auto w-[70%] h-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`}
         style={{
-          /* 🛠 CORREÇÃO VISUAL: O fundo agora está no ORB e não na div pai quadrada */
           background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)',
           boxShadow: `0 0 40px ${colors.glow}`,
           backdropFilter: 'blur(8px)',
-          aspectRatio: '1 / 1'
+          aspectRatio: '1 / 1' // 🎯 Garante círculo perfeito
         }}
       >
         
-        {/* FACE (Olhos, Boca e Partículas Ambientes ORIGINAIS) */}
+        {/* FACE */}
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -207,7 +239,6 @@ export function AvatarFace({
               </filter>
             </defs>
 
-            {/* Olhos Originais */}
             <g filter="url(#softGlow)" className="transition-opacity duration-700">
               <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
               <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
@@ -218,7 +249,6 @@ export function AvatarFace({
               <circle cx="122" cy="81" r="3.2" fill="white" opacity="0.7" />
             </g>
 
-            {/* Boca Original Detalhada */}
             <g className="transition-opacity duration-700">
               <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
               <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
@@ -229,7 +259,6 @@ export function AvatarFace({
               </path>
             </g>
 
-            {/* Partículas ambientes internas (As 3 esferas que flutuam) */}
             {[...Array(3)].map((_, i) => (
               <circle key={`ambient-${i}`} cx={50 + i * 50} cy={60} r="2" fill={colors.primary} opacity="0.4">
                 <animate attributeName="cy" values="60;50;60" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
@@ -239,7 +268,7 @@ export function AvatarFace({
           </svg>
         )}
 
-        {/* ORB LÍQUIDO GOOEY (Processando/Falando) */}
+        {/* ORB LÍQUIDO */}
         {!showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
@@ -266,8 +295,8 @@ export function AvatarFace({
           </svg>
         )}
 
-        {/* Anéis de Status (Ping) */}
-        <div className="absolute inset-0 rounded-full">
+        {/* Anéis de Status Internos (Ping) - Também corrigidos */}
+        <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
           {[1, 2, 3].map(ring => (
             <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping"
               style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />

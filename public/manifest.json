@@ -4,8 +4,8 @@
   "description": "Atendimento por Voz Inteligente com IA",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#A2D9F7",
-  "theme_color": "#A2D9F7",
+  "background_color": "#030819",
+  "theme_color": "#030819",
   "orientation": "portrait",
   "icons": [
     {

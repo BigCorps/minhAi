@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       model: 'tts-1',
       voice: 'nova', // Melhor voz para português
       input: text,
-      speed: 1.0, // Velocidade normal (natural)
+      speed: 0.80, // Velocidade normal (natural)
     });
 
     const buffer = Buffer.from(await tts.arrayBuffer());

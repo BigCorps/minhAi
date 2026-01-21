@@ -52,7 +52,9 @@ export function AvatarFace({
 
   const [colors, setColors] = useState(statusColors.idle);
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
+  const [audioLevels, setAudioLevels] = useState<number[]>(Array(32).fill(0));
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const showFace = !isProcessing && !isSpeaking;
 
@@ -73,6 +75,35 @@ export function AvatarFace({
     }));
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
+
+  // 🎵 SIMULAR AUDIOLEVELS (Gráfico de áudio)
+  useEffect(() => {
+    if (isSpeaking || isProcessing) {
+      audioIntervalRef.current = setInterval(() => {
+        setAudioLevels(prev => {
+          const newLevels = prev.map((_, i) => {
+            const base = Math.random() * (isSpeaking ? 0.8 : 0.5);
+            const wave = Math.sin(Date.now() / 200 + i * 0.5) * 0.3;
+            return Math.max(0, Math.min(1, base + wave));
+          });
+          return newLevels;
+        });
+      }, 50);
+    } else {
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current);
+        audioIntervalRef.current = null;
+      }
+      setAudioLevels(Array(32).fill(0));
+    }
+    
+    return () => {
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current);
+        audioIntervalRef.current = null;
+      }
+    };
+  }, [isSpeaking, isProcessing]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -445,6 +476,27 @@ export function AvatarFace({
               style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
           ))}
         </div>
+
+        {/* 🎵 GRÁFICO DE ÁUDIO - Barras Verticais */}
+        {(isSpeaking || isProcessing) && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
+            <div className="flex items-end justify-center gap-[2px] h-[60%] w-[80%]">
+              {audioLevels.map((level, i) => (
+                <div
+                  key={`audio-bar-${i}`}
+                  className="flex-1 rounded-t-sm transition-all duration-75"
+                  style={{
+                    height: `${Math.max(5, level * 100)}%`,
+                    backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
+                    opacity: 0.6 + level * 0.4,
+                    boxShadow: `0 0 ${level * 10}px ${i % 2 === 0 ? colors.primary : colors.secondary}`,
+                    filter: `blur(${0.5}px)`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <style jsx>{`

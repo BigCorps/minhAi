@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase-client';
+import { createClient } from '@/lib/supabase-browser';
 import { Zap, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 

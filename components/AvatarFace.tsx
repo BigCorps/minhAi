@@ -259,14 +259,15 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* ORB PRINCIPAL */}
+      {/* ORB PRINCIPAL - CÍRCULO PERFEITO */}
       <div 
-        className={`relative w-[70%] aspect-square flex items-center justify-center rounded-full overflow-visible ${orbSize} ${orbTransition}`}
+        className={`absolute inset-0 m-auto w-[70%] h-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} ${orbTransition}`}
         style={{
           background: isDark 
             ? 'rgba(15, 23, 42, 0.5)'   // Dark: bg-slate-900/50
             : 'rgba(248, 250, 252, 0.8)', // Light: bg-slate-50/80 (mais neutro)
-          boxShadow: `0 0 40px ${colors.glow}`
+          boxShadow: `0 0 40px ${colors.glow}`,
+          aspectRatio: '1 / 1' // 🎯 Força proporção 1:1 (círculo perfeito)
         }}
       >
         

@@ -108,7 +108,7 @@ export function AvatarFace({
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
       
-      {/* 🌊 ONDAS DE FUNDO (Anéis de Borda) - CORRIGIDO */}
+      {/* 🌊 ONDAS DE FUNDO (Anéis de Borda) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
           <div
@@ -116,7 +116,6 @@ export function AvatarFace({
             className="absolute rounded-full border-2"
             style={{
               width: `${60 + ring * 15}%`,
-              // height removido, aspectRatio adicionado para garantir círculo perfeito
               aspectRatio: '1 / 1',
               borderColor: colors.ring,
               opacity: isSpeaking ? 0.4 : 0.2,
@@ -127,54 +126,50 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* 🌟 HALOS DINÂMICOS (Camadas de Luz) - CORRIGIDOS PARA CÍRCULOS PERFEITOS */}
-      
-      {/* Layer 1 (Externa) */}
+      {/* 🌟 HALOS DINÂMICOS (Camadas de Luz) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
         <div 
           className="rounded-full opacity-20" 
           style={{ 
             width: '95%',
-            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            aspectRatio: '1 / 1',
             background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, 
             filter: 'blur(20px)' 
           }} 
         />
       </div>
 
-      {/* Layer 2 (Média) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 15s linear infinite reverse' }}>
         <div 
           className="rounded-full opacity-30" 
           style={{ 
             width: '90%',
-            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            aspectRatio: '1 / 1',
             background: `conic-gradient(from 45deg, transparent 0%, ${colors.halo} 20%, transparent 40%, ${colors.halo} 60%, transparent 80%, ${colors.halo} 100%)`, 
             filter: 'blur(15px)' 
           }} 
         />
       </div>
 
-      {/* Layer 3 (Interna) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 10s linear infinite' }}>
         <div 
           className="rounded-full opacity-40" 
           style={{ 
             width: '85%',
-            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            aspectRatio: '1 / 1',
             background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, 
             filter: 'blur(10px)' 
           }} 
         />
       </div>
 
-      {/* 🌟 PULSO DO HALO - CORRIGIDO */}
+      {/* 🌟 PULSO DO HALO */}
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
         <div 
           className="rounded-full" 
           style={{ 
             width: '80%',
-            aspectRatio: '1 / 1', // 🎯 Garante círculo perfeito
+            aspectRatio: '1 / 1',
             boxShadow: `0 0 40px ${colors.halo}40, 0 0 80px ${colors.halo}20, 0 0 120px ${colors.halo}10` 
           }} 
         />
@@ -200,9 +195,10 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* 🔮 ORB PRINCIPAL (Já estava corrigido, mantido) */}
+      {/* 🔮 ORB PRINCIPAL - CORREÇÃO DEFINITIVA DE CÍRCULO */}
       <div 
-        className={`absolute inset-0 m-auto w-[70%] h-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`}
+        // 🛠 FIX: Removido h-[70%]. Agora ele usa apenas w-[70%] e aspectRatio para ser um quadrado perfeito.
+        className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`}
         style={{
           background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)',
           boxShadow: `0 0 40px ${colors.glow}`,
@@ -295,7 +291,7 @@ export function AvatarFace({
           </svg>
         )}
 
-        {/* Anéis de Status Internos (Ping) - Também corrigidos */}
+        {/* Anéis de Status Internos (Ping) */}
         <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
           {[1, 2, 3].map(ring => (
             <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping"

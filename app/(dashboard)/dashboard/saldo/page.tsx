@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@/lib/supabase-browser';
+import { User } from '@supabase/supabase-js';
 import { Loader2, TrendingUp, TrendingDown, DollarSign, CreditCard, Download, RefreshCw } from 'lucide-react';
 
 interface CompanyBalance {

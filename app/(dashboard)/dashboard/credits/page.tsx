@@ -336,7 +336,7 @@ export default function CreditsPage() {
                           ? 'text-blue-200' 
                           : theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                       }`}>
-                        R$ {pkg.price_per_interaction.toFixed(4)} por interação
+                        R$ {(pkg.price_per_interaction / 100).toFixed(4)} por interação
                       </p>
                     </div>
 

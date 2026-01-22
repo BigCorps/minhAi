@@ -33,10 +33,37 @@ export default function HistoricoPage() {
     setError(null);
     
     try {
-      // 1. Carregar empresas para filtro
+      // 0. Buscar user_id e company_id do usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Buscar company_id do usuário via company_admins
+      const { data: adminData } = await supabase
+        .from('company_admins')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .limit(10);
+
+      const userCompanyIds = adminData?.map(a => a.company_id) || [];
+
+      if (userCompanyIds.length === 0) {
+        console.log('⚠️ Usuário não tem empresas associadas');
+        setCompanies([]);
+        setMessagePairs([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Empresas do usuário:', userCompanyIds);
+
+      // 1. Carregar empresas DO USUÁRIO para filtro
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, slug')
+        .in('id', userCompanyIds)
         .order('name');
 
       if (companiesError) {
@@ -46,10 +73,11 @@ export default function HistoricoPage() {
 
       setCompanies(companiesData || []);
 
-      // 2. Carregar conversas (USAR started_at)
+      // 2. Carregar conversas DAS EMPRESAS DO USUÁRIO
       let query = supabase
         .from('conversations')
         .select('id, company_id, started_at')
+        .in('company_id', userCompanyIds) // ✅ FILTRAR POR EMPRESAS DO USUÁRIO
         .order('started_at', { ascending: false })
         .limit(50);
 
@@ -63,6 +91,8 @@ export default function HistoricoPage() {
         console.error('Erro ao carregar conversas:', convError);
         throw new Error('Erro ao carregar conversas: ' + convError.message);
       }
+
+      console.log('📊 Conversas encontradas:', conversations?.length || 0);
 
       if (!conversations || conversations.length === 0) {
         setMessagePairs([]);
@@ -113,6 +143,7 @@ export default function HistoricoPage() {
         }
       }
 
+      console.log('✅ Pares de mensagens:', pairs.length);
       setMessagePairs(pairs);
     } catch (err: any) {
       console.error('Erro ao carregar dados:', err);
@@ -321,7 +352,7 @@ export default function HistoricoPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Link
-                            href={`/assistente/${pair.companySlug}`}
+                            href={`/ia/${pair.companySlug}`}
                             target="_blank"
                             className="text-sm font-medium text-primary-green hover:text-primary-green-dark"
                           >

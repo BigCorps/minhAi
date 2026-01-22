@@ -461,6 +461,7 @@ export default function CreditsPage() {
           amount={paymentData.amount}
           packageName={paymentData.packageName}
           paymentId={paymentData.payment_id}
+          theme={theme} // ← NOVO!
         />
       )}
     </>

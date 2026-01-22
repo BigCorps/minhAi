@@ -224,24 +224,6 @@ export default function PaymentModal({
               </button>
             )}
 
-            {/* Já pagou? */}
-            <p className={`text-center text-sm transition-colors ${
-              theme === 'dark' ? 'text-blue-300' : 'text-blue-600'
-            }`}>
-              Já pagou?{' '}
-              <button
-                onClick={handleConfirmPayment}
-                disabled={confirming || confirmed}
-                className={`font-medium underline disabled:opacity-50 transition-colors ${
-                  theme === 'dark'
-                    ? 'text-blue-400 hover:text-blue-300'
-                    : 'text-blue-700 hover:text-blue-800'
-                }`}
-              >
-                Confirme manualmente
-              </button>
-            </p>
-
             {/* Botão Fechar */}
             <button
               onClick={onClose}

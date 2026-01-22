@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { User } from '@supabase/supabase-js';
-import { Loader2, TrendingUp, TrendingDown, DollarSign, CreditCard, Download, RefreshCw } from 'lucide-react';
+import { Loader2, TrendingUp, RefreshCw, Download } from 'lucide-react';
 
 interface CompanyBalance {
   available_balance_cents: number;
@@ -24,11 +23,12 @@ interface PixTransaction {
 }
 
 export default function SaldoPage() {
+  const supabase = createClient();
   const [companyId, setCompanyId] = useState<string>('');
   const [balance, setBalance] = useState<CompanyBalance | null>(null);
   const [pixTransactions, setPixTransactions] = useState<PixTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pix' | 'withdraw' | 'credits' | 'history'>('pix');
+  const [activeTab, setActiveTab] = useState<'pix' | 'withdraw'>('pix');
 
   // Formulários
   const [withdrawAmount, setWithdrawAmount] = useState('');

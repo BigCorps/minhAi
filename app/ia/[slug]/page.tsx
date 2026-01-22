@@ -11,17 +11,36 @@ interface PageProps {
   }>;
 }
 
-// Função para verificar créditos da empresa
-async function checkCompanyCredits(companyId: string) {
+// ✅ Função para verificar créditos do USUÁRIO dono da empresa
+async function checkUserCredits(companyId: string) {
   const supabase = createClient();
   
-  const { data: credits } = await supabase
-    .from('company_credits')
-    .select('available_credits')
+  // 1. Buscar user_id do dono da empresa via company_admins
+  const { data: adminData } = await supabase
+    .from('company_admins')
+    .select('user_id')
     .eq('company_id', companyId)
+    .limit(1)
     .single();
   
-  return credits?.available_credits || 0;
+  if (!adminData) {
+    console.log('⚠️ Empresa sem admin associado');
+    return 0;
+  }
+
+  console.log('👤 User ID do dono:', adminData.user_id);
+  
+  // 2. Buscar créditos DO USUÁRIO
+  const { data: credits } = await supabase
+    .from('user_credits')
+    .select('available_credits')
+    .eq('user_id', adminData.user_id)
+    .single();
+  
+  const availableCredits = credits?.available_credits || 0;
+  console.log('💰 Créditos disponíveis:', availableCredits);
+  
+  return availableCredits;
 }
 
 export default async function AssistentePublicoPage({ params }: PageProps) {
@@ -40,9 +59,16 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     notFound();
   }
 
-  // 💳 Verificar créditos disponíveis
-  const remainingCredits = await checkCompanyCredits(company.id);
+  // 💳 Verificar créditos disponíveis DO USUÁRIO
+  const remainingCredits = await checkUserCredits(company.id);
   const hasCredits = remainingCredits > 0;
+
+  console.log('🔍 Verificação de créditos:', {
+    companyId: company.id,
+    companyName: company.name,
+    remainingCredits,
+    hasCredits
+  });
 
   // 🚫 Se não tem créditos, mostrar tela de inativo
   if (!hasCredits) {
@@ -51,44 +77,40 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
         <div className="max-w-md mx-auto p-8 text-center">
           {/* Ícone de Bloqueado */}
           <div className="mb-6 flex justify-center">
-            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center border-2 border-red-500/30">
-              <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center border-2 border-amber-500/30">
+              <svg className="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
           </div>
 
           {/* Título */}
           <h1 className="text-3xl font-bold text-white mb-4">
-            Assistente Temporariamente Inativo
+            Assistente Temporariamente Indisponível
           </h1>
 
           {/* Descrição */}
-          <p className="text-white/60 mb-2">
-            O assistente virtual de <span className="text-white font-semibold">{company.name}</span> está sem créditos disponíveis no momento.
+          <p className="text-white/60 mb-8">
+            O assistente de <span className="text-white font-semibold">{company.name}</span> está sendo atualizado no momento.
           </p>
 
-          <p className="text-white/40 text-sm mb-8">
-            Para reativar este assistente, é necessário adquirir mais créditos.
-          </p>
-
-          {/* Informações de Contato */}
+          {/* Botão para Admin */}
           <div className="bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-xl p-6 mb-6">
             <p className="text-white/70 text-sm mb-4">
               Se você é o responsável por este assistente:
             </p>
             <a
-              href="https://itend.com.br/login"
+              href="/dashboard"
               className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
             >
-              Acessar Painel e Recarregar Créditos
+              Acessar Painel
             </a>
           </div>
 
-          {/* Link Alternativo */}
+          {/* Contato Alternativo */}
           <div className="text-center">
             <p className="text-white/40 text-xs mb-2">
-              Caso contrário, entre em contato com:
+              Caso contrário, entre em contato:
             </p>
             <p className="text-white font-semibold text-sm">
               {company.name}

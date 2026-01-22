@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 
 interface CompanyContactsFormProps {
   companyId: string;
+  theme?: 'dark' | 'light';
   initialData?: {
     whatsapp_number?: string;
     instagram_username?: string;
@@ -14,7 +15,7 @@ interface CompanyContactsFormProps {
   };
 }
 
-export default function CompanyContactsForm({ companyId, initialData }: CompanyContactsFormProps) {
+export default function CompanyContactsForm({ companyId, theme = 'light', initialData }: CompanyContactsFormProps) {
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -76,19 +77,31 @@ export default function CompanyContactsForm({ companyId, initialData }: CompanyC
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 space-y-6">
+    <div className={`rounded-lg border p-6 space-y-6 ${
+      theme === 'dark'
+        ? 'bg-slate-800 border-slate-700'
+        : 'bg-white border-gray-200'
+    }`}>
       
       {/* Header */}
       <div>
-        <h3 className="text-xl font-bold mb-1">📱 Contatos e Pagamentos</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <h3 className={`text-xl font-bold mb-1 ${
+          theme === 'dark' ? 'text-white' : 'text-gray-900'
+        }`}>
+          📱 Contatos e Pagamentos
+        </h3>
+        <p className={`text-sm ${
+          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+        }`}>
           Configure os contatos da empresa para o assistente mostrar QR Codes
         </p>
       </div>
 
       {/* WhatsApp */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium" htmlFor="whatsapp">
+        <label className={`block text-sm font-medium ${
+          theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+        }`} htmlFor="whatsapp">
           WhatsApp da Empresa
         </label>
         <input
@@ -98,51 +111,79 @@ export default function CompanyContactsForm({ companyId, initialData }: CompanyC
           value={whatsappNumber}
           onChange={(e) => setWhatsappNumber(formatWhatsApp(e.target.value))}
           maxLength={15}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            theme === 'dark'
+              ? 'bg-slate-900 border-slate-600 text-white'
+              : 'bg-white border-gray-300 text-gray-900'
+          }`}
         />
-        <p className="text-xs text-gray-500">
+        <p className={`text-xs ${
+          theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+        }`}>
           💡 Cliente pode pedir: "mostre o WhatsApp" ou "quero falar no WhatsApp"
         </p>
       </div>
 
       {/* Instagram */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium" htmlFor="instagram">
+        <label className={`block text-sm font-medium ${
+          theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+        }`} htmlFor="instagram">
           Instagram da Empresa
         </label>
         <div className="flex items-center gap-2">
-          <span className="text-gray-500">@</span>
+          <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>@</span>
           <input
             id="instagram"
             placeholder="username"
             value={instagramUsername}
             onChange={(e) => setInstagramUsername(formatInstagram(e.target.value))}
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              theme === 'dark'
+                ? 'bg-slate-900 border-slate-600 text-white'
+                : 'bg-white border-gray-300 text-gray-900'
+            }`}
           />
         </div>
-        <p className="text-xs text-gray-500">
+        <p className={`text-xs ${
+          theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+        }`}>
           💡 Cliente pode pedir: "mostre o Instagram" ou "qual o Instagram?"
         </p>
       </div>
 
       {/* Divisor */}
-      <div className="border-t pt-6">
-        <h4 className="font-semibold text-sm mb-2">💰 Chave PIX para Recebimentos</h4>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+      <div className={`border-t pt-6 ${
+        theme === 'dark' ? 'border-slate-700' : 'border-gray-200'
+      }`}>
+        <h4 className={`font-semibold text-sm mb-2 ${
+          theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+        }`}>
+          💰 Chave PIX para Recebimentos
+        </h4>
+        <p className={`text-xs mb-4 ${
+          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+        }`}>
           Esta chave será usada quando o assistente gerar PIX para seus clientes
         </p>
       </div>
 
       {/* Tipo de Chave PIX */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium" htmlFor="pix-type">
+        <label className={`block text-sm font-medium ${
+          theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+        }`} htmlFor="pix-type">
           Tipo de Chave PIX
         </label>
         <select
           id="pix-type"
           value={pixKeyType}
           onChange={(e) => setPixKeyType(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            theme === 'dark'
+              ? 'bg-slate-900 border-slate-600 text-white'
+              : 'bg-white border-gray-300 text-gray-900'
+          }`}
         >
           <option value="cpf">CPF</option>
           <option value="cnpj">CNPJ</option>
@@ -154,7 +195,9 @@ export default function CompanyContactsForm({ companyId, initialData }: CompanyC
 
       {/* Chave PIX */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium" htmlFor="pix-key">
+        <label className={`block text-sm font-medium ${
+          theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+        }`} htmlFor="pix-key">
           Chave PIX
         </label>
         <input
@@ -168,9 +211,15 @@ export default function CompanyContactsForm({ companyId, initialData }: CompanyC
           }
           value={pixKey}
           onChange={(e) => setPixKey(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            theme === 'dark'
+              ? 'bg-slate-900 border-slate-600 text-white'
+              : 'bg-white border-gray-300 text-gray-900'
+          }`}
         />
-        <p className="text-xs text-gray-500">
+        <p className={`text-xs ${
+          theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+        }`}>
           💡 Cliente pode pedir: "gerar PIX de R$ 50,00"
         </p>
       </div>

@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
 import { WakeWordDetector } from './WakeWordDetector';
+// ✨ NOVOS IMPORTS PARA QR CODES E PIX
+import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
+import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
+import { createClient } from '@/lib/supabase-browser';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -29,6 +33,23 @@ export function VoiceAssistantWithWakeWord({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
+
+  // ✨ NOVOS ESTADOS PARA QR CODES E PIX
+  const [qrCodeData, setQrCodeData] = useState<{
+    type: 'whatsapp' | 'instagram' | 'pix';
+    qrCodeUrl: string;
+    qrContent: string;
+    displayText: string;
+    amount?: string;
+    companyName?: string;
+  } | null>(null);
+
+  const [pixConfirmationData, setPixConfirmationData] = useState<{
+    transactionId: string;
+    amount: string;
+    qrCodeUrl: string;
+    pixCode: string;
+  } | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -61,7 +82,6 @@ export function VoiceAssistantWithWakeWord({
     'valeu',
   ];
 
-  // 🎯 NOVO: Comandos de INTERRUPÇÃO (para parar áudio)
   const stopCommands = [
     'para',
     'pare',
@@ -71,7 +91,7 @@ export function VoiceAssistantWithWakeWord({
     'silêncio',
     'cala boca',
     'cala a boca',
-    'calça boca', // reconhecimento pode confundir
+    'calça boca',
     'chega',
     'obrigado',
     'obrigada',
@@ -121,7 +141,6 @@ export function VoiceAssistantWithWakeWord({
     console.log('🔓 Tentando unlock áudio...');
     
     try {
-      // 🎯 MOBILE: Criar áudio silencioso e tentar tocar
       const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
       silentAudio.volume = 0.01;
       
@@ -137,7 +156,6 @@ export function VoiceAssistantWithWakeWord({
           .catch(e => {
             console.log('⚠️ Audio unlock failed:', e.message);
             
-            // 🎯 MOBILE FIX: Tentar novamente em 1s
             setTimeout(() => {
               if (!audioUnlocked.current) {
                 console.log('🔄 Retry unlock...');
@@ -163,11 +181,9 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  // 🎯 NOVO: Função para parar áudio imediatamente
   function stopAudioImmediately() {
     console.log('🛑 STOP: Parando áudio imediatamente');
     
-    // Parar áudio atual
     if (currentAudioRef.current) {
       try {
         currentAudioRef.current.pause();
@@ -178,7 +194,6 @@ export function VoiceAssistantWithWakeWord({
       }
     }
     
-    // Parar feedback se estiver tocando
     if (feedbackAudioRef.current) {
       try {
         feedbackAudioRef.current.pause();
@@ -187,12 +202,10 @@ export function VoiceAssistantWithWakeWord({
       } catch (e) {}
     }
     
-    // Resetar estados
     setIsPlayingAudio(false);
     setIsProcessing(false);
     processingQuestion.current = false;
     
-    // Reiniciar wake word detection imediatamente
     console.log('🔄 Reiniciando wake word após interrupção...');
     setTimeout(() => {
       if (isActiveRef.current) {
@@ -205,10 +218,8 @@ export function VoiceAssistantWithWakeWord({
     console.log('🚀 Iniciando assistente estilo Alexa...');
     console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
     
-    // 🎯 MOBILE: Garantir unlock de áudio ANTES de iniciar
     unlockAudio();
     
-    // 🎯 MOBILE: Criar áudio de teste para garantir contexto
     if (isMobile) {
       try {
         const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
@@ -230,6 +241,223 @@ export function VoiceAssistantWithWakeWord({
     }, 300);
   }
 
+  // ========================================
+  // 🎯 COMANDOS DE VOZ PARA QR CODES E PIX
+  // ========================================
+
+  async function detectVoiceCommand(transcript: string): Promise<boolean> {
+    const lowerTranscript = transcript.toLowerCase().trim();
+    
+    console.log('🔍 Detectando comandos de voz:', lowerTranscript);
+    
+    // 📱 COMANDO: WHATSAPP
+    const whatsappTriggers = [
+      'mostre o whatsapp',
+      'qual o whatsapp',
+      'qual é o whatsapp',
+      'me passa o whatsapp',
+      'whatsapp da empresa',
+      'número do whatsapp'
+    ];
+    
+    if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('📱 Comando WhatsApp detectado!');
+      await handleWhatsAppCommand();
+      return true;
+    }
+    
+    // 📸 COMANDO: INSTAGRAM
+    const instagramTriggers = [
+      'mostre o instagram',
+      'qual o instagram',
+      'qual é o instagram',
+      'me passa o instagram',
+      'instagram da empresa',
+      'arroba do instagram'
+    ];
+    
+    if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('📸 Comando Instagram detectado!');
+      await handleInstagramCommand();
+      return true;
+    }
+    
+    // 💰 COMANDO: GERAR PIX
+    const pixRegex = /gerar (?:um )?pix(?: de)? ?(?:r\$|reais?)? ?(\d+(?:[,.]\d{1,2})?)/i;
+    const pixMatch = lowerTranscript.match(pixRegex);
+    
+    if (pixMatch) {
+      const amountStr = pixMatch[1].replace(',', '.');
+      const amount = parseFloat(amountStr);
+      
+      if (amount > 0) {
+        console.log('💰 Comando PIX detectado! Valor:', amount);
+        await handlePixCommand(amount);
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  async function handleWhatsAppCommand() {
+    try {
+      setIsProcessing(true);
+      
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('gerar-qrcode-contato', {
+        body: {
+          company_id: companyId,
+          qr_type: 'whatsapp'
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      const data = response.data;
+      
+      setQrCodeData({
+        type: 'whatsapp',
+        qrCodeUrl: data.qr_code_url,
+        qrContent: data.qr_content,
+        displayText: data.display_text,
+        companyName: data.company_name
+      });
+      
+      await playText(`Aqui está o WhatsApp: ${data.display_text}`);
+      
+    } catch (error: any) {
+      console.error('Erro WhatsApp:', error);
+      await playText('Desculpe, não consegui obter o WhatsApp.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleInstagramCommand() {
+    try {
+      setIsProcessing(true);
+      
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('gerar-qrcode-contato', {
+        body: {
+          company_id: companyId,
+          qr_type: 'instagram'
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      const data = response.data;
+      
+      setQrCodeData({
+        type: 'instagram',
+        qrCodeUrl: data.qr_code_url,
+        qrContent: data.qr_content,
+        displayText: data.display_text,
+        companyName: data.company_name
+      });
+      
+      await playText(`Aqui está o Instagram: ${data.display_text}`);
+      
+    } catch (error: any) {
+      console.error('Erro Instagram:', error);
+      await playText('Desculpe, não consegui obter o Instagram.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handlePixCommand(amount: number) {
+    try {
+      setIsProcessing(true);
+      
+      const amountCents = Math.round(amount * 100);
+      
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('gerar-pix-assistente', {
+        body: {
+          company_id: companyId,
+          amount_cents: amountCents
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      const data = response.data;
+      
+      setPixConfirmationData({
+        transactionId: data.transaction_id,
+        amount: data.amount_brl,
+        qrCodeUrl: data.qr_code_url,
+        pixCode: data.pix_code
+      });
+      
+      await playText(`PIX de ${amount.toFixed(2).replace('.', ',')} reais gerado. Aguardando confirmação.`);
+      
+    } catch (error: any) {
+      console.error('Erro PIX:', error);
+      await playText('Desculpe, não consegui gerar o PIX.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleConfirmPix() {
+    if (!pixConfirmationData) return;
+    
+    try {
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('confirmar-pix-assistente', {
+        body: {
+          transaction_id: pixConfirmationData.transactionId
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      setPixConfirmationData(null);
+      
+      await playText('PIX confirmado com sucesso!');
+      
+    } catch (error: any) {
+      console.error('Erro confirmar PIX:', error);
+      await playText('Erro ao confirmar PIX.');
+    }
+  }
+
+  async function handleCancelPix() {
+    if (!pixConfirmationData) return;
+    
+    try {
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('cancelar-pix-assistente', {
+        body: {
+          transaction_id: pixConfirmationData.transactionId
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      setPixConfirmationData(null);
+      
+      await playText('PIX cancelado.');
+      
+    } catch (error: any) {
+      console.error('Erro cancelar PIX:', error);
+    }
+  }
+
+  function handleCloseQRCode() {
+    setQrCodeData(null);
+    
+    playText('QR Code fechado.').catch(() => {});
+  }
+
+  function handleCopyQRCode() {
+    console.log('📋 QR Code copiado!');
+  }
+
   function startWakeWordDetection() {
     if (!('webkitSpeechRecognition' in window)) {
       setError('Use Chrome ou Edge.');
@@ -243,7 +471,6 @@ export function VoiceAssistantWithWakeWord({
     }
     lastRestartAttempt.current = now;
 
-    // Limpar recognition anterior
     if (recognitionRef.current) {
       try {
         console.log('🧹 Limpando recognition anterior');
@@ -258,7 +485,6 @@ export function VoiceAssistantWithWakeWord({
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      // 🎯 MOBILE: continuous=false para resetar contexto entre perguntas
       recognition.continuous = isMobile ? false : true;
       recognition.interimResults = true;
       recognition.lang = 'pt-BR';
@@ -271,10 +497,8 @@ export function VoiceAssistantWithWakeWord({
       };
 
       recognition.onresult = (event: any) => {
-        // 🎯 MOBILE: Pegar a transcrição mais recente E completa
         let transcript = '';
         
-        // Tentar pegar a última transcrição final disponível
         for (let i = event.results.length - 1; i >= 0; i--) {
           if (event.results[i].isFinal) {
             transcript = event.results[i][0].transcript;
@@ -282,7 +506,6 @@ export function VoiceAssistantWithWakeWord({
           }
         }
         
-        // Se não tiver final, pegar a mais recente (interim)
         if (!transcript) {
           transcript = event.results[event.results.length - 1][0].transcript;
         }
@@ -290,22 +513,19 @@ export function VoiceAssistantWithWakeWord({
         transcript = transcript.toLowerCase().trim();
         const isFinal = event.results[event.results.length - 1].isFinal;
         
-        // 🎯 DEBUG
         console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${transcript}"`);
         
-        // 🎯 PRIORIDADE 1: Detectar comandos de STOP (mesmo se ocupado!)
         const normalizedTranscript = transcript.toLowerCase()
-          .replace(/[.,!?]/g, '') // Remove pontuação
+          .replace(/[.,!?]/g, '')
           .trim();
         
-        // Frases explícitas de parada (completo e permissivo)
         const explicitStopPhrases = [
           'pare',
           'para',
           'parar',
           'cala boca',
           'cala a boca',
-          'calça boca', // reconhecimento pode confundir
+          'calça boca',
           'silencio',
           'silêncio',
           'stop',
@@ -321,7 +541,6 @@ export function VoiceAssistantWithWakeWord({
           return normalizedTranscript.includes(normalizedPhrase);
         });
         
-        // 🎯 Verificar se está REALMENTE tocando áudio (via ref, não state)
         const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
         
         console.log('🔍 Verificando comandos de stop:', {
@@ -329,12 +548,11 @@ export function VoiceAssistantWithWakeWord({
           hasExplicitStop,
           isProcessing,
           isPlayingAudio,
-          isActuallyPlaying, // 🎯 Estado real!
+          isActuallyPlaying,
           isFinal,
           hasAudioRef: currentAudioRef.current !== null
         });
         
-        // 🎯 Parar se tiver comando explícito E (processando OU tocando)
         if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
           console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO:', transcript);
           console.log('✅ PARANDO áudio imediatamente!');
@@ -342,33 +560,27 @@ export function VoiceAssistantWithWakeWord({
           return;
         }
         
-        // 🎯 PRIORIDADE 2: Se estiver ocupado, ignorar outras capturas
         if (processingQuestion.current || isProcessing || isPlayingAudio || isActuallyPlaying) {
           console.log('⏸️ Ocupado, ignorando captura:', normalizedTranscript);
           return;
         }
         
-        // 🎯 PRIORIDADE 3: MODELO ALEXA: Detectar wake word + pergunta
         const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
         
         if (detectionResult?.detected && detectionResult.keyword) {
           console.log(`🔍 Wake word detectada: "${detectionResult.keyword}"`);
           console.log(`📝 Transcrição: "${transcript}"`);
           
-          // 🎯 Só processar se for FINAL (mais confiável)
           if (isFinal) {
             console.log('✅ Processando pergunta completa');
             
-            // Unlock audio
             if (!audioUnlocked.current) {
               unlockAudio();
             }
             
-            // Processar pergunta completa
             if (!processingQuestion.current) {
               processingQuestion.current = true;
               
-              // Parar recognition IMEDIATAMENTE
               if (recognitionRef.current) {
                 try {
                   recognitionRef.current.stop();
@@ -387,7 +599,6 @@ export function VoiceAssistantWithWakeWord({
         console.log('⚠️ Recognition error:', event.error);
         
         if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
-          // Erros normais, ignorar
           return;
         }
         
@@ -407,14 +618,9 @@ export function VoiceAssistantWithWakeWord({
           permissionGranted
         });
         
-        // 🎯 MOBILE (continuous=false): Sempre reinicia automaticamente
-        // 🎯 DESKTOP (continuous=true): Só reinicia se não estiver ocupado
-        
         if (isMobile) {
-          // Mobile: Sempre desliga isListening quando parar
           setIsListening(false);
           
-          // Reiniciar SEMPRE (exceto se processando/tocando)
           if (isActiveRef.current && 
               !processingQuestion.current && 
               !isProcessing && 
@@ -434,7 +640,6 @@ export function VoiceAssistantWithWakeWord({
             console.log('⏸️ Mobile: Restart suspenso (ocupado)');
           }
         } else {
-          // Desktop: Comportamento original
           if (!processingQuestion.current && !isProcessing && !isPlayingAudio) {
             setIsListening(false);
           }
@@ -445,18 +650,15 @@ export function VoiceAssistantWithWakeWord({
               !isPlayingAudio && 
               permissionGranted) {
             
-            // 🎯 PREVENIR LOOP INFINITO
             const now = Date.now();
             const timeSinceLastRestart = now - lastRestartTime.current;
             
-            // Se último restart foi há menos de 2 segundos, é loop
             if (timeSinceLastRestart < 2000) {
               consecutiveRestarts.current += 1;
             } else {
-              consecutiveRestarts.current = 0; // Reset se passou tempo suficiente
+              consecutiveRestarts.current = 0;
             }
             
-            // Se mais de 3 restarts consecutivos rápidos, aguardar mais
             if (consecutiveRestarts.current >= 3) {
               console.log('⚠️ Loop detectado! Aguardando 3s antes de reiniciar...');
               consecutiveRestarts.current = 0;
@@ -512,7 +714,6 @@ export function VoiceAssistantWithWakeWord({
     console.log('  transcript:', transcript);
     console.log('  processingQuestion.current:', processingQuestion.current);
     
-    // 🎯 MOBILE FIX: PARAR RECOGNITION IMEDIATAMENTE
     if (recognitionRef.current) {
       try {
         console.log('🛑 Parando recognition antes de processar');
@@ -522,10 +723,8 @@ export function VoiceAssistantWithWakeWord({
       }
     }
     
-    // Limpar transcript
     let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
     
-    // Verificar se é comando de encerramento
     const normalizedForEndCheck = cleanTranscript.toLowerCase();
     const hasEndCommand = endCommands.some(cmd => normalizedForEndCheck.includes(cmd));
     
@@ -536,7 +735,6 @@ export function VoiceAssistantWithWakeWord({
       return;
     }
     
-    // Remover wake words
     for (const word of wakeWords) {
       cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
     }
@@ -560,13 +758,29 @@ export function VoiceAssistantWithWakeWord({
       return;
     }
     
-    // Processar pergunta
     processQuestion(cleanTranscript);
   }
 
   async function processQuestion(questionText: string) {
     console.log('⚡ Processando:', questionText);
     
+    // 🎯 DETECTAR COMANDOS DE VOZ PRIMEIRO
+    const isCommand = await detectVoiceCommand(questionText);
+    
+    if (isCommand) {
+      console.log('✅ Comando processado, retornando ao wake word');
+      processingQuestion.current = false;
+      
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 500);
+      
+      return;
+    }
+    
+    // Se não for comando, processar como pergunta normal
     setIsProcessing(true);
     
     try {
@@ -580,10 +794,8 @@ export function VoiceAssistantWithWakeWord({
 
       console.log('📤 Enviando para API...');
       
-      // 🎯 Iniciar feedback em paralelo, mas NÃO aguardar
       let feedbackStarted = false;
       const feedbackTimeout = setTimeout(() => {
-        // Só toca feedback se demorar mais de 1 segundo
         if (!feedbackStarted) {
           feedbackStarted = true;
           console.log('⏱️ API demorando, tocando feedback...');
@@ -593,7 +805,7 @@ export function VoiceAssistantWithWakeWord({
             console.log('⚠️ Feedback áudio falhou:', e.message);
           });
         }
-      }, 1000); // Aguarda 1s antes de tocar feedback
+      }, 1000);
       
       const response = await fetch('/api/voice/process', {
         method: 'POST',
@@ -610,12 +822,10 @@ export function VoiceAssistantWithWakeWord({
       console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
       console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
-      // Limpar timeout se API foi rápida
       clearTimeout(feedbackTimeout);
 
-      // 🎯 Se feedback começou, aguardar ele terminar
       if (feedbackStarted && feedbackAudioRef.current) {
-        const minFeedbackTime = 1200; // Tempo mínimo para ouvir feedback completo
+        const minFeedbackTime = 1200;
         const elapsedTime = Date.now() - startTime;
         
         if (elapsedTime < minFeedbackTime) {
@@ -624,7 +834,6 @@ export function VoiceAssistantWithWakeWord({
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
 
-        // Parar feedback
         console.log('🛑 Parando feedback...');
         try {
           feedbackAudioRef.current.pause();
@@ -635,8 +844,6 @@ export function VoiceAssistantWithWakeWord({
 
       setIsProcessing(false);
 
-      // 🎯 REINICIAR WAKE WORD DETECTION ANTES de tocar o áudio
-      // Isso permite interrupção durante a fala!
       console.log('🔄 Reiniciando wake word detection ANTES do áudio...');
       setTimeout(() => {
         if (isActiveRef.current) {
@@ -644,22 +851,19 @@ export function VoiceAssistantWithWakeWord({
         }
       }, 100);
 
-      // 🎯 TOCAR RESPOSTA COM VELOCIDADE NATURAL
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // 🎯 Velocidade levemente acelerada (mais natural para PT-BR)
       audio.playbackRate = 1.05;
       
       currentAudioRef.current = audio;
       
-      // 🎯 DEFINIR isPlayingAudio ANTES de tocar (para detecção imediata)
       setIsPlayingAudio(true);
       
       audio.onplay = () => {
         console.log('🔊 Áudio iniciou (reconhecimento ATIVO)');
-        setIsPlayingAudio(true); // Garantir
+        setIsPlayingAudio(true);
       };
       
       audio.onended = () => {
@@ -668,7 +872,6 @@ export function VoiceAssistantWithWakeWord({
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
-        // 🎯 Garantir que wake word detection está ativa
         console.log('🔄 Garantindo wake word detection ativa...');
         setTimeout(() => {
           if (isActiveRef.current && !recognitionRef.current) {
@@ -691,7 +894,6 @@ export function VoiceAssistantWithWakeWord({
         }, 200);
       };
 
-      // 🎯 TIMEOUT DE SEGURANÇA: Se áudio não começar em 3s, reiniciar
       const safetyTimeout = setTimeout(() => {
         if (!isPlayingAudio && currentAudioRef.current === audio) {
           console.log('⚠️ Áudio não iniciou em 3s, forçando reinício');
@@ -705,7 +907,6 @@ export function VoiceAssistantWithWakeWord({
         }
       }, 1500);
 
-      // 🎯 MOBILE FIX: Garantir que play() seja executado
       try {
         console.log('▶️ Tentando tocar áudio...');
         const playPromise = audio.play();
@@ -714,12 +915,11 @@ export function VoiceAssistantWithWakeWord({
           playPromise
             .then(() => {
               console.log('✅ Áudio tocando com sucesso');
-              clearTimeout(safetyTimeout); // Limpar timeout se sucesso
+              clearTimeout(safetyTimeout);
             })
             .catch(err => {
               console.error('❌ Erro play():', err);
               
-              // 🎯 RETRY no mobile se falhar
               setTimeout(() => {
                 console.log('🔄 Retry play()...');
                 audio.play()
@@ -730,7 +930,6 @@ export function VoiceAssistantWithWakeWord({
                     console.error('❌ Retry falhou:', e);
                     clearTimeout(safetyTimeout);
                     
-                    // Se ainda falhar, reiniciar wake word
                     setIsPlayingAudio(false);
                     currentAudioRef.current = null;
                     processingQuestion.current = false;
@@ -764,7 +963,6 @@ export function VoiceAssistantWithWakeWord({
       setIsProcessing(false);
       processingQuestion.current = false;
       
-      // Parar feedback em caso de erro
       if (feedbackAudioRef.current) {
         try {
           feedbackAudioRef.current.pause();
@@ -784,7 +982,6 @@ export function VoiceAssistantWithWakeWord({
   async function playProcessingFeedback(): Promise<HTMLAudioElement> {
     return new Promise(async (resolve, reject) => {
       try {
-        // 🎯 VARIAÇÃO: Escolher resposta aleatória
         const feedbackMessages = [
           'Entendi!',
           'Processando...',
@@ -797,7 +994,6 @@ export function VoiceAssistantWithWakeWord({
         
         console.log(`💬 Tocando feedback: "${randomMessage}"`);
         
-        // 🎯 TTS rápido (ideal se tiver endpoint otimizado)
         const response = await fetch('/api/voice/tts-fast', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -805,7 +1001,6 @@ export function VoiceAssistantWithWakeWord({
         });
 
         if (!response.ok) {
-          // Fallback: tentar TTS normal
           throw new Error('Fast TTS não disponível');
         }
 
@@ -814,7 +1009,7 @@ export function VoiceAssistantWithWakeWord({
         const audio = new Audio(audioUrl);
         
         audio.volume = 0.9;
-        audio.playbackRate = 1.0; // 🎯 Velocidade normal (era 0.85, estava muito lento)
+        audio.playbackRate = 1.0;
         
         audio.onplay = () => {
           setIsPlayingAudio(true);
@@ -833,11 +1028,9 @@ export function VoiceAssistantWithWakeWord({
         resolve(audio);
         
       } catch (err) {
-        // Se TTS falhar, usar áudio inline base64 (backup)
         console.log('⚠️ TTS feedback falhou, usando backup');
         
         try {
-          // Áudio curto "beep" como fallback
           const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU=');
           audio.volume = 0.5;
           await audio.play();
@@ -922,9 +1115,9 @@ export function VoiceAssistantWithWakeWord({
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
-    if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // 🔵 Azul ao responder
-    if (isProcessing) return 'bg-green-600 animate-pulse'; // 🟢 Verde escuro ao processar
-    if (isListening) return 'bg-green-400 animate-pulse'; // 🟢 Verde claro aguardando
+    if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
+    if (isProcessing) return 'bg-green-600 animate-pulse';
+    if (isListening) return 'bg-green-400 animate-pulse';
     return 'bg-gray-400';
   };
 
@@ -937,13 +1130,11 @@ export function VoiceAssistantWithWakeWord({
             : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
         }`}
         onMouseMove={(e) => {
-          // Mostrar botão X quando mouse está no canto superior direito
           const isNearTopRight = e.clientX > window.innerWidth - 150 && e.clientY < 150;
           setShowCloseButton(isNearTopRight);
         }}
         onMouseLeave={() => setShowCloseButton(false)}
       >
-        {/* Botão X - Aparece só com hover */}
         <button
           onClick={() => setIsFullscreen(false)}
           className={`absolute top-4 right-4 p-3 rounded-full transition-all duration-300 z-50 ${
@@ -960,17 +1151,21 @@ export function VoiceAssistantWithWakeWord({
         </button>
 
         <div className="flex flex-col items-center gap-4 md:gap-8 w-full px-4">
-          {/* Avatar - Responsivo: menor no mobile */}
           <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
             <AvatarFace
               isListening={isListening}
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
               theme={theme}
+              qrCodeData={qrCodeData}
+              pixConfirmationData={pixConfirmationData}
+              onCloseQRCode={handleCloseQRCode}
+              onCopyQRCode={handleCopyQRCode}
+              onConfirmPix={handleConfirmPix}
+              onCancelPix={handleCancelPix}
             />
           </div>
 
-          {/* Status - 50% translúcido em ambos os temas */}
           <div className="text-center px-4 max-w-md">
             <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 transition-colors ${
               theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
@@ -1016,6 +1211,12 @@ export function VoiceAssistantWithWakeWord({
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
               theme={theme}
+              qrCodeData={qrCodeData}
+              pixConfirmationData={pixConfirmationData}
+              onCloseQRCode={handleCloseQRCode}
+              onCopyQRCode={handleCopyQRCode}
+              onConfirmPix={handleConfirmPix}
+              onCancelPix={handleCancelPix}
             />
           </div>
         </div>

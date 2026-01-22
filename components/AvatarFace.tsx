@@ -1,19 +1,50 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
+import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
+import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 
 interface AvatarFaceProps {
   isListening: boolean;
   isSpeaking: boolean;
   isProcessing: boolean;
   theme?: 'dark' | 'light';
+  
+  // ✨ NOVOS PROPS PARA QR CODES
+  qrCodeData?: {
+    type: 'whatsapp' | 'instagram' | 'pix';
+    qrCodeUrl: string;
+    qrContent: string;
+    displayText: string;
+    amount?: string;
+    companyName?: string;
+  } | null;
+  
+  // ✨ NOVOS PROPS PARA PIX CONFIRMATION
+  pixConfirmationData?: {
+    transactionId: string;
+    amount: string;
+    qrCodeUrl: string;
+    pixCode: string;
+  } | null;
+  
+  onCloseQRCode?: () => void;
+  onCopyQRCode?: () => void;
+  onConfirmPix?: () => Promise<void>;
+  onCancelPix?: () => Promise<void>;
 }
 
 export function AvatarFace({ 
   isListening, 
   isSpeaking, 
   isProcessing, 
-  theme = 'dark' 
+  theme = 'dark',
+  qrCodeData,
+  pixConfirmationData,
+  onCloseQRCode,
+  onCopyQRCode,
+  onConfirmPix,
+  onCancelPix,
 }: AvatarFaceProps) {
   
   const isDark = theme === 'dark';
@@ -52,8 +83,8 @@ export function AvatarFace({
 
   const [colors, setColors] = useState(statusColors.idle);
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
-  const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0)); // 🎵 10 barras
-  const [isBlinking, setIsBlinking] = useState(false); // 👁️ Estado de piscada
+  const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0));
+  const [isBlinking, setIsBlinking] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,20 +101,15 @@ export function AvatarFace({
   // 👁️ SISTEMA DE PISCADAS ALEATÓRIAS E NATURAIS
   useEffect(() => {
     const scheduleNextBlink = () => {
-      // Intervalo aleatório entre 2 e 6 segundos
       const nextBlinkDelay = Math.random() * 4000 + 2000;
       
       blinkTimeoutRef.current = setTimeout(() => {
-        // Inicia a piscada
         setIsBlinking(true);
-        
-        // Duração da piscada: 120-180ms (natural)
         const blinkDuration = Math.random() * 60 + 120;
         
         setTimeout(() => {
           setIsBlinking(false);
           
-          // Chance de piscada dupla (15% das vezes)
           if (Math.random() < 0.15) {
             setTimeout(() => {
               setIsBlinking(true);
@@ -91,7 +117,7 @@ export function AvatarFace({
                 setIsBlinking(false);
                 scheduleNextBlink();
               }, blinkDuration);
-            }, 200); // Pequeno intervalo entre piscadas duplas
+            }, 200);
           } else {
             scheduleNextBlink();
           }
@@ -121,7 +147,7 @@ export function AvatarFace({
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
-  // 🎵 SIMULAR AUDIOLEVELS (Gráfico de áudio) - SÓ QUANDO FALANDO
+  // 🎵 SIMULAR AUDIOLEVELS
   useEffect(() => {
     if (isSpeaking) {
       audioIntervalRef.current = setInterval(() => {
@@ -139,7 +165,7 @@ export function AvatarFace({
         clearInterval(audioIntervalRef.current);
         audioIntervalRef.current = null;
       }
-      setAudioLevels(Array(10).fill(0)); // 🎵 10 barras zeradas
+      setAudioLevels(Array(10).fill(0));
     }
     
     return () => {
@@ -148,7 +174,7 @@ export function AvatarFace({
         audioIntervalRef.current = null;
       }
     };
-  }, [isSpeaking]); // 🎯 SÓ isSpeaking (não processing)
+  }, [isSpeaking]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -183,6 +209,37 @@ export function AvatarFace({
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
+      
+      {/* ✨ QR CODE DISPLAY OVERLAY */}
+      {qrCodeData && !pixConfirmationData && (
+        <div className="absolute inset-0 z-[100]">
+          <QRCodeDisplay
+            type={qrCodeData.type}
+            qrCodeUrl={qrCodeData.qrCodeUrl}
+            qrContent={qrCodeData.qrContent}
+            displayText={qrCodeData.displayText}
+            amount={qrCodeData.amount}
+            companyName={qrCodeData.companyName}
+            onClose={onCloseQRCode || (() => {})}
+            onCopy={onCopyQRCode}
+            autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15} // PIX não fecha automaticamente
+          />
+        </div>
+      )}
+
+      {/* ✨ PIX CONFIRMATION MODAL OVERLAY */}
+      {pixConfirmationData && (
+        <div className="absolute inset-0 z-[100]">
+          <PIXConfirmationModal
+            transactionId={pixConfirmationData.transactionId}
+            amount={pixConfirmationData.amount}
+            qrCodeUrl={pixConfirmationData.qrCodeUrl}
+            pixCode={pixConfirmationData.pixCode}
+            onConfirm={onConfirmPix || (async () => {})}
+            onCancel={onCancelPix || (async () => {})}
+          />
+        </div>
+      )}
       
       {/* 🌊 ONDAS DE FUNDO (Anéis de Borda) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -367,17 +424,14 @@ export function AvatarFace({
           </svg>
         )}
 
-        {/* 🌊💫 MÚLTIPLOS ORBS FLUIDOS COM MOVIMENTO INTENSO */}
+        {/* 🌊💫 MÚLTIPLOS ORBS FLUIDOS */}
         {!showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
-              {/* Filtro Gooey - Cria efeito líquido */}
               <filter id="gooey">
                 <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
                 <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo" />
               </filter>
-              
-              {/* Gradientes variados para mais diversidade */}
               <radialGradient id="coreGradient1">
                 <stop offset="0%" stopColor={colors.primary} />
                 <stop offset="100%" stopColor={colors.secondary} stopOpacity="0.6" />
@@ -393,70 +447,60 @@ export function AvatarFace({
             </defs>
             
             <g filter="url(#gooey)">
-              {/* ⭕ ORB PRINCIPAL 1 - Centro (Maior e mais dinâmico) */}
               <circle cx="100" cy="100" r="45" fill="url(#coreGradient1)">
                 <animate attributeName="r" values="40;55;40" dur="1.8s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="100;108;92;100" dur="3.5s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="100;92;108;100" dur="3.2s" repeatCount="indefinite" />
               </circle>
               
-              {/* ⭕ ORB 2 - Satélite Grande Esquerda */}
               <circle cx="65" cy="100" r="35" fill="url(#coreGradient2)" opacity="0.95">
                 <animate attributeName="r" values="32;42;32" dur="2s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="65;58;72;65" dur="2.8s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="100;108;92;100" dur="3.6s" repeatCount="indefinite" />
               </circle>
 
-              {/* ⭕ ORB 3 - Satélite Grande Direita */}
               <circle cx="135" cy="100" r="35" fill="url(#coreGradient3)" opacity="0.95">
                 <animate attributeName="r" values="33;43;33" dur="1.9s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="135;142;128;135" dur="3.2s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="100;92;108;100" dur="2.9s" repeatCount="indefinite" />
               </circle>
 
-              {/* ⭕ ORB 4 - Satélite Médio Superior */}
               <circle cx="100" cy="65" r="30" fill="url(#coreGradient1)" opacity="0.9">
                 <animate attributeName="r" values="27;37;27" dur="2.2s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="100;108;92;100" dur="3.8s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="65;58;72;65" dur="2.7s" repeatCount="indefinite" />
               </circle>
 
-              {/* ⭕ ORB 5 - Satélite Médio Inferior */}
               <circle cx="100" cy="135" r="30" fill="url(#coreGradient2)" opacity="0.9">
                 <animate attributeName="r" values="28;38;28" dur="2.4s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="100;92;108;100" dur="3.1s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="135;142;128;135" dur="3.5s" repeatCount="indefinite" />
               </circle>
 
-              {/* ⭕ ORB 6 - Diagonal Superior Esquerda */}
               <circle cx="72" cy="72" r="26" fill="url(#coreGradient3)" opacity="0.85">
                 <animate attributeName="r" values="23;33;23" dur="2.1s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="72;65;79;72" dur="3.3s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="72;65;79;72" dur="2.8s" repeatCount="indefinite" />
               </circle>
 
-              {/* ⭕ ORB 7 - Diagonal Superior Direita */}
               <circle cx="128" cy="72" r="26" fill="url(#coreGradient1)" opacity="0.85">
                 <animate attributeName="r" values="24;34;24" dur="2.3s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="128;135;121;128" dur="3s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="72;65;79;72" dur="3.4s" repeatCount="indefinite" />
               </circle>
 
-              {/* ⭕ ORB 8 - Diagonal Inferior Esquerda */}
               <circle cx="72" cy="128" r="26" fill="url(#coreGradient2)" opacity="0.85">
                 <animate attributeName="r" values="22;32;22" dur="2.5s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="72;65;79;72" dur="2.9s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="128;135;121;128" dur="3.2s" repeatCount="indefinite" />
               </circle>
 
-              {/* ⭕ ORB 9 - Diagonal Inferior Direita */}
               <circle cx="128" cy="128" r="26" fill="url(#coreGradient3)" opacity="0.85">
                 <animate attributeName="r" values="23;33;23" dur="2.6s" repeatCount="indefinite" />
                 <animate attributeName="cx" values="128;135;121;128" dur="3.6s" repeatCount="indefinite" />
                 <animate attributeName="cy" values="128;135;121;128" dur="2.6s" repeatCount="indefinite" />
               </circle>
 
-              {/* 💫 ORBS PEQUENOS DINÂMICOS - Mais quando speaking */}
               {[...Array(isSpeaking ? 16 : 8)].map((_, i) => {
                 const angle = (i * Math.PI * 2) / (isSpeaking ? 16 : 8);
                 const radius = isSpeaking ? 55 : 50;
@@ -472,35 +516,13 @@ export function AvatarFace({
                     fill={i % 3 === 0 ? colors.primary : i % 3 === 1 ? colors.secondary : colors.ring}
                     opacity="0.75"
                   >
-                    {/* Pulsação INTENSA */}
-                    <animate
-                      attributeName="r"
-                      values={isSpeaking ? "15;28;15" : "13;23;13"}
-                      dur={`${0.8 + (i * 0.08)}s`}
-                      repeatCount="indefinite"
-                    />
-                    
-                    {/* Movimento orbital */}
-                    <animateTransform
-                      attributeName="transform"
-                      type="translate"
-                      values={`0,0; ${Math.cos(angle) * 18},${Math.sin(angle) * 18}; 0,0`}
-                      dur={`${1.2 + (i * 0.07)}s`}
-                      repeatCount="indefinite"
-                    />
-                    
-                    {/* Opacidade pulsante */}
-                    <animate
-                      attributeName="opacity"
-                      values="0.4;1;0.4"
-                      dur={`${0.9 + (i * 0.06)}s`}
-                      repeatCount="indefinite"
-                    />
+                    <animate attributeName="r" values={isSpeaking ? "15;28;15" : "13;23;13"} dur={`${0.8 + (i * 0.08)}s`} repeatCount="indefinite" />
+                    <animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(angle) * 18},${Math.sin(angle) * 18}; 0,0`} dur={`${1.2 + (i * 0.07)}s`} repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.4;1;0.4" dur={`${0.9 + (i * 0.06)}s`} repeatCount="indefinite" />
                   </circle>
                 );
               })}
 
-              {/* 🌟 ORBS EXTRAS para ainda mais densidade quando speaking */}
               {isSpeaking && [...Array(12)].map((_, i) => {
                 const angle = (i * Math.PI * 2) / 12 + Math.PI / 12;
                 const radius = 35;
@@ -516,25 +538,9 @@ export function AvatarFace({
                     fill={i % 2 === 0 ? colors.primary : colors.secondary}
                     opacity="0.7"
                   >
-                    <animate
-                      attributeName="r"
-                      values="10;18;10"
-                      dur={`${0.7 + (i * 0.05)}s`}
-                      repeatCount="indefinite"
-                    />
-                    <animateTransform
-                      attributeName="transform"
-                      type="translate"
-                      values={`0,0; ${Math.cos(angle + Math.PI) * 12},${Math.sin(angle + Math.PI) * 12}; 0,0`}
-                      dur={`${1 + (i * 0.06)}s`}
-                      repeatCount="indefinite"
-                    />
-                    <animate
-                      attributeName="opacity"
-                      values="0.5;0.9;0.5"
-                      dur={`${0.8 + (i * 0.05)}s`}
-                      repeatCount="indefinite"
-                    />
+                    <animate attributeName="r" values="10;18;10" dur={`${0.7 + (i * 0.05)}s`} repeatCount="indefinite" />
+                    <animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(angle + Math.PI) * 12},${Math.sin(angle + Math.PI) * 12}; 0,0`} dur={`${1 + (i * 0.06)}s`} repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.5;0.9;0.5" dur={`${0.8 + (i * 0.05)}s`} repeatCount="indefinite" />
                   </circle>
                 );
               })}
@@ -550,7 +556,7 @@ export function AvatarFace({
           ))}
         </div>
 
-        {/* 🎵 GRÁFICO DE ÁUDIO - 10 Barras NA FRENTE (só quando speaking) */}
+        {/* 🎵 GRÁFICO DE ÁUDIO */}
         {isSpeaking && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
             <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">

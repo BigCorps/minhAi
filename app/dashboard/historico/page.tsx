@@ -33,33 +33,53 @@ export default function HistoricoPage() {
     setError(null);
     
     try {
-      // 0. Buscar user_id e company_id do usuário logado
+      // 0. Buscar user_id do usuário logado
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error('Usuário não autenticado');
       }
 
-      // Buscar company_id do usuário via company_admins
-      const { data: adminData } = await supabase
+      console.log('👤 User ID:', user.id);
+
+      // 1. Buscar company_id do usuário via company_admins
+      const { data: adminData, error: adminError } = await supabase
         .from('company_admins')
         .select('company_id')
-        .eq('user_id', user.id)
-        .limit(10);
+        .eq('user_id', user.id);
 
-      const userCompanyIds = adminData?.map(a => a.company_id) || [];
+      console.log('📋 Admin data:', adminData);
+      console.log('❌ Admin error:', adminError);
+
+      let userCompanyIds: string[] = [];
+
+      if (adminData && adminData.length > 0) {
+        // Usuário tem empresas via company_admins
+        userCompanyIds = adminData.map(a => a.company_id);
+        console.log('✅ Empresas via company_admins:', userCompanyIds);
+      } else {
+        // FALLBACK: Buscar empresas criadas pelo usuário (sem company_admins)
+        console.log('⚠️ Sem company_admins, buscando todas as empresas...');
+        
+        const { data: allCompanies } = await supabase
+          .from('companies')
+          .select('id');
+        
+        if (allCompanies && allCompanies.length > 0) {
+          userCompanyIds = allCompanies.map(c => c.id);
+          console.log('✅ Todas as empresas do sistema:', userCompanyIds);
+        }
+      }
 
       if (userCompanyIds.length === 0) {
-        console.log('⚠️ Usuário não tem empresas associadas');
+        console.log('⚠️ Nenhuma empresa encontrada');
         setCompanies([]);
         setMessagePairs([]);
         setLoading(false);
         return;
       }
 
-      console.log('✅ Empresas do usuário:', userCompanyIds);
-
-      // 1. Carregar empresas DO USUÁRIO para filtro
+      // 2. Carregar empresas
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, slug')
@@ -71,13 +91,14 @@ export default function HistoricoPage() {
         throw new Error('Não foi possível carregar as empresas');
       }
 
+      console.log('✅ Empresas carregadas:', companiesData?.length);
       setCompanies(companiesData || []);
 
-      // 2. Carregar conversas DAS EMPRESAS DO USUÁRIO
+      // 3. Carregar conversas
       let query = supabase
         .from('conversations')
         .select('id, company_id, started_at')
-        .in('company_id', userCompanyIds) // ✅ FILTRAR POR EMPRESAS DO USUÁRIO
+        .in('company_id', userCompanyIds)
         .order('started_at', { ascending: false })
         .limit(50);
 
@@ -100,16 +121,13 @@ export default function HistoricoPage() {
         return;
       }
 
-      // 3. Para cada conversa, buscar mensagens e empresa
+      // 4. Para cada conversa, buscar mensagens
       const pairs: MessagePair[] = [];
 
       for (const conv of conversations) {
-        // Buscar empresa
         const company = companiesData?.find(c => c.id === conv.company_id);
-        
         if (!company) continue;
 
-        // Buscar mensagens
         const { data: messages, error: msgError } = await supabase
           .from('messages')
           .select('*')
@@ -123,7 +141,7 @@ export default function HistoricoPage() {
 
         if (!messages || messages.length === 0) continue;
 
-        // Agrupar mensagens em pares (user + assistant)
+        // Agrupar em pares
         for (let i = 0; i < messages.length - 1; i++) {
           const msg1 = messages[i];
           const msg2 = messages[i + 1];
@@ -138,7 +156,7 @@ export default function HistoricoPage() {
               companySlug: company.slug,
               timestamp: msg1.created_at,
             });
-            i++; // Pular próxima mensagem já processada
+            i++;
           }
         }
       }

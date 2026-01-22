@@ -355,6 +355,7 @@ export default function EditarEmpresaPage() {
           {/* ✨ NOVO: Formulário de Contatos (WhatsApp, Instagram, PIX) */}
           <CompanyContactsForm
             companyId={companyId}
+            theme={theme} // ← NOVO
             initialData={{
               whatsapp_number: company.whatsapp_number,
               instagram_username: company.instagram_username,

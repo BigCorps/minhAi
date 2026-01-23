@@ -16,7 +16,16 @@ export function useWakeLock() {
     
     console.log('🔍 Wake Lock suportado:', supported);
     console.log('🌐 User Agent:', navigator.userAgent);
-  }, []);
+
+    // Cleanup APENAS ao desmontar o componente (não ao mudar isActive)
+    return () => {
+      console.log('🧹 Componente desmontando - liberando Wake Lock');
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+  }, []); // ⚡ Array vazio - só roda uma vez!
 
   const requestWakeLock = async () => {
     console.log('🔒 Tentando ativar Wake Lock...');
@@ -29,7 +38,7 @@ export function useWakeLock() {
     }
 
     // Se já está ativo, não fazer nada
-    if (wakeLockRef.current !== null) {
+    if (wakeLockRef.current !== null && !wakeLockRef.current.released) {
       console.log('✅ Wake Lock já está ativo');
       return true;
     }
@@ -44,11 +53,10 @@ export function useWakeLock() {
       console.log('📱 Tipo:', wakeLockRef.current.type);
       console.log('📱 Released:', wakeLockRef.current.released);
 
-      // Listener para quando o Wake Lock for liberado
+      // Listener para quando o Wake Lock for liberado PELO SISTEMA
       wakeLockRef.current.addEventListener('release', () => {
-        console.log('⚠️ Wake Lock foi liberado automaticamente');
+        console.log('⚠️ Wake Lock foi liberado pelo sistema');
         setIsActive(false);
-        wakeLockRef.current = null;
       });
 
       return true;
@@ -66,7 +74,7 @@ export function useWakeLock() {
   };
 
   const releaseWakeLock = async () => {
-    console.log('🔓 Tentando desativar Wake Lock...');
+    console.log('🔓 Desativando Wake Lock manualmente...');
     
     if (wakeLockRef.current) {
       try {
@@ -89,23 +97,24 @@ export function useWakeLock() {
     const handleVisibilityChange = async () => {
       console.log('👁️ Visibilidade mudou:', document.visibilityState);
       
-      if (document.visibilityState === 'visible' && isActive && !wakeLockRef.current) {
-        console.log('🔄 Reativando Wake Lock...');
-        await requestWakeLock();
+      // Se a página voltou a ficar visível E o Wake Lock deveria estar ativo
+      if (document.visibilityState === 'visible' && isActive) {
+        // Se o Wake Lock foi liberado (released = true), reativar
+        if (!wakeLockRef.current || wakeLockRef.current.released) {
+          console.log('🔄 Reativando Wake Lock...');
+          await requestWakeLock();
+        } else {
+          console.log('✅ Wake Lock ainda está ativo, não precisa reativar');
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Cleanup ao desmontar
     return () => {
-      console.log('🧹 Limpando Wake Lock...');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (wakeLockRef.current) {
-        releaseWakeLock();
-      }
     };
-  }, [isActive]);
+  }, [isActive]); // ⚡ Só depende de isActive
 
   return {
     isSupported,

@@ -285,30 +285,32 @@ export function VoiceAssistantWithWakeWord({
     }
     
     // 💰 COMANDO: GERAR PIX COM CENTAVOS
-    // ✅ DETECTAR FORMATO: "10 e 50" = R$ 10,50
-    const pixWithCentsRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer|fazer\s+um|fazer\s+uma|gerar\s+uma|gerar\s+um|fazer\s+o|fazer\s+a)\s+(?:um\s+|uma\s+)?(?:pix|pics|pic|picks|pixs|pagamento|cobrança|cobranca)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?\s+(\d+)\s+e\s+(\d+)/i;
+    // ✅ DETECTAR FORMATO: "10 e 50" OU "10 50" (Espaço no lugar da vírgula)
+    // 🔧 Mudança: (?:\s+e\s+|\s+) aceita " e " OU apenas espaço entre os números
+    const pixWithCentsRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer|fazer\s+um|fazer\s+uma|gerar\s+uma|gerar\s+um|fazer\s+o|fazer\s+a)\s+(?:um\s+|uma\s+)?(?:pix|pics|pic|picks|pixs|pagamento|cobrança|cobranca)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?\s+(\d+)(?:\s+e\s+|\s+)(\d+)/i;
     const pixWithCentsMatch = lowerTranscript.match(pixWithCentsRegex);
     
     if (pixWithCentsMatch) {
       const reais = pixWithCentsMatch[1];
       let centavos = pixWithCentsMatch[2];
       
-      // ✅ GARANTIR 2 DÍGITOS: "5" vira "50" (pois "10 e 5" oralmente costuma ser 10,50)
+      // Validação extra: Se o separador foi espaço, garante que não pegou algo nada a ver
+      // Mas em comandos curtos como "pix de 10 50", é seguro.
+      
+      // ✅ GARANTIR 2 DÍGITOS: "5" vira "50", "50" fica "50"
       if (centavos.length === 1) {
         centavos = centavos + '0'; 
       } else if (centavos.length > 2) {
         centavos = centavos.slice(0, 2); 
       }
       
-      // 🔧 CORREÇÃO: Cria o float decimal (10.50)
       const amount = parseFloat(`${reais}.${centavos}`);
       
       if (amount > 0) {
         console.log('💰 Comando PIX com centavos detectado!');
         console.log('   📝 Reais:', reais, '| Centavos:', centavos, '| Total:', amount);
         
-        // Passa 10.50 (que a API vai transformar em string "10.50")
-        await handlePixCommand(amount); 
+        await handlePixCommand(amount);
         return true;
       }
     }

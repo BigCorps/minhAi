@@ -33,7 +33,7 @@ export default function HomePage() {
       <div className="flex-shrink-0">
         <Image 
           src="/logo.png" 
-          alt="iTend" 
+          alt="eAi" 
           width={150} 
           height={68}
           className="h-10 md:h-12 w-auto"
@@ -244,7 +244,7 @@ export default function HomePage() {
           theme === 'dark' ? 'text-white/60' : 'text-gray-700'
         }`}>
           <p>
-            &copy; {new Date().getFullYear()} iTend - Atendimento por Voz Inteligente.
+            &copy; {new Date().getFullYear()} eAi - Atendimento por Voz Inteligente.
           </p>
           <small>
             <a

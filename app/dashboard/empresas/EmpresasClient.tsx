@@ -56,7 +56,7 @@ export default function EmpresasClient({ companies }: EmpresasClientProps) {
               <Link href="/dashboard">
                 <Image 
                   src="/logo.png" 
-                  alt="iTend" 
+                  alt="eAi" 
                   width={150} 
                   height={68}
                   className="rounded-lg cursor-pointer"

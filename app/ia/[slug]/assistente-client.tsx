@@ -145,7 +145,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           }`}>
             <div className="flex items-center justify-center space-x-4 mb-2">
               <Link
-                href="https://itend.com.br"
+                href="https://eai.app.br"
                 className={`text-xs font-medium transition-colors ${
                   theme === 'dark'
                     ? 'text-blue-400 hover:text-blue-300'
@@ -156,7 +156,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               </Link>
               <span className={theme === 'dark' ? 'text-white/20' : 'text-gray-400'}>|</span>
               <Link
-                href="https://itend.com.br/login"
+                href="https://eai.app.br/login"
                 className={`text-xs font-medium transition-colors ${
                   theme === 'dark'
                     ? 'text-blue-400 hover:text-blue-300'
@@ -176,7 +176,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              iTend - Desenvolvido por Bigcorps
+              eAi - Desenvolvido por Bigcorps
             </Link>
           </div>
         </div>

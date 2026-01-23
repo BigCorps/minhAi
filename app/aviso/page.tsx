@@ -127,7 +127,6 @@ export default function PrivacyPage() {
                 <li><strong>Informações de Conta:</strong> Nome, email, senha (criptografada) e foto de perfil</li>
                 <li><strong>Informações de Uso:</strong> Dados sobre como você utiliza a plataforma, incluindo páginas visitadas e ações realizadas</li>
                 <li><strong>Informações Técnicas:</strong> Endereço IP, tipo de navegador, dispositivo utilizado e sistema operacional</li>
-                </li>
               </ul>
 
               <h2>2. Como Usamos suas Informações</h2>

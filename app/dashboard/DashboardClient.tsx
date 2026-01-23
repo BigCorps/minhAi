@@ -67,7 +67,7 @@ export default function DashboardClient({
             <div className="flex items-center space-x-3">
               <Image 
                 src="/logo.png" 
-                alt="iTend" 
+                alt="eAi" 
                 width={150} 
                 height={68}
                 className="rounded-lg"
@@ -94,7 +94,7 @@ export default function DashboardClient({
           <p className={`transition-colors ${
             theme === 'dark' ? 'text-white/60' : 'text-gray-600'
           }`}>
-            Bem-vindo ao Painel de Controle do iTend
+            eAi, Bem-vindo ao Painel de Controle 
           </p>
         </div>
 

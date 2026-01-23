@@ -6,7 +6,7 @@ interface CopyLinkButtonProps {
 
 export function CopyLinkButton({ slug }: CopyLinkButtonProps) {
   function handleCopy() {
-    const url = `https://itend.com.br/ia/${slug}`;
+    const url = `https://eai.app.br/ia/${slug}`;
     navigator.clipboard.writeText(url);
     alert('Link copiado!');
   }

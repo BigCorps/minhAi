@@ -172,7 +172,7 @@ export default function EditarEmpresaPage() {
               <Link href="/dashboard">
                 <Image 
                   src="/logo.png" 
-                  alt="iTend" 
+                  alt="eAi" 
                   width={150} 
                   height={68}
                   className="rounded-lg cursor-pointer"
@@ -260,7 +260,7 @@ export default function EditarEmpresaPage() {
                 <p className={`mt-1 text-xs ${
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                 }`}>
-                  URL pública: <strong>itend.com.br/ia/{company.slug}</strong>
+                  URL pública: <strong>eai.app.br/ia/{company.slug}</strong>
                 </p>
               </div>
 

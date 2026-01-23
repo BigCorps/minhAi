@@ -252,26 +252,39 @@ export default function LoginPage() {
             }`}>Continuar com Google</span>
           </button>
 
-          {/* Termos e Privacidade */}
-          <div className="mt-6 text-center">
-            <p className={`text-xs transition-colors ${
-              theme === 'dark' ? 'text-white/50' : 'text-gray-500'
-            }`}>
-              Ao continuar, estou de acordo com os{' '}
-              <Link href="/termos" className={`underline transition-colors ${
-                theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
-              }`}>
-                Termos de Uso
-              </Link>
-              {' '}e{' '}
-              <Link href="/aviso" className={`underline transition-colors ${
-                theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
-              }`}>
-                Aviso de Privacidade
-              </Link>
-              .
-            </p>
-          </div>
+{/* Termos e Privacidade */}
+<div className="mt-6 text-center">
+  <p
+    className={`text-xs transition-colors ${
+      theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+    }`}
+  >
+    Ao continuar, estou de acordo com os
+    <br />
+    <Link
+      href="/termos"
+      className={`underline transition-colors ${
+        theme === 'dark'
+          ? 'text-blue-400 hover:text-blue-300'
+          : 'text-blue-600 hover:text-blue-700'
+      }`}
+    >
+      Termos de Uso
+    </Link>{' '}
+    e{' '}
+    <Link
+      href="/aviso"
+      className={`underline transition-colors ${
+        theme === 'dark'
+          ? 'text-blue-400 hover:text-blue-300'
+          : 'text-blue-600 hover:text-blue-700'
+      }`}
+    >
+      Aviso de Privacidade
+    </Link>
+    .
+  </p>
+</div>
 
           <div className="mt-4 text-center">
             <button

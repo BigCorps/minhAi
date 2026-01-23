@@ -5,7 +5,7 @@
  * 
  * Funciona com Web Speech API ou Deepgram transcriptions
  * Resolve o problema de variações de pronúncia como:
- * - "iTend" → "aitend", "itende", "itand", "i tend"
+ * - "eai" → "iai", "iae"
  * - "ola" → "olá", "óla", "ola"
  * - "oi" → "ói", "oí"
  */
@@ -35,17 +35,14 @@ const PHONETIC_RULES: Record<string, string[]> = {
 
 // Variações fonéticas específicas para palavras compostas
 const WORD_VARIATIONS: Record<string, string[]> = {
-  'itend': [
-    'itend',
-    'aitend',
-    'i tend',
-    'ai tend',
-    'itende',
-    'aitende',
-    'itand',
-    'aitand',
-    'itent',
-    'aitent',
+  'eai': [
+    'iai',
+    'iae',
+    'i a e',
+    'e a i',
+    'i a i',
+    'e a e',
+    'eae',
   ],
   'ola': ['ola', 'olá', 'óla', 'hola'],
   'oi': ['oi', 'ói', 'oí', 'hoi'],
@@ -309,18 +306,18 @@ export class WakeWordDetector {
 /*
 // 1. Criar detector
 const detector = new WakeWordDetector({
-  keywords: ['itend', 'ola', 'oi', 'ei sistema'],
+  keywords: ['eai', 'ola', 'oi', 'ei sistema'],
   threshold: 0.7,
   contextWindow: 5,
   usePhoneticMatching: true
 });
 
 // 2. Analisar transcrições do Deepgram ou Web Speech API
-const result = detector.detect("ei aitend tudo bem");
+const result = detector.detect("eai tudo bem");
 
 if (result.detected) {
   console.log('Wake word ativada!', result);
-  // { detected: true, keyword: 'itend', confidence: 0.95, matchedText: 'aitend' }
+  // { detected: true, keyword: 'eai', confidence: 0.95, matchedText: 'iai' }
 }
 
 // 3. Adicionar keywords dinamicamente por empresa

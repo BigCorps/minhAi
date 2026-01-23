@@ -99,13 +99,13 @@ export default function HomePage() {
           <h2 className={`text-5xl font-bold mb-6 transition-colors ${
             theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
           }`}>
-            Por Voz com IA totalmente personalizado?
+            por Voz com IA totalmente personalizado?
           </h2>
           <p className={`text-xl max-w-3xl mx-auto mb-8 transition-colors ${
             theme === 'dark' ? 'text-white/70' : 'text-gray-600'
           }`}>
             Transforme a experiência dos seus clientes com um assistente de voz inteligente
-            que responde perguntas, tira dúvidas e oferece suporte 24/7.
+            que responde perguntas, gera pagementos, faz agendamentos e oferece suporte 24/7.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

@@ -241,7 +241,7 @@ export function VoiceAssistantWithWakeWord({
     }, 300);
   }
 
-  // ========================================
+// ========================================
   // 🎯 COMANDOS DE VOZ PARA QR CODES E PIX
   // ========================================
 
@@ -290,60 +290,69 @@ export function VoiceAssistantWithWakeWord({
     const pixWithCentsMatch = lowerTranscript.match(pixWithCentsRegex);
     
     if (pixWithCentsMatch) {
-      const reais = pixWithCentsMatch[1];
-      let centavos = pixWithCentsMatch[2];
+      const reaisStr = pixWithCentsMatch[1];
+      let centavosStr = pixWithCentsMatch[2];
       
-      // ✅ GARANTIR 2 DÍGITOS: "5" vira "50", "50" fica "50"
-      if (centavos.length === 1) {
-        centavos = centavos + '0'; // "5" → "50"
-      } else if (centavos.length > 2) {
-        centavos = centavos.slice(0, 2); // "500" → "50"
+      // ✅ GARANTIR 2 DÍGITOS NOS CENTAVOS
+      if (centavosStr.length === 1) {
+        centavosStr = centavosStr + '0'; // "5" → "50"
+      } else if (centavosStr.length > 2) {
+        centavosStr = centavosStr.slice(0, 2); // "500" → "50"
       }
       
-      const amount = parseFloat(`${reais}.${centavos}`);
+      // 🔧 CORREÇÃO: Calcula direto em centavos (Inteiro)
+      // Ex: 10 e 50 -> (10 * 100) + 50 = 1050
+      const amountInCents = (parseInt(reaisStr) * 100) + parseInt(centavosStr);
       
-      if (amount > 0) {
+      if (amountInCents > 0) {
         console.log('💰 Comando PIX com centavos detectado!');
-        console.log('   📝 Reais:', reais, '| Centavos:', centavos, '| Total:', amount);
-        await handlePixCommand(amount);
+        console.log('   📝 Reais:', reaisStr, '| Centavos:', centavosStr, '| Total (cents):', amountInCents);
+        
+        // Passa o valor já em centavos (ex: 1050)
+        await handlePixCommand(amountInCents); 
         return true;
       }
     }
     
-    // 💰 COMANDO: GERAR PIX NORMAL
-    // ✅ REGEX MELHORADA: aceita "pix", "pics", "pic", "picks" + verbos de pagamento
+    // 💰 COMANDO: GERAR PIX NORMAL (Detecta decimais com vírgula ou ponto)
     const pixRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer|fazer\s+um|fazer\s+uma|gerar\s+uma|gerar\s+um|fazer\s+o|fazer\s+a)\s+(?:um\s+|uma\s+)?(?:pix|pics|pic|picks|pixs|pagamento|cobrança|cobranca)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?(?:\s+)?([\d]+(?:[,.]\d{1,2})?)/i;
     const pixMatch = lowerTranscript.match(pixRegex);
     
     if (pixMatch) {
       const amountStr = pixMatch[1].replace(',', '.');
-      const amount = parseFloat(amountStr);
+      const amountFloat = parseFloat(amountStr);
       
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado! Valor:', amount);
-        await handlePixCommand(amount);
+      // 🔧 CORREÇÃO: Converte float para centavos inteiros
+      // Ex: 10.50 * 100 = 1050
+      const amountInCents = Math.round(amountFloat * 100);
+      
+      if (amountInCents > 0) {
+        console.log('💰 Comando PIX detectado! Valor (cents):', amountInCents);
+        await handlePixCommand(amountInCents);
         return true;
       }
     }
     
-    // 💰 FALLBACK: Detectar apenas se tem "pix/pics/pagamento/cobrança" + número
+    // 💰 FALLBACK
     const pixFallbackRegex = /(?:pix|pics|pic|picks|pixs|pagamento|cobrança|cobranca).*?([\d]+(?:[,.]\d{1,2})?)/i;
     const pixFallbackMatch = lowerTranscript.match(pixFallbackRegex);
     
     if (pixFallbackMatch) {
       const amountStr = pixFallbackMatch[1].replace(',', '.');
-      const amount = parseFloat(amountStr);
+      const amountFloat = parseFloat(amountStr);
       
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado (fallback)! Valor:', amount);
-        await handlePixCommand(amount);
+      // 🔧 CORREÇÃO: Converte float para centavos inteiros
+      const amountInCents = Math.round(amountFloat * 100);
+      
+      if (amountInCents > 0) {
+        console.log('💰 Comando PIX detectado (fallback)! Valor (cents):', amountInCents);
+        await handlePixCommand(amountInCents);
         return true;
       }
     }
     
     return false;
   }
-
   async function handleWhatsAppCommand() {
     try {
       setIsProcessing(true);

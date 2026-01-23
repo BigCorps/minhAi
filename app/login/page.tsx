@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -115,7 +116,7 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <Image 
               src="/logo.png" 
-              alt="Gerente IA" 
+              alt="eAi" 
               width={190} 
               height={98}
               className="mx-auto mb-4 rounded-xl"
@@ -251,7 +252,28 @@ export default function LoginPage() {
             }`}>Continuar com Google</span>
           </button>
 
+          {/* Termos e Privacidade */}
           <div className="mt-6 text-center">
+            <p className={`text-xs transition-colors ${
+              theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+            }`}>
+              Ao continuar, estou de acordo com os{' '}
+              <Link href="/termos" className={`underline transition-colors ${
+                theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+              }`}>
+                Termos de Uso
+              </Link>
+              {' '}e{' '}
+              <Link href="/aviso" className={`underline transition-colors ${
+                theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+              }`}>
+                Aviso de Privacidade
+              </Link>
+              .
+            </p>
+          </div>
+
+          <div className="mt-4 text-center">
             <button
               onClick={() => {
                 setMode(mode === 'login' ? 'signup' : 'login');

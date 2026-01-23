@@ -17,7 +17,7 @@ export function UserProfile({ user }: UserProfileProps) {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = 'https://itend.com.br';
+    window.location.href = 'https://eai.app.br';
   }
 
   const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário';

@@ -57,7 +57,7 @@ export default function FAQsClient({ companies, user }: FAQsClientProps) {
               <Link href="/dashboard">
                 <Image 
                   src="/logo.png" 
-                  alt="iTend" 
+                  alt="eAi" 
                   width={150} 
                   height={68}
                   className="rounded-lg cursor-pointer"

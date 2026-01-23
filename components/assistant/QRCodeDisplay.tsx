@@ -78,7 +78,7 @@ export default function QRCodeDisplay({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
       <div className="relative w-full max-w-[340px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
         
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-slate-700">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {getTitle()}
           </h2>
@@ -126,12 +126,12 @@ export default function QRCodeDisplay({
           <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-gray-200 dark:border-slate-700">
             
             {type === 'pix' && amount && (
-              <div className="px-3 py-1 border-b border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
-                <p className="text-lg font-bold text-blue-600 dark:text-blue-400 text-center">
+              <div className="px-3 py-1.5 border-b border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400 text-center leading-tight">
                   R$ {amount}
                 </p>
                 {companyName && (
-                  <p className="text-[10px] text-gray-600 dark:text-gray-400 text-center leading-tight">
+                  <p className="text-[9px] text-gray-600 dark:text-gray-400 text-center leading-tight mt-0.5">
                     {companyName}
                   </p>
                 )}

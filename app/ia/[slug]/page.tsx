@@ -120,10 +120,10 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-white/5">
             <a
-              href="https://itend.com.br"
+              href="https://eai.app.br"
               className="text-xs text-white/30 hover:text-white/50 transition"
             >
-              iTend - Assistentes Virtuais com IA
+              eAi - Assistentes Virtuais com IA
             </a>
           </div>
         </div>

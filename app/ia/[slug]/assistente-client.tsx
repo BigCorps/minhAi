@@ -19,8 +19,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   
   // 🔒 Wake Lock para manter tela ligada
-  const { isSupported, isActive, requestWakeLock, releaseWakeLock } = useWakeLock();
-  const [showWakeLockToast, setShowWakeLockToast] = useState(false);
+  const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
 
   // Detectar preferência do sistema
   useEffect(() => {
@@ -28,41 +30,35 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     setTheme(isDark ? 'dark' : 'light');
   }, []);
 
-  // 🔒 Ativar Wake Lock automaticamente após primeira interação
-  useEffect(() => {
-    const activateWakeLock = async () => {
-      // Aguardar uma interação do usuário (clique ou toque)
-      const handleFirstInteraction = async () => {
-        if (isSupported && !isActive) {
-          const activated = await requestWakeLock();
-          if (activated) {
-            setShowWakeLockToast(true);
-            setTimeout(() => setShowWakeLockToast(false), 3000);
-          }
-        }
-        // Remove listener após primeira interação
-        document.removeEventListener('click', handleFirstInteraction);
-        document.removeEventListener('touchstart', handleFirstInteraction);
-      };
-
-      document.addEventListener('click', handleFirstInteraction, { once: true });
-      document.addEventListener('touchstart', handleFirstInteraction, { once: true });
-    };
-
-    activateWakeLock();
-  }, [isSupported, isActive, requestWakeLock]);
+  // Função para mostrar toast
+  const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   // Handler para toggle do Wake Lock
   const handleToggleWakeLock = async () => {
+    console.log('🎯 Botão Wake Lock clicado');
+    console.log('📊 Estado atual - isActive:', isActive, 'isSupported:', isSupported);
+
+    if (!isSupported) {
+      showToastMessage('Wake Lock não suportado neste navegador', 'warning');
+      return;
+    }
+
     if (isActive) {
+      // Desativar
       await releaseWakeLock();
-      setShowWakeLockToast(true);
-      setTimeout(() => setShowWakeLockToast(false), 2000);
+      showToastMessage('Tela sempre ligada desativada', 'warning');
     } else {
+      // Ativar
       const activated = await requestWakeLock();
       if (activated) {
-        setShowWakeLockToast(true);
-        setTimeout(() => setShowWakeLockToast(false), 2000);
+        showToastMessage('Tela sempre ligada ativada!', 'success');
+      } else {
+        showToastMessage(error || 'Erro ao ativar', 'error');
       }
     }
   };
@@ -77,20 +73,20 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       {/* Botões de Controle - Fixos no canto superior direito */}
       <div className="fixed top-6 right-6 z-50 flex items-center space-x-2">
         
-        {/* 🔒 Botão Wake Lock (manter tela ligada) */}
+        {/* 🔒 Botão Wake Lock (manter tela ligada) - SÓ APARECE SE SUPORTADO */}
         {isSupported && (
           <button
             onClick={handleToggleWakeLock}
-            className={`p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
+            className={`p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
               theme === 'dark'
                 ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                 : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
             } ${isActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
             aria-label={isActive ? 'Desativar tela sempre ligada' : 'Ativar tela sempre ligada'}
-            title={isActive ? 'Tela ligada ativa' : 'Ativar tela sempre ligada'}
+            title={isActive ? 'Tela ligada ativa - clique para desativar' : 'Clique para manter tela sempre ligada'}
           >
             {isActive ? (
-              // Ícone de cadeado aberto (ativo)
+              // Ícone de cadeado aberto (ativo) - VERDE
               <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
               </svg>
@@ -106,7 +102,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         {/* Botão de Toggle de Tema */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className={`p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
+          className={`p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
             theme === 'dark'
               ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
               : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
@@ -127,29 +123,30 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </button>
       </div>
 
-      {/* 🔔 Toast de Notificação do Wake Lock */}
-      {showWakeLockToast && (
-        <div className="fixed top-24 right-6 z-50 animate-slide-in">
-          <div className={`px-4 py-3 rounded-lg shadow-lg backdrop-blur-xl border flex items-center space-x-3 ${
+      {/* 🔔 Toast de Notificação */}
+      {showToast && (
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
+          <div className={`px-6 py-3 rounded-lg shadow-lg backdrop-blur-xl border flex items-center space-x-3 ${
             theme === 'dark'
-              ? 'bg-slate-800/90 border-white/10 text-white'
-              : 'bg-white/90 border-gray-200 text-gray-900'
+              ? 'bg-slate-800/95 border-white/10 text-white'
+              : 'bg-white/95 border-gray-200 text-gray-900'
           }`}>
-            {isActive ? (
-              <>
-                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium">Tela sempre ligada ativada</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium">Tela sempre ligada desativada</span>
-              </>
+            {toastType === 'success' && (
+              <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             )}
+            {toastType === 'warning' && (
+              <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            )}
+            {toastType === 'error' && (
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <span className="text-sm font-medium">{toastMessage}</span>
           </div>
         </div>
       )}
@@ -283,20 +280,20 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       </div>
 
-      {/* CSS para animação do toast */}
+      {/* CSS para animações */}
       <style jsx>{`
-        @keyframes slide-in {
+        @keyframes slide-down {
           from {
-            transform: translateX(100%);
+            transform: translate(-50%, -100%);
             opacity: 0;
           }
           to {
-            transform: translateX(0);
+            transform: translate(-50%, 0);
             opacity: 1;
           }
         }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
         }
       `}</style>
     </div>

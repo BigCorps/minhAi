@@ -111,7 +111,8 @@ export default function PrivacyPage() {
         }`}>
           <div className="h-[70vh] overflow-y-auto pr-4">
             <div className={`prose max-w-none transition-colors ${
-              theme === 'dark' ? 'prose-invert' : ''
+              theme === 'dark' ? 'text-white/80 prose-headings:text-white prose-strong:text-white prose-li:text-white/80 prose-p:text-white/80' 
+                               : 'text-gray-800'
             }`}>
               <p className={`text-sm mb-4 ${
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'

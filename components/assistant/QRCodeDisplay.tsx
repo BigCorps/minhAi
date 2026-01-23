@@ -102,17 +102,19 @@ export default function QRCodeDisplay({
         <div className="relative w-full aspect-square bg-white dark:bg-slate-900">
           
           <div 
-            className="absolute inset-0 p-8 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+            className="absolute inset-0 pt-4 pb-16 px-6 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
             onClick={handleCopy}
           >
-            <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              className="w-full h-full object-contain rounded-xl"
-            />
+            <div className="w-full h-full bg-white rounded-xl p-3 shadow-sm">
+              <img
+                src={qrCodeUrl}
+                alt="QR Code"
+                className="w-full h-full object-contain"
+              />
+            </div>
             
             {copied && (
-              <div className="absolute inset-0 flex items-center justify-center bg-green-500/95 rounded-xl animate-in fade-in zoom-in duration-200">
+              <div className="absolute inset-0 flex items-center justify-center bg-green-500/95 animate-in fade-in zoom-in duration-200">
                 <div className="flex flex-col items-center gap-1 text-white">
                   <Check className="w-10 h-10" />
                   <span className="font-bold">Copiado!</span>

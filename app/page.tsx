@@ -94,12 +94,12 @@ export default function HomePage() {
           <h1 className={`text-5xl font-bold mb-4 transition-colors ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
-            Atendimento ao Cliente
+            eAi, que tal um Atendimento ao Cliente
           </h1>
           <h2 className={`text-5xl font-bold mb-6 transition-colors ${
             theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
           }`}>
-            Por Voz com IA
+            Por Voz com IA totalmente personalizado?
           </h2>
           <p className={`text-xl max-w-3xl mx-auto mb-8 transition-colors ${
             theme === 'dark' ? 'text-white/70' : 'text-gray-600'
@@ -234,32 +234,59 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className={`border-t py-8 transition-colors ${
-        theme === 'dark'
-          ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
-          : 'bg-white border-gray-200'
-      }`}>
-        <div className={`px-4 text-center transition-colors ${
-          theme === 'dark' ? 'text-white/60' : 'text-gray-700'
-        }`}>
-          <p>
-            &copy; {new Date().getFullYear()} eAi - Atendimento por Voz Inteligente.
-          </p>
-          <small>
-            <a
-              href="https://bigcorps.com.br"
-              target="_blank"
-              rel="noreferrer"
-              className={`hover:underline transition-colors ${
-                theme === 'dark' ? 'text-white/40 hover:text-white/60' : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Desenvolvido por BigCorps.
-            </a>
-          </small>
-        </div>
-      </footer>
+{/* Footer */}
+<footer className={`border-t py-8 transition-colors ${
+  theme === 'dark'
+    ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
+    : 'bg-white border-gray-200'
+}`}>
+  <div className={`px-4 text-center transition-colors ${
+    theme === 'dark' ? 'text-white/60' : 'text-gray-700'
+  }`}>
+    <p>
+      &copy; {new Date().getFullYear()} eAi - Atendimento por Voz Inteligente.
+    </p>
+
+    <small className="block mt-2">
+      <a
+        href="https://bigcorps.com.br"
+        target="_blank"
+        rel="noreferrer"
+        className={`hover:underline transition-colors ${
+          theme === 'dark'
+            ? 'text-white/40 hover:text-white/60'
+            : 'text-gray-600 hover:text-gray-800'
+        }`}
+      >
+        Desenvolvido por BigCorps.
+      </a>
+    </small>
+
+    <small className="block mt-1 text-xs">
+      <Link
+        href="/termos"
+        className={`hover:underline transition-colors ${
+          theme === 'dark'
+            ? 'text-white/40 hover:text-white/60'
+            : 'text-gray-600 hover:text-gray-800'
+        }`}
+      >
+        Termos de Uso
+      </Link>
+      {' '}e{' '}
+      <Link
+        href="/aviso"
+        className={`hover:underline transition-colors ${
+          theme === 'dark'
+            ? 'text-white/40 hover:text-white/60'
+            : 'text-gray-600 hover:text-gray-800'
+        }`}
+      >
+        Aviso de Privacidade
+      </Link>
+    </small>
+  </div>
+</footer>
     </div>
   )
 }

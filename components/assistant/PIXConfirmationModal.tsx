@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Check, X, Copy } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
 
 interface PIXConfirmationModalProps {
   transactionId: string;
@@ -23,13 +24,31 @@ export default function PIXConfirmationModal({
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [copied, setCopied] = useState(false);
+  const supabase = createClient();
 
   const handleConfirm = async () => {
     setIsConfirming(true);
     try {
+      console.log('✅ Confirmando PIX:', transactionId);
+      
+      // ✅ Chamar Edge Function
+      const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
+        body: { transaction_id: transactionId }
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao confirmar:', error);
+        throw error;
+      }
+      
+      console.log('✅ PIX confirmado:', data);
+      alert(`✅ Pagamento confirmado! Saldo atualizado: R$ ${data.new_balance}`);
+      
+      // Chamar callback do pai (fecha modal)
       await onConfirm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao confirmar:', error);
+      alert('❌ Erro ao confirmar pagamento: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsConfirming(false);
     }
@@ -38,9 +57,25 @@ export default function PIXConfirmationModal({
   const handleCancel = async () => {
     setIsCancelling(true);
     try {
+      console.log('❌ Cancelando PIX:', transactionId);
+      
+      // ✅ Chamar Edge Function
+      const { data, error } = await supabase.functions.invoke('cancelar-pix-assistente', {
+        body: { transaction_id: transactionId }
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao cancelar:', error);
+        throw error;
+      }
+      
+      console.log('✅ PIX cancelado:', data);
+      
+      // Chamar callback do pai (fecha modal)
       await onCancel();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao cancelar:', error);
+      alert('❌ Erro ao cancelar PIX: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsCancelling(false);
     }
@@ -99,20 +134,28 @@ export default function PIXConfirmationModal({
                 <button
                   onClick={handleConfirm}
                   disabled={isConfirming || isCancelling}
-                  className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded transition"
+                  className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded transition flex items-center justify-center"
                   title="Confirmar Pagamento"
                 >
-                  <Check className="w-5 h-5" />
+                  {isConfirming ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-5 h-5" />
+                  )}
                 </button>
 
                 {/* Botão Cancelar */}
                 <button
                   onClick={handleCancel}
                   disabled={isConfirming || isCancelling}
-                  className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded transition"
+                  className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded transition flex items-center justify-center"
                   title="Cancelar PIX"
                 >
-                  <X className="w-5 h-5" />
+                  {isCancelling ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <X className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>

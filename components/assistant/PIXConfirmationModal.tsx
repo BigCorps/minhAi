@@ -31,14 +31,21 @@ export default function PIXConfirmationModal({
     try {
       console.log('✅ Confirmando PIX:', transactionId);
       
-      // ✅ Chamar Edge Function
+      // ✅ Chamar Edge Function com o nome correto do parâmetro
       const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: { transaction_id: transactionId }
+        body: { transaction_id: transactionId } // ← Nome correto!
       });
       
       if (error) {
         console.error('❌ Erro ao confirmar:', error);
         throw error;
+      }
+      
+      // Verificar se retornou erro de status 400 (não pago)
+      if (!data.success) {
+        console.log('⏳ PIX ainda não foi pago:', data.status);
+        alert(`⏳ ${data.message || 'PIX ainda não foi confirmado pelo banco. Aguarde alguns segundos e tente novamente.'}`);
+        return; // Não fecha o modal
       }
       
       console.log('✅ PIX confirmado:', data);
@@ -48,7 +55,13 @@ export default function PIXConfirmationModal({
       await onConfirm();
     } catch (error: any) {
       console.error('Erro ao confirmar:', error);
-      alert('❌ Erro ao confirmar pagamento: ' + (error.message || 'Erro desconhecido'));
+      
+      // Extrair mensagem amigável do erro
+      const errorMessage = error.context?.body?.message || 
+                          error.message || 
+                          'Erro ao confirmar pagamento';
+      
+      alert(`❌ ${errorMessage}`);
     } finally {
       setIsConfirming(false);
     }
@@ -59,9 +72,9 @@ export default function PIXConfirmationModal({
     try {
       console.log('❌ Cancelando PIX:', transactionId);
       
-      // ✅ Chamar Edge Function
+      // ✅ Chamar Edge Function com o nome correto do parâmetro
       const { data, error } = await supabase.functions.invoke('cancelar-pix-assistente', {
-        body: { transaction_id: transactionId }
+        body: { transaction_id: transactionId } // ← Nome correto!
       });
       
       if (error) {

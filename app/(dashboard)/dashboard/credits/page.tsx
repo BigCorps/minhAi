@@ -205,7 +205,7 @@ export default function CreditsPage() {
                 <p className={`text-lg transition-colors ${
                   theme === 'dark' ? 'text-white/60' : 'text-gray-600'
                 }`}>
-                  Escolha o plano ideal para suas necessidades
+                  Escolha o pacote ideal para suas necessidades
                 </p>
               </div>
 
@@ -278,7 +278,7 @@ export default function CreditsPage() {
             <h2 className={`text-2xl font-bold mb-6 transition-colors ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}>
-              Planos Disponíveis
+              Pacotes Disponíveis
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -405,7 +405,7 @@ export default function CreditsPage() {
                           Processando...
                         </span>
                       ) : (
-                        'Selecionar Plano'
+                        'Selecionar Pacote'
                       )}
                     </button>
                   </div>

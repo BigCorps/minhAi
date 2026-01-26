@@ -1429,59 +1429,61 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
             : 'bg-white border-gray-200'
         }`}>
           <div className="flex flex-col items-center space-y-6">
-            <div className="relative flex items-center justify-center">
-              <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
-                <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-            </div>
-
-            <div className="text-center w-full">
-              <p className={`text-xl font-bold mb-2 transition-colors ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {getStatusMessage()}
-              </p>
-              <p className={`text-sm mt-2 transition-colors ${
-                theme === 'dark' ? 'text-white/50' : 'text-gray-500'
-              }`}>
-                Modo Alexa: use palavra de ativação
-              </p>
-            </div>
-
-            {error && (
-              <div className={`w-full p-4 rounded-xl border-2 transition-colors ${
-                theme === 'dark'
-                  ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                  : 'bg-red-50 border-red-200 text-red-700'
-              }`}>
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
-
-            {showStartButton && permissionGranted && (
-              <button
-                onClick={handleStart}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition font-bold shadow-xl text-lg"
-              >
-                🎤 Iniciar Assistente
-              </button>
-            )}
-
-            {/* ✨ NOVO: Input de texto - posicionado após o status */}
-            {!showStartButton && (
-              <div className="w-full mt-4">
-                <TextInputChat
-                  onSendMessage={handleTextMessage}
-                  isProcessing={isProcessing || isPlayingAudio}
-                  theme={theme}
-                  disabled={false}
-                />
-              </div>
-            )}
+<div className="relative flex items-center justify-center">
+          <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
+            <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
           </div>
         </div>
+
+        <div className="text-center w-full">
+          <p className={`text-xl font-bold mb-2 transition-colors ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            {getStatusMessage()}
+          </p>
+          <p className={`text-sm mt-2 transition-colors ${
+            theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+          }`}>
+            Modo Alexa: use palavra de ativação
+          </p>
+        </div>
+
+        {error && (
+          <div className={`w-full p-4 rounded-xl border-2 transition-colors ${
+            theme === 'dark'
+              ? 'bg-red-500/10 border-red-500/30 text-red-300'
+              : 'bg-red-50 border-red-200 text-red-700'
+          }`}>
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {showStartButton && permissionGranted && (
+          <button
+            onClick={handleStart}
+            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition font-bold shadow-xl text-lg"
+          >
+            🎤 Iniciar Assistente
+          </button>
+        )}
+
+        {/* ✨ INPUT DE TEXTO */}
+        {!showStartButton && (
+          /* ALTERAÇÃO 3: Troquei 'mt-4' por 'mt-auto'. 
+             Isso empurra essa div para o final absoluto do container flex */
+          <div className="w-full mt-auto">
+            <TextInputChat
+              onSendMessage={handleTextMessage}
+              isProcessing={isProcessing || isPlayingAudio}
+              theme={theme}
+              disabled={false}
+            />
+          </div>
+        )}
+      </div>
+    </div>
       </div>
     </div>
   );

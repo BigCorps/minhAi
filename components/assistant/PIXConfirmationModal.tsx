@@ -31,32 +31,49 @@ export default function PIXConfirmationModal({
     try {
       console.log('✅ Confirmando PIX:', transactionId);
       
-      // ✅ Chamar Edge Function com o nome correto do parâmetro
-      const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: { transaction_id: transactionId } // ← Nome correto!
+      // ✅ Chamar Edge Function
+      const response = await supabase.functions.invoke('confirmar-pix-assistente', {
+        body: { transaction_id: transactionId }
       });
       
-      if (error) {
-        console.error('❌ Erro ao confirmar:', error);
-        throw error;
+      console.log('📥 Resposta completa:', response);
+      
+      // ✅ Tratar resposta com status 400 (PIX não pago)
+      if (response.error) {
+        console.error('❌ Erro na resposta:', response.error);
+        
+        // Tentar extrair dados do erro
+        const errorData = response.error.context?.body;
+        
+        if (errorData && !errorData.success) {
+          // Erro esperado: PIX não foi pago
+          console.log('⏳ PIX não pago:', errorData);
+          alert(`⏳ ${errorData.message || 'PIX ainda não foi confirmado pelo banco. Aguarde alguns segundos após o pagamento e tente novamente.'}`);
+          return; // Não fecha o modal
+        }
+        
+        // Erro inesperado
+        throw response.error;
       }
       
-      // Verificar se retornou erro de status 400 (não pago)
+      // ✅ Sucesso
+      const data = response.data;
+      
       if (!data.success) {
-        console.log('⏳ PIX ainda não foi pago:', data.status);
-        alert(`⏳ ${data.message || 'PIX ainda não foi confirmado pelo banco. Aguarde alguns segundos e tente novamente.'}`);
+        console.log('⏳ PIX não pago:', data);
+        alert(`⏳ ${data.message || 'PIX ainda não foi confirmado pelo banco.'}`);
         return; // Não fecha o modal
       }
       
       console.log('✅ PIX confirmado:', data);
-      alert(`✅ Pagamento confirmado! Saldo atualizado: R$ ${data.new_balance}`);
+      alert(`✅ Pagamento confirmado! Saldo atualizado: R$ ${data.new_balance.toFixed(2)}`);
       
       // Chamar callback do pai (fecha modal)
       await onConfirm();
     } catch (error: any) {
-      console.error('Erro ao confirmar:', error);
+      console.error('💥 Erro ao confirmar:', error);
       
-      // Extrair mensagem amigável do erro
+      // Tentar extrair mensagem
       const errorMessage = error.context?.body?.message || 
                           error.message || 
                           'Erro ao confirmar pagamento';

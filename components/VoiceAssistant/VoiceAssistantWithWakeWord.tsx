@@ -501,15 +501,16 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   async function handleConfirmPix() {
     console.log('🔘 handleConfirmPix chamada');
     
-    const currentData = pixConfirmationData;
+    // ✅ LER DO REF, NÃO DO ESTADO!
+    const currentData = pixStateRef.current?.pixConfirmationData;
     
     if (!currentData) {
-      console.log('⚠️ pixConfirmationData não existe');
+      console.log('⚠️ pixConfirmationData não existe no ref');
       await playText('Não há nenhum PIX aberto para confirmar');
       return;
     }
     
-    console.log('✅ pixConfirmationData encontrado:', currentData);
+    console.log('✅ pixConfirmationData encontrado no ref:', currentData);
     
     try {
       setIsProcessing(true);
@@ -564,15 +565,16 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   async function handleCancelPix() {
     console.log('🔘 handleCancelPix chamada');
     
-    const currentData = pixConfirmationData;
+    // ✅ LER DO REF, NÃO DO ESTADO!
+    const currentData = pixStateRef.current?.pixConfirmationData;
     
     if (!currentData) {
-      console.log('⚠️ pixConfirmationData não existe');
+      console.log('⚠️ pixConfirmationData não existe no ref');
       await playText('Não há nenhum PIX aberto para cancelar');
       return;
     }
     
-    console.log('✅ pixConfirmationData encontrado:', currentData);
+    console.log('✅ pixConfirmationData encontrado no ref:', currentData);
     
     try {
       setIsProcessing(true);

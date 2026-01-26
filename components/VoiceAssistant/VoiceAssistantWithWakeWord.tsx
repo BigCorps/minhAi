@@ -242,112 +242,133 @@ export function VoiceAssistantWithWakeWord({
   }
 
 // ========================================
-  // 🎯 COMANDOS DE VOZ PARA QR CODES E PIX
-  // ========================================
+// 🎯 ADICIONAR NA FUNÇÃO detectVoiceCommand
+// ========================================
 
-  async function detectVoiceCommand(transcript: string): Promise<boolean> {
-    const lowerTranscript = transcript.toLowerCase().trim();
-    
-    console.log('🔍 Detectando comandos de voz:', lowerTranscript);
-    
-    // 📱 COMANDO: WHATSAPP
-    const whatsappTriggers = [
-      'mostre o whatsapp',
-      'qual o whatsapp',
-      'qual é o whatsapp',
-      'me passa o whatsapp',
-      'whatsapp da empresa',
-      'número do whatsapp',
-      'quero o whatsapp'
-    ];
-    
-    if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📱 Comando WhatsApp detectado!');
-      await handleWhatsAppCommand();
-      return true;
-    }
-    
-    // 📸 COMANDO: INSTAGRAM
-    const instagramTriggers = [
-      'mostre o instagram',
-      'qual o instagram',
-      'qual é o instagram',
-      'me passa o instagram',
-      'instagram da empresa',
-      'arroba do instagram',
-      'quero o instagram'
-    ];
-    
-    if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📸 Comando Instagram detectado!');
-      await handleInstagramCommand();
-      return true;
-    }
-    
-    // 💰 COMANDO: GERAR PIX COM CENTAVOS
-    // ✅ DETECTAR FORMATO: "10 e 50" OU "10 50" (Espaço no lugar da vírgula)
-    // 🔧 Mudança: (?:\s+e\s+|\s+) aceita " e " OU apenas espaço entre os números
-    const pixWithCentsRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer|fazer\s+um|fazer\s+uma|gerar\s+uma|gerar\s+um|fazer\s+o|fazer\s+a)\s+(?:um\s+|uma\s+)?(?:pix|pics|pic|picks|pixs|pagamento|cobrança|cobranca)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?\s+(\d+)(?:\s+e\s+|\s+)(\d+)/i;
-    const pixWithCentsMatch = lowerTranscript.match(pixWithCentsRegex);
-    
-    if (pixWithCentsMatch) {
-      const reais = pixWithCentsMatch[1];
-      let centavos = pixWithCentsMatch[2];
-      
-      // Validação extra: Se o separador foi espaço, garante que não pegou algo nada a ver
-      // Mas em comandos curtos como "pix de 10 50", é seguro.
-      
-      // ✅ GARANTIR 2 DÍGITOS: "5" vira "50", "50" fica "50"
-      if (centavos.length === 1) {
-        centavos = centavos + '0'; 
-      } else if (centavos.length > 2) {
-        centavos = centavos.slice(0, 2); 
-      }
-      
-      const amount = parseFloat(`${reais}.${centavos}`);
-      
-      if (amount > 0) {
-        console.log('💰 Comando PIX com centavos detectado!');
-        console.log('   📝 Reais:', reais, '| Centavos:', centavos, '| Total:', amount);
-        
-        await handlePixCommand(amount);
-        return true;
-      }
-    }
-    
-    // 💰 COMANDO: GERAR PIX NORMAL
-    // ✅ REGEX: aceita decimais com ponto ou vírgula
-    const pixRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer|fazer\s+um|fazer\s+uma|gerar\s+uma|gerar\s+um|fazer\s+o|fazer\s+a)\s+(?:um\s+|uma\s+)?(?:pix|pics|pic|picks|pixs|pagamento|cobrança|cobranca)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?(?:\s+)?([\d]+(?:[,.]\d{1,2})?)/i;
-    const pixMatch = lowerTranscript.match(pixRegex);
-    
-    if (pixMatch) {
-      const amountStr = pixMatch[1].replace(',', '.');
-      const amount = parseFloat(amountStr);
-      
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado! Valor:', amount);
-        await handlePixCommand(amount);
-        return true;
-      }
-    }
-    
-    // 💰 FALLBACK
-    const pixFallbackRegex = /(?:pix|pics|pic|picks|pixs|pagamento|cobrança|cobranca).*?([\d]+(?:[,.]\d{1,2})?)/i;
-    const pixFallbackMatch = lowerTranscript.match(pixFallbackRegex);
-    
-    if (pixFallbackMatch) {
-      const amountStr = pixFallbackMatch[1].replace(',', '.');
-      const amount = parseFloat(amountStr);
-      
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado (fallback)! Valor:', amount);
-        await handlePixCommand(amount);
-        return true;
-      }
-    }
-    
-    return false;
+async function detectVoiceCommand(transcript: string): Promise<boolean> {
+  const lowerTranscript = transcript.toLowerCase().trim();
+  
+  console.log('🔍 Detectando comandos de voz:', lowerTranscript);
+  
+  // 📱 COMANDO: WHATSAPP
+  const whatsappTriggers = [
+    'mostre o whatsapp',
+    'qual o whatsapp',
+    'qual é o whatsapp',
+    'me passa o whatsapp',
+    'whatsapp da empresa',
+    'número do whatsapp',
+    'quero o whatsapp'
+  ];
+  
+  if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📱 Comando WhatsApp detectado!');
+    await handleWhatsAppCommand();
+    return true;
   }
+  
+  // 📸 COMANDO: INSTAGRAM
+  const instagramTriggers = [
+    'mostre o instagram',
+    'qual o instagram',
+    'qual é o instagram',
+    'me passa o instagram',
+    'instagram da empresa',
+    'arroba do instagram',
+    'quero o instagram'
+  ];
+  
+  if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📸 Comando Instagram detectado!');
+    await handleInstagramCommand();
+    return true;
+  }
+  
+  // ✅ COMANDO: CONFIRMAR PIX (NOVO!)
+  const confirmTriggers = [
+    'confirmar pix',
+    'confirma pix',
+    'confirmar o pix',
+    'confirma o pix',
+    'pix confirmado',
+    'paguei o pix',
+    'paguei',
+    'já paguei',
+    'pagamento confirmado'
+  ];
+  
+  if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('✅ Comando CONFIRMAR PIX detectado!');
+    
+    // Verificar se tem PIX aberto
+    if (pixConfirmationData) {
+      await handleConfirmPix();
+      return true;
+    } else {
+      console.log('⚠️ Nenhum PIX aberto para confirmar');
+      await playText('Não há nenhum PIX aberto para confirmar');
+      return true;
+    }
+  }
+  
+  // ❌ COMANDO: CANCELAR PIX (NOVO!)
+  const cancelTriggers = [
+    'cancelar pix',
+    'cancela pix',
+    'cancelar o pix',
+    'cancela o pix',
+    'desistir do pix',
+    'não quero',
+    'não vou pagar',
+    'fechar pix'
+  ];
+  
+  if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('❌ Comando CANCELAR PIX detectado!');
+    
+    // Verificar se tem PIX aberto
+    if (pixConfirmationData) {
+      await handleCancelPix();
+      return true;
+    } else {
+      console.log('⚠️ Nenhum PIX aberto para cancelar');
+      await playText('Não há nenhum PIX aberto');
+      return true;
+    }
+  }
+  
+  // 💰 COMANDO: GERAR PIX
+  const pixRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer)\s+(?:um\s+)?(?:pix|pics|pic|picks|pixs)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?(?:\s+)?([\d]+(?:[,.]\d{1,2})?)/i;
+  const pixMatch = lowerTranscript.match(pixRegex);
+  
+  if (pixMatch) {
+    const amountStr = pixMatch[1].replace(',', '.');
+    const amount = parseFloat(amountStr);
+    
+    if (amount > 0) {
+      console.log('💰 Comando PIX detectado! Valor:', amount);
+      await handlePixCommand(amount);
+      return true;
+    }
+  }
+  
+  // 💰 FALLBACK: Detectar apenas se tem "pix/pics" + número
+  const pixFallbackRegex = /(?:pix|pics|pic|picks|pixs).*?([\d]+(?:[,.]\d{1,2})?)/i;
+  const pixFallbackMatch = lowerTranscript.match(pixFallbackRegex);
+  
+  if (pixFallbackMatch) {
+    const amountStr = pixFallbackMatch[1].replace(',', '.');
+    const amount = parseFloat(amountStr);
+    
+    if (amount > 0) {
+      console.log('💰 Comando PIX detectado (fallback)! Valor:', amount);
+      await handlePixCommand(amount);
+      return true;
+    }
+  }
+  
+  return false;
+}
   
   async function handleWhatsAppCommand() {
     try {

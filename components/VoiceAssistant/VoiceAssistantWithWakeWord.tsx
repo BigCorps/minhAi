@@ -499,47 +499,105 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   }
 
   async function handleConfirmPix() {
-    if (!pixConfirmationData) return;
+    console.log('🔘 handleConfirmPix chamada');
+    
+    const currentData = pixConfirmationData;
+    
+    if (!currentData) {
+      console.log('⚠️ pixConfirmationData não existe');
+      await playText('Não há nenhum PIX aberto para confirmar');
+      return;
+    }
+    
+    console.log('✅ pixConfirmationData encontrado:', currentData);
     
     try {
+      setIsProcessing(true);
+      
+      await playText('Confirmando pagamento...');
+      
       const supabase = createClient();
       const response = await supabase.functions.invoke('confirmar-pix-assistente', {
         body: {
-          transaction_id: pixConfirmationData.transactionId
+          transaction_id: currentData.transactionId
         }
       });
       
-      if (response.error) throw response.error;
+      console.log('📥 Resposta Edge Function:', response);
       
-      setPixConfirmationData(null);
+      // Tratar erro 400 (PIX não pago)
+      if (response.error) {
+        const errorData = response.error.context?.body;
+        
+        if (errorData && !errorData.success) {
+          console.log('⏳ PIX não pago:', errorData.status);
+          await playText('PIX ainda não foi pago. Aguarde e tente novamente.');
+          return; // Não fecha o modal
+        }
+        
+        throw response.error;
+      }
       
-      await playText('PIX confirmado com sucesso!');
+      // Verificar sucesso
+      const data = response.data;
+      
+      if (!data.success) {
+        console.log('⏳ PIX não confirmado:', data);
+        await playText('PIX ainda não foi pago. Aguarde e tente novamente.');
+        return; // Não fecha o modal
+      }
+      
+      // Sucesso!
+      console.log('✅ PIX confirmado:', data);
+      setPixConfirmationData(null); // Fechar modal
+      
+      await playText(`Pagamento confirmado! Saldo atualizado para ${data.new_balance.toFixed(2)} reais.`);
       
     } catch (error: any) {
-      console.error('Erro confirmar PIX:', error);
-      await playText('Erro ao confirmar PIX.');
+      console.error('❌ Erro confirmar PIX:', error);
+      await playText('Erro ao confirmar pagamento.');
+    } finally {
+      setIsProcessing(false);
     }
   }
 
   async function handleCancelPix() {
-    if (!pixConfirmationData) return;
+    console.log('🔘 handleCancelPix chamada');
+    
+    const currentData = pixConfirmationData;
+    
+    if (!currentData) {
+      console.log('⚠️ pixConfirmationData não existe');
+      await playText('Não há nenhum PIX aberto para cancelar');
+      return;
+    }
+    
+    console.log('✅ pixConfirmationData encontrado:', currentData);
     
     try {
+      setIsProcessing(true);
+      
+      await playText('Cancelando PIX...');
+      
       const supabase = createClient();
       const response = await supabase.functions.invoke('cancelar-pix-assistente', {
         body: {
-          transaction_id: pixConfirmationData.transactionId
+          transaction_id: currentData.transactionId
         }
       });
       
       if (response.error) throw response.error;
       
-      setPixConfirmationData(null);
+      console.log('✅ PIX cancelado');
+      setPixConfirmationData(null); // Fechar modal
       
       await playText('PIX cancelado.');
       
     } catch (error: any) {
-      console.error('Erro cancelar PIX:', error);
+      console.error('❌ Erro cancelar PIX:', error);
+      await playText('Erro ao cancelar PIX.');
+    } finally {
+      setIsProcessing(false);
     }
   }
 

@@ -77,7 +77,7 @@ export default function TextInputChat({
               ? 'Processando...' 
               : isSending 
               ? 'Enviando...' 
-              : 'Digite sua mensagem...'
+              : 'Ou digite sua mensagem...'
           }
           className={`flex-1 bg-transparent outline-none text-sm placeholder:text-sm ${
             theme === 'dark'

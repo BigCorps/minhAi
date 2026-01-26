@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, X, Copy } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, X, Copy, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface PIXConfirmationModalProps {
@@ -24,7 +24,22 @@ export default function PIXConfirmationModal({
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: 'error' | 'warning' | 'success'} | null>(null);
   const supabase = createClient();
+
+  // Auto-hide toast após 3 segundos
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
+    setToast({ message, type });
+  };
 
   const handleConfirm = async () => {
     setIsConfirming(true);
@@ -48,12 +63,13 @@ export default function PIXConfirmationModal({
         if (errorData && !errorData.success) {
           // Erro esperado: PIX não foi pago
           console.log('⏳ PIX não pago:', errorData);
-          alert(`⏳ ${errorData.message || 'PIX ainda não foi confirmado pelo banco. Aguarde alguns segundos após o pagamento e tente novamente.'}`);
+          showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
           return; // Não fecha o modal
         }
         
         // Erro inesperado
-        throw response.error;
+        showToast('❌ Erro ao verificar pagamento', 'error');
+        return;
       }
       
       // ✅ Sucesso
@@ -61,24 +77,21 @@ export default function PIXConfirmationModal({
       
       if (!data.success) {
         console.log('⏳ PIX não pago:', data);
-        alert(`⏳ ${data.message || 'PIX ainda não foi confirmado pelo banco.'}`);
+        showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
         return; // Não fecha o modal
       }
       
       console.log('✅ PIX confirmado:', data);
-      alert(`✅ Pagamento confirmado! Saldo atualizado: R$ ${data.new_balance.toFixed(2)}`);
+      showToast(`✅ Pagamento confirmado! Saldo: R$ ${data.new_balance.toFixed(2)}`, 'success');
+      
+      // Aguardar 1 segundo para mostrar mensagem de sucesso
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Chamar callback do pai (fecha modal)
       await onConfirm();
     } catch (error: any) {
       console.error('💥 Erro ao confirmar:', error);
-      
-      // Tentar extrair mensagem
-      const errorMessage = error.context?.body?.message || 
-                          error.message || 
-                          'Erro ao confirmar pagamento';
-      
-      alert(`❌ ${errorMessage}`);
+      showToast('❌ Erro ao confirmar pagamento', 'error');
     } finally {
       setIsConfirming(false);
     }
@@ -124,6 +137,22 @@ export default function PIXConfirmationModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="relative w-full max-w-[340px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden">
+        
+        {/* Toast de notificação */}
+        {toast && (
+          <div className={`absolute top-4 left-4 right-4 z-10 p-3 rounded-lg shadow-lg animate-in slide-in-from-top duration-300 ${
+            toast.type === 'success' ? 'bg-green-500' :
+            toast.type === 'error' ? 'bg-red-500' :
+            'bg-yellow-500'
+          }`}>
+            <div className="flex items-center gap-2 text-white">
+              {toast.type === 'warning' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+              {toast.type === 'success' && <Check className="w-5 h-5 flex-shrink-0" />}
+              {toast.type === 'error' && <X className="w-5 h-5 flex-shrink-0" />}
+              <p className="text-sm font-medium flex-1">{toast.message}</p>
+            </div>
+          </div>
+        )}
         
         {/* Container Quadrado */}
         <div className="relative w-full aspect-square bg-white dark:bg-slate-900">

@@ -7,6 +7,8 @@ import { WakeWordDetector } from './WakeWordDetector';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 import { createClient } from '@/lib/supabase-browser';
+// ✨ NOVO: Import do TextInputChat
+import TextInputChat from './TextInputChat';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -61,6 +63,8 @@ export function VoiceAssistantWithWakeWord({
   const processingQuestion = useRef<boolean>(false);
   const consecutiveRestarts = useRef<number>(0);
   const lastRestartTime = useRef<number>(0);
+  // ✨ NOVO: Ref para conversation ID
+  const conversationIdRef = useRef<string | null>(null);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -548,6 +552,113 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   function handleCopyQRCode() {
     console.log('📋 QR Code copiado!');
   }
+
+  // ========================================
+  // ✨ NOVO: Handler para mensagens de texto
+  // ========================================
+  const handleTextMessage = async (message: string) => {
+    console.log('📝 Mensagem de texto recebida:', message);
+    
+    // Parar reconhecimento de voz se estiver ativo
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+
+    // Parar áudio se estiver tocando
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // 1. Verificar se é comando especial (WhatsApp, Instagram, PIX)
+      const isCommand = await detectVoiceCommand(message);
+      
+      if (isCommand) {
+        console.log('✅ Comando detectado via texto');
+        return;
+      }
+
+      // 2. Se não for comando, processar como pergunta normal
+      console.log('📤 Enviando mensagem para API...');
+      
+      const supabase = createClient();
+      
+      // Criar nova conversa se necessário
+      let currentConversationId = conversationIdRef.current;
+      
+      if (!currentConversationId) {
+        const { data: newConversation } = await supabase
+          .from('conversations')
+          .insert({
+            company_id: companyId,
+            started_at: new Date().toISOString(),
+            status: 'active'
+          })
+          .select()
+          .single();
+        
+        if (newConversation) {
+          currentConversationId = newConversation.id;
+          conversationIdRef.current = currentConversationId;
+        }
+      }
+
+      // Salvar mensagem do usuário
+      if (currentConversationId) {
+        await supabase.from('messages').insert({
+          conversation_id: currentConversationId,
+          role: 'user',
+          content: message
+        });
+      }
+
+      // Chamar Edge Function
+      const response = await supabase.functions.invoke('chat', {
+        body: {
+          question: message,
+          company_id: companyId,
+          conversation_id: currentConversationId
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { answer } = response.data;
+
+      // Salvar resposta do assistente
+      if (currentConversationId) {
+        await supabase.from('messages').insert({
+          conversation_id: currentConversationId,
+          role: 'assistant',
+          content: answer
+        });
+      }
+
+      // Tocar resposta em áudio
+      await playText(answer);
+
+    } catch (error: any) {
+      console.error('❌ Erro ao processar mensagem:', error);
+      await playText('Desculpe, ocorreu um erro ao processar sua mensagem.');
+    } finally {
+      setIsProcessing(false);
+      
+      // Reiniciar wake word detection
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 500);
+    }
+  };
 
   function startWakeWordDetection() {
     if (!('webkitSpeechRecognition' in window)) {
@@ -1356,6 +1467,18 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
               >
                 🎤 Iniciar Assistente
               </button>
+            )}
+
+            {/* ✨ NOVO: Input de texto - posicionado após o status */}
+            {!showStartButton && (
+              <div className="w-full mt-4">
+                <TextInputChat
+                  onSendMessage={handleTextMessage}
+                  isProcessing={isProcessing || isPlayingAudio}
+                  theme={theme}
+                  disabled={false}
+                />
+              </div>
             )}
           </div>
         </div>

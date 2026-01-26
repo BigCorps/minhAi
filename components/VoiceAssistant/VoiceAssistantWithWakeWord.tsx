@@ -101,6 +101,19 @@ export function VoiceAssistantWithWakeWord({
     'ok entendi',
   ];
 
+const pixStateRef = useRef<{
+  qrCodeData: any;
+  pixConfirmationData: any;
+} | null>(null);
+
+// Atualizar o ref sempre que os estados mudarem:
+useEffect(() => {
+  pixStateRef.current = {
+    qrCodeData,
+    pixConfirmationData
+  };
+}, [qrCodeData, pixConfirmationData]);
+
   // Inicializar WakeWordDetector
   useEffect(() => {
     console.log('🎯 Inicializando WakeWordDetector...');
@@ -242,7 +255,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
 // ========================================
-// 🎯 ADICIONAR NA FUNÇÃO detectVoiceCommand
+// Função detectVoiceCommand CORRIGIDA:
 // ========================================
 
 async function detectVoiceCommand(transcript: string): Promise<boolean> {
@@ -284,12 +297,13 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     return true;
   }
   
-  // ✅ COMANDO: CONFIRMAR PIX (NOVO!)
+  // ✅ COMANDO: CONFIRMAR PIX (CORRIGIDO!)
   const confirmTriggers = [
     'confirmar pix',
     'confirma pix',
     'confirmar o pix',
     'confirma o pix',
+    'confirme o pix',
     'pix confirmado',
     'paguei o pix',
     'paguei',
@@ -300,8 +314,11 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
     console.log('✅ Comando CONFIRMAR PIX detectado!');
     
-    // Verificar se tem PIX aberto
-    if (pixConfirmationData) {
+    // ✅ ACESSAR via REF
+    const currentPixState = pixStateRef.current;
+    
+    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, confirmando...');
       await handleConfirmPix();
       return true;
     } else {
@@ -311,12 +328,13 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     }
   }
   
-  // ❌ COMANDO: CANCELAR PIX (NOVO!)
+  // ❌ COMANDO: CANCELAR PIX (CORRIGIDO!)
   const cancelTriggers = [
     'cancelar pix',
     'cancela pix',
     'cancelar o pix',
     'cancela o pix',
+    'cancele o pix',
     'desistir do pix',
     'não quero',
     'não vou pagar',
@@ -326,8 +344,11 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger))) {
     console.log('❌ Comando CANCELAR PIX detectado!');
     
-    // Verificar se tem PIX aberto
-    if (pixConfirmationData) {
+    // ✅ ACESSAR via REF
+    const currentPixState = pixStateRef.current;
+    
+    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, cancelando...');
       await handleCancelPix();
       return true;
     } else {

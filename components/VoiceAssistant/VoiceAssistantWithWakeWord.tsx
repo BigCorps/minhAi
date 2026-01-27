@@ -304,6 +304,8 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   // ✅ COMANDO: CONFIRMAR PIX (CORRIGIDO!)
   const confirmTriggers = [
     'confirmar pix',
+    'confirmar pis',
+    'confirmar picos',
     'confirma pix',
     'confirmar o pix',
     'confirma o pix',
@@ -335,6 +337,8 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   // ❌ COMANDO: CANCELAR PIX (CORRIGIDO!)
   const cancelTriggers = [
     'cancelar pix',
+    'cancelar pis',
+    'cancelar picos',
     'cancela pix',
     'cancelar o pix',
     'cancela o pix',

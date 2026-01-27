@@ -244,7 +244,7 @@ export default function HomePage() {
     theme === 'dark' ? 'text-white/60' : 'text-gray-700'
   }`}>
     <p>
-      &copy; {new Date().getFullYear()} eAi - Express Artificial Intelligence.
+      &copy; {new Date().getFullYear()} eAi - Empowered Artificial Intelligence.
     </p>
 
     <small className="block mt-2">

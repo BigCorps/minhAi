@@ -123,7 +123,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
               href="https://eai.app.br"
               className="text-xs text-white/30 hover:text-white/50 transition"
             >
-              eAi - Assistentes Virtuais com IA
+              eAi - Empowered Artificial Intelligence
             </a>
           </div>
         </div>

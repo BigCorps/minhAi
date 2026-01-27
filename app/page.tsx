@@ -99,7 +99,7 @@ export default function HomePage() {
           <h2 className={`text-5xl font-bold mb-6 transition-colors ${
             theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
           }`}>
-            por Voz com IA totalmente personalizado?
+            por Voz com IA eficaz e personalizado?
           </h2>
           <p className={`text-xl max-w-3xl mx-auto mb-8 transition-colors ${
             theme === 'dark' ? 'text-white/70' : 'text-gray-600'
@@ -244,7 +244,7 @@ export default function HomePage() {
     theme === 'dark' ? 'text-white/60' : 'text-gray-700'
   }`}>
     <p>
-      &copy; {new Date().getFullYear()} eAi - Atendimento por Voz Inteligente.
+      &copy; {new Date().getFullYear()} eAi - Express Artificial Intelligence.
     </p>
 
     <small className="block mt-2">

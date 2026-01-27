@@ -267,7 +267,7 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
               Excluir Meus Dados
             </button>
           </Link>
-          <a href="mailto:privacidade@eai.app.br">
+          <a href="mailto:contato@bigcorps.com.br">
             <button className={`w-full sm:w-auto px-6 py-3 rounded-lg border transition-all font-medium ${
               theme === 'dark'
                 ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'

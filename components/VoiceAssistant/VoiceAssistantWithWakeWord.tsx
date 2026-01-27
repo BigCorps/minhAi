@@ -502,69 +502,67 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     }
   }
 
-  async function handleConfirmPix() {
-    console.log('🔘 handleConfirmPix chamada');
-    
-    // ✅ LER DO REF, NÃO DO ESTADO!
-    const currentData = pixStateRef.current?.pixConfirmationData;
-    
-    if (!currentData) {
-      console.log('⚠️ pixConfirmationData não existe no ref');
-      await playText('Não há nenhum PIX aberto para confirmar');
-      return;
-    }
-    
-    console.log('✅ pixConfirmationData encontrado no ref:', currentData);
-    
-    try {
-      setIsProcessing(true);
-      
-      await playText('Confirmando pagamento...');
-      
-      const supabase = createClient();
-      const response = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: {
-          transaction_id: currentData.transactionId
-        }
-      });
-      
-      console.log('📥 Resposta Edge Function:', response);
-      
-      // Tratar erro 400 (PIX não pago)
-      if (response.error) {
-        const errorData = response.error.context?.body;
-        
-        if (errorData && !errorData.success) {
-          console.log('⏳ PIX não pago:', errorData.status);
-          await playText('PIX ainda não foi pago. Aguarde e tente novamente.');
-          return; // Não fecha o modal
-        }
-        
-        throw response.error;
-      }
-      
-      // Verificar sucesso
-      const data = response.data;
-      
-      if (!data.success) {
-        console.log('⏳ PIX não confirmado:', data);
-        await playText('PIX ainda não foi pago. Aguarde e tente novamente.');
-        return; // Não fecha o modal
-      }
-      
-      // Sucesso!
-      console.log('✅ PIX confirmado:', data);
-      setPixConfirmationData(null); // Fechar modal
-      
-      await playText(`Pagamento confirmado! Saldo atualizado para ${data.new_balance.toFixed(2)} reais.`);
-      
-    } catch (error: any) {
-      console.error('❌ Erro confirmar PIX:', error);
-      await playText('Erro ao confirmar pagamento.');
-    } finally {
-      setIsProcessing(false);
-    }
+async function handleConfirmPix() {
+  console.log('🔘 handleConfirmPix chamada');
+  
+  // ✅ LER DO REF, NÃO DO ESTADO!
+  const currentData = pixStateRef.current?.pixConfirmationData;
+  
+  if (!currentData) {
+    console.log('⚠️ pixConfirmationData não existe no ref');
+    await playText('Não há nenhum PIX aberto para confirmar');
+    return;
   }
+  
+  console.log('✅ pixConfirmationData encontrado no ref:', currentData);
+  
+  try {
+    setIsProcessing(true);
+    
+    await playText('Confirmando pagamento...');
+    
+    const supabase = createClient();
+    const response = await supabase.functions.invoke('confirmar-pix-assistente', {
+      body: {
+        transaction_id: currentData.transactionId
+      }
+    });
+    
+    console.log('📥 Resposta Edge Function:', response);
+    
+    // ✅ TRATAR ERRO 400 (PIX NÃO PAGO)
+    if (response.error) {
+      console.log('❌ Erro detectado:', response.error);
+      console.log('📦 Context:', response.error.context);
+      
+      // PIX não foi pago - Mensagem amigável
+      await playText('PIX ainda não foi pago. Aguarde alguns segundos após o pagamento e tente novamente.');
+      return; // ← NÃO FECHA O MODAL
+    }
+    
+    // ✅ Verificar sucesso na resposta
+    const data = response.data;
+    
+    if (!data || !data.success) {
+      console.log('⏳ Resposta sem sucesso:', data);
+      await playText('PIX ainda não foi pago. Aguarde e tente novamente.');
+      return; // ← NÃO FECHA O MODAL
+    }
+    
+    // ✅ SUCESSO! (SEM FALAR O SALDO - PRIVACIDADE!)
+    console.log('✅ PIX confirmado:', data);
+    setPixConfirmationData(null); // ← FECHA O MODAL
+    
+    // ✅ NÃO REVELAR INFORMAÇÃO FINANCEIRA
+    await playText('Pagamento confirmado com sucesso!');
+    
+  } catch (error: any) {
+    console.error('❌ Erro geral:', error);
+    await playText('Erro ao confirmar pagamento. Tente novamente.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
 
   async function handleCancelPix() {
     console.log('🔘 handleCancelPix chamada');

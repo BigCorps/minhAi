@@ -14,6 +14,7 @@ interface VoiceAssistantWithWakeWordProps {
   companyId: string;
   companyName: string;
   wakeWord: string;
+  greetingMessage: string;
   theme?: 'dark' | 'light';
   isMaximized?: boolean;
 }
@@ -22,7 +23,7 @@ export function VoiceAssistantWithWakeWord({
   companyId,
   companyName,
   wakeWord,
-  greetingMessage,
+  greetingMessage,           // ← ESTA LINHA DEVE ESTAR AQUI
   theme = 'dark',
   isMaximized = false,
 }: VoiceAssistantWithWakeWordProps) {

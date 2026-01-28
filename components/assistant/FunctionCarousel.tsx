@@ -43,11 +43,12 @@ export default function FunctionCarousel({
   
   async function loadFunctions() {
     try {
-      // 1. Buscar todas as funções ativas
+      // 1. Buscar todas as funções ativas (exceto confirm/cancel PIX)
       const { data: allFunctions } = await supabase
         .from('assistant_functions')
         .select('*')
         .eq('is_active', true)
+        .not('function_key', 'in', '("pix_confirm","pix_cancel")')
         .order('display_order');
       
       // 2. Buscar quais estão ativadas para esta empresa
@@ -92,15 +93,20 @@ export default function FunctionCarousel({
   // Duplicar funções para loop infinito
   const duplicatedFunctions = [...functions, ...functions];
   
+  // Cores alternadas azul/verde eAi
+  const getCardColor = (index: number, isEnabled: boolean) => {
+    const colors = ['#3B82F6', '#10B981']; // Azul e Verde eAi
+    const color = colors[index % 2];
+    return isEnabled ? color : '#6B7280';
+  };
+  
   if (loading) {
     return (
-      <div className={`w-full py-4 ${
-        theme === 'dark' ? 'bg-slate-900/30' : 'bg-gray-100'
-      }`}>
+      <div className="w-full py-4">
         <div className="flex gap-3 px-4 justify-center">
-          <div className="animate-pulse bg-white/10 h-12 w-32 rounded-xl"></div>
-          <div className="animate-pulse bg-white/10 h-12 w-32 rounded-xl"></div>
-          <div className="animate-pulse bg-white/10 h-12 w-32 rounded-xl"></div>
+          <div className="animate-pulse bg-blue-500/20 h-12 w-32 rounded-xl"></div>
+          <div className="animate-pulse bg-green-500/20 h-12 w-32 rounded-xl"></div>
+          <div className="animate-pulse bg-blue-500/20 h-12 w-32 rounded-xl"></div>
         </div>
       </div>
     );
@@ -108,47 +114,37 @@ export default function FunctionCarousel({
   
   return (
     <>
-      {/* Carrossel */}
-      <div className={`w-full py-4 overflow-hidden ${
-        theme === 'dark' ? 'bg-slate-900/30' : 'bg-gray-100'
-      }`}>
+      {/* Carrossel SEM FUNDO - usa fundo do contexto */}
+      <div className="w-full py-4 overflow-hidden">
         <div className="relative w-full">
-          {/* Gradientes nas bordas */}
-          <div className={`absolute left-0 top-0 h-full w-12 z-10 pointer-events-none ${
-            theme === 'dark' 
-              ? 'bg-gradient-to-r from-slate-900/30 via-transparent to-transparent'
-              : 'bg-gradient-to-r from-gray-100 via-transparent to-transparent'
-          }`} />
-          <div className={`absolute right-0 top-0 h-full w-12 z-10 pointer-events-none ${
-            theme === 'dark'
-              ? 'bg-gradient-to-l from-slate-900/30 via-transparent to-transparent'
-              : 'bg-gradient-to-l from-gray-100 via-transparent to-transparent'
-          }`} />
+          {/* Gradientes nas bordas - adaptam ao contexto */}
+          <div className="absolute left-0 top-0 h-full w-16 z-10 pointer-events-none bg-gradient-to-r from-white dark:from-slate-950 via-white/50 dark:via-slate-950/50 to-transparent" />
+          <div className="absolute right-0 top-0 h-full w-16 z-10 pointer-events-none bg-gradient-to-l from-white dark:from-slate-950 via-white/50 dark:via-slate-950/50 to-transparent" />
           
           {/* Carrossel com animação CSS */}
           <div className="flex gap-3 px-4 animate-scroll">
             {duplicatedFunctions.map((fn, idx) => {
               const isEnabled = enabledKeys.includes(fn.function_key);
+              const borderColor = getCardColor(idx, isEnabled);
               
               return (
                 <button
                   key={`${fn.function_key}-${idx}`}
                   onClick={() => handleClick(fn)}
-                  className={`flex-shrink-0 px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-2 min-w-[180px] hover:scale-105 ${
+                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 min-w-[200px] hover:scale-105 ${
                     isEnabled
                       ? theme === 'dark'
                         ? 'bg-white/10 hover:bg-white/20 text-white shadow-lg'
-                        : 'bg-white hover:bg-gray-50 text-gray-900 shadow-md'
+                        : 'bg-white hover:bg-gray-50 text-gray-900 shadow-xl'
                       : theme === 'dark'
                         ? 'bg-gray-700/50 text-gray-400 hover:bg-gray-700/70'
                         : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
                   }`}
                   style={{
-                    borderLeft: isEnabled ? `3px solid ${fn.color}` : 'none'
+                    borderLeft: `4px solid ${borderColor}`
                   }}
                 >
-                  <span className="text-xl">{fn.icon}</span>
-                  <span className="text-sm whitespace-nowrap">{fn.function_name}</span>
+                  <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
                   {!isEnabled && (
                     <span className="text-xs opacity-60">(Demo)</span>
                   )}
@@ -170,14 +166,11 @@ export default function FunctionCarousel({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <span className="text-4xl">{demoFunction.icon}</span>
-                <div>
-                  <h2 className="text-2xl font-bold">{demo.title}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {demoFunction.short_description}
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-2xl font-bold">{demo.title}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {demoFunction.short_description}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedFunction(null)}
@@ -216,17 +209,12 @@ export default function FunctionCarousel({
             </div>
             
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <div className="flex gap-2">
-                <span className="text-2xl">💡</span>
-                <div>
-                  <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
-                    Função Desativada
-                  </p>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    Esta função está desativada no momento. Ative na página de Configurações para usar!
-                  </p>
-                </div>
-              </div>
+              <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                Função Desativada
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                Esta função está desativada no momento. Ative na página de Configurações para usar!
+              </p>
             </div>
           </div>
         </div>

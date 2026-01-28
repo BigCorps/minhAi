@@ -117,12 +117,8 @@ export default function FunctionCarousel({
       {/* Carrossel SEM FUNDO - usa fundo do contexto */}
       <div className="w-full py-4 overflow-hidden">
         <div className="relative w-full">
-          {/* Gradientes de esmaecimento nas pontas */}
-          <div className="absolute left-0 top-0 h-full w-24 z-10 pointer-events-none bg-gradient-to-r from-white dark:from-slate-950 to-transparent" />
-          <div className="absolute right-0 top-0 h-full w-24 z-10 pointer-events-none bg-gradient-to-l from-white dark:from-slate-950 to-transparent" />
-          
           {/* Carrossel com animação CSS */}
-          <div className="flex gap-3 px-4 animate-scroll">
+          <div className="flex gap-3 animate-scroll">
             {triplicatedFunctions.map((fn, idx) => {
               const isEnabled = enabledKeys.includes(fn.function_key);
               const originalIndex = idx % functions.length;
@@ -233,7 +229,7 @@ export default function FunctionCarousel({
         }
         
         .animate-scroll {
-          animation: scroll 45s linear infinite;
+          animation: scroll 36s linear infinite;
         }
         
         .animate-scroll:hover {
@@ -242,7 +238,7 @@ export default function FunctionCarousel({
         
         @media (max-width: 768px) {
           .animate-scroll {
-            animation: scroll 30s linear infinite;
+            animation: scroll 24s linear infinite;
           }
         }
       `}</style>

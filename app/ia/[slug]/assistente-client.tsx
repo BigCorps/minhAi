@@ -67,7 +67,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
   return (
     <>
-      {/* VERSÃO MAXIMIZADA */}
+      {/* ========================================== */}
+      {/* VERSÃO MAXIMIZADA (Fullscreen) */}
+      {/* ========================================== */}
       {isMaximized && (
         <div 
           className={`fixed inset-0 z-50 flex flex-col transition-colors duration-500 ${
@@ -127,17 +129,16 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
-          {/* Orbe Centralizado - SEM CARD */}
-          <div className="flex-1 flex items-center justify-center px-4">
-            <div className="w-full max-w-5xl">
-              <VoiceAssistantWithWakeWord 
-                companyId={company.id} 
-                companyName={company.name}
-                wakeWord={company.wake_word || 'olá assistente'}
-                greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
-                theme={theme}
-              />
-            </div>
+          {/* Orbe + Status (usando isMaximized={true}) */}
+          <div className="flex-1 flex items-center justify-center">
+            <VoiceAssistantWithWakeWord 
+              companyId={company.id} 
+              companyName={company.name}
+              wakeWord={company.wake_word || 'olá assistente'}
+              greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
+              theme={theme}
+              isMaximized={true}
+            />
           </div>
 
           {/* Toast */}
@@ -186,7 +187,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       )}
 
+      {/* ========================================== */}
       {/* VERSÃO NORMAL */}
+      {/* ========================================== */}
       {!isMaximized && (
         <div className={`min-h-screen transition-colors duration-500 ${
           theme === 'dark' 
@@ -205,7 +208,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 
                 {/* LADO ESQUERDO */}
                 <div className="flex items-center space-x-4">
-                  {/* Logo da Empresa - ALTURA LIMITADA */}
+                  {/* Logo da Empresa */}
                   {company.logo_url && (
                     <div className="flex-shrink-0">
                       <img
@@ -343,7 +346,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* Orbe */}
+          {/* Orbe - Versão Normal (com os 2 cards) */}
           <div className="flex-1 flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-5xl">
               <VoiceAssistantWithWakeWord 
@@ -352,6 +355,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 wakeWord={company.wake_word || 'olá assistente'}
                 greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                 theme={theme}
+                isMaximized={false}
               />
             </div>
           </div>

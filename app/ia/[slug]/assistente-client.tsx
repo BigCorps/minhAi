@@ -2,7 +2,7 @@
 
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import Image from 'next/image';
 
@@ -22,6 +22,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [showCloseButton, setShowCloseButton] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showZoomControl, setShowZoomControl] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const zoomTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -31,7 +33,39 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
+    
+    // Detectar mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      // Cleanup timeout
+      if (zoomTimeoutRef.current) {
+        clearTimeout(zoomTimeoutRef.current);
+      }
+    };
   }, []);
+
+  // Auto-hide zoom control no mobile após inatividade
+  const handleZoomChange = (value: number) => {
+    setZoomLevel(value);
+    
+    if (isMobile) {
+      // Limpar timeout anterior
+      if (zoomTimeoutRef.current) {
+        clearTimeout(zoomTimeoutRef.current);
+      }
+      
+      // Criar novo timeout para fechar após 3 segundos
+      zoomTimeoutRef.current = setTimeout(() => {
+        setShowZoomControl(false);
+      }, 3000);
+    }
+  };
 
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToastMessage(message);
@@ -91,11 +125,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               
               {/* Logo Empresa + Zoom Control (Esquerda) */}
-              <div 
-                className="flex items-center space-x-3"
-                onMouseEnter={() => setShowZoomControl(true)}
-                onMouseLeave={() => setShowZoomControl(false)}
-              >
+              <div className="flex items-center space-x-3">
                 {company.logo_url && (
                   <img
                     src={company.logo_url}
@@ -105,27 +135,44 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   />
                 )}
                 
-                {/* Controle de Zoom (aparece no hover) */}
-                <div className={`flex items-center space-x-2 transition-opacity duration-300 ${
-                  showZoomControl ? 'opacity-100' : 'opacity-0'
-                }`}>
-                  <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                  </svg>
-                  <input
-                    type="range"
-                    min="50"
-                    max="500"
-                    step="10"
-                    value={zoomLevel}
-                    onChange={(e) => setZoomLevel(Number(e.target.value))}
-                    className="w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 hover:[&::-webkit-slider-thumb]:bg-blue-600"
-                  />
-                  <span className={`text-xs font-mono ${
-                    theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+                {/* Controle de Zoom - Mobile: botão clicável / Desktop: hover */}
+                <div className="flex items-center space-x-2">
+                  {/* Botão de Zoom (Mobile: sempre visível / Desktop: no hover) */}
+                  <button
+                    onClick={() => isMobile && setShowZoomControl(!showZoomControl)}
+                    onMouseEnter={() => !isMobile && setShowZoomControl(true)}
+                    onMouseLeave={() => !isMobile && setShowZoomControl(false)}
+                    className={`p-2 rounded-lg transition-all ${
+                      theme === 'dark'
+                        ? 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                        : 'bg-black/5 hover:bg-black/10 text-gray-600 hover:text-gray-900'
+                    }`}
+                    title="Zoom"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                    </svg>
+                  </button>
+                  
+                  {/* Slider + Valor (aparece no hover no desktop ou ao clicar no mobile) */}
+                  <div className={`flex items-center space-x-2 transition-all duration-300 ${
+                    showZoomControl ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
                   }`}>
-                    {zoomLevel}%
-                  </span>
+                    <input
+                      type="range"
+                      min="50"
+                      max="500"
+                      step="10"
+                      value={zoomLevel}
+                      onChange={(e) => handleZoomChange(Number(e.target.value))}
+                      className="w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 hover:[&::-webkit-slider-thumb]:bg-blue-600"
+                    />
+                    <span className={`text-xs font-mono min-w-[3rem] text-right ${
+                      theme === 'dark' ? 'text-white/70' : 'text-gray-600'
+                    }`}>
+                      {zoomLevel}%
+                    </span>
+                  </div>
                 </div>
               </div>
               

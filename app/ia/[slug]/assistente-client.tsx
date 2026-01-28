@@ -280,15 +280,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 isMaximized={true}
               />
             </div>
+          </div>
 
-            {/* Carrossel de Funções - Versão Maximizada */}
-            <div className="w-full mt-8">
-              <FunctionCarousel 
-                companyId={company.id}
-                onFunctionClick={handleFunctionClick}
-                theme={theme}
-              />
-            </div>
+          {/* Carrossel de Funções - Versão Maximizada (ÚNICO) */}
+          <div className="w-full pb-4">
+            <FunctionCarousel 
+              companyId={company.id}
+              onFunctionClick={handleFunctionClick}
+              theme={theme}
+            />
           </div>
 
           {/* Toast */}
@@ -620,15 +620,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 isMaximized={false}
               />
             </div>
+          </div>
 
-            {/* Carrossel de Funções - Versão Normal */}
-            <div className="w-full max-w-7xl">
-              <FunctionCarousel 
-                companyId={company.id}
-                onFunctionClick={handleFunctionClick}
-                theme={theme}
-              />
-            </div>
+          {/* Carrossel de Funções - Versão Normal (ÚNICO) */}
+          <div className="w-full pb-8">
+            <FunctionCarousel 
+              companyId={company.id}
+              onFunctionClick={handleFunctionClick}
+              theme={theme}
+            />
           </div>
 
           {/* Footer */}

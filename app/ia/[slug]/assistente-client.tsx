@@ -12,14 +12,14 @@ interface AssistenteClientProps {
     name: string;
     wake_word: string;
     greeting_message: string;
-    logo_url?: string; // 🆕 Campo para logo da empresa
+    logo_url?: string;
   };
 }
 
 export default function AssistenteClient({ company }: AssistenteClientProps) {
   // Estado do tema (dark por padrão)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [isMaximized, setIsMaximized] = useState(false); // 🆕 Estado do maximizador
+  const [isMaximized, setIsMaximized] = useState(false);
   
   // 🔒 Wake Lock para manter tela ligada
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -52,11 +52,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     }
 
     if (isActive) {
-      // Desativar
       await releaseWakeLock();
       showToastMessage('Tela sempre ligada desativada', 'warning');
     } else {
-      // Ativar
       const activated = await requestWakeLock();
       if (activated) {
         showToastMessage('Tela sempre ligada ativada!', 'success');
@@ -66,7 +64,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     }
   };
 
-  // 🆕 Handler para maximizar/minimizar
+  // Handler para maximizar/minimizar
   const handleToggleMaximize = () => {
     setIsMaximized(!isMaximized);
     showToastMessage(
@@ -82,7 +80,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
     }`}>
       
-      {/* 🆕 NOVO HEADER REDESENHADO */}
+      {/* NOVO HEADER REDESENHADO */}
       <header className={`w-full border-b transition-colors ${
         theme === 'dark'
           ? 'bg-slate-900/50 border-white/5 backdrop-blur-xl'
@@ -91,7 +89,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
             
-            {/* 👈 LADO ESQUERDO: Logo + Nome + Slogan */}
+            {/* LADO ESQUERDO: Logo + Nome + Slogan */}
             <div className="flex items-center space-x-4">
               {/* Logo da Empresa */}
               {company.logo_url && (
@@ -121,7 +119,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               </div>
             </div>
 
-            {/* 👉 LADO DIREITO: Ícones + Logo eAi */}
+            {/* LADO DIREITO: Ícones + Logo eAi */}
             <div className="flex items-center space-x-3">
               
               {/* Grupo de Ícones de Controle */}
@@ -139,19 +137,19 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   title={isMaximized ? 'Sair do modo tela cheia' : 'Modo tela cheia'}
                 >
                   {isMaximized ? (
-                    // Ícone de minimizar (4 cantos para dentro)
+                    // Ícone de minimizar
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
                     </svg>
                   ) : (
-                    // Ícone de maximizar (4 cantos para fora)
+                    // Ícone de maximizar
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg>
                   )}
                 </button>
 
-                {/* 🔒 Botão Wake Lock (manter tela ligada) - SÓ APARECE SE SUPORTADO */}
+                {/* 🔒 Botão Wake Lock */}
                 {isSupported && (
                   <button
                     onClick={handleToggleWakeLock}
@@ -164,12 +162,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     title={isActive ? 'Tela ligada ativa - clique para desativar' : 'Clique para manter tela sempre ligada'}
                   >
                     {isActive ? (
-                      // Ícone de cadeado aberto (ativo) - VERDE
                       <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                       </svg>
                     ) : (
-                      // Ícone de cadeado fechado (inativo)
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
@@ -188,12 +184,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   aria-label="Toggle theme"
                 >
                   {theme === 'dark' ? (
-                    // Ícone Sol
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                   ) : (
-                    // Ícone Lua
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                     </svg>
@@ -201,12 +195,12 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 </button>
               </div>
 
-              {/* Separador vertical */}
+              {/* Separador vertical (apenas desktop) */}
               <div className={`hidden md:block w-px h-10 ${
                 theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'
               }`}></div>
 
-              {/* 🎯 Logo eAi */}
+              {/* Logo eAi */}
               <div className="flex-shrink-0">
                 <Image
                   src="/icon192.png"
@@ -221,7 +215,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       </header>
 
-      {/* 🔔 Toast de Notificação */}
+      {/* Toast de Notificação */}
       {showToast && (
         <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
           <div className={`px-6 py-3 rounded-lg shadow-lg backdrop-blur-xl border flex items-center space-x-3 ${
@@ -258,7 +252,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             wakeWord={company.wake_word || 'olá assistente'}
             greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
             theme={theme}
-            isMaximized={isMaximized} // 🆕 Passar estado de maximização
           />
         </div>
       </div>

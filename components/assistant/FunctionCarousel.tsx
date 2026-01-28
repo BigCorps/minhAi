@@ -90,8 +90,8 @@ export default function FunctionCarousel({
   const demo = selectedFunction ? getFunctionDemo(selectedFunction) : null;
   const demoFunction = functions.find(f => f.function_key === selectedFunction);
   
-  // Duplicar funções para loop infinito
-  const duplicatedFunctions = [...functions, ...functions];
+  // Triplicar funções para garantir loop infinito suave
+  const triplicatedFunctions = [...functions, ...functions, ...functions];
   
   // Cores alternadas azul/verde eAi
   const getCardColor = (index: number, isEnabled: boolean) => {
@@ -117,21 +117,18 @@ export default function FunctionCarousel({
       {/* Carrossel SEM FUNDO - usa fundo do contexto */}
       <div className="w-full py-4 overflow-hidden">
         <div className="relative w-full">
-          {/* Gradientes nas bordas - adaptam ao contexto */}
-          <div className="absolute left-0 top-0 h-full w-16 z-10 pointer-events-none bg-gradient-to-r from-white dark:from-slate-950 via-white/50 dark:via-slate-950/50 to-transparent" />
-          <div className="absolute right-0 top-0 h-full w-16 z-10 pointer-events-none bg-gradient-to-l from-white dark:from-slate-950 via-white/50 dark:via-slate-950/50 to-transparent" />
-          
           {/* Carrossel com animação CSS */}
           <div className="flex gap-3 px-4 animate-scroll">
-            {duplicatedFunctions.map((fn, idx) => {
+            {triplicatedFunctions.map((fn, idx) => {
               const isEnabled = enabledKeys.includes(fn.function_key);
-              const borderColor = getCardColor(idx, isEnabled);
+              const originalIndex = idx % functions.length;
+              const borderColor = getCardColor(originalIndex, isEnabled);
               
               return (
                 <button
                   key={`${fn.function_key}-${idx}`}
                   onClick={() => handleClick(fn)}
-                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 min-w-[200px] hover:scale-105 ${
+                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 ${
                     isEnabled
                       ? theme === 'dark'
                         ? 'bg-white/10 hover:bg-white/20 text-white shadow-lg'
@@ -227,12 +224,12 @@ export default function FunctionCarousel({
             transform: translateX(0);
           }
           100% {
-            transform: translateX(calc(-50%));
+            transform: translateX(calc(-33.333%));
           }
         }
         
         .animate-scroll {
-          animation: scroll 30s linear infinite;
+          animation: scroll 45s linear infinite;
         }
         
         .animate-scroll:hover {
@@ -241,7 +238,7 @@ export default function FunctionCarousel({
         
         @media (max-width: 768px) {
           .animate-scroll {
-            animation: scroll 20s linear infinite;
+            animation: scroll 30s linear infinite;
           }
         }
       `}</style>

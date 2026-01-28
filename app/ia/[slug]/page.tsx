@@ -139,6 +139,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
         name: company.name,
         wake_word: company.wake_word || 'olá assistente',
         greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
+        logo_url: company.logo_url || undefined, // 🆕 Incluir logo_url
       }}
     />
   );

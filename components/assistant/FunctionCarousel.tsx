@@ -131,11 +131,11 @@ export default function FunctionCarousel({
                   className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 ${
                     isEnabled
                       ? theme === 'dark'
-                        ? 'hover:bg-white/10 text-white shadow-md'
-                        : 'hover:bg-white/10 text-gray-900 shadow-lg'
+                        ? 'bg-white/10 hover:bg-white/20 text-white shadow-md'
+                        : 'bg-white hover:bg-gray-50 text-gray-900 shadow-lg'
                       : theme === 'dark'
-                        ? 'text-gray-400 hover:bg-gray-700/30'
-                        : 'text-gray-500 hover:bg-gray-200/30'
+                        ? 'bg-gray-700/50 text-gray-400 hover:bg-gray-700/70'
+                        : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
                   }`}
                   style={{
                     borderLeft: `4px solid ${borderColor}`

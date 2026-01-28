@@ -11,7 +11,7 @@ interface PageProps {
   }>;
 }
 
-// ✅ Função para verificar créditos do USUÁRIO dono da empresa
+// Função para verificar créditos do USUÁRIO dono da empresa
 async function checkUserCredits(companyId: string) {
   const supabase = createClient();
   
@@ -59,7 +59,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     notFound();
   }
 
-  // 💳 Verificar créditos disponíveis DO USUÁRIO
+  // Verificar créditos disponíveis DO USUÁRIO
   const remainingCredits = await checkUserCredits(company.id);
   const hasCredits = remainingCredits > 0;
 
@@ -70,7 +70,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     hasCredits
   });
 
-  // 🚫 Se não tem créditos, mostrar tela de inativo
+  // Se não tem créditos, mostrar tela de inativo
   if (!hasCredits) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -131,7 +131,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     );
   }
 
-  // ✅ Tem créditos, passar dados para client component
+  // Tem créditos, passar dados para client component
   return (
     <AssistenteClient
       company={{
@@ -139,7 +139,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
         name: company.name,
         wake_word: company.wake_word || 'olá assistente',
         greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
-        logo_url: company.logo_url || undefined, // 🆕 Incluir logo_url
+        logo_url: company.logo_url || undefined,
       }}
     />
   );

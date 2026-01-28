@@ -4,6 +4,7 @@ import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAss
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import Image from 'next/image';
 
 interface AssistenteClientProps {
   company: {
@@ -11,12 +12,14 @@ interface AssistenteClientProps {
     name: string;
     wake_word: string;
     greeting_message: string;
+    logo_url?: string; // 🆕 Campo para logo da empresa
   };
 }
 
 export default function AssistenteClient({ company }: AssistenteClientProps) {
   // Estado do tema (dark por padrão)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [isMaximized, setIsMaximized] = useState(false); // 🆕 Estado do maximizador
   
   // 🔒 Wake Lock para manter tela ligada
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -63,6 +66,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     }
   };
 
+  // 🆕 Handler para maximizar/minimizar
+  const handleToggleMaximize = () => {
+    setIsMaximized(!isMaximized);
+    showToastMessage(
+      isMaximized ? 'Modo normal ativado' : 'Modo maximizado ativado',
+      'success'
+    );
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-500 ${
       theme === 'dark' 
@@ -70,58 +82,144 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
     }`}>
       
-      {/* Botões de Controle - Fixos no canto superior direito */}
-      <div className="fixed top-6 right-6 z-50 flex items-center space-x-2">
-        
-        {/* 🔒 Botão Wake Lock (manter tela ligada) - SÓ APARECE SE SUPORTADO */}
-        {isSupported && (
-          <button
-            onClick={handleToggleWakeLock}
-            className={`p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
-              theme === 'dark'
-                ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-            } ${isActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
-            aria-label={isActive ? 'Desativar tela sempre ligada' : 'Ativar tela sempre ligada'}
-            title={isActive ? 'Tela ligada ativa - clique para desativar' : 'Clique para manter tela sempre ligada'}
-          >
-            {isActive ? (
-              // Ícone de cadeado aberto (ativo) - VERDE
-              <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-              </svg>
-            ) : (
-              // Ícone de cadeado fechado (inativo)
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            )}
-          </button>
-        )}
+      {/* 🆕 NOVO HEADER REDESENHADO */}
+      <header className={`w-full border-b transition-colors ${
+        theme === 'dark'
+          ? 'bg-slate-900/50 border-white/5 backdrop-blur-xl'
+          : 'bg-white/80 border-gray-200 backdrop-blur-xl'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
+            
+            {/* 👈 LADO ESQUERDO: Logo + Nome + Slogan */}
+            <div className="flex items-center space-x-4">
+              {/* Logo da Empresa */}
+              {company.logo_url && (
+                <div className="flex-shrink-0">
+                  <Image
+                    src={company.logo_url}
+                    alt={`${company.name} logo`}
+                    width={48}
+                    height={48}
+                    className="rounded-lg object-contain"
+                  />
+                </div>
+              )}
+              
+              {/* Nome e Slogan */}
+              <div className="flex flex-col">
+                <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {company.name}
+                </h1>
+                <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
+                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
+                }`}>
+                  Assistente Virtual com IA
+                </p>
+              </div>
+            </div>
 
-        {/* Botão de Toggle de Tema */}
-        <button
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className={`p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
-            theme === 'dark'
-              ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-              : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-          }`}
-          aria-label="Toggle theme"
-        >
-          {theme === 'dark' ? (
-            // Ícone Sol
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          ) : (
-            // Ícone Lua
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-          )}
-        </button>
-      </div>
+            {/* 👉 LADO DIREITO: Ícones + Logo eAi */}
+            <div className="flex items-center space-x-3">
+              
+              {/* Grupo de Ícones de Controle */}
+              <div className="flex items-center space-x-2">
+                
+                {/* 🔲 Botão Maximizar */}
+                <button
+                  onClick={handleToggleMaximize}
+                  className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                      : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                  } ${isMaximized ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}
+                  aria-label={isMaximized ? 'Modo normal' : 'Maximizar'}
+                  title={isMaximized ? 'Sair do modo tela cheia' : 'Modo tela cheia'}
+                >
+                  {isMaximized ? (
+                    // Ícone de minimizar (4 cantos para dentro)
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                    </svg>
+                  ) : (
+                    // Ícone de maximizar (4 cantos para fora)
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* 🔒 Botão Wake Lock (manter tela ligada) - SÓ APARECE SE SUPORTADO */}
+                {isSupported && (
+                  <button
+                    onClick={handleToggleWakeLock}
+                    className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                        : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                    } ${isActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
+                    aria-label={isActive ? 'Desativar tela sempre ligada' : 'Ativar tela sempre ligada'}
+                    title={isActive ? 'Tela ligada ativa - clique para desativar' : 'Clique para manter tela sempre ligada'}
+                  >
+                    {isActive ? (
+                      // Ícone de cadeado aberto (ativo) - VERDE
+                      <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                      </svg>
+                    ) : (
+                      // Ícone de cadeado fechado (inativo)
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+
+                {/* 🌙 Botão de Toggle de Tema */}
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                      : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                  }`}
+                  aria-label="Toggle theme"
+                >
+                  {theme === 'dark' ? (
+                    // Ícone Sol
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    // Ícone Lua
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              {/* Separador vertical */}
+              <div className={`hidden md:block w-px h-10 ${
+                theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'
+              }`}></div>
+
+              {/* 🎯 Logo eAi */}
+              <div className="flex-shrink-0">
+                <Image
+                  src="/icon192.png"
+                  alt="eAi logo"
+                  width={40}
+                  height={40}
+                  className="rounded-lg"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* 🔔 Toast de Notificação */}
       {showToast && (
@@ -151,22 +249,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       )}
 
-      {/* Header - minimalista */}
-      <div className="w-full pt-8 pb-4 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className={`text-3xl font-bold mb-1 transition-colors ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            {company.name}
-          </h1>
-          <p className={`text-sm tracking-wider uppercase transition-colors ${
-            theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-          }`}>
-            Assistente Virtual com IA
-          </p>
-        </div>
-      </div>
-
       {/* Área do Orbe - FOCO TOTAL */}
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-5xl">
@@ -176,6 +258,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             wakeWord={company.wake_word || 'olá assistente'}
             greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
             theme={theme}
+            isMaximized={isMaximized} // 🆕 Passar estado de maximização
           />
         </div>
       </div>

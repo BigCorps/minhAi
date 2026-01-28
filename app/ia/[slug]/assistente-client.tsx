@@ -173,9 +173,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             }
           }}
         >
-          {/* Header Minimalista - SEM fundo */}
-          <div className="w-full px-6 py-4 relative z-20">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
+          {/* Header Minimalista - Absolutamente posicionado e transparente */}
+          <div className="absolute top-0 left-0 right-0 px-6 py-4 z-20 pointer-events-none">
+            <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
               
               {/* Logo Empresa + Zoom Control (Esquerda) */}
               <div className="flex items-center space-x-3">

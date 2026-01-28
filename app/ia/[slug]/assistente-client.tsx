@@ -17,24 +17,20 @@ interface AssistenteClientProps {
 }
 
 export default function AssistenteClient({ company }: AssistenteClientProps) {
-  // Estado do tema (dark por padrão)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isMaximized, setIsMaximized] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
   
-  // 🔒 Wake Lock para manter tela ligada
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
 
-  // Detectar preferência do sistema
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
   }, []);
 
-  // Função para mostrar toast
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToastMessage(message);
     setToastType(type);
@@ -42,11 +38,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  // Handler para toggle do Wake Lock
   const handleToggleWakeLock = async () => {
-    console.log('🎯 Botão Wake Lock clicado');
-    console.log('📊 Estado atual - isActive:', isActive, 'isSupported:', isSupported);
-
     if (!isSupported) {
       showToastMessage('Wake Lock não suportado neste navegador', 'warning');
       return;
@@ -65,7 +57,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     }
   };
 
-  // Handler para maximizar/minimizar
   const handleToggleMaximize = () => {
     setIsMaximized(!isMaximized);
     showToastMessage(
@@ -76,9 +67,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
   return (
     <>
-      {/* ============================================ */}
-      {/* VERSÃO MAXIMIZADA (Fullscreen) */}
-      {/* ============================================ */}
+      {/* VERSÃO MAXIMIZADA */}
       {isMaximized && (
         <div 
           className={`fixed inset-0 z-50 flex flex-col transition-colors duration-500 ${
@@ -92,34 +81,25 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           }}
           onMouseLeave={() => setShowCloseButton(false)}
         >
-          {/* Header Minimalista - SEM BORDA */}
+          {/* Header Minimalista */}
           <div className="w-full px-6 py-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               
               {/* Logo Empresa (Esquerda) */}
               {company.logo_url && (
                 <div className="flex-shrink-0">
-                  <Image
+                  <img
                     src={company.logo_url}
                     alt={`${company.name} logo`}
-                    width={40}
-                    height={40}
                     className="rounded-lg object-contain"
+                    style={{ maxHeight: '36px', height: 'auto', width: 'auto' }}
                   />
                 </div>
               )}
               
-              {/* Logo eAi + Botão Fechar (Direita) */}
+              {/* Botão Fechar + Logo eAi (Direita) */}
               <div className="relative flex items-center space-x-3">
-                <Image
-                  src="/icon192.png"
-                  alt="eAi logo"
-                  width={36}
-                  height={36}
-                  className="rounded-lg"
-                />
-                
-                {/* Botão X (só aparece no hover) */}
+                {/* Botão X à ESQUERDA */}
                 <button
                   onClick={() => setIsMaximized(false)}
                   className={`p-2 rounded-full transition-all duration-300 ${
@@ -134,11 +114,20 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+
+                {/* Logo eAi à DIREITA */}
+                <Image
+                  src="/icon192.png"
+                  alt="eAi logo"
+                  width={36}
+                  height={36}
+                  className="rounded-lg"
+                />
               </div>
             </div>
           </div>
 
-          {/* Orbe Centralizado */}
+          {/* Orbe Centralizado - SEM CARD */}
           <div className="flex-1 flex items-center justify-center px-4">
             <div className="w-full max-w-5xl">
               <VoiceAssistantWithWakeWord 
@@ -151,7 +140,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
-          {/* Toast de Notificação (também aparece na versão maximizada) */}
+          {/* Toast */}
           {showToast && (
             <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
               <div className={`px-6 py-3 rounded-lg shadow-lg backdrop-blur-xl border flex items-center space-x-3 ${
@@ -179,7 +168,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* CSS para animações */}
           <style jsx>{`
             @keyframes slide-down {
               from {
@@ -198,9 +186,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       )}
 
-      {/* ============================================ */}
-      {/* VERSÃO NORMAL (quando não está maximizado) */}
-      {/* ============================================ */}
+      {/* VERSÃO NORMAL */}
       {!isMaximized && (
         <div className={`min-h-screen transition-colors duration-500 ${
           theme === 'dark' 
@@ -208,7 +194,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
         }`}>
           
-          {/* NOVO HEADER REDESENHADO */}
+          {/* Header */}
           <header className={`w-full border-b transition-colors ${
             theme === 'dark'
               ? 'bg-slate-900/50 border-white/5 backdrop-blur-xl'
@@ -217,22 +203,20 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
                 
-                {/* LADO ESQUERDO: Logo + Nome + Slogan */}
+                {/* LADO ESQUERDO */}
                 <div className="flex items-center space-x-4">
-                  {/* Logo da Empresa */}
+                  {/* Logo da Empresa - ALTURA LIMITADA */}
                   {company.logo_url && (
                     <div className="flex-shrink-0">
-                      <Image
+                      <img
                         src={company.logo_url}
                         alt={`${company.name} logo`}
-                        width={48}
-                        height={48}
                         className="rounded-lg object-contain"
+                        style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }}
                       />
                     </div>
                   )}
                   
-                  {/* Nome e Slogan */}
                   <div className="flex flex-col">
                     <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
                       theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -247,37 +231,27 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   </div>
                 </div>
 
-                {/* LADO DIREITO: Ícones + Logo eAi */}
+                {/* LADO DIREITO */}
                 <div className="flex items-center space-x-3">
                   
-                  {/* Grupo de Ícones de Controle */}
                   <div className="flex items-center space-x-2">
                     
-                    {/* 🔲 Botão Maximizar */}
+                    {/* Botão Maximizar */}
                     <button
                       onClick={handleToggleMaximize}
                       className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
                         theme === 'dark'
                           ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                           : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-                      } ${isMaximized ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}
-                      aria-label={isMaximized ? 'Modo normal' : 'Maximizar'}
-                      title={isMaximized ? 'Sair do modo tela cheia' : 'Modo tela cheia'}
+                      }`}
+                      title="Modo tela cheia"
                     >
-                      {isMaximized ? (
-                        // Ícone de minimizar
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
-                        </svg>
-                      ) : (
-                        // Ícone de maximizar
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                        </svg>
-                      )}
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
                     </button>
 
-                    {/* 🔒 Botão Wake Lock */}
+                    {/* Wake Lock */}
                     {isSupported && (
                       <button
                         onClick={handleToggleWakeLock}
@@ -286,8 +260,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                             ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                             : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
                         } ${isActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
-                        aria-label={isActive ? 'Desativar tela sempre ligada' : 'Ativar tela sempre ligada'}
-                        title={isActive ? 'Tela ligada ativa - clique para desativar' : 'Clique para manter tela sempre ligada'}
+                        title={isActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
                       >
                         {isActive ? (
                           <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -301,7 +274,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                       </button>
                     )}
 
-                    {/* 🌙 Botão de Toggle de Tema */}
+                    {/* Tema */}
                     <button
                       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                       className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
@@ -309,7 +282,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                           ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                           : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
                       }`}
-                      aria-label="Toggle theme"
                     >
                       {theme === 'dark' ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,7 +295,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     </button>
                   </div>
 
-                  {/* Separador vertical (apenas desktop) */}
+                  {/* Separador */}
                   <div className={`hidden md:block w-px h-10 ${
                     theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'
                   }`}></div>
@@ -343,7 +315,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </header>
 
-          {/* Toast de Notificação */}
+          {/* Toast */}
           {showToast && (
             <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
               <div className={`px-6 py-3 rounded-lg shadow-lg backdrop-blur-xl border flex items-center space-x-3 ${
@@ -371,7 +343,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* Área do Orbe - FOCO TOTAL */}
+          {/* Orbe */}
           <div className="flex-1 flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-5xl">
               <VoiceAssistantWithWakeWord 
@@ -384,15 +356,13 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
-          {/* Instruções - minimalistas embaixo */}
+          {/* Footer */}
           <div className={`w-full py-6 px-4 border-t transition-colors ${
             theme === 'dark'
               ? 'bg-slate-900/50 border-white/5 backdrop-blur-xl'
               : 'bg-white/80 border-gray-200 backdrop-blur-xl'
           }`}>
             <div className="max-w-4xl mx-auto">
-              
-              {/* Instruções compactas */}
               <div className="text-center mb-4">
                 <div className="flex flex-wrap justify-center gap-4 text-xs">
                   <div className={`flex items-center space-x-2 transition-colors ${
@@ -405,7 +375,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     }`}>1</span>
                     <span>Permita o microfone</span>
                   </div>
-                  
                   <div className={`flex items-center space-x-2 transition-colors ${
                     theme === 'dark' ? 'text-white/60' : 'text-gray-600'
                   }`}>
@@ -416,7 +385,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     }`}>2</span>
                     <span>Diga: "{company.wake_word}"</span>
                   </div>
-                  
                   <div className={`flex items-center space-x-2 transition-colors ${
                     theme === 'dark' ? 'text-white/60' : 'text-gray-600'
                   }`}>
@@ -427,7 +395,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     }`}>3</span>
                     <span>Faça sua pergunta</span>
                   </div>
-                  
                   <div className={`flex items-center space-x-2 transition-colors ${
                     theme === 'dark' ? 'text-white/60' : 'text-gray-600'
                   }`}>
@@ -441,50 +408,31 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 </div>
               </div>
 
-              {/* Footer minimalista */}
               <div className={`text-center border-t pt-4 transition-colors ${
                 theme === 'dark' ? 'border-white/5' : 'border-gray-200'
               }`}>
                 <div className="flex items-center justify-center space-x-4 mb-2">
-                  <Link
-                    href="https://eai.app.br"
-                    className={`text-xs font-medium transition-colors ${
-                      theme === 'dark'
-                        ? 'text-blue-400 hover:text-blue-300'
-                        : 'text-orange-600 hover:text-orange-700'
-                    }`}
-                  >
+                  <Link href="https://eai.app.br" className={`text-xs font-medium transition-colors ${
+                    theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-orange-600 hover:text-orange-700'
+                  }`}>
                     Crie seu assistente
                   </Link>
                   <span className={theme === 'dark' ? 'text-white/20' : 'text-gray-400'}>|</span>
-                  <Link
-                    href="https://eai.app.br/login"
-                    className={`text-xs font-medium transition-colors ${
-                      theme === 'dark'
-                        ? 'text-blue-400 hover:text-blue-300'
-                        : 'text-orange-600 hover:text-orange-700'
-                    }`}
-                  >
+                  <Link href="https://eai.app.br/login" className={`text-xs font-medium transition-colors ${
+                    theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-orange-600 hover:text-orange-700'
+                  }`}>
                     Editar Meu Assistente
                   </Link>
                 </div>
-                <Link
-                  href="https://bigcorps.com.br"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`text-[10px] transition-colors ${
-                    theme === 'dark'
-                      ? 'text-white/30 hover:text-white/50'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
+                <Link href="https://bigcorps.com.br" target="_blank" rel="noopener noreferrer" className={`text-[10px] transition-colors ${
+                  theme === 'dark' ? 'text-white/30 hover:text-white/50' : 'text-gray-500 hover:text-gray-700'
+                }`}>
                   eAi - Desenvolvido por Bigcorps
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* CSS para animações */}
           <style jsx>{`
             @keyframes slide-down {
               from {

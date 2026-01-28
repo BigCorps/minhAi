@@ -117,6 +117,10 @@ export default function FunctionCarousel({
       {/* Carrossel SEM FUNDO - usa fundo do contexto */}
       <div className="w-full py-4 overflow-hidden">
         <div className="relative w-full">
+          {/* Gradientes de esmaecimento nas pontas */}
+          <div className="absolute left-0 top-0 h-full w-24 z-10 pointer-events-none bg-gradient-to-r from-white dark:from-slate-950 to-transparent" />
+          <div className="absolute right-0 top-0 h-full w-24 z-10 pointer-events-none bg-gradient-to-l from-white dark:from-slate-950 to-transparent" />
+          
           {/* Carrossel com animação CSS */}
           <div className="flex gap-3 px-4 animate-scroll">
             {triplicatedFunctions.map((fn, idx) => {
@@ -131,8 +135,8 @@ export default function FunctionCarousel({
                   className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 ${
                     isEnabled
                       ? theme === 'dark'
-                        ? 'bg-white/10 hover:bg-white/20 text-white shadow-lg'
-                        : 'bg-white hover:bg-gray-50 text-gray-900 shadow-xl'
+                        ? 'bg-white/10 hover:bg-white/20 text-white shadow-md'
+                        : 'bg-white hover:bg-gray-50 text-gray-900 shadow-lg'
                       : theme === 'dark'
                         ? 'bg-gray-700/50 text-gray-400 hover:bg-gray-700/70'
                         : 'bg-gray-200 text-gray-500 hover:bg-gray-300'

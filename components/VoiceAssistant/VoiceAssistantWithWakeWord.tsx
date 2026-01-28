@@ -16,6 +16,7 @@ interface VoiceAssistantWithWakeWordProps {
   greetingMessage: string;
   theme?: 'dark' | 'light';
   isMaximized?: boolean;
+  onAssistantStart?: () => void;
 }
 
 export function VoiceAssistantWithWakeWord({
@@ -25,6 +26,7 @@ export function VoiceAssistantWithWakeWord({
   greetingMessage,
   theme = 'dark',
   isMaximized = false,
+  onAssistantStart, 
 }: VoiceAssistantWithWakeWordProps) {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
@@ -228,32 +230,37 @@ export function VoiceAssistantWithWakeWord({
     }, 200);
   }
 
-  async function handleStart() {
-    console.log('🚀 Iniciando assistente estilo Alexa...');
-    console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
-    
-    unlockAudio();
-    
-    if (isMobile) {
-      try {
-        const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-        testAudio.volume = 0.01;
-        await testAudio.play();
-        testAudio.pause();
-        console.log('✅ Mobile: Contexto de áudio estabelecido');
-      } catch (e) {
-        console.log('⚠️ Mobile: Falha no contexto de áudio');
-      }
+async function handleStart() {
+  console.log('🚀 Iniciando assistente estilo Alexa...');
+  console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
+  
+  unlockAudio();
+  
+  if (isMobile) {
+    try {
+      const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+      testAudio.volume = 0.01;
+      await testAudio.play();
+      testAudio.pause();
+      console.log('✅ Mobile: Contexto de áudio estabelecido');
+    } catch (e) {
+      console.log('⚠️ Mobile: Falha no contexto de áudio');
     }
-    
-    setShowStartButton(false);
-    
-    setTimeout(() => {
-      if (isActiveRef.current) {
-        startWakeWordDetection();
-      }
-    }, 300);
   }
+  
+  setShowStartButton(false);
+  
+  // 🆕 ADICIONAR ESTAS LINHAS
+  if (onAssistantStart) {
+    onAssistantStart();
+  }
+  
+  setTimeout(() => {
+    if (isActiveRef.current) {
+      startWakeWordDetection();
+    }
+  }, 300);
+}
 
   async function detectVoiceCommand(transcript: string): Promise<boolean> {
     const lowerTranscript = transcript.toLowerCase().trim();
@@ -1386,22 +1393,6 @@ export function VoiceAssistantWithWakeWord({
             Iniciar Assistente
           </button>
         )}
-
-        {!showStartButton && (
-          <div className="w-full max-w-2xl px-4">
-            <FunctionCarousel
-              companyId={companyId}
-              onFunctionClick={(functionKey, isEnabled) => {
-                if (isEnabled) {
-                  // Executar função por voz
-                  detectVoiceCommand(functionKey);
-                }
-                // Se desativada, o próprio carrossel mostra o modal
-              }}
-              theme={theme}
-            />
-          </div>
-        )}
       </div>
     );
   }
@@ -1477,21 +1468,7 @@ export function VoiceAssistantWithWakeWord({
             )}
 
             {!showStartButton && (
-              <>
-                <div className="w-full">
-                  <FunctionCarousel
-                    companyId={companyId}
-                    onFunctionClick={(functionKey, isEnabled) => {
-                      if (isEnabled) {
-                        // Executar função por voz
-                        detectVoiceCommand(functionKey);
-                      }
-                      // Se desativada, o próprio carrossel mostra o modal
-                    }}
-                    theme={theme}
-                  />
-                </div>
-                
+              <>              
                 <div className="w-full mt-auto">
                   <TextInputChat
                     onSendMessage={handleTextMessage}

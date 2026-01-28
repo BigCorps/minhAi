@@ -67,7 +67,7 @@ export default function DashboardClient({
             <div className="flex items-center space-x-3">
               <Image 
                 src="/logo.png" 
-                alt="eAi" 
+                alt="iTend" 
                 width={150} 
                 height={68}
                 className="rounded-lg"
@@ -94,7 +94,7 @@ export default function DashboardClient({
           <p className={`transition-colors ${
             theme === 'dark' ? 'text-white/60' : 'text-gray-600'
           }`}>
-            eAi, Bem-vindo ao Painel de Controle 
+            Bem-vindo ao Painel de Controle do iTend
           </p>
         </div>
 
@@ -243,6 +243,41 @@ export default function DashboardClient({
               theme === 'dark' ? 'text-white/60' : 'text-gray-600'
             }`}>
               Ver perguntas e respostas para ajustar o prompt
+            </p>
+          </Link>
+
+          {/* Card Funções */}
+          <Link
+            href="/dashboard/functions"
+            className={`block rounded-lg shadow-md p-6 hover:shadow-lg transition group ${
+              theme === 'dark'
+                ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10 hover:border-indigo-500/30'
+                : 'bg-white hover:shadow-xl'
+            }`}
+          >
+            <div className="flex items-center space-x-4 mb-4">
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition ${
+                theme === 'dark'
+                  ? 'bg-indigo-500/20 group-hover:bg-indigo-500/30'
+                  : 'bg-indigo-100 group-hover:bg-indigo-200'
+              }`}>
+                <svg className={`w-6 h-6 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className={`text-xl font-bold transition-colors ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>Funções</h3>
+                <p className={`text-sm transition-colors ${
+                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
+                }`}>do assistente</p>
+              </div>
+            </div>
+            <p className={`transition-colors ${
+              theme === 'dark' ? 'text-white/60' : 'text-gray-600'
+            }`}>
+              Ative ou desative funções que o assistente pode executar
             </p>
           </Link>
 

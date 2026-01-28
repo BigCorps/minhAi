@@ -5,6 +5,7 @@ import { AvatarFace } from '@/components/AvatarFace';
 import { WakeWordDetector } from './WakeWordDetector';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
+import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 
@@ -1385,6 +1386,22 @@ export function VoiceAssistantWithWakeWord({
             Iniciar Assistente
           </button>
         )}
+
+        {!showStartButton && (
+          <div className="w-full max-w-2xl px-4">
+            <FunctionCarousel
+              companyId={companyId}
+              onFunctionClick={(functionKey, isEnabled) => {
+                if (isEnabled) {
+                  // Executar função por voz
+                  detectVoiceCommand(functionKey);
+                }
+                // Se desativada, o próprio carrossel mostra o modal
+              }}
+              theme={theme}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -1460,14 +1477,30 @@ export function VoiceAssistantWithWakeWord({
             )}
 
             {!showStartButton && (
-              <div className="w-full mt-auto">
-                <TextInputChat
-                  onSendMessage={handleTextMessage}
-                  isProcessing={isProcessing || isPlayingAudio}
-                  theme={theme}
-                  disabled={false}
-                />
-              </div>
+              <>
+                <div className="w-full">
+                  <FunctionCarousel
+                    companyId={companyId}
+                    onFunctionClick={(functionKey, isEnabled) => {
+                      if (isEnabled) {
+                        // Executar função por voz
+                        detectVoiceCommand(functionKey);
+                      }
+                      // Se desativada, o próprio carrossel mostra o modal
+                    }}
+                    theme={theme}
+                  />
+                </div>
+                
+                <div className="w-full mt-auto">
+                  <TextInputChat
+                    onSendMessage={handleTextMessage}
+                    isProcessing={isProcessing || isPlayingAudio}
+                    theme={theme}
+                    disabled={false}
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>

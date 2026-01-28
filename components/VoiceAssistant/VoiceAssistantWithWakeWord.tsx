@@ -1525,9 +1525,9 @@ async function handleConfirmPix() {
         {showStartButton && permissionGranted && (
           <button
             onClick={handleStart}
-            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition font-bold shadow-xl text-lg"
+            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
           >
-            🎤 Iniciar Assistente
+            Iniciar Assistente
           </button>
         )}
 

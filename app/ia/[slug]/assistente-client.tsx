@@ -117,14 +117,22 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   </svg>
                 </button>
 
-                {/* Logo eAi à DIREITA */}
-                <Image
-                  src="/icon192.png"
-                  alt="eAi logo"
-                  width={36}
-                  height={36}
-                  className="rounded-lg"
-                />
+                {/* Logo eAi à DIREITA - Link */}
+                <Link 
+                  href="https://eai.app.br" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:opacity-80 transition-opacity"
+                  title="Visite eAi.app.br"
+                >
+                  <Image
+                    src="/icon192.png"
+                    alt="eAi logo"
+                    width={36}
+                    height={36}
+                    className="rounded-lg"
+                  />
+                </Link>
               </div>
             </div>
           </div>
@@ -285,6 +293,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                           ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                           : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
                       }`}
+                      title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
                     >
                       {theme === 'dark' ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,8 +312,14 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'
                   }`}></div>
 
-                  {/* Logo eAi */}
-                  <div className="flex-shrink-0">
+                  {/* Logo eAi - Link */}
+                  <Link 
+                    href="https://eai.app.br" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                    title="Visite eAi.app.br"
+                  >
                     <Image
                       src="/icon192.png"
                       alt="eAi logo"
@@ -312,7 +327,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                       height={40}
                       className="rounded-lg"
                     />
-                  </div>
+                  </Link>
                 </div>
               </div>
             </div>

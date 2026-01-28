@@ -157,7 +157,7 @@ export async function generateMetadata({ params }: PageProps) {
     .single();
 
   return {
-    title: company ? `${company.name} - Assistente Virtual` : 'Assistente Virtual',
-    description: `Converse com o assistente virtual da ${company?.name || 'empresa'}`,
+    title: company ? `${company.name} - eAi - Assistente IA com Voz` : 'eAi - Assistente IA com Voz',
+    description: `Converse com o assistente IA da ${company?.name || 'empresa'}`,
   };
 }

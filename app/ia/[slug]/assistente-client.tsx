@@ -446,40 +446,43 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 </div>
               </div>
 
-              {/* Mobile Layout - CENTRALIZADO */}
+              {/* Mobile Layout - Texto Centralizado + Logos nos Cantos */}
               <div className="md:hidden py-4 space-y-4">
                 
-                {/* Linha 1: Logo + Nome + Slogan + eAi (CENTRALIZADO) */}
-                <div className="flex items-center justify-center space-x-3">
+                {/* Linha 1: Logo Esquerda + Nome/Slogan Centralizado + eAi Direita */}
+                <div className="relative flex items-center justify-center min-h-[48px] px-4">
+                  {/* Logo da Empresa - Canto Esquerdo (absoluto) */}
                   {company.logo_url && (
-                    <div className="flex-shrink-0">
+                    <div className="absolute left-4 flex-shrink-0">
                       <img
                         src={company.logo_url}
                         alt={`${company.name} logo`}
                         className="rounded-lg object-contain"
-                        style={{ maxHeight: '32px', height: 'auto', width: 'auto', maxWidth: '80px' }}
+                        style={{ maxHeight: '36px', height: 'auto', width: 'auto', maxWidth: '80px' }}
                       />
                     </div>
                   )}
                   
-                  <div className="flex flex-col">
-                    <h1 className={`text-lg font-bold transition-colors ${
+                  {/* Nome + Slogan - Centro ABSOLUTO (ignorando logos) */}
+                  <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center">
+                    <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${
                       theme === 'dark' ? 'text-white' : 'text-gray-900'
                     }`}>
                       {company.name}
                     </h1>
-                    <p className={`text-[10px] tracking-wider uppercase transition-colors ${
+                    <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${
                       theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                     }`}>
                       Assistente Virtual com IA
                     </p>
                   </div>
 
+                  {/* Logo eAi - Canto Direito (absoluto) */}
                   <Link 
                     href="https://eai.app.br" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                    className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity"
                     title="Visite eAi.app.br"
                   >
                     <Image

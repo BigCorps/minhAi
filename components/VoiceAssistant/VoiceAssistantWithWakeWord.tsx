@@ -14,8 +14,8 @@ interface VoiceAssistantWithWakeWordProps {
   companyId: string;
   companyName: string;
   wakeWord: string;
-  greetingMessage: string;
   theme?: 'dark' | 'light';
+  isMaximized?: boolean;
 }
 
 export function VoiceAssistantWithWakeWord({
@@ -24,6 +24,7 @@ export function VoiceAssistantWithWakeWord({
   wakeWord,
   greetingMessage,
   theme = 'dark',
+  isMaximized = false,
 }: VoiceAssistantWithWakeWordProps) {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
@@ -1385,67 +1386,48 @@ async function handleConfirmPix() {
     return 'bg-gray-400';
   };
 
-  if (isFullscreen) {
-    return (
-      <div 
-        className={`fixed inset-0 z-50 flex items-center justify-center transition-colors duration-500 ${
-          theme === 'dark'
-            ? 'bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900'
-            : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
-        }`}
-        onMouseMove={(e) => {
-          const isNearTopRight = e.clientX > window.innerWidth - 150 && e.clientY < 150;
-          setShowCloseButton(isNearTopRight);
-        }}
-        onMouseLeave={() => setShowCloseButton(false)}
-      >
-        <button
-          onClick={() => setIsFullscreen(false)}
-          className={`absolute top-4 right-4 p-3 rounded-full transition-all duration-300 z-50 ${
-            showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          } ${
-            theme === 'dark'
-              ? 'bg-white/10 hover:bg-white/20 text-white'
-              : 'bg-black/10 hover:bg-black/20 text-black'
-          }`}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        <div className="flex flex-col items-center gap-4 md:gap-8 w-full px-4">
-          <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
-            <AvatarFace
-              isListening={isListening}
-              isSpeaking={isPlayingAudio}
-              isProcessing={isProcessing}
-              theme={theme}
-              qrCodeData={qrCodeData}
-              pixConfirmationData={pixConfirmationData}
-              onCloseQRCode={handleCloseQRCode}
-              onCopyQRCode={handleCopyQRCode}
-              onConfirmPix={handleConfirmPix}
-              onCancelPix={handleCancelPix}
-            />
-          </div>
-
-          <div className="text-center px-4 max-w-md">
-            <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 transition-colors ${
-              theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
-            }`}>
-              {getStatusMessage()}
-            </p>
-            {error && (
-              <p className={`text-xs sm:text-sm transition-colors ${
-                theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
-              }`}>{error}</p>
-            )}
-          </div>
-        </div>
+if (isMaximized) {
+  return (
+    <div className="flex flex-col items-center gap-4 md:gap-8 w-full px-4">
+      <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
+        <AvatarFace
+          isListening={isListening}
+          isSpeaking={isPlayingAudio}
+          isProcessing={isProcessing}
+          theme={theme}
+          qrCodeData={qrCodeData}
+          pixConfirmationData={pixConfirmationData}
+          onCloseQRCode={handleCloseQRCode}
+          onCopyQRCode={handleCopyQRCode}
+          onConfirmPix={handleConfirmPix}
+          onCancelPix={handleCancelPix}
+        />
       </div>
-    );
-  }
+
+      <div className="text-center px-4 max-w-md">
+        <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 transition-colors ${
+          theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
+        }`}>
+          {getStatusMessage()}
+        </p>
+        {error && (
+          <p className={`text-xs sm:text-sm transition-colors ${
+            theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
+          }`}>{error}</p>
+        )}
+      </div>
+
+      {showStartButton && permissionGranted && (
+        <button
+          onClick={handleStart}
+          className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
+        >
+          Iniciar Assistente
+        </button>
+      )}
+    </div>
+  );
+}
 
   return (
     <div className="w-full max-w-6xl mx-auto">

@@ -1,10 +1,5 @@
 // components/VoiceAssistant/functions/index.ts
 import { FunctionHandler, FunctionContext } from './types';
-import { whatsappQRHandler } from './contact/whatsapp';
-import { instagramQRHandler } from './contact/instagram';
-import { pixGenerateHandler } from './payment/pix-generate';
-import { pixConfirmHandler } from './payment/pix-confirm';
-import { pixCancelHandler } from './payment/pix-cancel';
 
 export const functionRegistry: FunctionHandler[] = [
   whatsappQRHandler,

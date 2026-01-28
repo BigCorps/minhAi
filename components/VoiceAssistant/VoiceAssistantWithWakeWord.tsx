@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase-browser';
 
 // 🆕 IMPORTS DOS MÓDULOS
 import { VoiceAssistantProps, QRCodeData, PIXConfirmationData } from './types';
-import { DEFAULT_WAKE_WORDS, END_COMMANDS } from './constants';
+import { DEFAULT_WAKE_WORDS, END_COMMANDS } from './utils/constants';
 import { unlockAudio, establishMobileAudioContext } from './utils/audioUnlock';
 import { detectAndExecuteFunction } from './functions';
 import { useAudioManager } from './hooks/useAudioManager';
@@ -103,7 +103,6 @@ export function VoiceAssistantWithWakeWord({
     onQuestionDetected: processQuestion,
     isProcessing,
     isPlayingAudio,
-    processingQuestion,
   });
   
   // Processar pergunta (comando ou FAQ/GPT)

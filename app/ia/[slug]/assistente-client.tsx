@@ -20,6 +20,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isMaximized, setIsMaximized] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [showZoomControl, setShowZoomControl] = useState(false);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -59,6 +61,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
   const handleToggleMaximize = () => {
     setIsMaximized(!isMaximized);
+    setZoomLevel(100); // Reset zoom ao entrar/sair da maximização
     showToastMessage(
       isMaximized ? 'Modo normal ativado' : 'Modo maximizado ativado',
       'success'
@@ -68,7 +71,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   return (
     <>
       {/* ========================================== */}
-      {/* VERSÃO MAXIMIZADA (Fullscreen) */}
+      {/* VERSÃO MAXIMIZADA (com Zoom) */}
       {/* ========================================== */}
       {isMaximized && (
         <div 
@@ -87,21 +90,47 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           <div className="w-full px-6 py-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               
-              {/* Logo Empresa (Esquerda) */}
-              {company.logo_url && (
-                <div className="flex-shrink-0">
+              {/* Logo Empresa + Zoom Control (Esquerda) */}
+              <div 
+                className="flex items-center space-x-3"
+                onMouseEnter={() => setShowZoomControl(true)}
+                onMouseLeave={() => setShowZoomControl(false)}
+              >
+                {company.logo_url && (
                   <img
                     src={company.logo_url}
                     alt={`${company.name} logo`}
                     className="rounded-lg object-contain"
                     style={{ maxHeight: '36px', height: 'auto', width: 'auto' }}
                   />
+                )}
+                
+                {/* Controle de Zoom (aparece no hover) */}
+                <div className={`flex items-center space-x-2 transition-opacity duration-300 ${
+                  showZoomControl ? 'opacity-100' : 'opacity-0'
+                }`}>
+                  <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                  </svg>
+                  <input
+                    type="range"
+                    min="50"
+                    max="500"
+                    step="10"
+                    value={zoomLevel}
+                    onChange={(e) => setZoomLevel(Number(e.target.value))}
+                    className="w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 hover:[&::-webkit-slider-thumb]:bg-blue-600"
+                  />
+                  <span className={`text-xs font-mono ${
+                    theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+                  }`}>
+                    {zoomLevel}%
+                  </span>
                 </div>
-              )}
+              </div>
               
               {/* Botão Fechar + Logo eAi (Direita) */}
               <div className="relative flex items-center space-x-3">
-                {/* Botão X à ESQUERDA */}
                 <button
                   onClick={() => setIsMaximized(false)}
                   className={`p-2 rounded-full transition-all duration-300 ${
@@ -117,7 +146,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   </svg>
                 </button>
 
-                {/* Logo eAi à DIREITA - Link */}
                 <Link 
                   href="https://eai.app.br" 
                   target="_blank" 
@@ -137,16 +165,23 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
-          {/* Orbe + Status (usando isMaximized={true}) */}
-          <div className="flex-1 flex items-center justify-center">
-            <VoiceAssistantWithWakeWord 
-              companyId={company.id} 
-              companyName={company.name}
-              wakeWord={company.wake_word || 'olá assistente'}
-              greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
-              theme={theme}
-              isMaximized={true}
-            />
+          {/* Orbe + Status (com Zoom aplicado) */}
+          <div className="flex-1 flex items-center justify-center overflow-auto">
+            <div 
+              style={{ 
+                transform: `scale(${zoomLevel / 100})`,
+                transition: 'transform 0.2s ease-out'
+              }}
+            >
+              <VoiceAssistantWithWakeWord 
+                companyId={company.id} 
+                companyName={company.name}
+                wakeWord={company.wake_word || 'olá assistente'}
+                greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
+                theme={theme}
+                isMaximized={true}
+              />
+            </div>
           </div>
 
           {/* Toast */}
@@ -212,11 +247,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               : 'bg-white/80 border-gray-200 backdrop-blur-xl'
           }`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
+              {/* Desktop Layout */}
+              <div className="hidden md:flex md:items-center md:justify-between py-4">
                 
-                {/* LADO ESQUERDO */}
+                {/* LADO ESQUERDO - Desktop */}
                 <div className="flex items-center space-x-4">
-                  {/* Logo da Empresa */}
                   {company.logo_url && (
                     <div className="flex-shrink-0">
                       <img
@@ -242,12 +277,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   </div>
                 </div>
 
-                {/* LADO DIREITO */}
+                {/* LADO DIREITO - Desktop */}
                 <div className="flex items-center space-x-3">
                   
                   <div className="flex items-center space-x-2">
                     
-                    {/* Botão Maximizar */}
                     <button
                       onClick={handleToggleMaximize}
                       className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
@@ -262,7 +296,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                       </svg>
                     </button>
 
-                    {/* Wake Lock */}
                     {isSupported && (
                       <button
                         onClick={handleToggleWakeLock}
@@ -285,7 +318,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                       </button>
                     )}
 
-                    {/* Tema */}
                     <button
                       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                       className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
@@ -307,12 +339,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     </button>
                   </div>
 
-                  {/* Separador */}
-                  <div className={`hidden md:block w-px h-10 ${
+                  <div className={`w-px h-10 ${
                     theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'
                   }`}></div>
 
-                  {/* Logo eAi - Link */}
                   <Link 
                     href="https://eai.app.br" 
                     target="_blank" 
@@ -328,6 +358,113 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                       className="rounded-lg"
                     />
                   </Link>
+                </div>
+              </div>
+
+              {/* Mobile Layout - CENTRALIZADO */}
+              <div className="md:hidden py-4 space-y-4">
+                
+                {/* Linha 1: Logo + Nome + Slogan + eAi (CENTRALIZADO) */}
+                <div className="flex items-center justify-center space-x-3">
+                  {company.logo_url && (
+                    <div className="flex-shrink-0">
+                      <img
+                        src={company.logo_url}
+                        alt={`${company.name} logo`}
+                        className="rounded-lg object-contain"
+                        style={{ maxHeight: '32px', height: 'auto', width: 'auto', maxWidth: '80px' }}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col">
+                    <h1 className={`text-lg font-bold transition-colors ${
+                      theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      {company.name}
+                    </h1>
+                    <p className={`text-[10px] tracking-wider uppercase transition-colors ${
+                      theme === 'dark' ? 'text-white/40' : 'text-gray-500'
+                    }`}>
+                      Assistente Virtual com IA
+                    </p>
+                  </div>
+
+                  <Link 
+                    href="https://eai.app.br" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                    title="Visite eAi.app.br"
+                  >
+                    <Image
+                      src="/icon192.png"
+                      alt="eAi logo"
+                      width={32}
+                      height={32}
+                      className="rounded-lg"
+                    />
+                  </Link>
+                </div>
+
+                {/* Linha 2: Botões (CENTRALIZADO) */}
+                <div className="flex items-center justify-center space-x-2">
+                  
+                  <button
+                    onClick={handleToggleMaximize}
+                    className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-white'
+                        : 'bg-black/5 border-black/10 text-black'
+                    }`}
+                    title="Modo tela cheia"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  </button>
+
+                  {isSupported && (
+                    <button
+                      onClick={handleToggleWakeLock}
+                      className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+                        theme === 'dark'
+                          ? 'bg-white/5 border-white/10 text-white'
+                          : 'bg-black/5 border-black/10 text-black'
+                      } ${isActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
+                      title={isActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
+                    >
+                      {isActive ? (
+                        <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-white'
+                        : 'bg-black/5 border-black/10 text-black'
+                    }`}
+                    title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                  >
+                    {theme === 'dark' ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
@@ -361,7 +498,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* Orbe - Versão Normal (com os 2 cards) */}
+          {/* Orbe */}
           <div className="flex-1 flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-5xl">
               <VoiceAssistantWithWakeWord 

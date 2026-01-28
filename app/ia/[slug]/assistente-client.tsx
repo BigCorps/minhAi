@@ -1,6 +1,7 @@
 'use client';
 
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
+import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
@@ -54,6 +55,18 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   // Handler de mudança de zoom
   const handleZoomChange = (value: number) => {
     setZoomLevel(value);
+  };
+
+  // Handler de clique nas funções do carrossel
+  const handleFunctionClick = (functionKey: string, isEnabled: boolean) => {
+    if (isEnabled) {
+      // Função ativada - pode executar ação
+      console.log('Função clicada:', functionKey);
+      showToastMessage(`Função ${functionKey} ativada`, 'success');
+    } else {
+      // Função desativada - modal de demo será mostrado pelo FunctionCarousel
+      console.log('Mostrando demo para:', functionKey);
+    }
   };
 
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -251,7 +264,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           </div>
 
           {/* Orbe + Status (com Zoom aplicado) */}
-          <div className="flex-1 flex items-center justify-center overflow-auto">
+          <div className="flex-1 flex flex-col items-center justify-center overflow-auto">
             <div 
               style={{ 
                 transform: `scale(${zoomLevel / 100})`,
@@ -265,6 +278,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                 theme={theme}
                 isMaximized={true}
+              />
+            </div>
+
+            {/* Carrossel de Funções - Versão Maximizada */}
+            <div className="w-full mt-8">
+              <FunctionCarousel 
+                companyId={company.id}
+                onFunctionClick={handleFunctionClick}
+                theme={theme}
               />
             </div>
           </div>
@@ -587,8 +609,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           )}
 
           {/* Orbe */}
-          <div className="flex-1 flex items-center justify-center px-4 py-8">
-            <div className="w-full max-w-5xl">
+          <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+            <div className="w-full max-w-5xl mb-8">
               <VoiceAssistantWithWakeWord 
                 companyId={company.id} 
                 companyName={company.name}
@@ -596,6 +618,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                 theme={theme}
                 isMaximized={false}
+              />
+            </div>
+
+            {/* Carrossel de Funções - Versão Normal */}
+            <div className="w-full max-w-7xl">
+              <FunctionCarousel 
+                companyId={company.id}
+                onFunctionClick={handleFunctionClick}
+                theme={theme}
               />
             </div>
           </div>

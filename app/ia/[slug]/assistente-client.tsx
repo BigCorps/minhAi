@@ -20,10 +20,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isMaximized, setIsMaximized] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
+  const [showControls, setShowControls] = useState(false); // 🆕 Controla X e 🔍
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showZoomControl, setShowZoomControl] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const zoomTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -44,27 +45,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     return () => {
       window.removeEventListener('resize', checkMobile);
       // Cleanup timeout
-      if (zoomTimeoutRef.current) {
-        clearTimeout(zoomTimeoutRef.current);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
       }
     };
   }, []);
 
-  // Auto-hide zoom control no mobile após inatividade
+  // Handler de mudança de zoom
   const handleZoomChange = (value: number) => {
     setZoomLevel(value);
-    
-    if (isMobile) {
-      // Limpar timeout anterior
-      if (zoomTimeoutRef.current) {
-        clearTimeout(zoomTimeoutRef.current);
-      }
-      
-      // Criar novo timeout para fechar após 3 segundos
-      zoomTimeoutRef.current = setTimeout(() => {
-        setShowZoomControl(false);
-      }, 3000);
-    }
   };
 
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -94,12 +83,30 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   };
 
   const handleToggleMaximize = () => {
-    setIsMaximized(!isMaximized);
+    const willMaximize = !isMaximized;
+    setIsMaximized(willMaximize);
     setZoomLevel(100); // Reset zoom ao entrar/sair da maximização
     showToastMessage(
-      isMaximized ? 'Modo normal ativado' : 'Modo maximizado ativado',
+      willMaximize ? 'Modo maximizado ativado' : 'Modo normal ativado',
       'success'
     );
+    
+    // 🆕 Mostrar controles por 5 segundos ao maximizar
+    if (willMaximize) {
+      setShowControls(true);
+      setShowCloseButton(true); // Mostra o X também
+      
+      // Limpar timeout anterior se existir
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      
+      // Esconder após 5 segundos
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+        setShowCloseButton(false);
+      }, 5000);
+    }
   };
 
   return (
@@ -115,10 +122,41 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
           }`}
           onMouseMove={(e) => {
-            const isNearTopRight = e.clientX > window.innerWidth - 150 && e.clientY < 100;
-            setShowCloseButton(isNearTopRight);
+            // Mostrar controles quando mouse está na área superior
+            const isNearTop = e.clientY < 100;
+            setShowControls(isNearTop);
+            setShowCloseButton(isNearTop);
+            
+            // Limpar timeout de auto-hide quando hover
+            if (isNearTop && controlsTimeoutRef.current) {
+              clearTimeout(controlsTimeoutRef.current);
+              controlsTimeoutRef.current = null;
+            }
           }}
-          onMouseLeave={() => setShowCloseButton(false)}
+          onMouseLeave={() => {
+            setShowControls(false);
+            setShowCloseButton(false);
+          }}
+          onTouchStart={(e) => {
+            // Mobile: toque na área superior mostra controles
+            const touch = e.touches[0];
+            const isNearTop = touch.clientY < 100;
+            
+            if (isNearTop) {
+              setShowControls(true);
+              setShowCloseButton(true);
+              
+              // Esconder após 5 segundos
+              if (controlsTimeoutRef.current) {
+                clearTimeout(controlsTimeoutRef.current);
+              }
+              
+              controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false);
+                setShowCloseButton(false);
+              }, 5000);
+            }
+          }}
         >
           {/* Header Minimalista */}
           <div className="w-full px-6 py-4">
@@ -135,14 +173,14 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   />
                 )}
                 
-                {/* Controle de Zoom - Mobile: botão clicável / Desktop: hover */}
+                {/* Controle de Zoom - Aparece/desaparece junto com o X */}
                 <div className="flex items-center space-x-2">
-                  {/* Botão de Zoom (Mobile: sempre visível / Desktop: no hover) */}
+                  {/* Botão de Zoom (aparece no hover ou toque) */}
                   <button
-                    onClick={() => isMobile && setShowZoomControl(!showZoomControl)}
-                    onMouseEnter={() => !isMobile && setShowZoomControl(true)}
-                    onMouseLeave={() => !isMobile && setShowZoomControl(false)}
-                    className={`p-2 rounded-lg transition-all ${
+                    onClick={() => setShowZoomControl(!showZoomControl)}
+                    className={`p-2 rounded-lg transition-all duration-300 ${
+                      showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    } ${
                       theme === 'dark'
                         ? 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
                         : 'bg-black/5 hover:bg-black/10 text-gray-600 hover:text-gray-900'
@@ -154,9 +192,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     </svg>
                   </button>
                   
-                  {/* Slider + Valor (aparece no hover no desktop ou ao clicar no mobile) */}
+                  {/* Slider + Valor (aparece ao clicar no botão de zoom) */}
                   <div className={`flex items-center space-x-2 transition-all duration-300 ${
-                    showZoomControl ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                    showZoomControl && showControls ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
                   }`}>
                     <input
                       type="range"

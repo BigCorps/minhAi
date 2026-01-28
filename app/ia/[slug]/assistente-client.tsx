@@ -25,6 +25,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showZoomControl, setShowZoomControl] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [assistantStarted, setAssistantStarted] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -99,6 +100,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     const willMaximize = !isMaximized;
     setIsMaximized(willMaximize);
     setZoomLevel(100); // Reset zoom ao entrar/sair da maximização
+    setAssistantStarted(false); // Reset do estado do assistente
     showToastMessage(
       willMaximize ? 'Modo maximizado ativado' : 'Modo normal ativado',
       'success'
@@ -278,18 +280,21 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                 theme={theme}
                 isMaximized={true}
+                onAssistantStart={() => setAssistantStarted(true)}
               />
             </div>
           </div>
 
-          {/* Carrossel de Funções - Versão Maximizada (ÚNICO) */}
-          <div className="w-full pb-4">
-            <FunctionCarousel 
-              companyId={company.id}
-              onFunctionClick={handleFunctionClick}
-              theme={theme}
-            />
-          </div>
+          {/* Carrossel de Funções - Versão Maximizada (aparece apenas após iniciar) */}
+          {assistantStarted && (
+            <div className="w-full pb-4">
+              <FunctionCarousel 
+                companyId={company.id}
+                onFunctionClick={handleFunctionClick}
+                theme={theme}
+              />
+            </div>
+          )}
 
           {/* Toast */}
           {showToast && (
@@ -610,7 +615,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
           {/* Orbe */}
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-            <div className="w-full max-w-5xl mb-8">
+            <div className="w-full max-w-5xl">
               <VoiceAssistantWithWakeWord 
                 companyId={company.id} 
                 companyName={company.name}
@@ -618,18 +623,21 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                 theme={theme}
                 isMaximized={false}
+                onAssistantStart={() => setAssistantStarted(true)}
               />
             </div>
           </div>
 
-          {/* Carrossel de Funções - Versão Normal (ÚNICO) */}
-          <div className="w-full pb-8">
-            <FunctionCarousel 
-              companyId={company.id}
-              onFunctionClick={handleFunctionClick}
-              theme={theme}
-            />
-          </div>
+          {/* Carrossel de Funções - Versão Normal (aparece apenas após iniciar) */}
+          {assistantStarted && (
+            <div className="w-full pb-8">
+              <FunctionCarousel 
+                companyId={company.id}
+                onFunctionClick={handleFunctionClick}
+                theme={theme}
+              />
+            </div>
+          )}
 
           {/* Footer */}
           <div className={`w-full py-6 px-4 border-t transition-colors ${

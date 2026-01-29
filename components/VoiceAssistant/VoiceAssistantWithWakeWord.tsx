@@ -925,8 +925,9 @@ export function VoiceAssistantWithWakeWord({
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      // ✅ MOBILE: continuous false + auto-restart rápido = sempre ativo sem apitar
-      recognition.continuous = isMobile ? false : true;
+      // ✅ MOBILE: Tentar continuous true primeiro (funciona em alguns navegadores modernos)
+      // Se não funcionar bem, o auto-restart com delay resolve
+      recognition.continuous = true; // Sempre true
       recognition.interimResults = isMobile ? false : true;
       recognition.lang = 'pt-BR';
       recognition.maxAlternatives = 1;
@@ -1038,30 +1039,30 @@ export function VoiceAssistantWithWakeWord({
         }
       };
 
-      // ✅ MOBILE: onend com restart IMEDIATO e SILENCIOSO
+      // ✅ MOBILE: onend com restart OTIMIZADO para evitar bipes
       recognition.onend = () => {
         console.log('🔴 Recognition encerrou');
         
         // NÃO mudar setIsListening para false - mantém visual ativo
         // setIsListening(false); // ← REMOVIDO!
         
-        // ✅ RESTART IMEDIATO se não estiver ocupado
+        // ✅ RESTART se não estiver ocupado
         if (
           isActiveRef.current && 
           !processingQuestion.current && 
           !isPlayingAudio
         ) {
-          // ✅ MOBILE: Restart IMEDIATO (sem delay) para parecer contínuo
+          // ✅ MOBILE: Delay de 800ms para evitar bipes constantes do navegador
+          // Esse delay é o mínimo que evita o bipe mas mantém responsividade
           if (isMobile) {
-            console.log('📱 Mobile: Restart IMEDIATO');
-            // Pequeno delay apenas para evitar loop travado
+            console.log('📱 Mobile: Restart em 800ms (evita bipe)');
             setTimeout(() => {
               if (isActiveRef.current && !processingQuestion.current && !isPlayingAudio) {
                 startWakeWordDetection();
               }
-            }, 100);
+            }, 800);
           } else {
-            // Desktop: Restart normal com delay
+            // Desktop: continuous = true, raramente cai aqui
             console.log('💻 Desktop: Restart em 500ms');
             setTimeout(() => {
               if (isActiveRef.current && !processingQuestion.current && !isPlayingAudio) {

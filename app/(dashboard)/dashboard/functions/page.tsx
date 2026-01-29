@@ -1,10 +1,12 @@
-// app/[slug]/assistant/functions/page.tsx
+// app/(dashboard)/dashboard/functions/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, XCircle, TrendingUp, Clock } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import FunctionSelector from '@/components/dashboard/functions/FunctionSelector';
+import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 
 interface AssistantFunction {
   id: string;
@@ -25,6 +27,7 @@ interface AssistantFunction {
   example_phrases: string[];
   is_active: boolean;
   display_order: number;
+  edit_modal_component?: string;
 }
 
 interface CompanyFunctionSetting {
@@ -37,59 +40,69 @@ interface CompanyFunctionSetting {
 }
 
 export default function AssistantFunctionsPage() {
-  const params = useParams();
   const router = useRouter();
-  const slug = params.slug as string;
+  const searchParams = useSearchParams();
+  const companyIdFromUrl = searchParams.get('companyId');
   
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [settings, setSettings] = useState<CompanyFunctionSetting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [companyId, setCompanyId] = useState<string>('');
+  const [companyId, setCompanyId] = useState<string>(companyIdFromUrl || '');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   
   const supabase = createClient();
   
+  // Detectar tema do sistema
   useEffect(() => {
-    loadData();
-  }, [slug]);
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(isDark ? 'dark' : 'light');
+  }, []);
   
-  async function loadData() {
+  // Carregar dados quando companyId muda
+  useEffect(() => {
+    if (companyId) {
+      loadData(companyId);
+    }
+  }, [companyId]);
+  
+  async function loadData(selectedCompanyId: string) {
     try {
       setLoading(true);
       
-      // 1. Buscar company_id
-      const { data: company } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('slug', slug)
-        .single();
+      console.log('📋 Carregando dados para empresa:', selectedCompanyId);
       
-      if (!company) {
-        console.error('Empresa não encontrada');
-        return;
-      }
-      
-      setCompanyId(company.id);
-      
-      // 2. Buscar todas as funções
-      const { data: allFunctions } = await supabase
+      // 1. Buscar todas as funções ativas
+      const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
         .select('*')
         .eq('is_active', true)
         .order('display_order');
       
+      if (functionsError) {
+        console.error('❌ Erro ao buscar funções:', functionsError);
+      }
+      
+      console.log('✅ Funções encontradas:', allFunctions?.length || 0);
+      
       setFunctions(allFunctions || []);
       
-      // 3. Buscar configurações da empresa
-      const { data: companySettings } = await supabase
+      // 2. Buscar configurações da empresa
+      const { data: companySettings, error: settingsError } = await supabase
         .from('company_function_settings')
         .select('*')
-        .eq('company_id', company.id);
+        .eq('company_id', selectedCompanyId);
+      
+      if (settingsError) {
+        console.error('❌ Erro ao buscar settings:', settingsError);
+      }
+      
+      console.log('✅ Settings encontrados:', companySettings?.length || 0);
       
       setSettings(companySettings || []);
       
     } catch (error) {
-      console.error('Erro ao carregar:', error);
+      console.error('❌ Erro geral ao carregar:', error);
     } finally {
       setLoading(false);
     }
@@ -107,30 +120,37 @@ export default function AssistantFunctionsPage() {
           .from('company_function_settings')
           .update({ 
             is_enabled: !currentlyEnabled,
-            ...(currentlyEnabled ? { disabled_at: new Date().toISOString() } : { enabled_at: new Date().toISOString() })
+            ...(currentlyEnabled 
+              ? { disabled_at: new Date().toISOString() } 
+              : { enabled_at: new Date().toISOString() }
+            )
           })
           .eq('id', setting.id);
         
         if (error) throw error;
+        
+        console.log(`✅ Função ${currentlyEnabled ? 'desativada' : 'ativada'}:`, functionKey);
       } else {
-        // Criar novo
+        // Criar novo (primeira vez que está sendo configurada)
         const { error } = await supabase
           .from('company_function_settings')
           .insert({
             company_id: companyId,
             function_key: functionKey,
-            is_enabled: true,
-            enabled_at: new Date().toISOString()
+            is_enabled: false, // Se está toggleando pela primeira vez, é pra desativar
+            disabled_at: new Date().toISOString()
           });
         
         if (error) throw error;
+        
+        console.log('✅ Setting criado e função desativada:', functionKey);
       }
       
       // Recarregar
-      await loadData();
+      await loadData(companyId);
       
     } catch (error) {
-      console.error('Erro ao atualizar:', error);
+      console.error('❌ Erro ao atualizar:', error);
       alert('Erro ao atualizar função. Tente novamente.');
     } finally {
       setUpdating(null);
@@ -139,7 +159,8 @@ export default function AssistantFunctionsPage() {
   
   function isFunctionEnabled(functionKey: string): boolean {
     const setting = settings.find(s => s.function_key === functionKey);
-    return setting ? setting.is_enabled : true; // Ativada por padrão
+    // Se não tem setting, assume ATIVA (padrão)
+    return setting ? setting.is_enabled : true;
   }
   
   function getFunctionStats(functionKey: string) {
@@ -151,20 +172,27 @@ export default function AssistantFunctionsPage() {
     };
   }
   
+  function handleEdit(functionKey: string) {
+    // TODO: Abrir modal de edição baseado em edit_modal_component
+    console.log('🔧 Editar função:', functionKey);
+    alert(`Modal de edição para ${functionKey} ainda não implementado.`);
+  }
+  
   const categories = [
     { key: 'knowledge', name: 'Conhecimento', icon: '🧠', color: '#3B82F6' },
+    { key: 'configuration', name: 'Configuração', icon: '⚙️', color: '#8B5CF6' },
     { key: 'contact', name: 'Contato', icon: '📞', color: '#10B981' },
     { key: 'payment', name: 'Pagamento', icon: '💰', color: '#F59E0B' },
     { key: 'schedule', name: 'Agendamento', icon: '📅', color: '#8B5CF6' },
     { key: 'other', name: 'Outros', icon: '⚡', color: '#6B7280' },
   ];
   
-  if (loading) {
+  if (loading && !companyId) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-slate-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Carregando funções...</p>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
       </div>
     );
@@ -184,169 +212,97 @@ export default function AssistantFunctionsPage() {
               <span>Voltar</span>
             </button>
             
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Funções do Assistente
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Ative ou desative as funções que seu assistente pode executar
-            </p>
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  Funções do Assistente
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Ative ou desative as funções que seu assistente pode executar
+                </p>
+              </div>
+              
+              {/* Seletor de Assistente */}
+              <FunctionSelector
+                onCompanySelect={setCompanyId}
+                selectedCompanyId={companyId}
+                theme={theme}
+              />
+            </div>
           </div>
           
-          {/* Categories */}
-          {categories.map(category => {
-            const categoryFunctions = functions.filter(f => f.function_category === category.key);
-            
-            if (categoryFunctions.length === 0) return null;
-            
-            return (
-              <div key={category.key} className="mb-12">
-                <div className="flex items-center gap-3 mb-6">
-                  <span className="text-3xl">{category.icon}</span>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {category.name}
-                  </h2>
-                  <span className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300">
-                    {categoryFunctions.length} {categoryFunctions.length === 1 ? 'função' : 'funções'}
-                  </span>
-                </div>
+          {/* Mensagem se não tem empresa selecionada */}
+          {!companyId && (
+            <div className="text-center py-12">
+              <p className="text-gray-600 dark:text-gray-400">
+                Selecione um assistente acima para gerenciar suas funções
+              </p>
+            </div>
+          )}
+          
+          {/* Loading */}
+          {loading && companyId && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+          
+          {/* Funções por categoria */}
+          {!loading && companyId && functions.length === 0 && (
+            <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Nenhuma função disponível no momento.
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">
+                Execute os SQLs de criação de funções no banco de dados.
+              </p>
+            </div>
+          )}
+          
+          {!loading && companyId && functions.length > 0 && (
+            <>
+              {categories.map(category => {
+                const categoryFunctions = functions.filter(f => f.function_category === category.key);
                 
-                <div className="grid md:grid-cols-2 gap-6">
-                  {categoryFunctions.map(fn => {
-                    const enabled = isFunctionEnabled(fn.function_key);
-                    const stats = getFunctionStats(fn.function_key);
-                    const isUpdating = updating === fn.function_key;
+                if (categoryFunctions.length === 0) return null;
+                
+                return (
+                  <div key={category.key} className="mb-12">
+                    <div className="flex items-center gap-3 mb-6">
+                      <span className="text-3xl">{category.icon}</span>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {category.name}
+                      </h2>
+                      <span className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300">
+                        {categoryFunctions.length} {categoryFunctions.length === 1 ? 'função' : 'funções'}
+                      </span>
+                    </div>
                     
-                    return (
-                      <div
-                        key={fn.id}
-                        className={`border rounded-2xl p-6 transition-all ${
-                          enabled
-                            ? 'border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-900/20 shadow-lg'
-                            : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800'
-                        }`}
-                      >
-                        {/* Header do Card */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div 
-                              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                              style={{ backgroundColor: `${fn.color}20` }}
-                            >
-                              {fn.icon}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-bold text-lg text-gray-900 dark:text-white">
-                                {fn.function_name}
-                              </h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {fn.short_description}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => toggleFunction(fn.function_key, enabled)}
-                            disabled={isUpdating}
-                            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                              enabled
-                                ? 'bg-green-600 text-white hover:bg-green-700'
-                                : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-500'
-                            } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            {isUpdating ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                <span>...</span>
-                              </>
-                            ) : enabled ? (
-                              <>
-                                <CheckCircle2 className="w-4 h-4" />
-                                <span>Ativada</span>
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="w-4 h-4" />
-                                <span>Desativada</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {categoryFunctions.map(fn => {
+                        const enabled = isFunctionEnabled(fn.function_key);
+                        const stats = getFunctionStats(fn.function_key);
+                        const isUpdating = updating === fn.function_key;
                         
-                        {/* Descrição */}
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
-                          {fn.description}
-                        </p>
-                        
-                        {/* Badges */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {fn.requires_payment && (
-                            <span className="px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium">
-                              💳 Requer Pagamento
-                            </span>
-                          )}
-                          {fn.is_premium && (
-                            <span className="px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium">
-                              ⭐ Premium
-                            </span>
-                          )}
-                          {fn.consumes_credits && (
-                            <span className="px-2 py-1 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-medium">
-                              🔥 {fn.credits_per_use} crédito{fn.credits_per_use > 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {!fn.save_to_history && (
-                            <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium">
-                              👻 Não salva histórico
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Stats */}
-                        {enabled && stats.usageCount > 0 && (
-                          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2">
-                              <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
-                              <div>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">Usos</p>
-                                <p className="font-semibold text-gray-900 dark:text-white">{stats.usageCount}</p>
-                              </div>
-                            </div>
-                            {stats.lastUsed && (
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                <div>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">Último uso</p>
-                                  <p className="font-semibold text-gray-900 dark:text-white text-xs">
-                                    {new Date(stats.lastUsed).toLocaleDateString('pt-BR')}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* Exemplos */}
-                        {fn.example_phrases && fn.example_phrases.length > 0 && (
-                          <div className="mt-4 p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                              💬 Exemplos de uso:
-                            </p>
-                            <ul className="space-y-1">
-                              {fn.example_phrases.slice(0, 2).map((phrase, i) => (
-                                <li key={i} className="text-xs text-gray-700 dark:text-gray-300">
-                                  • "{phrase}"
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+                        return (
+                          <FunctionCard
+                            key={fn.id}
+                            function={fn}
+                            isEnabled={enabled}
+                            stats={stats}
+                            onToggle={() => toggleFunction(fn.function_key, enabled)}
+                            onEdit={fn.edit_modal_component ? () => handleEdit(fn.function_key) : undefined}
+                            isUpdating={isUpdating}
+                            theme={theme}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
     </div>

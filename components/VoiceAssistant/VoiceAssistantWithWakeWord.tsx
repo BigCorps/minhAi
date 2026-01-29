@@ -932,6 +932,19 @@ export function VoiceAssistantWithWakeWord({
       recognition.interimResults = isMobile ? false : true;
       recognition.lang = 'pt-BR';
       recognition.maxAlternatives = 1;
+      
+      // ✅ Tentar reduzir feedback sonoro (não funciona em todos navegadores)
+      if (isMobile) {
+        try {
+          // @ts-ignore - propriedades não documentadas que alguns navegadores suportam
+          recognition.soundstart = null;
+          recognition.soundend = null;
+          recognition.audiostart = null;
+          recognition.audioend = null;
+        } catch (e) {
+          // Ignorar se não suportado
+        }
+      }
 
       recognition.onstart = () => {
         console.log('🎤 Wake word detection ATIVA');
@@ -1041,7 +1054,7 @@ export function VoiceAssistantWithWakeWord({
         }
       };
 
-      // ✅ MOBILE: onend com delay FIXO de 5000 segundos
+      // ✅ MOBILE: onend com restart RÁPIDO para manter sempre ativo
       recognition.onend = () => {
         console.log('🔴 Recognition encerrou');
         
@@ -1055,13 +1068,14 @@ export function VoiceAssistantWithWakeWord({
           !isPlayingAudio
         ) {
           if (isMobile) {
-            // ✅ MOBILE: Delay FIXO de 5000 segundos (83 minutos)
-            console.log('📱 Mobile: Restart em 5000 segundos');
+            // ✅ MOBILE: Restart em 1 segundo (balance entre responsividade e bipe)
+            // Bipe vai acontecer, mas assistente continua funcional
+            console.log('📱 Mobile: Restart em 1s');
             setTimeout(() => {
               if (isActiveRef.current && !processingQuestion.current && !isPlayingAudio) {
                 startWakeWordDetection();
               }
-            }, 5000000); // 5.000.000ms = 5000 segundos = ~83 minutos
+            }, 1000);
           } else {
             // Desktop: continuous = true, raramente cai aqui
             console.log('💻 Desktop: Restart em 500ms');
@@ -1526,7 +1540,13 @@ export function VoiceAssistantWithWakeWord({
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
+    if (isListening) {
+      // Mensagem especial para mobile sobre o bipe
+      if (isMobile) {
+        return `Ativo (bipes do navegador são normais)`;
+      }
+      return `Diga: "${wakeWords[0]}" + pergunta`;
+    }
     return 'Aguarde...';
   };
 

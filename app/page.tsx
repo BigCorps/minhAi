@@ -105,7 +105,7 @@ export default function HomePage() {
             theme === 'dark' ? 'text-white/70' : 'text-gray-600'
           }`}>
             Transforme a experiência dos seus clientes com um assistente de voz inteligente
-            que responde perguntas, com geração de pix, agendamentos e oferece suporte 24/7.
+            que responde perguntas, com geração de pix, agendamentos e com suporte 24/7.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

@@ -311,7 +311,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       {/* VERSÃO NORMAL */}
       {/* ========================================== */}
       {!isMaximized && (
-        <div className={`min-h-screen transition-colors duration-500 ${
+        <div className={`min-h-screen overflow-x-hidden transition-colors duration-500 ${
           theme === 'dark' 
             ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
             : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'

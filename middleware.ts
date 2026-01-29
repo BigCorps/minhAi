@@ -4,15 +4,28 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const path = requestUrl.pathname;
-
+  
   console.log('Middleware - Path:', path);
 
   // Rotas públicas que não precisam de autenticação
   const publicRoutes = [
-    '/',
     '/login',
     '/auth/callback',
     '/ia', // Assistentes públicos (verificação de créditos feita na página)
+    '/termos',
+    '/aviso',
+  ];
+
+  // Rotas protegidas (dentro do route group dashboard)
+  const protectedRoutes = [
+    '/assistentes',
+    '/funcoes',
+    '/saldo',
+    '/historico',
+    '/credits',
+    '/faqs',
+    '/perfil',
+    '/pacotes',
   ];
 
   // Verificar se é rota pública
@@ -20,8 +33,12 @@ export async function middleware(request: NextRequest) {
     path === route || path.startsWith(route + '/')
   );
 
+  // Verificar se é rota protegida
+  const isProtectedRoute = path === '/' || protectedRoutes.some(route => 
+    path === route || path.startsWith(route + '/')
+  );
+
   // Se for rota pública, permitir acesso
-  // (A verificação de créditos é feita dentro da página do slug)
   if (isPublicRoute) {
     console.log('Rota pública, permitindo acesso');
     return NextResponse.next();
@@ -87,16 +104,16 @@ export async function middleware(request: NextRequest) {
   console.log('User:', user ? user.email : 'não autenticado');
 
   // Se não estiver autenticado e tentar acessar rota protegida
-  if (!user && path.startsWith('/dashboard')) {
+  if (!user && isProtectedRoute) {
     console.log('Não autenticado, redirecionando para login');
     const redirectUrl = new URL('/login', request.url);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Se estiver autenticado e tentar acessar /login, redirecionar para dashboard
+  // Se estiver autenticado e tentar acessar /login, redirecionar para home
   if (user && path === '/login') {
-    console.log('Já autenticado, redirecionando para dashboard');
-    const redirectUrl = new URL('/dashboard', request.url);
+    console.log('Já autenticado, redirecionando para home');
+    const redirectUrl = new URL('/', request.url);
     return NextResponse.redirect(redirectUrl);
   }
 

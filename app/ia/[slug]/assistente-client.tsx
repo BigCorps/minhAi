@@ -241,8 +241,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
-          {/* Orbe + Status (com Zoom aplicado) */}
-          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
+          {/* Orbe + Status (com Zoom aplicado) - SEM CARROSSEL AQUI */}
+          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden pb-32">
             <div 
               style={{ 
                 transform: `scale(${zoomLevel / 100})`,
@@ -286,6 +286,17 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 )}
                 <span className="text-sm font-medium">{toastMessage}</span>
               </div>
+            </div>
+          )}
+
+          {/* Carrossel FIXO no rodapé - FORA do zoom */}
+          {assistantStarted && (
+            <div className="fixed bottom-0 left-0 right-0 w-full z-30">
+              <FunctionCarousel
+                companyId={company.id}
+                onFunctionClick={() => {}} // Implementar se necessário
+                theme={theme}
+              />
             </div>
           )}
 

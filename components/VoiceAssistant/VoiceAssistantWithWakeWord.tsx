@@ -564,26 +564,40 @@ export function VoiceAssistantWithWakeWord({
         if (result.isFinal) {
           const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
           
-          if (detectionResult?.detected) {
+          if (detectionResult?.detected && detectionResult.keyword) {
             console.log('🎉 WAKE WORD DETECTADA!');
             console.log('📝 Texto completo:', transcript);
             console.log('🔑 Wake word:', detectionResult.keyword);
-            console.log('💬 Comando:', detectionResult.commandAfterKeyword);
 
-            if (detectionResult.commandAfterKeyword && 
-                detectionResult.commandAfterKeyword.trim().length > 0) {
-              
-              processingQuestion.current = true;
-              
-              try {
-                recognition.stop();
-                setIsListening(false);
-              } catch (e) {
-                console.log('⚠️ Erro ao parar reconhecimento');
-              }
+            processingQuestion.current = true;
+            
+            try {
+              recognition.stop();
+              setIsListening(false);
+            } catch (e) {
+              console.log('⚠️ Erro ao parar reconhecimento');
+            }
 
-              await playFeedbackSound();
-              await processVoiceCommand(detectionResult.commandAfterKeyword);
+            await playFeedbackSound();
+            
+            // Extrair comando removendo a wake word
+            let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+            
+            for (const word of wakeWords) {
+              cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+            }
+            
+            cleanTranscript = cleanTranscript.replace(/\s+/g, ' ').trim();
+            
+            if (cleanTranscript.length > 0) {
+              await processVoiceCommand(cleanTranscript);
+            } else {
+              processingQuestion.current = false;
+              setTimeout(() => {
+                if (isActiveRef.current) {
+                  startWakeWordDetection();
+                }
+              }, 500);
             }
           }
         }

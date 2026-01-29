@@ -303,19 +303,22 @@ async function handleFunctionClick(functionKey: string) {
     }
     
     // ✅ REGISTRAR USO DA FUNÇÃO
-    await registerFunctionUsage(functionKey, 0); // 0 créditos por enquanto
+  async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
+    try {
+      const supabase = createClient();
     
-  } catch (error) {
-    console.error('Erro ao executar função:', error);
-    await playText('Desculpe, ocorreu um erro.');
-  } finally {
-    setIsProcessing(false);
+      // Usar a função SQL helper
+      await supabase.rpc('register_function_usage', {
+        p_company_id: companyId,
+        p_function_key: functionKey,
+        p_credits_consumed: creditsConsumed
+      });
     
-    setTimeout(() => {
-      if (isActiveRef.current) {
-        startWakeWordDetection();
-      }
-    }, 500);
+      console.log('✅ Uso registrado:', functionKey);
+    } catch (error) {
+      console.error('Erro ao registrar uso:', error);
+      // Não bloqueamos a execução se registro falhar
+    }
   }
 }
 
@@ -341,143 +344,199 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
   }
 }
 
-  async function detectVoiceCommand(transcript: string): Promise<boolean> {
-    const lowerTranscript = transcript.toLowerCase().trim();
+async function detectVoiceCommand(transcript: string): Promise<boolean> {
+  const lowerTranscript = transcript.toLowerCase().trim();
+  
+  console.log('🔍 Detectando comandos de voz:', lowerTranscript);
+  
+  // ========================================
+  // 1. WHATSAPP QR CODE
+  // ========================================
+  const whatsappTriggers = [
+    'mostre o whatsapp',
+    'qual o whatsapp',
+    'qual é o whatsapp',
+    'me passa o whatsapp',
+    'whatsapp da empresa',
+    'número do whatsapp',
+    'quero o whatsapp',
+    'zap',
+    'whats'
+  ];
+  
+  if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📱 Comando WhatsApp detectado!');
     
-    console.log('🔍 Detectando comandos de voz:', lowerTranscript);
+    // Verificar se está ativo
+    const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
     
-    const whatsappTriggers = [
-      'mostre o whatsapp',
-      'qual o whatsapp',
-      'qual é o whatsapp',
-      'me passa o whatsapp',
-      'whatsapp da empresa',
-      'número do whatsapp',
-      'quero o whatsapp'
-    ];
-    
-    if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📱 Comando WhatsApp detectado!');
-      // ✅ VERIFICAR SE ESTÁ ATIVO
-      const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
-    
-      if (!isEnabled) {
-        await playText('A função WhatsApp está desativada no momento.');
-        return true; // Retorna true para indicar que processou
-      }
-    
-      await handleWhatsAppCommand();
-      await registerFunctionUsage('qrcode_whatsapp', 0);
+    if (!isEnabled) {
+      await playText('A função WhatsApp está desativada no momento. Entre em contato com o suporte para ativá-la.');
       return true;
     }
     
-    const instagramTriggers = [
-      'mostre o instagram',
-      'qual o instagram',
-      'qual é o instagram',
-      'me passa o instagram',
-      'instagram da empresa',
-      'arroba do instagram',
-      'quero o instagram'
-    ];
-    
-    if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📸 Comando Instagram detectado!');
-      await handleInstagramCommand();
-      return true;
-    }
-    
-    const confirmTriggers = [
-      'confirmar pix',
-      'confirmar pis',
-      'confirmar picos',
-      'confirma pix',
-      'confirmar o pix',
-      'confirma o pix',
-      'confirme o pix',
-      'pix confirmado',
-      'paguei o pix',
-      'paguei',
-      'já paguei',
-      'pagamento confirmado'
-    ];
-    
-    if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('✅ Comando CONFIRMAR PIX detectado!');
-      
-      const currentPixState = pixStateRef.current;
-      
-      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-        console.log('💳 PIX aberto encontrado, confirmando...');
-        await handleConfirmPix();
-        return true;
-      } else {
-        console.log('⚠️ Nenhum PIX aberto para confirmar');
-        await playText('Não há nenhum PIX aberto para confirmar');
-        return true;
-      }
-    }
-    
-    const cancelTriggers = [
-      'cancelar pix',
-      'cancelar pis',
-      'cancelar picos',
-      'cancela pix',
-      'cancelar o pix',
-      'cancela o pix',
-      'cancele o pix',
-      'desistir do pix',
-      'não quero',
-      'não vou pagar',
-      'fechar pix'
-    ];
-    
-    if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('❌ Comando CANCELAR PIX detectado!');
-      
-      const currentPixState = pixStateRef.current;
-      
-      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-        console.log('💳 PIX aberto encontrado, cancelando...');
-        await handleCancelPix();
-        return true;
-      } else {
-        console.log('⚠️ Nenhum PIX aberto para cancelar');
-        await playText('Não há nenhum PIX aberto');
-        return true;
-      }
-    }
-    
-    const pixRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer)\s+(?:um\s+)?(?:pix|pics|pic|picks|pixs)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?(?:\s+)?([\d]+(?:[,.]\d{1,2})?)/i;
-    const pixMatch = lowerTranscript.match(pixRegex);
-    
-    if (pixMatch) {
-      const amountStr = pixMatch[1].replace(',', '.');
-      const amount = parseFloat(amountStr);
-      
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado! Valor:', amount);
-        await handlePixCommand(amount);
-        return true;
-      }
-    }
-    
-    const pixFallbackRegex = /(?:pix|pics|pic|picks|pixs).*?([\d]+(?:[,.]\d{1,2})?)/i;
-    const pixFallbackMatch = lowerTranscript.match(pixFallbackRegex);
-    
-    if (pixFallbackMatch) {
-      const amountStr = pixFallbackMatch[1].replace(',', '.');
-      const amount = parseFloat(amountStr);
-      
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado (fallback)! Valor:', amount);
-        await handlePixCommand(amount);
-        return true;
-      }
-    }
-    
-    return false;
+    await handleWhatsAppCommand();
+    await registerFunctionUsage('qrcode_whatsapp', 0);
+    return true;
   }
+  
+  // ========================================
+  // 2. INSTAGRAM QR CODE
+  // ========================================
+  const instagramTriggers = [
+    'mostre o instagram',
+    'qual o instagram',
+    'qual é o instagram',
+    'me passa o instagram',
+    'instagram da empresa',
+    'arroba do instagram',
+    'quero o instagram',
+    'insta',
+    'ig'
+  ];
+  
+  if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📸 Comando Instagram detectado!');
+    
+    // Verificar se está ativo
+    const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
+    
+    if (!isEnabled) {
+      await playText('A função Instagram está desativada no momento. Entre em contato com o suporte para ativá-la.');
+      return true;
+    }
+    
+    await handleInstagramCommand();
+    await registerFunctionUsage('qrcode_instagram', 0);
+    return true;
+  }
+  
+  // ========================================
+  // 3. CONFIRMAR PIX (interno - não tem função própria)
+  // ========================================
+  const confirmTriggers = [
+    'confirmar pix',
+    'confirmar pis',
+    'confirmar picos',
+    'confirma pix',
+    'confirmar o pix',
+    'confirma o pix',
+    'confirme o pix',
+    'pix confirmado',
+    'paguei o pix',
+    'paguei',
+    'já paguei',
+    'pagamento confirmado'
+  ];
+  
+  if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('✅ Comando CONFIRMAR PIX detectado!');
+    
+    const currentPixState = pixStateRef.current;
+    
+    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, confirmando...');
+      await handleConfirmPix();
+      return true;
+    } else {
+      console.log('⚠️ Nenhum PIX aberto para confirmar');
+      await playText('Não há nenhum PIX aberto para confirmar');
+      return true;
+    }
+  }
+  
+  // ========================================
+  // 4. CANCELAR PIX (interno - não tem função própria)
+  // ========================================
+  const cancelTriggers = [
+    'cancelar pix',
+    'cancelar pis',
+    'cancelar picos',
+    'cancela pix',
+    'cancelar o pix',
+    'cancela o pix',
+    'cancele o pix',
+    'desistir do pix',
+    'não quero',
+    'não vou pagar',
+    'fechar pix'
+  ];
+  
+  if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('❌ Comando CANCELAR PIX detectado!');
+    
+    const currentPixState = pixStateRef.current;
+    
+    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, cancelando...');
+      await handleCancelPix();
+      return true;
+    } else {
+      console.log('⚠️ Nenhum PIX aberto para cancelar');
+      await playText('Não há nenhum PIX aberto');
+      return true;
+    }
+  }
+  
+  // ========================================
+  // 5. GERAR PIX (com valor extraído da fala)
+  // ========================================
+  
+  // Regex principal: detecta "gerar/criar pix de X reais"
+  const pixRegex = /(?:gerar|gera|cria|criar|faça|faz|fazer)\s+(?:um\s+)?(?:pix|pics|pic|picks|pixs)(?:\s+de)?(?:\s+r\$)?(?:\s+reais?)?(?:\s+)?([\d]+(?:[,.]\d{1,2})?)/i;
+  const pixMatch = lowerTranscript.match(pixRegex);
+  
+  if (pixMatch) {
+    const amountStr = pixMatch[1].replace(',', '.');
+    const amount = parseFloat(amountStr);
+    
+    if (amount > 0) {
+      console.log('💰 Comando PIX detectado! Valor:', amount);
+      
+      // Verificar se está ativo
+      const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
+      
+      if (!isEnabled) {
+        await playText('A função PIX está desativada no momento. Entre em contato com o suporte para ativá-la.');
+        return true;
+      }
+      
+      await handlePixCommand(amount);
+      await registerFunctionUsage('pix_generate', 0);
+      return true;
+    }
+  }
+  
+  // Regex fallback: detecta "pix X" ou "pix de X"
+  const pixFallbackRegex = /(?:pix|pics|pic|picks|pixs).*?([\d]+(?:[,.]\d{1,2})?)/i;
+  const pixFallbackMatch = lowerTranscript.match(pixFallbackRegex);
+  
+  if (pixFallbackMatch) {
+    const amountStr = pixFallbackMatch[1].replace(',', '.');
+    const amount = parseFloat(amountStr);
+    
+    if (amount > 0) {
+      console.log('💰 Comando PIX detectado (fallback)! Valor:', amount);
+      
+      // Verificar se está ativo
+      const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
+      
+      if (!isEnabled) {
+        await playText('A função PIX está desativada no momento. Entre em contato com o suporte para ativá-la.');
+        return true;
+      }
+      
+      await handlePixCommand(amount);
+      await registerFunctionUsage('pix_generate', 0);
+      return true;
+    }
+  }
+  
+  // ========================================
+  // 6. NENHUM COMANDO DETECTADO
+  // ========================================
+  return false;
+}
   
   async function handleWhatsAppCommand() {
     try {
@@ -1529,98 +1588,104 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
     );
   }
 
-  return (
-    <div className="w-full max-w-6xl mx-auto">
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
-          theme === 'dark'
-            ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
-            : 'bg-white border-gray-200'
-        }`}>
-          <div className="relative h-96">
-            <AvatarFace
-              isListening={isListening}
-              isSpeaking={isPlayingAudio}
-              isProcessing={isProcessing}
-              theme={theme}
-              qrCodeData={qrCodeData}
-              pixConfirmationData={pixConfirmationData}
-              onCloseQRCode={handleCloseQRCode}
-              onCopyQRCode={handleCopyQRCode}
-              onConfirmPix={handleConfirmPix}
-              onCancelPix={handleCancelPix}
-            />
-          </div>
+return (
+  <div className="w-full max-w-6xl mx-auto">
+    {/* GRID DOS 2 CARDS */}
+    <div className="grid md:grid-cols-2 gap-8">
+      {/* CARD 1 - Avatar Face */}
+      <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
+        theme === 'dark'
+          ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
+          : 'bg-white border-gray-200'
+      }`}>
+        <div className="relative h-96">
+          <AvatarFace
+            isListening={isListening}
+            isSpeaking={isPlayingAudio}
+            isProcessing={isProcessing}
+            theme={theme}
+            qrCodeData={qrCodeData}
+            pixConfirmationData={pixConfirmationData}
+            onCloseQRCode={handleCloseQRCode}
+            onCopyQRCode={handleCopyQRCode}
+            onConfirmPix={handleConfirmPix}
+            onCancelPix={handleCancelPix}
+          />
         </div>
+      </div>
 
-        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${
-          theme === 'dark'
-            ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
-            : 'bg-white border-gray-200'
-        }`}>
-          <div className="flex flex-col items-center space-y-6">
-            <div className="relative flex items-center justify-center">
-              <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
-                <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
+      {/* CARD 2 - Status + Input (SEM CARROSSEL) */}
+      <div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${
+        theme === 'dark'
+          ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
+          : 'bg-white border-gray-200'
+      }`}>
+        <div className="flex flex-col items-center space-y-6">
+          <div className="relative flex items-center justify-center">
+            <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
+              <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
             </div>
-
-            <div className="text-center w-full">
-              <p className={`text-xl font-bold mb-2 transition-colors ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {getStatusMessage()}
-              </p>
-              <p className={`text-sm mt-2 transition-colors ${
-                theme === 'dark' ? 'text-white/50' : 'text-gray-500'
-              }`}>
-                Modo Alexa: use palavra de ativação
-              </p>
-            </div>
-
-            {error && (
-              <div className={`w-full p-4 rounded-xl border-2 transition-colors ${
-                theme === 'dark'
-                  ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                  : 'bg-red-50 border-red-200 text-red-700'
-              }`}>
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
-
-            {showStartButton && permissionGranted && (
-              <button
-                onClick={handleStart}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
-              >
-                Iniciar Assistente
-              </button>
-            )}
-
-            {!showStartButton && (
-              <>
-                {/* ✨ CARROSSEL NO MODO NORMAL */}
-                <div className="w-full">
-                  <FunctionCarousel
-                    companyId={companyId}
-                    onFunctionClick={handleFunctionClick}
-                    theme={theme}
-                  />
-                </div>
-                
-                <div className="w-full mt-auto">
-                  <TextInputChat
-                    onSendMessage={handleTextMessage}
-                    isProcessing={isProcessing || isPlayingAudio}
-                    theme={theme}
-                    disabled={false}
-                  />
-                </div>
-              </>
-            )}
           </div>
+
+          <div className="text-center w-full">
+            <p className={`text-xl font-bold mb-2 transition-colors ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              {getStatusMessage()}
+            </p>
+            <p className={`text-sm mt-2 transition-colors ${
+              theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+            }`}>
+              Modo Alexa: use palavra de ativação
+            </p>
+          </div>
+
+          {error && (
+            <div className={`w-full p-4 rounded-xl border-2 transition-colors ${
+              theme === 'dark'
+                ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                : 'bg-red-50 border-red-200 text-red-700'
+            }`}>
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
+          {showStartButton && permissionGranted && (
+            <button
+              onClick={handleStart}
+              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
+            >
+              Iniciar Assistente
+            </button>
+          )}
+
+          {!showStartButton && (
+            <div className="w-full mt-auto">
+              <TextInputChat
+                onSendMessage={handleTextMessage}
+                isProcessing={isProcessing || isPlayingAudio}
+                theme={theme}
+                disabled={false}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* ✨ CARROSSEL ABAIXO DOS 2 CARDS */}
+    {!showStartButton && (
+      <div className="w-full mt-8">
+        <FunctionCarousel
+          companyId={companyId}
+          onFunctionClick={handleFunctionClick}
+          theme={theme}
+        />
+      </div>
+    )}
+  </div>
         </div>
       </div>
     </div>

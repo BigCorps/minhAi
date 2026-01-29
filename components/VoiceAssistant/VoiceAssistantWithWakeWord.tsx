@@ -39,6 +39,7 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [voskReady, setVoskReady] = useState(false);
+  const [voskLoading, setVoskLoading] = useState(false);
 
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
@@ -110,19 +111,21 @@ export function VoiceAssistantWithWakeWord({
     isActiveRef.current = true;
     requestMicrophonePermission();
     
-    // Se for mobile, carregar Vosk em background
+    // Se for mobile, carregar Vosk
     if (isMobile) {
-      console.log('📱 Mobile detectado - Carregando Vosk em background...');
+      console.log('📱 Mobile detectado - Carregando Vosk...');
+      setVoskLoading(true);
       loadVosk()
         .then(model => {
           voskModelRef.current = model;
           setVoskReady(true);
+          setVoskLoading(false);
           console.log('✅ Vosk pronto para uso!');
         })
         .catch(err => {
           console.error('❌ Erro ao carregar Vosk:', err);
-          // Não mostrar erro ao usuário, apenas logar
-          console.log('⚠️ Continuando sem Vosk - fallback para Web Speech API');
+          setError('Erro ao carregar assistente de voz. Recarregue a página.');
+          setVoskLoading(false);
         });
     }
     
@@ -260,15 +263,10 @@ export function VoiceAssistantWithWakeWord({
     setTimeout(() => {
       if (isActiveRef.current) {
         if (isMobile) {
-          // Verificar se Vosk está pronto
-          if (voskReady && voskModelRef.current) {
-            console.log('✅ Iniciando com Vosk');
-            startVoskListening();
-          } else {
-            console.log('⚠️ Vosk não pronto, usando Web Speech API como fallback');
-            startWakeWordDetection();
-          }
+          // Mobile sempre usa Vosk
+          startVoskListening();
         } else {
+          // Desktop usa Web Speech API
           startWakeWordDetection();
         }
       }
@@ -280,8 +278,8 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   async function startVoskListening() {
     if (!voskModelRef.current) {
-      console.log('⚠️ Modelo Vosk não carregado ainda, usando Web Speech API');
-      startWakeWordDetection();
+      setError('Erro ao iniciar assistente de voz. Recarregue a página.');
+      console.error('❌ Vosk não foi carregado corretamente');
       return;
     }
 
@@ -347,8 +345,7 @@ export function VoiceAssistantWithWakeWord({
       
     } catch (err: any) {
       console.error('❌ Erro ao iniciar Vosk:', err);
-      console.log('⚠️ Fallback para Web Speech API');
-      startWakeWordDetection();
+      setError('Erro ao acessar microfone');
     }
   }
 
@@ -1754,6 +1751,7 @@ export function VoiceAssistantWithWakeWord({
 
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
+    if (isMobile && voskLoading) return 'Carregando assistente...';
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
@@ -1798,9 +1796,17 @@ if (isMaximized) {
               theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
             }`}>{error}</p>
           )}
+          {isMobile && voskLoading && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
+                Preparando reconhecimento de voz...
+              </p>
+            </div>
+          )}
         </div>
 
-        {showStartButton && permissionGranted && (
+        {showStartButton && permissionGranted && !voskLoading && (
           <button
             onClick={handleStart}
             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
@@ -1861,6 +1867,14 @@ if (isMaximized) {
               }`}>
                 Modo Alexa: use palavra de ativação
               </p>
+              {isMobile && voskLoading && (
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className={`text-xs ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
+                    Preparando reconhecimento de voz...
+                  </p>
+                </div>
+              )}
             </div>
 
             {error && (
@@ -1873,7 +1887,7 @@ if (isMaximized) {
               </div>
             )}
 
-            {showStartButton && permissionGranted && (
+            {showStartButton && permissionGranted && !voskLoading && (
               <button
                 onClick={handleStart}
                 className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"

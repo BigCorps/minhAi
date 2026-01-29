@@ -85,11 +85,13 @@ export default function FunctionCarousel({
   
   return (
     <>
-      {/* Carrossel de PONTA A PONTA - sem padding lateral */}
-      <div className="w-full py-4 overflow-hidden">
+      {/* Carrossel de PONTA A PONTA */}
+      {/* ATUALIZAÇÃO: overflow-x-auto no mobile permite arrastar, overflow-hidden no desktop mantém padrão */}
+      <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           {/* Carrossel com animação CSS - QUADRUPLICADO para loop perfeito */}
-          <div className="flex gap-3 pl-3 animate-scroll-infinite">
+          {/* w-max garante que o container estique para permitir o scroll manual horizontal */}
+          <div className="flex gap-3 pl-3 animate-scroll-infinite w-max">
             {quadruplicatedFunctions.map((fn, idx) => {
               const originalIndex = idx % functions.length;
               const borderColor = getCardColor(originalIndex);
@@ -98,7 +100,7 @@ export default function FunctionCarousel({
                 <button
                   key={`${fn.function_key}-${idx}`}
                   onClick={() => handleClick(fn)}
-                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 ${
+                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
                     theme === 'dark'
                       ? 'bg-white/10 hover:bg-white/20 text-white'
                       : 'bg-white hover:bg-gray-50 text-gray-900'
@@ -118,7 +120,7 @@ export default function FunctionCarousel({
         </div>
       </div>
       
-      {/* CSS para animação - velocidade aumentada em 20% (30s -> 24s desktop, 20s -> 16s mobile) */}
+      {/* CSS para animação */}
       <style jsx>{`
         @keyframes scroll-infinite {
           0% {
@@ -133,14 +135,25 @@ export default function FunctionCarousel({
           animation: scroll-infinite 24s linear infinite;
         }
         
-        .animate-scroll-infinite:hover {
+        /* Pausa a animação ao passar o mouse ou tocar e segurar no mobile */
+        .animate-scroll-infinite:hover, .animate-scroll-infinite:active {
           animation-play-state: paused;
         }
         
         @media (max-width: 768px) {
           .animate-scroll-infinite {
-            animation: scroll-infinite 16s linear infinite;
+            /* Velocidade aumentada em ~30% (16s -> 12s) */
+            animation: scroll-infinite 12s linear infinite;
           }
+        }
+
+        /* Utilitário para esconder a barra de rolagem no mobile */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;  /* IE e Edge */
+          scrollbar-width: none;  /* Firefox */
         }
       `}</style>
     </>

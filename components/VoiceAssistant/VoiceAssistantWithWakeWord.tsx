@@ -110,9 +110,9 @@ export function VoiceAssistantWithWakeWord({
     isActiveRef.current = true;
     requestMicrophonePermission();
     
-    // Se for mobile, carregar Vosk
+    // Se for mobile, carregar Vosk em background
     if (isMobile) {
-      console.log('📱 Mobile detectado - Carregando Vosk...');
+      console.log('📱 Mobile detectado - Carregando Vosk em background...');
       loadVosk()
         .then(model => {
           voskModelRef.current = model;
@@ -121,7 +121,8 @@ export function VoiceAssistantWithWakeWord({
         })
         .catch(err => {
           console.error('❌ Erro ao carregar Vosk:', err);
-          setError('Erro ao carregar modelo de voz');
+          // Não mostrar erro ao usuário, apenas logar
+          console.log('⚠️ Continuando sem Vosk - fallback para Web Speech API');
         });
     }
     
@@ -259,7 +260,14 @@ export function VoiceAssistantWithWakeWord({
     setTimeout(() => {
       if (isActiveRef.current) {
         if (isMobile) {
-          startVoskListening();
+          // Verificar se Vosk está pronto
+          if (voskReady && voskModelRef.current) {
+            console.log('✅ Iniciando com Vosk');
+            startVoskListening();
+          } else {
+            console.log('⚠️ Vosk não pronto, usando Web Speech API como fallback');
+            startWakeWordDetection();
+          }
         } else {
           startWakeWordDetection();
         }
@@ -272,7 +280,8 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   async function startVoskListening() {
     if (!voskModelRef.current) {
-      setError('Modelo Vosk não carregado');
+      console.log('⚠️ Modelo Vosk não carregado ainda, usando Web Speech API');
+      startWakeWordDetection();
       return;
     }
 
@@ -338,7 +347,8 @@ export function VoiceAssistantWithWakeWord({
       
     } catch (err: any) {
       console.error('❌ Erro ao iniciar Vosk:', err);
-      setError('Erro ao acessar microfone');
+      console.log('⚠️ Fallback para Web Speech API');
+      startWakeWordDetection();
     }
   }
 
@@ -1745,7 +1755,6 @@ export function VoiceAssistantWithWakeWord({
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
     if (showStartButton) return 'Clique em "Iniciar"';
-    if (isMobile && !voskReady) return 'Carregando modelo de voz...';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
@@ -1789,17 +1798,14 @@ if (isMaximized) {
               theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
             }`}>{error}</p>
           )}
-          {isMobile && isListening && (
-            <p className="text-xs text-green-400 mt-2">🔇 Sem bipes! (Vosk ativo)</p>
-          )}
         </div>
 
-        {showStartButton && permissionGranted && (!isMobile || voskReady) && (
+        {showStartButton && permissionGranted && (
           <button
             onClick={handleStart}
             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
           >
-            Iniciar Assistente {isMobile && '(Sem Bipes!)'}
+            Iniciar Assistente
           </button>
         )}
       </div>
@@ -1853,11 +1859,8 @@ if (isMaximized) {
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                {isMobile ? 'Modo Vosk (Sem Bipes)' : 'Modo Alexa: use palavra de ativação'}
+                Modo Alexa: use palavra de ativação
               </p>
-              {isMobile && isListening && (
-                <p className="text-xs text-green-400 mt-1">🔇 Reconhecimento contínuo ativo</p>
-              )}
             </div>
 
             {error && (
@@ -1870,12 +1873,12 @@ if (isMaximized) {
               </div>
             )}
 
-            {showStartButton && permissionGranted && (!isMobile || voskReady) && (
+            {showStartButton && permissionGranted && (
               <button
                 onClick={handleStart}
                 className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
               >
-                Iniciar Assistente {isMobile && '(Sem Bipes!)'}
+                Iniciar Assistente
               </button>
             )}
             {!showStartButton && (

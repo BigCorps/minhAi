@@ -1,7 +1,6 @@
 'use client';
 
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
-import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
@@ -21,7 +20,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isMaximized, setIsMaximized] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
-  const [showControls, setShowControls] = useState(false); // 🆕 Controla X e 🔍
+  const [showControls, setShowControls] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showZoomControl, setShowZoomControl] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -37,7 +36,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
     
-    // Detectar mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -46,23 +44,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     
     return () => {
       window.removeEventListener('resize', checkMobile);
-      // Cleanup timeout
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
     };
   }, []);
 
-  // Handler de mudança de zoom
   const handleZoomChange = (value: number) => {
     setZoomLevel(value);
   };
-
-  // Handler de clique nas funções do carrossel
-const handleFunctionClick = (functionKey: string) => {
-  console.log('🎯 Função clicada:', functionKey);
-  showToastMessage(`Executando função: ${functionKey}`, 'success');
-};
 
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToastMessage(message);
@@ -93,24 +83,21 @@ const handleFunctionClick = (functionKey: string) => {
   const handleToggleMaximize = () => {
     const willMaximize = !isMaximized;
     setIsMaximized(willMaximize);
-    setZoomLevel(100); // Reset zoom ao entrar/sair da maximização
-    setAssistantStarted(false); // Reset do estado do assistente
+    setZoomLevel(100);
+    setAssistantStarted(false);
     showToastMessage(
       willMaximize ? 'Modo maximizado ativado' : 'Modo normal ativado',
       'success'
     );
     
-    // 🆕 Mostrar controles por 5 segundos ao maximizar
     if (willMaximize) {
       setShowControls(true);
-      setShowCloseButton(true); // Mostra o X também
+      setShowCloseButton(true);
       
-      // Limpar timeout anterior se existir
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
       
-      // Esconder após 5 segundos
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
         setShowCloseButton(false);
@@ -131,12 +118,10 @@ const handleFunctionClick = (functionKey: string) => {
               : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
           }`}
           onMouseMove={(e) => {
-            // Mostrar controles quando mouse está na área superior
             const isNearTop = e.clientY < 100;
             setShowControls(isNearTop);
             setShowCloseButton(isNearTop);
             
-            // Limpar timeout de auto-hide quando hover
             if (isNearTop && controlsTimeoutRef.current) {
               clearTimeout(controlsTimeoutRef.current);
               controlsTimeoutRef.current = null;
@@ -147,7 +132,6 @@ const handleFunctionClick = (functionKey: string) => {
             setShowCloseButton(false);
           }}
           onTouchStart={(e) => {
-            // Mobile: toque na área superior mostra controles
             const touch = e.touches[0];
             const isNearTop = touch.clientY < 100;
             
@@ -155,7 +139,6 @@ const handleFunctionClick = (functionKey: string) => {
               setShowControls(true);
               setShowCloseButton(true);
               
-              // Esconder após 5 segundos
               if (controlsTimeoutRef.current) {
                 clearTimeout(controlsTimeoutRef.current);
               }
@@ -167,7 +150,7 @@ const handleFunctionClick = (functionKey: string) => {
             }
           }}
         >
-          {/* Header Minimalista - Absolutamente posicionado e transparente */}
+          {/* Header Minimalista */}
           <div className="absolute top-0 left-0 right-0 px-6 py-4 z-20 pointer-events-none">
             <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
               
@@ -182,9 +165,8 @@ const handleFunctionClick = (functionKey: string) => {
                   />
                 )}
                 
-                {/* Controle de Zoom - Aparece/desaparece junto com o X */}
+                {/* Controle de Zoom */}
                 <div className="flex items-center space-x-2">
-                  {/* Botão de Zoom (aparece no hover ou toque) */}
                   <button
                     onClick={() => setShowZoomControl(!showZoomControl)}
                     className={`p-2 rounded-lg transition-all duration-300 ${
@@ -201,7 +183,7 @@ const handleFunctionClick = (functionKey: string) => {
                     </svg>
                   </button>
                   
-                  {/* Slider + Valor (aparece ao clicar no botão de zoom) */}
+                  {/* Slider + Valor */}
                   <div className={`flex items-center space-x-2 transition-all duration-300 ${
                     showZoomControl && showControls ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
                   }`}>
@@ -278,17 +260,6 @@ const handleFunctionClick = (functionKey: string) => {
               />
             </div>
           </div>
-
-          {/* Carrossel de Funções - Versão Maximizada (aparece apenas após iniciar) */}
-          {assistantStarted && (
-            <div className="w-full pb-4">
-              <FunctionCarousel 
-                companyId={company.id}
-                onFunctionClick={handleFunctionClick}
-                theme={theme}
-              />
-            </div>
-          )}
 
           {/* Toast */}
           {showToast && (
@@ -467,12 +438,10 @@ const handleFunctionClick = (functionKey: string) => {
                 </div>
               </div>
 
-              {/* Mobile Layout - Texto Centralizado + Logos nos Cantos */}
+              {/* Mobile Layout */}
               <div className="md:hidden py-4 space-y-4">
                 
-                {/* Linha 1: Logo Esquerda + Nome/Slogan Centralizado + eAi Direita */}
                 <div className="relative flex items-center justify-center min-h-[48px] px-4">
-                  {/* Logo da Empresa - Canto Esquerdo (absoluto) */}
                   {company.logo_url && (
                     <div className="absolute left-4 flex-shrink-0">
                       <img
@@ -484,7 +453,6 @@ const handleFunctionClick = (functionKey: string) => {
                     </div>
                   )}
                   
-                  {/* Nome + Slogan - Centro ABSOLUTO (ignorando logos) */}
                   <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center">
                     <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${
                       theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -498,7 +466,6 @@ const handleFunctionClick = (functionKey: string) => {
                     </p>
                   </div>
 
-                  {/* Logo eAi - Canto Direito (absoluto) */}
                   <Link 
                     href="https://eai.app.br" 
                     target="_blank" 
@@ -516,7 +483,6 @@ const handleFunctionClick = (functionKey: string) => {
                   </Link>
                 </div>
 
-                {/* Linha 2: Botões (CENTRALIZADO) */}
                 <div className="flex items-center justify-center space-x-2">
                   
                   <button
@@ -607,7 +573,7 @@ const handleFunctionClick = (functionKey: string) => {
             </div>
           )}
 
-          {/* Orbe */}
+          {/* Orbe + Carrossel DENTRO do VoiceAssistant (única renderização) */}
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
             <div className="w-full max-w-5xl">
               <VoiceAssistantWithWakeWord 
@@ -622,16 +588,7 @@ const handleFunctionClick = (functionKey: string) => {
             </div>
           </div>
 
-          {/* Carrossel de Funções - Versão Normal (aparece apenas após iniciar) */}
-          {assistantStarted && (
-            <div className="w-full pb-8">
-              <FunctionCarousel 
-                companyId={company.id}
-                onFunctionClick={handleFunctionClick}
-                theme={theme}
-              />
-            </div>
-          )}
+          {/* 🚫 CARROSSEL DUPLICADO REMOVIDO - Agora só existe dentro do VoiceAssistantWithWakeWord */}
 
           {/* Footer */}
           <div className={`w-full py-6 px-4 border-t transition-colors ${

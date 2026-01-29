@@ -59,16 +59,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   };
 
   // Handler de clique nas funções do carrossel
-  const handleFunctionClick = (functionKey: string, isEnabled: boolean) => {
-    if (isEnabled) {
-      // Função ativada - pode executar ação
-      console.log('Função clicada:', functionKey);
-      showToastMessage(`Função ${functionKey} ativada`, 'success');
-    } else {
-      // Função desativada - modal de demo será mostrado pelo FunctionCarousel
-      console.log('Mostrando demo para:', functionKey);
-    }
-  };
+const handleFunctionClick = (functionKey: string) => {
+  console.log('🎯 Função clicada:', functionKey);
+  showToastMessage(`Executando função: ${functionKey}`, 'success');
+};
 
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToastMessage(message);

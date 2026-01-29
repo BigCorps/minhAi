@@ -1531,58 +1531,44 @@ export function VoiceAssistantWithWakeWord({
 
 if (isMaximized) {
     return (
-      <>
-        {/* Container principal - orbe sempre centralizado */}
-        <div className="flex flex-col items-center justify-center w-full h-full min-h-screen pb-32">
-          <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
-            <AvatarFace
-              isListening={isListening}
-              isSpeaking={isPlayingAudio}
-              isProcessing={isProcessing}
-              theme={theme}
-              qrCodeData={qrCodeData}
-              pixConfirmationData={pixConfirmationData}
-              onCloseQRCode={handleCloseQRCode}
-              onCopyQRCode={handleCopyQRCode}
-              onConfirmPix={handleConfirmPix}
-              onCancelPix={handleCancelPix}
-            />
-          </div>
+      <div className="flex flex-col items-center gap-4 md:gap-8 w-full">
+        <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
+          <AvatarFace
+            isListening={isListening}
+            isSpeaking={isPlayingAudio}
+            isProcessing={isProcessing}
+            theme={theme}
+            qrCodeData={qrCodeData}
+            pixConfirmationData={pixConfirmationData}
+            onCloseQRCode={handleCloseQRCode}
+            onCopyQRCode={handleCopyQRCode}
+            onConfirmPix={handleConfirmPix}
+            onCancelPix={handleCancelPix}
+          />
+        </div>
 
-          <div className="text-center px-4 max-w-md mt-8">
-            <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 transition-colors ${
-              theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
-            }`}>
-              {getStatusMessage()}
-            </p>
-            {error && (
-              <p className={`text-xs sm:text-sm transition-colors ${
-                theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
-              }`}>{error}</p>
-            )}
-          </div>
-
-          {showStartButton && permissionGranted && (
-            <button
-              onClick={handleStart}
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg mt-8"
-            >
-              Iniciar Assistente
-            </button>
+        <div className="text-center px-4 max-w-md">
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 transition-colors ${
+            theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
+          }`}>
+            {getStatusMessage()}
+          </p>
+          {error && (
+            <p className={`text-xs sm:text-sm transition-colors ${
+              theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
+            }`}>{error}</p>
           )}
         </div>
 
-        {/* Carrossel FIXO no rodapé - aparece após iniciar */}
-        {!showStartButton && (
-          <div className="fixed bottom-0 left-0 right-0 w-full z-10">
-            <FunctionCarousel
-              companyId={companyId}
-              onFunctionClick={handleFunctionClick}
-              theme={theme}
-            />
-          </div>
+        {showStartButton && permissionGranted && (
+          <button
+            onClick={handleStart}
+            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
+          >
+            Iniciar Assistente
+          </button>
         )}
-      </>
+      </div>
     );
   }
 

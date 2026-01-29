@@ -1666,15 +1666,18 @@ export function VoiceAssistantWithWakeWord({
         </div>
       </div>
 
-      {!showStartButton && (
-        <div className="w-full mt-8">
-          <FunctionCarousel
-            companyId={companyId}
-            onFunctionClick={handleFunctionClick}
-            theme={theme}
-          />
-        </div>
-      )}
     </div>
+    
+    {/* Carrossel FORA do container para ir de ponta a ponta */}
+    {!showStartButton && (
+      <div className="w-screen relative left-[50%] right-[50%] -mx-[50vw]">
+        <FunctionCarousel
+          companyId={companyId}
+          onFunctionClick={handleFunctionClick}
+          theme={theme}
+        />
+      </div>
+    )}
+  </>
   );
 }

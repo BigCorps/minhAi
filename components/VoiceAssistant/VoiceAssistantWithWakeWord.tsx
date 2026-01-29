@@ -1,3 +1,4 @@
+// components/VoiceAssistant/VoiceAssistantWithWakeWord.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -26,7 +27,7 @@ export function VoiceAssistantWithWakeWord({
   greetingMessage,
   theme = 'dark',
   isMaximized = false,
-  onAssistantStart, 
+  onAssistantStart,
 }: VoiceAssistantWithWakeWordProps) {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
@@ -35,8 +36,6 @@ export function VoiceAssistantWithWakeWord({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showCloseButton, setShowCloseButton] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
 
   const [qrCodeData, setQrCodeData] = useState<{
@@ -85,25 +84,6 @@ export function VoiceAssistantWithWakeWord({
     'desligar',
     'adeus',
     'valeu',
-  ];
-
-  const stopCommands = [
-    'para',
-    'pare',
-    'parar',
-    'stop',
-    'silencio',
-    'silêncio',
-    'cala boca',
-    'cala a boca',
-    'calça boca',
-    'chega',
-    'obrigado',
-    'obrigada',
-    'tá bom',
-    'ta bom',
-    'beleza',
-    'ok entendi',
   ];
 
   const pixStateRef = useRef<{
@@ -197,70 +177,89 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  function stopAudioImmediately() {
-    console.log('🛑 STOP: Parando áudio imediatamente');
+  async function handleStart() {
+    console.log('🚀 Iniciando assistente estilo Alexa...');
+    console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
     
-    if (currentAudioRef.current) {
+    unlockAudio();
+    
+    if (isMobile) {
       try {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-        currentAudioRef.current = null;
+        const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+        testAudio.volume = 0.01;
+        await testAudio.play();
+        testAudio.pause();
+        console.log('✅ Mobile: Contexto de áudio estabelecido');
       } catch (e) {
-        console.log('⚠️ Erro ao parar áudio:', e);
+        console.log('⚠️ Mobile: Falha no contexto de áudio');
       }
     }
     
-    if (feedbackAudioRef.current) {
-      try {
-        feedbackAudioRef.current.pause();
-        feedbackAudioRef.current.currentTime = 0;
-        feedbackAudioRef.current = null;
-      } catch (e) {}
+    setShowStartButton(false);
+    
+    if (onAssistantStart) {
+      onAssistantStart();
     }
     
-    setIsPlayingAudio(false);
-    setIsProcessing(false);
-    processingQuestion.current = false;
-    
-    console.log('🔄 Reiniciando wake word após interrupção...');
     setTimeout(() => {
       if (isActiveRef.current) {
         startWakeWordDetection();
       }
-    }, 200);
+    }, 300);
   }
 
-async function handleStart() {
-  console.log('🚀 Iniciando assistente estilo Alexa...');
-  console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
-  
-  unlockAudio();
-  
-  if (isMobile) {
+  // ========================================
+  // 🆕 HANDLER DO CARROSSEL
+  // ========================================
+  async function handleFunctionClick(functionKey: string) {
+    console.log('🎯 Função clicada no carrossel:', functionKey);
+    
+    // Parar reconhecimento de voz
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+
+    // Parar áudio se estiver tocando
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+
+    setIsProcessing(true);
+
     try {
-      const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-      testAudio.volume = 0.01;
-      await testAudio.play();
-      testAudio.pause();
-      console.log('✅ Mobile: Contexto de áudio estabelecido');
-    } catch (e) {
-      console.log('⚠️ Mobile: Falha no contexto de áudio');
+      switch (functionKey) {
+        case 'pix_generate':
+          await playText('Me chame e fale: gerar PIX com o valor, que já gero a cobrança.');
+          break;
+          
+        case 'qrcode_whatsapp':
+          await handleWhatsAppCommand();
+          break;
+          
+        case 'qrcode_instagram':
+          await handleInstagramCommand();
+          break;
+          
+        default:
+          await playText(`Função ${functionKey} ainda não implementada.`);
+      }
+    } catch (error) {
+      console.error('Erro ao executar função:', error);
+      await playText('Desculpe, ocorreu um erro.');
+    } finally {
+      setIsProcessing(false);
+      
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          startWakeWordDetection();
+        }
+      }, 500);
     }
   }
-  
-  setShowStartButton(false);
-  
-  // 🆕 ADICIONAR ESTAS LINHAS
-  if (onAssistantStart) {
-    onAssistantStart();
-  }
-  
-  setTimeout(() => {
-    if (isActiveRef.current) {
-      startWakeWordDetection();
-    }
-  }, 300);
-}
 
   async function detectVoiceCommand(transcript: string): Promise<boolean> {
     const lowerTranscript = transcript.toLowerCase().trim();
@@ -944,6 +943,39 @@ async function handleStart() {
     }
   }
 
+  function stopAudioImmediately() {
+    console.log('🛑 STOP: Parando áudio imediatamente');
+    
+    if (currentAudioRef.current) {
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        currentAudioRef.current = null;
+      } catch (e) {
+        console.log('⚠️ Erro ao parar áudio:', e);
+      }
+    }
+    
+    if (feedbackAudioRef.current) {
+      try {
+        feedbackAudioRef.current.pause();
+        feedbackAudioRef.current.currentTime = 0;
+        feedbackAudioRef.current = null;
+      } catch (e) {}
+    }
+    
+    setIsPlayingAudio(false);
+    setIsProcessing(false);
+    processingQuestion.current = false;
+    
+    console.log('🔄 Reiniciando wake word após interrupção...');
+    setTimeout(() => {
+      if (isActiveRef.current) {
+        startWakeWordDetection();
+      }
+    }, 200);
+  }
+
   function processWakeWordQuestion(transcript: string) {
     console.log('📋 processWakeWordQuestion chamada');
     console.log('  transcript:', transcript);
@@ -1393,6 +1425,17 @@ async function handleStart() {
             Iniciar Assistente
           </button>
         )}
+
+        {/* ✨ CARROSSEL NO MODO MAXIMIZADO */}
+        {!showStartButton && (
+          <div className="w-full max-w-4xl">
+            <FunctionCarousel
+              companyId={companyId}
+              onFunctionClick={handleFunctionClick}
+              theme={theme}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -1468,7 +1511,16 @@ async function handleStart() {
             )}
 
             {!showStartButton && (
-              <>              
+              <>
+                {/* ✨ CARROSSEL NO MODO NORMAL */}
+                <div className="w-full">
+                  <FunctionCarousel
+                    companyId={companyId}
+                    onFunctionClick={handleFunctionClick}
+                    theme={theme}
+                  />
+                </div>
+                
                 <div className="w-full mt-auto">
                   <TextInputChat
                     onSendMessage={handleTextMessage}

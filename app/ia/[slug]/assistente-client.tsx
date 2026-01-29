@@ -27,6 +27,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [assistantStarted, setAssistantStarted] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const voiceAssistantRef = useRef<any>(null);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -243,7 +244,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           </div>
 
           {/* Orbe + Status (com Zoom aplicado) - SEM CARROSSEL AQUI */}
-          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden pb-32">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pb-24">
             <div 
               style={{ 
                 transform: `scale(${zoomLevel / 100})`,
@@ -295,7 +296,12 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             <div className="fixed bottom-0 left-0 right-0 w-full z-30">
               <FunctionCarousel
                 companyId={company.id}
-                onFunctionClick={() => {}} // Implementar se necessário
+                onFunctionClick={(functionKey) => {
+                  // Chamar a função do VoiceAssistant através de um evento customizado
+                  window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+                    detail: { functionKey }
+                  }));
+                }}
                 theme={theme}
               />
             </div>

@@ -99,6 +99,26 @@ export function VoiceAssistantWithWakeWord({
   }, [qrCodeData, pixConfirmationData]);
 
   useEffect(() => {
+    isActiveRef.current = true;
+    requestMicrophonePermission();
+    
+    // Listener para cliques do carrossel externo (modo maximizado)
+    const handleExternalFunctionClick = (event: any) => {
+      const { functionKey } = event.detail;
+      console.log('🎯 Evento externo recebido:', functionKey);
+      handleFunctionClick(functionKey);
+    };
+    
+    window.addEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
+    
+    return () => {
+      isActiveRef.current = false;
+      cleanup();
+      window.removeEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
+    };
+  }, []);
+
+  useEffect(() => {
     console.log('🎯 Inicializando WakeWordDetector...');
     wakeWordDetectorRef.current = new WakeWordDetector({
       keywords: wakeWords,

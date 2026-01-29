@@ -57,10 +57,13 @@ export default function FunctionCard({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3 flex-1">
           <div 
-            className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl flex-shrink-0"
+            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: `${fn.color}20` }}
           >
-            {fn.icon}
+            <div 
+              className="w-8 h-8 rounded-lg"
+              style={{ backgroundColor: fn.color }}
+            />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">
@@ -125,22 +128,22 @@ export default function FunctionCard({
       <div className="flex flex-wrap gap-2 mb-4">
         {fn.requires_payment && (
           <span className="px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium">
-            💳 Requer Pagamento
+            Requer Pagamento
           </span>
         )}
         {fn.is_premium && (
           <span className="px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium">
-            ⭐ Premium
+            Premium
           </span>
         )}
         {fn.consumes_credits && (
           <span className="px-2 py-1 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-medium">
-            🔥 {fn.credits_per_use} crédito{fn.credits_per_use > 1 ? 's' : ''}
+            {fn.credits_per_use} crédito{fn.credits_per_use > 1 ? 's' : ''}
           </span>
         )}
         {!fn.save_to_history && (
           <span className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium">
-            👻 Privado
+            Privado
           </span>
         )}
       </div>
@@ -173,7 +176,7 @@ export default function FunctionCard({
       {fn.example_phrases && fn.example_phrases.length > 0 && (
         <div className="mt-4 p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-gray-700">
           <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
-            💬 Exemplos de uso:
+            Exemplos de uso:
           </p>
           <ul className="space-y-1">
             {fn.example_phrases.slice(0, 2).map((phrase, i) => (

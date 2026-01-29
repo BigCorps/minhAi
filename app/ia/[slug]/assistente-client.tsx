@@ -574,8 +574,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           )}
 
           {/* Orbe + Carrossel DENTRO do VoiceAssistant (única renderização) */}
-          <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-            <div className="w-full max-w-5xl">
+          <div className="flex-1 flex flex-col items-center justify-center py-8">
+            <div className="w-full max-w-5xl px-4">
               <VoiceAssistantWithWakeWord 
                 companyId={company.id} 
                 companyName={company.name}

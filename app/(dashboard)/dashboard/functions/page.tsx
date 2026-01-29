@@ -1,7 +1,7 @@
 // app/(dashboard)/dashboard/functions/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -39,7 +39,7 @@ interface CompanyFunctionSetting {
   last_used_at?: string;
 }
 
-export default function AssistantFunctionsPage() {
+function FunctionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const companyIdFromUrl = searchParams.get('companyId');
@@ -53,13 +53,11 @@ export default function AssistantFunctionsPage() {
   
   const supabase = createClient();
   
-  // Detectar tema do sistema
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
   }, []);
   
-  // Carregar dados quando companyId muda
   useEffect(() => {
     if (companyId) {
       loadData(companyId);
@@ -70,9 +68,6 @@ export default function AssistantFunctionsPage() {
     try {
       setLoading(true);
       
-      console.log('📋 Carregando dados para empresa:', selectedCompanyId);
-      
-      // 1. Buscar todas as funções ativas
       const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
         .select('*')
@@ -80,29 +75,24 @@ export default function AssistantFunctionsPage() {
         .order('display_order');
       
       if (functionsError) {
-        console.error('❌ Erro ao buscar funções:', functionsError);
+        console.error('Erro ao buscar funções:', functionsError);
       }
-      
-      console.log('✅ Funções encontradas:', allFunctions?.length || 0);
       
       setFunctions(allFunctions || []);
       
-      // 2. Buscar configurações da empresa
       const { data: companySettings, error: settingsError } = await supabase
         .from('company_function_settings')
         .select('*')
         .eq('company_id', selectedCompanyId);
       
       if (settingsError) {
-        console.error('❌ Erro ao buscar settings:', settingsError);
+        console.error('Erro ao buscar settings:', settingsError);
       }
-      
-      console.log('✅ Settings encontrados:', companySettings?.length || 0);
       
       setSettings(companySettings || []);
       
     } catch (error) {
-      console.error('❌ Erro geral ao carregar:', error);
+      console.error('Erro ao carregar:', error);
     } finally {
       setLoading(false);
     }
@@ -115,7 +105,6 @@ export default function AssistantFunctionsPage() {
       const setting = settings.find(s => s.function_key === functionKey);
       
       if (setting) {
-        // Atualizar existente
         const { error } = await supabase
           .from('company_function_settings')
           .update({ 
@@ -128,29 +117,23 @@ export default function AssistantFunctionsPage() {
           .eq('id', setting.id);
         
         if (error) throw error;
-        
-        console.log(`✅ Função ${currentlyEnabled ? 'desativada' : 'ativada'}:`, functionKey);
       } else {
-        // Criar novo (primeira vez que está sendo configurada)
         const { error } = await supabase
           .from('company_function_settings')
           .insert({
             company_id: companyId,
             function_key: functionKey,
-            is_enabled: false, // Se está toggleando pela primeira vez, é pra desativar
+            is_enabled: false,
             disabled_at: new Date().toISOString()
           });
         
         if (error) throw error;
-        
-        console.log('✅ Setting criado e função desativada:', functionKey);
       }
       
-      // Recarregar
       await loadData(companyId);
       
     } catch (error) {
-      console.error('❌ Erro ao atualizar:', error);
+      console.error('Erro ao atualizar:', error);
       alert('Erro ao atualizar função. Tente novamente.');
     } finally {
       setUpdating(null);
@@ -159,7 +142,6 @@ export default function AssistantFunctionsPage() {
   
   function isFunctionEnabled(functionKey: string): boolean {
     const setting = settings.find(s => s.function_key === functionKey);
-    // Se não tem setting, assume ATIVA (padrão)
     return setting ? setting.is_enabled : true;
   }
   
@@ -173,18 +155,17 @@ export default function AssistantFunctionsPage() {
   }
   
   function handleEdit(functionKey: string) {
-    // TODO: Abrir modal de edição baseado em edit_modal_component
-    console.log('🔧 Editar função:', functionKey);
+    console.log('Editar função:', functionKey);
     alert(`Modal de edição para ${functionKey} ainda não implementado.`);
   }
   
   const categories = [
-    { key: 'knowledge', name: 'Conhecimento', icon: '🧠', color: '#3B82F6' },
-    { key: 'configuration', name: 'Configuração', icon: '⚙️', color: '#8B5CF6' },
-    { key: 'contact', name: 'Contato', icon: '📞', color: '#10B981' },
-    { key: 'payment', name: 'Pagamento', icon: '💰', color: '#F59E0B' },
-    { key: 'schedule', name: 'Agendamento', icon: '📅', color: '#8B5CF6' },
-    { key: 'other', name: 'Outros', icon: '⚡', color: '#6B7280' },
+    { key: 'knowledge', name: 'Conhecimento', color: '#3B82F6' },
+    { key: 'configuration', name: 'Configuração', color: '#8B5CF6' },
+    { key: 'contact', name: 'Contato', color: '#10B981' },
+    { key: 'payment', name: 'Pagamento', color: '#F59E0B' },
+    { key: 'schedule', name: 'Agendamento', color: '#8B5CF6' },
+    { key: 'other', name: 'Outros', color: '#6B7280' },
   ];
   
   if (loading && !companyId) {
@@ -202,7 +183,6 @@ export default function AssistantFunctionsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
           <div className="mb-8">
             <button
               onClick={() => router.back()}
@@ -222,7 +202,6 @@ export default function AssistantFunctionsPage() {
                 </p>
               </div>
               
-              {/* Seletor de Assistente */}
               <FunctionSelector
                 onCompanySelect={setCompanyId}
                 selectedCompanyId={companyId}
@@ -231,7 +210,6 @@ export default function AssistantFunctionsPage() {
             </div>
           </div>
           
-          {/* Mensagem se não tem empresa selecionada */}
           {!companyId && (
             <div className="text-center py-12">
               <p className="text-gray-600 dark:text-gray-400">
@@ -240,14 +218,12 @@ export default function AssistantFunctionsPage() {
             </div>
           )}
           
-          {/* Loading */}
           {loading && companyId && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           )}
           
-          {/* Funções por categoria */}
           {!loading && companyId && functions.length === 0 && (
             <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -269,7 +245,12 @@ export default function AssistantFunctionsPage() {
                 return (
                   <div key={category.key} className="mb-12">
                     <div className="flex items-center gap-3 mb-6">
-                      <span className="text-3xl">{category.icon}</span>
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: `${category.color}20` }}
+                      >
+                        <div className="w-6 h-6 rounded-full" style={{ backgroundColor: category.color }} />
+                      </div>
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                         {category.name}
                       </h2>
@@ -306,5 +287,20 @@ export default function AssistantFunctionsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AssistantFunctionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <FunctionsPageContent />
+    </Suspense>
   );
 }

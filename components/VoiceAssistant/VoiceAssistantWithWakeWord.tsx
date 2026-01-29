@@ -567,7 +567,7 @@ export function VoiceAssistantWithWakeWord({
           if (detectionResult?.detected) {
             console.log('🎉 WAKE WORD DETECTADA!');
             console.log('📝 Texto completo:', transcript);
-            console.log('🔑 Wake word:', detectionResult.matchedKeyword);
+            console.log('🔑 Wake word:', detectionResult.keyword);
             console.log('💬 Comando:', detectionResult.commandAfterKeyword);
 
             if (detectionResult.commandAfterKeyword && 

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Bot } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -34,7 +34,6 @@ export default function FunctionSelector({
   
   async function loadCompanies() {
     try {
-      // Buscar empresas do usuário
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) return;
@@ -59,7 +58,6 @@ export default function FunctionSelector({
       
       setCompanies(allCompanies || []);
       
-      // Se não tem companyId selecionado, seleciona a primeira
       if (!selectedCompanyId && allCompanies && allCompanies.length > 0) {
         onCompanySelect(allCompanies[0].id);
       }
@@ -99,7 +97,6 @@ export default function FunctionSelector({
   }
   
   if (companies.length === 1) {
-    // Se tem apenas 1 assistente, não precisa de seletor
     return (
       <div className={`px-4 py-3 rounded-lg border ${
         theme === 'dark'
@@ -107,10 +104,10 @@ export default function FunctionSelector({
           : 'bg-white border-gray-300 text-gray-900'
       }`}>
         <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
           }`}>
-            🤖
+            <Bot className="w-5 h-5 text-blue-500" />
           </div>
           <div>
             <p className="text-sm font-medium">{companies[0].name}</p>
@@ -137,10 +134,10 @@ export default function FunctionSelector({
         style={{ minWidth: '300px' }}
       >
         <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
           }`}>
-            🤖
+            <Bot className="w-5 h-5 text-blue-500" />
           </div>
           <div className="text-left">
             <p className="text-sm font-medium">
@@ -160,13 +157,11 @@ export default function FunctionSelector({
       
       {isOpen && (
         <>
-          {/* Overlay para fechar ao clicar fora */}
           <div 
             className="fixed inset-0 z-10" 
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Dropdown */}
           <div className={`absolute top-full left-0 right-0 mt-2 rounded-lg border shadow-xl z-20 overflow-hidden ${
             theme === 'dark'
               ? 'bg-slate-800 border-slate-700'
@@ -190,14 +185,14 @@ export default function FunctionSelector({
                         : 'hover:bg-gray-100 text-gray-900'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     company.id === selectedCompanyId
                       ? 'bg-blue-500/30'
                       : theme === 'dark'
                         ? 'bg-slate-700'
                         : 'bg-gray-100'
                   }`}>
-                    🤖
+                    <Bot className="w-5 h-5 text-blue-500" />
                   </div>
                   <div className="text-left flex-1">
                     <p className="text-sm font-medium">{company.name}</p>

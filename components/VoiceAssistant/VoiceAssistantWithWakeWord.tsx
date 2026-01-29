@@ -9,6 +9,7 @@ import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
+import { loadVosk } from '@/lib/vosk';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -29,7 +30,7 @@ export function VoiceAssistantWithWakeWord({
   isMaximized = false,
   onAssistantStart,
 }: VoiceAssistantWithWakeWordProps) {
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -37,6 +38,7 @@ export function VoiceAssistantWithWakeWord({
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
+  const [voskReady, setVoskReady] = useState(false);
 
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
@@ -65,6 +67,12 @@ export function VoiceAssistantWithWakeWord({
   const consecutiveRestarts = useRef<number>(0);
   const lastRestartTime = useRef<number>(0);
   const conversationIdRef = useRef<string | null>(null);
+  
+  // Refs para Vosk (mobile)
+  const voskModelRef = useRef<any>(null);
+  const voskRecognizerRef = useRef<any>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -102,6 +110,21 @@ export function VoiceAssistantWithWakeWord({
     isActiveRef.current = true;
     requestMicrophonePermission();
     
+    // Se for mobile, carregar Vosk
+    if (isMobile) {
+      console.log('📱 Mobile detectado - Carregando Vosk...');
+      loadVosk()
+        .then(model => {
+          voskModelRef.current = model;
+          setVoskReady(true);
+          console.log('✅ Vosk pronto para uso!');
+        })
+        .catch(err => {
+          console.error('❌ Erro ao carregar Vosk:', err);
+          setError('Erro ao carregar modelo de voz');
+        });
+    }
+    
     // Listener para cliques do carrossel externo (modo maximizado)
     const handleExternalFunctionClick = (event: any) => {
       const { functionKey } = event.detail;
@@ -129,22 +152,34 @@ export function VoiceAssistantWithWakeWord({
     });
   }, [wakeWords.join(','), endCommands.join(',')]);
 
-  useEffect(() => {
-    isActiveRef.current = true;
-    requestMicrophonePermission();
-    
-    return () => {
-      isActiveRef.current = false;
-      cleanup();
-    };
-  }, []);
-
   function cleanup() {
+    // Cleanup Web Speech API
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
     }
+    
+    // Cleanup Vosk
+    if (voskRecognizerRef.current) {
+      try {
+        voskRecognizerRef.current.free();
+        voskRecognizerRef.current = null;
+      } catch (e) {}
+    }
+    
+    if (audioCtxRef.current) {
+      try {
+        audioCtxRef.current.close();
+        audioCtxRef.current = null;
+      } catch (e) {}
+    }
+    
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+    
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
@@ -199,7 +234,7 @@ export function VoiceAssistantWithWakeWord({
 
   async function handleStart() {
     console.log('🚀 Iniciando assistente estilo Alexa...');
-    console.log('📱 Dispositivo:', isMobile ? 'MOBILE' : 'DESKTOP');
+    console.log('📱 Dispositivo:', isMobile ? 'MOBILE (Vosk)' : 'DESKTOP (Web Speech)');
     
     unlockAudio();
     
@@ -223,9 +258,157 @@ export function VoiceAssistantWithWakeWord({
     
     setTimeout(() => {
       if (isActiveRef.current) {
-        startWakeWordDetection();
+        if (isMobile) {
+          startVoskListening();
+        } else {
+          startWakeWordDetection();
+        }
       }
     }, 300);
+  }
+
+  // ========================================
+  // VOSK LISTENING (MOBILE) - SEM BIPES!
+  // ========================================
+  async function startVoskListening() {
+    if (!voskModelRef.current) {
+      setError('Modelo Vosk não carregado');
+      return;
+    }
+
+    try {
+      console.log('🎤 Iniciando Vosk (SEM BIPES)...');
+      
+      // Criar recognizer
+      const recognizer = new voskModelRef.current.KaldiRecognizer();
+      voskRecognizerRef.current = recognizer;
+      
+      // Event listeners Vosk
+      recognizer.on('result', (message: any) => {
+        const text = message.result.text;
+        console.log('✅ Vosk resultado final:', text);
+        handleVoskTranscript(text, true);
+      });
+      
+      recognizer.on('partialresult', (message: any) => {
+        const partial = message.result.partial;
+        if (partial) {
+          console.log('📝 Vosk parcial:', partial);
+          handleVoskTranscript(partial, false);
+        }
+      });
+      
+      // Configurar microfone
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1,
+          sampleRate: 16000
+        }
+      });
+      
+      mediaStreamRef.current = mediaStream;
+      
+      // Criar AudioContext
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      audioCtxRef.current = audioContext;
+      
+      // Criar node para processar áudio
+      const recognizerNode = audioContext.createScriptProcessor(4096, 1, 1);
+      
+      recognizerNode.onaudioprocess = (event) => {
+        try {
+          if (voskRecognizerRef.current && isActiveRef.current) {
+            voskRecognizerRef.current.acceptWaveform(event.inputBuffer);
+          }
+        } catch (error) {
+          console.error('❌ Erro acceptWaveform:', error);
+        }
+      };
+      
+      // Conectar microfone
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      source.connect(recognizerNode);
+      recognizerNode.connect(audioContext.destination);
+      
+      setIsListening(true);
+      console.log('✅ Vosk ATIVO - Reconhecimento contínuo SEM BIPES! 🎉');
+      
+    } catch (err: any) {
+      console.error('❌ Erro ao iniciar Vosk:', err);
+      setError('Erro ao acessar microfone');
+    }
+  }
+
+  function handleVoskTranscript(text: string, isFinal: boolean) {
+    if (!text || !isActiveRef.current) return;
+    
+    const lowerText = text.toLowerCase().trim();
+    console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
+    
+    // Verificar comandos de stop
+    const normalizedTranscript = lowerText.replace(/[.,!?]/g, '').trim();
+    
+    const explicitStopPhrases = [
+      'pare',
+      'para',
+      'parar',
+      'cala boca',
+      'cala a boca',
+      'calça boca',
+      'silencio',
+      'silêncio',
+      'stop',
+      'chega',
+      'para de falar',
+      'pare de falar',
+      'para ai',
+      'para aí'
+    ];
+    
+    const hasExplicitStop = explicitStopPhrases.some(phrase => {
+      const normalizedPhrase = phrase.replace(/[.,!?]/g, '').trim();
+      return normalizedTranscript.includes(normalizedPhrase);
+    });
+    
+    const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
+    
+    if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
+      console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO (Vosk):', lowerText);
+      console.log('✅ PARANDO áudio imediatamente!');
+      stopAudioImmediately();
+      return;
+    }
+    
+    // Se está ocupado, ignorar
+    if (processingQuestion.current || isProcessing || isPlayingAudio || isActuallyPlaying) {
+      console.log('⏸️ Vosk: Ocupado, ignorando captura');
+      return;
+    }
+    
+    // Detectar wake word
+    const detectionResult = wakeWordDetectorRef.current?.detect(lowerText);
+    
+    if (detectionResult?.detected && detectionResult.keyword) {
+      console.log(`🔍 Wake word detectada (Vosk): "${detectionResult.keyword}"`);
+      
+      if (isFinal) {
+        console.log('✅ Processando pergunta completa (Vosk)');
+        
+        if (!audioUnlocked.current) {
+          unlockAudio();
+        }
+        
+        if (!processingQuestion.current) {
+          processingQuestion.current = true;
+          processWakeWordQuestion(lowerText);
+        }
+      } else {
+        console.log('⏳ Aguardando transcrição final (Vosk)...');
+      }
+    }
   }
 
   async function checkIfFunctionIsEnabled(functionKey: string): Promise<boolean> {
@@ -301,15 +484,20 @@ export function VoiceAssistantWithWakeWord({
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          startWakeWordDetection();
+          if (isMobile) {
+            // Vosk já está sempre ativo, não precisa restart
+            console.log('✅ Vosk continua ativo');
+          } else {
+            startWakeWordDetection();
+          }
         }
       }, 500);
       
       return;
     }
     
-    // Parar reconhecimento de voz
-    if (recognitionRef.current) {
+    // Parar reconhecimento de voz (apenas desktop)
+    if (!isMobile && recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
@@ -353,7 +541,12 @@ export function VoiceAssistantWithWakeWord({
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          startWakeWordDetection();
+          if (isMobile) {
+            // Vosk já está sempre ativo
+            console.log('✅ Vosk continua ativo');
+          } else {
+            startWakeWordDetection();
+          }
         }
       }, 500);
     }
@@ -764,7 +957,7 @@ export function VoiceAssistantWithWakeWord({
   const handleTextMessage = async (message: string) => {
     console.log('📝 Mensagem de texto recebida:', message);
     
-    if (recognitionRef.current) {
+    if (!isMobile && recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {}
@@ -849,12 +1042,20 @@ export function VoiceAssistantWithWakeWord({
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          startWakeWordDetection();
+          if (isMobile) {
+            // Vosk já está sempre ativo
+            console.log('✅ Vosk continua ativo');
+          } else {
+            startWakeWordDetection();
+          }
         }
       }, 500);
     }
   };
 
+  // ========================================
+  // WEB SPEECH API (DESKTOP ONLY)
+  // ========================================
   function startWakeWordDetection() {
     if (!('webkitSpeechRecognition' in window)) {
       setError('Use Chrome ou Edge.');
@@ -882,13 +1083,13 @@ export function VoiceAssistantWithWakeWord({
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      recognition.continuous = isMobile ? false : true;
+      recognition.continuous = true;  // Desktop sempre continuous
       recognition.interimResults = true;
       recognition.lang = 'pt-BR';
-      recognition.maxAlternatives = isMobile ? 3 : 5;
+      recognition.maxAlternatives = 5;
 
       recognition.onstart = () => {
-        console.log(`🎤 Wake word detection ATIVA (continuous=${recognition.continuous})`);
+        console.log('🎤 Wake word detection ATIVA (Desktop - Web Speech)');
         setIsListening(true);
         setError('');
       };
@@ -939,16 +1140,6 @@ export function VoiceAssistantWithWakeWord({
         });
         
         const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
-        
-        console.log('🔍 Verificando comandos de stop:', {
-          transcript: normalizedTranscript,
-          hasExplicitStop,
-          isProcessing,
-          isPlayingAudio,
-          isActuallyPlaying,
-          isFinal,
-          hasAudioRef: currentAudioRef.current !== null
-        });
         
         if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
           console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO:', transcript);
@@ -1006,75 +1197,30 @@ export function VoiceAssistantWithWakeWord({
       };
 
       recognition.onend = () => {
-        console.log('🔴 Recognition parou', {
-          isActive: isActiveRef.current,
-          processingQuestion: processingQuestion.current,
-          isProcessing,
-          isPlayingAudio,
-          hasAudioRef: currentAudioRef.current !== null,
-          permissionGranted
-        });
+        console.log('🔴 Recognition parou (Desktop)');
         
-        if (isMobile) {
+        if (!processingQuestion.current && !isProcessing && !isPlayingAudio) {
           setIsListening(false);
+        }
+        
+        if (isActiveRef.current && 
+            !processingQuestion.current && 
+            !isProcessing && 
+            !isPlayingAudio && 
+            permissionGranted) {
           
-          if (isActiveRef.current && 
-              !processingQuestion.current && 
-              !isProcessing && 
-              !isPlayingAudio && 
-              permissionGranted) {
-            
-            console.log('📱 Mobile: Auto-restart em 300ms...');
-            setTimeout(() => {
-              if (isActiveRef.current && 
-                  !processingQuestion.current && 
-                  !isProcessing && 
-                  !isPlayingAudio) {
-                startWakeWordDetection();
-              }
-            }, 300);
+          const now = Date.now();
+          const timeSinceLastRestart = now - lastRestartTime.current;
+          
+          if (timeSinceLastRestart < 2000) {
+            consecutiveRestarts.current += 1;
           } else {
-            console.log('⏸️ Mobile: Restart suspenso (ocupado)');
-          }
-        } else {
-          if (!processingQuestion.current && !isProcessing && !isPlayingAudio) {
-            setIsListening(false);
+            consecutiveRestarts.current = 0;
           }
           
-          if (isActiveRef.current && 
-              !processingQuestion.current && 
-              !isProcessing && 
-              !isPlayingAudio && 
-              permissionGranted) {
-            
-            const now = Date.now();
-            const timeSinceLastRestart = now - lastRestartTime.current;
-            
-            if (timeSinceLastRestart < 2000) {
-              consecutiveRestarts.current += 1;
-            } else {
-              consecutiveRestarts.current = 0;
-            }
-            
-            if (consecutiveRestarts.current >= 3) {
-              console.log('⚠️ Loop detectado! Aguardando 3s antes de reiniciar...');
-              consecutiveRestarts.current = 0;
-              
-              setTimeout(() => {
-                if (isActiveRef.current && 
-                    !processingQuestion.current && 
-                    !isProcessing && 
-                    !isPlayingAudio) {
-                  lastRestartTime.current = Date.now();
-                  startWakeWordDetection();
-                }
-              }, 1500);
-              return;
-            }
-            
-            console.log('🔄 Desktop: Auto-restart em 500ms...', {
-              consecutiveRestarts: consecutiveRestarts.current
-            });
+          if (consecutiveRestarts.current >= 3) {
+            console.log('⚠️ Loop detectado! Aguardando 3s antes de reiniciar...');
+            consecutiveRestarts.current = 0;
             
             setTimeout(() => {
               if (isActiveRef.current && 
@@ -1083,13 +1229,28 @@ export function VoiceAssistantWithWakeWord({
                   !isPlayingAudio) {
                 lastRestartTime.current = Date.now();
                 startWakeWordDetection();
-              } else {
-                console.log('⏸️ Restart cancelado: sistema ocupado');
               }
-            }, 300);
-          } else {
-            console.log('⏸️ Restart suspenso: processando ou tocando áudio');
+            }, 1500);
+            return;
           }
+          
+          console.log('🔄 Desktop: Auto-restart em 500ms...', {
+            consecutiveRestarts: consecutiveRestarts.current
+          });
+          
+          setTimeout(() => {
+            if (isActiveRef.current && 
+                !processingQuestion.current && 
+                !isProcessing && 
+                !isPlayingAudio) {
+              lastRestartTime.current = Date.now();
+              startWakeWordDetection();
+            } else {
+              console.log('⏸️ Restart cancelado: sistema ocupado');
+            }
+          }, 300);
+        } else {
+          console.log('⏸️ Restart suspenso: processando ou tocando áudio');
         }
       };
 
@@ -1134,7 +1295,12 @@ export function VoiceAssistantWithWakeWord({
     console.log('🔄 Reiniciando wake word após interrupção...');
     setTimeout(() => {
       if (isActiveRef.current) {
-        startWakeWordDetection();
+        if (isMobile) {
+          // Vosk já está sempre ativo
+          console.log('✅ Vosk continua ativo');
+        } else {
+          startWakeWordDetection();
+        }
       }
     }, 200);
   }
@@ -1144,7 +1310,7 @@ export function VoiceAssistantWithWakeWord({
     console.log('  transcript:', transcript);
     console.log('  processingQuestion.current:', processingQuestion.current);
     
-    if (recognitionRef.current) {
+    if (!isMobile && recognitionRef.current) {
       try {
         console.log('🛑 Parando recognition antes de processar');
         recognitionRef.current.stop();
@@ -1182,7 +1348,12 @@ export function VoiceAssistantWithWakeWord({
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          startWakeWordDetection();
+          if (isMobile) {
+            // Vosk já está sempre ativo
+            console.log('✅ Vosk continua ativo');
+          } else {
+            startWakeWordDetection();
+          }
         }
       }, 300);
       return;
@@ -1202,7 +1373,12 @@ export function VoiceAssistantWithWakeWord({
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          startWakeWordDetection();
+          if (isMobile) {
+            // Vosk já está sempre ativo
+            console.log('✅ Vosk continua ativo');
+          } else {
+            startWakeWordDetection();
+          }
         }
       }, 500);
       
@@ -1275,7 +1451,12 @@ export function VoiceAssistantWithWakeWord({
       console.log('🔄 Reiniciando wake word detection ANTES do áudio...');
       setTimeout(() => {
         if (isActiveRef.current) {
-          startWakeWordDetection();
+          if (isMobile) {
+            // Vosk já está sempre ativo
+            console.log('✅ Vosk continua ativo');
+          } else {
+            startWakeWordDetection();
+          }
         }
       }, 100);
 
@@ -1302,8 +1483,13 @@ export function VoiceAssistantWithWakeWord({
         
         console.log('🔄 Garantindo wake word detection ativa...');
         setTimeout(() => {
-          if (isActiveRef.current && !recognitionRef.current) {
-            startWakeWordDetection();
+          if (isActiveRef.current) {
+            if (isMobile) {
+              // Vosk já está sempre ativo
+              console.log('✅ Vosk continua ativo');
+            } else if (!recognitionRef.current) {
+              startWakeWordDetection();
+            }
           }
         }, 200);
       };
@@ -1317,7 +1503,11 @@ export function VoiceAssistantWithWakeWord({
         setTimeout(() => {
           if (isActiveRef.current) {
             console.log('🔄 Reiniciando após erro...');
-            startWakeWordDetection();
+            if (isMobile) {
+              console.log('✅ Vosk continua ativo');
+            } else {
+              startWakeWordDetection();
+            }
           }
         }, 200);
       };
@@ -1330,7 +1520,11 @@ export function VoiceAssistantWithWakeWord({
           processingQuestion.current = false;
           
           if (isActiveRef.current) {
-            startWakeWordDetection();
+            if (isMobile) {
+              console.log('✅ Vosk continua ativo');
+            } else {
+              startWakeWordDetection();
+            }
           }
         }
       }, 1500);
@@ -1364,7 +1558,11 @@ export function VoiceAssistantWithWakeWord({
                     
                     setTimeout(() => {
                       if (isActiveRef.current) {
-                        startWakeWordDetection();
+                        if (isMobile) {
+                          console.log('✅ Vosk continua ativo');
+                        } else {
+                          startWakeWordDetection();
+                        }
                       }
                     }, 200);
                   });
@@ -1380,7 +1578,11 @@ export function VoiceAssistantWithWakeWord({
         
         setTimeout(() => {
           if (isActiveRef.current) {
-            startWakeWordDetection();
+            if (isMobile) {
+              console.log('✅ Vosk continua ativo');
+            } else {
+              startWakeWordDetection();
+            }
           }
         }, 200);
       }
@@ -1401,7 +1603,11 @@ export function VoiceAssistantWithWakeWord({
       setTimeout(() => {
         if (isActiveRef.current) {
           console.log('🔄 Reiniciando após erro...');
-          startWakeWordDetection();
+          if (isMobile) {
+            console.log('✅ Vosk continua ativo');
+          } else {
+            startWakeWordDetection();
+          }
         }
       }, 1000);
     }
@@ -1479,7 +1685,11 @@ export function VoiceAssistantWithWakeWord({
     
     setTimeout(() => {
       if (isActiveRef.current) {
-        startWakeWordDetection();
+        if (isMobile) {
+          console.log('✅ Vosk continua ativo');
+        } else {
+          startWakeWordDetection();
+        }
       }
     }, 1000);
   }
@@ -1535,6 +1745,7 @@ export function VoiceAssistantWithWakeWord({
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
     if (showStartButton) return 'Clique em "Iniciar"';
+    if (isMobile && !voskReady) return 'Carregando modelo de voz...';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
@@ -1578,14 +1789,17 @@ if (isMaximized) {
               theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
             }`}>{error}</p>
           )}
+          {isMobile && isListening && (
+            <p className="text-xs text-green-400 mt-2">🔇 Sem bipes! (Vosk ativo)</p>
+          )}
         </div>
 
-        {showStartButton && permissionGranted && (
+        {showStartButton && permissionGranted && (!isMobile || voskReady) && (
           <button
             onClick={handleStart}
             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
           >
-            Iniciar Assistente
+            Iniciar Assistente {isMobile && '(Sem Bipes!)'}
           </button>
         )}
       </div>
@@ -1639,8 +1853,11 @@ if (isMaximized) {
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: use palavra de ativação
+                {isMobile ? 'Modo Vosk (Sem Bipes)' : 'Modo Alexa: use palavra de ativação'}
               </p>
+              {isMobile && isListening && (
+                <p className="text-xs text-green-400 mt-1">🔇 Reconhecimento contínuo ativo</p>
+              )}
             </div>
 
             {error && (
@@ -1653,12 +1870,12 @@ if (isMaximized) {
               </div>
             )}
 
-            {showStartButton && permissionGranted && (
+            {showStartButton && permissionGranted && (!isMobile || voskReady) && (
               <button
                 onClick={handleStart}
                 className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
               >
-                Iniciar Assistente
+                Iniciar Assistente {isMobile && '(Sem Bipes!)'}
               </button>
             )}
             {!showStartButton && (

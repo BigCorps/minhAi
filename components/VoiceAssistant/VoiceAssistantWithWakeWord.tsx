@@ -65,6 +65,7 @@ export function VoiceAssistantWithWakeWord({
   const consecutiveRestarts = useRef<number>(0);
   const lastRestartTime = useRef<number>(0);
   const conversationIdRef = useRef<string | null>(null);
+  const recognitionStartTime = useRef<number>(0); // ← NOVO: rastrear início
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -934,6 +935,7 @@ export function VoiceAssistantWithWakeWord({
 
       recognition.onstart = () => {
         console.log('🎤 Wake word detection ATIVA');
+        recognitionStartTime.current = Date.now(); // ← Marcar tempo de início
         setIsListening(true);
         setError('');
       };
@@ -1039,7 +1041,7 @@ export function VoiceAssistantWithWakeWord({
         }
       };
 
-      // ✅ MOBILE: onend com restart OTIMIZADO para evitar bipes
+      // ✅ MOBILE: onend com delay FIXO de 5000 segundos
       recognition.onend = () => {
         console.log('🔴 Recognition encerrou');
         
@@ -1052,15 +1054,14 @@ export function VoiceAssistantWithWakeWord({
           !processingQuestion.current && 
           !isPlayingAudio
         ) {
-          // ✅ MOBILE: Delay de 800ms para evitar bipes constantes do navegador
-          // Esse delay é o mínimo que evita o bipe mas mantém responsividade
           if (isMobile) {
-            console.log('📱 Mobile: Restart em 800ms (evita bipe)');
+            // ✅ MOBILE: Delay FIXO de 5000 segundos (83 minutos)
+            console.log('📱 Mobile: Restart em 5000 segundos');
             setTimeout(() => {
               if (isActiveRef.current && !processingQuestion.current && !isPlayingAudio) {
                 startWakeWordDetection();
               }
-            }, 800);
+            }, 5000000); // 5.000.000ms = 5000 segundos = ~83 minutos
           } else {
             // Desktop: continuous = true, raramente cai aqui
             console.log('💻 Desktop: Restart em 500ms');

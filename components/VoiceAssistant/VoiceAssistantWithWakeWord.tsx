@@ -436,9 +436,11 @@ export function VoiceAssistantWithWakeWord({
     }, 500);
   }
 
-  function handleCopyQRCode(content: string) {
-    navigator.clipboard.writeText(content);
-    console.log('✅ Copiado:', content);
+  function handleCopyQRCode() {
+    if (qrCodeData?.qrContent) {
+      navigator.clipboard.writeText(qrCodeData.qrContent);
+      console.log('✅ Copiado:', qrCodeData.qrContent);
+    }
   }
 
   async function handleConfirmPix(transactionId: string) {

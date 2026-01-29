@@ -1570,7 +1570,7 @@ export function VoiceAssistantWithWakeWord({
         )}
 
         {!showStartButton && (
-          <div className="w-full max-w-4xl">
+          <div className="fixed bottom-0 left-0 right-0 w-full z-10">
             <FunctionCarousel
               companyId={companyId}
               onFunctionClick={handleFunctionClick}
@@ -1668,7 +1668,7 @@ export function VoiceAssistantWithWakeWord({
 
       {/* Carrossel FORA do container para ir de ponta a ponta */}
       {!showStartButton && (
-        <div className="w-screen relative left-[50%] right-[50%] -mx-[50vw]">
+        <div className="w-full overflow-hidden mt-8">
           <FunctionCarousel
             companyId={companyId}
             onFunctionClick={handleFunctionClick}

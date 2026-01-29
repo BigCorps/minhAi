@@ -1570,12 +1570,14 @@ export function VoiceAssistantWithWakeWord({
         )}
 
         {!showStartButton && (
-          <div className="fixed bottom-0 left-0 right-0 w-full z-10 bg-gradient-to-t from-slate-950/80 to-transparent pt-8 pb-4">
-            <FunctionCarousel
-              companyId={companyId}
-              onFunctionClick={handleFunctionClick}
-              theme={theme}
-            />
+          <div className="fixed bottom-0 left-0 right-0 w-full z-10 pb-safe">
+            <div className="bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent pt-12 pb-6">
+              <FunctionCarousel
+                companyId={companyId}
+                onFunctionClick={handleFunctionClick}
+                theme={theme}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -1667,15 +1669,15 @@ export function VoiceAssistantWithWakeWord({
 
       {/* Carrossel de ponta a ponta */}
       {!showStartButton && (
-        <div className="w-full mt-8">
-          <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+        <>
+          <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
             <FunctionCarousel
               companyId={companyId}
               onFunctionClick={handleFunctionClick}
               theme={theme}
             />
           </div>
-        </div>
+        </>
       )}
     </div>
   );

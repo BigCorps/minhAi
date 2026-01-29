@@ -65,7 +65,6 @@ export function VoiceAssistantWithWakeWord({
   const consecutiveRestarts = useRef<number>(0);
   const lastRestartTime = useRef<number>(0);
   const conversationIdRef = useRef<string | null>(null);
-  const recognitionStartTime = useRef<number>(0); // ← NOVO: rastrear início
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -130,40 +129,13 @@ export function VoiceAssistantWithWakeWord({
     });
   }, [wakeWords.join(','), endCommands.join(',')]);
 
-  // ✅ CORREÇÃO: Cleanup melhorado ao desmontar
   useEffect(() => {
     isActiveRef.current = true;
     requestMicrophonePermission();
     
     return () => {
-      console.log('🧹 Cleanup: Desmontando componente');
       isActiveRef.current = false;
-      
-      // Parar reconhecimento de voz
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-          recognitionRef.current.abort();
-        } catch (e) {
-          console.log('⚠️ Erro ao parar recognition no cleanup:', e);
-        }
-        recognitionRef.current = null;
-      }
-      
-      // Parar áudios
-      if (currentAudioRef.current) {
-        try {
-          currentAudioRef.current.pause();
-          currentAudioRef.current = null;
-        } catch (e) {}
-      }
-      
-      if (feedbackAudioRef.current) {
-        try {
-          feedbackAudioRef.current.pause();
-          feedbackAudioRef.current = null;
-        } catch (e) {}
-      }
+      cleanup();
     };
   }, []);
 
@@ -171,17 +143,11 @@ export function VoiceAssistantWithWakeWord({
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-        recognitionRef.current.abort();
       } catch (e) {}
-      recognitionRef.current = null;
     }
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
-    }
-    if (feedbackAudioRef.current) {
-      feedbackAudioRef.current.pause();
-      feedbackAudioRef.current = null;
     }
   }
 
@@ -889,33 +855,23 @@ export function VoiceAssistantWithWakeWord({
     }
   };
 
-  // ✅ CORREÇÃO MOBILE: Auto-restart silencioso para manter sempre ativo
   function startWakeWordDetection() {
     if (!('webkitSpeechRecognition' in window)) {
       setError('Use Chrome ou Edge.');
       return;
     }
 
-    // ✅ Verificar se deve realmente iniciar
-    if (!isActiveRef.current) {
-      console.log('⏸️ isActiveRef = false, não iniciando recognition');
-      return;
-    }
-
-    // ✅ Prevenir restart muito rápido
     const now = Date.now();
-    if (now - lastRestartAttempt.current < 300) {
+    if (now - lastRestartAttempt.current < 500) {
       console.log('⚠️ Tentativa de restart muito rápida, aguardando...');
       return;
     }
     lastRestartAttempt.current = now;
 
-    // ✅ Limpar recognition anterior
     if (recognitionRef.current) {
       try {
         console.log('🧹 Limpando recognition anterior');
         recognitionRef.current.stop();
-        recognitionRef.current.abort();
         recognitionRef.current = null;
       } catch (e) {
         console.log('⚠️ Erro ao limpar recognition:', e);
@@ -926,29 +882,13 @@ export function VoiceAssistantWithWakeWord({
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      // ✅ MOBILE: Tentar continuous true primeiro (funciona em alguns navegadores modernos)
-      // Se não funcionar bem, o auto-restart com delay resolve
-      recognition.continuous = true; // Sempre true
-      recognition.interimResults = isMobile ? false : true;
+      recognition.continuous = isMobile ? false : true;
+      recognition.interimResults = true;
       recognition.lang = 'pt-BR';
-      recognition.maxAlternatives = 1;
-      
-      // ✅ Tentar reduzir feedback sonoro (não funciona em todos navegadores)
-      if (isMobile) {
-        try {
-          // @ts-ignore - propriedades não documentadas que alguns navegadores suportam
-          recognition.soundstart = null;
-          recognition.soundend = null;
-          recognition.audiostart = null;
-          recognition.audioend = null;
-        } catch (e) {
-          // Ignorar se não suportado
-        }
-      }
+      recognition.maxAlternatives = isMobile ? 3 : 5;
 
       recognition.onstart = () => {
-        console.log('🎤 Wake word detection ATIVA');
-        recognitionStartTime.current = Date.now(); // ← Marcar tempo de início
+        console.log(`🎤 Wake word detection ATIVA (continuous=${recognition.continuous})`);
         setIsListening(true);
         setError('');
       };
@@ -956,7 +896,6 @@ export function VoiceAssistantWithWakeWord({
       recognition.onresult = (event: any) => {
         let transcript = '';
         
-        // Pegar resultado final ou último interim
         for (let i = event.results.length - 1; i >= 0; i--) {
           if (event.results[i].isFinal) {
             transcript = event.results[i][0].transcript;
@@ -971,7 +910,7 @@ export function VoiceAssistantWithWakeWord({
         transcript = transcript.toLowerCase().trim();
         const isFinal = event.results[event.results.length - 1].isFinal;
         
-        console.log(`🔊 ${isFinal ? 'Final' : 'Interim'}: "${transcript}"`);
+        console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${transcript}"`);
         
         const normalizedTranscript = transcript.toLowerCase()
           .replace(/[.,!?]/g, '')
@@ -1001,8 +940,19 @@ export function VoiceAssistantWithWakeWord({
         
         const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
         
-        if (hasExplicitStop && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
+        console.log('🔍 Verificando comandos de stop:', {
+          transcript: normalizedTranscript,
+          hasExplicitStop,
+          isProcessing,
+          isPlayingAudio,
+          isActuallyPlaying,
+          isFinal,
+          hasAudioRef: currentAudioRef.current !== null
+        });
+        
+        if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
           console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO:', transcript);
+          console.log('✅ PARANDO áudio imediatamente!');
           stopAudioImmediately();
           return;
         }
@@ -1015,10 +965,12 @@ export function VoiceAssistantWithWakeWord({
         const detectionResult = wakeWordDetectorRef.current?.detect(transcript);
         
         if (detectionResult?.detected && detectionResult.keyword) {
-          console.log(`✅ Wake word detectada: "${detectionResult.keyword}"`);
+          console.log(`🔍 Wake word detectada: "${detectionResult.keyword}"`);
+          console.log(`📝 Transcrição: "${transcript}"`);
           
-          // Só processar se for resultado final
           if (isFinal) {
+            console.log('✅ Processando pergunta completa');
+            
             if (!audioUnlocked.current) {
               unlockAudio();
             }
@@ -1026,7 +978,6 @@ export function VoiceAssistantWithWakeWord({
             if (!processingQuestion.current) {
               processingQuestion.current = true;
               
-              // Parar reconhecimento ANTES de processar
               if (recognitionRef.current) {
                 try {
                   recognitionRef.current.stop();
@@ -1035,6 +986,8 @@ export function VoiceAssistantWithWakeWord({
               
               processWakeWordQuestion(transcript);
             }
+          } else {
+            console.log('⏳ Aguardando transcrição final...');
           }
         }
       };
@@ -1042,7 +995,6 @@ export function VoiceAssistantWithWakeWord({
       recognition.onerror = (event: any) => {
         console.log('⚠️ Recognition error:', event.error);
         
-        // Ignorar erros comuns - vão disparar onend que faz restart
         if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
           return;
         }
@@ -1050,45 +1002,94 @@ export function VoiceAssistantWithWakeWord({
         if (event.error === 'not-allowed') {
           setError('Permissão negada');
           setPermissionGranted(false);
-          setIsListening(false);
         }
       };
 
-      // ✅ MOBILE: onend com restart RÁPIDO para manter sempre ativo
       recognition.onend = () => {
-        console.log('🔴 Recognition encerrou');
+        console.log('🔴 Recognition parou', {
+          isActive: isActiveRef.current,
+          processingQuestion: processingQuestion.current,
+          isProcessing,
+          isPlayingAudio,
+          hasAudioRef: currentAudioRef.current !== null,
+          permissionGranted
+        });
         
-        // NÃO mudar setIsListening para false - mantém visual ativo
-        // setIsListening(false); // ← REMOVIDO!
-        
-        // ✅ RESTART se não estiver ocupado
-        if (
-          isActiveRef.current && 
-          !processingQuestion.current && 
-          !isPlayingAudio
-        ) {
-          if (isMobile) {
-            // ✅ MOBILE: Restart em 1 segundo (balance entre responsividade e bipe)
-            // Bipe vai acontecer, mas assistente continua funcional
-            console.log('📱 Mobile: Restart em 1s');
+        if (isMobile) {
+          setIsListening(false);
+          
+          if (isActiveRef.current && 
+              !processingQuestion.current && 
+              !isProcessing && 
+              !isPlayingAudio && 
+              permissionGranted) {
+            
+            console.log('📱 Mobile: Auto-restart em 300ms...');
             setTimeout(() => {
-              if (isActiveRef.current && !processingQuestion.current && !isPlayingAudio) {
+              if (isActiveRef.current && 
+                  !processingQuestion.current && 
+                  !isProcessing && 
+                  !isPlayingAudio) {
                 startWakeWordDetection();
               }
-            }, 1000);
+            }, 300);
           } else {
-            // Desktop: continuous = true, raramente cai aqui
-            console.log('💻 Desktop: Restart em 500ms');
-            setTimeout(() => {
-              if (isActiveRef.current && !processingQuestion.current && !isPlayingAudio) {
-                startWakeWordDetection();
-              }
-            }, 500);
+            console.log('⏸️ Mobile: Restart suspenso (ocupado)');
           }
         } else {
-          // Se estiver ocupado, aí sim muda visual
-          setIsListening(false);
-          console.log('⏸️ Ocupado - não restart');
+          if (!processingQuestion.current && !isProcessing && !isPlayingAudio) {
+            setIsListening(false);
+          }
+          
+          if (isActiveRef.current && 
+              !processingQuestion.current && 
+              !isProcessing && 
+              !isPlayingAudio && 
+              permissionGranted) {
+            
+            const now = Date.now();
+            const timeSinceLastRestart = now - lastRestartTime.current;
+            
+            if (timeSinceLastRestart < 2000) {
+              consecutiveRestarts.current += 1;
+            } else {
+              consecutiveRestarts.current = 0;
+            }
+            
+            if (consecutiveRestarts.current >= 3) {
+              console.log('⚠️ Loop detectado! Aguardando 3s antes de reiniciar...');
+              consecutiveRestarts.current = 0;
+              
+              setTimeout(() => {
+                if (isActiveRef.current && 
+                    !processingQuestion.current && 
+                    !isProcessing && 
+                    !isPlayingAudio) {
+                  lastRestartTime.current = Date.now();
+                  startWakeWordDetection();
+                }
+              }, 1500);
+              return;
+            }
+            
+            console.log('🔄 Desktop: Auto-restart em 500ms...', {
+              consecutiveRestarts: consecutiveRestarts.current
+            });
+            
+            setTimeout(() => {
+              if (isActiveRef.current && 
+                  !processingQuestion.current && 
+                  !isProcessing && 
+                  !isPlayingAudio) {
+                lastRestartTime.current = Date.now();
+                startWakeWordDetection();
+              } else {
+                console.log('⏸️ Restart cancelado: sistema ocupado');
+              }
+            }, 300);
+          } else {
+            console.log('⏸️ Restart suspenso: processando ou tocando áudio');
+          }
         }
       };
 
@@ -1097,12 +1098,8 @@ export function VoiceAssistantWithWakeWord({
       
     } catch (err) {
       console.error('❌ Erro iniciar recognition:', err);
-      setError('Erro ao iniciar reconhecimento');
-      setIsListening(false);
-      
-      // Tentar novamente
       setTimeout(() => {
-        if (isActiveRef.current && permissionGranted && !processingQuestion.current && !isPlayingAudio) {
+        if (isActiveRef.current && permissionGranted && !processingQuestion.current) {
           startWakeWordDetection();
         }
       }, 2000);
@@ -1540,13 +1537,7 @@ export function VoiceAssistantWithWakeWord({
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) {
-      // Mensagem especial para mobile sobre o bipe
-      if (isMobile) {
-        return `Ativo (bipes do navegador são normais)`;
-      }
-      return `Diga: "${wakeWords[0]}" + pergunta`;
-    }
+    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
     return 'Aguarde...';
   };
 

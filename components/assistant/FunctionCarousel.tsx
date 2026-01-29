@@ -62,8 +62,8 @@ export default function FunctionCarousel({
     onFunctionClick(fn.function_key);
   }
   
-  // Triplicar funções para garantir loop infinito suave
-  const triplicatedFunctions = [...functions, ...functions, ...functions];
+  // Quadruplicar funções para garantir loop infinito PERFEITO
+  const quadruplicatedFunctions = [...functions, ...functions, ...functions, ...functions];
   
   // Cores alternadas azul/verde eAi
   const getCardColor = (index: number) => {
@@ -85,12 +85,12 @@ export default function FunctionCarousel({
   
   return (
     <>
-      {/* Carrossel SEM FUNDO - usa fundo do contexto */}
+      {/* Carrossel de PONTA A PONTA - sem padding lateral */}
       <div className="w-full py-4 overflow-hidden">
         <div className="relative w-full">
-          {/* Carrossel com animação CSS */}
-          <div className="flex gap-3 animate-scroll">
-            {triplicatedFunctions.map((fn, idx) => {
+          {/* Carrossel com animação CSS - QUADRUPLICADO para loop perfeito */}
+          <div className="flex gap-3 pl-3 animate-scroll-infinite">
+            {quadruplicatedFunctions.map((fn, idx) => {
               const originalIndex = idx % functions.length;
               const borderColor = getCardColor(originalIndex);
               
@@ -100,11 +100,14 @@ export default function FunctionCarousel({
                   onClick={() => handleClick(fn)}
                   className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 ${
                     theme === 'dark'
-                      ? 'bg-white/10 hover:bg-white/20 text-white shadow-md'
-                      : 'bg-white hover:bg-gray-50 text-gray-900 shadow-lg'
+                      ? 'bg-white/10 hover:bg-white/20 text-white'
+                      : 'bg-white hover:bg-gray-50 text-gray-900'
                   }`}
                   style={{
-                    borderLeft: `4px solid ${borderColor}`
+                    borderLeft: `4px solid ${borderColor}`,
+                    boxShadow: theme === 'dark' 
+                      ? '0 2px 4px rgba(0, 0, 0, 0.2)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.05)'
                   }}
                 >
                   <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
@@ -115,28 +118,28 @@ export default function FunctionCarousel({
         </div>
       </div>
       
-      {/* CSS para animação */}
+      {/* CSS para animação - velocidade aumentada em 20% (30s -> 24s desktop, 20s -> 16s mobile) */}
       <style jsx>{`
-        @keyframes scroll {
+        @keyframes scroll-infinite {
           0% {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(calc(-33.333%));
+            transform: translateX(calc(-25%));
           }
         }
         
-        .animate-scroll {
-          animation: scroll 36s linear infinite;
+        .animate-scroll-infinite {
+          animation: scroll-infinite 24s linear infinite;
         }
         
-        .animate-scroll:hover {
+        .animate-scroll-infinite:hover {
           animation-play-state: paused;
         }
         
         @media (max-width: 768px) {
-          .animate-scroll {
-            animation: scroll 24s linear infinite;
+          .animate-scroll-infinite {
+            animation: scroll-infinite 16s linear infinite;
           }
         }
       `}</style>

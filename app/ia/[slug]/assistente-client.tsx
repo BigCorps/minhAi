@@ -1,6 +1,7 @@
 'use client';
 
 import { VoiceAssistantWithWakeWord } from '@/components/VoiceAssistant/VoiceAssistantWithWakeWord';
+import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';

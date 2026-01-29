@@ -208,58 +208,138 @@ export function VoiceAssistantWithWakeWord({
     }, 300);
   }
 
-  // ========================================
-  // 🆕 HANDLER DO CARROSSEL
-  // ========================================
-  async function handleFunctionClick(functionKey: string) {
-    console.log('🎯 Função clicada no carrossel:', functionKey);
+async function checkIfFunctionIsEnabled(functionKey: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
     
-    // Parar reconhecimento de voz
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
+    // 1. Verificar se função existe e está ativa globalmente
+    const { data: func } = await supabase
+      .from('assistant_functions')
+      .select('is_active')
+      .eq('function_key', functionKey)
+      .single();
+    
+    if (!func || !func.is_active) {
+      return false;
     }
-
-    // Parar áudio se estiver tocando
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
+    
+    // 2. Verificar se tem configuração específica da empresa
+    const { data: setting } = await supabase
+      .from('company_function_settings')
+      .select('is_enabled')
+      .eq('company_id', companyId)
+      .eq('function_key', functionKey)
+      .single();
+    
+    // Se não tem configuração, assume ATIVA (padrão)
+    if (!setting) {
+      return true;
     }
-
-    setIsProcessing(true);
-
-    try {
-      switch (functionKey) {
-        case 'pix_generate':
-          await playText('Me chame e fale: gerar PIX com o valor, que já gero a cobrança.');
-          break;
-          
-        case 'qrcode_whatsapp':
-          await handleWhatsAppCommand();
-          break;
-          
-        case 'qrcode_instagram':
-          await handleInstagramCommand();
-          break;
-          
-        default:
-          await playText(`Função ${functionKey} ainda não implementada.`);
-      }
-    } catch (error) {
-      console.error('Erro ao executar função:', error);
-      await playText('Desculpe, ocorreu um erro.');
-    } finally {
-      setIsProcessing(false);
-      
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          startWakeWordDetection();
-        }
-      }, 500);
-    }
+    
+    return setting.is_enabled;
+    
+  } catch (error) {
+    console.error('Erro ao verificar função:', error);
+    // Em caso de erro, assume ativa para não bloquear
+    return true;
   }
+}
+
+// ========================================
+// ATUALIZAR handleFunctionClick
+// ========================================
+
+async function handleFunctionClick(functionKey: string) {
+  console.log('🎯 Função clicada no carrossel:', functionKey);
+  
+  // ✅ VERIFICAR SE FUNÇÃO ESTÁ ATIVA
+  const isEnabled = await checkIfFunctionIsEnabled(functionKey);
+  
+  if (!isEnabled) {
+    console.log('⚠️ Função desativada:', functionKey);
+    await playText('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
+    
+    setTimeout(() => {
+      if (isActiveRef.current) {
+        startWakeWordDetection();
+      }
+    }, 500);
+    
+    return;
+  }
+  
+  // Parar reconhecimento de voz
+  if (recognitionRef.current) {
+    try {
+      recognitionRef.current.stop();
+    } catch (e) {}
+  }
+
+  // Parar áudio se estiver tocando
+  if (currentAudioRef.current) {
+    currentAudioRef.current.pause();
+    currentAudioRef.current.currentTime = 0;
+    currentAudioRef.current = null;
+  }
+
+  setIsProcessing(true);
+
+  try {
+    switch (functionKey) {
+      case 'pix_generate':
+        await playText('Me chame e fale: gerar PIX com o valor, que já gero a cobrança.');
+        break;
+        
+      case 'qrcode_whatsapp':
+        await handleWhatsAppCommand();
+        break;
+        
+      case 'qrcode_instagram':
+        await handleInstagramCommand();
+        break;
+        
+      default:
+        await playText(`Função ${functionKey} ainda não implementada.`);
+    }
+    
+    // ✅ REGISTRAR USO DA FUNÇÃO
+    await registerFunctionUsage(functionKey, 0); // 0 créditos por enquanto
+    
+  } catch (error) {
+    console.error('Erro ao executar função:', error);
+    await playText('Desculpe, ocorreu um erro.');
+  } finally {
+    setIsProcessing(false);
+    
+    setTimeout(() => {
+      if (isActiveRef.current) {
+        startWakeWordDetection();
+      }
+    }, 500);
+  }
+}
+
+// ========================================
+// ADICIONAR FUNÇÃO DE REGISTRO DE USO
+// ========================================
+
+async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
+  try {
+    const supabase = createClient();
+    
+    // Usar a função SQL helper
+    await supabase.rpc('register_function_usage', {
+      p_company_id: companyId,
+      p_function_key: functionKey,
+      p_credits_consumed: creditsConsumed
+    });
+    
+    console.log('✅ Uso registrado:', functionKey);
+  } catch (error) {
+    console.error('Erro ao registrar uso:', error);
+    // Não bloqueamos a execução se registro falhar
+  }
+}
 
   async function detectVoiceCommand(transcript: string): Promise<boolean> {
     const lowerTranscript = transcript.toLowerCase().trim();
@@ -278,7 +358,16 @@ export function VoiceAssistantWithWakeWord({
     
     if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
       console.log('📱 Comando WhatsApp detectado!');
+      // ✅ VERIFICAR SE ESTÁ ATIVO
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
+    
+      if (!isEnabled) {
+        await playText('A função WhatsApp está desativada no momento.');
+        return true; // Retorna true para indicar que processou
+      }
+    
       await handleWhatsAppCommand();
+      await registerFunctionUsage('qrcode_whatsapp', 0);
       return true;
     }
     

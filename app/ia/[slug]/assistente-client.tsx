@@ -266,7 +266,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           </div>
 
           {/* Orbe + Status (com Zoom aplicado) */}
-          <div className="flex-1 flex flex-col items-center justify-center overflow-auto">
+          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
             <div 
               style={{ 
                 transform: `scale(${zoomLevel / 100})`,

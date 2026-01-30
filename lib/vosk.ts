@@ -1,9 +1,24 @@
 import * as Vosk from "vosk-browser";
 
+// ✅ INTERCEPTOR: Capturar todas requisições do Vosk
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const [url] = args;
+  console.log('🔍 Vosk tentando buscar:', url);
+  
+  try {
+    const response = await originalFetch(...args);
+    console.log(`${response.ok ? '✅' : '❌'} ${url} - Status: ${response.status}`);
+    return response;
+  } catch (error) {
+    console.error('❌ Erro ao buscar:', url, error);
+    throw error;
+  }
+};
+
 let model: any = null;
 
-export async function loadVosk(onProgress?: (progress: number) => void) {
-  if (model) {
+export async function loadVosk(onProgress?: (progress: number) => void) {  if (model) {
     console.log('✅ Modelo Vosk já carregado (cache)');
     return model;
   }

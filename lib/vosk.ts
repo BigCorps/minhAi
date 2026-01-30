@@ -48,7 +48,7 @@ export async function loadVosk(onProgress?: (progress: number) => void) {  if (m
     const startTime = Date.now();
     
     // Criar modelo
-    model = await Vosk.createModel(modelPath);
+    model = await Vosk.createModel("https://pub-1d470f67ff584dad91b19d3502f130e6.r2.dev");
     
     const loadTime = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`✅ Modelo carregado em ${loadTime}s`);

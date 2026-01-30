@@ -17,66 +17,29 @@ export async function middleware(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: any) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+          request.cookies.set({ name, value, ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: any) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
+          request.cookies.set({ name, value: '', ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value: '', ...options });
         },
       },
     }
   );
 
-  // Verificar autenticação
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
 
-  // Rotas públicas que NÃO precisam de autenticação
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/signup',
-    '/auth/callback',
-    '/auth/confirm',
-    '/reset-password',
-    '/update-password',
-  ];
+  // Rotas públicas (não precisam autenticação)
+  const publicRoutes = ['/login', '/signup', '/auth/callback', '/auth/confirm'];
 
-  // Rotas protegidas que PRECISAM de autenticação
+  // Rotas protegidas (precisam autenticação)
   const protectedRoutes = [
-    '/dashboard',
     '/assistentes',
-    '/funcoes',
+    '/funcoes', 
     '/saldo',
     '/historico',
     '/credits',
@@ -85,44 +48,32 @@ export async function middleware(request: NextRequest) {
     '/faqs',
   ];
 
-  // Verificar se é rota protegida
+  const isPublicRoute = publicRoutes.includes(pathname);
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  // Verificar se é rota pública
-  const isPublicRoute = publicRoutes.some(route => pathname === route);
-
-  // Se é rota protegida e usuário NÃO está logado
+  // Se é rota protegida e usuário NÃO está logado → redirecionar para login
   if (isProtectedRoute && !user) {
     const redirectUrl = new URL('/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Se usuário está logado e tenta acessar login/signup
+  // Se usuário está logado e tenta acessar login/signup → redirecionar para raiz
   if (user && (pathname === '/login' || pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Se usuário está logado e acessa a raiz, redirecionar para dashboard
-  if (user && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+  // Se é raiz "/" e usuário NÃO está logado → permitir (landing page)
+  // Se é raiz "/" e usuário ESTÁ logado → permitir (dashboard)
+  // Isso funciona porque app/(dashboard)/page.tsx é acessível em "/"
 
   return response;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
   ],
 };

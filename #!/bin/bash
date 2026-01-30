@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# Script Final - Correção Completa de Autenticação
-# - Atualiza callback para redirecionar para /dashboard
-# - Middleware já foi corrigido nos passos anteriores
+# Script Final - Correção Route Groups + Signup
+# Resolve 404 em /dashboard e erro no signup
 
-echo "🔐 Aplicando correções finais..."
+echo "🔧 Aplicando correções finais..."
 echo ""
 
 # Cores
@@ -14,7 +13,7 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Verificar se estamos na raiz
+# Verificar raiz
 if [ ! -f "package.json" ]; then
     echo -e "${RED}❌ Execute na raiz do projeto!${NC}"
     exit 1
@@ -22,14 +21,84 @@ fi
 
 # Backup
 echo -e "${BLUE}💾 Criando backup...${NC}"
-BACKUP_DIR=".backup/final_auth_$(date +%Y%m%d_%H%M%S)"
+BACKUP_DIR=".backup/final_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$BACKUP_DIR"
+
+if [ -f "middleware.ts" ]; then
+    cp middleware.ts "$BACKUP_DIR/"
+    echo -e "${GREEN}✓ Backup de middleware.ts${NC}"
+fi
 
 if [ -f "app/auth/callback/route.ts" ]; then
     cp app/auth/callback/route.ts "$BACKUP_DIR/"
     echo -e "${GREEN}✓ Backup de callback/route.ts${NC}"
 fi
 
+echo ""
+
+# Atualizar middleware
+echo -e "${BLUE}📝 Atualizando middleware.ts...${NC}"
+cat > middleware.ts << 'EOF'
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          request.cookies.set({ name, value, ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          request.cookies.set({ name, value: '', ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value: '', ...options });
+        },
+      },
+    }
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const pathname = request.nextUrl.pathname;
+
+  const publicRoutes = ['/login', '/signup', '/auth/callback', '/auth/confirm'];
+  const protectedRoutes = ['/assistentes', '/funcoes', '/saldo', '/historico', '/credits', '/perfil', '/pacotes', '/faqs'];
+
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isProtectedRoute = protectedRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`));
+
+  if (isProtectedRoute && !user) {
+    const redirectUrl = new URL('/login', request.url);
+    redirectUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)'],
+};
+EOF
+
+echo -e "${GREEN}✓ middleware.ts atualizado${NC}"
 echo ""
 
 # Atualizar callback
@@ -44,15 +113,13 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') ?? '/dashboard';
+  const next = requestUrl.searchParams.get('next') ?? '/';
 
   if (code) {
     try {
-      // Next.js 16+ - cookies é async
       const cookieStore = await cookies();
       const supabase = createClient();
 
-      // Trocar code por session
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
@@ -62,8 +129,6 @@ export async function GET(request: Request) {
 
       if (data.session) {
         console.log('✅ Sessão criada:', data.session.user.email);
-        
-        // Redirecionar para dashboard
         return NextResponse.redirect(new URL(next, requestUrl.origin));
       }
     } catch (error) {
@@ -79,6 +144,23 @@ EOF
 echo -e "${GREEN}✓ app/auth/callback/route.ts atualizado${NC}"
 echo ""
 
+# Buscar user_credits no código
+echo -e "${BLUE}🔍 Buscando inserções em user_credits...${NC}"
+FOUND=$(grep -r "user_credits" app/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "FROM" | grep -v "node_modules" || true)
+
+if [ -n "$FOUND" ]; then
+    echo -e "${YELLOW}⚠️  Encontrado código que menciona user_credits:${NC}"
+    echo "$FOUND"
+    echo ""
+    echo -e "${YELLOW}⚠️  AÇÃO MANUAL NECESSÁRIA:${NC}"
+    echo "   Verifique os arquivos acima e remova qualquer INSERT em user_credits"
+    echo "   Os créditos já foram criados via SQL!"
+else
+    echo -e "${GREEN}✓ Nenhuma inserção em user_credits encontrada${NC}"
+fi
+
+echo ""
+
 # Limpar cache
 echo -e "${BLUE}🧹 Limpando cache...${NC}"
 rm -rf .next
@@ -87,39 +169,29 @@ echo ""
 
 # Resultado
 echo -e "${GREEN}================================================${NC}"
-echo -e "${GREEN}✅ Código atualizado!${NC}"
+echo -e "${GREEN}✅ Correções aplicadas!${NC}"
 echo -e "${GREEN}================================================${NC}"
 echo ""
-echo -e "${YELLOW}⚠️  ÚLTIMA AÇÃO MANUAL:${NC}"
+echo -e "${BLUE}📋 Mudanças:${NC}"
+echo "   • middleware.ts → redireciona para '/' (não '/dashboard')"
+echo "   • callback → redireciona para '/' (não '/dashboard')"
+echo "   • Cache limpo"
 echo ""
-echo "1️⃣  ${BLUE}Executar SQL no Supabase:${NC}"
-echo "   • Abra: Supabase Dashboard → SQL Editor"
-echo "   • Execute: ${BLUE}create_trigger_20_credits.sql${NC}"
-echo ""
-echo "   ${YELLOW}IMPORTANTE: 20 créditos iniciais (não 1120)${NC}"
-echo ""
-echo "2️⃣  ${BLUE}Verificar trigger criado:${NC}"
-echo "   ${BLUE}SELECT * FROM pg_trigger WHERE tgname = 'on_auth_user_created';${NC}"
-echo "   • Deve retornar 1 linha"
-echo ""
-echo "3️⃣  ${BLUE}Verificar todos usuários têm créditos:${NC}"
-echo "   ${BLUE}SELECT COUNT(*) FROM auth.users u${NC}"
-echo "   ${BLUE}LEFT JOIN public.user_credits uc ON u.id = uc.user_id${NC}"
-echo "   ${BLUE}WHERE uc.user_id IS NULL;${NC}"
-echo "   • Deve retornar 0"
-echo ""
-echo "4️⃣  ${BLUE}Testar:${NC}"
+
+if [ -n "$FOUND" ]; then
+    echo -e "${YELLOW}⚠️  AÇÃO MANUAL:${NC}"
+    echo "   Remova inserções em user_credits dos arquivos listados acima"
+    echo ""
+fi
+
+echo -e "${BLUE}🧪 Testar:${NC}"
 echo "   ${BLUE}npm run dev${NC}"
-echo "   • Signup: http://localhost:3000/signup"
-echo "   • Login: http://localhost:3000/login"
-echo "   • Verificar redirecionamento para /dashboard ✅"
-echo "   • Verificar console sem erros ✅"
 echo ""
-echo "5️⃣  ${BLUE}Deploy:${NC}"
-echo "   ${BLUE}git add .${NC}"
-echo "   ${BLUE}git commit -m 'fix: 20 créditos + callback dashboard'${NC}"
-echo "   ${BLUE}git push${NC}"
+echo "   1. http://localhost:3000/ → Dashboard (se logado)"
+echo "   2. http://localhost:3000/login → Login"
+echo "   3. http://localhost:3000/signup → Signup (sem erro)"
+echo "   4. Console (F12) → Sem erros"
 echo ""
 echo "💾 Backup em: ${BLUE}$BACKUP_DIR${NC}"
 echo ""
-echo -e "${GREEN}🚀 Código pronto! Execute o SQL no Supabase!${NC}"
+echo -e "${GREEN}🚀 Pronto para testar!${NC}"

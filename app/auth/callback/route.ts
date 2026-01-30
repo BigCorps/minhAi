@@ -1,5 +1,5 @@
 // app/auth/callback/route.ts
-// OAuth callback que redireciona para /dashboard
+// Callback OAuth que redireciona para raiz "/" (dashboard)
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
@@ -8,7 +8,7 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') ?? '/dashboard'; // Default: dashboard
+  const next = requestUrl.searchParams.get('next') ?? '/'; // Redireciona para raiz (dashboard)
 
   if (code) {
     try {
@@ -25,9 +25,9 @@ export async function GET(request: Request) {
       }
 
       if (data.session) {
-        console.log('✅ Sessão criada com sucesso:', data.session.user.email);
+        console.log('✅ Sessão criada:', data.session.user.email);
         
-        // Redirecionar para dashboard (ou next se especificado)
+        // Redirecionar para raiz (dashboard)
         return NextResponse.redirect(new URL(next, requestUrl.origin));
       }
     } catch (error) {
@@ -36,7 +36,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Se não tem code, redirecionar para login
   console.warn('⚠️ Callback sem code');
   return NextResponse.redirect(new URL('/login', requestUrl.origin));
 }

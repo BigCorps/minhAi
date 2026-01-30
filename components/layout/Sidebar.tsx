@@ -9,7 +9,7 @@ import {
   Settings, 
   DollarSign, 
   MessageSquare,
-  X 
+  ChevronDown
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,89 +29,78 @@ export function Sidebar({ theme }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <>
+    <div className="relative">
       {/* Botão Hambúrguer */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setIsOpen(!isOpen)}
         className={`p-2 rounded-lg transition ${
           theme === 'dark'
             ? 'hover:bg-white/5 text-white'
             : 'hover:bg-gray-100 text-gray-700'
         }`}
-        aria-label="Abrir menu"
+        aria-label="Menu"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 
-      {/* Overlay */}
+      {/* Dropdown Menu */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${
-          theme === 'dark'
-            ? 'bg-slate-900 border-r border-white/10'
-            : 'bg-white border-r border-gray-200'
-        }`}
-      >
-        {/* Header */}
-        <div className={`flex items-center justify-between p-4 border-b ${
-          theme === 'dark' ? 'border-white/10' : 'border-gray-200'
-        }`}>
-          <h2 className={`text-lg font-bold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Menu
-          </h2>
-          <button
+        <>
+          {/* Overlay para fechar ao clicar fora */}
+          <div 
+            className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
-            className={`p-2 rounded-lg transition ${
-              theme === 'dark'
-                ? 'hover:bg-white/5 text-white'
-                : 'hover:bg-gray-100 text-gray-700'
-            }`}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+          />
+          
+          {/* Menu Dropdown */}
+          <div className={`absolute left-0 top-full mt-2 w-64 rounded-lg shadow-xl border py-2 z-50 ${
+            theme === 'dark'
+              ? 'bg-slate-800 border-white/10'
+              : 'bg-white border-gray-200'
+          }`}>
+            {/* Header do Menu */}
+            <div className={`px-4 py-2 border-b ${
+              theme === 'dark' ? 'border-white/10' : 'border-gray-200'
+            }`}>
+              <h3 className={`text-sm font-semibold ${
+                theme === 'dark' ? 'text-white/60' : 'text-gray-500'
+              }`}>
+                Menu de Navegação
+              </h3>
+            </div>
 
-        {/* Menu Items */}
-        <nav className="p-4 space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
-                  isActive
-                    ? theme === 'dark'
-                      ? 'bg-blue-500/20 text-blue-400'
-                      : 'bg-blue-50 text-blue-600'
-                    : theme === 'dark'
-                      ? 'text-white/70 hover:bg-white/5 hover:text-white'
-                      : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-    </>
+            {/* Menu Items */}
+            <nav className="py-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center space-x-3 px-4 py-3 transition ${
+                      isActive
+                        ? theme === 'dark'
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : 'bg-blue-50 text-blue-600'
+                        : theme === 'dark'
+                          ? 'text-white/70 hover:bg-white/5 hover:text-white'
+                          : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

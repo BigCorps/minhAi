@@ -1,9 +1,9 @@
 // app/(dashboard)/HomeClient.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CreditsCard } from '@/components/CreditsCard';
+import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Bot, 
   Settings, 
@@ -28,14 +28,7 @@ export default function HomeClient({
   totalConversations, 
   totalFAQs 
 }: HomeClientProps) {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-    if (mediaQuery.matches) {
-      setTheme('light');
-    }
-  }, []);
+  const { theme } = useTheme();
 
   const displayName = user?.user_metadata?.name || user?.email || 'Usuário';
 

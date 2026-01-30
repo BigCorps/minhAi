@@ -1,23 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Sidebar } from './Sidebar';
 import { UserMenu } from './UserMenu';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface DashboardHeaderProps {
   user: any;
 }
 
 export function DashboardHeader({ user }: DashboardHeaderProps) {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-    if (mediaQuery.matches) {
-      setTheme('light');
-    }
-  }, []);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <>
@@ -47,7 +40,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             <div className="flex items-center space-x-4">
               {/* Theme Toggle */}
               <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={toggleTheme}
                 className={`p-2 rounded-lg transition ${
                   theme === 'dark'
                     ? 'hover:bg-white/5 text-white'

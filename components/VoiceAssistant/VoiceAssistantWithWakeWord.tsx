@@ -316,7 +316,7 @@ export function VoiceAssistantWithWakeWord({
       console.log('🎤 Iniciando Vosk (SEM BIPES)...');
       
       // Criar recognizer
-      const recognizer = new voskModelRef.current.KaldiRecognizer();
+      const recognizer = new voskModelRef.current.KaldiRecognizer(16000);
       voskRecognizerRef.current = recognizer;
       
       // Event listeners Vosk

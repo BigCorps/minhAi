@@ -11,30 +11,13 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = [
     '/login',
     '/auth/callback',
-    '/ia', // Assistentes públicos (verificação de créditos feita na página)
+    '/ia', // Assistentes públicos
     '/termos',
     '/aviso',
   ];
 
-  // Rotas protegidas (dentro do route group dashboard)
-  const protectedRoutes = [
-    '/assistentes',
-    '/funcoes',
-    '/saldo',
-    '/historico',
-    '/credits',
-    '/faqs',
-    '/perfil',
-    '/pacotes',
-  ];
-
   // Verificar se é rota pública
   const isPublicRoute = publicRoutes.some(route => 
-    path === route || path.startsWith(route + '/')
-  );
-
-  // Verificar se é rota protegida
-  const isProtectedRoute = path === '/' || protectedRoutes.some(route => 
     path === route || path.startsWith(route + '/')
   );
 
@@ -103,18 +86,33 @@ export async function middleware(request: NextRequest) {
 
   console.log('User:', user ? user.email : 'não autenticado');
 
-  // Se não estiver autenticado e tentar acessar rota protegida
-  if (!user && isProtectedRoute) {
+  // Rotas protegidas
+  const protectedPaths = [
+    '/',
+    '/assistentes',
+    '/funcoes', 
+    '/saldo',
+    '/historico',
+    '/credits',
+    '/faqs',
+    '/perfil',
+    '/pacotes',
+  ];
+
+  const isProtectedPath = protectedPaths.some(route => 
+    path === route || path.startsWith(route + '/')
+  );
+
+  // Se não autenticado e rota protegida → login
+  if (!user && isProtectedPath) {
     console.log('Não autenticado, redirecionando para login');
-    const redirectUrl = new URL('/login', request.url);
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Se estiver autenticado e tentar acessar /login, redirecionar para home
+  // Se autenticado e tentando acessar login → home
   if (user && path === '/login') {
     console.log('Já autenticado, redirecionando para home');
-    const redirectUrl = new URL('/', request.url);
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return response;
@@ -122,14 +120,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
   ],
 };

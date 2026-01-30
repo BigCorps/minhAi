@@ -9,17 +9,17 @@ export async function loadVosk(onProgress?: (progress: number) => void) {
   }
   
   try {
-    // ✅ USANDO ALPHACEPHEI (SERVIDOR OFICIAL DO VOSK)
-    // Este é o servidor oficial que hospeda todos os modelos completos
-    const modelUrl = "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip";
+    // ✅ USANDO PROXY NEXT.JS PARA CONTORNAR CORS
+    // O Next.js baixa o modelo do servidor oficial e serve para o cliente
+    const modelUrl = "/api/vosk-proxy";
     
-    console.log('📦 Iniciando download do modelo Vosk...');
+    console.log('📦 Iniciando download do modelo Vosk via proxy...');
     console.log('📂 URL:', modelUrl);
-    console.log('⏳ Download pode demorar (modelo ~40MB)...');
+    console.log('⏳ Primeira vez pode demorar ~30-60s (download de 40MB)...');
     
     const startTime = Date.now();
     
-    // O Vosk vai baixar e extrair automaticamente o ZIP
+    // O Vosk vai baixar e extrair automaticamente
     model = await Vosk.createModel(modelUrl);
     
     const loadTime = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -31,22 +31,9 @@ export async function loadVosk(onProgress?: (progress: number) => void) {
   } catch (error: any) {
     console.error('❌ Erro ao carregar Vosk:', error);
     console.error('❌ Mensagem:', error.message);
+    console.error('❌ Stack:', error.stack);
     
-    // Tentar fallback para servidor alternativo
-    console.log('🔄 Tentando servidor alternativo...');
-    try {
-      const fallbackUrl = "https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-model-small-pt-0.3.zip";
-      console.log('📂 Fallback URL:', fallbackUrl);
-      
-      model = await Vosk.createModel(fallbackUrl);
-      console.log('✅ Modelo carregado via fallback');
-      
-      if (onProgress) onProgress(100);
-      return model;
-    } catch (fallbackError: any) {
-      console.error('❌ Fallback também falhou:', fallbackError.message);
-      throw error;
-    }
+    throw error;
   }
 }
 
@@ -55,12 +42,13 @@ export async function loadVoskWithProgress(onProgress: (progress: number) => voi
   
   const progressInterval = setInterval(() => {
     if (estimatedProgress < 95) {
-      const increment = estimatedProgress < 30 ? 3 : estimatedProgress < 70 ? 5 : 2;
+      // Progresso mais lento no início (download)
+      const increment = estimatedProgress < 30 ? 2 : estimatedProgress < 70 ? 4 : 1;
       estimatedProgress = Math.min(estimatedProgress + increment, 95);
       onProgress(Math.floor(estimatedProgress));
       console.log(`📊 Progresso: ${Math.floor(estimatedProgress)}%`);
     }
-  }, 800);
+  }, 1000);
 
   try {
     const result = await loadVosk((p) => {

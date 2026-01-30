@@ -1,0 +1,125 @@
+#!/bin/bash
+
+# Script Final - Correção Completa de Autenticação
+# - Atualiza callback para redirecionar para /dashboard
+# - Middleware já foi corrigido nos passos anteriores
+
+echo "🔐 Aplicando correções finais..."
+echo ""
+
+# Cores
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Verificar se estamos na raiz
+if [ ! -f "package.json" ]; then
+    echo -e "${RED}❌ Execute na raiz do projeto!${NC}"
+    exit 1
+fi
+
+# Backup
+echo -e "${BLUE}💾 Criando backup...${NC}"
+BACKUP_DIR=".backup/final_auth_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$BACKUP_DIR"
+
+if [ -f "app/auth/callback/route.ts" ]; then
+    cp app/auth/callback/route.ts "$BACKUP_DIR/"
+    echo -e "${GREEN}✓ Backup de callback/route.ts${NC}"
+fi
+
+echo ""
+
+# Atualizar callback
+echo -e "${BLUE}📝 Atualizando app/auth/callback/route.ts...${NC}"
+mkdir -p app/auth/callback
+
+cat > app/auth/callback/route.ts << 'EOF'
+import { createClient } from '@/lib/supabase-server';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+
+export async function GET(request: Request) {
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get('code');
+  const next = requestUrl.searchParams.get('next') ?? '/dashboard';
+
+  if (code) {
+    try {
+      // Next.js 16+ - cookies é async
+      const cookieStore = await cookies();
+      const supabase = createClient();
+
+      // Trocar code por session
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (error) {
+        console.error('❌ Erro ao trocar code por session:', error);
+        return NextResponse.redirect(new URL('/login?error=auth_error', requestUrl.origin));
+      }
+
+      if (data.session) {
+        console.log('✅ Sessão criada:', data.session.user.email);
+        
+        // Redirecionar para dashboard
+        return NextResponse.redirect(new URL(next, requestUrl.origin));
+      }
+    } catch (error) {
+      console.error('❌ Erro no callback:', error);
+      return NextResponse.redirect(new URL('/login?error=callback_error', requestUrl.origin));
+    }
+  }
+
+  return NextResponse.redirect(new URL('/login', requestUrl.origin));
+}
+EOF
+
+echo -e "${GREEN}✓ app/auth/callback/route.ts atualizado${NC}"
+echo ""
+
+# Limpar cache
+echo -e "${BLUE}🧹 Limpando cache...${NC}"
+rm -rf .next
+echo -e "${GREEN}✓ Cache limpo${NC}"
+echo ""
+
+# Resultado
+echo -e "${GREEN}================================================${NC}"
+echo -e "${GREEN}✅ Código atualizado!${NC}"
+echo -e "${GREEN}================================================${NC}"
+echo ""
+echo -e "${YELLOW}⚠️  ÚLTIMA AÇÃO MANUAL:${NC}"
+echo ""
+echo "1️⃣  ${BLUE}Executar SQL no Supabase:${NC}"
+echo "   • Abra: Supabase Dashboard → SQL Editor"
+echo "   • Execute: ${BLUE}create_trigger_20_credits.sql${NC}"
+echo ""
+echo "   ${YELLOW}IMPORTANTE: 20 créditos iniciais (não 1120)${NC}"
+echo ""
+echo "2️⃣  ${BLUE}Verificar trigger criado:${NC}"
+echo "   ${BLUE}SELECT * FROM pg_trigger WHERE tgname = 'on_auth_user_created';${NC}"
+echo "   • Deve retornar 1 linha"
+echo ""
+echo "3️⃣  ${BLUE}Verificar todos usuários têm créditos:${NC}"
+echo "   ${BLUE}SELECT COUNT(*) FROM auth.users u${NC}"
+echo "   ${BLUE}LEFT JOIN public.user_credits uc ON u.id = uc.user_id${NC}"
+echo "   ${BLUE}WHERE uc.user_id IS NULL;${NC}"
+echo "   • Deve retornar 0"
+echo ""
+echo "4️⃣  ${BLUE}Testar:${NC}"
+echo "   ${BLUE}npm run dev${NC}"
+echo "   • Signup: http://localhost:3000/signup"
+echo "   • Login: http://localhost:3000/login"
+echo "   • Verificar redirecionamento para /dashboard ✅"
+echo "   • Verificar console sem erros ✅"
+echo ""
+echo "5️⃣  ${BLUE}Deploy:${NC}"
+echo "   ${BLUE}git add .${NC}"
+echo "   ${BLUE}git commit -m 'fix: 20 créditos + callback dashboard'${NC}"
+echo "   ${BLUE}git push${NC}"
+echo ""
+echo "💾 Backup em: ${BLUE}$BACKUP_DIR${NC}"
+echo ""
+echo -e "${GREEN}🚀 Código pronto! Execute o SQL no Supabase!${NC}"

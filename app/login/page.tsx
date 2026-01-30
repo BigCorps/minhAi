@@ -29,9 +29,13 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
 
+    console.log('🔐 Tentando autenticação:', { email, mode });
+
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        console.log('📝 Criando nova conta...');
+        
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -39,23 +43,37 @@ export default function LoginPage() {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Erro no signup:', error);
+          throw error;
+        }
 
+        console.log('✅ Conta criada com sucesso!', data);
         alert('Cadastro realizado! Verifique seu email para confirmar.');
         setMode('login');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log('🔑 Fazendo login...');
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Erro no login:', error);
+          throw error;
+        }
 
+        console.log('✅ Login bem-sucedido!', data);
+        console.log('🔄 Redirecionando para /...');
+        
+        // Redirecionar para raiz (dashboard)
         router.push('/');
         router.refresh();
       }
     } catch (error: any) {
-      setError(error.message);
+      console.error('❌ Erro na autenticação:', error);
+      setError(error.message || 'Erro ao autenticar. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -65,6 +83,8 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
+    console.log('🔐 Iniciando login com Google...');
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -73,9 +93,15 @@ export default function LoginPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro no Google OAuth:', error);
+        throw error;
+      }
+
+      console.log('✅ Redirecionando para Google...');
     } catch (error: any) {
-      setError(error.message);
+      console.error('❌ Erro no Google login:', error);
+      setError(error.message || 'Erro ao fazer login com Google.');
       setLoading(false);
     }
   }

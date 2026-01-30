@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# Script Final - Correção Route Groups + Signup
-# Resolve 404 em /dashboard e erro no signup
+# Script - Limpar e Testar Login
 
-echo "🔧 Aplicando correções finais..."
+echo "🧹 Limpando e preparando para teste de login..."
 echo ""
 
 # Cores
@@ -19,179 +18,51 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# Backup
-echo -e "${BLUE}💾 Criando backup...${NC}"
-BACKUP_DIR=".backup/final_$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$BACKUP_DIR"
-
-if [ -f "middleware.ts" ]; then
-    cp middleware.ts "$BACKUP_DIR/"
-    echo -e "${GREEN}✓ Backup de middleware.ts${NC}"
-fi
-
-if [ -f "app/auth/callback/route.ts" ]; then
-    cp app/auth/callback/route.ts "$BACKUP_DIR/"
-    echo -e "${GREEN}✓ Backup de callback/route.ts${NC}"
-fi
-
-echo ""
-
-# Atualizar middleware
-echo -e "${BLUE}📝 Atualizando middleware.ts...${NC}"
-cat > middleware.ts << 'EOF'
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
-
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({ name, value: '', ...options });
-          response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
-
-  const publicRoutes = ['/login', '/signup', '/auth/callback', '/auth/confirm'];
-  const protectedRoutes = ['/assistentes', '/funcoes', '/saldo', '/historico', '/credits', '/perfil', '/pacotes', '/faqs'];
-
-  const isPublicRoute = publicRoutes.includes(pathname);
-  const isProtectedRoute = protectedRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`));
-
-  if (isProtectedRoute && !user) {
-    const redirectUrl = new URL('/login', request.url);
-    redirectUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  if (user && (pathname === '/login' || pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  return response;
-}
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)'],
-};
-EOF
-
-echo -e "${GREEN}✓ middleware.ts atualizado${NC}"
-echo ""
-
-# Atualizar callback
-echo -e "${BLUE}📝 Atualizando app/auth/callback/route.ts...${NC}"
-mkdir -p app/auth/callback
-
-cat > app/auth/callback/route.ts << 'EOF'
-import { createClient } from '@/lib/supabase-server';
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-
-export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') ?? '/';
-
-  if (code) {
-    try {
-      const cookieStore = await cookies();
-      const supabase = createClient();
-
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-      if (error) {
-        console.error('❌ Erro ao trocar code por session:', error);
-        return NextResponse.redirect(new URL('/login?error=auth_error', requestUrl.origin));
-      }
-
-      if (data.session) {
-        console.log('✅ Sessão criada:', data.session.user.email);
-        return NextResponse.redirect(new URL(next, requestUrl.origin));
-      }
-    } catch (error) {
-      console.error('❌ Erro no callback:', error);
-      return NextResponse.redirect(new URL('/login?error=callback_error', requestUrl.origin));
-    }
-  }
-
-  return NextResponse.redirect(new URL('/login', requestUrl.origin));
-}
-EOF
-
-echo -e "${GREEN}✓ app/auth/callback/route.ts atualizado${NC}"
-echo ""
-
-# Buscar user_credits no código
-echo -e "${BLUE}🔍 Buscando inserções em user_credits...${NC}"
-FOUND=$(grep -r "user_credits" app/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "FROM" | grep -v "node_modules" || true)
-
-if [ -n "$FOUND" ]; then
-    echo -e "${YELLOW}⚠️  Encontrado código que menciona user_credits:${NC}"
-    echo "$FOUND"
-    echo ""
-    echo -e "${YELLOW}⚠️  AÇÃO MANUAL NECESSÁRIA:${NC}"
-    echo "   Verifique os arquivos acima e remova qualquer INSERT em user_credits"
-    echo "   Os créditos já foram criados via SQL!"
-else
-    echo -e "${GREEN}✓ Nenhuma inserção em user_credits encontrada${NC}"
-fi
-
-echo ""
-
 # Limpar cache
 echo -e "${BLUE}🧹 Limpando cache...${NC}"
 rm -rf .next
+rm -rf node_modules/.cache 2>/dev/null
 echo -e "${GREEN}✓ Cache limpo${NC}"
 echo ""
 
-# Resultado
-echo -e "${GREEN}================================================${NC}"
-echo -e "${GREEN}✅ Correções aplicadas!${NC}"
-echo -e "${GREEN}================================================${NC}"
-echo ""
-echo -e "${BLUE}📋 Mudanças:${NC}"
-echo "   • middleware.ts → redireciona para '/' (não '/dashboard')"
-echo "   • callback → redireciona para '/' (não '/dashboard')"
-echo "   • Cache limpo"
-echo ""
-
-if [ -n "$FOUND" ]; then
-    echo -e "${YELLOW}⚠️  AÇÃO MANUAL:${NC}"
-    echo "   Remova inserções em user_credits dos arquivos listados acima"
+# Atualizar middleware (opcional)
+if [ -f "middleware-final.ts" ]; then
+    echo -e "${BLUE}📝 Atualizar middleware? (s/n)${NC}"
+    read -p "" -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Ss]$ ]]; then
+        cp middleware-final.ts middleware.ts
+        echo -e "${GREEN}✓ middleware.ts atualizado${NC}"
+    fi
     echo ""
 fi
 
-echo -e "${BLUE}🧪 Testar:${NC}"
+# Resultado
+echo -e "${GREEN}================================================${NC}"
+echo -e "${GREEN}✅ Preparado para testar!${NC}"
+echo -e "${GREEN}================================================${NC}"
+echo ""
+echo -e "${YELLOW}🔴 ANTES DE TESTAR:${NC}"
+echo ""
+echo "1. ${BLUE}Limpar cookies do navegador:${NC}"
+echo "   • Abra DevTools (F12)"
+echo "   • Application → Clear site data"
+echo "   • Ou use modo incógnito (Ctrl+Shift+N)"
+echo ""
+echo "2. ${BLUE}Iniciar servidor:${NC}"
 echo "   ${BLUE}npm run dev${NC}"
 echo ""
-echo "   1. http://localhost:3000/ → Dashboard (se logado)"
-echo "   2. http://localhost:3000/login → Login"
-echo "   3. http://localhost:3000/signup → Signup (sem erro)"
-echo "   4. Console (F12) → Sem erros"
+echo "3. ${BLUE}Testar login:${NC}"
+echo "   • Abra http://localhost:3000/login"
+echo "   • ${GREEN}Deve permanecer em /login (não redirecionar)${NC}"
+echo "   • Abra Console (F12)"
+echo "   • Preencha email e senha"
+echo "   • Clique 'Entrar'"
+echo "   • Veja logs no console:"
+echo "     ${GREEN}✅ 🔑 Fazendo login...${NC}"
+echo "     ${GREEN}✅ ✅ Login bem-sucedido!${NC}"
+echo "     ${GREEN}✅ 🔄 Redirecionando para /...${NC}"
 echo ""
-echo "💾 Backup em: ${BLUE}$BACKUP_DIR${NC}"
+echo -e "${BLUE}💡 Dica: Use modo incógnito para evitar cache!${NC}"
 echo ""
-echo -e "${GREEN}🚀 Pronto para testar!${NC}"
+echo -e "${GREEN}🚀 Pronto!${NC}"

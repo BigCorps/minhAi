@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Rotas públicas (não precisam autenticação)
-  const publicRoutes = ['/login', '/signup', '/auth/callback', '/auth/confirm'];
+  const publicRoutes = ['/login', '/auth/callback', '/auth/confirm'];
 
   // Rotas protegidas (precisam autenticação)
   const protectedRoutes = [
@@ -60,14 +60,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Se usuário está logado e tenta acessar login/signup → redirecionar para raiz
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  // Se usuário está logado e tenta acessar login → redirecionar para raiz
+  if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Se é raiz "/" e usuário NÃO está logado → permitir (landing page)
-  // Se é raiz "/" e usuário ESTÁ logado → permitir (dashboard)
-  // Isso funciona porque app/(dashboard)/page.tsx é acessível em "/"
+  // "/" não redireciona - pode ser landing page OU dashboard dependendo de estar logado
 
   return response;
 }

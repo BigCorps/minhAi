@@ -1,67 +1,134 @@
+// lib/vosk.ts
 import * as Vosk from "vosk-browser";
 
 let model: any = null;
+let isDownloading = false;
 
 export async function loadVosk(onProgress?: (progress: number) => void) {
   if (model) {
     console.log('✅ Modelo Vosk já carregado (cache)');
+    if (onProgress) onProgress(100);
     return model;
   }
   
   try {
-    // ✅ USANDO PROXY NEXT.JS PARA CONTORNAR CORS
-    // O Next.js baixa o modelo do servidor oficial e serve para o cliente
     const modelUrl = "/api/vosk-proxy";
     
-    console.log('📦 Iniciando download do modelo Vosk via proxy...');
-    console.log('📂 URL:', modelUrl);
+    console.log('🔍 Verificando cache do Vosk...');
+    
+    // Verificar se já está no cache do navegador
+    const cacheCheck = await checkVoskCache(modelUrl);
+    
+    if (cacheCheck.inCache) {
+      console.log('✅ Modelo encontrado no cache! Carregando instantaneamente...');
+      isDownloading = false;
+      
+      // Carrega do cache (rápido)
+      model = await Vosk.createModel(modelUrl);
+      
+      if (onProgress) onProgress(100);
+      console.log('✅ Modelo carregado do cache');
+      return model;
+    }
+    
+    // Não está no cache, vai baixar
+    console.log('📦 Cache não encontrado. Iniciando download...');
     console.log('⏳ Primeira vez pode demorar ~30-60s (download de 40MB)...');
+    isDownloading = true;
     
     const startTime = Date.now();
     
-    // O Vosk vai baixar e extrair automaticamente
+    // Progresso estimado durante download
+    let estimatedProgress = 0;
+    const progressInterval = setInterval(() => {
+      if (isDownloading && estimatedProgress < 95) {
+        const increment = estimatedProgress < 30 ? 2 : estimatedProgress < 70 ? 4 : 1;
+        estimatedProgress = Math.min(estimatedProgress + increment, 95);
+        if (onProgress) onProgress(Math.floor(estimatedProgress));
+      }
+    }, 1000);
+    
+    // Download
     model = await Vosk.createModel(modelUrl);
     
+    clearInterval(progressInterval);
+    isDownloading = false;
+    
     const loadTime = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`✅ Modelo carregado em ${loadTime}s`);
+    console.log(`✅ Modelo baixado e carregado em ${loadTime}s`);
     
     if (onProgress) onProgress(100);
     
     return model;
+    
   } catch (error: any) {
+    isDownloading = false;
     console.error('❌ Erro ao carregar Vosk:', error);
     console.error('❌ Mensagem:', error.message);
-    console.error('❌ Stack:', error.stack);
-    
     throw error;
   }
 }
 
-export async function loadVoskWithProgress(onProgress: (progress: number) => void) {
-  let estimatedProgress = 0;
-  
-  const progressInterval = setInterval(() => {
-    if (estimatedProgress < 95) {
-      // Progresso mais lento no início (download)
-      const increment = estimatedProgress < 30 ? 2 : estimatedProgress < 70 ? 4 : 1;
-      estimatedProgress = Math.min(estimatedProgress + increment, 95);
-      onProgress(Math.floor(estimatedProgress));
-      console.log(`📊 Progresso: ${Math.floor(estimatedProgress)}%`);
-    }
-  }, 1000);
-
+/**
+ * Verifica se o modelo Vosk está no cache do navegador
+ */
+async function checkVoskCache(url: string): Promise<{ inCache: boolean }> {
   try {
-    const result = await loadVosk((p) => {
-      if (p === 100) {
-        clearInterval(progressInterval);
-        onProgress(100);
+    // Tentar abrir o cache do navegador
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      
+      for (const cacheName of cacheNames) {
+        const cache = await caches.open(cacheName);
+        const cachedResponse = await cache.match(url);
+        
+        if (cachedResponse) {
+          console.log('✅ Cache encontrado:', cacheName);
+          return { inCache: true };
+        }
       }
-    });
-    clearInterval(progressInterval);
-    onProgress(100);
-    return result;
+    }
+    
+    return { inCache: false };
+    
   } catch (error) {
-    clearInterval(progressInterval);
-    throw error;
+    console.log('⚠️ Erro ao verificar cache, assumindo não cached');
+    return { inCache: false };
+  }
+}
+
+/**
+ * Wrapper com callback de progresso
+ */
+export async function loadVoskWithProgress(
+  onProgress: (progress: number, downloading: boolean) => void
+): Promise<any> {
+  
+  // Callback wrapper que indica se está baixando
+  const progressCallback = (progress: number) => {
+    onProgress(progress, isDownloading);
+  };
+  
+  return loadVosk(progressCallback);
+}
+
+/**
+ * Limpar cache do Vosk (para debug/teste)
+ */
+export async function clearVoskCache() {
+  try {
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      
+      for (const cacheName of cacheNames) {
+        await caches.delete(cacheName);
+        console.log('🗑️ Cache limpo:', cacheName);
+      }
+      
+      console.log('✅ Todo cache limpo');
+      model = null;
+    }
+  } catch (error) {
+    console.error('❌ Erro ao limpar cache:', error);
   }
 }

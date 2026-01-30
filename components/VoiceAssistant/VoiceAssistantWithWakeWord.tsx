@@ -9,7 +9,7 @@ import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
-import { loadVosk } from '@/lib/vosk';
+import { loadVoskWithProgress } from '@/lib/vosk';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -40,6 +40,7 @@ export function VoiceAssistantWithWakeWord({
   const [showStartButton, setShowStartButton] = useState(true);
   const [voskReady, setVoskReady] = useState(false);
   const [voskLoading, setVoskLoading] = useState(false);
+  const [voskProgress, setVoskProgress] = useState(0);
 
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
@@ -115,17 +116,45 @@ export function VoiceAssistantWithWakeWord({
     if (isMobile) {
       console.log('📱 Mobile detectado - Carregando Vosk...');
       setVoskLoading(true);
-      loadVosk()
+      setVoskProgress(0);
+      
+      // Timeout de segurança (60 segundos)
+      const timeout = setTimeout(() => {
+        if (voskLoading && !voskReady) {
+          console.error('⏰ Timeout ao carregar Vosk (60s)');
+          setError('O carregamento está demorando muito. Verifique sua conexão e recarregue a página.');
+          setVoskLoading(false);
+        }
+      }, 60000);
+      
+      loadVoskWithProgress((progress) => {
+        console.log(`📊 Progresso Vosk: ${progress}%`);
+        setVoskProgress(progress);
+      })
         .then(model => {
+          clearTimeout(timeout);
           voskModelRef.current = model;
           setVoskReady(true);
           setVoskLoading(false);
+          setVoskProgress(100);
           console.log('✅ Vosk pronto para uso!');
         })
         .catch(err => {
+          clearTimeout(timeout);
           console.error('❌ Erro ao carregar Vosk:', err);
-          setError('Erro ao carregar assistente de voz. Recarregue a página.');
+          
+          // Verificar se é erro de rede ou arquivo não encontrado
+          const errorMsg = err.message || err.toString();
+          if (errorMsg.includes('404') || errorMsg.includes('not found')) {
+            setError('Modelo de voz não encontrado. Entre em contato com o suporte.');
+          } else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
+            setError('Erro de conexão. Verifique sua internet e recarregue a página.');
+          } else {
+            setError('Erro ao carregar assistente de voz. Recarregue a página.');
+          }
+          
           setVoskLoading(false);
+          setVoskProgress(0);
         });
     }
     
@@ -1797,11 +1826,30 @@ if (isMaximized) {
             }`}>{error}</p>
           )}
           {isMobile && voskLoading && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                Preparando reconhecimento de voz...
-              </p>
+            <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
+                  Preparando reconhecimento de voz...
+                </p>
+              </div>
+              
+              {/* Barra de progresso */}
+              <div className="w-full">
+                <div className={`w-full h-2 rounded-full overflow-hidden ${
+                  theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+                }`}>
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-300 ease-out"
+                    style={{ width: `${voskProgress}%` }}
+                  ></div>
+                </div>
+                <p className={`text-xs text-center mt-2 ${
+                  theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+                }`}>
+                  {voskProgress}% carregado
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -1868,11 +1916,30 @@ if (isMaximized) {
                 Modo Alexa: use palavra de ativação
               </p>
               {isMobile && voskLoading && (
-                <div className="flex items-center justify-center gap-2 mt-4">
-                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className={`text-xs ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                    Preparando reconhecimento de voz...
-                  </p>
+                <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className={`text-xs ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
+                      Preparando reconhecimento de voz...
+                    </p>
+                  </div>
+                  
+                  {/* Barra de progresso */}
+                  <div className="w-full">
+                    <div className={`w-full h-2 rounded-full overflow-hidden ${
+                      theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+                    }`}>
+                      <div 
+                        className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-300 ease-out"
+                        style={{ width: `${voskProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className={`text-xs text-center mt-2 ${
+                      theme === 'dark' ? 'text-white/50' : 'text-gray-500'
+                    }`}>
+                      {voskProgress}% carregado
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

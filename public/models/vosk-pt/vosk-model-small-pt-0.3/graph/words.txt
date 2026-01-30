@@ -1,0 +1,7 @@
+<eps> 0
+<unk> 1
+a 2
+de 3
+e 4
+o 5
+que 6

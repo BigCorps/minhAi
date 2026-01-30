@@ -49,3 +49,36 @@ export async function loadVosk(onProgress?: (progress: number) => void) {
     throw error;
   }
 }
+
+// Função auxiliar para simular progresso durante o download
+export async function loadVoskWithProgress(onProgress: (progress: number) => void) {
+  let progress = 0;
+  let estimatedProgress = 0;
+  
+  // Simular progresso de forma mais realista
+  const progressInterval = setInterval(() => {
+    if (estimatedProgress < 95) {
+      // Progresso mais lento no início, mais rápido no meio
+      const increment = estimatedProgress < 30 ? 3 : estimatedProgress < 70 ? 5 : 2;
+      estimatedProgress = Math.min(estimatedProgress + increment, 95);
+      onProgress(Math.floor(estimatedProgress));
+      console.log(`📊 Progresso estimado: ${Math.floor(estimatedProgress)}%`);
+    }
+  }, 800);
+
+  try {
+    const result = await loadVosk((p) => {
+      if (p === 100) {
+        clearInterval(progressInterval);
+        onProgress(100);
+      }
+    });
+    clearInterval(progressInterval);
+    onProgress(100);
+    return result;
+  } catch (error) {
+    clearInterval(progressInterval);
+    console.error('❌ Falha no loadVoskWithProgress');
+    throw error;
+  }
+}

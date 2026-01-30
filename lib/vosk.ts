@@ -9,13 +9,31 @@ export async function loadVosk(onProgress?: (progress: number) => void) {
   }
   
   try {
+    const modelPath = "/models/vosk-pt/vosk-model-small-pt-0.3/";
     console.log('📦 Iniciando download do modelo Vosk...');
-    console.log('📂 Caminho: /models/vosk-pt/vosk-model-small-pt-0.3');
+    console.log('📂 Caminho:', modelPath);
+    
+    // ✅ TESTE: Verificar se arquivos existem
+    const testFiles = [
+      modelPath + 'conf/model.conf',
+      modelPath + 'conf/mfcc.conf',
+      modelPath + 'am/final.mdl',
+      modelPath + 'graph/Gr.fst'
+    ];
+    
+    for (const file of testFiles) {
+      try {
+        const response = await fetch(file);
+        console.log(`${response.ok ? '✅' : '❌'} ${file} - Status: ${response.status}`);
+      } catch (e) {
+        console.error(`❌ Erro ao testar ${file}:`, e);
+      }
+    }
     
     const startTime = Date.now();
     
     // Criar modelo
-    model = await Vosk.createModel("/models/vosk-pt/vosk-model-small-pt-0.3/");
+    model = await Vosk.createModel(modelPath);
     
     const loadTime = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`✅ Modelo carregado em ${loadTime}s`);
@@ -28,39 +46,6 @@ export async function loadVosk(onProgress?: (progress: number) => void) {
     console.error('❌ Tipo do erro:', error.constructor.name);
     console.error('❌ Mensagem:', error.message);
     console.error('❌ Stack:', error.stack);
-    throw error;
-  }
-}
-
-// Função auxiliar para simular progresso durante o download
-export async function loadVoskWithProgress(onProgress: (progress: number) => void) {
-  let progress = 0;
-  let estimatedProgress = 0;
-  
-  // Simular progresso de forma mais realista
-  const progressInterval = setInterval(() => {
-    if (estimatedProgress < 95) {
-      // Progresso mais lento no início, mais rápido no meio
-      const increment = estimatedProgress < 30 ? 3 : estimatedProgress < 70 ? 5 : 2;
-      estimatedProgress = Math.min(estimatedProgress + increment, 95);
-      onProgress(Math.floor(estimatedProgress));
-      console.log(`📊 Progresso estimado: ${Math.floor(estimatedProgress)}%`);
-    }
-  }, 800);
-
-  try {
-    const result = await loadVosk((p) => {
-      if (p === 100) {
-        clearInterval(progressInterval);
-        onProgress(100);
-      }
-    });
-    clearInterval(progressInterval);
-    onProgress(100);
-    return result;
-  } catch (error) {
-    clearInterval(progressInterval);
-    console.error('❌ Falha no loadVoskWithProgress');
     throw error;
   }
 }

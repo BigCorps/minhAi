@@ -30,7 +30,7 @@ export function VoiceAssistantWithWakeWord({
   isMaximized = false,
   onAssistantStart,
 }: VoiceAssistantWithWakeWordProps) {
-  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isMobile = true;
   
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

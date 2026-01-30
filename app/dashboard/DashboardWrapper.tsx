@@ -1,7 +1,7 @@
 // app/(dashboard)/DashboardWrapper.tsx
 'use client';
 
-import { useTheme } from '@/contexts/ThemeContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 
 interface DashboardWrapperProps {
@@ -9,7 +9,7 @@ interface DashboardWrapperProps {
   children: React.ReactNode;
 }
 
-export function DashboardWrapper({ user, children }: DashboardWrapperProps) {
+function DashboardContent({ user, children }: DashboardWrapperProps) {
   const { theme } = useTheme();
 
   return (
@@ -22,5 +22,15 @@ export function DashboardWrapper({ user, children }: DashboardWrapperProps) {
         {children}
       </main>
     </div>
+  );
+}
+
+export function DashboardWrapper({ user, children }: DashboardWrapperProps) {
+  return (
+    <ThemeProvider>
+      <DashboardContent user={user}>
+        {children}
+      </DashboardContent>
+    </ThemeProvider>
   );
 }

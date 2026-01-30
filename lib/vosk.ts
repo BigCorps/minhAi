@@ -1,54 +1,26 @@
 import * as Vosk from "vosk-browser";
 
-// ✅ INTERCEPTOR: Capturar todas requisições do Vosk
-const originalFetch = window.fetch;
-window.fetch = async (...args) => {
-  const [url] = args;
-  console.log('🔍 Vosk tentando buscar:', url);
-  
-  try {
-    const response = await originalFetch(...args);
-    console.log(`${response.ok ? '✅' : '❌'} ${url} - Status: ${response.status}`);
-    return response;
-  } catch (error) {
-    console.error('❌ Erro ao buscar:', url, error);
-    throw error;
-  }
-};
-
 let model: any = null;
 
-export async function loadVosk(onProgress?: (progress: number) => void) {  if (model) {
+export async function loadVosk(onProgress?: (progress: number) => void) {
+  if (model) {
     console.log('✅ Modelo Vosk já carregado (cache)');
     return model;
   }
   
   try {
-    const modelPath = "/models/vosk-pt/vosk-model-small-pt-0.3/";
+    // ✅ USANDO ALPHACEPHEI (SERVIDOR OFICIAL DO VOSK)
+    // Este é o servidor oficial que hospeda todos os modelos completos
+    const modelUrl = "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip";
+    
     console.log('📦 Iniciando download do modelo Vosk...');
-    console.log('📂 Caminho:', modelPath);
-    
-    // ✅ TESTE: Verificar se arquivos existem
-    const testFiles = [
-      modelPath + 'conf/model.conf',
-      modelPath + 'conf/mfcc.conf',
-      modelPath + 'am/final.mdl',
-      modelPath + 'graph/Gr.fst'
-    ];
-    
-    for (const file of testFiles) {
-      try {
-        const response = await fetch(file);
-        console.log(`${response.ok ? '✅' : '❌'} ${file} - Status: ${response.status}`);
-      } catch (e) {
-        console.error(`❌ Erro ao testar ${file}:`, e);
-      }
-    }
+    console.log('📂 URL:', modelUrl);
+    console.log('⏳ Download pode demorar (modelo ~40MB)...');
     
     const startTime = Date.now();
     
-    // Criar modelo
-    model = await Vosk.createModel("https://pub-1d470f67ff584dad91b19d3502f130e6.r2.dev");
+    // O Vosk vai baixar e extrair automaticamente o ZIP
+    model = await Vosk.createModel(modelUrl);
     
     const loadTime = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`✅ Modelo carregado em ${loadTime}s`);
@@ -57,27 +29,36 @@ export async function loadVosk(onProgress?: (progress: number) => void) {  if (m
     
     return model;
   } catch (error: any) {
-    console.error('❌ Erro detalhado ao carregar Vosk:', error);
-    console.error('❌ Tipo do erro:', error.constructor.name);
+    console.error('❌ Erro ao carregar Vosk:', error);
     console.error('❌ Mensagem:', error.message);
-    console.error('❌ Stack:', error.stack);
-    throw error;
+    
+    // Tentar fallback para servidor alternativo
+    console.log('🔄 Tentando servidor alternativo...');
+    try {
+      const fallbackUrl = "https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-model-small-pt-0.3.zip";
+      console.log('📂 Fallback URL:', fallbackUrl);
+      
+      model = await Vosk.createModel(fallbackUrl);
+      console.log('✅ Modelo carregado via fallback');
+      
+      if (onProgress) onProgress(100);
+      return model;
+    } catch (fallbackError: any) {
+      console.error('❌ Fallback também falhou:', fallbackError.message);
+      throw error;
+    }
   }
 }
 
-// Função auxiliar para simular progresso durante o download
 export async function loadVoskWithProgress(onProgress: (progress: number) => void) {
-  let progress = 0;
   let estimatedProgress = 0;
   
-  // Simular progresso de forma mais realista
   const progressInterval = setInterval(() => {
     if (estimatedProgress < 95) {
-      // Progresso mais lento no início, mais rápido no meio
       const increment = estimatedProgress < 30 ? 3 : estimatedProgress < 70 ? 5 : 2;
       estimatedProgress = Math.min(estimatedProgress + increment, 95);
       onProgress(Math.floor(estimatedProgress));
-      console.log(`📊 Progresso estimado: ${Math.floor(estimatedProgress)}%`);
+      console.log(`📊 Progresso: ${Math.floor(estimatedProgress)}%`);
     }
   }, 800);
 
@@ -93,7 +74,6 @@ export async function loadVoskWithProgress(onProgress: (progress: number) => voi
     return result;
   } catch (error) {
     clearInterval(progressInterval);
-    console.error('❌ Falha no loadVoskWithProgress');
     throw error;
   }
 }

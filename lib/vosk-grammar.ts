@@ -1,234 +1,208 @@
-// lib/vosk-grammar.ts
+// lib/vosk-corrections.ts
 
 /**
- * Grammar customizada para melhorar reconhecimento do Vosk
- * Adicione aqui palavras específicas do seu domínio que o Vosk deve priorizar
+ * Dicionário EXPANDIDO de correções para Vosk
+ * Captura erros comuns de reconhecimento em português
  */
 
-export const VOSK_CUSTOM_GRAMMAR = [
-  // === PALAVRAS-CHAVE PIX ===
-  '[unk]',
-  'pix',
-  'pics',
-  'pic',
-  'picos',
-  'kit', // para normalizar depois
-  
-  // === COMANDOS FINANCEIROS ===
-  'gerar',
-  'criar',
-  'fazer',
-  'cobrança',
-  'cobranca',
-  'cobrar',
-  'pagamento',
-  'pagar',
-  'receber',
-  
-  // === VALORES ===
-  'reais',
-  'real',
-  'centavos',
-  'valor',
-  
-  // === NÚMEROS (0-100) ===
-  'zero', 'um', 'dois', 'tres', 'três', 'quatro', 'cinco',
-  'seis', 'sete', 'oito', 'nove', 'dez',
-  'onze', 'doze', 'treze', 'catorze', 'quinze',
-  'dezesseis', 'dezessete', 'dezoito', 'dezenove',
-  'vinte', 'trinta', 'quarenta', 'cinquenta',
-  'sessenta', 'setenta', 'oitenta', 'noventa', 'cem',
-  
-  // === NÚMEROS GRANDES ===
-  'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos',
-  'seiscentos', 'setecentos', 'oitocentos', 'novecentos',
-  'mil', 'milhão', 'milhões',
-  
-  // === WHATSAPP ===
-  'whatsapp',
-  'whats',
-  'zap',
-  'wassap',
-  'número',
-  'numero',
-  'contato',
-  'telefone',
-  
-  // === INSTAGRAM ===
-  'instagram',
-  'insta',
-  'arroba',
-  'perfil',
-  'rede',
-  'social',
-  
-  // === AÇÕES GERAIS ===
-  'mostrar',
-  'mostre',
-  'mostra',
-  'exibir',
-  'exiba',
-  'ver',
-  'qual',
-  'quais',
-  'me',
-  'o',
-  'a',
-  'da',
-  'do',
-  'de',
-  'para',
-  
-  // === CONFIRMAÇÃO ===
-  'confirmar',
-  'confirmado',
-  'confirma',
-  'paguei',
-  'já',
-  'ok',
-  'sim',
-  'certo',
-  'correto',
-  
-  // === CANCELAMENTO ===
-  'cancelar',
-  'cancela',
-  'desistir',
-  'não',
-  'nao',
-  'nunca',
-  'quero',
-  'fechar',
-  'fecha',
-  
-  // === WAKE WORDS ===
-  'gerente',
-  'atendente',
-  'assistente',
-  'oi',
-  'olá',
-  'ola',
-  'eai',
-  'ei',
-  
-  // === COMANDOS STOP ===
-  'pare',
-  'para',
-  'parar',
-  'cala',
-  'boca',
-  'silencio',
-  'silêncio',
-  'stop',
-  'chega',
-  'tchau',
-  'obrigado',
-  'obrigada',
-  'valeu',
-  
-  // === CONECTORES E PREPOSIÇÕES ===
-  'com',
-  'sem',
-  'em',
-  'no',
-  'na',
-  'pelo',
-  'pela',
-  'ao',
-  'à',
-  'por',
-  'favor',
-  
-  // === VERBOS COMUNS ===
-  'quero',
-  'preciso',
-  'gostaria',
-  'poderia',
-  'pode',
-  'consegue',
-  'ajuda',
-  'ajudar',
-  
-  // === SAUDAÇÕES ===
-  'boa',
-  'dia',
-  'tarde',
-  'noite',
-  'bom',
-  'tudo',
-  'bem',
-  
-  // === PERGUNTAS ===
-  'como',
-  'quando',
-  'onde',
-  'porque',
-  'porquê',
-  'quanto',
-  'quem',
-  'que',
-  'o que',
-  
-  // === ADICIONE AQUI PALAVRAS ESPECÍFICAS DO SEU NEGÓCIO ===
-  // Exemplo para delivery:
-  // 'pizza', 'hamburguer', 'lanche', 'entrega', 'cardapio'
-  
-  // Exemplo para clínica:
-  // 'consulta', 'agendamento', 'horario', 'doutor', 'exame'
-];
-
-/**
- * Dicionário de correções pós-processamento
- * Normaliza erros conhecidos do Vosk
- */
 export const VOSK_CORRECTIONS: { [key: string]: string } = {
-  // PIX
+  // ========================================
+  // PIX - Todas as variações possíveis
+  // ========================================
+  'pix': 'pix',
+  'pics': 'pix',
+  'pic': 'pix',
   'picos': 'pix',
   'kit': 'pix',
-  'pic': 'pix',
-  'picks': 'pix',
-  'pics': 'pix',
   'pis': 'pix',
   'pitch': 'pix',
+  'piche': 'pix',
+  'pica': 'pix',
+  'pia': 'pix',
+  'picks': 'pix',
+  'pix': 'pix',
+  'mix': 'pix',
+  'fix': 'pix',
   
-  // WhatsApp
+  // ========================================
+  // WHATSAPP - Muitas variações
+  // ========================================
+  'whatsapp': 'whatsapp',
+  'whats app': 'whatsapp',
+  'whats': 'whatsapp',
+  'what\'s app': 'whatsapp',
   'whats up': 'whatsapp',
   'wassap': 'whatsapp',
-  "what's app": 'whatsapp',
+  'watzap': 'whatsapp',
   'watts': 'whatsapp',
-  'zap zap': 'zap',
+  'watts app': 'whatsapp',
+  'zap': 'whatsapp',
+  'zap zap': 'whatsapp',
+  'zapzap': 'whatsapp',
+  'zapp': 'whatsapp',
+  'sap': 'whatsapp',
+  'sapp': 'whatsapp',
+  'uóts': 'whatsapp',
+  'uóts app': 'whatsapp',
+  'whats app': 'whatsapp',
+  'what sap': 'whatsapp',
+  'what\'s up': 'whatsapp',
+  'what up': 'whatsapp',
   
-  // Instagram
+  // Especial: "lote" (comum no Vosk BR confundir com WhatsApp)
+  'lote': 'whatsapp',
+  'lotes': 'whatsapp',
+  'do lote': 'whatsapp',
+  'o lote': 'whatsapp',
+  
+  // ========================================
+  // INSTAGRAM - Variações
+  // ========================================
+  'instagram': 'instagram',
+  'insta': 'instagram',
   'insta gram': 'instagram',
   'instagramo': 'instagram',
+  'instagran': 'instagram',
+  'instagrama': 'instagram',
+  'inta': 'instagram',
+  'instá': 'instagram',
   
-  // Números
-  'dois mil': '2000',
-  'três mil': '3000',
-  'cinco mil': '5000',
-  'dez mil': '10000',
+  // ========================================
+  // COBRANÇA/PIX (contexto)
+  // ========================================
+  'cobrança': 'cobrança',
+  'cobranca': 'cobrança',
+  'cobransa': 'cobrança',
+  'cobrânça': 'cobrança',
   
-  // Stop commands
+  // ========================================
+  // NÚMEROS POR EXTENSO (expansão)
+  // ========================================
+  'zero': '0',
+  'um': '1',
+  'uma': '1',
+  'dois': '2',
+  'duas': '2',
+  'três': '3',
+  'tres': '3',
+  'quatro': '4',
+  'cinco': '5',
+  'seis': '6',
+  'sete': '7',
+  'oito': '8',
+  'nove': '9',
+  'dez': '10',
+  'onze': '11',
+  'doze': '12',
+  'treze': '13',
+  'catorze': '14',
+  'quatorze': '14',
+  'quinze': '15',
+  'dezesseis': '16',
+  'dezessete': '17',
+  'dezoito': '18',
+  'dezenove': '19',
+  'vinte': '20',
+  'trinta': '30',
+  'quarenta': '40',
+  'cinquenta': '50',
+  'sessenta': '60',
+  'setenta': '70',
+  'oitenta': '80',
+  'noventa': '90',
+  'cem': '100',
+  'cento': '100',
+  'duzentos': '200',
+  'trezentos': '300',
+  'quatrocentos': '400',
+  'quinhentos': '500',
+  'seiscentos': '600',
+  'setecentos': '700',
+  'oitocentos': '800',
+  'novecentos': '900',
+  'mil': '1000',
+  
+  // Compostos comuns
+  'vinte e um': '21',
+  'vinte e dois': '22',
+  'trinta e cinco': '35',
+  'cinquenta reais': '50 reais',
+  'cem reais': '100 reais',
+  
+  // ========================================
+  // STOP COMMANDS
+  // ========================================
   'calça boca': 'cala boca',
   'para de': 'pare de',
   'para aí': 'pare aí',
+  'pára': 'pare',
   
-  // Confirmação
+  // ========================================
+  // CONFIRMAÇÃO
+  // ========================================
   'tá bom': 'ok',
   'ta bom': 'ok',
+  'tá': 'ok',
+  'ta': 'ok',
   'beleza': 'ok',
+  'blz': 'ok',
+  'tranquilo': 'ok',
+  'confirmo': 'confirmar',
+  'confirmado': 'confirmar',
 };
 
 /**
  * Normaliza transcrição do Vosk aplicando correções
+ * VERSÃO MELHORADA com regex mais robusta
  */
 export function normalizeVoskTranscript(text: string): string {
   let normalized = text.toLowerCase().trim();
   
   // Aplicar correções do dicionário
   for (const [wrong, correct] of Object.entries(VOSK_CORRECTIONS)) {
-    const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+    // Usar regex com word boundaries E lookahead/lookbehind flexível
+    // Captura: "do lote" → "do whatsapp"
+    const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, 'gi');
     normalized = normalized.replace(regex, correct);
+  }
+  
+  return normalized;
+}
+
+/**
+ * Escape special regex characters
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * ALTERNATIVA: Fuzzy matching agressivo
+ * Para casos onde Vosk erra muito
+ */
+export function fuzzyNormalize(text: string): string {
+  let normalized = text.toLowerCase().trim();
+  
+  // WhatsApp: qualquer coisa com "at" ou "zap"
+  if (/\b(w[aeiou]*ts?|zap|lote|sap)\b/i.test(normalized)) {
+    // Se tem "número" ou "contato" perto, é WhatsApp
+    if (/número|numero|contato|telefone/i.test(normalized)) {
+      normalized = normalized.replace(/\b(w[aeiou]*ts?|zap|lote|sap)\b/gi, 'whatsapp');
+    }
+  }
+  
+  // Instagram: qualquer coisa com "insta"
+  if (/\bint?[aeiou]*s?t[aeiou]*\b/i.test(normalized)) {
+    if (/perfil|arroba|rede|social/i.test(normalized)) {
+      normalized = normalized.replace(/\bint?[aeiou]*s?t[aeiou]*\b/gi, 'instagram');
+    }
+  }
+  
+  // PIX: qualquer coisa com "p" + vogal + "x" ou "cs"
+  if (/\bp[aeiou]*[xcs]+\b/i.test(normalized)) {
+    if (/gerar|criar|fazer|cobrança|cobrar|pagar/i.test(normalized)) {
+      normalized = normalized.replace(/\bp[aeiou]*[xcs]+\b/gi, 'pix');
+    }
   }
   
   return normalized;

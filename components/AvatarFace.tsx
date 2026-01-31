@@ -34,6 +34,9 @@ interface AvatarFaceProps {
   onCancelPix?: () => Promise<void>;
 }
 
+// 🎭 TIPOS DE EXPRESSÕES PARA O SISTEMA ALEATÓRIO
+type Expression = 'idle' | 'blink' | 'smile' | 'tired' | 'yawn' | 'sleeping' | 'surprised' | 'attentive';
+
 export function AvatarFace({ 
   isListening, 
   isSpeaking, 
@@ -85,9 +88,11 @@ export function AvatarFace({
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0));
   const [isBlinking, setIsBlinking] = useState(false);
+  const [currentExpression, setCurrentExpression] = useState<Expression>('idle');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const expressionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const showFace = !isProcessing && !isSpeaking;
 
@@ -98,7 +103,7 @@ export function AvatarFace({
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
 
-  // 👁️ SISTEMA DE PISCADAS ALEATÓRIAS E NATURAIS
+  // 👁️ SISTEMA DE PISCADAS ALEATÓRIAS E NATURAIS (PRESERVADO)
   useEffect(() => {
     const scheduleNextBlink = () => {
       const nextBlinkDelay = Math.random() * 4000 + 2000;
@@ -125,7 +130,7 @@ export function AvatarFace({
       }, nextBlinkDelay);
     };
 
-    if (showFace) {
+    if (showFace && currentExpression !== 'sleeping') {
       scheduleNextBlink();
     }
 
@@ -134,7 +139,43 @@ export function AvatarFace({
         clearTimeout(blinkTimeoutRef.current);
       }
     };
-  }, [showFace]);
+  }, [showFace, currentExpression]);
+
+  // 🎭 SISTEMA DE EXPRESSÕES ALEATÓRIAS
+  useEffect(() => {
+    const expressions: Expression[] = ['smile', 'tired', 'yawn', 'sleeping', 'surprised'];
+    
+    const scheduleNextExpression = () => {
+      const delay = Math.random() * 8000 + 5000; // Entre 5 e 13 segundos
+      
+      expressionTimeoutRef.current = setTimeout(() => {
+        const randomExpr = expressions[Math.floor(Math.random() * expressions.length)];
+        setCurrentExpression(randomExpr);
+        
+        // Duração da expressão (exceto sleeping que dura mais)
+        const duration = randomExpr === 'sleeping' ? 6000 : 3000;
+        
+        setTimeout(() => {
+          setCurrentExpression('idle');
+          scheduleNextExpression();
+        }, duration);
+      }, delay);
+    };
+
+    if (showFace && !isListening) {
+      scheduleNextExpression();
+    } else if (isListening) {
+      setCurrentExpression('attentive');
+      if (expressionTimeoutRef.current) clearTimeout(expressionTimeoutRef.current);
+    } else {
+      setCurrentExpression('idle');
+      if (expressionTimeoutRef.current) clearTimeout(expressionTimeoutRef.current);
+    }
+
+    return () => {
+      if (expressionTimeoutRef.current) clearTimeout(expressionTimeoutRef.current);
+    };
+  }, [showFace, isListening]);
 
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
@@ -147,7 +188,7 @@ export function AvatarFace({
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
-  // 🎵 SIMULAR AUDIOLEVELS
+  // 🎵 SIMULAR AUDIOLEVELS (PRESERVADO)
   useEffect(() => {
     if (isSpeaking) {
       audioIntervalRef.current = setInterval(() => {
@@ -303,7 +344,8 @@ export function AvatarFace({
           style={{ 
             width: '80%',
             aspectRatio: '1 / 1',
-            boxShadow: `0 0 40px ${colors.halo}40, 0 0 80px ${colors.halo}20, 0 0 120px ${colors.halo}10` 
+            background: `radial-gradient(circle at center, ${colors.glow} 0%, transparent 70%)`,
+            opacity: 0.5
           }} 
         />
       </div>
@@ -339,7 +381,7 @@ export function AvatarFace({
         }}
       >
         
-        {/* FACE (Com Piscadas) */}
+        {/* FACE (Com Piscadas e Expressões) */}
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -367,64 +409,130 @@ export function AvatarFace({
               </filter>
             </defs>
 
-            <g filter="url(#softGlow)" className="transition-opacity duration-700">
+            <g filter="url(#softGlow)" className="transition-all duration-700">
               {/* Olho Esquerdo */}
-              {!isBlinking ? (
+              {(!isBlinking && currentExpression !== 'sleeping' && currentExpression !== 'yawn') ? (
                 <>
-                  <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-                  <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-                  <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
+                  <ellipse 
+                    cx="76" cy={currentExpression === 'tired' ? "88" : "85"} 
+                    rx={currentExpression === 'surprised' ? "16" : currentExpression === 'attentive' ? "15" : "14.4"} 
+                    ry={currentExpression === 'surprised' ? "20" : currentExpression === 'attentive' ? "18" : "17.6"} 
+                    fill="url(#eyeGradient)" opacity="0.85" 
+                    className="transition-all duration-500"
+                  />
+                  <ellipse cx="73" cy={currentExpression === 'tired' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                  <circle cx="74" cy={currentExpression === 'tired' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
                 </>
               ) : (
                 <path 
-                  d="M 62 85 Q 76 87 90 85" 
+                  d={currentExpression === 'yawn' ? "M 62 82 Q 76 78 90 82" : "M 62 85 Q 76 87 90 85"} 
                   stroke={colors.primary} 
                   strokeWidth="3.5" 
                   fill="none" 
                   strokeLinecap="round" 
                   opacity="0.85"
+                  className="transition-all duration-500"
                 />
               )}
               
               {/* Olho Direito */}
-              {!isBlinking ? (
+              {(!isBlinking && currentExpression !== 'sleeping' && currentExpression !== 'yawn') ? (
                 <>
-                  <ellipse cx="124" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-                  <ellipse cx="121" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-                  <circle cx="122" cy="81" r="3.2" fill="white" opacity="0.7" />
+                  <ellipse 
+                    cx="124" cy={currentExpression === 'tired' ? "88" : "85"} 
+                    rx={currentExpression === 'surprised' ? "16" : currentExpression === 'attentive' ? "15" : "14.4"} 
+                    ry={currentExpression === 'surprised' ? "20" : currentExpression === 'attentive' ? "18" : "17.6"} 
+                    fill="url(#eyeGradient)" opacity="0.85" 
+                    className="transition-all duration-500"
+                  />
+                  <ellipse cx="121" cy={currentExpression === 'tired' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                  <circle cx="122" cy={currentExpression === 'tired' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
                 </>
               ) : (
                 <path 
-                  d="M 110 85 Q 124 87 138 85" 
+                  d={currentExpression === 'yawn' ? "M 110 82 Q 124 78 138 82" : "M 110 85 Q 124 87 138 85"} 
                   stroke={colors.primary} 
                   strokeWidth="3.5" 
                   fill="none" 
                   strokeLinecap="round" 
                   opacity="0.85"
+                  className="transition-all duration-500"
                 />
               )}
             </g>
 
-            <g className="transition-opacity duration-700">
-              <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
-              <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
-                <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
+            <g className="transition-all duration-700">
+              {/* Sombra da Boca */}
+              <path 
+                d={
+                  currentExpression === 'smile' ? "M 66 135 Q 100 155 134 135" : 
+                  currentExpression === 'yawn' ? "M 85 140 Q 100 165 115 140" :
+                  currentExpression === 'surprised' ? "M 90 145 Q 100 160 110 145" :
+                  currentExpression === 'attentive' ? "M 80 140 Q 100 145 120 140" :
+                  "M 66 137 Q 100 152 134 137"
+                } 
+                stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} 
+                strokeWidth={currentExpression === 'yawn' ? "15" : "10"} 
+                fill="none" strokeLinecap="round" opacity="0.6" 
+                className="transition-all duration-500"
+              />
+              
+              {/* Linha Principal da Boca */}
+              <path 
+                d={
+                  currentExpression === 'smile' ? "M 68 134 Q 100 153 132 134" : 
+                  currentExpression === 'yawn' ? "M 87 139 Q 100 163 113 139" :
+                  currentExpression === 'surprised' ? "M 92 144 Q 100 158 108 144" :
+                  currentExpression === 'attentive' ? "M 82 139 Q 100 143 118 139" :
+                  "M 68 136 Q 100 150 132 136"
+                } 
+                stroke="url(#mouthDepth)" 
+                strokeWidth={currentExpression === 'yawn' ? "12" : "8"} 
+                fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)"
+                className="transition-all duration-500"
+              >
+                {!['yawn', 'surprised', 'attentive'].includes(currentExpression) && (
+                  <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
+                )}
               </path>
-              <path d="M 70 135 Q 100 147 130 135" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6">
+              
+              {/* Brilho da Boca */}
+              <path 
+                d={
+                  currentExpression === 'smile' ? "M 70 133 Q 100 150 130 133" : 
+                  currentExpression === 'yawn' ? "M 89 138 Q 100 160 111 138" :
+                  currentExpression === 'surprised' ? "M 94 143 Q 100 155 106 143" :
+                  currentExpression === 'attentive' ? "M 84 138 Q 100 141 116 138" :
+                  "M 70 135 Q 100 147 130 135"
+                } 
+                stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6"
+                className="transition-all duration-500"
+              >
                 <animate attributeName="opacity" values="0.5;0.7;0.5" dur="3s" repeatCount="indefinite" />
               </path>
             </g>
 
-            {[...Array(3)].map((_, i) => (
-              <circle key={`ambient-${i}`} cx={50 + i * 50} cy={60} r="2" fill={colors.primary} opacity="0.4">
-                <animate attributeName="cy" values="60;50;60" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.2;0.6;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
-              </circle>
-            ))}
+            {/* Partículas Ambientais (Zzz se estiver dormindo) */}
+            {currentExpression === 'sleeping' ? (
+              [...Array(3)].map((_, i) => (
+                <text key={`zzz-${i}`} x={140 + i * 15} y={60 - i * 15} fill={colors.primary} fontSize="16" fontWeight="bold" opacity="0.6">
+                  Z
+                  <animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
+                  <animate attributeName="y" values={`${60 - i * 15};${40 - i * 15}`} dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
+                </text>
+              ))
+            ) : (
+              [...Array(3)].map((_, i) => (
+                <circle key={`ambient-${i}`} cx={50 + i * 50} cy={60} r="2" fill={colors.primary} opacity="0.4">
+                  <animate attributeName="cy" values="60;50;60" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.2;0.6;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+                </circle>
+              ))
+            )}
           </svg>
         )}
 
-        {/* 🌊💫 MÚLTIPLOS ORBS FLUIDOS */}
+        {/* 🌊💫 MÚLTIPLOS ORBS FLUIDOS (PRESERVADO) */}
         {!showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
@@ -556,7 +664,7 @@ export function AvatarFace({
           ))}
         </div>
 
-        {/* 🎵 GRÁFICO DE ÁUDIO */}
+        {/* 🎵 GRÁFICO DE ÁUDIO (PRESERVADO) */}
         {isSpeaking && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
             <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">

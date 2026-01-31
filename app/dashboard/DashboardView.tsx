@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { DashboardHeader } from '@/components/layout/DashboardHeader
+import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface DashboardViewProps {

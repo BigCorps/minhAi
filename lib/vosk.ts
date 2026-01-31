@@ -1,134 +1,204 @@
-// lib/vosk.ts
-import * as Vosk from "vosk-browser";
+// lib/vosk-corrections.ts
 
-let model: any = null;
-let isDownloading = false;
+/**
+ * Dicionário EXPANDIDO de correções para Vosk
+ * Captura erros comuns de reconhecimento em português
+ */
 
-export async function loadVosk(onProgress?: (progress: number) => void) {
-  if (model) {
-    console.log('✅ Modelo Vosk já carregado (cache)');
-    if (onProgress) onProgress(100);
-    return model;
+export const VOSK_CORRECTIONS: { [key: string]: string } = {
+  // ========================================
+  // PIX - Todas as variações possíveis
+  // ========================================
+  'pix': 'pix',
+  'pics': 'pix',
+  'pic': 'pix',
+  'picos': 'pix',
+  'kit': 'pix',
+  'pis': 'pix',
+  'pitch': 'pix',
+  'piche': 'pix',
+  'pica': 'pix',
+  'pia': 'pix',
+  'picks': 'pix',
+  'mix': 'pix',
+  'fix': 'pix',
+  
+  // ========================================
+  // WHATSAPP - Muitas variações
+  // ========================================
+  'whatsapp': 'whatsapp',
+  'whats app': 'whatsapp',
+  'whats': 'whatsapp',
+  'what\'s app': 'whatsapp',
+  'whats up': 'whatsapp',
+  'wassap': 'whatsapp',
+  'watzap': 'whatsapp',
+  'watts': 'whatsapp',
+  'watts app': 'whatsapp',
+  'zap': 'whatsapp',
+  'zap zap': 'whatsapp',
+  'zapzap': 'whatsapp',
+  'zapp': 'whatsapp',
+  'sap': 'whatsapp',
+  'sapp': 'whatsapp',
+  'uóts': 'whatsapp',
+  'uóts app': 'whatsapp',
+  
+  // Especial: "lote" (comum no Vosk BR confundir com WhatsApp)
+  'lote': 'whatsapp',
+  'lotes': 'whatsapp',
+  'do lote': 'whatsapp',
+  'o lote': 'whatsapp',
+  
+  // ========================================
+  // INSTAGRAM - Variações
+  // ========================================
+  'instagram': 'instagram',
+  'insta': 'instagram',
+  'insta gram': 'instagram',
+  'instagramo': 'instagram',
+  'instagran': 'instagram',
+  'instagrama': 'instagram',
+  'inta': 'instagram',
+  'instá': 'instagram',
+  
+  // ========================================
+  // COBRANÇA/PIX (contexto)
+  // ========================================
+  'cobrança': 'cobrança',
+  'cobranca': 'cobrança',
+  'cobransa': 'cobrança',
+  'cobrânça': 'cobrança',
+  
+  // ========================================
+  // NÚMEROS POR EXTENSO (expansão)
+  // ========================================
+  'zero': '0',
+  'um': '1',
+  'uma': '1',
+  'dois': '2',
+  'duas': '2',
+  'três': '3',
+  'tres': '3',
+  'quatro': '4',
+  'cinco': '5',
+  'seis': '6',
+  'sete': '7',
+  'oito': '8',
+  'nove': '9',
+  'dez': '10',
+  'onze': '11',
+  'doze': '12',
+  'treze': '13',
+  'catorze': '14',
+  'quatorze': '14',
+  'quinze': '15',
+  'dezesseis': '16',
+  'dezessete': '17',
+  'dezoito': '18',
+  'dezenove': '19',
+  'vinte': '20',
+  'trinta': '30',
+  'quarenta': '40',
+  'cinquenta': '50',
+  'sessenta': '60',
+  'setenta': '70',
+  'oitenta': '80',
+  'noventa': '90',
+  'cem': '100',
+  'cento': '100',
+  'duzentos': '200',
+  'trezentos': '300',
+  'quatrocentos': '400',
+  'quinhentos': '500',
+  'seiscentos': '600',
+  'setecentos': '700',
+  'oitocentos': '800',
+  'novecentos': '900',
+  'mil': '1000',
+  
+  // Compostos comuns
+  'vinte e um': '21',
+  'vinte e dois': '22',
+  'trinta e cinco': '35',
+  'cinquenta reais': '50 reais',
+  'cem reais': '100 reais',
+  
+  // ========================================
+  // STOP COMMANDS
+  // ========================================
+  'calça boca': 'cala boca',
+  'para de': 'pare de',
+  'para aí': 'pare aí',
+  'pára': 'pare',
+  
+  // ========================================
+  // CONFIRMAÇÃO
+  // ========================================
+  'tá bom': 'ok',
+  'ta bom': 'ok',
+  'tá': 'ok',
+  'ta': 'ok',
+  'beleza': 'ok',
+  'blz': 'ok',
+  'tranquilo': 'ok',
+  'confirmo': 'confirmar',
+  'confirmado': 'confirmar',
+};
+
+/**
+ * Normaliza transcrição do Vosk aplicando correções
+ * VERSÃO MELHORADA com regex mais robusta
+ */
+export function normalizeVoskTranscript(text: string): string {
+  let normalized = text.toLowerCase().trim();
+  
+  // Aplicar correções do dicionário
+  for (const [wrong, correct] of Object.entries(VOSK_CORRECTIONS)) {
+    // Usar regex com word boundaries E lookahead/lookbehind flexível
+    // Captura: "do lote" → "do whatsapp"
+    const regex = new RegExp(`\\b${escapeRegex(wrong)}\\b`, 'gi');
+    normalized = normalized.replace(regex, correct);
   }
   
-  try {
-    const modelUrl = "/api/vosk-proxy";
-    
-    console.log('🔍 Verificando cache do Vosk...');
-    
-    // Verificar se já está no cache do navegador
-    const cacheCheck = await checkVoskCache(modelUrl);
-    
-    if (cacheCheck.inCache) {
-      console.log('✅ Modelo encontrado no cache! Carregando instantaneamente...');
-      isDownloading = false;
-      
-      // Carrega do cache (rápido)
-      model = await Vosk.createModel(modelUrl);
-      
-      if (onProgress) onProgress(100);
-      console.log('✅ Modelo carregado do cache');
-      return model;
-    }
-    
-    // Não está no cache, vai baixar
-    console.log('📦 Cache não encontrado. Iniciando download...');
-    console.log('⏳ Primeira vez pode demorar ~30-60s (download de 40MB)...');
-    isDownloading = true;
-    
-    const startTime = Date.now();
-    
-    // Progresso estimado durante download
-    let estimatedProgress = 0;
-    const progressInterval = setInterval(() => {
-      if (isDownloading && estimatedProgress < 95) {
-        const increment = estimatedProgress < 30 ? 2 : estimatedProgress < 70 ? 4 : 1;
-        estimatedProgress = Math.min(estimatedProgress + increment, 95);
-        if (onProgress) onProgress(Math.floor(estimatedProgress));
-      }
-    }, 1000);
-    
-    // Download
-    model = await Vosk.createModel(modelUrl);
-    
-    clearInterval(progressInterval);
-    isDownloading = false;
-    
-    const loadTime = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`✅ Modelo baixado e carregado em ${loadTime}s`);
-    
-    if (onProgress) onProgress(100);
-    
-    return model;
-    
-  } catch (error: any) {
-    isDownloading = false;
-    console.error('❌ Erro ao carregar Vosk:', error);
-    console.error('❌ Mensagem:', error.message);
-    throw error;
-  }
+  return normalized;
 }
 
 /**
- * Verifica se o modelo Vosk está no cache do navegador
+ * Escape special regex characters
  */
-async function checkVoskCache(url: string): Promise<{ inCache: boolean }> {
-  try {
-    // Tentar abrir o cache do navegador
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      
-      for (const cacheName of cacheNames) {
-        const cache = await caches.open(cacheName);
-        const cachedResponse = await cache.match(url);
-        
-        if (cachedResponse) {
-          console.log('✅ Cache encontrado:', cacheName);
-          return { inCache: true };
-        }
-      }
-    }
-    
-    return { inCache: false };
-    
-  } catch (error) {
-    console.log('⚠️ Erro ao verificar cache, assumindo não cached');
-    return { inCache: false };
-  }
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Wrapper com callback de progresso
+ * ALTERNATIVA: Fuzzy matching agressivo
+ * Para casos onde Vosk erra muito
  */
-export async function loadVoskWithProgress(
-  onProgress: (progress: number, downloading: boolean) => void
-): Promise<any> {
+export function fuzzyNormalize(text: string): string {
+  let normalized = text.toLowerCase().trim();
   
-  // Callback wrapper que indica se está baixando
-  const progressCallback = (progress: number) => {
-    onProgress(progress, isDownloading);
-  };
-  
-  return loadVosk(progressCallback);
-}
-
-/**
- * Limpar cache do Vosk (para debug/teste)
- */
-export async function clearVoskCache() {
-  try {
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      
-      for (const cacheName of cacheNames) {
-        await caches.delete(cacheName);
-        console.log('🗑️ Cache limpo:', cacheName);
-      }
-      
-      console.log('✅ Todo cache limpo');
-      model = null;
+  // WhatsApp: qualquer coisa com "at" ou "zap"
+  if (/\b(w[aeiou]*ts?|zap|lote|sap)\b/i.test(normalized)) {
+    // Se tem "número" ou "contato" perto, é WhatsApp
+    if (/número|numero|contato|telefone/i.test(normalized)) {
+      normalized = normalized.replace(/\b(w[aeiou]*ts?|zap|lote|sap)\b/gi, 'whatsapp');
     }
-  } catch (error) {
-    console.error('❌ Erro ao limpar cache:', error);
   }
+  
+  // Instagram: qualquer coisa com "insta"
+  if (/\bint?[aeiou]*s?t[aeiou]*\b/i.test(normalized)) {
+    if (/perfil|arroba|rede|social/i.test(normalized)) {
+      normalized = normalized.replace(/\bint?[aeiou]*s?t[aeiou]*\b/gi, 'instagram');
+    }
+  }
+  
+  // PIX: qualquer coisa com "p" + vogal + "x" ou "cs"
+  if (/\bp[aeiou]*[xcs]+\b/i.test(normalized)) {
+    if (/gerar|criar|fazer|cobrança|cobrar|pagar/i.test(normalized)) {
+      normalized = normalized.replace(/\bp[aeiou]*[xcs]+\b/gi, 'pix');
+    }
+  }
+  
+  return normalized;
 }

@@ -1,9 +1,8 @@
 // app/dashboard/layout.tsx
-// LAYOUT SERVER-SIDE - Verifica login e passa user
+// LAYOUT SIMPLES - SEM THEMECONTEXT
 
 import { getUser } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
-import DashboardLayoutClient from './DashboardLayoutClient';
 
 export default async function DashboardLayout({
   children,
@@ -16,9 +15,5 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  return (
-    <DashboardLayoutClient user={user}>
-      {children}
-    </DashboardLayoutClient>
-  );
+  return <>{children}</>;
 }

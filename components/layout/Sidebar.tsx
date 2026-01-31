@@ -8,8 +8,7 @@ import {
   Bot, 
   Settings, 
   DollarSign, 
-  MessageSquare,
-  ChevronDown
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -45,7 +44,7 @@ export function Sidebar({ theme }: SidebarProps) {
         </svg>
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Lógica do Menu Dropdown (Igual ao UserMenu) */}
       {isOpen && (
         <>
           {/* Overlay para fechar ao clicar fora */}
@@ -54,25 +53,25 @@ export function Sidebar({ theme }: SidebarProps) {
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Menu Dropdown */}
+          {/* Menu Dropdown - Janela Flutuante */}
           <div className={`absolute left-0 top-full mt-2 w-64 rounded-lg shadow-xl border py-2 z-50 ${
             theme === 'dark'
               ? 'bg-slate-800 border-white/10'
               : 'bg-white border-gray-200'
           }`}>
-            {/* Header do Menu */}
-            <div className={`px-4 py-2 border-b ${
-              theme === 'dark' ? 'border-white/10' : 'border-gray-200'
+            {/* Header do Menu (Opcional - Estilo similar ao User Info do UserMenu) */}
+            <div className={`px-4 py-3 border-b mb-2 ${
+              theme === 'dark' ? 'border-white/10' : 'border-gray-100'
             }`}>
               <h3 className={`text-sm font-semibold ${
-                theme === 'dark' ? 'text-white/60' : 'text-gray-500'
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
                 Menu de Navegação
               </h3>
             </div>
 
             {/* Menu Items */}
-            <nav className="py-2">
+            <nav className="flex flex-col">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -82,18 +81,18 @@ export function Sidebar({ theme }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center space-x-3 px-4 py-3 transition ${
+                    className={`w-full px-4 py-3 text-left text-sm transition flex items-center space-x-3 ${
                       isActive
                         ? theme === 'dark'
-                          ? 'bg-blue-500/20 text-blue-400'
-                          : 'bg-blue-50 text-blue-600'
+                          ? 'bg-blue-500/10 text-blue-400 border-l-2 border-blue-400'
+                          : 'bg-blue-50 text-blue-600 border-l-2 border-blue-600'
                         : theme === 'dark'
-                          ? 'text-white/70 hover:bg-white/5 hover:text-white'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'text-white hover:bg-white/5 border-l-2 border-transparent'
+                          : 'text-gray-700 hover:bg-gray-50 border-l-2 border-transparent'
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}

@@ -10,7 +10,6 @@ import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { loadVoskWithProgress } from '@/lib/vosk';
 import { normalizeVoskTranscript } from '@/lib/vosk-grammar';
-import { detectByContext, extractAmountFromContext } from '@/lib/voice-context-detector';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -31,17 +30,6 @@ export function VoiceAssistantWithWakeWord({
   isMaximized = false,
   onAssistantStart,
 }: VoiceAssistantWithWakeWordProps) {
-  enum AssistantState {
-    LISTENING_WAKE_WORD = 'listening_wake_word',
-    LISTENING_COMMAND = 'listening_command',
-    PROCESSING = 'processing',
-    SPEAKING = 'speaking',
-  }
-
-  const [assistantState, setAssistantState] = useState<AssistantState>(
-    AssistantState.LISTENING_WAKE_WORD
-  );
-  
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -81,8 +69,6 @@ export function VoiceAssistantWithWakeWord({
   const voskRecognizerRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const speechRecognitionRef = useRef<any>(null);
-  const commandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
@@ -211,18 +197,6 @@ export function VoiceAssistantWithWakeWord({
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
-    }
-    
-    if (speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.stop();
-        speechRecognitionRef.current = null;
-      } catch (e) {}
-    }
-    
-    if (commandTimeoutRef.current) {
-      clearTimeout(commandTimeoutRef.current);
-      commandTimeoutRef.current = null;
     }
   }
 
@@ -367,254 +341,70 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  function pauseVosk() {
-    console.log('⏸️ Pausando Vosk...');
-    
-    if (audioCtxRef.current) {
-      try {
-        audioCtxRef.current.suspend();
-        console.log('✅ Vosk pausado');
-      } catch (e) {
-        console.error('❌ Erro ao pausar Vosk:', e);
-      }
-    }
-  }
-
-  function resumeVosk() {
-    console.log('▶️ Retomando Vosk...');
-    
-    if (audioCtxRef.current) {
-      try {
-        audioCtxRef.current.resume();
-        console.log('✅ Vosk retomado');
-      } catch (e) {
-        console.error('❌ Erro ao retomar Vosk:', e);
-      }
-    }
-  }
-
   function handleVoskTranscript(text: string, isFinal: boolean) {
     if (!text || !isActiveRef.current) return;
-    
-    if (assistantState !== AssistantState.LISTENING_WAKE_WORD) {
-      return;
-    }
     
     const normalizedText = normalizeVoskTranscript(text);
     const lowerText = normalizedText.toLowerCase().trim();
     
     const detectionResult = wakeWordDetectorRef.current?.detect(lowerText);
     
-    if (detectionResult?.detected && isFinal) {
-      console.log('🎯 Wake word detectada:', detectionResult.keyword);
-      console.log('📝 Texto completo:', lowerText);
+    if (detectionResult?.detected) {
+      console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
+      console.log(`🔍 Wake word: "${detectionResult.keyword}"`);
       
-      setAssistantState(AssistantState.LISTENING_COMMAND);
+      const normalizedTranscript = lowerText.replace(/[.,!?]/g, '').trim();
       
-      playActivationBeep();
+      const explicitStopPhrases = [
+        'pare',
+        'para',
+        'parar',
+        'cala boca',
+        'cala a boca',
+        'calça boca',
+        'silencio',
+        'silêncio',
+        'stop',
+        'chega',
+        'para de falar',
+        'pare de falar',
+        'para ai',
+        'para aí'
+      ];
       
-      startCommandListening();
-    }
-  }
-
-  function startCommandListening() {
-    console.log('🎤 Iniciando captura de comando via Web Speech...');
-    
-    pauseVosk();
-    
-    const SpeechRecognition = 
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      console.error('❌ Web Speech API não suportada');
-      resumeVosk();
-      setAssistantState(AssistantState.LISTENING_WAKE_WORD);
-      return;
-    }
-    
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    
-    speechRecognitionRef.current = recognition;
-    
-    commandTimeoutRef.current = setTimeout(() => {
-      console.log('⏰ Timeout: voltando para wake word');
-      stopCommandListening();
-      playErrorBeep();
-      resumeVosk();
-      setAssistantState(AssistantState.LISTENING_WAKE_WORD);
-    }, 15000);
-    
-    recognition.onstart = () => {
-      console.log('✅ Web Speech iniciado, Vosk pausado');
-    };
-    
-    recognition.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1];
-      const transcript = result[0].transcript;
-      const isFinal = result.isFinal;
+      const hasExplicitStop = explicitStopPhrases.some(phrase => {
+        const normalizedPhrase = phrase.replace(/[.,!?]/g, '').trim();
+        return normalizedTranscript.includes(normalizedPhrase);
+      });
       
-      console.log(`${isFinal ? '✅' : '📝'} Web Speech: "${transcript}"`);
+      const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
       
-      if (isFinal) {
-        console.log('✅ Comando capturado completo:', transcript);
-        
-        if (commandTimeoutRef.current) {
-          clearTimeout(commandTimeoutRef.current);
-          commandTimeoutRef.current = null;
-        }
-        
-        stopCommandListening();
-        
-        playProcessingBeep();
-        
-        setAssistantState(AssistantState.PROCESSING);
-        
-        processCommand(transcript);
-      }
-    };
-    
-    recognition.onerror = (event: any) => {
-      console.error('❌ Erro Web Speech:', event.error);
-      
-      if (event.error === 'no-speech') {
-        console.log('⚠️ Nenhuma fala detectada');
+      if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
+        console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO (Vosk):', lowerText);
+        console.log('✅ PARANDO áudio imediatamente!');
+        stopAudioImmediately();
         return;
       }
       
-      if (commandTimeoutRef.current) {
-        clearTimeout(commandTimeoutRef.current);
-        commandTimeoutRef.current = null;
+      if (processingQuestion.current || isProcessing || isPlayingAudio || isActuallyPlaying) {
+        console.log('⏸️ Vosk: Ocupado, ignorando captura');
+        return;
       }
-      stopCommandListening();
-      playErrorBeep();
-      resumeVosk();
-      setAssistantState(AssistantState.LISTENING_WAKE_WORD);
-    };
-    
-    recognition.onend = () => {
-      console.log('🎤 Web Speech encerrado');
       
-      if (assistantState === AssistantState.LISTENING_COMMAND) {
-        console.log('⚠️ Encerrou sem capturar, voltando...');
-        resumeVosk();
-        setAssistantState(AssistantState.LISTENING_WAKE_WORD);
+      if (isFinal) {
+        console.log('✅ Processando pergunta completa (Vosk)');
+        
+        if (!audioUnlocked.current) {
+          unlockAudio();
+        }
+        
+        if (!processingQuestion.current) {
+          processingQuestion.current = true;
+          processWakeWordQuestion(lowerText);
+        }
+      } else {
+        console.log('⏳ Aguardando transcrição final (Vosk)...');
       }
-    };
-    
-    try {
-      recognition.start();
-      console.log('✅ Web Speech ativo, FALE AGORA!');
-    } catch (e) {
-      console.error('❌ Erro ao iniciar Web Speech:', e);
-      resumeVosk();
-      setAssistantState(AssistantState.LISTENING_WAKE_WORD);
-    }
-  }
-
-  function stopCommandListening() {
-    if (speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.stop();
-        speechRecognitionRef.current = null;
-      } catch (e) {}
-    }
-    
-    if (commandTimeoutRef.current) {
-      clearTimeout(commandTimeoutRef.current);
-      commandTimeoutRef.current = null;
-    }
-  }
-
-  async function processCommand(transcript: string) {
-    console.log('⚡ Processando comando:', transcript);
-    
-    const isSpecificCommand = await detectVoiceCommand(transcript);
-    
-    if (!isSpecificCommand) {
-      await processQuestion(transcript);
-    }
-    
-    resumeVosk();
-    setAssistantState(AssistantState.LISTENING_WAKE_WORD);
-  }
-
-  function playActivationBeep() {
-    try {
-      const audioContext = new AudioContext();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 800;
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.2);
-      
-      console.log('🔔 Beep ativação tocado');
-    } catch (e) {
-      console.log('⚠️ Erro beep:', e);
-    }
-  }
-
-  function playProcessingBeep() {
-    try {
-      const audioContext = new AudioContext();
-      
-      const osc1 = audioContext.createOscillator();
-      const gain1 = audioContext.createGain();
-      osc1.connect(gain1);
-      gain1.connect(audioContext.destination);
-      osc1.frequency.value = 600;
-      gain1.gain.setValueAtTime(0.2, audioContext.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-      osc1.start(audioContext.currentTime);
-      osc1.stop(audioContext.currentTime + 0.1);
-      
-      const osc2 = audioContext.createOscillator();
-      const gain2 = audioContext.createGain();
-      osc2.connect(gain2);
-      gain2.connect(audioContext.destination);
-      osc2.frequency.value = 800;
-      gain2.gain.setValueAtTime(0.2, audioContext.currentTime + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
-      osc2.start(audioContext.currentTime + 0.15);
-      osc2.stop(audioContext.currentTime + 0.25);
-      
-      console.log('🔔 Beep processamento tocado');
-    } catch (e) {
-      console.log('⚠️ Erro beep:', e);
-    }
-  }
-
-  function playErrorBeep() {
-    try {
-      const audioContext = new AudioContext();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.3);
-      
-      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-      
-      console.log('🔔 Beep erro tocado');
-    } catch (e) {
-      console.log('⚠️ Erro beep:', e);
     }
   }
 
@@ -1237,6 +1027,49 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     console.log('✅ Vosk continua ativo');
   }
 
+  function processWakeWordQuestion(transcript: string) {
+    console.log('📋 processWakeWordQuestion chamada');
+    console.log('  transcript:', transcript);
+    console.log('  processingQuestion.current:', processingQuestion.current);
+    
+    let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    const normalizedForEndCheck = cleanTranscript.toLowerCase();
+    const hasEndCommand = endCommands.some(cmd => normalizedForEndCheck.includes(cmd));
+    
+    if (hasEndCommand) {
+      console.log('👋 Comando de encerramento:', cleanTranscript);
+      processingQuestion.current = false;
+      playGoodbye();
+      return;
+    }
+    
+    for (const word of wakeWords) {
+      cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+    }
+    
+    cleanTranscript = cleanTranscript.replace(/\s+/g, ' ').trim();
+    
+    const words = cleanTranscript.split(' ').filter((w: string) => w.length > 2);
+    
+    console.log('🔍 Pergunta extraída:', cleanTranscript);
+    console.log('📊 Palavras:', words.length, words);
+    
+    if (words.length === 0) {
+      console.log('❌ Sem pergunta, resetando e voltando para wake word');
+      processingQuestion.current = false;
+      
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          console.log('✅ Vosk continua ativo');
+        }
+      }, 300);
+      return;
+    }
+    
+    processQuestion(cleanTranscript);
+  }
+
   async function processQuestion(questionText: string) {
     console.log('⚡ Processando:', questionText);
     
@@ -1570,22 +1403,9 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     if (!permissionGranted) return 'Aguardando permissão...';
     if (voskLoading && !voskReady) return 'Carregando assistente...';
     if (showStartButton) return 'Clique em "Iniciar"';
-    
-    if (assistantState === AssistantState.LISTENING_COMMAND) {
-      return 'Estou ouvindo... 🎤';
-    }
-    
-    if (assistantState === AssistantState.PROCESSING) {
-      return 'Processando...';
-    }
-    
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    
-    if (assistantState === AssistantState.LISTENING_WAKE_WORD) {
-      return `Diga: "${wakeWords[0]}"`;
-    }
-    
+    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
     return 'Aguarde...';
   };
 
@@ -1621,16 +1441,6 @@ if (isMaximized) {
           }`}>
             {getStatusMessage()}
           </p>
-          {assistantState === AssistantState.LISTENING_COMMAND && (
-            <div className="mt-4 flex items-center justify-center gap-2 animate-pulse">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <p className={`text-sm font-bold ${
-                theme === 'dark' ? 'text-green-400' : 'text-green-600'
-              }`}>
-                Estou ouvindo... fale agora!
-              </p>
-            </div>
-          )}
           {error && (
             <p className={`text-xs sm:text-sm transition-colors ${
               theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
@@ -1727,16 +1537,6 @@ if (isMaximized) {
               }`}>
                 Modo Alexa: use palavra de ativação
               </p>
-              {assistantState === AssistantState.LISTENING_COMMAND && (
-                <div className="mt-4 flex items-center justify-center gap-2 animate-pulse">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <p className={`text-sm font-bold ${
-                    theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                  }`}>
-                    Estou ouvindo... fale agora!
-                  </p>
-                </div>
-              )}
               {voskLoading && !voskReady && (
                 <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
                   <div className="flex items-center justify-center gap-2">

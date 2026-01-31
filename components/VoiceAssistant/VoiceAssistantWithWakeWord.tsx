@@ -367,6 +367,32 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
+  function pauseVosk() {
+    console.log('⏸️ Pausando Vosk...');
+    
+    if (audioCtxRef.current) {
+      try {
+        audioCtxRef.current.suspend();
+        console.log('✅ Vosk pausado');
+      } catch (e) {
+        console.error('❌ Erro ao pausar Vosk:', e);
+      }
+    }
+  }
+
+  function resumeVosk() {
+    console.log('▶️ Retomando Vosk...');
+    
+    if (audioCtxRef.current) {
+      try {
+        audioCtxRef.current.resume();
+        console.log('✅ Vosk retomado');
+      } catch (e) {
+        console.error('❌ Erro ao retomar Vosk:', e);
+      }
+    }
+  }
+
   function handleVoskTranscript(text: string, isFinal: boolean) {
     if (!text || !isActiveRef.current) return;
     
@@ -394,11 +420,14 @@ export function VoiceAssistantWithWakeWord({
   function startCommandListening() {
     console.log('🎤 Iniciando captura de comando via Web Speech...');
     
+    pauseVosk();
+    
     const SpeechRecognition = 
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
       console.error('❌ Web Speech API não suportada');
+      resumeVosk();
       setAssistantState(AssistantState.LISTENING_WAKE_WORD);
       return;
     }
@@ -415,11 +444,12 @@ export function VoiceAssistantWithWakeWord({
       console.log('⏰ Timeout: voltando para wake word');
       stopCommandListening();
       playErrorBeep();
+      resumeVosk();
       setAssistantState(AssistantState.LISTENING_WAKE_WORD);
     }, 15000);
     
     recognition.onstart = () => {
-      console.log('✅ Web Speech iniciado, aguardando fala...');
+      console.log('✅ Web Speech iniciado, Vosk pausado');
     };
     
     recognition.onresult = (event: any) => {
@@ -451,12 +481,8 @@ export function VoiceAssistantWithWakeWord({
       console.error('❌ Erro Web Speech:', event.error);
       
       if (event.error === 'no-speech') {
-        console.log('⚠️ Nenhuma fala detectada, aguardando...');
+        console.log('⚠️ Nenhuma fala detectada');
         return;
-      }
-      
-      if (event.error === 'aborted') {
-        console.log('⚠️ Reconhecimento abortado');
       }
       
       if (commandTimeoutRef.current) {
@@ -465,6 +491,7 @@ export function VoiceAssistantWithWakeWord({
       }
       stopCommandListening();
       playErrorBeep();
+      resumeVosk();
       setAssistantState(AssistantState.LISTENING_WAKE_WORD);
     };
     
@@ -472,7 +499,8 @@ export function VoiceAssistantWithWakeWord({
       console.log('🎤 Web Speech encerrado');
       
       if (assistantState === AssistantState.LISTENING_COMMAND) {
-        console.log('⚠️ Encerrou sem capturar comando, voltando...');
+        console.log('⚠️ Encerrou sem capturar, voltando...');
+        resumeVosk();
         setAssistantState(AssistantState.LISTENING_WAKE_WORD);
       }
     };
@@ -482,6 +510,7 @@ export function VoiceAssistantWithWakeWord({
       console.log('✅ Web Speech ativo, FALE AGORA!');
     } catch (e) {
       console.error('❌ Erro ao iniciar Web Speech:', e);
+      resumeVosk();
       setAssistantState(AssistantState.LISTENING_WAKE_WORD);
     }
   }
@@ -509,6 +538,7 @@ export function VoiceAssistantWithWakeWord({
       await processQuestion(transcript);
     }
     
+    resumeVosk();
     setAssistantState(AssistantState.LISTENING_WAKE_WORD);
   }
 

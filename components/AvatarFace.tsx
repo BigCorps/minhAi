@@ -109,7 +109,6 @@ export function AvatarFace({
       const nextBlinkDelay = Math.random() * 4000 + 2000;
       
       blinkTimeoutRef.current = setTimeout(() => {
-        // Não pisca se estiver flertando (pois o flerte já controla os olhos) ou dormindo
         if (currentExpression === 'flirt' || currentExpression === 'sleeping') {
           scheduleNextBlink();
           return;
@@ -158,7 +157,6 @@ export function AvatarFace({
         const randomExpr = expressions[Math.floor(Math.random() * expressions.length)];
         setCurrentExpression(randomExpr);
         
-        // Duração: flertar dura 2s conforme pedido, dormir 6s, outros 3s
         const duration = randomExpr === 'sleeping' ? 6000 : randomExpr === 'flirt' ? 2000 : 3000;
         
         setTimeout(() => {
@@ -407,7 +405,7 @@ export function AvatarFace({
                 />
               )}
               
-              {/* Olho Direito (Com piscadinha de flerte) */}
+              {/* Olho Direito (Piscadinha flerte) */}
               {(!isBlinking && currentExpression !== 'sleeping' && currentExpression !== 'yawn' && currentExpression !== 'flirt') ? (
                 <>
                   <ellipse 
@@ -433,8 +431,8 @@ export function AvatarFace({
               )}
             </g>
 
-            <g className="transition-all duration-500">
-              {/* Sombra da Boca - Sincronizada com duration-500 */}
+            <g className="transition-all duration-700">
+              {/* Sombra da Boca (Parte Cinza) - Sincronizada com duration-700 para acompanhar a parte azul */}
               <path 
                 d={
                   currentExpression === 'smile' || currentExpression === 'flirt' ? "M 66 135 Q 100 155 134 135" : 
@@ -446,10 +444,10 @@ export function AvatarFace({
                 stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} 
                 strokeWidth={currentExpression === 'yawn' ? "15" : "10"} 
                 fill="none" strokeLinecap="round" opacity="0.6" 
-                className="transition-all duration-500"
+                className="transition-all duration-700"
               />
               
-              {/* Linha Principal da Boca - Sincronizada com duration-500 */}
+              {/* Linha Principal da Boca (Parte Azul) - duration-700 */}
               <path 
                 d={
                   currentExpression === 'smile' || currentExpression === 'flirt' ? "M 68 134 Q 100 153 132 134" : 
@@ -461,14 +459,14 @@ export function AvatarFace({
                 stroke="url(#mouthDepth)" 
                 strokeWidth={currentExpression === 'yawn' ? "12" : "8"} 
                 fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)"
-                className="transition-all duration-500"
+                className="transition-all duration-700"
               >
                 {!['yawn', 'surprised', 'attentive'].includes(currentExpression) && (
                   <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
                 )}
               </path>
               
-              {/* Brilho da Boca - Sincronizada com duration-500 */}
+              {/* Brilho da Boca (Parte Branca) - duration-700 */}
               <path 
                 d={
                   currentExpression === 'smile' || currentExpression === 'flirt' ? "M 70 133 Q 100 150 130 133" : 
@@ -478,7 +476,7 @@ export function AvatarFace({
                   "M 70 135 Q 100 147 130 135"
                 } 
                 stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6"
-                className="transition-all duration-500"
+                className="transition-all duration-700"
               >
                 <animate attributeName="opacity" values="0.5;0.7;0.5" dur="3s" repeatCount="indefinite" />
               </path>
@@ -518,35 +516,8 @@ export function AvatarFace({
               <circle cx="100" cy="100" r="45" fill="url(#coreGradient1)"><animate attributeName="r" values="40;55;40" dur="1.8s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.5s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="3.2s" repeatCount="indefinite" /></circle>
               <circle cx="65" cy="100" r="35" fill="url(#coreGradient2)" opacity="0.95"><animate attributeName="r" values="32;42;32" dur="2s" repeatCount="indefinite" /><animate attributeName="cx" values="65;58;72;65" dur="2.8s" repeatCount="indefinite" /><animate attributeName="cy" values="100;108;92;100" dur="3.6s" repeatCount="indefinite" /></circle>
               <circle cx="135" cy="100" r="35" fill="url(#coreGradient3)" opacity="0.95"><animate attributeName="r" values="33;43;33" dur="1.9s" repeatCount="indefinite" /><animate attributeName="cx" values="135;142;128;135" dur="3.2s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="2.9s" repeatCount="indefinite" /></circle>
-              {[...Array(isSpeaking ? 16 : 8)].map((_, i) => {
-                const angle = (i * Math.PI * 2) / (isSpeaking ? 16 : 8);
-                const radius = isSpeaking ? 55 : 50;
-                return (
-                  <circle key={`small-orb-${i}`} cx={100 + Math.cos(angle) * radius} cy={100 + Math.sin(angle) * radius} r={isSpeaking ? "20" : "16"} fill={i % 3 === 0 ? colors.primary : i % 3 === 1 ? colors.secondary : colors.ring} opacity="0.75">
-                    <animate attributeName="r" values={isSpeaking ? "15;28;15" : "13;23;13"} dur={`${0.8 + (i * 0.08)}s`} repeatCount="indefinite" />
-                    <animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(angle) * 18},${Math.sin(angle) * 18}; 0,0`} dur={`${1.2 + (i * 0.07)}s`} repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.4;1;0.4" dur={`${0.9 + (i * 0.06)}s`} repeatCount="indefinite" />
-                  </circle>
-                );
-              })}
             </g>
           </svg>
-        )}
-
-        <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
-          {[1, 2, 3].map(ring => (
-            <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
-          ))}
-        </div>
-
-        {isSpeaking && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
-            <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
-              {audioLevels.map((level, i) => (
-                <div key={`audio-bar-${i}`} className="flex-1 rounded-t-sm transition-all duration-75" style={{ height: `${Math.max(5, level * 100)}%`, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, opacity: 0.7 + level * 0.3, boxShadow: `0 0 ${level * 12}px ${i % 2 === 0 ? colors.primary : colors.secondary}`, filter: `blur(${0.3}px)` }} />
-              ))}
-            </div>
-          </div>
         )}
       </div>
 

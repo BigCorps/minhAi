@@ -20,7 +20,6 @@ export const VOSK_CORRECTIONS: { [key: string]: string } = {
   'pica': 'pix',
   'pia': 'pix',
   'picks': 'pix',
-  'pix': 'pix',
   'mix': 'pix',
   'fix': 'pix',
   

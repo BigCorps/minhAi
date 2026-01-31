@@ -1,5 +1,5 @@
 // app/auth/callback/route.ts
-// Callback OAuth que redireciona para raiz "/" (dashboard)
+// Callback OAuth - REDIRECIONA PARA /dashboard
 
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
@@ -8,15 +8,13 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') ?? '/'; // Redireciona para raiz (dashboard)
+  const next = requestUrl.searchParams.get('next') ?? '/dashboard'; // ✅ MUDANÇA: Redireciona para /dashboard
 
   if (code) {
     try {
-      // Next.js 16+ - cookies é async
       const cookieStore = await cookies();
       const supabase = createClient();
 
-      // Trocar code por session
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
@@ -26,8 +24,9 @@ export async function GET(request: Request) {
 
       if (data.session) {
         console.log('✅ Sessão criada:', data.session.user.email);
+        console.log('🔄 Redirecionando para:', next);
         
-        // Redirecionar para raiz (dashboard)
+        // ✅ Redirecionar para /dashboard
         return NextResponse.redirect(new URL(next, requestUrl.origin));
       }
     } catch (error) {

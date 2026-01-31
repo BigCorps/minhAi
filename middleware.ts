@@ -1,3 +1,6 @@
+// middleware.ts
+// PROTEGE /dashboard e subpastas
+
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -34,38 +37,26 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Rotas públicas (não precisam autenticação)
-  const publicRoutes = ['/login', '/auth/callback', '/auth/confirm'];
+  const publicRoutes = ['/', '/login', '/auth/callback', '/auth/confirm', '/termos', '/aviso'];
 
-  // Rotas protegidas (precisam autenticação)
-  const protectedRoutes = [
-    '/assistentes',
-    '/funcoes', 
-    '/saldo',
-    '/historico',
-    '/credits',
-    '/perfil',
-    '/pacotes',
-    '/faqs',
-  ];
+  // ✅ MUDANÇA: Proteger /dashboard e todas suas subpastas
+  const isProtectedRoute = pathname.startsWith('/dashboard');
 
   const isPublicRoute = publicRoutes.includes(pathname);
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
 
   // Se é rota protegida e usuário NÃO está logado → redirecionar para login
   if (isProtectedRoute && !user) {
+    console.log('🔒 Rota protegida sem login:', pathname);
     const redirectUrl = new URL('/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Se usuário está logado e tenta acessar login → redirecionar para raiz
+  // Se usuário está logado e tenta acessar login → redirecionar para dashboard
   if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url));
+    console.log('✅ Usuário logado tentando acessar login, redirecionando para /dashboard');
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
-
-  // "/" não redireciona - pode ser landing page OU dashboard dependendo de estar logado
 
   return response;
 }

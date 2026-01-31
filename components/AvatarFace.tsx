@@ -34,8 +34,8 @@ interface AvatarFaceProps {
   onCancelPix?: () => Promise<void>;
 }
 
-// 🎭 TIPOS DE EXPRESSÕES PARA OS OLHOS
-type EyeExpression = 'idle' | 'tired' | 'sleeping' | 'surprised' | 'attentive' | 'flirt';
+// 🎭 TIPOS DE EXPRESSÕES Oculares (Emoções e Direções)
+type EyeExpression = 'idle' | 'tired' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry' | 'lookLeft' | 'lookRight' | 'lookDown';
 
 export function AvatarFace({ 
   isListening, 
@@ -89,6 +89,8 @@ export function AvatarFace({
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0));
   const [isBlinking, setIsBlinking] = useState(false);
   const [eyeExpr, setEyeExpr] = useState<EyeExpression>('idle');
+  const [stars, setStars] = useState<Array<{id: number, x: number, y: number, delay: number}>>([]);
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -103,11 +105,26 @@ export function AvatarFace({
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
 
+  // ✨ SISTEMA DE ESTRELAS ALEATÓRIAS NO ROSTO
+  useEffect(() => {
+    const generateStars = () => {
+      const newStars = Array.from({ length: 6 }, (_, i) => ({
+        id: Math.random(),
+        x: 40 + Math.random() * 120, // Posição X aleatória dentro do rosto
+        y: 40 + Math.random() * 120, // Posição Y aleatória dentro do rosto
+        delay: Math.random() * 5
+      }));
+      setStars(newStars);
+    };
+    generateStars();
+    const interval = setInterval(generateStars, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
   // 👁️ SISTEMA DE PISCADAS ALEATÓRIAS (ORIGINAL)
   useEffect(() => {
     const scheduleNextBlink = () => {
       const nextBlinkDelay = Math.random() * 4000 + 2000;
-      
       blinkTimeoutRef.current = setTimeout(() => {
         if (eyeExpr === 'flirt' || eyeExpr === 'sleeping') {
           scheduleNextBlink();
@@ -131,20 +148,22 @@ export function AvatarFace({
         }, blinkDuration);
       }, nextBlinkDelay);
     };
-
     if (showFace) scheduleNextBlink();
     return () => { if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current); };
   }, [showFace, eyeExpr]);
 
   // 🎭 SISTEMA DE EXPRESSÕES ALEATÓRIAS (APENAS OLHOS)
   useEffect(() => {
-    const expressions: EyeExpression[] = ['tired', 'sleeping', 'surprised', 'flirt'];
+    const expressions: EyeExpression[] = [
+      'tired', 'sleeping', 'surprised', 'flirt', 
+      'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown'
+    ];
     const scheduleNextExpr = () => {
-      const delay = Math.random() * 8000 + 5000;
+      const delay = Math.random() * 6000 + 4000;
       exprTimeoutRef.current = setTimeout(() => {
         const next = expressions[Math.floor(Math.random() * expressions.length)];
         setEyeExpr(next);
-        const duration = next === 'sleeping' ? 6000 : next === 'flirt' ? 2000 : 3000;
+        const duration = next === 'sleeping' ? 6000 : next === 'flirt' ? 2000 : 2500;
         setTimeout(() => {
           setEyeExpr('idle');
           scheduleNextExpr();
@@ -284,7 +303,6 @@ export function AvatarFace({
         <div className="rounded-full opacity-40" style={{ width: '85%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, filter: 'blur(10px)' }} />
       </div>
 
-      {/* 🌟 PULSO DO HALO (ORIGINAL) */}
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
         <div className="rounded-full" style={{ width: '80%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, ${colors.glow} 0%, transparent 70%)`, opacity: 0.5 }} />
       </div>
@@ -319,7 +337,7 @@ export function AvatarFace({
         }}
       >
         
-        {/* FACE (Com Expressões apenas nos Olhos) */}
+        {/* FACE */}
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -336,47 +354,56 @@ export function AvatarFace({
                 <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
               <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" />
-                <stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" />
-                <stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
+                <stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" /><stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
               </linearGradient>
               <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/>
-                <feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
-                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
             </defs>
+
+            {/* ✨ ESTRELAS ALEATÓRIAS DANÇANTES */}
+            {stars.map((star) => (
+              <circle key={star.id} cx={star.x} cy={star.y} r="1.5" fill={colors.primary} opacity="0.6">
+                <animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${star.delay}s`} repeatCount="indefinite" />
+                <animate attributeName="r" values="1;2;1" dur="2s" begin={`${star.delay}s`} repeatCount="indefinite" />
+                <animateTransform attributeName="transform" type="translate" values="0,0; 5,-5; 0,0" dur="4s" begin={`${star.delay}s`} repeatCount="indefinite" />
+              </circle>
+            ))}
 
             <g filter="url(#softGlow)" className="transition-all duration-500">
               {/* Olho Esquerdo */}
               {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'flirt') ? (
                 <>
                   <ellipse 
-                    cx="76" cy={eyeExpr === 'tired' ? "88" : "85"} 
+                    cx={eyeExpr === 'lookLeft' ? "72" : eyeExpr === 'lookRight' ? "80" : "76"} 
+                    cy={eyeExpr === 'tired' || eyeExpr === 'lookDown' ? "88" : eyeExpr === 'angry' ? "86" : "85"} 
                     rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} 
-                    ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} 
+                    ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : eyeExpr === 'sad' ? "15" : "17.6"} 
                     fill="url(#eyeGradient)" opacity="0.85" 
                     className="transition-all duration-500"
                   />
-                  <ellipse cx="73" cy={eyeExpr === 'tired' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-                  <circle cx="74" cy={eyeExpr === 'tired' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
+                  {eyeExpr === 'angry' && <path d="M 60 75 L 92 82" stroke={colors.primary} strokeWidth="2.5" opacity="0.8" />}
+                  {eyeExpr === 'sad' && <path d="M 60 80 Q 76 75 92 80" stroke={colors.primary} strokeWidth="2.5" opacity="0.8" />}
+                  <ellipse cx={eyeExpr === 'lookLeft' ? "69" : eyeExpr === 'lookRight' ? "77" : "73"} cy={eyeExpr === 'tired' || eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
                 </>
               ) : (
                 <path d="M 62 85 Q 76 87 90 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" className="transition-all duration-500" />
               )}
               
-              {/* Olho Direito (Piscadinha no flerte) */}
+              {/* Olho Direito */}
               {(!isBlinking && eyeExpr !== 'sleeping') ? (
                 <>
                   <ellipse 
-                    cx="124" cy={eyeExpr === 'tired' ? "88" : "85"} 
+                    cx={eyeExpr === 'lookLeft' ? "120" : eyeExpr === 'lookRight' ? "128" : "124"} 
+                    cy={eyeExpr === 'tired' || eyeExpr === 'lookDown' ? "88" : eyeExpr === 'angry' ? "86" : "85"} 
                     rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} 
-                    ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} 
+                    ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : eyeExpr === 'sad' ? "15" : "17.6"} 
                     fill="url(#eyeGradient)" opacity="0.85" 
                     className="transition-all duration-500"
                   />
-                  <ellipse cx="121" cy={eyeExpr === 'tired' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-                  <circle cx="122" cy={eyeExpr === 'tired' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
+                  {eyeExpr === 'angry' && <path d="M 108 82 L 140 75" stroke={colors.primary} strokeWidth="2.5" opacity="0.8" />}
+                  {eyeExpr === 'sad' && <path d="M 108 80 Q 124 75 140 80" stroke={colors.primary} strokeWidth="2.5" opacity="0.8" />}
+                  <ellipse cx={eyeExpr === 'lookLeft' ? "117" : eyeExpr === 'lookRight' ? "125" : "121"} cy={eyeExpr === 'tired' || eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
                 </>
               ) : (
                 <path d="M 110 85 Q 124 87 138 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" className="transition-all duration-500" />
@@ -394,23 +421,13 @@ export function AvatarFace({
               </path>
             </g>
 
-            {/* Zzz ou Ambient Particles */}
-            {eyeExpr === 'sleeping' ? (
-              [...Array(3)].map((_, i) => (
-                <text key={`zzz-${i}`} x={140 + i * 15} y={60 - i * 15} fill={colors.primary} fontSize="16" fontWeight="bold" opacity="0.6">
-                  Z
-                  <animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
-                  <animate attributeName="y" values={`${60 - i * 15};${40 - i * 15}`} dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
-                </text>
-              ))
-            ) : (
-              [...Array(3)].map((_, i) => (
-                <circle key={`ambient-${i}`} cx={50 + i * 50} cy={60} r="2" fill={colors.primary} opacity="0.4">
-                  <animate attributeName="cy" values="60;50;60" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.2;0.6;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
-                </circle>
-              ))
-            )}
+            {eyeExpr === 'sleeping' && [...Array(3)].map((_, i) => (
+              <text key={`zzz-${i}`} x={140 + i * 15} y={60 - i * 15} fill={colors.primary} fontSize="16" fontWeight="bold" opacity="0.6">
+                Z
+                <animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
+                <animate attributeName="y" values={`${60 - i * 15};${40 - i * 15}`} dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
+              </text>
+            ))}
           </svg>
         )}
 
@@ -419,8 +436,7 @@ export function AvatarFace({
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
               <filter id="gooey">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
-                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" /><feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo" />
               </filter>
               <radialGradient id="coreGradient1"><stop offset="0%" stopColor={colors.primary} /><stop offset="100%" stopColor={colors.secondary} stopOpacity="0.6" /></radialGradient>
               <radialGradient id="coreGradient2"><stop offset="0%" stopColor={colors.secondary} /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.6" /></radialGradient>

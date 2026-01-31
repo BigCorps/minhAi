@@ -406,7 +406,7 @@ export function VoiceAssistantWithWakeWord({
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     
     speechRecognitionRef.current = recognition;
@@ -416,28 +416,49 @@ export function VoiceAssistantWithWakeWord({
       stopCommandListening();
       playErrorBeep();
       setAssistantState(AssistantState.LISTENING_WAKE_WORD);
-    }, 10000);
+    }, 15000);
+    
+    recognition.onstart = () => {
+      console.log('✅ Web Speech iniciado, aguardando fala...');
+    };
     
     recognition.onresult = (event: any) => {
       const result = event.results[event.results.length - 1];
       const transcript = result[0].transcript;
+      const isFinal = result.isFinal;
       
-      console.log('✅ Comando capturado:', transcript);
+      console.log(`${isFinal ? '✅' : '📝'} Web Speech: "${transcript}"`);
       
-      if (commandTimeoutRef.current) {
-        clearTimeout(commandTimeoutRef.current);
-        commandTimeoutRef.current = null;
+      if (isFinal) {
+        console.log('✅ Comando capturado completo:', transcript);
+        
+        if (commandTimeoutRef.current) {
+          clearTimeout(commandTimeoutRef.current);
+          commandTimeoutRef.current = null;
+        }
+        
+        stopCommandListening();
+        
+        playProcessingBeep();
+        
+        setAssistantState(AssistantState.PROCESSING);
+        
+        processCommand(transcript);
       }
-      
-      playProcessingBeep();
-      
-      setAssistantState(AssistantState.PROCESSING);
-      
-      processCommand(transcript);
     };
     
     recognition.onerror = (event: any) => {
       console.error('❌ Erro Web Speech:', event.error);
+      
+      if (event.error === 'no-speech') {
+        console.log('⚠️ Nenhuma fala detectada, aguardando...');
+        return;
+      }
+      
+      if (event.error === 'aborted') {
+        console.log('⚠️ Reconhecimento abortado');
+      }
+      
       if (commandTimeoutRef.current) {
         clearTimeout(commandTimeoutRef.current);
         commandTimeoutRef.current = null;
@@ -449,12 +470,16 @@ export function VoiceAssistantWithWakeWord({
     
     recognition.onend = () => {
       console.log('🎤 Web Speech encerrado');
-      stopCommandListening();
+      
+      if (assistantState === AssistantState.LISTENING_COMMAND) {
+        console.log('⚠️ Encerrou sem capturar comando, voltando...');
+        setAssistantState(AssistantState.LISTENING_WAKE_WORD);
+      }
     };
     
     try {
       recognition.start();
-      console.log('✅ Web Speech ativo');
+      console.log('✅ Web Speech ativo, FALE AGORA!');
     } catch (e) {
       console.error('❌ Erro ao iniciar Web Speech:', e);
       setAssistantState(AssistantState.LISTENING_WAKE_WORD);
@@ -489,26 +514,78 @@ export function VoiceAssistantWithWakeWord({
 
   function playActivationBeep() {
     try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAo=');
-      audio.volume = 0.3;
-      audio.play().catch(e => console.log('Som ativação:', e.message));
-    } catch (e) {}
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+      
+      console.log('🔔 Beep ativação tocado');
+    } catch (e) {
+      console.log('⚠️ Erro beep:', e);
+    }
   }
 
   function playProcessingBeep() {
     try {
-      const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt55=');
-      audio.volume = 0.3;
-      audio.play().catch(e => console.log('Som processando:', e.message));
-    } catch (e) {}
+      const audioContext = new AudioContext();
+      
+      const osc1 = audioContext.createOscillator();
+      const gain1 = audioContext.createGain();
+      osc1.connect(gain1);
+      gain1.connect(audioContext.destination);
+      osc1.frequency.value = 600;
+      gain1.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      osc1.start(audioContext.currentTime);
+      osc1.stop(audioContext.currentTime + 0.1);
+      
+      const osc2 = audioContext.createOscillator();
+      const gain2 = audioContext.createGain();
+      osc2.connect(gain2);
+      gain2.connect(audioContext.destination);
+      osc2.frequency.value = 800;
+      gain2.gain.setValueAtTime(0.2, audioContext.currentTime + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+      osc2.start(audioContext.currentTime + 0.15);
+      osc2.stop(audioContext.currentTime + 0.25);
+      
+      console.log('🔔 Beep processamento tocado');
+    } catch (e) {
+      console.log('⚠️ Erro beep:', e);
+    }
   }
 
   function playErrorBeep() {
     try {
-      const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2Ec=');
-      audio.volume = 0.2;
-      audio.play().catch(e => console.log('Som erro:', e.message));
-    } catch (e) {}
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.3);
+      
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+      
+      console.log('🔔 Beep erro tocado');
+    } catch (e) {
+      console.log('⚠️ Erro beep:', e);
+    }
   }
 
   async function checkIfFunctionIsEnabled(functionKey: string): Promise<boolean> {
@@ -1514,6 +1591,16 @@ if (isMaximized) {
           }`}>
             {getStatusMessage()}
           </p>
+          {assistantState === AssistantState.LISTENING_COMMAND && (
+            <div className="mt-4 flex items-center justify-center gap-2 animate-pulse">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <p className={`text-sm font-bold ${
+                theme === 'dark' ? 'text-green-400' : 'text-green-600'
+              }`}>
+                Estou ouvindo... fale agora!
+              </p>
+            </div>
+          )}
           {error && (
             <p className={`text-xs sm:text-sm transition-colors ${
               theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
@@ -1610,6 +1697,16 @@ if (isMaximized) {
               }`}>
                 Modo Alexa: use palavra de ativação
               </p>
+              {assistantState === AssistantState.LISTENING_COMMAND && (
+                <div className="mt-4 flex items-center justify-center gap-2 animate-pulse">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <p className={`text-sm font-bold ${
+                    theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                  }`}>
+                    Estou ouvindo... fale agora!
+                  </p>
+                </div>
+              )}
               {voskLoading && !voskReady && (
                 <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
                   <div className="flex items-center justify-center gap-2">

@@ -10,7 +10,6 @@ import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { loadVoskWithProgress } from '@/lib/vosk';
 import { normalizeVoskTranscript } from '@/lib/vosk-grammar';
-import { detectByContext, extractAmountFromContext } from '@/lib/voice-context-detector';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -574,55 +573,26 @@ export function VoiceAssistantWithWakeWord({
   }
 
 async function detectVoiceCommand(transcript: string): Promise<boolean> {
-  // 1. Normalizar com dicionário expandido
-  const normalized = normalizeVoskTranscript(transcript);
+  const lowerTranscript = transcript.toLowerCase().trim();
   
-  console.log('🔍 Detectando comandos de voz:', transcript);
-  console.log('🔄 Normalizado:', normalized);
+  console.log('🔍 Detectando comandos de voz:', lowerTranscript);
   
-  // ========================================
-  // 2. TENTAR DETECÇÃO EXATA PRIMEIRO
-  // ========================================
+  const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
+  console.log('🔢 Após conversão:', transcriptWithNumbers);
   
-  // PIX - Detecção exata
-  const pixPatterns = [
-    /(?:gerar|gera|criar|cria|fazer|faz|faça)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-    /(pix|cobrança|cobranca)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+  const whatsappTriggers = [
+    'whatsapp',
+    'whats',
+    'zap',
+    'número',
+    'contato'
   ];
   
-  for (const pattern of pixPatterns) {
-    const match = normalized.match(pattern);
-    if (match) {
-      const amountStr = match[2] || match[1];
-      const amount = parseFloat(amountStr.replace(',', '.'));
-      
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado (exato)! Valor:', amount);
-        
-        const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
-        if (!isEnabled) {
-          await playText('A função PIX está desativada no momento.');
-          return true;
-        }
-        
-        await handlePixCommand(amount);
-        await registerFunctionUsage('pix_generate', 0);
-        return true;
-      }
-    }
-  }
-  
-  // WhatsApp - Detecção exata
-  const whatsappPatterns = [
-    /(?:mostre|mostra|qual|ver|exibir)\s*(?:o|é o)?\s*(?:número|numero|contato|telefone)?\s*(?:do\s*)?whatsapp/i,
-    /whatsapp\s*(?:da\s*)?empresa/i,
-    /número\s*(?:do\s*)?whatsapp/i,
-  ];
-  
-  if (whatsappPatterns.some(p => p.test(normalized))) {
-    console.log('📱 Comando WhatsApp detectado (exato)!');
+  if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📱 Comando WhatsApp detectado!');
     
     const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
+    
     if (!isEnabled) {
       await playText('A função WhatsApp está desativada no momento.');
       return true;
@@ -633,17 +603,18 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     return true;
   }
   
-  // Instagram - Detecção exata
-  const instagramPatterns = [
-    /(?:mostre|mostra|qual|ver|exibir)\s*(?:o|é o)?\s*(?:perfil|arroba)?\s*(?:do\s*)?instagram/i,
-    /instagram\s*(?:da\s*)?empresa/i,
-    /arroba\s*(?:do\s*)?instagram/i,
+  const instagramTriggers = [
+    'instagram',
+    'insta',
+    'arroba',
+    'perfil'
   ];
   
-  if (instagramPatterns.some(p => p.test(normalized))) {
-    console.log('📸 Comando Instagram detectado (exato)!');
+  if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📸 Comando Instagram detectado!');
     
     const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
+    
     if (!isEnabled) {
       await playText('A função Instagram está desativada no momento.');
       return true;
@@ -654,107 +625,83 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     return true;
   }
   
-  // ========================================
-  // 3. TENTAR DETECÇÃO POR CONTEXTO
-  // ========================================
-  
-  console.log('🎯 Tentando detecção por contexto...');
-  const contextResult = detectByContext(normalized);
-  
-  if (contextResult.detected) {
-    console.log(`✅ ${contextResult.target} detectado por contexto!`);
-    console.log(`   Confiança: ${(contextResult.confidence * 100).toFixed(0)}%`);
-    console.log(`   Motivo: ${contextResult.reason}`);
-    
-    // Executar comando baseado no target
-    if (contextResult.target === 'whatsapp') {
-      const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
-      if (!isEnabled) {
-        await playText('A função WhatsApp está desativada no momento.');
-        return true;
-      }
-      await handleWhatsAppCommand();
-      await registerFunctionUsage('qrcode_whatsapp', 0);
-      return true;
-    }
-    
-    if (contextResult.target === 'instagram') {
-      const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
-      if (!isEnabled) {
-        await playText('A função Instagram está desativada no momento.');
-        return true;
-      }
-      await handleInstagramCommand();
-      await registerFunctionUsage('qrcode_instagram', 0);
-      return true;
-    }
-    
-    if (contextResult.target === 'pix') {
-      // Tentar extrair valor do contexto
-      const amount = extractAmountFromContext(normalized);
-      if (amount > 0) {
-        console.log('💰 Valor extraído do contexto:', amount);
-        const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
-        if (!isEnabled) {
-          await playText('A função PIX está desativada no momento.');
-          return true;
-        }
-        await handlePixCommand(amount);
-        await registerFunctionUsage('pix_generate', 0);
-        return true;
-      } else {
-        console.log('⚠️ PIX detectado mas sem valor');
-        await playText('Por favor, informe o valor do PIX');
-        return true;
-      }
-    }
-  }
-  
-  // ========================================
-  // 4. COMANDOS DE CONFIRMAÇÃO/CANCELAMENTO
-  // ========================================
-  
-  const confirmPatterns = [
-    /confirmar?\s*(?:o\s*)?pix/i,
-    /(?:já\s*)?paguei/i,
-    /pagamento\s*confirmado/i,
+  const confirmTriggers = [
+    'confirmar',
+    'confirmado',
+    'paguei',
+    'já paguei',
+    'pagamento confirmado'
   ];
   
-  if (confirmPatterns.some(p => p.test(normalized))) {
+  if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
     console.log('✅ Comando CONFIRMAR PIX detectado!');
+    
     const currentPixState = pixStateRef.current;
+    
     if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, confirmando...');
       await handleConfirmPix();
       return true;
     } else {
+      console.log('⚠️ Nenhum PIX aberto para confirmar');
       await playText('Não há nenhum PIX aberto para confirmar');
       return true;
     }
   }
   
-  const cancelPatterns = [
-    /cancelar?\s*(?:o\s*)?pix/i,
-    /desistir\s*(?:do\s*)?pix/i,
-    /fechar\s*pix/i,
+  const cancelTriggers = [
+    'cancelar',
+    'cancela',
+    'desistir',
+    'não quero',
+    'fechar'
   ];
   
-  if (cancelPatterns.some(p => p.test(normalized))) {
+  if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
+      lowerTranscript.includes('pix')) {
     console.log('❌ Comando CANCELAR PIX detectado!');
+    
     const currentPixState = pixStateRef.current;
+    
     if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, cancelando...');
       await handleCancelPix();
       return true;
     } else {
+      console.log('⚠️ Nenhum PIX aberto para cancelar');
       await playText('Não há nenhum PIX aberto');
       return true;
     }
   }
   
-  // ========================================
-  // 5. NENHUM COMANDO DETECTADO
-  // ========================================
+  const pixPatterns = [
+    /(?:gerar|gera|criar|cria|fazer|faz|faça)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+    /(pix|cobrança|cobranca)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+  ];
   
-  console.log('❌ Nenhum comando detectado, enviando para GPT');
+  for (const pattern of pixPatterns) {
+    const match = transcriptWithNumbers.match(pattern);
+    if (match) {
+      const amountStr = match[2] || match[1];
+      const amount = parseFloat(amountStr.replace(',', '.'));
+      
+      if (amount > 0) {
+        console.log('💰 Comando PIX detectado! Valor:', amount);
+        
+        const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
+        
+        if (!isEnabled) {
+          await playText('A função PIX está desativada no momento.');
+          return true;
+        }
+        
+        await handlePixCommand(amount);
+        await registerFunctionUsage('pix_generate', 0);
+        return true;
+      }
+    }
+  }
+  
   return false;
 }
   

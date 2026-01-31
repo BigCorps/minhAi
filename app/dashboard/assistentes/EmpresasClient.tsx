@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { CopyLinkButton } from '@/components/CopyLinkButton';
-import { DashboardHeader } from './DashboardHeader'; // Ajuste o caminho conforme necessário
+import { DashboardHeader } from '@/components/DashboardHeader'; // Ajuste o caminho conforme necessário
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface EmpresasClientProps {

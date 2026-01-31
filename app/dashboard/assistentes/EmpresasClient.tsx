@@ -68,7 +68,7 @@ export default function EmpresasClient({ companies, user }: EmpresasClientProps)
                   </svg>
                 </div>
                 <div className="flex gap-2">
-                  <CopyLinkButton companyId={company.id} />
+                  <CopyLinkButton slug={company.id} />
                 </div>
               </div>
 

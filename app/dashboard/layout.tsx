@@ -1,7 +1,9 @@
-// app/(dashboard)/layout.tsx
+// app/dashboard/layout.tsx
+// LAYOUT SERVER-SIDE - Verifica login e passa user
+
 import { getUser } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
-import { DashboardWrapper } from './DashboardWrapper';
+import DashboardLayoutClient from './DashboardLayoutClient';
 
 export default async function DashboardLayout({
   children,
@@ -15,8 +17,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardWrapper user={user}>
+    <DashboardLayoutClient user={user}>
       {children}
-    </DashboardWrapper>
+    </DashboardLayoutClient>
   );
 }

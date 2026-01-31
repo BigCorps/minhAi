@@ -1,70 +1,53 @@
+// contexts/ThemeContext.tsx
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Theme = 'dark' | 'light';
+type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  // Inicializa com 'dark' como padrão
+  const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
-  // Carregar tema do localStorage na montagem
+  // Carrega o tema do localStorage após montar (client-side only)
   useEffect(() => {
     setMounted(true);
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    
     if (savedTheme) {
-      setThemeState(savedTheme);
-    } else {
-      // Detectar preferência do sistema
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setThemeState(prefersDark ? 'dark' : 'light');
+      setTheme(savedTheme);
     }
   }, []);
 
-  // Aplicar tema no documento e salvar no localStorage
+  // Salva o tema no localStorage quando muda
   useEffect(() => {
-    if (!mounted) return;
-
-    // Aplicar classe no HTML
-    const root = document.documentElement;
-    root.classList.remove('dark', 'light');
-    root.classList.add(theme);
-
-    // Aplicar cor de fundo no body
-    if (theme === 'dark') {
-      document.body.style.backgroundColor = '#020617'; // slate-950
-    } else {
-      document.body.style.backgroundColor = '#ffffff';
+    if (mounted) {
+      localStorage.setItem('theme', theme);
     }
-
-    // Salvar no localStorage
-    localStorage.setItem('theme', theme);
   }, [theme, mounted]);
 
   const toggleTheme = () => {
-    setThemeState(prev => prev === 'dark' ? 'light' : 'dark');
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-  };
-
-  // Evitar flash de tema incorreto
+  // Evita flash durante SSR/hydration
   if (!mounted) {
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen bg-slate-950">
+        {children}
+      </div>
+    );
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

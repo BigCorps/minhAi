@@ -43,10 +43,6 @@ export const VOSK_CORRECTIONS: { [key: string]: string } = {
   'sapp': 'whatsapp',
   'uóts': 'whatsapp',
   'uóts app': 'whatsapp',
-  'whats app': 'whatsapp',
-  'what sap': 'whatsapp',
-  'what\'s up': 'whatsapp',
-  'what up': 'whatsapp',
   
   // Especial: "lote" (comum no Vosk BR confundir com WhatsApp)
   'lote': 'whatsapp',

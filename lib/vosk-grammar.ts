@@ -227,7 +227,6 @@ export function normalizeVoskTranscript(text: string): string {
   
   // Aplicar correções do dicionário
   for (const [wrong, correct] of Object.entries(VOSK_CORRECTIONS)) {
-    // Usar regex com word boundaries para evitar substituições parciais
     const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
     normalized = normalized.replace(regex, correct);
   }

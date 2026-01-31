@@ -9,7 +9,7 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { loadVoskWithProgress } from '@/lib/vosk';
-import { VOSK_CUSTOM_GRAMMAR, normalizeVoskTranscript } from '@/lib/vosk-grammar';
+import { normalizeVoskTranscript } from '@/lib/vosk-grammar';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -282,12 +282,9 @@ export function VoiceAssistantWithWakeWord({
     }
 
     try {
-      console.log('🎤 Iniciando Vosk com grammar customizada...');
+      console.log('🎤 Iniciando Vosk...');
       
-      const recognizer = new voskModelRef.current.KaldiRecognizer(
-        16000,
-        JSON.stringify(VOSK_CUSTOM_GRAMMAR)
-      );
+      const recognizer = new voskModelRef.current.KaldiRecognizer(16000);
       
       voskRecognizerRef.current = recognizer;
       
@@ -520,10 +517,68 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
+  function convertWordsToNumbers(text: string): string {
+    const numberWords: {[key: string]: string} = {
+      'zero': '0',
+      'um': '1',
+      'dois': '2',
+      'três': '3',
+      'tres': '3',
+      'quatro': '4',
+      'cinco': '5',
+      'seis': '6',
+      'sete': '7',
+      'oito': '8',
+      'nove': '9',
+      'dez': '10',
+      'onze': '11',
+      'doze': '12',
+      'treze': '13',
+      'catorze': '14',
+      'quatorze': '14',
+      'quinze': '15',
+      'dezesseis': '16',
+      'dezessete': '17',
+      'dezoito': '18',
+      'dezenove': '19',
+      'vinte': '20',
+      'trinta': '30',
+      'quarenta': '40',
+      'cinquenta': '50',
+      'sessenta': '60',
+      'setenta': '70',
+      'oitenta': '80',
+      'noventa': '90',
+      'cem': '100',
+      'cento': '100',
+      'duzentos': '200',
+      'trezentos': '300',
+      'quatrocentos': '400',
+      'quinhentos': '500',
+      'seiscentos': '600',
+      'setecentos': '700',
+      'oitocentos': '800',
+      'novecentos': '900',
+      'mil': '1000',
+    };
+    
+    let result = text;
+    
+    for (const [word, number] of Object.entries(numberWords)) {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      result = result.replace(regex, number);
+    }
+    
+    return result;
+  }
+
 async function detectVoiceCommand(transcript: string): Promise<boolean> {
   const lowerTranscript = transcript.toLowerCase().trim();
   
   console.log('🔍 Detectando comandos de voz:', lowerTranscript);
+  
+  const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
+  console.log('🔢 Após conversão:', transcriptWithNumbers);
   
   const whatsappTriggers = [
     'whatsapp',
@@ -619,65 +674,31 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     }
   }
   
-  const pixKeywords = ['pix', 'pics', 'pic', 'cobrança', 'cobrar'];
-  const hasPix = pixKeywords.some(keyword => lowerTranscript.includes(keyword));
+  const pixPatterns = [
+    /(?:gerar|gera|criar|cria|fazer|faz|faça)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+    /(pix|cobrança|cobranca)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+  ];
   
-  if (hasPix) {
-    console.log('💰 Palavra-chave PIX detectada!');
-    
-    let amount = null;
-    
-    const pattern1 = /de\s+([\d]+(?:[,.]\d{1,2})?)\s*(?:reais?)?/i;
-    const match1 = lowerTranscript.match(pattern1);
-    if (match1) {
-      amount = parseFloat(match1[1].replace(',', '.'));
-      console.log('✅ Valor encontrado (padrão 1):', amount);
-    }
-    
-    if (!amount) {
-      const pattern2 = /(?:r\$|reais?)\s*([\d]+(?:[,.]\d{1,2})?)/i;
-      const match2 = lowerTranscript.match(pattern2);
-      if (match2) {
-        amount = parseFloat(match2[1].replace(',', '.'));
-        console.log('✅ Valor encontrado (padrão 2):', amount);
-      }
-    }
-    
-    if (!amount) {
-      const pattern3 = /([\d]+(?:[,.]\d{1,2})?)\s*reais?/i;
-      const match3 = lowerTranscript.match(pattern3);
-      if (match3) {
-        amount = parseFloat(match3[1].replace(',', '.'));
-        console.log('✅ Valor encontrado (padrão 3):', amount);
-      }
-    }
-    
-    if (!amount) {
-      const pattern4 = /([\d]+(?:[,.]\d{1,2})?)/;
-      const match4 = lowerTranscript.match(pattern4);
-      if (match4) {
-        amount = parseFloat(match4[1].replace(',', '.'));
-        console.log('✅ Valor encontrado (padrão 4):', amount);
-      }
-    }
-    
-    if (amount && amount > 0) {
-      console.log('💰 PIX DETECTADO! Valor:', amount);
+  for (const pattern of pixPatterns) {
+    const match = transcriptWithNumbers.match(pattern);
+    if (match) {
+      const amountStr = match[2] || match[1];
+      const amount = parseFloat(amountStr.replace(',', '.'));
       
-      const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
-      
-      if (!isEnabled) {
-        await playText('A função PIX está desativada no momento.');
+      if (amount > 0) {
+        console.log('💰 Comando PIX detectado! Valor:', amount);
+        
+        const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
+        
+        if (!isEnabled) {
+          await playText('A função PIX está desativada no momento.');
+          return true;
+        }
+        
+        await handlePixCommand(amount);
+        await registerFunctionUsage('pix_generate', 0);
         return true;
       }
-      
-      await handlePixCommand(amount);
-      await registerFunctionUsage('pix_generate', 0);
-      return true;
-    } else {
-      console.log('⚠️ Palavra PIX detectada mas sem valor válido');
-      await playText('Qual o valor do PIX?');
-      return true;
     }
   }
   

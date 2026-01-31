@@ -1,8 +1,6 @@
-// app/dashboard/layout.tsx
-// LAYOUT SIMPLES - SEM THEMECONTEXT
-
 import { getUser } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
+import { ThemeProvider } from '@/contexts/ThemeContext'; // Certifique-se que o caminho está correto
 
 export default async function DashboardLayout({
   children,
@@ -15,5 +13,9 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  return <>{children}</>;
+  return (
+    <ThemeProvider>
+      {children}
+    </ThemeProvider>
+  );
 }

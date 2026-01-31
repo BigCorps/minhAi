@@ -7,6 +7,8 @@ export const revalidate = 0;
 
 export default async function EmpresasPage() {
   const user = await getUser();
+  
+  // Se não houver usuário, redireciona para login
   if (!user) redirect('/login');
 
   const supabase = createClient();
@@ -15,5 +17,6 @@ export default async function EmpresasPage() {
     .select('*')
     .order('created_at', { ascending: false });
 
-  return <EmpresasClient companies={companies || []} />;
+  // Agora passamos o 'user' para o Client Component
+  return <EmpresasClient companies={companies || []} user={user} />;
 }

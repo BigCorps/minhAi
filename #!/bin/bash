@@ -1,68 +1,167 @@
 #!/bin/bash
 
-# Script - Limpar e Testar Login
+# SCRIPT DE LIMPEZA TOTAL E CORREÇÃO
 
-echo "🧹 Limpando e preparando para teste de login..."
+echo "🔥 LIMPEZA TOTAL E CORREÇÃO DO DASHBOARD"
+echo "════════════════════════════════════════"
 echo ""
 
 # Cores
+RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Verificar raiz
+# 1. Verificar se está na raiz do projeto
 if [ ! -f "package.json" ]; then
     echo -e "${RED}❌ Execute na raiz do projeto!${NC}"
     exit 1
 fi
 
-# Limpar cache
-echo -e "${BLUE}🧹 Limpando cache...${NC}"
-rm -rf .next
-rm -rf node_modules/.cache 2>/dev/null
-echo -e "${GREEN}✓ Cache limpo${NC}"
+# 2. Verificar estrutura
+echo -e "${BLUE}1. Verificando estrutura...${NC}"
+if [ ! -d "app/dashboard" ]; then
+    echo -e "${RED}❌ Pasta app/dashboard não existe!${NC}"
+    echo "Execute: mv app/\(dashboard\) app/dashboard"
+    exit 1
+fi
+echo -e "${GREEN}✓ Estrutura OK${NC}"
 echo ""
 
-# Atualizar middleware (opcional)
-if [ -f "middleware-final.ts" ]; then
-    echo -e "${BLUE}📝 Atualizar middleware? (s/n)${NC}"
-    read -p "" -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
-        cp middleware-final.ts middleware.ts
-        echo -e "${GREEN}✓ middleware.ts atualizado${NC}"
-    fi
-    echo ""
+# 3. Backup do HomeClient atual
+echo -e "${BLUE}2. Criando backup...${NC}"
+if [ -f "app/dashboard/HomeClient.tsx" ]; then
+    cp app/dashboard/HomeClient.tsx app/dashboard/HomeClient.tsx.backup
+    echo -e "${GREEN}✓ Backup criado: HomeClient.tsx.backup${NC}"
+else
+    echo -e "${YELLOW}⚠ HomeClient.tsx não encontrado${NC}"
 fi
+echo ""
+
+# 4. Criar HomeClient simplificado
+echo -e "${BLUE}3. Criando HomeClient simplificado...${NC}"
+
+cat > app/dashboard/HomeClient.tsx << 'EOFHOME'
+// app/dashboard/HomeClient.tsx
+// VERSÃO ULTRA BÁSICA - SEM DEPENDÊNCIAS COMPLEXAS
+
+'use client';
+
+interface HomeClientProps {
+  user: any;
+  userId: string;
+  totalCompanies: number;
+  totalConversations: number;
+  totalFAQs: number;
+}
+
+export default function HomeClient({ 
+  user,
+  userId,
+  totalCompanies, 
+  totalConversations, 
+  totalFAQs 
+}: HomeClientProps) {
+  const displayName = user?.user_metadata?.name || user?.email || 'Usuário';
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">🎉 Dashboard Funcionando!</h1>
+          <h2 className="text-2xl mb-4">Olá, {displayName}!</h2>
+          <p className="text-white/60">Bem-vindo ao eAi Dashboard</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-slate-800/50 rounded-lg p-6 border border-white/10">
+            <div className="text-4xl mb-2">🤖</div>
+            <div className="text-2xl font-bold">{totalCompanies}</div>
+            <div className="text-white/60">Assistentes</div>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-lg p-6 border border-white/10">
+            <div className="text-4xl mb-2">💬</div>
+            <div className="text-2xl font-bold">{totalConversations}</div>
+            <div className="text-white/60">Conversas</div>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-lg p-6 border border-white/10">
+            <div className="text-4xl mb-2">⚡</div>
+            <div className="text-2xl font-bold">{totalFAQs}</div>
+            <div className="text-white/60">FAQs</div>
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 rounded-lg p-6 border border-white/10 mb-8">
+          <h3 className="text-xl font-bold mb-4">Links Rápidos</h3>
+          <div className="space-y-2">
+            <a href="/dashboard/assistentes" className="block text-blue-400 hover:text-blue-300">
+              → Assistentes
+            </a>
+            <a href="/dashboard/funcoes" className="block text-blue-400 hover:text-blue-300">
+              → Funções
+            </a>
+            <a href="/dashboard/saldo" className="block text-blue-400 hover:text-blue-300">
+              → Saldo
+            </a>
+            <a href="/dashboard/historico" className="block text-blue-400 hover:text-blue-300">
+              → Histórico
+            </a>
+          </div>
+        </div>
+
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+          <div className="text-green-400 font-bold mb-2">✅ Dashboard está funcionando!</div>
+          <div className="text-sm text-white/60">User ID: {userId}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+EOFHOME
+
+echo -e "${GREEN}✓ HomeClient.tsx criado${NC}"
+echo ""
+
+# 5. Limpar TUDO
+echo -e "${BLUE}4. Limpando cache (pode demorar)...${NC}"
+
+rm -rf .next
+echo -e "${GREEN}✓ .next deletado${NC}"
+
+rm -rf node_modules/.cache 2>/dev/null
+echo -e "${GREEN}✓ node_modules/.cache deletado${NC}"
+
+rm -rf .vercel 2>/dev/null
+echo -e "${GREEN}✓ .vercel deletado${NC}"
+
+echo ""
+
+# 6. Limpar cache do npm
+echo -e "${BLUE}5. Limpando cache do npm...${NC}"
+npm cache clean --force
+echo -e "${GREEN}✓ Cache do npm limpo${NC}"
+echo ""
 
 # Resultado
-echo -e "${GREEN}================================================${NC}"
-echo -e "${GREEN}✅ Preparado para testar!${NC}"
-echo -e "${GREEN}================================================${NC}"
+echo "════════════════════════════════════════"
+echo -e "${GREEN}✅ LIMPEZA COMPLETA!${NC}"
+echo "════════════════════════════════════════"
 echo ""
-echo -e "${YELLOW}🔴 ANTES DE TESTAR:${NC}"
+echo -e "${YELLOW}Próximos passos:${NC}"
+echo "  1. ${BLUE}npm install${NC} (reinstalar dependências)"
+echo "  2. ${BLUE}npm run dev${NC} (rodar servidor)"
+echo "  3. Acessar: ${BLUE}http://localhost:3000/dashboard${NC}"
 echo ""
-echo "1. ${BLUE}Limpar cookies do navegador:${NC}"
-echo "   • Abra DevTools (F12)"
-echo "   • Application → Clear site data"
-echo "   • Ou use modo incógnito (Ctrl+Shift+N)"
+echo -e "${YELLOW}O que foi feito:${NC}"
+echo "  ✓ HomeClient.tsx substituído (versão simplificada)"
+echo "  ✓ Cache .next deletado"
+echo "  ✓ Cache node_modules deletado"
+echo "  ✓ Cache npm limpo"
 echo ""
-echo "2. ${BLUE}Iniciar servidor:${NC}"
-echo "   ${BLUE}npm run dev${NC}"
+echo -e "${YELLOW}Backup:${NC}"
+echo "  app/dashboard/HomeClient.tsx.backup"
 echo ""
-echo "3. ${BLUE}Testar login:${NC}"
-echo "   • Abra http://localhost:3000/login"
-echo "   • ${GREEN}Deve permanecer em /login (não redirecionar)${NC}"
-echo "   • Abra Console (F12)"
-echo "   • Preencha email e senha"
-echo "   • Clique 'Entrar'"
-echo "   • Veja logs no console:"
-echo "     ${GREEN}✅ 🔑 Fazendo login...${NC}"
-echo "     ${GREEN}✅ ✅ Login bem-sucedido!${NC}"
-echo "     ${GREEN}✅ 🔄 Redirecionando para /...${NC}"
-echo ""
-echo -e "${BLUE}💡 Dica: Use modo incógnito para evitar cache!${NC}"
-echo ""
-echo -e "${GREEN}🚀 Pronto!${NC}"
+echo -e "${GREEN}🚀 Agora deve funcionar!${NC}"

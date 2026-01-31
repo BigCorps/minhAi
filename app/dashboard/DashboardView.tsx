@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { DashboardHeader } from './empresas/DashboardHeader'; // Ajuste o caminho onde você salvou o DashboardHeader
+import { DashboardHeader } from '@/components/layout/DashboardHeader
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface DashboardViewProps {

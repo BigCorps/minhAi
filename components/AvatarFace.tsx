@@ -143,16 +143,7 @@ export function AvatarFace({
     return () => { if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current); };
   }, [showFace, eyeExpr]);
 
-  // 🆕 USEEFFECT MODIFICADO - Expressões continuam durante IDLE e LISTENING
   useEffect(() => {
-    // 🆕 Continuar animando quando não está processando ou falando
-    const shouldAnimate = !isSpeaking && !isProcessing;
-    
-    if (!shouldAnimate) {
-      setEyeExpr('idle');
-      return;
-    }
-
     const expressions: EyeExpression[] = [
       'sleeping', 'sleeping', 
       'flirt', 'flirt', 'flirt', 
@@ -177,9 +168,9 @@ export function AvatarFace({
       }, delay);
     };
 
-    scheduleNextExpr();
+    if (showFace) scheduleNextExpr();
     return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
-  }, [isSpeaking, isProcessing, isListening]); // 🆕 Dependências atualizadas
+  }, [showFace, isListening]);
 
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
@@ -272,20 +263,20 @@ export function AvatarFace({
           <div key={i} className="absolute rounded-full opacity-70 animate-float blur-[1px]" style={{ left: `${(particle.x / 500) * 100}%`, top: `${(particle.y / 500) * 100}%`, width: `${particle.size}px`, height: `${particle.size}px`, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, animationDuration: `${2 + particle.speed * 2}s`, animationDelay: `${i * 0.1}s`, boxShadow: `0 0 ${particle.size * 2}px ${i % 2 === 0 ? colors.primary : colors.secondary}` }} />
         ))}
       </div>
-      <div className={`relative w-full h-full transition-transform duration-700 ${orbSize}`} style={{ aspectRatio: '1/1' }}>
+      <div className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`} style={{ background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)', boxShadow: `0 0 40px ${colors.glow}`, backdropFilter: 'blur(8px)', aspectRatio: '1 / 1' }}>
         {showFace && (
-          <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
+          <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
-              <radialGradient id="eyeGradient"><stop offset="0%" stopColor={colors.primary} /><stop offset="100%" stopColor={colors.secondary} /></radialGradient>
-              <radialGradient id="glowGradient"><stop offset="0%" stopColor="white" stopOpacity="0.9" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" /></radialGradient>
-              <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor={isDark ? '#1e293b' : '#cbd5e1'} /><stop offset="100%" stopColor={isDark ? '#0f172a' : '#94a3b8'} /></linearGradient>
-              <filter id="softGlow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              <filter id="mouthDepthShadow"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3"/></filter>
+              <radialGradient id="eyeGradient"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.9" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.3" /></radialGradient>
+              <radialGradient id="glowGradient"><stop offset="0%" stopColor="white" stopOpacity="0.8" /><stop offset="100%" stopColor="white" stopOpacity="0" /></radialGradient>
+              <filter id="softGlow"><feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" /><stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" /></linearGradient>
+              <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
             {stars.map((star) => (
-              <circle key={star.id} cx={star.x} cy={star.y} r="2" fill={colors.primary} opacity="0.6">
-                <animate attributeName="opacity" values="0;1;0" dur="3s" begin={`${star.delay}s`} repeatCount="indefinite" />
-                <animate attributeName="r" values="1;3;1" dur="3s" begin={`${star.delay}s`} repeatCount="indefinite" />
+              <circle key={star.id} cx={star.x} cy={star.y} r="1.5" fill={colors.primary} opacity="0.6">
+                <animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${star.delay}s`} repeatCount="indefinite" />
+                <animate attributeName="r" values="1;2;1" dur="2s" begin={`${star.delay}s`} repeatCount="indefinite" />
                 <animateTransform attributeName="transform" type="translate" values="0,0; 5,-5; 0,0" dur="4s" begin={`${star.delay}s`} repeatCount="indefinite" />
               </circle>
             ))}

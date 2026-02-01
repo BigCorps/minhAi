@@ -9,6 +9,8 @@ interface AvatarFaceProps {
   isSpeaking: boolean;
   isProcessing: boolean;
   theme?: 'dark' | 'light';
+  
+  // ✨ NOVOS PROPS PARA QR CODES
   qrCodeData?: {
     type: 'whatsapp' | 'instagram' | 'pix';
     qrCodeUrl: string;
@@ -17,19 +19,23 @@ interface AvatarFaceProps {
     amount?: string;
     companyName?: string;
   } | null;
+  
+  // ✨ NOVOS PROPS PARA PIX CONFIRMATION
   pixConfirmationData?: {
     transactionId: string;
     amount: string;
     qrCodeUrl: string;
     pixCode: string;
   } | null;
+  
   onCloseQRCode?: () => void;
   onCopyQRCode?: () => void;
   onConfirmPix?: () => Promise<void>;
   onCancelPix?: () => Promise<void>;
 }
 
-type EyeExpression = 'idle' | 'tired' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry' | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy' | 'confused';
+// 🎭 TIPOS DE EXPRESSÕES Oculares (Removido 'tired')
+type EyeExpression = 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry' | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy' | 'confused';
 
 export function AvatarFace({ 
   isListening, 
@@ -46,6 +52,7 @@ export function AvatarFace({
   
   const isDark = theme === 'dark';
 
+  // 🎯 CORES ORIGINAIS PRESERVADAS INTEGRALMENTE
   const statusColors = useMemo(() => ({
     idle: { 
       primary: '#3b82f6',
@@ -89,6 +96,7 @@ export function AvatarFace({
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // 🎯 IMPORTANTE: Garantir que as expressões rodem sempre que não estiver falando/processando
   const showFace = !isProcessing && !isSpeaking;
 
   useEffect(() => {
@@ -98,6 +106,7 @@ export function AvatarFace({
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
 
+  // ✨ ESTRELAS ALEATÓRIAS (MELHORADO)
   useEffect(() => {
     const generateStars = () => {
       const newStars = Array.from({ length: 6 }, (_, i) => ({
@@ -113,6 +122,7 @@ export function AvatarFace({
     return () => clearInterval(interval);
   }, []);
 
+  // 👁️ SISTEMA DE PISCADAS ALEATÓRIAS (ORIGINAL)
   useEffect(() => {
     const scheduleNextBlink = () => {
       const nextBlinkDelay = Math.random() * 4000 + 2000;
@@ -143,17 +153,32 @@ export function AvatarFace({
     return () => { if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current); };
   }, [showFace, eyeExpr]);
 
+  // 🎭 SISTEMA DE EXPRESSÕES ALEATÓRIAS (AJUSTADO PARA MAIOR FREQUÊNCIA DE FLERTE E SONO)
   useEffect(() => {
+    // Lista ponderada para dar mais peso ao flirt e sleeping
     const expressions: EyeExpression[] = [
-      'tired', 'sleeping', 'surprised', 'flirt', 
-      'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy', 'confused'
+      'sleeping', 'sleeping', // Peso 2
+      'flirt', 'flirt', 'flirt', // Peso 3
+      'surprised', 'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy', 'confused'
     ];
+
     const scheduleNextExpr = () => {
-      const delay = Math.random() * 6000 + 4000;
+      // Intervalo menor entre expressões para ser mais dinâmico
+      const delay = Math.random() * 4000 + 3000; 
+      
       exprTimeoutRef.current = setTimeout(() => {
+        // Se estiver ouvindo, não muda para aleatória, mantém atento
+        if (isListening) {
+          setEyeExpr('attentive');
+          scheduleNextExpr();
+          return;
+        }
+
         const next = expressions[Math.floor(Math.random() * expressions.length)];
         setEyeExpr(next);
+        
         const duration = next === 'sleeping' ? 6000 : next === 'flirt' ? 2000 : 2500;
+        
         setTimeout(() => {
           setEyeExpr('idle');
           scheduleNextExpr();
@@ -161,18 +186,14 @@ export function AvatarFace({
       }, delay);
     };
 
-    if (showFace && !isListening) {
+    if (showFace) {
       scheduleNextExpr();
-    } else if (isListening) {
-      setEyeExpr('attentive');
-      if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current);
-    } else {
-      setEyeExpr('idle');
-      if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current);
     }
+    
     return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
   }, [showFace, isListening]);
 
+  // 🎵 AUDIO LEVELS E PARTÍCULAS (PRESERVADOS)
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
     const newParticles = Array.from({ length: particleCount }, () => ({
@@ -232,7 +253,7 @@ export function AvatarFace({
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
       
-      {/* QR CODE OVERLAYS (ORIGINAL) */}
+      {/* QR CODES E MODAIS (PRESERVADOS) */}
       {qrCodeData && !pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
           <QRCodeDisplay type={qrCodeData.type} qrCodeUrl={qrCodeData.qrCodeUrl} qrContent={qrCodeData.qrContent} displayText={qrCodeData.displayText} amount={qrCodeData.amount} companyName={qrCodeData.companyName} onClose={onCloseQRCode || (() => {})} onCopy={onCopyQRCode} autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15} />
@@ -244,7 +265,7 @@ export function AvatarFace({
         </div>
       )}
       
-      {/* ONDAS E HALOS (ORIGINAL) */}
+      {/* PULSAÇÕES E ANÉIS ORIGINAIS (RESTAURADOS) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
           <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{ width: `${60 + ring * 15}%`, aspectRatio: '1 / 1', borderColor: colors.ring, opacity: isSpeaking ? 0.4 : 0.2, animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`, animationDelay: `${ring * 0.3}s` }} />
@@ -298,12 +319,6 @@ export function AvatarFace({
               <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
-              <clipPath id="eyeClip">
-                <ellipse cx="76" cy="85" rx="14.4" ry="17.6" />
-              </clipPath>
-              <clipPath id="eyeClipRight">
-                <ellipse cx="124" cy="85" rx="14.4" ry="17.6" />
-              </clipPath>
             </defs>
 
             {/* ✨ ESTRELAS ALEATÓRIAS */}
@@ -326,8 +341,7 @@ export function AvatarFace({
                     ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} 
                     fill="url(#eyeGradient)" opacity="0.85" 
                   />
-                  {/* Cortes Geométricos */}
-                  {eyeExpr === 'tired' && <rect x="50" y="60" width="50" height="25" fill={isDark ? '#0f172a' : '#f8fafc'} />}
+                  {/* Cortes Geométricos (Cansado removido) */}
                   {eyeExpr === 'sad' && <path d="M 50 60 L 100 85 L 100 60 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
                   {eyeExpr === 'angry' && <path d="M 50 60 L 100 60 L 50 85 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
                   
@@ -346,7 +360,7 @@ export function AvatarFace({
                   </path>
                 </g>
               ) : (
-                /* Caso eyeExpr === 'flirt' no olho esquerdo: fica aberto normal */
+                /* Flirt: Olho esquerdo aberto normal */
                 <g>
                   <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
                   <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
@@ -367,15 +381,12 @@ export function AvatarFace({
                     strokeWidth={eyeExpr === 'flirt' ? "3.5" : "0"}
                     opacity="0.85" 
                   />
-                  {/* Piscada do Flerte (olho direito fechado) */}
                   {eyeExpr === 'flirt' ? (
                     <path d="M 110 85 Q 124 87 138 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
                   ) : (
                     <>
-                      {eyeExpr === 'tired' && <rect x="100" y="60" width="50" height="25" fill={isDark ? '#0f172a' : '#f8fafc'} />}
                       {eyeExpr === 'sad' && <path d="M 100 60 L 150 60 L 100 85 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
                       {eyeExpr === 'angry' && <path d="M 100 60 L 150 85 L 150 60 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
-                      
                       <ellipse cx={eyeExpr === 'lookLeft' ? "117" : eyeExpr === 'lookRight' ? "125" : "121"} cy={eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
                       <circle cx={eyeExpr === 'lookLeft' ? "118" : eyeExpr === 'lookRight' ? "126" : "122"} cy={eyeExpr === 'lookDown' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
                     </>
@@ -386,7 +397,6 @@ export function AvatarFace({
               ) : eyeExpr === 'happy' ? (
                 <path d="M 110 88 L 124 78 L 138 88" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
               ) : (
-                /* Confused */
                 <g transform="translate(124, 85)">
                   <path d="M -10 0 A 10 10 0 1 0 10 0 A 10 10 0 1 0 -5 0 A 5 5 0 1 0 5 0" stroke={colors.primary} strokeWidth="2" fill="none">
                     <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="1s" repeatCount="indefinite" />
@@ -395,7 +405,7 @@ export function AvatarFace({
               )}
             </g>
 
-            {/* BOCA (ORIGINAL E INALTERADA) */}
+            {/* BOCA ORIGINAL (PRESERVADA) */}
             <g className="transition-opacity duration-700">
               <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
               <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
@@ -414,7 +424,7 @@ export function AvatarFace({
           </svg>
         )}
 
-        {/* ORBS E ANÉIS (ORIGINAL RESTAURADO) */}
+        {/* ORBS E ANÉIS ORIGINAIS (RESTAURADOS) */}
         {!showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
@@ -427,6 +437,12 @@ export function AvatarFace({
               <circle cx="100" cy="100" r="45" fill="url(#coreGradient1)"><animate attributeName="r" values="40;55;40" dur="1.8s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.5s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="3.2s" repeatCount="indefinite" /></circle>
               <circle cx="65" cy="100" r="35" fill="url(#coreGradient2)" opacity="0.95"><animate attributeName="r" values="32;42;32" dur="2s" repeatCount="indefinite" /><animate attributeName="cx" values="65;58;72;65" dur="2.8s" repeatCount="indefinite" /><animate attributeName="cy" values="100;108;92;100" dur="3.6s" repeatCount="indefinite" /></circle>
               <circle cx="135" cy="100" r="35" fill="url(#coreGradient3)" opacity="0.95"><animate attributeName="r" values="33;43;33" dur="1.9s" repeatCount="indefinite" /><animate attributeName="cx" values="135;142;128;135" dur="3.2s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="2.9s" repeatCount="indefinite" /></circle>
+              <circle cx="100" cy="65" r="30" fill="url(#coreGradient1)" opacity="0.9"><animate attributeName="r" values="27;37;27" dur="2.2s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.8s" repeatCount="indefinite" /><animate attributeName="cy" values="65;58;72;65" dur="2.7s" repeatCount="indefinite" /></circle>
+              <circle cx="100" cy="135" r="30" fill="url(#coreGradient2)" opacity="0.9"><animate attributeName="r" values="28;38;28" dur="2.4s" repeatCount="indefinite" /><animate attributeName="cx" values="100;92;108;100" dur="3.1s" repeatCount="indefinite" /><animate attributeName="cy" values="135;142;128;135" dur="3.5s" repeatCount="indefinite" /></circle>
+              <circle cx="72" cy="72" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.1s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="3.3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="2.8s" repeatCount="indefinite" /></circle>
+              <circle cx="128" cy="72" r="26" fill="url(#coreGradient1)" opacity="0.85"><animate attributeName="r" values="24;34;24" dur="2.3s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="3.4s" repeatCount="indefinite" /></circle>
+              <circle cx="72" cy="128" r="26" fill="url(#coreGradient2)" opacity="0.85"><animate attributeName="r" values="22;32;22" dur="2.5s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="2.9s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="3.2s" repeatCount="indefinite" /></circle>
+              <circle cx="128" cy="128" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.6s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3.6s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="2.6s" repeatCount="indefinite" /></circle>
               {[...Array(isSpeaking ? 16 : 8)].map((_, i) => {
                 const angle = (i * Math.PI * 2) / (isSpeaking ? 16 : 8);
                 const radius = isSpeaking ? 55 : 50;
@@ -436,16 +452,27 @@ export function AvatarFace({
                   </circle>
                 );
               })}
+              {isSpeaking && [...Array(12)].map((_, i) => {
+                const angle = (i * Math.PI * 2) / 12 + Math.PI / 12;
+                const radius = 35;
+                return (
+                  <circle key={`extra-orb-${i}`} cx={100 + Math.cos(angle) * radius} cy={100 + Math.sin(angle) * radius} r="12" fill={i % 2 === 0 ? colors.primary : colors.secondary} opacity="0.7">
+                    <animate attributeName="r" values="10;18;10" dur={`${0.7 + (i * 0.05)}s`} repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(angle + Math.PI) * 12},${Math.sin(angle + Math.PI) * 12}; 0,0`} dur={`${1 + (i * 0.06)}s`} repeatCount="indefinite" /><animate attributeName="opacity" values="0.5;0.9;0.5" dur={`${0.8 + (i * 0.05)}s`} repeatCount="indefinite" />
+                  </circle>
+                );
+              })}
             </g>
           </svg>
         )}
 
+        {/* ANÉIS DE PING (ORIGINAL) */}
         <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
           {[1, 2, 3].map(ring => (
             <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
           ))}
         </div>
 
+        {/* 🎵 GRÁFICO DE ÁUDIO (ORIGINAL) */}
         {isSpeaking && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
             <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">

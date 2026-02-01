@@ -117,7 +117,8 @@ export function AvatarFace({
     const scheduleNextBlink = () => {
       const nextBlinkDelay = Math.random() * 4000 + 2000;
       blinkTimeoutRef.current = setTimeout(() => {
-        if (eyeExpr === 'flirt' || eyeExpr === 'sleeping' || eyeExpr === 'happy') {
+        // Correção do Relatório Visual: Adicionar verificação de isBlinking e eyeExpr
+        if (eyeExpr === 'flirt' || eyeExpr === 'sleeping' || eyeExpr === 'happy' || isBlinking) {
           scheduleNextBlink();
           return;
         }
@@ -141,36 +142,63 @@ export function AvatarFace({
     };
     if (showFace) scheduleNextBlink();
     return () => { if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current); };
-  }, [showFace, eyeExpr]);
+  }, [showFace, eyeExpr, isBlinking]);
 
   useEffect(() => {
+    // 🆕 Melhoria do Guia de Expressões: Continuar animando durante IDLE e LISTENING
+    const shouldAnimate = !isSpeaking && !isProcessing;
+    
+    if (!shouldAnimate) {
+      setEyeExpr('idle');
+      return;
+    }
+
+    // Lista de todas as expressões disponíveis
     const expressions: EyeExpression[] = [
-      'sleeping', 'sleeping', 
-      'flirt', 'flirt', 'flirt', 
-      'surprised', 'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy'
+      'idle',
+      'sleeping',
+      'surprised',
+      'attentive',
+      'flirt',
+      'sad',
+      'angry',
+      'lookLeft',
+      'lookRight',
+      'lookDown',
+      'happy'
     ];
 
-    const scheduleNextExpr = () => {
-      const delay = Math.random() * 4000 + 3000; 
+    const changeExpression = () => {
+      // Escolher uma expressão aleatória (sem 'idle')
+      const nonIdleExpressions = expressions.filter(e => e !== 'idle');
+      const randomExpr = nonIdleExpressions[Math.floor(Math.random() * nonIdleExpressions.length)];
+      setEyeExpr(randomExpr);
+
+      // Voltar para 'idle' após 2-3 segundos
       exprTimeoutRef.current = setTimeout(() => {
-        if (isListening) {
-          setEyeExpr('attentive');
-          scheduleNextExpr();
-          return;
-        }
-        const next = expressions[Math.floor(Math.random() * expressions.length)];
-        setEyeExpr(next);
-        const duration = next === 'sleeping' ? 6000 : next === 'flirt' ? 2000 : 2500;
-        setTimeout(() => {
-          setEyeExpr('idle');
-          scheduleNextExpr();
-        }, duration);
-      }, delay);
+        setEyeExpr('idle');
+      }, 2000 + Math.random() * 1000);
     };
 
-    if (showFace) scheduleNextExpr();
-    return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
-  }, [showFace, isListening]);
+    // Mudar expressão a cada 5-8 segundos
+    const interval = setInterval(() => {
+      changeExpression();
+    }, 5000 + Math.random() * 3000);
+
+    // Primeira expressão após 3 segundos
+    const initialTimeout = setTimeout(() => {
+      changeExpression();
+    }, 3000);
+
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      clearTimeout(initialTimeout);
+      if (exprTimeoutRef.current) {
+        clearTimeout(exprTimeoutRef.current);
+      }
+    };
+  }, [isSpeaking, isProcessing]); // 🆕 Reage a mudanças de estado conforme o guia
 
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
@@ -260,7 +288,7 @@ export function AvatarFace({
       <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
       <div className="absolute w-full h-full overflow-visible pointer-events-none">
         {particles.map((particle, i) => (
-          <div key={i} className="absolute rounded-full opacity-70 animate-float blur-[1px]" style={{ left: `${(particle.x / 500) * 100}%`, top: `${(particle.y / 500) * 100}%`, width: `${particle.size}px`, height: `${particle.size}px`, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, animationDuration: `${2 + particle.speed * 2}s`, animationDelay: `${i * 0.1}s`, boxShadow: `0 0 ${particle.size * 2}px ${i % 2 === 0 ? colors.primary : colors.secondary}` }} />
+          <div key={`particle-${i}`} className="absolute rounded-full animate-float" style={{ left: particle.x, top: particle.y, width: particle.size, height: particle.size, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, opacity: 0.3, animationDuration: `${5 / particle.speed}s`, animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
       <div className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`} style={{ background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)', boxShadow: `0 0 40px ${colors.glow}`, backdropFilter: 'blur(8px)', aspectRatio: '1 / 1' }}>
@@ -285,17 +313,17 @@ export function AvatarFace({
               {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'flirt' && eyeExpr !== 'happy') ? (
                 <g className="transition-all duration-500">
                   <ellipse cx={eyeExpr === 'lookLeft' ? "72" : eyeExpr === 'lookRight' ? "80" : "76"} cy={eyeExpr === 'lookDown' ? "88" : "85"} rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} fill="url(#eyeGradient)" opacity="0.85" />
-                  {eyeExpr === 'sad' && <path d="M 50 60 L 100 85 L 100 60 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
-                  {eyeExpr === 'angry' && <path d="M 50 60 L 100 60 L 50 85 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
+                  {/* Correção do Relatório Visual: Não renderizar triângulos no tema dark */}
+                  {eyeExpr === 'sad' && !isDark && <path d="M 50 60 L 100 85 L 100 60 Z" fill="#f8fafc" />}
+                  {eyeExpr === 'angry' && !isDark && <path d="M 50 60 L 100 60 L 50 85 Z" fill="#f8fafc" />}
                   <ellipse cx={eyeExpr === 'lookLeft' ? "69" : eyeExpr === 'lookRight' ? "77" : "73"} cy={eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
                   <circle cx={eyeExpr === 'lookLeft' ? "70" : eyeExpr === 'lookRight' ? "78" : "74"} cy={eyeExpr === 'lookDown' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
                 </g>
               ) : isBlinking || eyeExpr === 'sleeping' ? (
                 <path d="M 62 85 Q 76 87 90 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
               ) : eyeExpr === 'happy' ? (
-                <g transform="translate(76, 85)">
-                  <path d="M -10 5 L 0 -5 L 10 5" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
-                </g>
+                // Correção do Relatório Visual: Usar coordenadas absolutas sem transform
+                <path d="M 66 90 L 76 80 L 86 90" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
               ) : (
                 <g><ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" /><ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" /><circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" /></g>
               )}
@@ -307,8 +335,9 @@ export function AvatarFace({
                   ) : (
                     <>
                       <ellipse cx={eyeExpr === 'lookLeft' ? "120" : eyeExpr === 'lookRight' ? "128" : "124"} cy={eyeExpr === 'lookDown' ? "88" : "85"} rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} fill="url(#eyeGradient)" opacity="0.85" />
-                      {eyeExpr === 'sad' && <path d="M 100 60 L 150 60 L 100 85 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
-                      {eyeExpr === 'angry' && <path d="M 100 60 L 150 85 L 150 60 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
+                      {/* Correção do Relatório Visual: Não renderizar triângulos no tema dark */}
+                      {eyeExpr === 'sad' && !isDark && <path d="M 100 60 L 150 60 L 100 85 Z" fill="#f8fafc" />}
+                      {eyeExpr === 'angry' && !isDark && <path d="M 100 60 L 150 85 L 150 60 Z" fill="#f8fafc" />}
                       <ellipse cx={eyeExpr === 'lookLeft' ? "117" : eyeExpr === 'lookRight' ? "125" : "121"} cy={eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
                       <circle cx={eyeExpr === 'lookLeft' ? "118" : eyeExpr === 'lookRight' ? "126" : "122"} cy={eyeExpr === 'lookDown' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
                     </>
@@ -317,9 +346,8 @@ export function AvatarFace({
               ) : isBlinking || eyeExpr === 'sleeping' ? (
                 <path d="M 110 85 Q 124 87 138 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
               ) : (
-                <g transform="translate(124, 85)">
-                  <path d="M -10 5 L 0 -5 L 10 5" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
-                </g>
+                // Correção do Relatório Visual: Usar coordenadas absolutas sem transform
+                <path d="M 114 90 L 124 80 L 134 90" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
               )}
             </g>
             <g className="transition-opacity duration-700">

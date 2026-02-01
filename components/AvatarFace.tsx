@@ -9,8 +9,6 @@ interface AvatarFaceProps {
   isSpeaking: boolean;
   isProcessing: boolean;
   theme?: 'dark' | 'light';
-  
-  // ✨ NOVOS PROPS PARA QR CODES
   qrCodeData?: {
     type: 'whatsapp' | 'instagram' | 'pix';
     qrCodeUrl: string;
@@ -19,23 +17,19 @@ interface AvatarFaceProps {
     amount?: string;
     companyName?: string;
   } | null;
-  
-  // ✨ NOVOS PROPS PARA PIX CONFIRMATION
   pixConfirmationData?: {
     transactionId: string;
     amount: string;
     qrCodeUrl: string;
     pixCode: string;
   } | null;
-  
   onCloseQRCode?: () => void;
   onCopyQRCode?: () => void;
   onConfirmPix?: () => Promise<void>;
   onCancelPix?: () => Promise<void>;
 }
 
-// 🎭 TIPOS DE EXPRESSÕES Oculares (Removido 'tired')
-type EyeExpression = 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry' | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy' | 'confused';
+type EyeExpression = 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry' | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy';
 
 export function AvatarFace({ 
   isListening, 
@@ -52,7 +46,6 @@ export function AvatarFace({
   
   const isDark = theme === 'dark';
 
-  // 🎯 CORES ORIGINAIS PRESERVADAS INTEGRALMENTE
   const statusColors = useMemo(() => ({
     idle: { 
       primary: '#3b82f6',
@@ -96,7 +89,6 @@ export function AvatarFace({
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // 🎯 IMPORTANTE: Garantir que as expressões rodem sempre que não estiver falando/processando
   const showFace = !isProcessing && !isSpeaking;
 
   useEffect(() => {
@@ -106,7 +98,6 @@ export function AvatarFace({
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
 
-  // ✨ ESTRELAS ALEATÓRIAS (MELHORADO)
   useEffect(() => {
     const generateStars = () => {
       const newStars = Array.from({ length: 6 }, (_, i) => ({
@@ -122,12 +113,11 @@ export function AvatarFace({
     return () => clearInterval(interval);
   }, []);
 
-  // 👁️ SISTEMA DE PISCADAS ALEATÓRIAS (ORIGINAL)
   useEffect(() => {
     const scheduleNextBlink = () => {
       const nextBlinkDelay = Math.random() * 4000 + 2000;
       blinkTimeoutRef.current = setTimeout(() => {
-        if (eyeExpr === 'flirt' || eyeExpr === 'sleeping' || eyeExpr === 'happy' || eyeExpr === 'confused') {
+        if (eyeExpr === 'flirt' || eyeExpr === 'sleeping' || eyeExpr === 'happy') {
           scheduleNextBlink();
           return;
         }
@@ -153,32 +143,24 @@ export function AvatarFace({
     return () => { if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current); };
   }, [showFace, eyeExpr]);
 
-  // 🎭 SISTEMA DE EXPRESSÕES ALEATÓRIAS (AJUSTADO PARA MAIOR FREQUÊNCIA DE FLERTE E SONO)
   useEffect(() => {
-    // Lista ponderada para dar mais peso ao flirt e sleeping
     const expressions: EyeExpression[] = [
-      'sleeping', 'sleeping', // Peso 2
-      'flirt', 'flirt', 'flirt', // Peso 3
-      'surprised', 'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy', 'confused'
+      'sleeping', 'sleeping', 
+      'flirt', 'flirt', 'flirt', 
+      'surprised', 'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy'
     ];
 
     const scheduleNextExpr = () => {
-      // Intervalo menor entre expressões para ser mais dinâmico
       const delay = Math.random() * 4000 + 3000; 
-      
       exprTimeoutRef.current = setTimeout(() => {
-        // Se estiver ouvindo, não muda para aleatória, mantém atento
         if (isListening) {
           setEyeExpr('attentive');
           scheduleNextExpr();
           return;
         }
-
         const next = expressions[Math.floor(Math.random() * expressions.length)];
         setEyeExpr(next);
-        
         const duration = next === 'sleeping' ? 6000 : next === 'flirt' ? 2000 : 2500;
-        
         setTimeout(() => {
           setEyeExpr('idle');
           scheduleNextExpr();
@@ -186,14 +168,10 @@ export function AvatarFace({
       }, delay);
     };
 
-    if (showFace) {
-      scheduleNextExpr();
-    }
-    
+    if (showFace) scheduleNextExpr();
     return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
   }, [showFace, isListening]);
 
-  // 🎵 AUDIO LEVELS E PARTÍCULAS (PRESERVADOS)
   useEffect(() => {
     const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
     const newParticles = Array.from({ length: particleCount }, () => ({
@@ -252,8 +230,6 @@ export function AvatarFace({
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
-      
-      {/* QR CODES E MODAIS (PRESERVADOS) */}
       {qrCodeData && !pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
           <QRCodeDisplay type={qrCodeData.type} qrCodeUrl={qrCodeData.qrCodeUrl} qrContent={qrCodeData.qrContent} displayText={qrCodeData.displayText} amount={qrCodeData.amount} companyName={qrCodeData.companyName} onClose={onCloseQRCode || (() => {})} onCopy={onCopyQRCode} autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15} />
@@ -264,8 +240,6 @@ export function AvatarFace({
           <PIXConfirmationModal transactionId={pixConfirmationData.transactionId} amount={pixConfirmationData.amount} qrCodeUrl={pixConfirmationData.qrCodeUrl} pixCode={pixConfirmationData.pixCode} onConfirm={onConfirmPix || (async () => {})} onCancel={onCancelPix || (async () => {})} />
         </div>
       )}
-      
-      {/* PULSAÇÕES E ANÉIS ORIGINAIS (RESTAURADOS) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
           <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{ width: `${60 + ring * 15}%`, aspectRatio: '1 / 1', borderColor: colors.ring, opacity: isSpeaking ? 0.4 : 0.2, animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`, animationDelay: `${ring * 0.3}s` }} />
@@ -283,45 +257,22 @@ export function AvatarFace({
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
         <div className="rounded-full" style={{ width: '80%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, ${colors.glow} 0%, transparent 70%)`, opacity: 0.5 }} />
       </div>
-
       <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
-      
       <div className="absolute w-full h-full overflow-visible pointer-events-none">
         {particles.map((particle, i) => (
           <div key={i} className="absolute rounded-full opacity-70 animate-float blur-[1px]" style={{ left: `${(particle.x / 500) * 100}%`, top: `${(particle.y / 500) * 100}%`, width: `${particle.size}px`, height: `${particle.size}px`, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, animationDuration: `${2 + particle.speed * 2}s`, animationDelay: `${i * 0.1}s`, boxShadow: `0 0 ${particle.size * 2}px ${i % 2 === 0 ? colors.primary : colors.secondary}` }} />
         ))}
       </div>
-
-      {/* 🔮 ORB PRINCIPAL */}
-      <div 
-        className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`}
-        style={{ background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)', boxShadow: `0 0 40px ${colors.glow}`, backdropFilter: 'blur(8px)', aspectRatio: '1 / 1' }}
-      >
-        
-        {/* FACE */}
+      <div className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-500 ease-out`} style={{ background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)', boxShadow: `0 0 40px ${colors.glow}`, backdropFilter: 'blur(8px)', aspectRatio: '1 / 1' }}>
         {showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
-              <radialGradient id="eyeGradient">
-                <stop offset="0%" stopColor={colors.primary} stopOpacity="0.9" />
-                <stop offset="100%" stopColor={colors.primary} stopOpacity="0.3" />
-              </radialGradient>
-              <radialGradient id="glowGradient">
-                <stop offset="0%" stopColor="white" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="white" stopOpacity="0" />
-              </radialGradient>
-              <filter id="softGlow">
-                <feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-              <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" /><stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" />
-              </linearGradient>
-              <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
+              <radialGradient id="eyeGradient"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.9" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.3" /></radialGradient>
+              <radialGradient id="glowGradient"><stop offset="0%" stopColor="white" stopOpacity="0.8" /><stop offset="100%" stopColor="white" stopOpacity="0" /></radialGradient>
+              <filter id="softGlow"><feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" /><stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" /></linearGradient>
+              <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
-
-            {/* ✨ ESTRELAS ALEATÓRIAS */}
             {stars.map((star) => (
               <circle key={star.id} cx={star.x} cy={star.y} r="1.5" fill={colors.primary} opacity="0.6">
                 <animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${star.delay}s`} repeatCount="indefinite" />
@@ -329,62 +280,33 @@ export function AvatarFace({
                 <animateTransform attributeName="transform" type="translate" values="0,0; 5,-5; 0,0" dur="4s" begin={`${star.delay}s`} repeatCount="indefinite" />
               </circle>
             ))}
-
             <g filter="url(#softGlow)" className="transition-all duration-500">
               {/* OLHO ESQUERDO */}
-              {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'flirt' && eyeExpr !== 'happy' && eyeExpr !== 'confused') ? (
+              {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'flirt' && eyeExpr !== 'happy') ? (
                 <g className="transition-all duration-500">
-                  <ellipse 
-                    cx={eyeExpr === 'lookLeft' ? "72" : eyeExpr === 'lookRight' ? "80" : "76"} 
-                    cy={eyeExpr === 'lookDown' ? "88" : "85"} 
-                    rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} 
-                    ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} 
-                    fill="url(#eyeGradient)" opacity="0.85" 
-                  />
-                  {/* Cortes Geométricos (Cansado removido) */}
+                  <ellipse cx={eyeExpr === 'lookLeft' ? "72" : eyeExpr === 'lookRight' ? "80" : "76"} cy={eyeExpr === 'lookDown' ? "88" : "85"} rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} fill="url(#eyeGradient)" opacity="0.85" />
                   {eyeExpr === 'sad' && <path d="M 50 60 L 100 85 L 100 60 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
                   {eyeExpr === 'angry' && <path d="M 50 60 L 100 60 L 50 85 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
-                  
-                  {/* Brilho Original Restaurado */}
                   <ellipse cx={eyeExpr === 'lookLeft' ? "69" : eyeExpr === 'lookRight' ? "77" : "73"} cy={eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
                   <circle cx={eyeExpr === 'lookLeft' ? "70" : eyeExpr === 'lookRight' ? "78" : "74"} cy={eyeExpr === 'lookDown' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
                 </g>
               ) : isBlinking || eyeExpr === 'sleeping' ? (
                 <path d="M 62 85 Q 76 87 90 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
               ) : eyeExpr === 'happy' ? (
-                <path d="M 62 88 L 76 78 L 90 88" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
-              ) : eyeExpr === 'confused' ? (
                 <g transform="translate(76, 85)">
-                  <path d="M -10 0 A 10 10 0 1 0 10 0 A 10 10 0 1 0 -5 0 A 5 5 0 1 0 5 0" stroke={colors.primary} strokeWidth="2" fill="none">
-                    <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="1s" repeatCount="indefinite" />
-                  </path>
+                  <path d="M -10 5 L 0 -5 L 10 5" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
                 </g>
               ) : (
-                /* Flirt: Olho esquerdo aberto normal */
-                <g>
-                  <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-                  <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-                  <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
-                </g>
+                <g><ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" /><ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" /><circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" /></g>
               )}
-              
               {/* OLHO DIREITO */}
-              {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'happy' && eyeExpr !== 'confused') ? (
+              {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'happy') ? (
                 <g className="transition-all duration-500">
-                  <ellipse 
-                    cx={eyeExpr === 'lookLeft' ? "120" : eyeExpr === 'lookRight' ? "128" : "124"} 
-                    cy={eyeExpr === 'lookDown' ? "88" : "85"} 
-                    rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} 
-                    ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} 
-                    fill={eyeExpr === 'flirt' ? "none" : "url(#eyeGradient)"} 
-                    stroke={eyeExpr === 'flirt' ? colors.primary : "none"}
-                    strokeWidth={eyeExpr === 'flirt' ? "3.5" : "0"}
-                    opacity="0.85" 
-                  />
                   {eyeExpr === 'flirt' ? (
                     <path d="M 110 85 Q 124 87 138 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
                   ) : (
                     <>
+                      <ellipse cx={eyeExpr === 'lookLeft' ? "120" : eyeExpr === 'lookRight' ? "128" : "124"} cy={eyeExpr === 'lookDown' ? "88" : "85"} rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} fill="url(#eyeGradient)" opacity="0.85" />
                       {eyeExpr === 'sad' && <path d="M 100 60 L 150 60 L 100 85 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
                       {eyeExpr === 'angry' && <path d="M 100 60 L 150 85 L 150 60 Z" fill={isDark ? '#0f172a' : '#f8fafc'} />}
                       <ellipse cx={eyeExpr === 'lookLeft' ? "117" : eyeExpr === 'lookRight' ? "125" : "121"} cy={eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
@@ -394,18 +316,12 @@ export function AvatarFace({
                 </g>
               ) : isBlinking || eyeExpr === 'sleeping' ? (
                 <path d="M 110 85 Q 124 87 138 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
-              ) : eyeExpr === 'happy' ? (
-                <path d="M 110 88 L 124 78 L 138 88" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
               ) : (
                 <g transform="translate(124, 85)">
-                  <path d="M -10 0 A 10 10 0 1 0 10 0 A 10 10 0 1 0 -5 0 A 5 5 0 1 0 5 0" stroke={colors.primary} strokeWidth="2" fill="none">
-                    <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="1s" repeatCount="indefinite" />
-                  </path>
+                  <path d="M -10 5 L 0 -5 L 10 5" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
                 </g>
               )}
             </g>
-
-            {/* BOCA ORIGINAL (PRESERVADA) */}
             <g className="transition-opacity duration-700">
               <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
               <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
@@ -415,7 +331,6 @@ export function AvatarFace({
                 <animate attributeName="opacity" values="0.5;0.7;0.5" dur="3s" repeatCount="indefinite" />
               </path>
             </g>
-
             {eyeExpr === 'sleeping' && [...Array(3)].map((_, i) => (
               <text key={`zzz-${i}`} x={140 + i * 15} y={60 - i * 15} fill={colors.primary} fontSize="16" fontWeight="bold" opacity="0.6">
                 Z<animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" /><animate attributeName="y" values={`${60 - i * 15};${40 - i * 15}`} dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
@@ -423,8 +338,6 @@ export function AvatarFace({
             ))}
           </svg>
         )}
-
-        {/* ORBS E ANÉIS ORIGINAIS (RESTAURADOS) */}
         {!showFace && (
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl transition-opacity duration-700">
             <defs>
@@ -452,27 +365,14 @@ export function AvatarFace({
                   </circle>
                 );
               })}
-              {isSpeaking && [...Array(12)].map((_, i) => {
-                const angle = (i * Math.PI * 2) / 12 + Math.PI / 12;
-                const radius = 35;
-                return (
-                  <circle key={`extra-orb-${i}`} cx={100 + Math.cos(angle) * radius} cy={100 + Math.sin(angle) * radius} r="12" fill={i % 2 === 0 ? colors.primary : colors.secondary} opacity="0.7">
-                    <animate attributeName="r" values="10;18;10" dur={`${0.7 + (i * 0.05)}s`} repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(angle + Math.PI) * 12},${Math.sin(angle + Math.PI) * 12}; 0,0`} dur={`${1 + (i * 0.06)}s`} repeatCount="indefinite" /><animate attributeName="opacity" values="0.5;0.9;0.5" dur={`${0.8 + (i * 0.05)}s`} repeatCount="indefinite" />
-                  </circle>
-                );
-              })}
             </g>
           </svg>
         )}
-
-        {/* ANÉIS DE PING (ORIGINAL) */}
         <div className="absolute inset-0 rounded-full" style={{ aspectRatio: '1/1' }}>
           {[1, 2, 3].map(ring => (
             <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
           ))}
         </div>
-
-        {/* 🎵 GRÁFICO DE ÁUDIO (ORIGINAL) */}
         {isSpeaking && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50">
             <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
@@ -483,7 +383,6 @@ export function AvatarFace({
           </div>
         )}
       </div>
-
       <style jsx>{`
         @keyframes float { 0%, 100% { transform: translateY(0) translateX(0); } 33% { transform: translateY(-20px) translateX(10px); } 66% { transform: translateY(-10px) translateX(-10px); } }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

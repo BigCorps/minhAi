@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
         }
         
         const [companyResult, transcript] = await Promise.all([
-          supabase.from('companies').select('id, name, system_prompt, description, knowledge_base').eq('id', companyId).single(),
+          supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
           transcribeAudio(buffer, {
             encoding,
             sampleRateHertz: 16000,
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
         console.log('🔄 Fallback para Whisper...');
         
         const [companyResult, whisperResult] = await Promise.all([
-          supabase.from('companies').select('id, name, system_prompt, description, knowledge_base').eq('id', companyId).single(),
+          supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
           openai.audio.transcriptions.create({
             file: audioFile,
             model: 'whisper-1',

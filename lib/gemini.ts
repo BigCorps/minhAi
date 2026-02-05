@@ -101,17 +101,14 @@ export async function generateAssistantResponse(
   userMessage: string,
   companyContext: {
     companyName: string;
-    companyDescription?: string;
-    knowledgeBase?: string;
+    systemPrompt?: string;
+    greetingMessage?: string;
+    conversationHistory?: any[];
   },
   conversationHistory?: GeminiMessage[]
 ): Promise<string> {
   const systemPrompt = `
-Você é um assistente virtual inteligente da empresa ${companyContext.companyName}.
-
-${companyContext.companyDescription ? `Sobre a empresa: ${companyContext.companyDescription}` : ''}
-
-${companyContext.knowledgeBase ? `Base de conhecimento:\n${companyContext.knowledgeBase}` : ''}
+${companyContext.systemPrompt || `Você é um assistente virtual inteligente da empresa ${companyContext.companyName}.`}
 
 Regras importantes:
 1. Seja breve e objetivo (máximo 2-3 frases)

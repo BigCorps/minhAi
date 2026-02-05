@@ -1562,7 +1562,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Web Speech API (Chrome/Edge/Safari)
+                Modo Alexa ativado, utilize a palavra de ativação.
               </p>
             </div>
 

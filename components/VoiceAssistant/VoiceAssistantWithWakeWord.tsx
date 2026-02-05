@@ -1,5 +1,23 @@
 'use client';
 
+/**
+ * 🚀 Voice Assistant 100% Google (Sem Vosk) - VERSÃO COMPLETA
+ * 
+ * Migração de Vosk → Web Speech API
+ * Backend 100% Google (Speech + Gemini + TTS)
+ * 
+ * Todas as funcionalidades mantidas:
+ * - Wake word detection
+ * - PIX generation/confirmation/cancel
+ * - WhatsApp/Instagram QR codes
+ * - FAQ matching (backend)
+ * - Text input chat
+ * - Function carousel
+ * - Processing feedback audio
+ * - Stop commands
+ * - End commands
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
 import { WakeWordDetector } from './WakeWordDetector';
@@ -8,8 +26,6 @@ import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
-import { loadVoskWithProgress } from '@/lib/vosk';
-import { normalizeVoskTranscript } from '@/lib/vosk-grammar';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -30,16 +46,16 @@ export function VoiceAssistantWithWakeWord({
   isMaximized = false,
   onAssistantStart,
 }: VoiceAssistantWithWakeWordProps) {
+  // ========================================
+  // STATES
+  // ========================================
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
-  const [voskReady, setVoskReady] = useState(false);
-  const [voskLoading, setVoskLoading] = useState(false);
-  const [voskProgress, setVoskProgress] = useState(0);
-  const [voskDownloading, setVoskDownloading] = useState(false);
+  const [browserSpeechSupported, setBrowserSpeechSupported] = useState(false);
 
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
@@ -57,6 +73,9 @@ export function VoiceAssistantWithWakeWord({
     pixCode: string;
   } | null>(null);
 
+  // ========================================
+  // REFS
+  // ========================================
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const feedbackAudioRef = useRef<HTMLAudioElement | null>(null);
   const isActiveRef = useRef(true);
@@ -65,11 +84,13 @@ export function VoiceAssistantWithWakeWord({
   const processingQuestion = useRef<boolean>(false);
   const conversationIdRef = useRef<string | null>(null);
   
-  const voskModelRef = useRef<any>(null);
-  const voskRecognizerRef = useRef<any>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
+  // 🎤 Web Speech API
+  const recognitionRef = useRef<any>(null);
+  const isRecognitionActive = useRef(false);
 
+  // ========================================
+  // CONFIGURATION
+  // ========================================
   const wakeWords = [
     ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
     'oi',
@@ -102,51 +123,26 @@ export function VoiceAssistantWithWakeWord({
     };
   }, [qrCodeData, pixConfirmationData]);
 
+  // ========================================
+  // INITIALIZATION
+  // ========================================
   useEffect(() => {
     isActiveRef.current = true;
-    requestMicrophonePermission();
     
-    console.log('📱 Carregando Vosk...');
-    setVoskLoading(true);
-    setVoskProgress(0);
+    console.log('🚀 Inicializando Voice Assistant (Web Speech API)...');
     
-    const timeout = setTimeout(() => {
-      if (voskLoading && !voskReady) {
-        console.error('⏰ Timeout ao carregar Vosk (60s)');
-        setError('O carregamento está demorando muito. Verifique sua conexão e recarregue a página.');
-        setVoskLoading(false);
-      }
-    }, 60000);
+    // ✅ Verificar suporte Web Speech API
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
-    loadVoskWithProgress((progress, downloading) => {
-      console.log(`📊 Progresso: ${progress}% ${downloading ? '(baixando)' : '(cache)'}`);
-      setVoskProgress(progress);
-      setVoskDownloading(downloading);
-    })
-      .then(model => {
-        clearTimeout(timeout);
-        voskModelRef.current = model;
-        setVoskReady(true);
-        setVoskLoading(false);
-        setVoskProgress(100);
-        console.log('✅ Vosk pronto para uso!');
-      })
-      .catch(err => {
-        clearTimeout(timeout);
-        console.error('❌ Erro ao carregar Vosk:', err);
-        
-        const errorMsg = err.message || err.toString();
-        if (errorMsg.includes('404') || errorMsg.includes('not found')) {
-          setError('Modelo de voz não encontrado. Entre em contato com o suporte.');
-        } else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
-          setError('Erro de conexão. Verifique sua internet e recarregue a página.');
-        } else {
-          setError('Erro ao carregar assistente de voz. Recarregue a página.');
-        }
-        
-        setVoskLoading(false);
-        setVoskProgress(0);
-      });
+    if (SpeechRecognition) {
+      console.log('✅ Web Speech API suportada!');
+      setBrowserSpeechSupported(true);
+      requestMicrophonePermission();
+    } else {
+      console.error('❌ Web Speech API não suportada neste navegador');
+      setError('Navegador não suporta reconhecimento de voz. Use Chrome, Edge ou Safari.');
+      setBrowserSpeechSupported(false);
+    }
     
     const handleExternalFunctionClick = (event: any) => {
       const { functionKey } = event.detail;
@@ -174,32 +170,37 @@ export function VoiceAssistantWithWakeWord({
     });
   }, [wakeWords.join(','), endCommands.join(',')]);
 
+  // ========================================
+  // CLEANUP
+  // ========================================
   function cleanup() {
-    if (voskRecognizerRef.current) {
-      try {
-        voskRecognizerRef.current.free();
-        voskRecognizerRef.current = null;
-      } catch (e) {}
-    }
+    console.log('🧹 Cleanup...');
     
-    if (audioCtxRef.current) {
+    // Parar Web Speech API
+    if (recognitionRef.current && isRecognitionActive.current) {
       try {
-        audioCtxRef.current.close();
-        audioCtxRef.current = null;
-      } catch (e) {}
-    }
-    
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
+        recognitionRef.current.stop();
+        isRecognitionActive.current = false;
+        console.log('✅ Recognition stopped');
+      } catch (e) {
+        console.log('⚠️ Erro ao parar recognition:', e);
+      }
     }
     
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
     }
+    
+    if (feedbackAudioRef.current) {
+      feedbackAudioRef.current.pause();
+      feedbackAudioRef.current = null;
+    }
   }
 
+  // ========================================
+  // AUDIO UNLOCK
+  // ========================================
   function unlockAudio() {
     if (audioUnlocked.current) return;
     
@@ -234,20 +235,28 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
+  // ========================================
+  // MICROPHONE PERMISSION
+  // ========================================
   async function requestMicrophonePermission() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());
       setPermissionGranted(true);
       setError('');
+      console.log('✅ Permissão de microfone concedida');
     } catch (err) {
+      console.error('❌ Permissão negada:', err);
       setError('Permissão do microfone negada.');
       setPermissionGranted(false);
     }
   }
 
+  // ========================================
+  // START ASSISTANT
+  // ========================================
   async function handleStart() {
-    console.log('🚀 Iniciando assistente de voz...');
+    console.log('🚀 Iniciando assistente de voz (Web Speech API)...');
     
     unlockAudio();
     
@@ -269,92 +278,117 @@ export function VoiceAssistantWithWakeWord({
     
     setTimeout(() => {
       if (isActiveRef.current) {
-        startVoskListening();
+        startWebSpeechListening();
       }
     }, 300);
   }
 
-  async function startVoskListening() {
-    if (!voskModelRef.current) {
-      setError('Erro ao iniciar assistente de voz. Recarregue a página.');
-      console.error('❌ Vosk não foi carregado corretamente');
+  // ========================================
+  // WEB SPEECH API
+  // ========================================
+  function startWebSpeechListening() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      setError('Reconhecimento de voz não suportado');
       return;
     }
 
     try {
-      console.log('🎤 Iniciando Vosk...');
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
       
-      const recognizer = new voskModelRef.current.KaldiRecognizer(16000);
+      // Configurações otimizadas
+      recognition.continuous = true;  // Escuta contínua
+      recognition.interimResults = true;  // Resultados parciais
+      recognition.lang = 'pt-BR';  // Português Brasil
+      recognition.maxAlternatives = 1;
       
-      voskRecognizerRef.current = recognizer;
+      // Event: Resultado parcial ou final
+      recognition.onresult = (event: any) => {
+        const last = event.results.length - 1;
+        const result = event.results[last];
+        const transcript = result[0].transcript;
+        const isFinal = result.isFinal;
+        
+        console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${transcript}"`);
+        
+        handleWebSpeechTranscript(transcript, isFinal);
+      };
       
-      recognizer.on('result', (message: any) => {
-        const text = message.result.text;
-        console.log('✅ Vosk resultado final:', text);
-        handleVoskTranscript(text, true);
-      });
-      
-      recognizer.on('partialresult', (message: any) => {
-        const partial = message.result.partial;
-        if (partial) {
-          handleVoskTranscript(partial, false);
-        }
-      });
-      
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: false,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          channelCount: 1,
-          sampleRate: 16000
-        }
-      });
-      
-      mediaStreamRef.current = mediaStream;
-      
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      audioCtxRef.current = audioContext;
-      
-      const recognizerNode = audioContext.createScriptProcessor(4096, 1, 1);
-      
-      recognizerNode.onaudioprocess = (event) => {
-        try {
-          if (voskRecognizerRef.current && isActiveRef.current) {
-            voskRecognizerRef.current.acceptWaveform(event.inputBuffer);
-          }
-        } catch (error) {
-          console.error('❌ Erro acceptWaveform:', error);
+      // Event: Erro
+      recognition.onerror = (event: any) => {
+        console.error('❌ Web Speech error:', event.error);
+        
+        if (event.error === 'no-speech') {
+          console.log('⏳ Sem fala detectada, continuando...');
+        } else if (event.error === 'aborted') {
+          console.log('🔄 Recognition abortado, reiniciando...');
+          setTimeout(() => {
+            if (isActiveRef.current && !isRecognitionActive.current) {
+              startWebSpeechListening();
+            }
+          }, 1000);
+        } else if (event.error === 'network') {
+          console.error('❌ Erro de rede no Web Speech API');
+          setError('Erro de conexão. Verifique sua internet.');
+        } else {
+          setError(`Erro de reconhecimento: ${event.error}`);
         }
       };
       
-      const source = audioContext.createMediaStreamSource(mediaStream);
-      source.connect(recognizerNode);
-      recognizerNode.connect(audioContext.destination);
+      // Event: Início
+      recognition.onstart = () => {
+        console.log('🎤 Recognition started');
+        isRecognitionActive.current = true;
+        setIsListening(true);
+      };
       
-      setIsListening(true);
-      console.log('✅ Vosk ATIVO - Reconhecimento contínuo! 🎉');
+      // Event: Fim
+      recognition.onend = () => {
+        console.log('🔚 Web Speech encerrado');
+        isRecognitionActive.current = false;
+        
+        // Reiniciar se ainda ativo
+        if (isActiveRef.current && !isProcessing && !isPlayingAudio) {
+          console.log('🔄 Reiniciando reconhecimento...');
+          setTimeout(() => {
+            if (isActiveRef.current) {
+              startWebSpeechListening();
+            }
+          }, 500);
+        } else {
+          setIsListening(false);
+        }
+      };
+      
+      // Iniciar
+      recognition.start();
+      console.log('✅ Web Speech API ATIVO! 🎉');
       
     } catch (err: any) {
-      console.error('❌ Erro ao iniciar Vosk:', err);
+      console.error('❌ Erro ao iniciar Web Speech:', err);
       setError('Erro ao acessar microfone');
     }
   }
 
-  function handleVoskTranscript(text: string, isFinal: boolean) {
+  // ========================================
+  // HANDLE TRANSCRIPT
+  // ========================================
+  function handleWebSpeechTranscript(text: string, isFinal: boolean) {
     if (!text || !isActiveRef.current) return;
     
-    const normalizedText = normalizeVoskTranscript(text);
-    const lowerText = normalizedText.toLowerCase().trim();
+    const lowerText = text.toLowerCase().trim();
     
     const detectionResult = wakeWordDetectorRef.current?.detect(lowerText);
     
     if (detectionResult?.detected) {
-      console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
-      console.log(`🔍 Wake word: "${detectionResult.keyword}"`);
+      console.log(`🔍 Wake word detectada: "${detectionResult.keyword}"`);
+      console.log(`📊 Confidence: ${(detectionResult.confidence * 100).toFixed(0)}%`);
       
       const normalizedTranscript = lowerText.replace(/[.,!?]/g, '').trim();
       
+      // Comandos de parar explícitos
       const explicitStopPhrases = [
         'pare',
         'para',
@@ -380,19 +414,19 @@ export function VoiceAssistantWithWakeWord({
       const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
       
       if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
-        console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO (Vosk):', lowerText);
+        console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO!');
         console.log('✅ PARANDO áudio imediatamente!');
         stopAudioImmediately();
         return;
       }
       
       if (processingQuestion.current || isProcessing || isPlayingAudio || isActuallyPlaying) {
-        console.log('⏸️ Vosk: Ocupado, ignorando captura');
+        console.log('⏸️ Ocupado, ignorando captura');
         return;
       }
       
       if (isFinal) {
-        console.log('✅ Processando pergunta completa (Vosk)');
+        console.log('✅ Processando pergunta completa (Web Speech)');
         
         if (!audioUnlocked.current) {
           unlockAudio();
@@ -403,11 +437,14 @@ export function VoiceAssistantWithWakeWord({
           processWakeWordQuestion(lowerText);
         }
       } else {
-        console.log('⏳ Aguardando transcrição final (Vosk)...');
+        console.log('⏳ Aguardando transcrição final...');
       }
     }
   }
 
+  // ========================================
+  // FUNCTION MANAGEMENT
+  // ========================================
   async function checkIfFunctionIsEnabled(functionKey: string): Promise<boolean> {
     try {
       const supabase = createClient();
@@ -419,6 +456,7 @@ export function VoiceAssistantWithWakeWord({
         .single();
       
       if (!func || !func.is_active) {
+        console.log(`⚠️ Função ${functionKey} não ativa globalmente`);
         return false;
       }
       
@@ -430,9 +468,11 @@ export function VoiceAssistantWithWakeWord({
         .single();
       
       if (!setting) {
+        console.log(`✅ Função ${functionKey} habilitada (sem setting específico)`);
         return true;
       }
       
+      console.log(`${setting.is_enabled ? '✅' : '❌'} Função ${functionKey} ${setting.is_enabled ? 'habilitada' : 'desabilitada'} para empresa`);
       return setting.is_enabled;
       
     } catch (error) {
@@ -451,7 +491,7 @@ export function VoiceAssistantWithWakeWord({
         p_credits_consumed: creditsConsumed
       });
       
-      console.log('✅ Uso registrado:', functionKey);
+      console.log(`✅ Uso registrado: ${functionKey} (${creditsConsumed} créditos)`);
     } catch (error) {
       console.error('Erro ao registrar uso:', error);
     }
@@ -468,7 +508,7 @@ export function VoiceAssistantWithWakeWord({
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          console.log('✅ Vosk continua ativo');
+          console.log('✅ Web Speech continua ativo');
         }
       }, 500);
       
@@ -511,12 +551,15 @@ export function VoiceAssistantWithWakeWord({
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          console.log('✅ Vosk continua ativo');
+          console.log('✅ Web Speech continua ativo');
         }
       }, 500);
     }
   }
 
+  // ========================================
+  // NUMBER CONVERSION
+  // ========================================
   function convertWordsToNumbers(text: string): string {
     const numberWords: {[key: string]: string} = {
       'zero': '0',
@@ -572,139 +615,150 @@ export function VoiceAssistantWithWakeWord({
     return result;
   }
 
-async function detectVoiceCommand(transcript: string): Promise<boolean> {
-  const lowerTranscript = transcript.toLowerCase().trim();
-  
-  console.log('🔍 Detectando comandos de voz:', lowerTranscript);
-  
-  const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
-  console.log('🔢 Após conversão:', transcriptWithNumbers);
-  
-  const whatsappTriggers = [
-    'whatsapp',
-    'whats',
-    'zap',
-    'número',
-    'contato'
-  ];
-  
-  if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-    console.log('📱 Comando WhatsApp detectado!');
+  // ========================================
+  // VOICE COMMAND DETECTION
+  // ========================================
+  async function detectVoiceCommand(transcript: string): Promise<boolean> {
+    const lowerTranscript = transcript.toLowerCase().trim();
     
-    const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
+    console.log('🔍 Detectando comandos de voz:', lowerTranscript);
     
-    if (!isEnabled) {
-      await playText('A função WhatsApp está desativada no momento.');
-      return true;
-    }
+    const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
+    console.log('🔢 Após conversão:', transcriptWithNumbers);
     
-    await handleWhatsAppCommand();
-    await registerFunctionUsage('qrcode_whatsapp', 0);
-    return true;
-  }
-  
-  const instagramTriggers = [
-    'instagram',
-    'insta',
-    'arroba',
-    'perfil'
-  ];
-  
-  if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-    console.log('📸 Comando Instagram detectado!');
+    // WhatsApp
+    const whatsappTriggers = [
+      'whatsapp',
+      'whats',
+      'zap',
+      'número',
+      'contato'
+    ];
     
-    const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
-    
-    if (!isEnabled) {
-      await playText('A função Instagram está desativada no momento.');
-      return true;
-    }
-    
-    await handleInstagramCommand();
-    await registerFunctionUsage('qrcode_instagram', 0);
-    return true;
-  }
-  
-  const confirmTriggers = [
-    'confirmar',
-    'confirmado',
-    'paguei',
-    'já paguei',
-    'pagamento confirmado'
-  ];
-  
-  if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-    console.log('✅ Comando CONFIRMAR PIX detectado!');
-    
-    const currentPixState = pixStateRef.current;
-    
-    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-      console.log('💳 PIX aberto encontrado, confirmando...');
-      await handleConfirmPix();
-      return true;
-    } else {
-      console.log('⚠️ Nenhum PIX aberto para confirmar');
-      await playText('Não há nenhum PIX aberto para confirmar');
-      return true;
-    }
-  }
-  
-  const cancelTriggers = [
-    'cancelar',
-    'cancela',
-    'desistir',
-    'não quero',
-    'fechar'
-  ];
-  
-  if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
-      lowerTranscript.includes('pix')) {
-    console.log('❌ Comando CANCELAR PIX detectado!');
-    
-    const currentPixState = pixStateRef.current;
-    
-    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-      console.log('💳 PIX aberto encontrado, cancelando...');
-      await handleCancelPix();
-      return true;
-    } else {
-      console.log('⚠️ Nenhum PIX aberto para cancelar');
-      await playText('Não há nenhum PIX aberto');
-      return true;
-    }
-  }
-  
-  const pixPatterns = [
-    /(?:gerar|gera|criar|cria|fazer|faz|faça)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-    /(pix|cobrança|cobranca)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-  ];
-  
-  for (const pattern of pixPatterns) {
-    const match = transcriptWithNumbers.match(pattern);
-    if (match) {
-      const amountStr = match[2] || match[1];
-      const amount = parseFloat(amountStr.replace(',', '.'));
+    if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('📱 Comando WhatsApp detectado!');
       
-      if (amount > 0) {
-        console.log('💰 Comando PIX detectado! Valor:', amount);
-        
-        const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
-        
-        if (!isEnabled) {
-          await playText('A função PIX está desativada no momento.');
-          return true;
-        }
-        
-        await handlePixCommand(amount);
-        await registerFunctionUsage('pix_generate', 0);
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
+      
+      if (!isEnabled) {
+        await playText('A função WhatsApp está desativada no momento.');
+        return true;
+      }
+      
+      await handleWhatsAppCommand();
+      await registerFunctionUsage('qrcode_whatsapp', 0);
+      return true;
+    }
+    
+    // Instagram
+    const instagramTriggers = [
+      'instagram',
+      'insta',
+      'arroba',
+      'perfil'
+    ];
+    
+    if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('📸 Comando Instagram detectado!');
+      
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
+      
+      if (!isEnabled) {
+        await playText('A função Instagram está desativada no momento.');
+        return true;
+      }
+      
+      await handleInstagramCommand();
+      await registerFunctionUsage('qrcode_instagram', 0);
+      return true;
+    }
+    
+    // Confirmar PIX
+    const confirmTriggers = [
+      'confirmar',
+      'confirmado',
+      'paguei',
+      'já paguei',
+      'pagamento confirmado'
+    ];
+    
+    if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('✅ Comando CONFIRMAR PIX detectado!');
+      
+      const currentPixState = pixStateRef.current;
+      
+      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+        console.log('💳 PIX aberto encontrado, confirmando...');
+        await handleConfirmPix();
+        return true;
+      } else {
+        console.log('⚠️ Nenhum PIX aberto para confirmar');
+        await playText('Não há nenhum PIX aberto para confirmar');
         return true;
       }
     }
+    
+    // Cancelar PIX
+    const cancelTriggers = [
+      'cancelar',
+      'cancela',
+      'desistir',
+      'não quero',
+      'fechar'
+    ];
+    
+    if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
+        lowerTranscript.includes('pix')) {
+      console.log('❌ Comando CANCELAR PIX detectado!');
+      
+      const currentPixState = pixStateRef.current;
+      
+      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+        console.log('💳 PIX aberto encontrado, cancelando...');
+        await handleCancelPix();
+        return true;
+      } else {
+        console.log('⚠️ Nenhum PIX aberto para cancelar');
+        await playText('Não há nenhum PIX aberto');
+        return true;
+      }
+    }
+    
+    // PIX Generation
+    const pixPatterns = [
+      /(?:gerar|gera|criar|cria|fazer|faz|faça)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+      /(pix|cobrança|cobranca)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+    ];
+    
+    for (const pattern of pixPatterns) {
+      const match = transcriptWithNumbers.match(pattern);
+      if (match) {
+        const amountStr = match[2] || match[1];
+        const amount = parseFloat(amountStr.replace(',', '.'));
+        
+        if (amount > 0) {
+          console.log('💰 Comando PIX detectado! Valor:', amount);
+          
+          const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
+          
+          if (!isEnabled) {
+            await playText('A função PIX está desativada no momento.');
+            return true;
+          }
+          
+          await handlePixCommand(amount);
+          await registerFunctionUsage('pix_generate', 0);
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
-  
-  return false;
-}
-  
+
+  // ========================================
+  // COMMAND HANDLERS
+  // ========================================
   async function handleWhatsAppCommand() {
     try {
       setIsProcessing(true);
@@ -837,7 +891,6 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
       
       if (response.error) {
         console.log('❌ Erro detectado:', response.error);
-        console.log('📦 Context:', response.error.context);
         
         await playText('PIX ainda não foi pago. Aguarde alguns segundos após o pagamento e tente novamente.');
         return;
@@ -913,6 +966,9 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     console.log('📋 QR Code copiado!');
   }
 
+  // ========================================
+  // TEXT INPUT HANDLER
+  // ========================================
   const handleTextMessage = async (message: string) => {
     console.log('📝 Mensagem de texto recebida:', message);
 
@@ -995,12 +1051,15 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          console.log('✅ Vosk continua ativo');
+          console.log('✅ Web Speech continua ativo');
         }
       }, 500);
     }
   };
 
+  // ========================================
+  // AUDIO CONTROL
+  // ========================================
   function stopAudioImmediately() {
     console.log('🛑 STOP: Parando áudio imediatamente');
     
@@ -1024,13 +1083,15 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     setIsProcessing(false);
     processingQuestion.current = false;
     
-    console.log('✅ Vosk continua ativo');
+    console.log('✅ Web Speech continua ativo');
   }
 
+  // ========================================
+  // QUESTION PROCESSING
+  // ========================================
   function processWakeWordQuestion(transcript: string) {
     console.log('📋 processWakeWordQuestion chamada');
     console.log('  transcript:', transcript);
-    console.log('  processingQuestion.current:', processingQuestion.current);
     
     let cleanTranscript = transcript.replace(/[,\.!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
     
@@ -1056,12 +1117,12 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     console.log('📊 Palavras:', words.length, words);
     
     if (words.length === 0) {
-      console.log('❌ Sem pergunta, resetando e voltando para wake word');
+      console.log('❌ Sem pergunta, resetando');
       processingQuestion.current = false;
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          console.log('✅ Vosk continua ativo');
+          console.log('✅ Web Speech continua ativo');
         }
       }, 300);
       return;
@@ -1076,12 +1137,12 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     const isCommand = await detectVoiceCommand(questionText);
     
     if (isCommand) {
-      console.log('✅ Comando processado, retornando ao wake word');
+      console.log('✅ Comando processado');
       processingQuestion.current = false;
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          console.log('✅ Vosk continua ativo');
+          console.log('✅ Web Speech continua ativo');
         }
       }, 500);
       
@@ -1126,7 +1187,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
       const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
       const processingTime = Date.now() - startTime;
 
-      console.log(usedFAQ ? '⚡ FAQ' : '🤖 GPT');
+      console.log(usedFAQ ? '⚡ FAQ' : '🤖 Gemini');
       console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
       clearTimeout(feedbackTimeout);
@@ -1151,7 +1212,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
 
       setIsProcessing(false);
 
-      console.log('🔄 Vosk continua ativo durante resposta...');
+      console.log('🔄 Web Speech continua ativo durante resposta...');
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -1174,7 +1235,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
-        console.log('✅ Vosk continua ativo');
+        console.log('✅ Web Speech continua ativo');
       };
 
       audio.onerror = (e) => {
@@ -1185,20 +1246,20 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
         
         setTimeout(() => {
           if (isActiveRef.current) {
-            console.log('✅ Vosk continua ativo');
+            console.log('✅ Web Speech continua ativo');
           }
         }, 200);
       };
 
       const safetyTimeout = setTimeout(() => {
         if (!isPlayingAudio && currentAudioRef.current === audio) {
-          console.log('⚠️ Áudio não iniciou em 3s, forçando reinício');
+          console.log('⚠️ Áudio não iniciou, forçando reinício');
           setIsPlayingAudio(false);
           currentAudioRef.current = null;
           processingQuestion.current = false;
           
           if (isActiveRef.current) {
-            console.log('✅ Vosk continua ativo');
+            console.log('✅ Web Speech continua ativo');
           }
         }
       }, 1500);
@@ -1210,7 +1271,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
-              console.log('✅ Áudio tocando com sucesso');
+              console.log('✅ Áudio tocando');
               clearTimeout(safetyTimeout);
             })
             .catch(err => {
@@ -1229,12 +1290,6 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
                     setIsPlayingAudio(false);
                     currentAudioRef.current = null;
                     processingQuestion.current = false;
-                    
-                    setTimeout(() => {
-                      if (isActiveRef.current) {
-                        console.log('✅ Vosk continua ativo');
-                      }
-                    }, 200);
                   });
               }, 100);
             });
@@ -1245,12 +1300,6 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingQuestion.current = false;
-        
-        setTimeout(() => {
-          if (isActiveRef.current) {
-            console.log('✅ Vosk continua ativo');
-          }
-        }, 200);
       }
       
     } catch (err: any) {
@@ -1268,7 +1317,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
       
       setTimeout(() => {
         if (isActiveRef.current) {
-          console.log('✅ Vosk continua ativo');
+          console.log('✅ Web Speech continua ativo');
         }
       }, 1000);
     }
@@ -1346,7 +1395,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     
     setTimeout(() => {
       if (isActiveRef.current) {
-        console.log('✅ Vosk continua ativo');
+        console.log('✅ Web Speech continua ativo');
       }
     }, 1000);
   }
@@ -1399,9 +1448,12 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     });
   }
 
+  // ========================================
+  // STATUS DISPLAY
+  // ========================================
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
-    if (voskLoading && !voskReady) return 'Carregando assistente...';
+    if (!browserSpeechSupported) return 'Navegador não suportado';
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
@@ -1410,14 +1462,17 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   };
 
   const getStatusColor = () => {
-    if (!permissionGranted) return 'bg-gray-400';
+    if (!permissionGranted || !browserSpeechSupported) return 'bg-gray-400';
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
     if (isProcessing) return 'bg-green-600 animate-pulse';
     if (isListening) return 'bg-green-400 animate-pulse';
     return 'bg-gray-400';
   };
 
-if (isMaximized) {
+  // ========================================
+  // RENDER
+  // ========================================
+  if (isMaximized) {
     return (
       <div className="flex flex-col items-center gap-4 md:gap-8 w-full">
         <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
@@ -1446,37 +1501,9 @@ if (isMaximized) {
               theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'
             }`}>{error}</p>
           )}
-          {voskLoading && !voskReady && (
-            <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                  {voskDownloading ? 'Baixando modelo de voz...' : 'Carregando...'}
-                </p>
-              </div>
-              
-              {voskDownloading && (
-                <div className="w-full">
-                  <div className={`w-full h-2 rounded-full overflow-hidden ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'
-                  }`}>
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-300 ease-out"
-                      style={{ width: `${voskProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className={`text-xs text-center mt-2 ${
-                    theme === 'dark' ? 'text-white/50' : 'text-gray-500'
-                  }`}>
-                    {voskProgress}% baixado (~40MB)
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {showStartButton && permissionGranted && !voskLoading && (
+        {showStartButton && permissionGranted && browserSpeechSupported && (
           <button
             onClick={handleStart}
             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
@@ -1535,36 +1562,8 @@ if (isMaximized) {
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa: use palavra de ativação
+                Web Speech API (Chrome/Edge/Safari)
               </p>
-              {voskLoading && !voskReady && (
-                <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}`}>
-                      {voskDownloading ? 'Baixando modelo de voz...' : 'Carregando...'}
-                    </p>
-                  </div>
-                  
-                  {voskDownloading && (
-                    <div className="w-full">
-                      <div className={`w-full h-2 rounded-full overflow-hidden ${
-                        theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'
-                      }`}>
-                        <div 
-                          className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-300"
-                          style={{ width: `${voskProgress}%` }}
-                        ></div>
-                      </div>
-                      <p className={`text-xs text-center mt-2 ${
-                        theme === 'dark' ? 'text-white/50' : 'text-gray-500'
-                      }`}>
-                        {voskProgress}% baixado (~40MB)
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {error && (
@@ -1577,7 +1576,7 @@ if (isMaximized) {
               </div>
             )}
 
-            {showStartButton && permissionGranted && !voskLoading && (
+            {showStartButton && permissionGranted && browserSpeechSupported && (
               <button
                 onClick={handleStart}
                 className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
@@ -1585,6 +1584,7 @@ if (isMaximized) {
                 Iniciar Assistente
               </button>
             )}
+            
             {!showStartButton && (
               <div className="w-full mt-auto">
                 <TextInputChat
@@ -1600,15 +1600,13 @@ if (isMaximized) {
       </div>
 
       {!showStartButton && (
-        <>
-          <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
-            <FunctionCarousel
-              companyId={companyId}
-              onFunctionClick={handleFunctionClick}
-              theme={theme}
-            />
-          </div>
-        </>
+        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
+          <FunctionCarousel
+            companyId={companyId}
+            onFunctionClick={handleFunctionClick}
+            theme={theme}
+          />
+        </div>
       )}
     </div>
   );

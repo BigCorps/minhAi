@@ -32,3 +32,20 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# ========================================
+# Google Cloud Credentials (CRÍTICO!)
+# ========================================
+credentials/
+service-account-key.json
+*-service-account.json
+google-credentials.json
+
+# ========================================
+# Arquivos sensíveis adicionais
+# ========================================
+.env.production
+.env.development
+*.key
+*.pem
+*.p12

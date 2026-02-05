@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { transcribeAudio, DEFAULT_HINTS } from '@/lib/google-speech-streaming';
+import { generateAssistantResponse } from '@/lib/gemini';
+import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
 
@@ -7,10 +10,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Deepgram API Key
-const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY!;
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
-// Funções auxiliares
+// Funções auxiliares para FAQ matching
 function similarity(s1: string, s2: string): number {
   const longer = s1.length > s2.length ? s1 : s2;
   const shorter = s1.length > s2.length ? s2 : s1;
@@ -47,35 +50,6 @@ function normalizeText(text: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^\w\s]/g, '')
     .trim();
-}
-
-async function transcribeWithDeepgram(audioFile: File): Promise<string> {
-  const audioBuffer = await audioFile.arrayBuffer();
-  
-  const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=pt-BR&punctuate=true&smart_format=true', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Token ${DEEPGRAM_API_KEY}`,
-      'Content-Type': audioFile.type || 'audio/webm',
-    },
-    body: audioBuffer,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Deepgram error:', response.status, errorText);
-    throw new Error(`Deepgram error: ${response.status}`);
-  }
-
-  const result = await response.json();
-  const transcript = result.results?.channels[0]?.alternatives[0]?.transcript || '';
-  
-  console.log('🎯 Deepgram result:', {
-    transcript,
-    confidence: result.results?.channels[0]?.alternatives[0]?.confidence
-  });
-  
-  return transcript;
 }
 
 async function findMatchingFAQ(supabase: any, companyId: string, question: string) {
@@ -132,11 +106,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       break;
     }
     
-    // Similaridade - 🎯 THRESHOLD AUMENTADO: 40% → 85%
+    // Similaridade - threshold 85%
     const score = similarity(questionNormalized, faqQuestionNormalized);
     console.log(`  📊 Similarity: ${(score * 100).toFixed(1)}% (threshold: 85%)`);
     
-    if (score > bestScore && score > 0.85) { // 🎯 MUDADO: 0.40 → 0.85
+    if (score > bestScore && score > 0.85) {
       bestScore = score;
       bestMatch = faq;
       bestMethod = 'similarity';
@@ -159,11 +133,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
         }
         
         const varScore = similarity(questionNormalized, variationNormalized);
-        if (varScore > 0.85) { // 🎯 MUDADO: 0.40 → 0.85
+        if (varScore > 0.85) {
           console.log(`    - "${variation}": ${(varScore * 100).toFixed(1)}%`);
         }
         
-        if (varScore > bestScore && varScore > 0.85) { // 🎯 MUDADO: 0.40 → 0.85
+        if (varScore > bestScore && varScore > 0.85) {
           bestScore = varScore;
           bestMatch = faq;
           bestMethod = 'variation-similarity';
@@ -172,7 +146,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       }
     }
     
-    // Keywords - 🎯 THRESHOLD AUMENTADO: 40% → 70%
+    // Keywords - threshold 70%
     const faqWords = faqQuestionNormalized.split(' ').filter((w: string) => w.length > 2);
     const commonWords = questionWords.filter((w: string) => faqWords.includes(w));
     const keywordScore = commonWords.length / Math.max(questionWords.length, faqWords.length);
@@ -181,7 +155,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       console.log(`  🔤 Keywords comuns: [${commonWords.join(', ')}] = ${(keywordScore * 100).toFixed(1)}%`);
     }
     
-    if (keywordScore > bestScore && keywordScore > 0.70) { // 🎯 MUDADO: 0.40 → 0.70
+    if (keywordScore > bestScore && keywordScore > 0.70) {
       bestScore = keywordScore;
       bestMatch = faq;
       bestMethod = 'keywords';
@@ -196,7 +170,7 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
     console.log(`   Método: ${bestMethod}`);
   } else {
     console.log('❌ NENHUM MATCH (threshold: 85% similarity, 70% keywords)');
-    console.log('🤖 Vai usar GPT');
+    console.log('🤖 Vai usar Gemini');
   }
 
   return bestMatch;
@@ -206,7 +180,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   let sttTime = 0;
   let faqTime = 0;
-  let gptTime = 0;
+  let llmTime = 0;
   let ttsTime = 0;
   
   console.log('\n=== 🎯 NOVA REQUISIÇÃO ===');
@@ -237,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    console.log('⚡ Iniciando...', directQuestion ? '(Direct Question)' : '(Deepgram)');
+    console.log('⚡ Iniciando...', directQuestion ? '(Direct Question)' : '(Google STT)');
     
     // FASE 1: Transcrição ou Direct Question
     const sttStart = Date.now();
@@ -249,28 +223,43 @@ export async function POST(request: NextRequest) {
     if (directQuestion) {
       // Pergunta direta (veio com wake word)
       console.log('💬 Direct:', directQuestion);
-      const companyResult = await supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single();
+      const companyResult = await supabase.from('companies').select('id, name, system_prompt, description, knowledge_base').eq('id', companyId).single();
       userMessage = directQuestion;
       company = companyResult.data;
     } else {
-      // Transcrição normal
+      // Transcrição com Google Speech-to-Text
       try {
+        const arrayBuffer = await audioFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        // Detectar encoding do áudio
+        let encoding: 'LINEAR16' | 'WEBM_OPUS' = 'LINEAR16';
+        if (audioFile.type.includes('webm')) {
+          encoding = 'WEBM_OPUS';
+        }
+        
         const [companyResult, transcript] = await Promise.all([
-          supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
-          transcribeWithDeepgram(audioFile)
+          supabase.from('companies').select('id, name, system_prompt, description, knowledge_base').eq('id', companyId).single(),
+          transcribeAudio(buffer, {
+            encoding,
+            sampleRateHertz: 16000,
+            languageCode: 'pt-BR',
+            hints: DEFAULT_HINTS,
+            model: 'command_and_search',
+          })
         ]);
         
         userMessage = transcript;
         company = companyResult.data;
       } catch (error: any) {
         transcriptionError = error;
-        console.error('❌ Erro Deepgram:', error.message);
+        console.error('❌ Erro Google STT:', error.message);
         
-        // Se Deepgram falhar, tentar Whisper fallback
+        // Fallback para Whisper
         console.log('🔄 Fallback para Whisper...');
         
         const [companyResult, whisperResult] = await Promise.all([
-          supabase.from('companies').select('id, name, system_prompt').eq('id', companyId).single(),
+          supabase.from('companies').select('id, name, system_prompt, description, knowledge_base').eq('id', companyId).single(),
           openai.audio.transcriptions.create({
             file: audioFile,
             model: 'whisper-1',
@@ -284,21 +273,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const transcriptionTime = Date.now() - sttStart;
+    sttTime = Date.now() - sttStart;
 
     if (!userMessage || !company) {
       console.log('❌ Transcrição vazia ou company não encontrada');
       
-      const errorTTS = await openai.audio.speech.create({
-        model: 'tts-1',
-        voice: 'nova',
-        input: 'Não consegui te ouvir. Pode repetir?',
-        speed: 1.0, // 🎯 Velocidade normal
+      const errorAudio = await synthesizeSpeech({
+        text: 'Não consegui te ouvir. Pode repetir?',
+        voiceName: BRAZILIAN_VOICES.FEMALE_A,
+        speakingRate: 1.0,
+        audioEncoding: 'MP3',
       });
       
-      const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
-      
-      return new Response(errorBuffer, {
+      return new Response(errorAudio, {
         headers: {
           'Content-Type': 'audio/mpeg',
           'X-Transcription': encodeURIComponent('[vazio]'),
@@ -313,16 +300,16 @@ export async function POST(request: NextRequest) {
     console.log(`🔤 Normalizado: "${normalizeText(userMessage)}"`);
     
     if (directQuestion) {
-      console.log(`⏱️ Direct: ${transcriptionTime}ms`);
+      console.log(`⏱️ Direct: ${sttTime}ms`);
     } else {
-      console.log(`⏱️ ${transcriptionError ? 'Whisper (fallback)' : 'Deepgram'}: ${transcriptionTime}ms`);
+      console.log(`⏱️ ${transcriptionError ? 'Whisper (fallback)' : 'Google STT'}: ${sttTime}ms`);
       
       if (transcriptionError) {
-        console.log(`⚠️ Deepgram falhou, usando Whisper`);
+        console.log(`⚠️ Google STT falhou, usando Whisper`);
       }
     }
 
-    // Se for checkEndOnly, retornar só transcrição (sem FAQ/GPT/TTS)
+    // Se for checkEndOnly, retornar só transcrição (sem FAQ/LLM/TTS)
     if (checkEndOnly) {
       console.log('✅ Check-only mode: retornando só transcrição');
       
@@ -345,11 +332,11 @@ export async function POST(request: NextRequest) {
     console.log(`⏱️ FAQ matching: ${faqTime}ms`);
     console.log(`📊 FAQ result:`, matchingFAQ ? `FOUND: "${matchingFAQ.question}"` : 'NOT FOUND');
     
-
     let responseText = '';
     let usedFAQ = false;
 
     if (matchingFAQ) {
+      // Usar resposta do FAQ
       responseText = matchingFAQ.answer;
       usedFAQ = true;
       console.log('⚡ FAQ');
@@ -361,7 +348,7 @@ export async function POST(request: NextRequest) {
         .eq('id', matchingFAQ.id)
         .then(() => console.log('📊 +1 contador'));
     } else {
-      // GPT
+      // Usar Gemini
       const conversationMessages: any[] = [];
       
       if (conversationId && conversationId !== 'new') {
@@ -377,43 +364,33 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      conversationMessages.push({
-        role: 'system',
-        content: company.system_prompt || 'Você é um assistente prestativo.'
-      });
+      console.log('🤖 Gemini');
+      const llmStart = Date.now();
       
-      conversationMessages.push({
-        role: 'user',
-        content: userMessage
-      });
+      // Preparar contexto para o Gemini
+      const context = {
+        companyName: company.name,
+        companyDescription: company.description ?? undefined,
+        knowledgeBase: company.knowledge_base ?? undefined,
+        systemPrompt: company.system_prompt ?? undefined,
+        conversationHistory: conversationMessages.length > 0 ? conversationMessages : undefined,
+      };
       
-      console.log('🤖 GPT');
-      const gptStart = Date.now();
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: conversationMessages,
-        max_tokens: 100,
-        temperature: 0.7,
-        presence_penalty: 0.1,
-      });
-      gptTime = Date.now() - gptStart;
-      console.log(`⏱️ GPT: ${gptTime}ms`);
-      
-      responseText = completion.choices[0]?.message?.content || 'Desculpe, não entendi.';
+      responseText = await generateAssistantResponse(userMessage, context);
+      llmTime = Date.now() - llmStart;
+      console.log(`⏱️ Gemini: ${llmTime}ms`);
     }
 
-    // FASE 3: TTS - 🎯 OTIMIZADO PARA PT-BR
+    // FASE 3: TTS com Google Text-to-Speech
     const ttsStart = Date.now();
-    const tts = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'nova', // 🎯 Melhor para PT-BR
-      input: responseText,
-      speed: 1.0, // 🎯 Velocidade normal (natural para PT-BR)
+    const audioBuffer = await synthesizeSpeech({
+      text: responseText,
+      voiceName: BRAZILIAN_VOICES.FEMALE_A,
+      speakingRate: 1.0,
+      audioEncoding: 'MP3',
     });
     ttsTime = Date.now() - ttsStart;
-    console.log(`⏱️ TTS: ${ttsTime}ms`);
-
-    const audioBuffer = Buffer.from(await tts.arrayBuffer());
+    console.log(`⏱️ Google TTS: ${ttsTime}ms`);
 
     // FASE 4: Salvar histórico (não bloqueia response)
     let finalConversationId = conversationId || randomUUID();
@@ -437,11 +414,10 @@ export async function POST(request: NextRequest) {
 
     const totalTime = Date.now() - startTime;
 
-    
     console.log('\n=== ⏱️ RESUMO DE TEMPOS ===');
     console.log(`STT: ${sttTime}ms`);
     console.log(`FAQ: ${faqTime}ms`);
-    console.log(`GPT: ${gptTime}ms`);
+    console.log(`LLM: ${llmTime}ms`);
     console.log(`TTS: ${ttsTime}ms`);
     console.log(`TOTAL: ${totalTime}ms`);
     console.log('========================\n');
@@ -453,23 +429,22 @@ export async function POST(request: NextRequest) {
         'X-Used-FAQ': String(usedFAQ),
         'X-Processing-Time': String(totalTime),
         'X-Transcription': encodeURIComponent(userMessage),
+        'X-Service': 'google-stack',
       },
     });
   } catch (error: any) {
     console.error('❌ Erro:', error.message, error.stack);
     
-    // TTS de erro
+    // TTS de erro com Google
     try {
-      const errorTTS = await openai.audio.speech.create({
-        model: 'tts-1',
-        voice: 'nova',
-        input: 'Desculpe, ocorreu um erro. Tente novamente.',
-        speed: 1.0,
+      const errorAudio = await synthesizeSpeech({
+        text: 'Desculpe, ocorreu um erro. Tente novamente.',
+        voiceName: BRAZILIAN_VOICES.FEMALE_A,
+        speakingRate: 1.0,
+        audioEncoding: 'MP3',
       });
       
-      const errorBuffer = Buffer.from(await errorTTS.arrayBuffer());
-      
-      return new Response(errorBuffer, {
+      return new Response(errorAudio, {
         headers: {
           'Content-Type': 'audio/mpeg',
           'X-Error': 'true',

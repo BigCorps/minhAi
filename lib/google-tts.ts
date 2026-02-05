@@ -1,6 +1,7 @@
 // lib/google-tts.ts
 
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
+import { getGoogleCredentials, getGoogleProjectId } from './google-credentials';
 
 /**
  * Client Google Text-to-Speech
@@ -10,9 +11,13 @@ let ttsClient: TextToSpeechClient | null = null;
 
 export function getTTSClient(): TextToSpeechClient {
   if (!ttsClient) {
-    ttsClient = new TextToSpeechClient({
-      keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-    });
+    const credentials = getGoogleCredentials();
+    
+    ttsClient = new TextToSpeechClient(
+      credentials 
+        ? { credentials, projectId: getGoogleProjectId() }  // Vercel: passa objeto
+        : { projectId: getGoogleProjectId() }  // Local: usa arquivo via env var
+    );
   }
   return ttsClient;
 }

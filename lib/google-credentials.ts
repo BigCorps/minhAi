@@ -27,19 +27,25 @@ export function getGoogleCredentials(): GoogleCredentials | undefined {
   // Vercel/Produção: JSON direto
   if (process.env.GOOGLE_CREDENTIALS_JSON) {
     try {
-      return JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-    } catch (e) {
-      console.error('❌ Erro ao parsear GOOGLE_CREDENTIALS_JSON:', e);
-      throw new Error('GOOGLE_CREDENTIALS_JSON inválido');
+      const parsed = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+      console.log('✅ GOOGLE_CREDENTIALS_JSON parseado');
+      console.log('📊 Project ID:', parsed.project_id);
+      console.log('📊 Client email:', parsed.client_email);
+      return parsed;
+    } catch (e: any) {
+      console.error('❌ Erro ao parsear GOOGLE_CREDENTIALS_JSON:', e.message);
+      throw new Error('GOOGLE_CREDENTIALS_JSON inválido: ' + e.message);
     }
   }
   
   // Local: arquivo (SDK lê automaticamente)
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    console.log('✅ Usando GOOGLE_APPLICATION_CREDENTIALS (arquivo)');
     // Retornar undefined para SDK usar arquivo
     return undefined;
   }
   
+  console.error('❌ Nenhuma credencial encontrada!');
   throw new Error(
     'Google credentials não configuradas. ' +
     'Configure GOOGLE_APPLICATION_CREDENTIALS (local) ou ' +
@@ -69,9 +75,14 @@ export function getGoogleLocation(): string {
 
 /**
  * Verifica se está em ambiente Vercel
+ * Usa múltiplas checagens para maior confiabilidade
  */
 export function isVercel(): boolean {
-  return !!process.env.GOOGLE_CREDENTIALS_JSON;
+  return !!(
+    process.env.VERCEL ||           // Variável automática do Vercel
+    process.env.VERCEL_ENV ||        // Outra variável do Vercel
+    process.env.GOOGLE_CREDENTIALS_JSON  // Nossa variável custom
+  );
 }
 
 /**

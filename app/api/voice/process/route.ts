@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
     if (directQuestion) {
       // Pergunta direta (veio com wake word)
       console.log('💬 Direct:', directQuestion);
-      const companyResult = await supabase.from('companies').select('id, name, system_prompt, description, knowledge_base').eq('id', companyId).single();
+      const companyResult = await supabase.from('companies').select('id, name, system_prompt, greeting_message, welcome_message').eq('id', companyId).single();
       userMessage = directQuestion;
       company = companyResult.data;
     } else {
@@ -370,9 +370,8 @@ export async function POST(request: NextRequest) {
       // Preparar contexto para o Gemini
       const context = {
         companyName: company.name,
-        companyDescription: company.description ?? undefined,
-        knowledgeBase: company.knowledge_base ?? undefined,
         systemPrompt: company.system_prompt ?? undefined,
+        greetingMessage: company.greeting_message ?? undefined,
         conversationHistory: conversationMessages.length > 0 ? conversationMessages : undefined,
       };
       

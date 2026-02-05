@@ -988,60 +988,48 @@ export function VoiceAssistantWithWakeWord({
         return;
       }
 
-      console.log('📤 Enviando mensagem para API...');
+      console.log('📤 Enviando para /api/voice/process...');
       
-      const supabase = createClient();
-      
-      let currentConversationId = conversationIdRef.current;
-      
-      if (!currentConversationId) {
-        const { data: newConversation } = await supabase
-          .from('conversations')
-          .insert({
-            company_id: companyId,
-            started_at: new Date().toISOString(),
-            status: 'active'
-          })
-          .select()
-          .single();
-        
-        if (newConversation) {
-          currentConversationId = newConversation.id;
-          conversationIdRef.current = currentConversationId;
-        }
-      }
+      // ✅ USAR API ROUTE (não Edge Function!)
+      const formData = new FormData();
+      const textBlob = new Blob([message], { type: 'text/plain' });
+      formData.append('audio', textBlob);
+      formData.append('companyId', companyId);
+      formData.append('directQuestion', message);
 
-      if (currentConversationId) {
-        await supabase.from('messages').insert({
-          conversation_id: currentConversationId,
-          role: 'user',
-          content: message
-        });
-      }
-
-      const response = await supabase.functions.invoke('chat', {
-        body: {
-          question: message,
-          company_id: companyId,
-          conversation_id: currentConversationId
-        }
+      const response = await fetch('/api/voice/process', {
+        method: 'POST',
+        body: formData,
       });
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (!response.ok) {
+        throw new Error(`Erro: ${response.status}`);
       }
 
-      const { answer } = response.data;
+      console.log('✅ Resposta recebida');
 
-      if (currentConversationId) {
-        await supabase.from('messages').insert({
-          conversation_id: currentConversationId,
-          role: 'assistant',
-          content: answer
-        });
-      }
+      // Pegar resposta em áudio
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.playbackRate = 1.05;
+      
+      currentAudioRef.current = audio;
+      setIsPlayingAudio(true);
+      
+      audio.onended = () => {
+        console.log('✅ Resposta tocada');
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+      };
 
-      await playText(answer);
+      audio.onerror = () => {
+        console.error('❌ Erro ao tocar áudio');
+        setIsPlayingAudio(false);
+        currentAudioRef.current = null;
+      };
+
+      await audio.play();
 
     } catch (error: any) {
       console.error('❌ Erro ao processar mensagem:', error);
@@ -1562,7 +1550,7 @@ export function VoiceAssistantWithWakeWord({
               <p className={`text-sm mt-2 transition-colors ${
                 theme === 'dark' ? 'text-white/50' : 'text-gray-500'
               }`}>
-                Modo Alexa ativado, utilize a palavra de ativação.
+                No modo voz, utilize a palavra de ativação
               </p>
             </div>
 

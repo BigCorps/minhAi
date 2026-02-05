@@ -1,16 +1,16 @@
 // lib/google-tts.ts
 
-import textToSpeech from '@google-cloud/text-to-speech';
+import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 
 /**
  * Client Google Text-to-Speech
  */
 
-let ttsClient: textToSpeech.TextToSpeechClient | null = null;
+let ttsClient: TextToSpeechClient | null = null;
 
-export function getTTSClient(): textToSpeech.TextToSpeechClient {
+export function getTTSClient(): TextToSpeechClient {
   if (!ttsClient) {
-    ttsClient = new textToSpeech.TextToSpeechClient({
+    ttsClient = new TextToSpeechClient({
       keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
     });
   }

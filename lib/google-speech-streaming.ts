@@ -1,7 +1,7 @@
 // lib/google-speech-streaming.ts
 
 import { SpeechClient } from '@google-cloud/speech';
-import { getGoogleCredentials, getGoogleProjectId } from './google-credentials';
+import { getGoogleCredentials, getGoogleProjectId, isVercel } from './google-credentials';
 
 /**
  * Client Google Speech-to-Text com streaming em tempo real
@@ -11,13 +11,23 @@ let speechClient: SpeechClient | null = null;
 
 export function getSpeechClient(): SpeechClient {
   if (!speechClient) {
-    const credentials = getGoogleCredentials();
-    
-    speechClient = new SpeechClient(
-      credentials 
-        ? { credentials, projectId: getGoogleProjectId() }  // Vercel: passa objeto
-        : { projectId: getGoogleProjectId() }  // Local: usa arquivo via env var
-    );
+    if (isVercel()) {
+      // Vercel: passar credentials como objeto
+      const credentials = getGoogleCredentials();
+      console.log('🔧 Criando SpeechClient (Vercel mode)');
+      
+      speechClient = new SpeechClient({
+        projectId: getGoogleProjectId(),
+        credentials: credentials,
+      });
+    } else {
+      // Local: não passar nada, SDK usa env var automaticamente
+      console.log('🔧 Criando SpeechClient (Local mode)');
+      
+      speechClient = new SpeechClient({
+        projectId: getGoogleProjectId(),
+      });
+    }
   }
   return speechClient;
 }

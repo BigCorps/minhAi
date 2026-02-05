@@ -68,6 +68,13 @@ export function getGoogleLocation(): string {
 }
 
 /**
+ * Verifica se está em ambiente Vercel
+ */
+export function isVercel(): boolean {
+  return !!process.env.GOOGLE_CREDENTIALS_JSON;
+}
+
+/**
  * Verifica se credenciais estão configuradas
  */
 export function hasGoogleCredentials(): boolean {

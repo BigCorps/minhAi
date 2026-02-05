@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient();
     const { data: company } = await supabase
       .from('companies')
-      .select('name, description, knowledge_base')
+      .select('name, system_prompt, greeting_message')
       .eq('id', company_id)
       .single();
     
@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
       question,
       {
         companyName: company.name,
-        companyDescription: company.description ?? undefined,
-        knowledgeBase: company.knowledge_base ?? undefined,
+        systemPrompt: company.system_prompt ?? undefined,
+        greetingMessage: company.greeting_message ?? undefined,
       },
       conversationHistory
     );

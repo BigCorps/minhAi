@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
         audioEncoding: 'MP3',
       });
       
-      return new Response(errorAudio, {
+      return new Response(new Uint8Array(errorAudio), {
         headers: {
           'Content-Type': 'audio/mpeg',
           'X-Transcription': encodeURIComponent('[vazio]'),
@@ -391,6 +391,9 @@ export async function POST(request: NextRequest) {
     });
     ttsTime = Date.now() - ttsStart;
     console.log(`⏱️ Google TTS: ${ttsTime}ms`);
+    
+    // Converter Buffer para Uint8Array (compatível com NextResponse)
+    const audioData = new Uint8Array(audioBuffer);
 
     // FASE 4: Salvar histórico (não bloqueia response)
     let finalConversationId = conversationId || randomUUID();
@@ -422,7 +425,7 @@ export async function POST(request: NextRequest) {
     console.log(`TOTAL: ${totalTime}ms`);
     console.log('========================\n');
 
-    return new Response(audioBuffer, {
+    return new Response(audioData, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Conversation-Id': finalConversationId,
@@ -444,7 +447,7 @@ export async function POST(request: NextRequest) {
         audioEncoding: 'MP3',
       });
       
-      return new Response(errorAudio, {
+      return new Response(new Uint8Array(errorAudio), {
         headers: {
           'Content-Type': 'audio/mpeg',
           'X-Error': 'true',

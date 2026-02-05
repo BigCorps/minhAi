@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     console.log(`✅ TTS gerado em ${duration}ms (${audioBuffer.length} bytes)`);
     
     // Retornar áudio
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(audioBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'audio/mpeg',
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       audioEncoding: 'MP3',
     });
     
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(audioBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'audio/mpeg',

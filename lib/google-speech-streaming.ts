@@ -1,16 +1,17 @@
 // lib/google-speech-streaming.ts
 
-import speech from '@google-cloud/speech';
+import { SpeechClient } from '@google-cloud/speech';
+import type { google } from '@google-cloud/speech/build/protos/protos';
 
 /**
  * Client Google Speech-to-Text com streaming em tempo real
  */
 
-let speechClient: speech.SpeechClient | null = null;
+let speechClient: SpeechClient | null = null;
 
-export function getSpeechClient(): speech.SpeechClient {
+export function getSpeechClient(): SpeechClient {
   if (!speechClient) {
-    speechClient = new speech.SpeechClient({
+    speechClient = new SpeechClient({
       keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
     });
   }
@@ -36,7 +37,7 @@ export function createStreamingRecognition(
 ) {
   const client = getSpeechClient();
   
-  const request: speech.protos.google.cloud.speech.v1.IStreamingRecognizeRequest = {
+  const request: any = {
     config: {
       encoding: config.encoding,
       sampleRateHertz: config.sampleRateHertz,

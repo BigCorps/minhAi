@@ -1,17 +1,12 @@
 'use client';
 
 /**
- * 🚀 Voice Assistant 100% Google (Sem Vosk) - VERSÃO COMPLETA + CORREÇÕES
+ * 🚀 Voice Assistant 100% Google WebSocket - VERSÃO COMPLETA + TODAS CORREÇÕES
  * 
- * Migração de Vosk → Web Speech API
- * Backend 100% Google (Speech + Gemini + TTS)
- * 
- * ✅ CORREÇÕES APLICADAS:
- * - Recognition parado durante processamento de pergunta
- * - Recognition parado durante reprodução de áudio
- * - Reativação com delay de 2 segundos após resposta
- * - Função stopRecognitionSafely() adicionada
- * - Feedback loop corrigido
+ * ✅ WebSocket Google Speech (streaming real-time)
+ * ✅ Feedback loop corrigido
+ * ✅ Recognition pausado durante processamento
+ * ✅ Delay de 2 segundos após resposta
  * 
  * Todas as funcionalidades mantidas:
  * - Wake word detection
@@ -33,6 +28,7 @@ import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
+import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -62,7 +58,6 @@ export function VoiceAssistantWithWakeWord({
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
-  const [browserSpeechSupported, setBrowserSpeechSupported] = useState(false);
 
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
@@ -91,9 +86,9 @@ export function VoiceAssistantWithWakeWord({
   const processingQuestion = useRef<boolean>(false);
   const conversationIdRef = useRef<string | null>(null);
   
-  // 🎤 Web Speech API
-  const recognitionRef = useRef<any>(null);
-  const isRecognitionActive = useRef(false);
+  // ✅ Google Speech WebSocket refs
+  const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
+  const shouldProcessAudio = useRef<boolean>(true);
 
   // ========================================
   // CONFIGURATION
@@ -136,20 +131,9 @@ export function VoiceAssistantWithWakeWord({
   useEffect(() => {
     isActiveRef.current = true;
     
-    console.log('🚀 Inicializando Voice Assistant (Web Speech API)...');
+    console.log('🚀 Inicializando Voice Assistant (Google Speech WebSocket)...');
     
-    // ✅ Verificar suporte Web Speech API
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (SpeechRecognition) {
-      console.log('✅ Web Speech API suportada!');
-      setBrowserSpeechSupported(true);
-      requestMicrophonePermission();
-    } else {
-      console.error('❌ Web Speech API não suportada neste navegador');
-      setError('Navegador não suporta reconhecimento de voz. Use Chrome, Edge ou Safari.');
-      setBrowserSpeechSupported(false);
-    }
+    requestMicrophonePermission();
     
     const handleExternalFunctionClick = (event: any) => {
       const { functionKey } = event.detail;
@@ -183,15 +167,11 @@ export function VoiceAssistantWithWakeWord({
   function cleanup() {
     console.log('🧹 Cleanup...');
     
-    // Parar Web Speech API
-    if (recognitionRef.current && isRecognitionActive.current) {
-      try {
-        recognitionRef.current.stop();
-        isRecognitionActive.current = false;
-        console.log('✅ Recognition stopped');
-      } catch (e) {
-        console.log('⚠️ Erro ao parar recognition:', e);
-      }
+    // Parar Google Speech WebSocket
+    if (googleSpeechRef.current) {
+      googleSpeechRef.current.stopRecording();
+      googleSpeechRef.current.disconnect();
+      googleSpeechRef.current = null;
     }
     
     if (currentAudioRef.current) {
@@ -260,159 +240,69 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ========================================
-  // START ASSISTANT
+  // GOOGLE SPEECH WEBSOCKET
   // ========================================
-  async function handleStart() {
-    console.log('🚀 Iniciando assistente de voz (Web Speech API)...');
-    
-    unlockAudio();
-    
+  async function startGoogleSpeech() {
     try {
-      const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU=');
-      testAudio.volume = 0.01;
-      await testAudio.play();
-      testAudio.pause();
-      console.log('✅ Contexto de áudio estabelecido');
-    } catch (e) {
-      console.log('⚠️ Falha no contexto de áudio');
-    }
-    
-    setShowStartButton(false);
-    
-    if (onAssistantStart) {
-      onAssistantStart();
-    }
-    
-    setTimeout(() => {
-      if (isActiveRef.current) {
-        startWebSpeechListening();
-      }
-    }, 300);
-  }
-
-  // ========================================
-  // ✅ NOVA FUNÇÃO: stopRecognitionSafely
-  // ========================================
-  function stopRecognitionSafely() {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-        console.log('🛑 Recognition PARADO para evitar feedback');
-        return true;
-      } catch (e) {
-        console.log('⚠️ Recognition já estava parado');
-        return false;
-      }
-    }
-    return false;
-  }
-
-  // ========================================
-  // WEB SPEECH API
-  // ========================================
-  function startWebSpeechListening() {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      setError('Reconhecimento de voz não suportado');
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
+      console.log('🎤 Iniciando Google Speech Streaming...');
       
-      // Configurações otimizadas
-      recognition.continuous = true;  // Escuta contínua
-      recognition.interimResults = true;  // Resultados parciais
-      recognition.lang = 'pt-BR';  // Português Brasil
-      recognition.maxAlternatives = 1;
+      const client = new GoogleSpeechWebSocket({
+        onTranscript: (text, isFinal) => {
+          handleGoogleTranscript(text, isFinal);
+        },
+        onError: (error) => {
+          console.error('❌ Erro Google Speech:', error);
+          setError('Erro no reconhecimento de voz');
+        },
+        onReady: () => {
+          console.log('✅ Google Speech pronto');
+          setIsListening(true);
+        },
+        languageCode: 'pt-BR',
+        sampleRate: 16000,
+      });
       
-      // Event: Resultado parcial ou final
-      recognition.onresult = (event: any) => {
-        const last = event.results.length - 1;
-        const result = event.results[last];
-        const transcript = result[0].transcript;
-        const isFinal = result.isFinal;
-        
-        console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${transcript}"`);
-        
-        handleWebSpeechTranscript(transcript, isFinal);
-      };
+      googleSpeechRef.current = client;
       
-      // Event: Erro
-      recognition.onerror = (event: any) => {
-        console.error('❌ Web Speech error:', event.error);
-        
-        if (event.error === 'no-speech') {
-          console.log('⏳ Sem fala detectada, continuando...');
-        } else if (event.error === 'aborted') {
-          console.log('🔄 Recognition abortado, reiniciando...');
-          setTimeout(() => {
-            if (isActiveRef.current && !isRecognitionActive.current) {
-              startWebSpeechListening();
-            }
-          }, 1000);
-        } else if (event.error === 'network') {
-          console.error('❌ Erro de rede no Web Speech API');
-          setError('Erro de conexão. Verifique sua internet.');
-        } else {
-          setError(`Erro de reconhecimento: ${event.error}`);
-        }
-      };
+      await client.connect();
+      await client.startRecording();
       
-      // Event: Início
-      recognition.onstart = () => {
-        console.log('🎤 Recognition started');
-        isRecognitionActive.current = true;
-        setIsListening(true);
-      };
-      
-      // Event: Fim
-      recognition.onend = () => {
-        console.log('🔚 Web Speech encerrado');
-        isRecognitionActive.current = false;
-        
-        // Reiniciar se ainda ativo
-        if (isActiveRef.current && !isProcessing && !isPlayingAudio) {
-          console.log('🔄 Reiniciando reconhecimento...');
-          setTimeout(() => {
-            if (isActiveRef.current) {
-              startWebSpeechListening();
-            }
-          }, 500);
-        } else {
-          setIsListening(false);
-        }
-      };
-      
-      // Iniciar
-      recognition.start();
-      console.log('✅ Web Speech API ATIVO! 🎉');
-      
-    } catch (err: any) {
-      console.error('❌ Erro ao iniciar Web Speech:', err);
+    } catch (error: any) {
+      console.error('❌ Erro ao iniciar Google Speech:', error);
       setError('Erro ao acessar microfone');
     }
   }
 
-  // ========================================
-  // HANDLE TRANSCRIPT
-  // ========================================
-  function handleWebSpeechTranscript(text: string, isFinal: boolean) {
-    if (!text || !isActiveRef.current) return;
+  async function stopGoogleSpeech() {
+    if (googleSpeechRef.current) {
+      console.log('🛑 Parando Google Speech...');
+      
+      await googleSpeechRef.current.stopRecording();
+      googleSpeechRef.current.disconnect();
+      googleSpeechRef.current = null;
+      
+      setIsListening(false);
+      console.log('✅ Google Speech parado');
+    }
+  }
+
+  function handleGoogleTranscript(text: string, isFinal: boolean) {
+    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
     
     const lowerText = text.toLowerCase().trim();
     
+    console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
+    
+    // Detectar wake word
     const detectionResult = wakeWordDetectorRef.current?.detect(lowerText);
     
     if (detectionResult?.detected) {
-      console.log(`🔍 Wake word detectada: "${detectionResult.keyword}"`);
+      console.log(`🔍 Wake word: "${detectionResult.keyword}"`);
       console.log(`📊 Confidence: ${(detectionResult.confidence * 100).toFixed(0)}%`);
       
       const normalizedTranscript = lowerText.replace(/[.,!?]/g, '').trim();
       
-      // Comandos de parar explícitos
+      // Detectar comandos de stop explícitos
       const explicitStopPhrases = [
         'pare',
         'para',
@@ -438,19 +328,20 @@ export function VoiceAssistantWithWakeWord({
       const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
       
       if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
-        console.log('🛑 COMANDO STOP EXPLÍCITO DETECTADO!');
-        console.log('✅ PARANDO áudio imediatamente!');
+        console.log('🛑 COMANDO STOP detectado:', lowerText);
         stopAudioImmediately();
         return;
       }
       
+      // Se está ocupado, ignorar
       if (processingQuestion.current || isProcessing || isPlayingAudio || isActuallyPlaying) {
         console.log('⏸️ Ocupado, ignorando captura');
         return;
       }
       
+      // Se for resultado final, processar
       if (isFinal) {
-        console.log('✅ Processando pergunta completa (Web Speech)');
+        console.log('✅ Processando pergunta completa');
         
         if (!audioUnlocked.current) {
           unlockAudio();
@@ -464,6 +355,37 @@ export function VoiceAssistantWithWakeWord({
         console.log('⏳ Aguardando transcrição final...');
       }
     }
+  }
+
+  // ========================================
+  // START ASSISTANT
+  // ========================================
+  async function handleStart() {
+    console.log('🚀 Iniciando assistente de voz (Google Speech WebSocket)...');
+    
+    unlockAudio();
+    
+    try {
+      const testAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU=');
+      testAudio.volume = 0.01;
+      await testAudio.play();
+      testAudio.pause();
+      console.log('✅ Contexto de áudio estabelecido');
+    } catch (e) {
+      console.log('⚠️ Falha no contexto de áudio');
+    }
+    
+    setShowStartButton(false);
+    
+    if (onAssistantStart) {
+      onAssistantStart();
+    }
+    
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        await startGoogleSpeech();
+      }
+    }, 300);
   }
 
   // ========================================
@@ -530,9 +452,10 @@ export function VoiceAssistantWithWakeWord({
       console.log('⚠️ Função desativada:', functionKey);
       await playText('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
       
-      setTimeout(() => {
+      setTimeout(async () => {
         if (isActiveRef.current) {
-          console.log('✅ Web Speech continua ativo');
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
         }
       }, 500);
       
@@ -573,9 +496,10 @@ export function VoiceAssistantWithWakeWord({
     } finally {
       setIsProcessing(false);
       
-      setTimeout(() => {
+      setTimeout(async () => {
         if (isActiveRef.current) {
-          console.log('✅ Web Speech continua ativo');
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
         }
       }, 500);
     }
@@ -1014,7 +938,6 @@ export function VoiceAssistantWithWakeWord({
 
       console.log('📤 Enviando para /api/voice/process...');
       
-      // ✅ USAR API ROUTE (não Edge Function!)
       const formData = new FormData();
       const textBlob = new Blob([message], { type: 'text/plain' });
       formData.append('audio', textBlob);
@@ -1032,7 +955,6 @@ export function VoiceAssistantWithWakeWord({
 
       console.log('✅ Resposta recebida');
 
-      // Pegar resposta em áudio
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
@@ -1061,9 +983,10 @@ export function VoiceAssistantWithWakeWord({
     } finally {
       setIsProcessing(false);
       
-      setTimeout(() => {
+      setTimeout(async () => {
         if (isActiveRef.current) {
-          console.log('✅ Web Speech continua ativo');
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
         }
       }, 500);
     }
@@ -1095,7 +1018,12 @@ export function VoiceAssistantWithWakeWord({
     setIsProcessing(false);
     processingQuestion.current = false;
     
-    console.log('✅ Web Speech continua ativo');
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+      }
+    }, 500);
   }
 
   // ========================================
@@ -1132,9 +1060,10 @@ export function VoiceAssistantWithWakeWord({
       console.log('❌ Sem pergunta, resetando');
       processingQuestion.current = false;
       
-      setTimeout(() => {
+      setTimeout(async () => {
         if (isActiveRef.current) {
-          console.log('✅ Web Speech continua ativo');
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
         }
       }, 300);
       return;
@@ -1143,14 +1072,13 @@ export function VoiceAssistantWithWakeWord({
     processQuestion(cleanTranscript);
   }
 
-  // ========================================
-  // ✅ MUDANÇA 2: Parar recognition no início
-  // ========================================
   async function processQuestion(questionText: string) {
     console.log('⚡ Processando:', questionText);
     
-    // ✅ CRUCIAL: PARAR RECOGNITION AQUI!
-    stopRecognitionSafely();
+    // ✅ PARAR GOOGLE SPEECH!
+    shouldProcessAudio.current = false;
+    await stopGoogleSpeech();
+    console.log('🛑 Google Speech parado para evitar feedback');
     
     const isCommand = await detectVoiceCommand(questionText);
     
@@ -1158,16 +1086,11 @@ export function VoiceAssistantWithWakeWord({
       console.log('✅ Comando processado');
       processingQuestion.current = false;
       
-      // ✅ MUDANÇA 3: Reativar após comando
-      setTimeout(() => {
-        if (isActiveRef.current && recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-            console.log('🎤 Recognition REINICIADO após comando');
-          } catch (e) {
-            console.log('⚠️ Erro ao reiniciar');
-          }
-        }
+      // ✅ REATIVAR GOOGLE SPEECH APÓS 500MS
+      setTimeout(async () => {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+        console.log('🎤 Google Speech reiniciado após comando');
       }, 500);
       
       return;
@@ -1236,7 +1159,7 @@ export function VoiceAssistantWithWakeWord({
 
       setIsProcessing(false);
 
-      console.log('🔄 Web Speech continua ativo durante resposta...');
+      console.log('🔄 Preparando resposta de áudio...');
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -1249,57 +1172,35 @@ export function VoiceAssistantWithWakeWord({
       setIsPlayingAudio(true);
       
       audio.onplay = () => {
-        console.log('🔊 Áudio iniciou (reconhecimento ATIVO)');
+        console.log('🔊 Áudio iniciou');
         setIsPlayingAudio(true);
       };
       
-      // ========================================
-      // ✅ MUDANÇA 4: Modificar audio.onended
-      // ========================================
+      // ✅ REATIVAR GOOGLE SPEECH APÓS 2 SEGUNDOS
       audio.onended = () => {
         console.log('✅ Resposta concluída');
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
-        // ✅ PARAR RECOGNITION (garantia)
-        stopRecognitionSafely();
-        
-        // ✅ REATIVAR SOMENTE APÓS 2 SEGUNDOS!
-        setTimeout(() => {
-          if (isActiveRef.current && recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-              console.log('🎤 Recognition REINICIADO após resposta completa');
-            } catch (e) {
-              console.log('⚠️ Erro ao reiniciar recognition:', e);
-            }
-          }
-        }, 2000);  // ← 2 SEGUNDOS DE DELAY!
+        setTimeout(async () => {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+          console.log('🎤 Google Speech reiniciado após resposta');
+        }, 2000);
       };
 
-      // ========================================
-      // ✅ MUDANÇA 5: Modificar audio.onerror
-      // ========================================
+      // ✅ REATIVAR GOOGLE SPEECH APÓS 1 SEGUNDO (erro)
       audio.onerror = (e) => {
         console.error('❌ Erro ao tocar áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
-        // ✅ PARAR RECOGNITION
-        stopRecognitionSafely();
-        
-        // ✅ REATIVAR APÓS 1 SEGUNDO
-        setTimeout(() => {
-          if (isActiveRef.current && recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-              console.log('🎤 Recognition REINICIADO após erro');
-            } catch (e) {
-              console.log('⚠️ Erro ao reiniciar');
-            }
-          }
+        setTimeout(async () => {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+          console.log('🎤 Google Speech reiniciado após erro');
         }, 1000);
       };
 
@@ -1310,9 +1211,12 @@ export function VoiceAssistantWithWakeWord({
           currentAudioRef.current = null;
           processingQuestion.current = false;
           
-          if (isActiveRef.current) {
-            console.log('✅ Web Speech continua ativo');
-          }
+          setTimeout(async () => {
+            if (isActiveRef.current) {
+              shouldProcessAudio.current = true;
+              await startGoogleSpeech();
+            }
+          }, 1000);
         }
       }, 1500);
 
@@ -1367,10 +1271,11 @@ export function VoiceAssistantWithWakeWord({
         } catch (e) {}
       }
       
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          console.log('✅ Web Speech continua ativo');
-        }
+      // ✅ REATIVAR GOOGLE SPEECH APÓS 1 SEGUNDO
+      setTimeout(async () => {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+        console.log('🎤 Google Speech reiniciado após erro crítico');
       }, 1000);
     }
   }
@@ -1445,9 +1350,10 @@ export function VoiceAssistantWithWakeWord({
       console.log('Erro despedida');
     }
     
-    setTimeout(() => {
+    setTimeout(async () => {
       if (isActiveRef.current) {
-        console.log('✅ Web Speech continua ativo');
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
       }
     }, 1000);
   }
@@ -1505,7 +1411,6 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
-    if (!browserSpeechSupported) return 'Navegador não suportado';
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
@@ -1514,7 +1419,7 @@ export function VoiceAssistantWithWakeWord({
   };
 
   const getStatusColor = () => {
-    if (!permissionGranted || !browserSpeechSupported) return 'bg-gray-400';
+    if (!permissionGranted) return 'bg-gray-400';
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
     if (isProcessing) return 'bg-green-600 animate-pulse';
     if (isListening) return 'bg-green-400 animate-pulse';
@@ -1555,7 +1460,7 @@ export function VoiceAssistantWithWakeWord({
           )}
         </div>
 
-        {showStartButton && permissionGranted && browserSpeechSupported && (
+        {showStartButton && permissionGranted && (
           <button
             onClick={handleStart}
             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"
@@ -1628,7 +1533,7 @@ export function VoiceAssistantWithWakeWord({
               </div>
             )}
 
-            {showStartButton && permissionGranted && browserSpeechSupported && (
+            {showStartButton && permissionGranted && (
               <button
                 onClick={handleStart}
                 className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg"

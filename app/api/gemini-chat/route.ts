@@ -1,141 +1,223 @@
-// app/api/gemini-chat/route.ts
+// lib/gemini.ts
 
-import { NextRequest, NextResponse } from 'next/server';
-import { generateAssistantResponse, GeminiMessage } from '@/lib/gemini';
-import { createClient } from '@/lib/supabase-server';
-
-export const runtime = 'nodejs';
-export const maxDuration = 30;
+import { 
+  GoogleGenerativeAI,
+  HarmCategory,
+  HarmBlockThreshold,
+} from '@google/generative-ai';
 
 /**
- * POST /api/gemini-chat
- * 
- * Processa mensagem do usuário com Gemini
- * Body: { 
- *   question: string, 
- *   company_id: string,
- *   conversation_id?: string,
- *   history?: GeminiMessage[]
- * }
+ * Cliente Gemini 1.5 Flash via Google AI API
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { question, company_id, conversation_id, history } = body;
-    
-    if (!question || !company_id) {
-      return NextResponse.json(
-        { error: 'question e company_id são obrigatórios' },
-        { status: 400 }
-      );
+
+let genAI: GoogleGenerativeAI | null = null;
+
+export function getGoogleAI(): GoogleGenerativeAI {
+  if (!genAI) {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      throw new Error('GOOGLE_API_KEY não configurada');
     }
+    genAI = new GoogleGenerativeAI(apiKey);
+  }
+  return genAI;
+}
+
+export interface GeminiMessage {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
+export interface GeminiConfig {
+  temperature?: number; // 0-2 (criatividade)
+  maxOutputTokens?: number; // Máximo de tokens na resposta
+  topP?: number; // 0-1 (diversidade)
+  topK?: number; // Número de tokens considerados
+}
+
+/**
+ * Gera resposta com Gemini 1.5 Flash
+ */
+export async function generateWithGemini(
+  prompt: string,
+  config?: GeminiConfig,
+  conversationHistory?: GeminiMessage[]
+): Promise<string> {
+  const genAI = getGoogleAI();
+  
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+  });
+  
+  const contents: GeminiMessage[] = conversationHistory ?? [];
+  
+  // Adicionar mensagem do usuário
+  contents.push({
+    role: 'user',
+    parts: [{ text: prompt }],
+  });
+  
+  const generationConfig = {
+    temperature: config?.temperature ?? 0.7,
+    maxOutputTokens: config?.maxOutputTokens ?? 256,
+    topP: config?.topP ?? 0.95,
+    topK: config?.topK ?? 40,
+  };
+  
+  const safetySettings = [
+    {
+      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+  ];
+  
+  const result = await model.generateContent({
+    contents,
+    generationConfig,
+    safetySettings,
+  });
+  
+  const response = result.response;
+  
+  if (!response.candidates || response.candidates.length === 0) {
+    throw new Error('Nenhuma resposta gerada pelo Gemini');
+  }
+  
+  const text = response.candidates[0].content.parts
+    .map(part => part.text)
+    .join('');
+  
+  return text;
+}
+
+/**
+ * Gera resposta com contexto de empresa
+ */
+export async function generateAssistantResponse(
+  userMessage: string,
+  companyContext: {
+    companyName: string;
+    systemPrompt?: string;
+    greetingMessage?: string;
+    conversationHistory?: any[];
+  },
+  conversationHistory?: GeminiMessage[]
+): Promise<string> {
+  const systemPrompt = `
+${companyContext.systemPrompt || `Você é um assistente virtual inteligente da empresa ${companyContext.companyName}.`}
+
+Regras importantes:
+1. Seja breve e objetivo (máximo 2-3 frases)
+2. Use linguagem natural e amigável
+3. Fale em português brasileiro
+4. Se não souber algo, seja honesto
+5. Não invente informações sobre a empresa
+
+Mensagem do cliente: ${userMessage}
+
+Responda de forma natural e útil:
+`.trim();
+  
+  return generateWithGemini(systemPrompt, {
+    temperature: 0.7,
+    maxOutputTokens: 150, // Respostas curtas
+  }, conversationHistory);
+}
+
+/**
+ * Streaming de resposta (para UX melhor)
+ */
+export async function* generateStreamWithGemini(
+  prompt: string,
+  config?: GeminiConfig
+): AsyncGenerator<string> {
+  const genAI = getGoogleAI();
+  
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+  });
+  
+  const generationConfig = {
+    temperature: config?.temperature ?? 0.7,
+    maxOutputTokens: config?.maxOutputTokens ?? 256,
+    topP: config?.topP ?? 0.95,
+    topK: config?.topK ?? 40,
+  };
+  
+  const result = await model.generateContentStream({
+    contents: [{
+      role: 'user',
+      parts: [{ text: prompt }],
+    }],
+    generationConfig,
+  });
+  
+  for await (const chunk of result.stream) {
+    const text = chunk.candidates?.[0]?.content?.parts
+      .map(part => part.text)
+      .join('') ?? '';
     
-    console.log('🤖 Gemini processando:', {
-      question: question.substring(0, 50),
-      company_id,
-      has_history: !!history,
-    });
-    
-    const startTime = Date.now();
-    
-    // Buscar informações da empresa
-    const supabase = createClient();
-    const { data: company } = await supabase
-      .from('companies')
-      .select('name, system_prompt, greeting_message')
-      .eq('id', company_id)
-      .single();
-    
-    if (!company) {
-      return NextResponse.json(
-        { error: 'Empresa não encontrada' },
-        { status: 404 }
-      );
+    if (text) {
+      yield text;
     }
-    
-    // Buscar histórico do Supabase se conversation_id fornecido
-    let conversationHistory: GeminiMessage[] = history ?? [];
-    
-    if (conversation_id && !history) {
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('role, content')
-        .eq('conversation_id', conversation_id)
-        .order('created_at', { ascending: true })
-        .limit(10); // Últimas 10 mensagens
-      
-      if (messages) {
-        conversationHistory = messages.map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }],
-        }));
-      }
-    }
-    
-    // Gerar resposta com Gemini
-    const answer = await generateAssistantResponse(
-      question,
-      {
-        companyName: company.name,
-        systemPrompt: company.system_prompt ?? undefined,
-        greetingMessage: company.greeting_message ?? undefined,
-      },
-      conversationHistory
-    );
-    
-    const duration = Date.now() - startTime;
-    console.log(`✅ Gemini respondeu em ${duration}ms:`, answer.substring(0, 50));
-    
-    // Salvar no banco se conversation_id fornecido
-    if (conversation_id) {
-      // Mensagem do usuário
-      await supabase.from('messages').insert({
-        conversation_id,
-        role: 'user',
-        content: question,
-      });
-      
-      // Resposta do assistente
-      await supabase.from('messages').insert({
-        conversation_id,
-        role: 'assistant',
-        content: answer,
-      });
-    }
-    
-    return NextResponse.json({
-      answer,
-      duration,
-      service: 'gemini-1.5-flash',
-      tokens_used: Math.ceil(answer.length / 4), // Estimativa
-    });
-    
-  } catch (error: any) {
-    console.error('❌ Erro Gemini:', error);
-    
-    // Log detalhado do erro
-    console.error('Stack:', error.stack);
-    
-    return NextResponse.json(
-      { 
-        error: 'Erro ao processar mensagem',
-        details: error.message 
-      },
-      { status: 500 }
-    );
   }
 }
 
 /**
- * OPTIONS para CORS
+ * Extrai intenção do usuário (útil para detectar comandos)
  */
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
+export async function extractIntent(
+  userMessage: string
+): Promise<{
+  intent: 'pix' | 'whatsapp' | 'instagram' | 'question' | 'other';
+  confidence: number;
+  extractedData?: any;
+}> {
+  const prompt = `
+Analise a mensagem do usuário e identifique a intenção:
+
+Mensagem: "${userMessage}"
+
+Intenções possíveis:
+- pix: Gerar cobrança PIX (extrair valor)
+- whatsapp: Mostrar WhatsApp da empresa
+- instagram: Mostrar Instagram da empresa
+- question: Pergunta geral sobre a empresa
+- other: Outra coisa
+
+Responda APENAS em JSON:
+{
+  "intent": "...",
+  "confidence": 0.0-1.0,
+  "extractedData": {...}
+}
+`.trim();
+  
+  const response = await generateWithGemini(prompt, {
+    temperature: 0.2, // Baixa temperatura para mais precisão
+    maxOutputTokens: 100,
   });
+  
+  // Parse JSON
+  try {
+    const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (e) {
+    return {
+      intent: 'other',
+      confidence: 0.5,
+    };
+  }
 }

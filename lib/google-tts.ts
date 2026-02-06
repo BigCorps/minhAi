@@ -1,54 +1,43 @@
-// lib/google-tts.ts (CORRIGIDO)
+import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-import { TextToSpeechClient } from '@google-cloud/text-to-speech';
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
-let ttsClient: TextToSpeechClient | null = null;
+export async function POST(request: NextRequest) {
+  try {
+    const { text } = await request.json();
 
-export function getTTSClient(): TextToSpeechClient {
-  if (!ttsClient) {
-    console.log('🔧 Criando TTSClient');
-    
-    // ✅ SEMPRE usar GOOGLE_CLOUD_CREDENTIALS (é o que tem no Vercel)
-    ttsClient = new TextToSpeechClient({
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-      credentials: JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS || '{}'),
+    if (!text) {
+      return NextResponse.json(
+        { error: 'Texto é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    // 🎯 TTS otimizado para PT-BR
+    const ttsResponse = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'nova', // 🎯 Melhor voz para português brasileiro
+      input: text,
+      response_format: 'mp3',
+      speed: 1.2, // 🎯 Velocidade normal (natural)
     });
+
+    const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+
+    return new NextResponse(audioBuffer, {
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'public, max-age=3600',
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro TTS:', error);
+    return NextResponse.json(
+      { error: 'Erro ao gerar áudio', details: error.message },
+      { status: 500 }
+    );
   }
-  return ttsClient;
 }
-
-/**
- * Sintetiza texto em áudio usando Google TTS
- */
-export async function synthesizeSpeech(params: {
-  text: string;
-  voiceName: string;
-  speakingRate?: number;
-  audioEncoding: 'MP3' | 'LINEAR16';
-}): Promise<Buffer> {
-  const client = getTTSClient();
-  
-  const [response] = await client.synthesizeSpeech({
-    input: { text: params.text },
-    voice: {
-      name: params.voiceName,
-      languageCode: 'pt-BR',
-    },
-    audioConfig: {
-      audioEncoding: params.audioEncoding,
-      speakingRate: params.speakingRate || 1.0,
-    },
-  });
-
-  if (!response.audioContent) {
-    throw new Error('TTS response vazia');
-  }
-
-  return Buffer.from(response.audioContent as Uint8Array);
-}
-
-export const BRAZILIAN_VOICES = {
-  FEMALE_A: 'pt-BR-Wavenet-A',
-  FEMALE_C: 'pt-BR-Wavenet-C',
-  MALE_B: 'pt-BR-Wavenet-B',
-} as const;

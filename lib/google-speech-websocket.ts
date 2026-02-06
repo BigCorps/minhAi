@@ -1,19 +1,8 @@
-// lib/google-speech-websocket.ts
+// lib/google-speech-websocket.ts (VERSÃO SUPABASE)
 
 /**
  * Cliente WebSocket para Google Speech-to-Text Streaming
- * 
- * Uso:
- * const client = new GoogleSpeechWebSocket({
- *   onTranscript: (text, isFinal) => console.log(text),
- *   onError: (error) => console.error(error)
- * });
- * 
- * await client.connect();
- * await client.startRecording();
- * // ... usuário fala ...
- * await client.stopRecording();
- * client.disconnect();
+ * Conecta via Supabase Edge Function
  */
 
 export interface GoogleSpeechConfig {
@@ -44,16 +33,18 @@ export class GoogleSpeechWebSocket {
   }
   
   /**
-   * Conecta ao WebSocket do backend
+   * Conecta ao WebSocket da Supabase Edge Function
    */
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // Determinar URL do WebSocket baseado no ambiente
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/api/voice/stream`;
+        // URL da Supabase Edge Function
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const wsUrl = supabaseUrl
+          .replace('https://', 'wss://')
+          .replace('http://', 'ws://') + '/functions/v1/speech-stream';
         
-        console.log('🔌 Conectando WebSocket:', wsUrl);
+        console.log('🔌 Conectando Supabase WebSocket:', wsUrl);
         
         this.ws = new WebSocket(wsUrl);
         
@@ -68,22 +59,24 @@ export class GoogleSpeechWebSocket {
               sampleRate: this.config.sampleRate,
             }
           }));
-          
-          this.config.onReady();
-          resolve();
         };
         
         this.ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             
-            if (data.type === 'transcript') {
+            if (data.type === 'ready') {
+              console.log('✅ Google Speech pronto:', data.config);
+              this.config.onReady();
+              resolve();
+            } else if (data.type === 'transcript') {
               this.config.onTranscript(data.text, data.isFinal);
             } else if (data.type === 'error') {
+              console.error('❌ Erro do servidor:', data.message);
               this.config.onError(new Error(data.message));
             }
           } catch (error) {
-            console.error('Erro ao processar mensagem WebSocket:', error);
+            console.error('Erro ao processar mensagem:', error);
           }
         };
         
@@ -98,7 +91,7 @@ export class GoogleSpeechWebSocket {
         };
         
       } catch (error) {
-        console.error('❌ Erro ao conectar WebSocket:', error);
+        console.error('❌ Erro ao conectar:', error);
         reject(error);
       }
     });
@@ -152,7 +145,7 @@ export class GoogleSpeechWebSocket {
           int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
         
-        // Enviar para backend via WebSocket
+        // Enviar para Supabase via WebSocket
         this.ws.send(int16Data.buffer);
       };
       

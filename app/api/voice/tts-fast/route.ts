@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       console.log('⚡ Cache hit!');
       const cachedBuffer = AUDIO_CACHE.get(cacheKey)!;
       
-      return new Response(cachedBuffer, {
+      return new Response(new Uint8Array(cachedBuffer), {
         headers: {
           'Content-Type': 'audio/mpeg',
           'Cache-Control': 'public, max-age=31536000', // 1 ano
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       console.log('💾 Armazenado no cache');
     }
 
-    return new Response(buffer, {
+    return new Response(new Uint8Array(buffer), {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Processing-Time': String(processingTime),

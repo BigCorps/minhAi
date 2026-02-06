@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+export const runtime = 'nodejs';
+export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,16 +15,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🎯 TTS otimizado para PT-BR
-    const ttsResponse = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'nova', // 🎯 Melhor voz para português brasileiro
-      input: text,
-      response_format: 'mp3',
-      speed: 1.2, // 🎯 Velocidade normal (natural)
-    });
+    console.log('🔊 Google TTS:', text.substring(0, 50));
 
-    const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+    const audioBuffer = await synthesizeSpeech({
+      text,
+      voiceName: BRAZILIAN_VOICES.FEMALE_A,
+      speakingRate: 1.0,
+      audioEncoding: 'MP3',
+    });
 
     return new NextResponse(audioBuffer, {
       headers: {
@@ -34,7 +31,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Erro TTS:', error);
+    console.error('❌ Erro TTS:', error.message);
     return NextResponse.json(
       { error: 'Erro ao gerar áudio', details: error.message },
       { status: 500 }

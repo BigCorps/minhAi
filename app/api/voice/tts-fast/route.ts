@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+export const runtime = 'nodejs';
 
 // Cache de áudios comuns (pre-gerados)
 const AUDIO_CACHE = new Map<string, Buffer>();
@@ -16,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Texto obrigatório' }, { status: 400 });
     }
 
-    console.log('🎯 TTS-Fast:', text);
+    console.log('🔊 TTS-Fast:', text.substring(0, 30));
 
     // Verificar cache primeiro
     const cacheKey = text.toLowerCase().trim();
@@ -24,43 +22,43 @@ export async function POST(request: NextRequest) {
       console.log('⚡ Cache hit!');
       const cachedBuffer = AUDIO_CACHE.get(cacheKey)!;
       
-      return new Response(cachedBuffer as unknown as BodyInit, {
+      return new Response(cachedBuffer, {
         headers: {
           'Content-Type': 'audio/mpeg',
           'Cache-Control': 'public, max-age=31536000', // 1 ano
+          'X-Cache': 'HIT',
         },
       });
     }
 
-    // Gerar TTS com configurações otimizadas para PT-BR
+    // Gerar com Google TTS
     const startTime = Date.now();
     
-    const tts = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'nova', // Melhor voz para português
-      input: text,
-      speed: 0.80, // Velocidade normal (natural)
+    const buffer = await synthesizeSpeech({
+      text,
+      voiceName: BRAZILIAN_VOICES.FEMALE_A,
+      speakingRate: 1.0,
+      audioEncoding: 'MP3',
     });
 
-    const buffer = Buffer.from(await tts.arrayBuffer());
     const processingTime = Date.now() - startTime;
-    
-    console.log(`⏱️ TTS PT-BR gerado em ${processingTime}ms`);
+    console.log(`⏱️ TTS gerado em ${processingTime}ms`);
 
     // Cachear apenas textos curtos e comuns
-    if (text.length < 30 && AUDIO_CACHE.size < 10) {
+    if (text.length < 30 && AUDIO_CACHE.size < 20) {
       AUDIO_CACHE.set(cacheKey, buffer);
       console.log('💾 Armazenado no cache');
     }
 
-    return new Response(buffer as unknown as BodyInit, {
+    return new Response(buffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Processing-Time': String(processingTime),
+        'X-Cache': 'MISS',
       },
     });
   } catch (error: any) {
-    console.error('Erro TTS-Fast:', error);
+    console.error('❌ Erro TTS-Fast:', error.message);
     return NextResponse.json(
       { error: 'Erro ao gerar áudio' },
       { status: 500 }
@@ -73,29 +71,32 @@ const COMMON_PHRASES = [
   'Entendi sua pergunta!',
   'Processando sua resposta.',
   'Um momento por favor!',
-  'Certo, Aguarde um pouco.',
+  'Certo, aguarde um pouco.',
   'Tudo bem, só um instante!',
+  'Desculpe, não consegui processar.',
+  'Por favor, repita.',
+  'Estou ouvindo.',
 ];
 
 // Inicializar cache (opcional - só em produção)
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && process.env.GOOGLE_CLOUD_API_KEY) {
   (async () => {
-    console.log('🔥 Pre-aquecendo cache TTS PT-BR...');
+    console.log('🔥 Pre-aquecendo cache Google TTS...');
     for (const phrase of COMMON_PHRASES) {
       try {
-        const tts = await openai.audio.speech.create({
-          model: 'tts-1',
-          voice: 'nova',
-          input: phrase,
-          speed: 0.80, // Velocidade normal
+        const buffer = await synthesizeSpeech({
+          text: phrase,
+          voiceName: BRAZILIAN_VOICES.FEMALE_A,
+          speakingRate: 1.0,
+          audioEncoding: 'MP3',
         });
-        const buffer = Buffer.from(await tts.arrayBuffer());
+        
         AUDIO_CACHE.set(phrase.toLowerCase().trim(), buffer);
-        console.log(`✅ Cached PT-BR: "${phrase}"`);
+        console.log(`✅ Cached: "${phrase}"`);
       } catch (e) {
-        console.log(`⚠️ Failed to cache: "${phrase}"`);
+        console.log(`⚠️ Failed: "${phrase}"`);
       }
     }
-    console.log('✅ Cache TTS PT-BR pronto!');
+    console.log(`✅ Cache pronto! ${AUDIO_CACHE.size} frases`);
   })();
 }

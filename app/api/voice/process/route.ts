@@ -199,9 +199,9 @@ export async function POST(request: NextRequest) {
       // Usar Gemini
       console.log('🤖 Usando Gemini');
       
-      // ✅ gemini-1.5-flash-002 - versão estável mais recente
+      // ✅ gemini-1.5-flash - versão estável mais recente
       const model = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash-002'
+        model: 'gemini-1.5-flash'
       });
       
       const prompt = `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}

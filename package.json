@@ -3,8 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--no-deprecation' next dev",
-    "build": "NODE_OPTIONS='--no-deprecation' next build",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

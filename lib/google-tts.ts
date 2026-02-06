@@ -31,13 +31,14 @@ export async function synthesizeSpeech(
     audioEncoding = 'MP3',
   } = options;
 
-  const apiKey = process.env.GOOGLE_API_KEY;
+  // ✅ Usar key específica do Google Cloud (tem TTS habilitado)
+  const apiKey = process.env.GOOGLE_CLOUD_API_KEY || process.env.GOOGLE_API_KEY;
   
   if (!apiKey) {
-    throw new Error('GOOGLE_API_KEY não configurada');
+    throw new Error('GOOGLE_CLOUD_API_KEY não configurada');
   }
 
-  console.log('🔊 Google TTS (REST API)');
+  console.log('🔊 Google TTS');
 
   const requestBody = {
     input: { text },
@@ -76,7 +77,6 @@ export async function synthesizeSpeech(
     throw new Error('No audio content in response');
   }
 
-  // Decodificar base64
   const audioBuffer = Buffer.from(data.audioContent, 'base64');
 
   console.log(`✅ TTS: ${audioBuffer.length} bytes`);

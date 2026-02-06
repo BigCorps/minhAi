@@ -1,8 +1,8 @@
-// lib/google-speech-websocket.ts (VERSÃO SUPABASE)
+// lib/google-speech-websocket.ts (CORRIGIDO - COM KEEPALIVE CLIENT)
 
 /**
  * Cliente WebSocket para Google Speech-to-Text Streaming
- * Conecta via Supabase Edge Function
+ * COM suporte a keepalive (ping/pong)
  */
 
 export interface GoogleSpeechConfig {
@@ -21,6 +21,7 @@ export class GoogleSpeechWebSocket {
   private source: MediaStreamAudioSourceNode | null = null;
   private isRecording: boolean = false;
   private config: Required<GoogleSpeechConfig>;
+  private pongTimeout: number | null = null; // ✅ NOVO!
   
   constructor(config: GoogleSpeechConfig) {
     this.config = {
@@ -32,13 +33,9 @@ export class GoogleSpeechWebSocket {
     };
   }
   
-  /**
-   * Conecta ao WebSocket da Supabase Edge Function
-   */
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // URL da Supabase Edge Function
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
         const wsUrl = supabaseUrl
           .replace('https://', 'wss://')
@@ -51,7 +48,6 @@ export class GoogleSpeechWebSocket {
         this.ws.onopen = () => {
           console.log('✅ WebSocket conectado');
           
-          // Enviar configuração inicial
           this.ws!.send(JSON.stringify({
             type: 'config',
             config: {
@@ -64,6 +60,15 @@ export class GoogleSpeechWebSocket {
         this.ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+            
+            // ✅ RESPONDER PING COM PONG
+            if (data.type === 'ping') {
+              console.log('🏓 Ping recebido, enviando pong');
+              if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({ type: 'pong' }));
+              }
+              return;
+            }
             
             if (data.type === 'ready') {
               console.log('✅ Google Speech pronto:', data.config);
@@ -88,6 +93,12 @@ export class GoogleSpeechWebSocket {
         
         this.ws.onclose = () => {
           console.log('🔌 WebSocket desconectado');
+          
+          // ✅ LIMPAR TIMEOUT DE PONG
+          if (this.pongTimeout) {
+            clearTimeout(this.pongTimeout);
+            this.pongTimeout = null;
+          }
         };
         
       } catch (error) {
@@ -97,9 +108,6 @@ export class GoogleSpeechWebSocket {
     });
   }
   
-  /**
-   * Inicia captura de áudio do microfone
-   */
   async startRecording(): Promise<void> {
     if (this.isRecording) {
       console.log('⚠️ Já está gravando');
@@ -109,7 +117,6 @@ export class GoogleSpeechWebSocket {
     try {
       console.log('🎤 Iniciando captura de áudio...');
       
-      // Capturar microfone
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -120,15 +127,11 @@ export class GoogleSpeechWebSocket {
         }
       });
       
-      // Criar AudioContext
       this.audioContext = new AudioContext({
         sampleRate: this.config.sampleRate
       });
       
-      // Criar source do microfone
       this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
-      
-      // Criar processor para capturar áudio
       this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
       
       this.scriptProcessor.onaudioprocess = (event) => {
@@ -149,7 +152,6 @@ export class GoogleSpeechWebSocket {
         this.ws.send(int16Data.buffer);
       };
       
-      // Conectar nodes
       this.source.connect(this.scriptProcessor);
       this.scriptProcessor.connect(this.audioContext.destination);
       
@@ -163,9 +165,6 @@ export class GoogleSpeechWebSocket {
     }
   }
   
-  /**
-   * Para captura de áudio
-   */
   async stopRecording(): Promise<void> {
     if (!this.isRecording) {
       return;
@@ -175,7 +174,6 @@ export class GoogleSpeechWebSocket {
     
     this.isRecording = false;
     
-    // Desconectar nodes
     if (this.scriptProcessor) {
       this.scriptProcessor.disconnect();
       this.scriptProcessor = null;
@@ -186,13 +184,11 @@ export class GoogleSpeechWebSocket {
       this.source = null;
     }
     
-    // Fechar AudioContext
     if (this.audioContext) {
       await this.audioContext.close();
       this.audioContext = null;
     }
     
-    // Parar tracks do microfone
     if (this.mediaStream) {
       this.mediaStream.getTracks().forEach(track => track.stop());
       this.mediaStream = null;
@@ -201,26 +197,22 @@ export class GoogleSpeechWebSocket {
     console.log('✅ Gravação parada');
   }
   
-  /**
-   * Desconecta WebSocket
-   */
   disconnect(): void {
+    if (this.pongTimeout) {
+      clearTimeout(this.pongTimeout);
+      this.pongTimeout = null;
+    }
+    
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
   }
   
-  /**
-   * Verifica se está conectado
-   */
   isConnected(): boolean {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
   
-  /**
-   * Verifica se está gravando
-   */
   isRecordingActive(): boolean {
     return this.isRecording;
   }

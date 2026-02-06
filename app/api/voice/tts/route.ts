@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       audioEncoding: 'MP3',
     });
 
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(new Uint8Array(audioBuffer), {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Cache-Control': 'public, max-age=3600',

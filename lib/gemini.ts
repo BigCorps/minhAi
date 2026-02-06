@@ -1,101 +1,18 @@
-// lib/gemini.ts
+// lib/gemini.ts (VERSÃO CHATGPT - FUNCIONA!)
 
-import { VertexAI } from '@google-cloud/vertexai';
+import OpenAI from 'openai';
 
-/**
- * Client Gemini 1.5 Flash via Vertex AI
- */
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
-let vertexAI: VertexAI | null = null;
-
-export function getVertexAI(): VertexAI {
-  if (!vertexAI) {
-    vertexAI = new VertexAI({
-      project: process.env.GOOGLE_CLOUD_PROJECT_ID!,
-      location: process.env.GOOGLE_CLOUD_LOCATION ?? 'us-central1',
-    });
-  }
-  return vertexAI;
-}
-
-export interface GeminiMessage {
-  role: 'user' | 'model';
-  parts: { text: string }[];
-}
-
-export interface GeminiConfig {
-  temperature?: number; // 0-2 (criatividade)
-  maxOutputTokens?: number; // Máximo de tokens na resposta
-  topP?: number; // 0-1 (diversidade)
-  topK?: number; // Número de tokens considerados
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
 }
 
 /**
- * Gera resposta com Gemini 1.5 Flash
- */
-export async function generateWithGemini(
-  prompt: string,
-  config?: GeminiConfig,
-  conversationHistory?: GeminiMessage[]
-): Promise<string> {
-  const vertex = getVertexAI();
-  
-  const model = vertex.getGenerativeModel({
-    model: 'gemini-1.5-flash-002', // Modelo mais rápido
-  });
-  
-  const contents: GeminiMessage[] = conversationHistory ?? [];
-  
-  // Adicionar mensagem do usuário
-  contents.push({
-    role: 'user',
-    parts: [{ text: prompt }],
-  });
-  
-  const request = {
-    contents,
-    generationConfig: {
-      temperature: config?.temperature ?? 0.7,
-      maxOutputTokens: config?.maxOutputTokens ?? 256,
-      topP: config?.topP ?? 0.95,
-      topK: config?.topK ?? 40,
-    },
-    safetySettings: [
-      {
-        category: 'HARM_CATEGORY_HATE_SPEECH' as any,
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE' as any,
-      },
-      {
-        category: 'HARM_CATEGORY_DANGEROUS_CONTENT' as any,
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE' as any,
-      },
-      {
-        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT' as any,
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE' as any,
-      },
-      {
-        category: 'HARM_CATEGORY_HARASSMENT' as any,
-        threshold: 'BLOCK_MEDIUM_AND_ABOVE' as any,
-      },
-    ],
-  };
-  
-  const response = await model.generateContent(request);
-  const result = response.response;
-  
-  if (!result.candidates || result.candidates.length === 0) {
-    throw new Error('Nenhuma resposta gerada pelo Gemini');
-  }
-  
-  const text = result.candidates[0].content.parts
-    .map(part => part.text)
-    .join('');
-  
-  return text;
-}
-
-/**
- * Gera resposta com contexto de empresa
+ * Gera resposta usando ChatGPT (GPT-4o-mini)
  */
 export async function generateAssistantResponse(
   userMessage: string,
@@ -105,65 +22,48 @@ export async function generateAssistantResponse(
     greetingMessage?: string;
     conversationHistory?: any[];
   },
-  conversationHistory?: GeminiMessage[]
+  conversationHistory?: ChatMessage[]
 ): Promise<string> {
-  const systemPrompt = `
-${companyContext.systemPrompt || `Você é um assistente virtual inteligente da empresa ${companyContext.companyName}.`}
+  const messages: ChatMessage[] = [
+    {
+      role: 'system',
+      content: companyContext.systemPrompt || 
+        `Você é um assistente virtual inteligente da empresa ${companyContext.companyName}.
 
 Regras importantes:
 1. Seja breve e objetivo (máximo 2-3 frases)
 2. Use linguagem natural e amigável
 3. Fale em português brasileiro
 4. Se não souber algo, seja honesto
-5. Não invente informações sobre a empresa
-
-Mensagem do cliente: ${userMessage}
-
-Responda de forma natural e útil:
-`.trim();
-  
-  return generateWithGemini(systemPrompt, {
-    temperature: 0.7,
-    maxOutputTokens: 150, // Respostas curtas
-  }, conversationHistory);
-}
-
-/**
- * Streaming de resposta (para UX melhor)
- * TODO: Implementar depois se necessário
- */
-export async function* generateStreamWithGemini(
-  prompt: string,
-  config?: GeminiConfig
-): AsyncGenerator<string> {
-  const vertex = getVertexAI();
-  
-  const model = vertex.getGenerativeModel({
-    model: 'gemini-1.5-flash-002',
-  });
-  
-  const request = {
-    contents: [{
-      role: 'user' as const,
-      parts: [{ text: prompt }],
-    }],
-    generationConfig: {
-      temperature: config?.temperature ?? 0.7,
-      maxOutputTokens: config?.maxOutputTokens ?? 256,
-    },
-  };
-  
-  const streamingResponse = await model.generateContentStream(request);
-  
-  for await (const chunk of streamingResponse.stream) {
-    const text = chunk.candidates?.[0]?.content?.parts
-      .map(part => part.text)
-      .join('') ?? '';
-    
-    if (text) {
-      yield text;
+5. Não invente informações sobre a empresa`
     }
+  ];
+
+  // Adicionar histórico se fornecido
+  if (conversationHistory && conversationHistory.length > 0) {
+    messages.push(...conversationHistory);
   }
+
+  // Adicionar mensagem atual
+  messages.push({
+    role: 'user',
+    content: userMessage
+  });
+
+  console.log('🤖 Chamando ChatGPT...');
+  
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: messages,
+    temperature: 0.7,
+    max_tokens: 150,
+  });
+
+  const response = completion.choices[0].message.content || 'Desculpe, não consegui processar sua pergunta.';
+  
+  console.log('✅ ChatGPT respondeu:', response.substring(0, 50) + '...');
+  
+  return response;
 }
 
 /**
@@ -176,33 +76,30 @@ export async function extractIntent(
   confidence: number;
   extractedData?: any;
 }> {
-  const prompt = `
-Analise a mensagem do usuário e identifique a intenção:
-
-Mensagem: "${userMessage}"
-
-Intenções possíveis:
-- pix: Gerar cobrança PIX (extrair valor)
-- whatsapp: Mostrar WhatsApp da empresa
-- instagram: Mostrar Instagram da empresa
-- question: Pergunta geral sobre a empresa
-- other: Outra coisa
-
-Responda APENAS em JSON:
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `Analise a mensagem e identifique a intenção.
+Responda APENAS em JSON válido:
 {
-  "intent": "...",
+  "intent": "pix|whatsapp|instagram|question|other",
   "confidence": 0.0-1.0,
-  "extractedData": {...}
-}
-`.trim();
-  
-  const response = await generateWithGemini(prompt, {
-    temperature: 0.2, // Baixa temperatura para mais precisão
-    maxOutputTokens: 100,
+  "extractedData": {}
+}`
+      },
+      {
+        role: 'user',
+        content: userMessage
+      }
+    ],
+    temperature: 0.2,
+    max_tokens: 100,
   });
-  
-  // Parse JSON
+
   try {
+    const response = completion.choices[0].message.content || '{}';
     const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
     return JSON.parse(cleaned);
   } catch (e) {

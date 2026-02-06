@@ -1,10 +1,17 @@
 'use client';
 
 /**
- * 🚀 Voice Assistant 100% Google (Sem Vosk) - VERSÃO COMPLETA
+ * 🚀 Voice Assistant 100% Google (Sem Vosk) - VERSÃO COMPLETA + CORREÇÕES
  * 
  * Migração de Vosk → Web Speech API
  * Backend 100% Google (Speech + Gemini + TTS)
+ * 
+ * ✅ CORREÇÕES APLICADAS:
+ * - Recognition parado durante processamento de pergunta
+ * - Recognition parado durante reprodução de áudio
+ * - Reativação com delay de 2 segundos após resposta
+ * - Função stopRecognitionSafely() adicionada
+ * - Feedback loop corrigido
  * 
  * Todas as funcionalidades mantidas:
  * - Wake word detection
@@ -281,6 +288,23 @@ export function VoiceAssistantWithWakeWord({
         startWebSpeechListening();
       }
     }, 300);
+  }
+
+  // ========================================
+  // ✅ NOVA FUNÇÃO: stopRecognitionSafely
+  // ========================================
+  function stopRecognitionSafely() {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+        console.log('🛑 Recognition PARADO para evitar feedback');
+        return true;
+      } catch (e) {
+        console.log('⚠️ Recognition já estava parado');
+        return false;
+      }
+    }
+    return false;
   }
 
   // ========================================
@@ -1119,8 +1143,14 @@ export function VoiceAssistantWithWakeWord({
     processQuestion(cleanTranscript);
   }
 
+  // ========================================
+  // ✅ MUDANÇA 2: Parar recognition no início
+  // ========================================
   async function processQuestion(questionText: string) {
     console.log('⚡ Processando:', questionText);
+    
+    // ✅ CRUCIAL: PARAR RECOGNITION AQUI!
+    stopRecognitionSafely();
     
     const isCommand = await detectVoiceCommand(questionText);
     
@@ -1128,9 +1158,15 @@ export function VoiceAssistantWithWakeWord({
       console.log('✅ Comando processado');
       processingQuestion.current = false;
       
+      // ✅ MUDANÇA 3: Reativar após comando
       setTimeout(() => {
-        if (isActiveRef.current) {
-          console.log('✅ Web Speech continua ativo');
+        if (isActiveRef.current && recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+            console.log('🎤 Recognition REINICIADO após comando');
+          } catch (e) {
+            console.log('⚠️ Erro ao reiniciar');
+          }
         }
       }, 500);
       
@@ -1217,26 +1253,54 @@ export function VoiceAssistantWithWakeWord({
         setIsPlayingAudio(true);
       };
       
+      // ========================================
+      // ✅ MUDANÇA 4: Modificar audio.onended
+      // ========================================
       audio.onended = () => {
         console.log('✅ Resposta concluída');
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
-        console.log('✅ Web Speech continua ativo');
+        // ✅ PARAR RECOGNITION (garantia)
+        stopRecognitionSafely();
+        
+        // ✅ REATIVAR SOMENTE APÓS 2 SEGUNDOS!
+        setTimeout(() => {
+          if (isActiveRef.current && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+              console.log('🎤 Recognition REINICIADO após resposta completa');
+            } catch (e) {
+              console.log('⚠️ Erro ao reiniciar recognition:', e);
+            }
+          }
+        }, 2000);  // ← 2 SEGUNDOS DE DELAY!
       };
 
+      // ========================================
+      // ✅ MUDANÇA 5: Modificar audio.onerror
+      // ========================================
       audio.onerror = (e) => {
         console.error('❌ Erro ao tocar áudio:', e);
         setIsPlayingAudio(false);
         currentAudioRef.current = null;
         processingQuestion.current = false;
         
+        // ✅ PARAR RECOGNITION
+        stopRecognitionSafely();
+        
+        // ✅ REATIVAR APÓS 1 SEGUNDO
         setTimeout(() => {
-          if (isActiveRef.current) {
-            console.log('✅ Web Speech continua ativo');
+          if (isActiveRef.current && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+              console.log('🎤 Recognition REINICIADO após erro');
+            } catch (e) {
+              console.log('⚠️ Erro ao reiniciar');
+            }
           }
-        }, 200);
+        }, 1000);
       };
 
       const safetyTimeout = setTimeout(() => {

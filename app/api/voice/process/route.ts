@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { transcribeAudio, DEFAULT_HINTS } from '@/lib/google-speech-streaming';
-import { generateAssistantResponse } from '@/lib/gemini';
 import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
@@ -347,38 +346,66 @@ export async function POST(request: NextRequest) {
         .update({ usage_count: (matchingFAQ.usage_count || 0) + 1 })
         .eq('id', matchingFAQ.id)
         .then(() => console.log('📊 +1 contador'));
-    } else {
-      // Usar Gemini
-      const conversationMessages: any[] = [];
-      
-      if (conversationId && conversationId !== 'new') {
-        const { data: history } = await supabase
-          .from('conversation_messages')
-          .select('role, content')
-          .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true })
-          .limit(10);
-        
-        if (history && history.length > 0) {
-          conversationMessages.push(...history);
-        }
-      }
-      
-      console.log('🤖 Gemini');
-      const llmStart = Date.now();
-      
-      // Preparar contexto para o Gemini
-      const context = {
-        companyName: company.name,
-        systemPrompt: company.system_prompt ?? undefined,
-        greetingMessage: company.greeting_message ?? undefined,
-        conversationHistory: conversationMessages.length > 0 ? conversationMessages : undefined,
-      };
-      
-      responseText = await generateAssistantResponse(userMessage, context);
-      llmTime = Date.now() - llmStart;
-      console.log(`⏱️ Gemini: ${llmTime}ms`);
+} else {
+  // Usar OpenAI GPT-4o-mini
+  const conversationMessages: any[] = [];
+  
+  if (conversationId && conversationId !== 'new') {
+    const { data: history } = await supabase
+      .from('conversation_messages')
+      .select('role, content')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+      .limit(10);
+    
+    if (history && history.length > 0) {
+      conversationMessages.push(...history);
     }
+  }
+  
+  console.log('🤖 OpenAI GPT-4o-mini');
+  const llmStart = Date.now();
+  
+  // Preparar mensagens para OpenAI
+  const messages: any[] = [
+    {
+      role: 'system',
+      content: company.system_prompt || 
+        `Você é um assistente virtual inteligente da empresa ${company.name}.
+
+Regras importantes:
+1. Seja breve e objetivo (máximo 2-3 frases)
+2. Use linguagem natural e amigável
+3. Fale em português brasileiro
+4. Se não souber algo, seja honesto
+5. Não invente informações sobre a empresa`
+    }
+  ];
+  
+  // Adicionar histórico
+  if (conversationMessages.length > 0) {
+    messages.push(...conversationMessages);
+  }
+  
+  // Adicionar mensagem atual
+  messages.push({
+    role: 'user',
+    content: userMessage
+  });
+  
+  // Chamar OpenAI
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: messages,
+    temperature: 0.7,
+    max_tokens: 150,
+  });
+  
+  responseText = completion.choices[0].message.content || 'Desculpe, não consegui processar sua pergunta.';
+  
+  llmTime = Date.now() - llmStart;
+  console.log(`⏱️ OpenAI: ${llmTime}ms`);
+}
 
     // FASE 3: TTS com Google Text-to-Speech
     const ttsStart = Date.now();

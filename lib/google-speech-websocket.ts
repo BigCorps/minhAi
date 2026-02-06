@@ -1,8 +1,8 @@
-// lib/google-speech-websocket.ts (CORRIGIDO - COM KEEPALIVE CLIENT)
+// lib/google-speech-websocket.ts (COM LOGS DE DEBUG)
 
 /**
  * Cliente WebSocket para Google Speech-to-Text Streaming
- * COM suporte a keepalive (ping/pong)
+ * VERSÃO COM LOGS COMPLETOS PARA DEBUG
  */
 
 export interface GoogleSpeechConfig {
@@ -21,7 +21,7 @@ export class GoogleSpeechWebSocket {
   private source: MediaStreamAudioSourceNode | null = null;
   private isRecording: boolean = false;
   private config: Required<GoogleSpeechConfig>;
-  private pongTimeout: number | null = null; // ✅ NOVO!
+  private chunksSent: number = 0; // ✅ CONTADOR DE CHUNKS
   
   constructor(config: GoogleSpeechConfig) {
     this.config = {
@@ -61,7 +61,7 @@ export class GoogleSpeechWebSocket {
           try {
             const data = JSON.parse(event.data);
             
-            // ✅ RESPONDER PING COM PONG
+            // Responder ping com pong
             if (data.type === 'ping') {
               console.log('🏓 Ping recebido, enviando pong');
               if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -75,6 +75,7 @@ export class GoogleSpeechWebSocket {
               this.config.onReady();
               resolve();
             } else if (data.type === 'transcript') {
+              console.log('📝 Transcrição recebida:', data.text); // ✅ LOG
               this.config.onTranscript(data.text, data.isFinal);
             } else if (data.type === 'error') {
               console.error('❌ Erro do servidor:', data.message);
@@ -87,18 +88,16 @@ export class GoogleSpeechWebSocket {
         
         this.ws.onerror = (error) => {
           console.error('❌ WebSocket error:', error);
+          console.error('❌ WebSocket readyState:', this.ws?.readyState); // ✅ DEBUG
           this.config.onError(new Error('WebSocket connection error'));
           reject(error);
         };
         
-        this.ws.onclose = () => {
+        this.ws.onclose = (event) => {
           console.log('🔌 WebSocket desconectado');
-          
-          // ✅ LIMPAR TIMEOUT DE PONG
-          if (this.pongTimeout) {
-            clearTimeout(this.pongTimeout);
-            this.pongTimeout = null;
-          }
+          console.log('🔌 Close code:', event.code); // ✅ DEBUG
+          console.log('🔌 Close reason:', event.reason); // ✅ DEBUG
+          console.log('📊 Total de chunks enviados:', this.chunksSent); // ✅ DEBUG
         };
         
       } catch (error) {
@@ -127,19 +126,53 @@ export class GoogleSpeechWebSocket {
         }
       });
       
+      console.log('✅ MediaStream obtido:', this.mediaStream.getTracks()[0].getSettings()); // ✅ DEBUG
+      
       this.audioContext = new AudioContext({
         sampleRate: this.config.sampleRate
       });
       
+      console.log('✅ AudioContext criado, sampleRate:', this.audioContext.sampleRate); // ✅ DEBUG
+      
       this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
       
+      this.chunksSent = 0; // ✅ RESETAR CONTADOR
+      
       this.scriptProcessor.onaudioprocess = (event) => {
-        if (!this.isRecording || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        // ✅ LOG A CADA 50 CHUNKS (evitar spam)
+        if (this.chunksSent % 50 === 0) {
+          console.log('📊 Processando chunk:', this.chunksSent);
+        }
+        
+        if (!this.isRecording) {
+          console.log('⚠️ isRecording = false, ignorando chunk'); // ✅ DEBUG
+          return;
+        }
+        
+        if (!this.ws) {
+          console.log('⚠️ WebSocket não existe, ignorando chunk'); // ✅ DEBUG
+          return;
+        }
+        
+        if (this.ws.readyState !== WebSocket.OPEN) {
+          console.log('⚠️ WebSocket não está OPEN:', this.ws.readyState); // ✅ DEBUG
           return;
         }
         
         const inputData = event.inputBuffer.getChannelData(0);
+        
+        // ✅ VERIFICAR NÍVEL DE ÁUDIO
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) {
+          sum += Math.abs(inputData[i]);
+        }
+        const avgVolume = sum / inputData.length;
+        
+        // Log de volume a cada 50 chunks
+        if (this.chunksSent % 50 === 0) {
+          console.log('🔊 Volume médio:', avgVolume.toFixed(4));
+        }
         
         // Converter Float32Array para Int16Array
         const int16Data = new Int16Array(inputData.length);
@@ -148,8 +181,18 @@ export class GoogleSpeechWebSocket {
           int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
         
-        // Enviar para Supabase via WebSocket
-        this.ws.send(int16Data.buffer);
+        try {
+          // Enviar para Supabase via WebSocket
+          this.ws.send(int16Data.buffer);
+          this.chunksSent++;
+          
+          // Log a cada 50 chunks
+          if (this.chunksSent % 50 === 0) {
+            console.log('✅ Chunk enviado! Total:', this.chunksSent, 'Bytes:', int16Data.byteLength);
+          }
+        } catch (error) {
+          console.error('❌ Erro ao enviar chunk:', error); // ✅ DEBUG
+        }
       };
       
       this.source.connect(this.scriptProcessor);
@@ -171,6 +214,7 @@ export class GoogleSpeechWebSocket {
     }
     
     console.log('🛑 Parando gravação...');
+    console.log('📊 Total de chunks enviados:', this.chunksSent); // ✅ DEBUG
     
     this.isRecording = false;
     
@@ -198,11 +242,6 @@ export class GoogleSpeechWebSocket {
   }
   
   disconnect(): void {
-    if (this.pongTimeout) {
-      clearTimeout(this.pongTimeout);
-      this.pongTimeout = null;
-    }
-    
     if (this.ws) {
       this.ws.close();
       this.ws = null;

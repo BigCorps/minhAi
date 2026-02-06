@@ -14,7 +14,7 @@ export function getTTSClient(): TextToSpeechClient {
       
       ttsClient = new TextToSpeechClient({
         projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-        credentials: credentials,
+        credentials: JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS || '{}'), // ✅ CORRETO!
       });
     } 
     // Local: usar arquivo

@@ -14,7 +14,7 @@ export function getSpeechClient(): SpeechClient {
       
       speechClient = new SpeechClient({
         projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-        credentials: credentials,
+          credentials: JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS || '{}'), // ✅ CORRETO!
       });
     } 
     // Local: usar arquivo

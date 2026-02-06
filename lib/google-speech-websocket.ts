@@ -19,7 +19,6 @@ export class GoogleSpeechWebSocket {
   private mediaStream: MediaStream | null = null;
   private scriptProcessor: ScriptProcessorNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
-  private gainNode: GainNode | null = null; // ✅ ADICIONAR GAIN NODE
   private isRecording: boolean = false;
   private config: Required<GoogleSpeechConfig>;
   private chunksSent: number = 0;
@@ -135,12 +134,6 @@ export class GoogleSpeechWebSocket {
       console.log('✅ AudioContext criado, sampleRate:', this.audioContext.sampleRate);
       
       this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
-      
-      // ✅ CRIAR GAIN NODE PARA AMPLIFICAR ÁUDIO
-      this.gainNode = this.audioContext.createGain();
-      this.gainNode.gain.value = 3.0; // Amplificar 3x (ajuste se necessário)
-      console.log('🔊 GainNode criado com ganho:', this.gainNode.gain.value);
-      
       this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
       
       this.chunksSent = 0;
@@ -197,13 +190,12 @@ export class GoogleSpeechWebSocket {
         }
       };
       
-      // ✅ CONECTAR: source → gainNode → scriptProcessor → destination
-      this.source.connect(this.gainNode);
-      this.gainNode.connect(this.scriptProcessor);
+      // ✅ CONECTAR: source → scriptProcessor → destination
+      this.source.connect(this.scriptProcessor);
       this.scriptProcessor.connect(this.audioContext.destination);
       
       this.isRecording = true;
-      console.log('✅ Gravação iniciada com amplificação');
+      console.log('✅ Gravação iniciada');
       
     } catch (error) {
       console.error('❌ Erro ao iniciar gravação:', error);
@@ -225,11 +217,6 @@ export class GoogleSpeechWebSocket {
     if (this.scriptProcessor) {
       this.scriptProcessor.disconnect();
       this.scriptProcessor = null;
-    }
-    
-    if (this.gainNode) {
-      this.gainNode.disconnect();
-      this.gainNode = null;
     }
     
     if (this.source) {

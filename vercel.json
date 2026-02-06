@@ -1,0 +1,8 @@
+{
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/route-COM-GEMINI.ts": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -1,25 +1,5 @@
 'use client';
 
-/**
- * 🚀 Voice Assistant 100% Google WebSocket - VERSÃO COMPLETA + TODAS CORREÇÕES
- * 
- * ✅ WebSocket Google Speech (streaming real-time)
- * ✅ Feedback loop corrigido
- * ✅ Recognition pausado durante processamento
- * ✅ Delay de 2 segundos após resposta
- * 
- * Todas as funcionalidades mantidas:
- * - Wake word detection
- * - PIX generation/confirmation/cancel
- * - WhatsApp/Instagram QR codes
- * - FAQ matching (backend)
- * - Text input chat
- * - Function carousel
- * - Processing feedback audio
- * - Stop commands
- * - End commands
- */
-
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
 import { WakeWordDetector } from './WakeWordDetector';

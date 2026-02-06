@@ -1,7 +1,7 @@
 // app/api/gemini-chat/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAssistantResponse, ChatMessage } from '@/lib/gemini';
+import { generateAssistantResponse, GeminiMessage } from '@/lib/gemini';
 import { createClient } from '@/lib/supabase-server';
 
 export const runtime = 'nodejs';
@@ -10,12 +10,12 @@ export const maxDuration = 30;
 /**
  * POST /api/gemini-chat
  * 
- * Processa mensagem do usuário com ChatGPT
+ * Processa mensagem do usuário com Gemini
  * Body: { 
  *   question: string, 
  *   company_id: string,
  *   conversation_id?: string,
- *   history?: ChatMessage[]
+ *   history?: GeminiMessage[]
  * }
  */
 export async function POST(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.log('🤖 ChatGPT processando:', {
+    console.log('🤖 Gemini processando:', {
       question: question.substring(0, 50),
       company_id,
       has_history: !!history,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Buscar histórico do Supabase se conversation_id fornecido
-    let conversationHistory: ChatMessage[] = history ?? [];
+    let conversationHistory: GeminiMessage[] = history ?? [];
     
     if (conversation_id && !history) {
       const { data: messages } = await supabase
@@ -66,13 +66,13 @@ export async function POST(request: NextRequest) {
       
       if (messages) {
         conversationHistory = messages.map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.content,
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }],
         }));
       }
     }
     
-    // Gerar resposta com ChatGPT
+    // Gerar resposta com Gemini
     const answer = await generateAssistantResponse(
       question,
       {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     );
     
     const duration = Date.now() - startTime;
-    console.log(`✅ ChatGPT respondeu em ${duration}ms:`, answer.substring(0, 50));
+    console.log(`✅ Gemini respondeu em ${duration}ms:`, answer.substring(0, 50));
     
     // Salvar no banco se conversation_id fornecido
     if (conversation_id) {
@@ -106,12 +106,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       answer,
       duration,
-      service: 'gpt-4o-mini',
+      service: 'gemini-1.5-flash',
       tokens_used: Math.ceil(answer.length / 4), // Estimativa
     });
     
   } catch (error: any) {
-    console.error('❌ Erro ChatGPT:', error);
+    console.error('❌ Erro Gemini:', error);
     
     // Log detalhado do erro
     console.error('Stack:', error.stack);

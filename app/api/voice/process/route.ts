@@ -201,8 +201,8 @@ export async function POST(request: NextRequest) {
       
       // ✅ gemini-1.5-flash - versão estável mais recente
       const model = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash' 
-      }, { apiVersion: 'v1' });
+        model: 'gemini-1.5-flash',
+      }, { apiVersion: 'v1beta' });
       
       const prompt = `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
 

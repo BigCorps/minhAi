@@ -423,67 +423,99 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  async function handleFunctionClick(functionKey: string) {
-    console.log('🎯 Função clicada no carrossel:', functionKey);
+async function handleFunctionClick(functionKey: string) {
+  console.log('🎯 Função clicada no carrossel:', functionKey);
+  
+  const isEnabled = await checkIfFunctionIsEnabled(functionKey);
+  
+  if (!isEnabled) {
+    console.log('⚠️ Função desativada:', functionKey);
+    await playText('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
     
-    const isEnabled = await checkIfFunctionIsEnabled(functionKey);
-    
-    if (!isEnabled) {
-      console.log('⚠️ Função desativada:', functionKey);
-      await playText('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
-      
-      setTimeout(async () => {
-        if (isActiveRef.current) {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-        }
-      }, 500);
-      
-      return;
-    }
-
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      switch (functionKey) {
-        case 'pix_generate':
-          await playText('Me chame e fale: gerar PIX com o valor, que já gero a cobrança.');
-          break;
-          
-        case 'qrcode_whatsapp':
-          await handleWhatsAppCommand();
-          break;
-          
-        case 'qrcode_instagram':
-          await handleInstagramCommand();
-          break;
-          
-        default:
-          await playText(`Função ${functionKey} ainda não implementada.`);
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
       }
-      
-      await registerFunctionUsage(functionKey, 0);
-      
-    } catch (error) {
-      console.error('Erro ao executar função:', error);
-      await playText('Desculpe, ocorreu um erro ao executar esta função.');
-    } finally {
-      setIsProcessing(false);
-      
-      setTimeout(async () => {
-        if (isActiveRef.current) {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-        }
-      }, 500);
-    }
+    }, 500);
+    
+    return;
   }
+
+  if (currentAudioRef.current) {
+    currentAudioRef.current.pause();
+    currentAudioRef.current.currentTime = 0;
+    currentAudioRef.current = null;
+  }
+
+  setIsProcessing(true);
+
+  try {
+    switch (functionKey) {
+      // ✅ NOVO: Perguntas Frequentes
+      case 'faq':
+      case 'perguntas_frequentes':
+        await playText('Me faça qualquer pergunta sobre nossos serviços que responderei com base nas perguntas mais frequentes.');
+        break;
+      
+      // ✅ NOVO: ChatGPT / Perguntas Gerais
+      case 'chatgpt':
+      case 'perguntas_gerais':
+      case 'general_questions':
+        await playText('Pode me fazer qualquer pergunta. Estou aqui para te ajudar com informações gerais.');
+        break;
+      
+      // PIX
+      case 'pix_generate':
+      case 'gerar_pix':
+        await playText('Me chame e diga: gerar PIX de 50 reais, que já crio a cobrança para você.');
+        break;
+        
+      // WhatsApp
+      case 'qrcode_whatsapp':
+      case 'whatsapp':
+        await handleWhatsAppCommand();
+        break;
+        
+      // Instagram
+      case 'qrcode_instagram':
+      case 'instagram':
+        await handleInstagramCommand();
+        break;
+      
+      // ✅ NOVO: Nosso Instagram (caso seja diferente)
+      case 'nosso_instagram':
+        await playText('Vou te mostrar nosso Instagram. Siga a gente lá!');
+        await handleInstagramCommand();
+        break;
+      
+      // ✅ NOVO: Nosso WhatsApp (caso seja diferente)
+      case 'nosso_whatsapp':
+        await playText('Aqui está nosso WhatsApp. Entre em contato a qualquer momento!');
+        await handleWhatsAppCommand();
+        break;
+        
+      // Fallback
+      default:
+        await playText(`A função ${functionKey} ainda não está configurada. Entre em contato com o suporte.`);
+    }
+    
+    await registerFunctionUsage(functionKey, 0);
+    
+  } catch (error) {
+    console.error('Erro ao executar função:', error);
+    await playText('Desculpe, ocorreu um erro ao executar esta função.');
+  } finally {
+    setIsProcessing(false);
+    
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+      }
+    }, 500);
+  }
+}
 
   // ========================================
   // NUMBER CONVERSION

@@ -180,17 +180,7 @@ export default function HistoricoPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
         {/* Cabeçalho da Página (Interno) */}
-        <div className="mb-8">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center mb-4 transition-colors text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Voltar ao Dashboard
-          </Link>
-          
+        <div className="mb-8">         
           <h1 className="text-3xl font-bold transition-colors text-gray-900 dark:text-white">
             Histórico de Conversas
           </h1>

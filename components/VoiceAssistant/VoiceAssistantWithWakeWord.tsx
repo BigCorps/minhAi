@@ -1260,68 +1260,51 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  async function playProcessingFeedback(): Promise<HTMLAudioElement> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const feedbackMessages = [
-          'Entendi!',
-          'Processando...',
-          'Um momento!',
-          'Aguarde...',
-          'Um instante!',
-        ];
-        
-        const randomMessage = feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
-        
-        console.log(`💬 Tocando feedback: "${randomMessage}"`);
-        
-        const response = await fetch('/api/voice/tts-fast', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: randomMessage }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Fast TTS não disponível');
-        }
-
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        
-        audio.volume = 0.9;
-        audio.playbackRate = 1.0;
-        
-        audio.onplay = () => {
-          setIsPlayingAudio(true);
-        };
-
-        audio.onended = () => {
-          setIsPlayingAudio(false);
-        };
-
-        audio.onerror = () => {
-          setIsPlayingAudio(false);
-          reject(new Error('Erro ao tocar feedback'));
-        };
-
-        await audio.play();
-        resolve(audio);
-        
-      } catch (err) {
-        console.log('⚠️ TTS feedback falhou, usando backup');
-        
-        try {
-          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUB4QU6vo66lXGAo+meL0wmskBSyBzvLYiTcIGWi77OefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQU=');
-          audio.volume = 0.5;
-          await audio.play();
-          resolve(audio);
-        } catch (beepErr) {
-          reject(beepErr);
-        }
-      }
-    });
-  }
+async function playProcessingFeedback(): Promise<HTMLAudioElement> {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('🔔 Tocando bipe de confirmação');
+      
+      // Bipe simples e profissional (440Hz por 150ms)
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 440; // Lá (A4) - tom agradável
+      oscillator.type = 'sine'; // Onda senoidal suave
+      
+      gainNode.gain.value = 0.3; // Volume moderado
+      
+      const currentTime = audioContext.currentTime;
+      
+      // Fade in rápido (50ms)
+      gainNode.gain.setValueAtTime(0, currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, currentTime + 0.05);
+      
+      // Fade out (50ms)
+      gainNode.gain.setValueAtTime(0.3, currentTime + 0.1);
+      gainNode.gain.linearRampToValueAtTime(0, currentTime + 0.15);
+      
+      oscillator.start(currentTime);
+      oscillator.stop(currentTime + 0.15);
+      
+      // Criar um HTMLAudioElement fake para compatibilidade
+      const fakeAudio = new Audio();
+      fakeAudio.onended = () => {};
+      
+      setTimeout(() => {
+        resolve(fakeAudio);
+      }, 150);
+      
+    } catch (err) {
+      console.log('⚠️ Bipe falhou:', err);
+      reject(err);
+    }
+  });
+}
 
   async function playGoodbye() {
     try {

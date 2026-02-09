@@ -488,201 +488,217 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   // NUMBER CONVERSION
   // ========================================
-  function convertWordsToNumbers(text: string): string {
-    const numberWords: {[key: string]: string} = {
-      'zero': '0',
-      'um': '1',
-      'dois': '2',
-      'três': '3',
-      'tres': '3',
-      'quatro': '4',
-      'cinco': '5',
-      'seis': '6',
-      'sete': '7',
-      'oito': '8',
-      'nove': '9',
-      'dez': '10',
-      'onze': '11',
-      'doze': '12',
-      'treze': '13',
-      'catorze': '14',
-      'quatorze': '14',
-      'quinze': '15',
-      'dezesseis': '16',
-      'dezessete': '17',
-      'dezoito': '18',
-      'dezenove': '19',
-      'vinte': '20',
-      'trinta': '30',
-      'quarenta': '40',
-      'cinquenta': '50',
-      'sessenta': '60',
-      'setenta': '70',
-      'oitenta': '80',
-      'noventa': '90',
-      'cem': '100',
-      'cento': '100',
-      'duzentos': '200',
-      'trezentos': '300',
-      'quatrocentos': '400',
-      'quinhentos': '500',
-      'seiscentos': '600',
-      'setecentos': '700',
-      'oitocentos': '800',
-      'novecentos': '900',
-      'mil': '1000',
-    };
+function convertWordsToNumbers(text: string): string {
+  const numberWords: {[key: string]: string} = {
+    // Unidades
+    'zero': '0', 'um': '1', 'dois': '2', 'três': '3', 'tres': '3',
+    'quatro': '4', 'cinco': '5', 'seis': '6', 'sete': '7',
+    'oito': '8', 'nove': '9',
     
-    let result = text;
+    // Dezenas especiais
+    'dez': '10', 'onze': '11', 'doze': '12', 'treze': '13',
+    'catorze': '14', 'quatorze': '14', 'quinze': '15',
+    'dezesseis': '16', 'dezessete': '17', 'dezoito': '18', 'dezenove': '19',
     
-    for (const [word, number] of Object.entries(numberWords)) {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
-      result = result.replace(regex, number);
-    }
+    // Dezenas
+    'vinte': '20', 'trinta': '30', 'quarenta': '40', 'cinquenta': '50',
+    'sessenta': '60', 'setenta': '70', 'oitenta': '80', 'noventa': '90',
     
-    return result;
+    // Centenas
+    'cem': '100', 'cento': '100',
+    'duzentos': '200', 'trezentos': '300', 'quatrocentos': '400',
+    'quinhentos': '500', 'seiscentos': '600', 'setecentos': '700',
+    'oitocentos': '800', 'novecentos': '900',
+    
+    // Milhares
+    'mil': '1000',
+  };
+  
+  let result = text;
+  
+  // ✅ Processar composições como "vinte e cinco" → "25"
+  const composicoes = [
+    { pattern: /vinte e um/gi, value: '21' },
+    { pattern: /vinte e dois/gi, value: '22' },
+    { pattern: /vinte e três/gi, value: '23' },
+    { pattern: /vinte e quatro/gi, value: '24' },
+    { pattern: /vinte e cinco/gi, value: '25' },
+    { pattern: /trinta e cinco/gi, value: '35' },
+    { pattern: /quarenta e cinco/gi, value: '45' },
+    { pattern: /cinquenta e cinco/gi, value: '55' },
+    // Adicione mais conforme necessário
+  ];
+  
+  for (const comp of composicoes) {
+    result = result.replace(comp.pattern, comp.value);
   }
+  
+  // ✅ Substituir palavras individuais
+  for (const [word, number] of Object.entries(numberWords)) {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    result = result.replace(regex, number);
+  }
+  
+  return result;
+}
 
   // ========================================
   // VOICE COMMAND DETECTION
   // ========================================
-  async function detectVoiceCommand(transcript: string): Promise<boolean> {
-    const lowerTranscript = transcript.toLowerCase().trim();
-    
-    console.log('🔍 Detectando comandos de voz:', lowerTranscript);
-    
-    const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
-    console.log('🔢 Após conversão:', transcriptWithNumbers);
-    
-    // WhatsApp
-    const whatsappTriggers = [
-      'whatsapp',
-      'whats',
-      'zap',
-      'número',
-      'contato'
-    ];
-    
-    if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📱 Comando WhatsApp detectado!');
-      
-      const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
-      
-      if (!isEnabled) {
-        await playText('A função WhatsApp está desativada no momento.');
-        return true;
-      }
-      
-      await handleWhatsAppCommand();
-      await registerFunctionUsage('qrcode_whatsapp', 0);
+async function detectVoiceCommand(transcript: string): Promise<boolean> {
+  const lowerTranscript = transcript.toLowerCase().trim();
+  
+  console.log('🔍 Detectando comandos de voz:', lowerTranscript);
+  
+  // ✅ MELHORADO: Converter números por extenso ANTES de processar
+  const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
+  console.log('🔢 Após conversão:', transcriptWithNumbers);
+  
+  // WhatsApp (mantido)
+  const whatsappTriggers = [
+    'whatsapp', 'whats', 'zap', 'número', 'contato'
+  ];
+  
+  if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📱 Comando WhatsApp detectado!');
+    const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
+    if (!isEnabled) {
+      await playText('A função WhatsApp está desativada no momento.');
       return true;
     }
-    
-    // Instagram
-    const instagramTriggers = [
-      'instagram',
-      'insta',
-      'arroba',
-      'perfil'
-    ];
-    
-    if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📸 Comando Instagram detectado!');
-      
-      const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
-      
-      if (!isEnabled) {
-        await playText('A função Instagram está desativada no momento.');
-        return true;
-      }
-      
-      await handleInstagramCommand();
-      await registerFunctionUsage('qrcode_instagram', 0);
+    await handleWhatsAppCommand();
+    await registerFunctionUsage('qrcode_whatsapp', 0);
+    return true;
+  }
+  
+  // Instagram (mantido)
+  const instagramTriggers = [
+    'instagram', 'insta', 'arroba', 'perfil'
+  ];
+  
+  if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('📸 Comando Instagram detectado!');
+    const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
+    if (!isEnabled) {
+      await playText('A função Instagram está desativada no momento.');
       return true;
     }
-    
-    // Confirmar PIX
-    const confirmTriggers = [
-      'confirmar',
-      'confirmado',
-      'paguei',
-      'já paguei',
-      'pagamento confirmado'
-    ];
-    
-    if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('✅ Comando CONFIRMAR PIX detectado!');
-      
-      const currentPixState = pixStateRef.current;
-      
-      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-        console.log('💳 PIX aberto encontrado, confirmando...');
-        await handleConfirmPix();
-        return true;
-      } else {
-        console.log('⚠️ Nenhum PIX aberto para confirmar');
-        await playText('Não há nenhum PIX aberto para confirmar');
-        return true;
-      }
+    await handleInstagramCommand();
+    await registerFunctionUsage('qrcode_instagram', 0);
+    return true;
+  }
+  
+  // Confirmar PIX (mantido)
+  const confirmTriggers = [
+    'confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'
+  ];
+  
+  if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+    console.log('✅ Comando CONFIRMAR PIX detectado!');
+    const currentPixState = pixStateRef.current;
+    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, confirmando...');
+      await handleConfirmPix();
+      return true;
+    } else {
+      console.log('⚠️ Nenhum PIX aberto para confirmar');
+      await playText('Não há nenhum PIX aberto para confirmar');
+      return true;
     }
-    
-    // Cancelar PIX
-    const cancelTriggers = [
-      'cancelar',
-      'cancela',
-      'desistir',
-      'não quero',
-      'fechar'
-    ];
-    
-    if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
-        lowerTranscript.includes('pix')) {
-      console.log('❌ Comando CANCELAR PIX detectado!');
-      
-      const currentPixState = pixStateRef.current;
-      
-      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-        console.log('💳 PIX aberto encontrado, cancelando...');
-        await handleCancelPix();
-        return true;
-      } else {
-        console.log('⚠️ Nenhum PIX aberto para cancelar');
-        await playText('Não há nenhum PIX aberto');
-        return true;
-      }
+  }
+  
+  // Cancelar PIX (mantido)
+  const cancelTriggers = [
+    'cancelar', 'cancela', 'desistir', 'não quero', 'fechar'
+  ];
+  
+  if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
+      lowerTranscript.includes('pix')) {
+    console.log('❌ Comando CANCELAR PIX detectado!');
+    const currentPixState = pixStateRef.current;
+    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+      console.log('💳 PIX aberto encontrado, cancelando...');
+      await handleCancelPix();
+      return true;
+    } else {
+      console.log('⚠️ Nenhum PIX aberto para cancelar');
+      await playText('Não há nenhum PIX aberto');
+      return true;
     }
+  }
+  
+  // ✅ PIX Generation - VERSÃO MELHORADA
+  console.log('💰 Procurando padrões PIX...');
+  
+  // Padrões ampliados e mais flexíveis
+  const pixPatterns = [
+    // "gerar/criar/fazer pix de 50"
+    /(?:gerar|gera|criar|cria|fazer|faz|faça|quero)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
     
-    // PIX Generation
-    const pixPatterns = [
-      /(?:gerar|gera|criar|cria|fazer|faz|faça)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-      /(pix|cobrança|cobranca)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-    ];
+    // "pix de 100 reais"
+    /(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
     
-    for (const pattern of pixPatterns) {
-      const match = transcriptWithNumbers.match(pattern);
-      if (match) {
-        const amountStr = match[2] || match[1];
-        const amount = parseFloat(amountStr.replace(',', '.'));
+    // "cobrar 25 reais"
+    /(?:cobrar|cobra)\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+    
+    // "50 reais no pix" ou "50 no pix"
+    /(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?\s*(?:no|via|pelo|por)?\s*pix/i,
+    
+    // "valor de 30" (quando contexto já é PIX)
+    /(?:valor|no valor)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)/i,
+  ];
+  
+  for (const pattern of pixPatterns) {
+    const match = transcriptWithNumbers.match(pattern);
+    if (match) {
+      console.log('🎯 Pattern matched:', pattern.source);
+      console.log('📝 Match completo:', match[0]);
+      
+      // Tentar extrair valor de diferentes grupos de captura
+      let amountStr = match[2] || match[1];
+      
+      if (!amountStr) {
+        console.log('⚠️ Valor não encontrado no match');
+        continue;
+      }
+      
+      console.log('💵 Valor extraído:', amountStr);
+      
+      // Limpar e converter
+      amountStr = amountStr.replace(/[^\d,.]/, '').replace(',', '.');
+      const amount = parseFloat(amountStr);
+      
+      console.log('💰 Valor convertido:', amount);
+      
+      if (amount > 0 && amount < 100000) { // Limite razoável
+        console.log(`✅ PIX detectado! Valor: R$ ${amount.toFixed(2)}`);
         
-        if (amount > 0) {
-          console.log('💰 Comando PIX detectado! Valor:', amount);
-          
-          const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
-          
-          if (!isEnabled) {
-            await playText('A função PIX está desativada no momento.');
-            return true;
-          }
-          
-          await handlePixCommand(amount);
-          await registerFunctionUsage('pix_generate', 0);
+        const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
+        
+        if (!isEnabled) {
+          await playText('A função PIX está desativada no momento.');
           return true;
         }
+        
+        await handlePixCommand(amount);
+        await registerFunctionUsage('pix_generate', 0);
+        return true;
+      } else {
+        console.log('⚠️ Valor fora do limite:', amount);
       }
     }
-    
-    return false;
   }
+  
+  // ✅ FALLBACK: Se mencionou PIX mas não encontrou valor
+  if (lowerTranscript.includes('pix')) {
+    console.log('⚠️ Mencionou PIX mas sem valor claro');
+    await playText('Qual o valor do PIX que você deseja gerar?');
+    return true;
+  }
+  
+  console.log('❌ Nenhum comando detectado');
+  return false;
+}
 
   // ========================================
   // COMMAND HANDLERS

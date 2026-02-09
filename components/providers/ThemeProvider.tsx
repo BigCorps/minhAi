@@ -2,8 +2,23 @@
 'use client';
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
-import { type ThemeProviderProps } from 'next-themes/dist/types';
+import { ReactNode } from 'react';
 
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+interface ThemeProviderProps {
+  children: ReactNode;
+  attribute?: 'class' | 'data-theme' | 'data-mode';
+  defaultTheme?: string;
+  enableSystem?: boolean;
+  disableTransitionOnChange?: boolean;
+  storageKey?: string;
+  themes?: string[];
+  forcedTheme?: string;
+  enableColorScheme?: boolean;
+}
+
+export function ThemeProvider({ 
+  children, 
+  ...props 
+}: ThemeProviderProps) {
   return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
 }

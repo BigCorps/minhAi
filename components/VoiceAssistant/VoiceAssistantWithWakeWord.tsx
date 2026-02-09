@@ -452,52 +452,35 @@ async function handleFunctionClick(functionKey: string) {
 
   try {
     switch (functionKey) {
-      // ✅ NOVO: Perguntas Frequentes
+      // ✅ Perguntas Frequentes
       case 'faq':
-      case 'perguntas_frequentes':
-        await playText('Me faça qualquer pergunta sobre nossos serviços que responderei com base nas perguntas mais frequentes.');
+        await playText('Me faça qualquer pergunta sobre nossos produtos, serviços, horários ou políticas. Estou aqui para te ajudar!');
         break;
       
-      // ✅ NOVO: ChatGPT / Perguntas Gerais
+      // ✅ ChatGPT / Perguntas Gerais
       case 'chatgpt':
-      case 'perguntas_gerais':
-      case 'general_questions':
-        await playText('Pode me fazer qualquer pergunta. Estou aqui para te ajudar com informações gerais.');
+        await playText('Pode me fazer qualquer pergunta! Estou aqui para conversar e te ajudar com informações gerais.');
         break;
       
       // PIX
       case 'pix_generate':
-      case 'gerar_pix':
-        await playText('Me chame e diga: gerar PIX de 50 reais, que já crio a cobrança para você.');
+        await playText('Para gerar um PIX, me diga o valor. Por exemplo: gerar PIX de 50 reais.');
         break;
         
       // WhatsApp
       case 'qrcode_whatsapp':
-      case 'whatsapp':
         await handleWhatsAppCommand();
         break;
         
       // Instagram
       case 'qrcode_instagram':
-      case 'instagram':
         await handleInstagramCommand();
-        break;
-      
-      // ✅ NOVO: Nosso Instagram (caso seja diferente)
-      case 'nosso_instagram':
-        await playText('Vou te mostrar nosso Instagram. Siga a gente lá!');
-        await handleInstagramCommand();
-        break;
-      
-      // ✅ NOVO: Nosso WhatsApp (caso seja diferente)
-      case 'nosso_whatsapp':
-        await playText('Aqui está nosso WhatsApp. Entre em contato a qualquer momento!');
-        await handleWhatsAppCommand();
         break;
         
       // Fallback
       default:
-        await playText(`A função ${functionKey} ainda não está configurada. Entre em contato com o suporte.`);
+        console.log('⚠️ Função não mapeada:', functionKey);
+        await playText(`A função ${functionKey} ainda não está configurada.`);
     }
     
     await registerFunctionUsage(functionKey, 0);

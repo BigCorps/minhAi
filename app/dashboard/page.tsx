@@ -1,6 +1,4 @@
 // app/dashboard/page.tsx
-// PÁGINA DO DASHBOARD - SEM HEADER (header está no layout)
-
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 
@@ -12,6 +10,7 @@ export default async function DashboardPage() {
   let totalConversations = 0;
   let totalFAQs = 0;
 
+  // Carregamento de dados com tratamento de erro
   try {
     const { count } = await supabase.from('companies').select('*', { count: 'exact', head: true });
     totalCompanies = count || 0;
@@ -131,7 +130,6 @@ export default async function DashboardPage() {
           </Link>
         </div>
       )}
-      </div>
     </div>
   );
 }

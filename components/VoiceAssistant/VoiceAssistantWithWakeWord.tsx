@@ -35,9 +35,11 @@ export function VoiceAssistantWithWakeWord({
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
+  const [transcript, setTranscript] = useState('');
 
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
@@ -123,10 +125,21 @@ export function VoiceAssistantWithWakeWord({
     
     window.addEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
     
+    // ✅ PASSO 4: Atalho ESC para parar
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        console.log('⌨️ ESC pressionado - parando tudo');
+        stopEverything();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    
     return () => {
       isActiveRef.current = false;
       cleanup();
       window.removeEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
+      window.removeEventListener('keydown', handleKeyPress);
     };
   }, []);
 
@@ -266,12 +279,122 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
+  // ========================================
+  // ✅ PASSO 1: FUNÇÃO DE DETECÇÃO DE STOP
+  // ========================================
+  function detectStopCommand(text: string): boolean {
+    const lowerText = text.toLowerCase().trim();
+    
+    const stopPhrases = [
+      // Comandos diretos
+      'pare',
+      'para',
+      'parar',
+      'stop',
+      'cala boca',
+      'cala a boca',
+      'silêncio',
+      'silencio',
+      'quieto',
+      'chega',
+      'cancela',
+      'cancelar',
+      
+      // Variações
+      'para de falar',
+      'pare de falar',
+      'cale a boca',
+      'fica quieto',
+      'para aí',
+      'para ai',
+      'tchau',
+      'obrigado tchau',
+      'tá bom tchau',
+      'ta bom tchau',
+      
+      // Negações
+      'não quero',
+      'nao quero',
+      'esquece',
+      'deixa pra lá',
+      'deixa pra la'
+    ];
+    
+    // Verificar se o texto exato está na lista
+    if (stopPhrases.includes(lowerText)) {
+      return true;
+    }
+    
+    // Verificar se alguma frase de parada está contida no texto
+    return stopPhrases.some(phrase => {
+      const words = phrase.split(' ');
+      if (words.length === 1) {
+        // Palavra única: deve ser palavra completa
+        const regex = new RegExp(`\\b${phrase}\\b`, 'i');
+        return regex.test(lowerText);
+      } else {
+        // Frase: deve conter a frase completa
+        return lowerText.includes(phrase);
+      }
+    });
+  }
+
+  // ========================================
+  // ✅ PASSO 2: FUNÇÃO DE PARAR TUDO
+  // ========================================
+  function stopEverything() {
+    console.log('🛑 Comando de parar detectado - interrompendo tudo');
+    
+    // 1. Parar áudio atual
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+    
+    // 2. Parar speech (se houver)
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    
+    // 3. Resetar estados
+    setIsProcessing(false);
+    setIsSpeaking(false);
+    setIsPlayingAudio(false);
+    
+    // 4. Fechar modais abertos
+    setQrCodeData(null);
+    setPixConfirmationData(null);
+    
+    // 5. Limpar transcrição
+    setTranscript('');
+    
+    // 6. Voltar a escutar
+    shouldProcessAudio.current = true;
+    processingQuestion.current = false;
+    
+    console.log('✅ Tudo parado - pronto para escutar novamente');
+    
+    // Reiniciar Google Speech após parar
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        await startGoogleSpeech();
+      }
+    }, 500);
+  }
+
   function handleGoogleTranscript(text: string, isFinal: boolean) {
     if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
     
     const lowerText = text.toLowerCase().trim();
     
     console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
+    
+    // ✅ PASSO 3: VERIFICAR COMANDO DE PARAR PRIMEIRO
+    if (detectStopCommand(lowerText)) {
+      stopEverything();
+      return; // Sai da função sem processar mais nada
+    }
     
     // Detectar wake word
     const detectionResult = wakeWordDetectorRef.current?.detect(lowerText);
@@ -987,6 +1110,12 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   const handleTextMessage = async (message: string) => {
     console.log('📝 Mensagem de texto recebida:', message);
 
+    // ✅ PASSO 3: Verificar comando STOP no texto também
+    if (detectStopCommand(message)) {
+      stopEverything();
+      return;
+    }
+
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.currentTime = 0;
@@ -1482,6 +1611,16 @@ async function playProcessingFeedback(): Promise<HTMLAudioElement> {
   if (isMaximized) {
     return (
       <div className="flex flex-col items-center gap-4 md:gap-8 w-full">
+        {/* ✅ PASSO 5: Botão PARAR (opcional) */}
+        {isSpeaking && (
+          <button
+            onClick={stopEverything}
+            className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all"
+          >
+            🛑 PARAR
+          </button>
+        )}
+        
         <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
           <AvatarFace
             isListening={isListening}
@@ -1530,6 +1669,16 @@ async function playProcessingFeedback(): Promise<HTMLAudioElement> {
             ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
             : 'bg-white border-gray-200'
         }`}>
+          {/* ✅ PASSO 5: Botão PARAR (opcional) */}
+          {isSpeaking && (
+            <button
+              onClick={stopEverything}
+              className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all z-10"
+            >
+              🛑 PARAR
+            </button>
+          )}
+          
           <div className="relative h-96">
             <AvatarFace
               isListening={isListening}

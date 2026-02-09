@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface MessagePair {
   id: string;
@@ -33,46 +32,34 @@ export default function HistoricoPage() {
     setError(null);
     
     try {
-      // 0. Buscar user_id do usuário logado
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error('Usuário não autenticado');
       }
 
-      console.log('👤 User ID:', user.id);
-
-      // 1. Buscar company_id do usuário via company_admins
-      const { data: adminData, error: adminError } = await supabase
+      // 1. Buscar company_id via company_admins
+      const { data: adminData } = await supabase
         .from('company_admins')
         .select('company_id')
         .eq('user_id', user.id);
 
-      console.log('📋 Admin data:', adminData);
-      console.log('❌ Admin error:', adminError);
-
       let userCompanyIds: string[] = [];
 
       if (adminData && adminData.length > 0) {
-        // Usuário tem empresas via company_admins
         userCompanyIds = adminData.map(a => a.company_id);
-        console.log('✅ Empresas via company_admins:', userCompanyIds);
       } else {
-        // FALLBACK: Buscar empresas criadas pelo usuário (sem company_admins)
-        console.log('⚠️ Sem company_admins, buscando todas as empresas...');
-        
+        // FALLBACK: Buscar empresas criadas pelo usuário
         const { data: allCompanies } = await supabase
           .from('companies')
           .select('id');
         
         if (allCompanies && allCompanies.length > 0) {
           userCompanyIds = allCompanies.map(c => c.id);
-          console.log('✅ Todas as empresas do sistema:', userCompanyIds);
         }
       }
 
       if (userCompanyIds.length === 0) {
-        console.log('⚠️ Nenhuma empresa encontrada');
         setCompanies([]);
         setMessagePairs([]);
         setLoading(false);
@@ -86,12 +73,8 @@ export default function HistoricoPage() {
         .in('id', userCompanyIds)
         .order('name');
 
-      if (companiesError) {
-        console.error('Erro ao carregar empresas:', companiesError);
-        throw new Error('Não foi possível carregar as empresas');
-      }
+      if (companiesError) throw new Error('Não foi possível carregar as empresas');
 
-      console.log('✅ Empresas carregadas:', companiesData?.length);
       setCompanies(companiesData || []);
 
       // 3. Carregar conversas
@@ -108,12 +91,7 @@ export default function HistoricoPage() {
 
       const { data: conversations, error: convError } = await query;
 
-      if (convError) {
-        console.error('Erro ao carregar conversas:', convError);
-        throw new Error('Erro ao carregar conversas: ' + convError.message);
-      }
-
-      console.log('📊 Conversas encontradas:', conversations?.length || 0);
+      if (convError) throw new Error('Erro ao carregar conversas: ' + convError.message);
 
       if (!conversations || conversations.length === 0) {
         setMessagePairs([]);
@@ -121,7 +99,7 @@ export default function HistoricoPage() {
         return;
       }
 
-      // 4. Para cada conversa, buscar mensagens
+      // 4. Buscar mensagens
       const pairs: MessagePair[] = [];
 
       for (const conv of conversations) {
@@ -134,11 +112,7 @@ export default function HistoricoPage() {
           .eq('conversation_id', conv.id)
           .order('created_at', { ascending: true });
 
-        if (msgError) {
-          console.error('Erro ao carregar mensagens:', msgError);
-          continue;
-        }
-
+        if (msgError) continue;
         if (!messages || messages.length === 0) continue;
 
         // Agrupar em pares
@@ -161,7 +135,6 @@ export default function HistoricoPage() {
         }
       }
 
-      console.log('✅ Pares de mensagens:', pairs.length);
       setMessagePairs(pairs);
     } catch (err: any) {
       console.error('Erro ao carregar dados:', err);
@@ -185,11 +158,8 @@ export default function HistoricoPage() {
         .in('id', ids);
 
       if (error) throw error;
-
-      // Recarregar dados
       loadData();
     } catch (error: any) {
-      console.error('Error deleting:', error);
       alert('Erro ao excluir interação: ' + error.message);
     }
   }
@@ -205,47 +175,39 @@ export default function HistoricoPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image 
-                  src="/logo.png" 
-                  alt="eAi" 
-                  width={150} 
-                  height={68}
-                  className="rounded-lg cursor-pointer"
-                />
-              </Link>
-              <h1 className="text-xl font-bold text-gray-900">
-                Histórico de Conversas
-              </h1>
-            </div>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center text-primary-green hover:text-primary-green-dark"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Voltar
-            </Link>
-          </div>
+    <div className="min-h-screen transition-colors duration-500 bg-gray-50 dark:bg-slate-950">
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        
+        {/* Cabeçalho da Página (Interno) */}
+        <div className="mb-8">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center mb-4 transition-colors text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Voltar ao Dashboard
+          </Link>
+          
+          <h1 className="text-3xl font-bold transition-colors text-gray-900 dark:text-white">
+            Histórico de Conversas
+          </h1>
+          <p className="mt-2 transition-colors text-gray-600 dark:text-white/60">
+            Visualize e gerencie as interações dos usuários com seus assistentes.
+          </p>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg p-6 mb-6">
             <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
-                <h3 className="text-red-900 font-semibold mb-1">Erro ao carregar histórico</h3>
-                <p className="text-red-800 text-sm mb-3">{error}</p>
+                <h3 className="text-red-900 dark:text-red-200 font-semibold mb-1">Erro ao carregar histórico</h3>
+                <p className="text-red-800 dark:text-red-300 text-sm mb-3">{error}</p>
                 <button
                   onClick={loadData}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
@@ -257,10 +219,11 @@ export default function HistoricoPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* Filtros */}
+        <div className="rounded-lg shadow-md p-6 mb-6 transition-colors bg-white dark:bg-slate-900 dark:border dark:border-white/10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex-1">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="search" className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
                 Buscar
               </label>
               <input
@@ -269,19 +232,23 @@ export default function HistoricoPage() {
                 placeholder="Buscar por pergunta, resposta ou empresa..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors 
+                bg-white border-gray-300 text-gray-900 
+                dark:bg-slate-800 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
               />
             </div>
 
             <div className="w-full md:w-64">
-              <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="company" className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
                 Filtrar por Empresa
               </label>
               <select
                 id="company"
                 value={selectedCompany}
                 onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                bg-white border-gray-300 text-gray-900
+                dark:bg-slate-800 dark:border-white/10 dark:text-white"
               >
                 <option value="all">Todas as empresas</option>
                 {companies.map((company) => (
@@ -293,73 +260,76 @@ export default function HistoricoPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+          <div className="mt-4 flex items-center justify-between text-sm transition-colors text-gray-600 dark:text-gray-400">
             <span>
               {filteredPairs.length} {filteredPairs.length === 1 ? 'interação' : 'interações'}
             </span>
             <button
               onClick={loadData}
               disabled={loading}
-              className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition disabled:opacity-50"
+              className="px-3 py-1 rounded transition disabled:opacity-50
+              bg-gray-100 text-gray-700 hover:bg-gray-200
+              dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700"
             >
-              🔄 Atualizar
+              Atualizar
             </button>
           </div>
         </div>
 
+        {/* Loading e Lista */}
         {loading ? (
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <div className="w-16 h-16 border-4 border-primary-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Carregando...</p>
+          <div className="rounded-lg shadow-md p-12 text-center transition-colors bg-white dark:bg-slate-900">
+            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="transition-colors text-gray-600 dark:text-gray-400">Carregando...</p>
           </div>
         ) : filteredPairs.length === 0 && !error ? (
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg shadow-md p-12 text-center transition-colors bg-white dark:bg-slate-900 dark:border dark:border-white/10">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gray-100 dark:bg-slate-800">
+              <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold mb-2 transition-colors text-gray-900 dark:text-white">
               Nenhuma conversa ainda
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 transition-colors text-gray-600 dark:text-gray-400">
               As conversas aparecerão aqui quando os clientes usarem o assistente
             </p>
             <Link
               href="/dashboard/empresas"
-              className="inline-block px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
+              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
             >
               Ver Empresas
             </Link>
           </div>
         ) : !error && (
           <>
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="rounded-lg shadow-md overflow-hidden transition-colors bg-white dark:bg-slate-900 dark:border dark:border-white/10">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="transition-colors bg-gray-50 border-b border-gray-200 dark:bg-slate-800 dark:border-white/10">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
                         Data/Hora
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
                         Empresa
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
                         Pergunta
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
                         Resposta
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
                         Ações
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y transition-colors bg-white divide-gray-200 dark:bg-slate-900 dark:divide-white/10">
                     {filteredPairs.map((pair) => (
-                      <tr key={pair.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <tr key={pair.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm transition-colors text-gray-500 dark:text-gray-400">
                           {new Date(pair.timestamp).toLocaleString('pt-BR', {
                             day: '2-digit',
                             month: '2-digit',
@@ -372,23 +342,23 @@ export default function HistoricoPage() {
                           <Link
                             href={`/ia/${pair.companySlug}`}
                             target="_blank"
-                            className="text-sm font-medium text-primary-green hover:text-primary-green-dark"
+                            className="text-sm font-medium transition-colors text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             {pair.companyName}
                           </Link>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900 max-w-md">
+                          <div className="text-sm max-w-md transition-colors text-gray-900 dark:text-gray-100">
                             <div className="flex items-start space-x-2">
-                              <span className="flex-shrink-0 text-blue-600">👤</span>
+                              <span className="flex-shrink-0 text-blue-600 dark:text-blue-400">👤</span>
                               <p className="line-clamp-3">{pair.userMessage}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-700 max-w-md">
+                          <div className="text-sm max-w-md transition-colors text-gray-700 dark:text-gray-300">
                             <div className="flex items-start space-x-2">
-                              <span className="flex-shrink-0 text-green-600">🤖</span>
+                              <span className="flex-shrink-0 text-green-600 dark:text-green-400">🤖</span>
                               <p className="line-clamp-3">{pair.assistantMessage}</p>
                             </div>
                           </div>
@@ -396,7 +366,7 @@ export default function HistoricoPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                           <button
                             onClick={() => handleDelete(pair)}
-                            className="text-red-600 hover:text-red-900 transition"
+                            className="transition-colors text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                             title="Excluir"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -411,11 +381,11 @@ export default function HistoricoPage() {
               </div>
             </div>
 
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4" style={{ backgroundColor: 'rgba(162, 217, 247, 0.2)', borderColor: 'rgba(162, 217, 247, 0.5)' }}>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                💡 Dica: Use o histórico para melhorar o prompt
+            <div className="mt-6 rounded-lg p-4 transition-colors bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-500/30">
+              <h3 className="font-semibold mb-2 transition-colors text-gray-900 dark:text-white">
+                Dica: Use o histórico para melhorar o prompt
               </h3>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm transition-colors text-gray-700 dark:text-gray-300">
                 Analise as respostas do assistente. Se não estiverem adequadas, vá em <strong>Empresas → Editar</strong> e ajuste o <strong>Prompt do Assistente</strong> com mais detalhes.
               </p>
             </div>

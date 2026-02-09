@@ -102,7 +102,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 Dashboard
               </Link>
               <Link 
-                href="/dashboard/empresas" 
+                href="/dashboard/assistentes" 
                 className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" 
                 onClick={() => setSidebarOpen(false)}
               >

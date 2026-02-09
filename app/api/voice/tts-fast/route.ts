@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     
     const buffer = await synthesizeSpeech({
       text,
-      voiceName: BRAZILIAN_VOICES.FEMALE_A,
+      voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
       speakingRate: 1.0,
       audioEncoding: 'MP3',
     });
@@ -86,7 +86,7 @@ if (process.env.NODE_ENV === 'production' && process.env.GOOGLE_CLOUD_API_KEY) {
       try {
         const buffer = await synthesizeSpeech({
           text: phrase,
-          voiceName: BRAZILIAN_VOICES.FEMALE_A,
+          voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
           speakingRate: 1.0,
           audioEncoding: 'MP3',
         });

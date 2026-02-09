@@ -24,7 +24,7 @@ export async function synthesizeSpeech(
 ): Promise<Buffer> {
   const {
     text,
-    voiceName = BRAZILIAN_VOICES.FEMALE_A,
+    voiceName = BRAZILIAN_VOICES.NEURAL_MALE,
     speakingRate = 1.0,
     pitch = 0,
     volumeGainDb = 0,

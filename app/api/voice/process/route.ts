@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     if (!userMessage) {
       const errorAudio = await synthesizeSpeech({
         text: 'Não consegui te ouvir. Pode repetir?',
-        voiceName: BRAZILIAN_VOICES.FEMALE_A,
+        voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
         speakingRate: 1.0,
         audioEncoding: 'MP3',
       });
@@ -214,7 +214,7 @@ Pergunta: ${userMessage}`;
     // TTS
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
-      voiceName: BRAZILIAN_VOICES.FEMALE_A,
+      voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
       speakingRate: 1.0,
       audioEncoding: 'MP3',
     });
@@ -259,7 +259,7 @@ Pergunta: ${userMessage}`;
     try {
       const errorAudio = await synthesizeSpeech({
         text: 'Desculpe, ocorreu um erro.',
-        voiceName: BRAZILIAN_VOICES.FEMALE_A,
+        voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
         speakingRate: 1.0,
         audioEncoding: 'MP3',
       });

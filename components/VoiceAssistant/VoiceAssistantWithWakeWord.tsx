@@ -542,19 +542,75 @@ function convertWordsToNumbers(text: string): string {
   return result;
 }
 
+function correctTranscriptionErrors(text: string): string {
+  let corrected = text;
+  
+  // Mapa de correções (palavra errada → palavra correta)
+  const corrections: { [key: string]: string } = {
+    // PIX e variações
+    'picos': 'pix',
+    'picks': 'pix',
+    'pix': 'pix', // manter original
+    'piche': 'pix',
+    'pics': 'pix',
+    'pixel': 'pix',
+    
+    // Cobrança
+    'cobranca': 'cobrança',
+    'cobranças': 'cobrança',
+    
+    // WhatsApp
+    'watts': 'whatsapp',
+    'what\'s': 'whatsapp',
+    'whats': 'whatsapp',
+    'zap': 'whatsapp',
+    'zapp': 'whatsapp',
+    
+    // Instagram
+    'instagran': 'instagram',
+    'insta': 'instagram',
+    'istagran': 'instagram',
+    
+    // Números problemáticos
+    'sentavos': 'centavos',
+    'reais': 'reais',
+    'real': 'reais',
+    
+    // Ações
+    'gera': 'gerar',
+    'cria': 'criar',
+    'faz': 'fazer',
+    'cobra': 'cobrar',
+  };
+  
+  // Aplicar correções (case-insensitive)
+  for (const [wrong, right] of Object.entries(corrections)) {
+    const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+    corrected = corrected.replace(regex, right);
+  }
+  
+  return corrected;
+}
+
   // ========================================
   // VOICE COMMAND DETECTION
   // ========================================
 async function detectVoiceCommand(transcript: string): Promise<boolean> {
-  const lowerTranscript = transcript.toLowerCase().trim();
+  // ✅ PASSO 1: Corrigir erros de transcrição PRIMEIRO
+  const correctedTranscript = correctTranscriptionErrors(transcript);
+  const lowerTranscript = correctedTranscript.toLowerCase().trim();
   
-  console.log('🔍 Detectando comandos de voz:', lowerTranscript);
+  console.log('🔍 Original:', transcript);
+  if (correctedTranscript !== transcript) {
+    console.log('🔧 Corrigido:', correctedTranscript);
+  }
+  console.log('🔍 Processando:', lowerTranscript);
   
-  // ✅ MELHORADO: Converter números por extenso ANTES de processar
+  // ✅ PASSO 2: Converter números por extenso
   const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
   console.log('🔢 Após conversão:', transcriptWithNumbers);
   
-  // WhatsApp (mantido)
+  // WhatsApp
   const whatsappTriggers = [
     'whatsapp', 'whats', 'zap', 'número', 'contato'
   ];
@@ -571,7 +627,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     return true;
   }
   
-  // Instagram (mantido)
+  // Instagram
   const instagramTriggers = [
     'instagram', 'insta', 'arroba', 'perfil'
   ];
@@ -588,7 +644,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     return true;
   }
   
-  // Confirmar PIX (mantido)
+  // Confirmar PIX
   const confirmTriggers = [
     'confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'
   ];
@@ -607,7 +663,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     }
   }
   
-  // Cancelar PIX (mantido)
+  // Cancelar PIX
   const cancelTriggers = [
     'cancelar', 'cancela', 'desistir', 'não quero', 'fechar'
   ];
@@ -627,7 +683,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     }
   }
   
-  // ✅ PIX Generation - VERSÃO MELHORADA
+  // ✅ PIX Generation - VERSÃO MELHORADA com correção
   console.log('💰 Procurando padrões PIX...');
   
   // Padrões ampliados e mais flexíveis

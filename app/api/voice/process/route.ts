@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { processWithGPT } from '@/lib/openai';
 import { synthesizeSpeech, BRAZILIAN_VOICES } from '@/lib/google-tts';
 import { randomUUID } from 'crypto';
-
-// ✅ Usar Gemini com API Key
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -196,15 +193,10 @@ export async function POST(request: NextRequest) {
         .eq('id', matchingFAQ.id)
         .then(() => console.log('📊 +1'));
     } else {
-      // Usar Gemini
-      console.log('🤖 Usando Gemini');
+      // Usar OpenAI (GPT-4o-mini)
+      console.log('🤖 Usando OpenAI GPT-4o-mini');
       
-      // ✅ gemini-1.5-flash - versão estável mais recente
-      const model = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
-      }, { apiVersion: 'v1beta' });
-      
-      const prompt = `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
+      const systemPrompt = `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
 
 Regras:
 - Seja breve (máximo 2-3 frases)
@@ -214,11 +206,9 @@ Regras:
 
 Pergunta: ${userMessage}`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      responseText = response.text() || 'Desculpe, não consegui processar.';
+      responseText = await processWithGPT(userMessage, systemPrompt);
       
-      console.log('✅ Gemini respondeu');
+      console.log('✅ OpenAI respondeu');
     }
 
     // TTS

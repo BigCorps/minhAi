@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardHeaderProps {
   user: any;
@@ -17,14 +18,14 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-30 border-b bg-slate-900/95 border-white/10 backdrop-blur-xl">
+      <header className="fixed top-0 left-0 right-0 z-30 border-b bg-white/95 dark:bg-slate-900/95 border-gray-200 dark:border-white/10 backdrop-blur-xl transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Left */}
+            {/* Left: Hamburger + Logo */}
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-lg hover:bg-white/5 text-white"
+                className="p-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -36,12 +37,16 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               </Link>
             </div>
 
-            {/* Right Side */}
+            {/* Right: Theme Toggle + User Menu */}
             <div className="flex items-center space-x-4">
+              {/* Theme Toggle Button */}
+              <ThemeToggle />
+              
+              {/* User Menu */}
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/5 text-white"
+                  className="flex items-center space-x-2 p-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition"
                 >
                   <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold">
                     {displayName.charAt(0).toUpperCase()}
@@ -50,14 +55,18 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-lg shadow-lg border border-white/10 py-2">
-                    <Link href="/dashboard/perfil" className="block px-4 py-2 text-sm text-white hover:bg-white/5">
-                      👤 Perfil
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 py-2">
+                    <Link 
+                      href="/dashboard/perfil" 
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      Perfil
                     </Link>
-                    <hr className="my-2 border-white/10" />
+                    <hr className="my-2 border-gray-200 dark:border-white/10" />
                     <form action="/api/auth/logout" method="POST">
-                      <button className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5">
-                        🚪 Sair
+                      <button className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-white/5">
+                        Sair
                       </button>
                     </form>
                   </div>
@@ -72,24 +81,60 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
       {sidebarOpen && (
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed top-0 left-0 bottom-0 w-64 bg-slate-900 border-r border-white/10 z-50 p-6">
+          <div className="fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-white/10 z-50 p-6">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-white">Menu</h2>
-              <button onClick={() => setSidebarOpen(false)} className="text-white">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Menu</h2>
+              <button 
+                onClick={() => setSidebarOpen(false)} 
+                className="text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 p-2 rounded-lg transition"
+              >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             <nav className="space-y-2">
-              <Link href="/dashboard" className="block px-4 py-2 rounded-lg text-white hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                🏠 Dashboard
+              <Link 
+                href="/dashboard" 
+                className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" 
+                onClick={() => setSidebarOpen(false)}
+              >
+                Dashboard
               </Link>
-              <Link href="/dashboard/empresas" className="block px-4 py-2 rounded-lg text-white hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                🤖 Assistentes
+              <Link 
+                href="/dashboard/empresas" 
+                className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" 
+                onClick={() => setSidebarOpen(false)}
+              >
+                Assistentes
               </Link>
-              <Link href="/dashboard/historico" className="block px-4 py-2 rounded-lg text-white hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                💬 Histórico
+              <Link 
+                href="/dashboard/historico" 
+                className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" 
+                onClick={() => setSidebarOpen(false)}
+              >
+                Histórico
+              </Link>
+              <Link 
+                href="/dashboard/funcoes" 
+                className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" 
+                onClick={() => setSidebarOpen(false)}
+              >
+                Funções
+              </Link>
+              <Link 
+                href="/dashboard/faqs" 
+                className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" 
+                onClick={() => setSidebarOpen(false)}
+              >
+                FAQs
+              </Link>
+              <Link 
+                href="/dashboard/saldo" 
+                className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" 
+                onClick={() => setSidebarOpen(false)}
+              >
+                Saldo
               </Link>
             </nav>
           </div>

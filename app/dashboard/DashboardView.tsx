@@ -66,15 +66,15 @@ export default function DashboardView({
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 py-2">
                     <Link href="/dashboard/perfil" className="block px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setUserMenuOpen(false)}>
-                      👤 Perfil
+                      Perfil
                     </Link>
                     <Link href="/dashboard/credits" className="block px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setUserMenuOpen(false)}>
-                      💳 Créditos
+                      Créditos
                     </Link>
                     <hr className="my-2 border-gray-200 dark:border-white/10" />
                     <form action="/api/auth/logout" method="POST">
                       <button className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-white/5">
-                        🚪 Sair
+                        Sair
                       </button>
                     </form>
                   </div>
@@ -100,22 +100,22 @@ export default function DashboardView({
             </div>
             <nav className="space-y-2">
               <Link href="/dashboard" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                🏠 Dashboard
+                Dashboard
               </Link>
               <Link href="/dashboard/assistentes" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                🤖 Assistentes
+                Assistentes
               </Link>
               <Link href="/dashboard/funcoes" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                ⚙️ Funções
+                Funções
               </Link>
               <Link href="/dashboard/historico" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                💬 Histórico
+                Histórico
               </Link>
               <Link href="/dashboard/faqs" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                ⚡ FAQs
+                FAQs
               </Link>
               <Link href="/dashboard/saldo" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
-                💰 Saldo
+                Saldo
               </Link>
             </nav>
           </div>

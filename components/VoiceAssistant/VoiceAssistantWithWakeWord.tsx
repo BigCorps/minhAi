@@ -464,7 +464,7 @@ async function handleFunctionClick(functionKey: string) {
       
       // PIX
       case 'pix_generate':
-        await playText('Para gerar um PIX, me diga o valor. Por exemplo: gerar PIX de 50 reais.');
+        await playText('Para gerar um pix, me diga o valor. Por exemplo: gerar pix de 50 reais.');
         break;
         
       // WhatsApp

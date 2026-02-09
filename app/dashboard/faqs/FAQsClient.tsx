@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 interface FAQsClientProps {
   companies: any[];
-  // Removi o 'user' das props pois ele só era usado no header antigo
+  user: any; // Adicione esta linha
 }
 
 export default function FAQsClient({ companies }: FAQsClientProps) {

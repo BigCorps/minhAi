@@ -1,6 +1,7 @@
 // app/dashboard/page.tsx
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
+import { Settings, Wallet } from 'lucide-react';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -86,10 +87,10 @@ export default async function DashboardPage() {
 
         {/* FAQs */}
         <Link href="/dashboard/faqs">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-purple-500 dark:hover:border-purple-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer">
             <div className="flex items-center space-x-4 mb-4">
-              <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
@@ -107,14 +108,20 @@ export default async function DashboardPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <Link href="/dashboard/functions">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">⚙️ Funções</h3>
+            <div className="flex items-center space-x-3 mb-2">
+              <Settings className="w-5 h-5 text-gray-600 dark:text-white/70" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Funções</h3>
+            </div>
             <p className="text-sm text-gray-600 dark:text-white/60">Configure funções do assistente</p>
           </div>
         </Link>
 
         <Link href="/dashboard/saldo">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">💰 Saldo</h3>
+            <div className="flex items-center space-x-3 mb-2">
+              <Wallet className="w-5 h-5 text-gray-600 dark:text-white/70" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Saldo</h3>
+            </div>
             <p className="text-sm text-gray-600 dark:text-white/60">PIX recebidos e saques</p>
           </div>
         </Link>

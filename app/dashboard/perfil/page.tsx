@@ -1,3 +1,4 @@
+// app/dashboard/perfil/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -129,6 +130,7 @@ export default function PerfilPage() {
     );
   }
 
+  // Check if user is logged in via Google
   const isGoogleUser = user?.app_metadata?.provider === 'google';
 
   return (
@@ -159,11 +161,11 @@ export default function PerfilPage() {
                   src={avatarUrl} 
                   alt="Avatar" 
                   fill 
-                  className="rounded-full object-cover ring-4 ring-orange-500/20"
+                  className="rounded-full object-cover ring-4 ring-[#b0cb1f]"
                   unoptimized
                 />
               ) : (
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white text-4xl font-bold">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#b0cb1f] to-[#8ca214] flex items-center justify-center text-white text-4xl font-bold">
                   {name.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -192,7 +194,7 @@ export default function PerfilPage() {
           {/* Personal Info */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <User className="w-5 h-5 text-orange-500" />
+              <User className="w-5 h-5 text-[#b0cb1f]" />
               Informações Pessoais
             </h2>
             
@@ -205,7 +207,7 @@ export default function PerfilPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-[#b0cb1f] outline-none transition-all text-gray-900 dark:text-white"
                     placeholder="Seu nome"
                   />
                 </div>
@@ -228,7 +230,7 @@ export default function PerfilPage() {
               <button
                 type="submit"
                 disabled={updating}
-                className="flex items-center justify-center space-x-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                className="flex items-center justify-center space-x-2 px-6 py-2 bg-[#b0cb1f] hover:bg-[#8ca214] text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
               >
                 {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span>Salvar Alterações</span>
@@ -236,14 +238,20 @@ export default function PerfilPage() {
             </form>
           </div>
 
-          {/* Security Section - Only for non-Google users */}
-          {!isGoogleUser && (
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <Lock className="w-5 h-5 text-red-500" />
-                Segurança
-              </h2>
-              
+          {/* Security Section - Show for all but with a note for Google users */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+              <Lock className="w-5 h-5 text-blue-500" />
+              Segurança
+            </h2>
+            
+            {isGoogleUser ? (
+              <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-100 dark:border-blue-500/20">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Sua conta está vinculada ao Google. Para alterar sua senha ou configurações de segurança, acesse sua conta Google.
+                </p>
+              </div>
+            ) : (
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
@@ -254,7 +262,7 @@ export default function PerfilPage() {
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all text-gray-900 dark:text-white"
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-900 dark:text-white"
                         placeholder="••••••••"
                         minLength={6}
                       />
@@ -268,7 +276,7 @@ export default function PerfilPage() {
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all text-gray-900 dark:text-white"
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-900 dark:text-white"
                         placeholder="••••••••"
                         minLength={6}
                       />
@@ -279,14 +287,14 @@ export default function PerfilPage() {
                 <button
                   type="submit"
                   disabled={updating || !newPassword}
-                  className="flex items-center justify-center space-x-2 px-6 py-2 bg-gray-800 dark:bg-white dark:text-slate-900 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                  className="flex items-center justify-center space-x-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
                 >
                   {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
                   <span>Alterar Senha</span>
                 </button>
               </form>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

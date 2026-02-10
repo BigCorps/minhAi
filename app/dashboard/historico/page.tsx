@@ -102,6 +102,7 @@ export default function HistoricoPage() {
       const conversationIds = conversations.map(c => c.id);
 
       // 4. Buscar todas as mensagens das conversas encontradas
+      // Importante: Ordenar por created_at para garantir a sequência correta
       const { data: allMessages, error: msgError } = await supabase
         .from('messages')
         .select('*')
@@ -129,6 +130,7 @@ export default function HistoricoPage() {
 
         const convMessages = messagesByConv[conv.id] || [];
         
+        // Lógica de pareamento: Procurar por uma mensagem do usuário seguida por uma do assistente
         for (let i = 0; i < convMessages.length - 1; i++) {
           const msg1 = convMessages[i];
           const msg2 = convMessages[i + 1];
@@ -190,7 +192,7 @@ export default function HistoricoPage() {
   });
 
   return (
-    <div className="min-h-screen transition-colors duration-500 bg-gray-50 dark:bg-slate-950">
+    <div className="min-h-screen transition-colors duration-500 bg-gray-50 dark:bg-slate-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">         
           <h1 className="text-3xl font-bold transition-colors text-gray-900 dark:text-white">
@@ -221,7 +223,7 @@ export default function HistoricoPage() {
           </div>
         )}
 
-        <div className="rounded-xl shadow-sm p-6 mb-6 transition-colors bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10">
+        <div className="rounded-xl shadow-sm p-6 mb-6 transition-colors bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex-1 relative">
               <label htmlFor="search" className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
@@ -282,40 +284,42 @@ export default function HistoricoPage() {
         </div>
 
         {loading ? (
-          <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10">
+          <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="transition-colors text-gray-600 dark:text-gray-400">Carregando histórico...</p>
           </div>
         ) : filteredPairs.length === 0 && !error ? (
-          <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10">
+          <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gray-100 dark:bg-slate-800">
               <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-500" />
             </div>
             <h2 className="text-xl font-bold mb-2 transition-colors text-gray-900 dark:text-white">
               Nenhuma conversa encontrada
             </h2>
-            <p className="mb-6 transition-colors text-gray-600 dark:text-gray-400">
-              As conversas aparecerão aqui quando os clientes usarem o assistente.
+            <p className="transition-colors text-gray-600 dark:text-gray-400">
+              Ainda não há interações registradas para os critérios selecionados.
             </p>
           </div>
-        ) : !error && (
+        ) : (
           <div className="space-y-4">
             {filteredPairs.map((pair) => (
-              <div 
+              <div
                 key={pair.id}
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                className="rounded-xl shadow-sm overflow-hidden border transition-all
+                bg-white border-gray-200 hover:border-blue-300
+                dark:bg-slate-800 dark:border-white/10 dark:hover:border-blue-500/30"
               >
                 <div className="p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-bold rounded uppercase tracking-wider">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                         {pair.companyName}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {new Date(pair.timestamp).toLocaleString('pt-BR')}
                       </span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => handleDelete(pair)}
                       className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                       title="Excluir interação"
@@ -326,32 +330,31 @@ export default function HistoricoPage() {
 
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400">U</span>
+                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                       </div>
-                      <div className="flex-1 bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
-                        <p className="text-sm text-gray-800 dark:text-gray-200">{pair.userMessage}</p>
+                      <div className="flex-1 bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3">
+                        <p className="text-sm text-gray-900 dark:text-gray-200">{pair.userMessage}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">A</span>
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                        <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <div className="flex-1 bg-blue-50/50 dark:bg-blue-500/5 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
-                        <p className="text-sm text-gray-800 dark:text-gray-200">{pair.assistantMessage}</p>
+                      <div className="flex-1 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
+                        <p className="text-sm text-gray-900 dark:text-gray-200">{pair.assistantMessage}</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="px-4 py-2 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-white/5 flex justify-end">
-                  <Link 
-                    href={`/dashboard/historico/${pair.conversationId}`}
-                    className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center hover:underline"
+                <div className="px-4 py-2 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-white/5 flex justify-end">
+                  <Link
+                    href={`/dashboard/assistentes/${pair.companySlug}/chat?conv=${pair.conversationId}`}
+                    className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center"
                   >
-                    Ver conversa completa
-                    <ChevronRight className="w-3 h-3 ml-1" />
+                    Ver conversa completa <ChevronRight className="w-3 h-3 ml-1" />
                   </Link>
                 </div>
               </div>
@@ -360,5 +363,13 @@ export default function HistoricoPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function User({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
   );
 }

@@ -18,7 +18,7 @@ import {
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/assistentes', label: 'Assistentes', icon: Bot },
-  { href: '/dashboard/funcoes', label: 'Funções', icon: Settings },
+  { href: '/dashboard/functions', label: 'Funções', icon: Settings },
   { href: '/dashboard/faqs', label: 'FAQs', icon: HelpCircle },
   { href: '/dashboard/saldo', label: 'Saldo', icon: Wallet },
   { href: '/dashboard/historico', label: 'Histórico', icon: MessageSquare },

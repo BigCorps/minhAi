@@ -104,7 +104,7 @@ export default function PerfilPage() {
           pix_key: pixKey,
           pix_key_type: pixKeyType,
           updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' }); // Use onConflict to handle existing rows
+        }, { onConflict: 'user_id' });
 
       if (pixError) throw pixError;
       
@@ -159,31 +159,28 @@ export default function PerfilPage() {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) throw new Error('Usuário não autenticado.');
 
-      // 1. Get registration options from Edge Function
-      const response = await fetch('/functions/v1/webauthn-registration-options', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
-      const options = await response.json();
-      if (!response.ok) throw new Error(options.error || 'Não foi possível iniciar o registro biométrico.');
+      // 1. Get registration options via Supabase client
+      const { data: options, error: optionsError } = await supabase.functions.invoke(
+        'webauthn-registration-options'
+      );
+      if (optionsError) throw new Error(optionsError.message || 'Não foi possível iniciar o registro biométrico.');
 
       // 2. Start browser registration
       const regResponse = await startRegistration(options);
 
-      // 3. Verify registration via Edge Function
-      const verifyResponse = await fetch('/functions/v1/webauthn-verify-registration', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ registrationResponse: regResponse }),
-      });
-      const verification = await verifyResponse.json();
+      // 3. Verify registration via Supabase client
+      const { data: verification, error: verifyError } = await supabase.functions.invoke(
+        'webauthn-verify-registration',
+        {
+          body: {
+            attestationResponse: regResponse,
+            expectedChallenge: options.challenge,
+          },
+        }
+      );
 
-      if (!verifyResponse.ok || !verification.success) {
-        throw new Error(verification.error || 'Falha na verificação biométrica.');
+      if (verifyError || !verification.verified) {
+        throw new Error(verification?.error || 'Falha na verificação biométrica.');
       }
 
       // Refresh authenticators list
@@ -191,7 +188,7 @@ export default function PerfilPage() {
         .from('webauthn_credentials')
         .select('*')
         .eq('user_id', user.id);
-      
+
       if (authDataError) throw authDataError;
       if (authData) setAuthenticators(authData);
       setMessage({ type: 'success', text: 'Biometria cadastrada com sucesso!' });
@@ -207,21 +204,15 @@ export default function PerfilPage() {
     if (!confirm('Tem certeza que deseja remover este acesso biométrico?')) return;
 
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) throw new Error('Usuário não autenticado.');
+      const { data: result, error: removeError } = await supabase.functions.invoke(
+        'webauthn-remove-credential',
+        {
+          body: { credentialId },
+        }
+      );
 
-      const response = await fetch('/functions/v1/webauthn-remove-credential', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ credentialId }),
-      });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Erro ao remover acesso biométrico.');
+      if (removeError || !result.success) {
+        throw new Error(result?.error || 'Erro ao remover acesso biométrico.');
       }
 
       setAuthenticators(authenticators.filter(a => a.credential_id !== credentialId));

@@ -404,7 +404,7 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   function extractCommand(
     transcript: string, 
-    wakeWordResult: { keyword: string; matchedText?: string }
+    wakeWordResult: { detected: boolean; keyword?: string; confidence: number; matchedText?: string }
   ): string {
     let text = transcript.toLowerCase().trim();
     
@@ -415,8 +415,10 @@ export function VoiceAssistantWithWakeWord({
     }
     
     // 2. Remover wake word original (garantia)
-    const keyword = wakeWordResult.keyword.toLowerCase();
-    text = text.replace(keyword, '');
+    if (wakeWordResult.keyword) {
+      const keyword = wakeWordResult.keyword.toLowerCase();
+      text = text.replace(keyword, '');
+    }
     
     // 3. Remover vírgulas, pontos e espaços no início
     text = text.replace(/^[,.\s]+/, '');

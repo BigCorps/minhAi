@@ -154,41 +154,39 @@ export default function PerfilPage() {
   async function registerBiometry() {
     setRegisteringBiometry(true);
     setMessage(null);
-
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) throw new Error('Usuário não autenticado.');
-
-      // 1. Get registration options via Supabase client
+      const authHeaders = {
+        Authorization: `Bearer ${session.access_token}`,
+      };
+      // 1. Get registration options
       const { data: options, error: optionsError } = await supabase.functions.invoke(
-        'webauthn-registration-options'
+        'webauthn-registration-options',
+        { headers: authHeaders }
       );
       if (optionsError) throw new Error(optionsError.message || 'Não foi possível iniciar o registro biométrico.');
-
       // 2. Start browser registration
       const regResponse = await startRegistration(options);
-
-      // 3. Verify registration via Supabase client
+      // 3. Verify registration
       const { data: verification, error: verifyError } = await supabase.functions.invoke(
         'webauthn-verify-registration',
         {
+          headers: authHeaders,
           body: {
             attestationResponse: regResponse,
             expectedChallenge: options.challenge,
           },
         }
       );
-
       if (verifyError || !verification.verified) {
         throw new Error(verification?.error || 'Falha na verificação biométrica.');
       }
-
       // Refresh authenticators list
       const { data: authData, error: authDataError } = await supabase
         .from('webauthn_credentials')
         .select('*')
         .eq('user_id', user.id);
-
       if (authDataError) throw authDataError;
       if (authData) setAuthenticators(authData);
       setMessage({ type: 'success', text: 'Biometria cadastrada com sucesso!' });
@@ -280,41 +278,105 @@ export default function PerfilPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Informações do Usuário */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-purple-100 dark:bg-purple-500/10 rounded-lg">
-                <User className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Informações do Usuário</h2>
+        {/* Informações do Usuário */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
+              <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-
-            <form onSubmit={handleUpdateProfile} className="space-y-6">
-              <div>
-                <label htmlFor="userName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome</label>
-                <input
-                  type="text"
-                  id="userName"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Seu nome completo"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={updating}
-                className="w-full flex items-center justify-center px-6 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50"
-              >
-                {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-                Salvar Informações
-              </button>
-            </form>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Informações do Usuário</h2>
           </div>
 
+          <form onSubmit={handleUpdateProfile} className="space-y-6">
+            <div>
+              <label htmlFor="userName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome</label>
+              <input
+                type="text"
+                id="userName"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Seu nome completo"
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={updating}
+              className="w-full flex items-center justify-center px-6 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50"
+            >
+              {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+              Salvar Informações
+            </button>
+          </form>
+        </div>
+
+        {/* Biometria - Horizontal compacto */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-center gap-3 lg:flex-1">
+              <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
+                <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Login por Biometria</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {isBiometrySupported 
+                    ? `${authenticators.length} dispositivo${authenticators.length !== 1 ? 's' : ''} cadastrado${authenticators.length !== 1 ? 's' : ''}`
+                    : 'Não suportado neste navegador'
+                  }
+                </p>
+              </div>
+            </div>
+
+            {isBiometrySupported && (
+              <div className="flex flex-col sm:flex-row gap-3 lg:w-auto">
+                {authenticators.length > 0 && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-500/30">
+                    <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm text-green-700 dark:text-green-400 font-medium">Ativo</span>
+                  </div>
+                )}
+                <button
+                  onClick={registerBiometry}
+                  disabled={registeringBiometry}
+                  className="flex items-center justify-center px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-bold disabled:opacity-50 shadow-lg shadow-blue-500/20 whitespace-nowrap"
+                >
+                  {registeringBiometry ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
+                  Cadastrar Biometria
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Lista de dispositivos - colapsável */}
+          {isBiometrySupported && authenticators.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-white/5 space-y-3">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Dispositivos Cadastrados</p>
+              {authenticators.map((auth) => (
+                <div key={auth.credential_id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-white/5">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Dispositivo Confiável</p>
+                      <p className="text-xs text-gray-500">Cadastrado em {new Date(auth.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeAuthenticator(auth.credential_id)}
+                    className="p-2 text-gray-400 hover:text-red-500 transition"
+                    title="Remover biometria"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
           {/* Configuração Pix */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-6">
@@ -323,6 +385,10 @@ export default function PerfilPage() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Configuração Pix</h2>
             </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-500/30">
+              💡 Esta chave Pix será utilizada para receber os pagamentos enviados pelos seus assistentes virtuais.
+            </p>
 
             <form onSubmit={handleUpdateProfile} className="space-y-6">
               <div>
@@ -415,61 +481,6 @@ export default function PerfilPage() {
               </form>
             </div>
           )}
-
-          {/* Biometria */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
-                <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Login por Biometria</h2>
-            </div>
-
-            {!isBiometrySupported ? (
-              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-500/30 rounded-2xl text-amber-700 dark:text-amber-400 text-sm">
-                Seu navegador ou dispositivo não suporta autenticação biométrica.
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Adicione uma camada extra de segurança e acesse sua conta rapidamente usando sua digital ou reconhecimento facial.
-                </p>
-
-                {authenticators.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Dispositivos Cadastrados</p>
-                    {authenticators.map((auth) => (
-                      <div key={auth.credential_id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-white/5">
-                        <div className="flex items-center gap-3">
-                          <Smartphone className="w-5 h-5 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white">Dispositivo Confiável</p>
-                            <p className="text-xs text-gray-500">Cadastrado em {new Date(auth.created_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removeAuthenticator(auth.credential_id)}
-                          className="p-2 text-gray-400 hover:text-red-500 transition"
-                          title="Remover biometria"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  onClick={registerBiometry}
-                  disabled={registeringBiometry}
-                  className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-bold disabled:opacity-50 shadow-lg shadow-blue-500/20"
-                >
-                  {registeringBiometry ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Key className="w-5 h-5 mr-2" />}
-                  Cadastrar Nova Biometria
-                </button>
-              </div>
-            )}
-          </div>
 
         </div>
       </div>

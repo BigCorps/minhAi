@@ -1736,7 +1736,10 @@ async function playProcessingFeedback(): Promise<HTMLAudioElement> {
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) return companyWakeWord ? `Diga: "${companyWakeWord}" + pergunta` : 'Escutando...';
+    if (isListening) {
+      const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + pergunta` : 'Escutando...';
+    }
     return 'Aguarde...';
   };
 

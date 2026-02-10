@@ -1,3 +1,4 @@
+// app/dashboard/perfil/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,9 +6,8 @@ import { createClient } from '@/lib/supabase-browser';
 import { 
   User, Mail, Lock, Camera, Save, Loader2, 
   AlertCircle, CheckCircle2, Fingerprint, Trash2, 
-  Smartphone, ShieldCheck, Wallet, Key
+  Smartphone, ShieldCheck, Wallet, Key, Edit
 } from 'lucide-react';
-import Image from 'next/image';
 import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
 export default function PerfilPage() {
@@ -17,6 +17,11 @@ export default function PerfilPage() {
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
+  // User details states
+  const [userName, setUserName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   // Pix states
   const [pixKey, setPixKey] = useState('');
   const [pixKeyType, setPixKeyType] = useState('cpf');
@@ -31,16 +36,23 @@ export default function PerfilPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUser(user);
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (authUser) {
+          setUser(authUser);
+          setUserName(authUser.user_metadata?.name || '');
           
           // Load user profile (Pix)
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('user_profiles')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', authUser.id)
             .single();
+          
+          // Handle case where no profile exists yet (PGRST116)
+          if (profileError && profileError.code !== 'PGRST116') {
+            throw profileError;
+          }
           
           if (profileData) {
             setProfile(profileData);
@@ -49,17 +61,19 @@ export default function PerfilPage() {
           }
 
           // Load authenticators
-          const { data: authData } = await supabase
+          const { data: authData, error: authDataError } = await supabase
             .from('webauthn_credentials')
             .select('*')
-            .eq('user_id', user.id);
+            .eq('user_id', authUser.id);
           
+          if (authDataError) throw authDataError;
           if (authData) setAuthenticators(authData);
         }
         
         setIsBiometrySupported(browserSupportsWebAuthn());
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+      } catch (error: any) {
+        console.error('Erro ao carregar dados:', error.message);
+        setMessage({ type: 'error', text: 'Erro ao carregar dados: ' + error.message });
       } finally {
         setLoading(false);
       }
@@ -73,19 +87,63 @@ export default function PerfilPage() {
     setMessage(null);
 
     try {
-      const { error } = await supabase
+      // Update user name
+      if (userName !== user?.user_metadata?.name) {
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { name: userName }
+        });
+        if (updateError) throw updateError;
+        setUser({ ...user, user_metadata: { ...user.user_metadata, name: userName } });
+      }
+
+      // Update Pix key in user_profiles table
+      const { error: pixError } = await supabase
         .from('user_profiles')
         .upsert({
           user_id: user.id,
           pix_key: pixKey,
           pix_key_type: pixKeyType,
           updated_at: new Date().toISOString()
-        });
+        }, { onConflict: 'user_id' }); // Use onConflict to handle existing rows
 
-      if (error) throw error;
+      if (pixError) throw pixError;
       
       setProfile({ ...profile, pix_key: pixKey, pix_key_type: pixKeyType });
       setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setUpdating(true);
+    setMessage(null);
+
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: 'As senhas não coincidem.' });
+      setUpdating(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'A senha deve ter no mínimo 6 caracteres.' });
+      setUpdating(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: 'Senha alterada com sucesso!' });
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
@@ -98,29 +156,43 @@ export default function PerfilPage() {
     setMessage(null);
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) throw new Error('Usuário não autenticado.');
+
       // 1. Get registration options from Edge Function
-      const { data: options, error: optionsError } = await supabase.functions.invoke('webauthn-registration-options');
-      if (optionsError) throw new Error('Não foi possível iniciar o registro biométrico.');
+      const response = await fetch('/functions/v1/webauthn-registration-options', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+      const options = await response.json();
+      if (!response.ok) throw new Error(options.error || 'Não foi possível iniciar o registro biométrico.');
 
       // 2. Start browser registration
       const regResponse = await startRegistration(options);
 
       // 3. Verify registration via Edge Function
-      const { data: verification, error: verificationError } = await supabase.functions.invoke(
-        'webauthn-verify-registration', 
-        { body: { registrationResponse: regResponse } }
-      );
+      const verifyResponse = await fetch('/functions/v1/webauthn-verify-registration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ registrationResponse: regResponse }),
+      });
+      const verification = await verifyResponse.json();
 
-      if (verificationError || !verification.success) {
+      if (!verifyResponse.ok || !verification.success) {
         throw new Error(verification.error || 'Falha na verificação biométrica.');
       }
 
       // Refresh authenticators list
-      const { data: authData } = await supabase
+      const { data: authData, error: authDataError } = await supabase
         .from('webauthn_credentials')
         .select('*')
         .eq('user_id', user.id);
       
+      if (authDataError) throw authDataError;
       if (authData) setAuthenticators(authData);
       setMessage({ type: 'success', text: 'Biometria cadastrada com sucesso!' });
     } catch (error: any) {
@@ -131,17 +203,28 @@ export default function PerfilPage() {
     }
   }
 
-  async function removeAuthenticator(id: string) {
+  async function removeAuthenticator(credentialId: string) {
     if (!confirm('Tem certeza que deseja remover este acesso biométrico?')) return;
 
     try {
-      const { error } = await supabase.functions.invoke('webauthn-remove-credential', {
-        body: { credentialId: id }
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) throw new Error('Usuário não autenticado.');
+
+      const response = await fetch('/functions/v1/webauthn-remove-credential', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ credentialId }),
       });
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Erro ao remover acesso biométrico.');
+      }
 
-      setAuthenticators(authenticators.filter(a => a.id !== id));
+      setAuthenticators(authenticators.filter(a => a.credential_id !== credentialId));
       setMessage({ type: 'success', text: 'Acesso removido com sucesso.' });
     } catch (error: any) {
       setMessage({ type: 'error', text: 'Erro ao remover: ' + error.message });
@@ -168,7 +251,7 @@ export default function PerfilPage() {
           <div className="relative group">
             <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#b0cb1f] shadow-lg">
               {user?.user_metadata?.avatar_url ? (
-                <Image src={user.user_metadata.avatar_url} alt="Avatar" width={128} height={128} className="object-cover" />
+                <img src={user.user_metadata.avatar_url} alt="Avatar" width={128} height={128} className="object-cover" />
               ) : (
                 <div className="w-full h-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
                   <User className="w-16 h-16 text-gray-400" />
@@ -198,7 +281,7 @@ export default function PerfilPage() {
         {message && (
           <div className={`p-4 rounded-2xl flex items-center gap-3 border ${
             message.type === 'success' 
-              ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-500/30 text-green-700 dark:text-green-400' 
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-500/30 text-green-700 dark:text-green-400'
               : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-500/30 text-red-700 dark:text-red-400'
           }`}>
             {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -208,6 +291,39 @@ export default function PerfilPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
+          {/* Informações do Usuário */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-purple-100 dark:bg-purple-500/10 rounded-lg">
+                <User className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Informações do Usuário</h2>
+            </div>
+
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+              <div>
+                <label htmlFor="userName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome</label>
+                <input
+                  type="text"
+                  id="userName"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Seu nome completo"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={updating}
+                className="w-full flex items-center justify-center px-6 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50"
+              >
+                {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+                Salvar Informações
+              </button>
+            </form>
+          </div>
+
           {/* Configuração Pix */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-6">
@@ -264,6 +380,51 @@ export default function PerfilPage() {
             </form>
           </div>
 
+          {/* Alterar Senha */}
+          {!isGoogleUser && (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-red-100 dark:bg-red-500/10 rounded-lg">
+                  <Lock className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Alterar Senha</h2>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-6">
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nova Senha</label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="********"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirmar Nova Senha</label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="********"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="w-full flex items-center justify-center px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold disabled:opacity-50"
+                >
+                  {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+                  Alterar Senha
+                </button>
+              </form>
+            </div>
+          )}
+
           {/* Biometria */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-6">
@@ -287,7 +448,7 @@ export default function PerfilPage() {
                   <div className="space-y-3">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Dispositivos Cadastrados</p>
                     {authenticators.map((auth) => (
-                      <div key={auth.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-white/5">
+                      <div key={auth.credential_id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-white/5">
                         <div className="flex items-center gap-3">
                           <Smartphone className="w-5 h-5 text-gray-400" />
                           <div>

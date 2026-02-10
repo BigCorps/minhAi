@@ -93,7 +93,7 @@ export default function DashboardView({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Olá, {displayName}! 👋</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Olá, {displayName}!</h1>
             <p className="text-lg text-gray-600 dark:text-white/60">Bem-vindo ao seu painel de controle</p>
           </div>
 
@@ -153,16 +153,16 @@ export default function DashboardView({
 
           {/* Quick Actions */}
           <div className="grid md:grid-cols-2 gap-6">
-            <Link href="/dashboard/funcoes">
+            <Link href="/dashboard/functions">
               <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">⚙️ Funções</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Funções</h3>
                 <p className="text-sm text-gray-600 dark:text-white/60">Configure funções do assistente</p>
               </div>
             </Link>
 
             <Link href="/dashboard/saldo">
               <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">💰 Saldo</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Saldo</h3>
                 <p className="text-sm text-gray-600 dark:text-white/60">PIX recebidos e saques</p>
               </div>
             </Link>
@@ -171,9 +171,9 @@ export default function DashboardView({
           {/* CTA */}
           {totalCompanies === 0 && (
             <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6">
-              <h3 className="font-semibold text-blue-900 dark:text-white mb-1">🚀 Comece Agora</h3>
+              <h3 className="font-semibold text-blue-900 dark:text-white mb-1">Comece Agora</h3>
               <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
-              <Link href="/dashboard/assistentes/nova" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold">
+              <Link href="/dashboard/assistentes/create" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold">
                 + Criar Assistente
               </Link>
             </div>

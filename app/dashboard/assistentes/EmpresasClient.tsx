@@ -12,7 +12,9 @@ import {
   Copy, 
   Check,
   Lock,
-  Globe
+  Globe,
+  X,
+  Download
 } from 'lucide-react';
 
 interface AssistentesClientProps {
@@ -22,13 +24,20 @@ interface AssistentesClientProps {
 
 export default function AssistentesClient({ companies, user }: AssistentesClientProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showQrModal, setShowQrModal] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState<any | null>(null);
 
   const handleCopy = (slug: string, id: string) => {
     const url = `https://eai.app.br/ia/${slug}`;
     navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const generateQrUrl = (slug: string, isPublic: boolean, privateSlug: string) => {
+    const baseUrl = isPublic 
+      ? `https://eai.app.br/ia/${slug}` 
+      : `https://eai.app.br/ia/private/${privateSlug}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(baseUrl)}`;
   };
 
   return (
@@ -45,7 +54,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
             </p>
           </div>
           <Link
-            href="/dashboard/assistentes/nova"
+            href="/dashboard/assistentes/create"
             className="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20 font-semibold active:scale-95"
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -66,9 +75,17 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                 {/* Info do Assistente */}
                 <div className="flex items-center space-x-4 flex-1">
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 duration-300
-                  bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 overflow-hidden border border-gray-100 dark:border-white/5">
+                  bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 overflow-hidden border border-gray-100 dark:border-white/5 relative">
                     {assistant.logo_url ? (
-                      <Image src={assistant.logo_url} alt={assistant.name} width={64} height={64} className="object-cover" />
+                      <img 
+                        src={assistant.logo_url} 
+                        alt={assistant.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = ''; // Fallback se a imagem falhar
+                          (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>';
+                        }}
+                      />
                     ) : (
                       <Zap className="w-8 h-8" />
                     )}
@@ -96,7 +113,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
 
                 {/* Ações */}
                 <div className="flex flex-wrap items-center gap-3">
-                  {/* Copiar Link Público */}
+                  {/* Copiar Link */}
                   <button
                     onClick={() => handleCopy(assistant.slug, assistant.id)}
                     className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
@@ -104,12 +121,12 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                     dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
                   >
                     {copiedId === assistant.id ? <Check className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
-                    Link Público
+                    Copiar Link
                   </button>
 
                   {/* QR Code */}
                   <button
-                    onClick={() => setShowQrModal(assistant.id)}
+                    onClick={() => setShowQrModal(assistant)}
                     className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
                     bg-gray-100 text-gray-700 hover:bg-gray-200
                     dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
@@ -120,7 +137,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
 
                   {/* Funções */}
                   <Link
-                    href={`/dashboard/funcoes?companyId=${assistant.id}`}
+                    href={`/dashboard/functions?companyId=${assistant.id}`}
                     className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
                     bg-blue-50 text-blue-600 hover:bg-blue-100
                     dark:bg-blue-600/10 dark:text-blue-400 dark:hover:bg-blue-600/20 border border-blue-100 dark:border-blue-500/20"
@@ -169,34 +186,50 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
           )}
         </div>
 
-        {/* Modal de QR Code (Simulado) */}
+        {/* Modal de QR Code */}
         {showQrModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-white/10">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-white/10 relative">
+              <button 
+                onClick={() => setShowQrModal(null)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
               <div className="text-center">
-                <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">QR Code do Assistente</h3>
-                <div className="bg-white p-4 rounded-xl inline-block mb-6 border border-gray-100">
-                  {/* Aqui entraria o componente de QR Code real */}
-                  <div className="w-48 h-48 bg-gray-100 flex items-center justify-center text-gray-400">
-                    <QrCode className="w-24 h-24" />
-                  </div>
+                <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">QR Code do Assistente</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">{showQrModal.name}</p>
+                
+                <div className="bg-white p-4 rounded-xl inline-block mb-6 border border-gray-100 shadow-inner">
+                  <img 
+                    src={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug)} 
+                    alt="QR Code" 
+                    className="w-48 h-48"
+                  />
                 </div>
+                
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                   Aponte a câmera para o código para abrir o assistente.
                 </p>
+                
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowQrModal(null)}
-                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg font-semibold"
+                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm"
                   >
                     Fechar
                   </button>
-                  <button
-                    onClick={() => alert('Imagem copiada para o clipboard!')}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold"
+                  <a
+                    href={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug)}
+                    download={`qrcode-${showQrModal.slug}.png`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition"
                   >
-                    Copiar Imagem
-                  </button>
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar
+                  </a>
                 </div>
               </div>
             </div>

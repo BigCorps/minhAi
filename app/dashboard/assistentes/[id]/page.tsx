@@ -3,40 +3,33 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
-import CompanyContactsForm from '@/components/company/CompanyContactsForm';
+import { ArrowLeft, Save, Loader2, Globe, Lock, Trash2 } from 'lucide-react';
 
-export default function EditarEmpresaPage() {
+export default function EditarAssistentePage() {
   const router = useRouter();
   const params = useParams();
-  const companyId = params.id as string;
+  const assistantId = params.id as string;
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [company, setCompany] = useState<any>(null);
-  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [assistant, setAssistant] = useState<any>(null);
+  const [isPublic, setIsPublic] = useState(true);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    if (mediaQuery.matches) {
-      setTheme('dark');
-    }
-  }, []);
-
-  useEffect(() => {
-    async function loadCompany() {
+    async function loadAssistant() {
       try {
         const { data, error } = await supabase
           .from('companies')
           .select('*')
-          .eq('id', companyId)
+          .eq('id', assistantId)
           .single();
 
         if (error) throw error;
-        setCompany(data);
+        setAssistant(data);
+        setIsPublic(data.is_public ?? true);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -44,8 +37,8 @@ export default function EditarEmpresaPage() {
       }
     }
 
-    loadCompany();
-  }, [companyId]);
+    loadAssistant();
+  }, [assistantId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,20 +49,21 @@ export default function EditarEmpresaPage() {
     const data = {
       name: formData.get('name') as string,
       slug: formData.get('slug') as string,
+      logo_url: formData.get('logo_url') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
-      system_prompt: formData.get('system_prompt') as string,
+      is_public: isPublic,
     };
 
     try {
       const { error } = await supabase
         .from('companies')
         .update(data)
-        .eq('id', companyId);
+        .eq('id', assistantId);
 
       if (error) throw error;
 
-      alert('✅ Empresa atualizada com sucesso!');
+      alert('✅ Assistente atualizado com sucesso!');
       router.refresh();
     } catch (err: any) {
       setError(err.message);
@@ -79,23 +73,19 @@ export default function EditarEmpresaPage() {
   }
 
   async function handleDelete() {
-    if (!confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.')) {
+    if (!confirm('Tem certeza que deseja excluir este assistente? Esta ação não pode ser desfeita.')) {
       return;
     }
 
     setSaving(true);
-    setError(null);
-
     try {
       const { error } = await supabase
         .from('companies')
         .delete()
-        .eq('id', companyId);
+        .eq('id', assistantId);
 
       if (error) throw error;
-
-      router.push('/dashboard/empresas');
-      router.refresh();
+      router.push('/dashboard/assistentes');
     } catch (err: any) {
       setError(err.message);
       setSaving(false);
@@ -104,170 +94,142 @@ export default function EditarEmpresaPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${
-        theme === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
-      }`}>
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!company) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${
-        theme === 'dark' ? 'bg-slate-950' : 'bg-gray-50'
-      }`}>
-        <div className="text-center">
-          <h1 className={`text-2xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Empresa não encontrada
-          </h1>
-          <Link
-            href="/dashboard/empresas"
-            className="text-primary-green hover:text-primary-green-dark"
-          >
-            ← Voltar para Empresas
-          </Link>
+          <Loader2 className="w-12 h-12 border-b-2 border-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">Carregando...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950' : 'bg-gray-50'}`}>
-      
-      {/* ✨ BOTÃO DE TOGGLE DE TEMA */}
-      <button
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className={`fixed top-6 right-6 z-50 p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
-          theme === 'dark'
-            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-            : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-        }`}
-        aria-label="Alternar tema"
-      >
-        {theme === 'dark' ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        )}
-      </button>
-      
-      <header className={`border-b ${
-        theme === 'dark'
-          ? 'bg-slate-900/50 border-white/10'
-          : 'bg-white border-gray-200'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image 
-                  src="/logo.png" 
-                  alt="eAi" 
-                  width={150} 
-                  height={68}
-                  className="rounded-lg cursor-pointer"
-                />
-              </Link>
-              <h1 className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                Editar Empresa
-              </h1>
-            </div>
-          </div>
+    <div className="min-h-screen bg-transparent">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <Link
+            href="/dashboard/assistentes"
+            className="inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Voltar para Assistentes
+          </Link>
+          
+          <button
+            onClick={handleDelete}
+            className="flex items-center text-red-500 hover:text-red-600 transition text-sm font-medium"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Excluir Assistente
+          </button>
         </div>
-      </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link
-          href="/dashboard/empresas"
-          className="inline-flex items-center text-primary-green hover:text-primary-green-dark mb-6"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Voltar para Empresas
-        </Link>
+        <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+          <div className="px-8 py-6 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Configurar Assistente
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Edite as informações básicas e visibilidade do seu assistente.
+            </p>
+          </div>
 
-        <div className="space-y-6">
-          {/* Formulário Principal da Empresa */}
-          <form onSubmit={handleSubmit} className={`rounded-lg shadow-md p-8 ${
-            theme === 'dark' ? 'bg-slate-800' : 'bg-white'
-          }`}>
-            <h2 className={`text-2xl font-bold mb-6 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              Informações da Empresa
-            </h2>
-
+          <form onSubmit={handleSubmit} className="p-8">
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               </div>
             )}
 
             <div className="space-y-6">
+              {/* Nome e Slug */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome do Assistente *
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                    defaultValue={assistant.name}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="slug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Slug (URL Pública) *
+                  </label>
+                  <input
+                    type="text"
+                    id="slug"
+                    name="slug"
+                    required
+                    defaultValue={assistant.slug}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition"
+                  />
+                </div>
+              </div>
+
+              {/* Logo URL */}
               <div>
-                <label htmlFor="name" className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-                }`}>
-                  Nome da Empresa *
+                <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Link do Logo (URL da Imagem)
                 </label>
                 <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  required
-                  defaultValue={company.name}
-                  placeholder="Ex: Restaurante Bella Vista"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent ${
-                    theme === 'dark'
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  type="url"
+                  id="logo_url"
+                  name="logo_url"
+                  defaultValue={assistant.logo_url}
+                  placeholder="https://exemplo.com/logo.png"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                 />
               </div>
 
+              {/* Visibilidade */}
               <div>
-                <label htmlFor="slug" className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-                }`}>
-                  Slug (identificador único) *
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Visibilidade do Assistente
                 </label>
-                <input
-                  type="text"
-                  id="slug"
-                  name="slug"
-                  required
-                  defaultValue={company.slug}
-                  placeholder="restaurante-bella-vista"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm ${
-                    theme === 'dark'
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                />
-                <p className={`mt-1 text-xs ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                }`}>
-                  URL pública: <strong>eai.app.br/ia/{company.slug}</strong>
-                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(true)}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      isPublic 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' 
+                        : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
+                    }`}
+                  >
+                    <Globe className="w-5 h-5 mr-2" />
+                    <div className="text-left">
+                      <p className="font-bold text-sm">Público</p>
+                      <p className="text-[10px] opacity-70">Acessível via link slug</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(false)}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      !isPublic 
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400' 
+                        : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
+                    }`}
+                  >
+                    <Lock className="w-5 h-5 mr-2" />
+                    <div className="text-left">
+                      <p className="font-bold text-sm">Privado</p>
+                      <p className="text-[10px] opacity-70">Acessível via link único</p>
+                    </div>
+                  </button>
+                </div>
               </div>
 
+              {/* Palavras de Ativação */}
               <div>
-                <label htmlFor="wake_word" className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-                }`}>
+                <label htmlFor="wake_word" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Palavras de Ativação *
                 </label>
                 <input
@@ -275,94 +237,48 @@ export default function EditarEmpresaPage() {
                   id="wake_word"
                   name="wake_word"
                   required
-                  defaultValue={company.wake_word}
-                  placeholder="Ex: olá assistente, oi gerente"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent ${
-                    theme === 'dark'
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  defaultValue={assistant.wake_word}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                 />
-                <p className={`mt-1 text-xs ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                }`}>
-                  ✨ Separe múltiplas palavras com vírgula (,)
-                </p>
               </div>
 
+              {/* Mensagem de Ativação */}
               <div>
-                <label htmlFor="greeting_message" className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-                }`}>
-                  Mensagem de Saudação *
+                <label htmlFor="greeting_message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mensagem de Ativação *
                 </label>
                 <textarea
                   id="greeting_message"
                   name="greeting_message"
                   required
                   rows={3}
-                  defaultValue={company.greeting_message}
-                  placeholder="Ex: Olá! Como posso ajudar você hoje?"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent ${
-                    theme === 'dark'
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="system_prompt" className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-                }`}>
-                  Prompt do Assistente (Instruções) *
-                </label>
-                <textarea
-                  id="system_prompt"
-                  name="system_prompt"
-                  required
-                  rows={10}
-                  defaultValue={company.system_prompt || 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.'}
-                  placeholder="Defina como o assistente deve se comportar..."
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm ${
-                    theme === 'dark'
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  defaultValue={assistant.greeting_message}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                 />
               </div>
             </div>
 
-            <div className="mt-8 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={saving}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
-              >
-                Excluir Empresa
-              </button>
+            <div className="mt-8 flex items-center gap-4">
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                className="flex-1 flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 font-bold shadow-lg shadow-blue-500/20"
               >
-                {saving ? 'Salvando...' : 'Salvar Alterações'}
+                {saving ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-5 h-5 mr-2" />
+                )}
+                Salvar Alterações
               </button>
+              <Link
+                href="/dashboard/assistentes"
+                className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold"
+              >
+                Cancelar
+              </Link>
             </div>
           </form>
-
-          {/* ✨ NOVO: Formulário de Contatos (WhatsApp, Instagram, PIX) */}
-          <CompanyContactsForm
-            companyId={companyId}
-            theme={theme} // ← NOVO
-            initialData={{
-              whatsapp_number: company.whatsapp_number,
-              instagram_username: company.instagram_username,
-              pix_key: company.pix_key,
-              pix_key_type: company.pix_key_type,
-            }}
-          />
         </div>
       </div>
     </div>

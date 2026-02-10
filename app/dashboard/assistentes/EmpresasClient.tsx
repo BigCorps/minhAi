@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -95,7 +96,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                   bg-gray-100 text-gray-700 hover:bg-gray-200
                   dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:border dark:border-white/5"
                 >
-                  Configurar
+                  ⚙️ Configurar
                 </Link>
                 <Link
                   href={`/dashboard/assistentes/${assistant.id}/chat`}
@@ -103,7 +104,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                   bg-blue-50 text-blue-600 hover:bg-blue-100
                   dark:bg-blue-600/20 dark:text-blue-400 dark:hover:bg-blue-600/30 dark:border dark:border-blue-500/30"
                 >
-                  Testar
+                  💬 Testar
                 </Link>
               </div>
             </div>

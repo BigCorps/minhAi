@@ -47,6 +47,12 @@ export function VoiceAssistantWithWakeWord({
   const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
   const [companyGreeting, setCompanyGreeting] = useState<string>('');
 
+  // ✅ PASSO 1: Novo state para guardar configs das funções
+  const [functionSettings, setFunctionSettings] = useState<Record<string, {
+    saveToHistory: boolean;
+    creditsPerUse: number;
+  }>>({});
+
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
     qrCodeUrl: string;
@@ -180,6 +186,73 @@ export function VoiceAssistantWithWakeWord({
     
     loadCompanyConfig();
   }, [companyId, wakeWord, greetingMessage]);
+
+  // ========================================
+  // ✅ PASSO 1: useEffect para carregar function settings
+  // ========================================
+  useEffect(() => {
+    async function loadFunctionSettings() {
+      if (!companyId) return;
+
+      try {
+        const supabase = createClient();
+
+        // Busca configurações globais (assistant_functions)
+        // JOIN com configurações específicas da empresa (company_function_settings)
+        const { data, error } = await supabase
+          .from('assistant_functions')
+          .select(`
+            function_key,
+            save_to_history,
+            credits_per_use,
+            company_function_settings!inner(
+              is_enabled,
+              custom_credits_per_use
+            )
+          `)
+          .eq('company_function_settings.company_id', companyId)
+          .eq('is_active', true);
+
+        if (error || !data) {
+          // Fallback: buscar só assistant_functions sem join
+          const { data: fallback } = await supabase
+            .from('assistant_functions')
+            .select('function_key, save_to_history, credits_per_use')
+            .eq('is_active', true);
+
+          if (fallback) {
+            const settings: Record<string, any> = {};
+            fallback.forEach(f => {
+              settings[f.function_key] = {
+                saveToHistory: f.save_to_history,
+                creditsPerUse: f.credits_per_use,
+              };
+            });
+            setFunctionSettings(settings);
+          }
+          return;
+        }
+
+        // Monta mapa com custom_credits_per_use da empresa tendo prioridade
+        const settings: Record<string, any> = {};
+        data.forEach(f => {
+          const companySetting = f.company_function_settings?.[0];
+          settings[f.function_key] = {
+            saveToHistory: f.save_to_history,
+            creditsPerUse: companySetting?.custom_credits_per_use ?? f.credits_per_use,
+          };
+        });
+
+        setFunctionSettings(settings);
+        console.log('✅ Function settings carregados:', settings);
+
+      } catch (error) {
+        console.error('❌ Erro ao carregar function settings:', error);
+      }
+    }
+
+    loadFunctionSettings();
+  }, [companyId]);
 
   // ========================================
   // ✅ MUDANÇA 4: ATUALIZAR WAKEWORDDETECTOR
@@ -462,6 +535,42 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ========================================
+  // ✅ PASSO 2: Adicionar saveInteractionToHistory()
+  // ========================================
+  async function saveInteractionToHistory(
+    userMessage: string,
+    assistantMessage: string,
+  ) {
+    try {
+      const supabase = createClient();
+
+      const { data: conv, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          company_id: companyId,
+          status: 'completed',
+          total_messages: 2,
+        })
+        .select('id')
+        .single();
+
+      if (convError) {
+        console.error('❌ Erro ao criar conversa:', convError);
+        return;
+      }
+
+      await supabase.from('messages').insert([
+        { conversation_id: conv.id, role: 'user', content: userMessage },
+        { conversation_id: conv.id, role: 'assistant', content: assistantMessage },
+      ]);
+
+      console.log('✅ Salvo no histórico:', conv.id);
+    } catch (error) {
+      console.error('❌ Erro ao salvar histórico:', error);
+    }
+  }
+
+  // ========================================
   // ✅ MUDANÇA 8: STOPEVERYTHING() ATUALIZADO
   // ========================================
   function stopEverything() {
@@ -677,6 +786,7 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
+  // ✅ PASSO 3: Corrigir registerFunctionUsage() para usar functionSettings
   async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
     try {
       const supabase = createClient();
@@ -693,353 +803,370 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-async function handleFunctionClick(functionKey: string) {
-  console.log('🎯 Função clicada no carrossel:', functionKey);
-  
-  const isEnabled = await checkIfFunctionIsEnabled(functionKey);
-  
-  if (!isEnabled) {
-    console.log('⚠️ Função desativada:', functionKey);
-    await playText('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
+  // ✅ PASSO 3: Atualizar handleFunctionClick() para usar créditos dinâmicos
+  async function handleFunctionClick(functionKey: string) {
+    console.log('🎯 Função clicada no carrossel:', functionKey);
     
-    setTimeout(async () => {
-      if (isActiveRef.current) {
-        shouldProcessAudio.current = true;
-        await startGoogleSpeech();
-      }
-    }, 500);
+    const isEnabled = await checkIfFunctionIsEnabled(functionKey);
     
-    return;
-  }
-
-  if (currentAudioRef.current) {
-    currentAudioRef.current.pause();
-    currentAudioRef.current.currentTime = 0;
-    currentAudioRef.current = null;
-  }
-
-  setIsProcessing(true);
-
-  try {
-    switch (functionKey) {
-      // ✅ Perguntas Frequentes
-      case 'faq':
-        await playText('Me faça qualquer pergunta sobre nossos produtos, serviços, horários ou políticas. Estou aqui para te ajudar!');
-        break;
+    if (!isEnabled) {
+      console.log('⚠️ Função desativada:', functionKey);
+      await playText('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
       
-      // ✅ ChatGPT / Perguntas Gerais
-      case 'chatgpt':
-        await playText('Pode me fazer qualquer pergunta! Estou aqui para conversar e te ajudar com informações gerais.');
-        break;
+      setTimeout(async () => {
+        if (isActiveRef.current) {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+        }
+      }, 500);
       
-      // PIX
-      case 'pix_generate':
-        await playText('Para gerar um pix, me diga o valor. Por exemplo: gerar pix de 50 reais.');
-        break;
-        
-      // WhatsApp
-      case 'qrcode_whatsapp':
-        await handleWhatsAppCommand();
-        break;
-        
-      // Instagram
-      case 'qrcode_instagram':
-        await handleInstagramCommand();
-        break;
-        
-      // Fallback
-      default:
-        console.log('⚠️ Função não mapeada:', functionKey);
-        await playText(`A função ${functionKey} ainda não está configurada.`);
+      return;
     }
-    
-    await registerFunctionUsage(functionKey, 0);
-    
-  } catch (error) {
-    console.error('Erro ao executar função:', error);
-    await playText('Desculpe, ocorreu um erro ao executar esta função.');
-  } finally {
-    setIsProcessing(false);
-    
-    setTimeout(async () => {
-      if (isActiveRef.current) {
-        shouldProcessAudio.current = true;
-        await startGoogleSpeech();
+
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      switch (functionKey) {
+        // ✅ Perguntas Frequentes
+        case 'faq':
+          await playText('Me faça qualquer pergunta sobre nossos produtos, serviços, horários ou políticas. Estou aqui para te ajudar!');
+          break;
+        
+        // ✅ ChatGPT / Perguntas Gerais
+        case 'chatgpt':
+          await playText('Pode me fazer qualquer pergunta! Estou aqui para conversar e te ajudar com informações gerais.');
+          break;
+        
+        // PIX
+        case 'pix_generate':
+          await playText('Para gerar um pix, me diga o valor. Por exemplo: gerar pix de 50 reais.');
+          break;
+          
+        // WhatsApp
+        case 'qrcode_whatsapp':
+          await handleWhatsAppCommand();
+          break;
+          
+        // Instagram
+        case 'qrcode_instagram':
+          await handleInstagramCommand();
+          break;
+          
+        // Fallback
+        default:
+          console.log('⚠️ Função não mapeada:', functionKey);
+          await playText(`A função ${functionKey} ainda não está configurada.`);
       }
-    }, 500);
+      
+      // ✅ PASSO 3: Usar créditos dinâmicos do functionSettings
+      await registerFunctionUsage(
+        functionKey,
+        functionSettings[functionKey]?.creditsPerUse ?? 0
+      );
+      
+    } catch (error) {
+      console.error('Erro ao executar função:', error);
+      await playText('Desculpe, ocorreu um erro ao executar esta função.');
+    } finally {
+      setIsProcessing(false);
+      
+      setTimeout(async () => {
+        if (isActiveRef.current) {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+        }
+      }, 500);
+    }
   }
-}
 
   // ========================================
   // NUMBER CONVERSION
   // ========================================
-function convertWordsToNumbers(text: string): string {
-  const numberWords: {[key: string]: string} = {
-    // Unidades
-    'zero': '0', 'um': '1', 'dois': '2', 'três': '3', 'tres': '3',
-    'quatro': '4', 'cinco': '5', 'seis': '6', 'sete': '7',
-    'oito': '8', 'nove': '9',
+  function convertWordsToNumbers(text: string): string {
+    const numberWords: {[key: string]: string} = {
+      // Unidades
+      'zero': '0', 'um': '1', 'dois': '2', 'três': '3', 'tres': '3',
+      'quatro': '4', 'cinco': '5', 'seis': '6', 'sete': '7',
+      'oito': '8', 'nove': '9',
+      
+      // Dezenas especiais
+      'dez': '10', 'onze': '11', 'doze': '12', 'treze': '13',
+      'catorze': '14', 'quatorze': '14', 'quinze': '15',
+      'dezesseis': '16', 'dezessete': '17', 'dezoito': '18', 'dezenove': '19',
+      
+      // Dezenas
+      'vinte': '20', 'trinta': '30', 'quarenta': '40', 'cinquenta': '50',
+      'sessenta': '60', 'setenta': '70', 'oitenta': '80', 'noventa': '90',
+      
+      // Centenas
+      'cem': '100', 'cento': '100',
+      'duzentos': '200', 'trezentos': '300', 'quatrocentos': '400',
+      'quinhentos': '500', 'seiscentos': '600', 'setecentos': '700',
+      'oitocentos': '800', 'novecentos': '900',
+      
+      // Milhares
+      'mil': '1000',
+    };
     
-    // Dezenas especiais
-    'dez': '10', 'onze': '11', 'doze': '12', 'treze': '13',
-    'catorze': '14', 'quatorze': '14', 'quinze': '15',
-    'dezesseis': '16', 'dezessete': '17', 'dezoito': '18', 'dezenove': '19',
+    let result = text;
     
-    // Dezenas
-    'vinte': '20', 'trinta': '30', 'quarenta': '40', 'cinquenta': '50',
-    'sessenta': '60', 'setenta': '70', 'oitenta': '80', 'noventa': '90',
+    // ✅ Processar composições como "vinte e cinco" → "25"
+    const composicoes = [
+      { pattern: /vinte e um/gi, value: '21' },
+      { pattern: /vinte e dois/gi, value: '22' },
+      { pattern: /vinte e três/gi, value: '23' },
+      { pattern: /vinte e quatro/gi, value: '24' },
+      { pattern: /vinte e cinco/gi, value: '25' },
+      { pattern: /trinta e cinco/gi, value: '35' },
+      { pattern: /quarenta e cinco/gi, value: '45' },
+      { pattern: /cinquenta e cinco/gi, value: '55' },
+      // Adicione mais conforme necessário
+    ];
     
-    // Centenas
-    'cem': '100', 'cento': '100',
-    'duzentos': '200', 'trezentos': '300', 'quatrocentos': '400',
-    'quinhentos': '500', 'seiscentos': '600', 'setecentos': '700',
-    'oitocentos': '800', 'novecentos': '900',
+    for (const comp of composicoes) {
+      result = result.replace(comp.pattern, comp.value);
+    }
     
-    // Milhares
-    'mil': '1000',
-  };
-  
-  let result = text;
-  
-  // ✅ Processar composições como "vinte e cinco" → "25"
-  const composicoes = [
-    { pattern: /vinte e um/gi, value: '21' },
-    { pattern: /vinte e dois/gi, value: '22' },
-    { pattern: /vinte e três/gi, value: '23' },
-    { pattern: /vinte e quatro/gi, value: '24' },
-    { pattern: /vinte e cinco/gi, value: '25' },
-    { pattern: /trinta e cinco/gi, value: '35' },
-    { pattern: /quarenta e cinco/gi, value: '45' },
-    { pattern: /cinquenta e cinco/gi, value: '55' },
-    // Adicione mais conforme necessário
-  ];
-  
-  for (const comp of composicoes) {
-    result = result.replace(comp.pattern, comp.value);
+    // ✅ Substituir palavras individuais
+    for (const [word, number] of Object.entries(numberWords)) {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      result = result.replace(regex, number);
+    }
+    
+    return result;
   }
-  
-  // ✅ Substituir palavras individuais
-  for (const [word, number] of Object.entries(numberWords)) {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    result = result.replace(regex, number);
-  }
-  
-  return result;
-}
 
-function correctTranscriptionErrors(text: string): string {
-  let corrected = text;
-  
-  // Mapa de correções (palavra errada → palavra correta)
-  const corrections: { [key: string]: string } = {
-    // PIX e variações
-    'picos': 'pix',
-    'picks': 'pix',
-    'pix': 'pix', // manter original
-    'piche': 'pix',
-    'pics': 'pix',
-    'pixel': 'pix',
+  function correctTranscriptionErrors(text: string): string {
+    let corrected = text;
     
-    // Cobrança
-    'cobranca': 'cobrança',
-    'cobranças': 'cobrança',
+    // Mapa de correções (palavra errada → palavra correta)
+    const corrections: { [key: string]: string } = {
+      // PIX e variações
+      'picos': 'pix',
+      'picks': 'pix',
+      'pix': 'pix', // manter original
+      'piche': 'pix',
+      'pics': 'pix',
+      'pixel': 'pix',
+      
+      // Cobrança
+      'cobranca': 'cobrança',
+      'cobranças': 'cobrança',
+      
+      // WhatsApp
+      'watts': 'whatsapp',
+      'what\'s': 'whatsapp',
+      'whats': 'whatsapp',
+      'zap': 'whatsapp',
+      'zapp': 'whatsapp',
+      
+      // Instagram
+      'instagran': 'instagram',
+      'insta': 'instagram',
+      'istagran': 'instagram',
+      
+      // Números problemáticos
+      'sentavos': 'centavos',
+      'reais': 'reais',
+      'real': 'reais',
+      
+      // Ações
+      'gera': 'gerar',
+      'cria': 'criar',
+      'faz': 'fazer',
+      'cobra': 'cobrar',
+    };
     
-    // WhatsApp
-    'watts': 'whatsapp',
-    'what\'s': 'whatsapp',
-    'whats': 'whatsapp',
-    'zap': 'whatsapp',
-    'zapp': 'whatsapp',
+    // Aplicar correções (case-insensitive)
+    for (const [wrong, right] of Object.entries(corrections)) {
+      const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+      corrected = corrected.replace(regex, right);
+    }
     
-    // Instagram
-    'instagran': 'instagram',
-    'insta': 'instagram',
-    'istagran': 'instagram',
-    
-    // Números problemáticos
-    'sentavos': 'centavos',
-    'reais': 'reais',
-    'real': 'reais',
-    
-    // Ações
-    'gera': 'gerar',
-    'cria': 'criar',
-    'faz': 'fazer',
-    'cobra': 'cobrar',
-  };
-  
-  // Aplicar correções (case-insensitive)
-  for (const [wrong, right] of Object.entries(corrections)) {
-    const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-    corrected = corrected.replace(regex, right);
+    return corrected;
   }
-  
-  return corrected;
-}
 
   // ========================================
   // VOICE COMMAND DETECTION
   // ========================================
-async function detectVoiceCommand(transcript: string): Promise<boolean> {
-  // ✅ PASSO 1: Corrigir erros de transcrição PRIMEIRO
-  const correctedTranscript = correctTranscriptionErrors(transcript);
-  const lowerTranscript = correctedTranscript.toLowerCase().trim();
-  
-  console.log('🔍 Original:', transcript);
-  if (correctedTranscript !== transcript) {
-    console.log('🔧 Corrigido:', correctedTranscript);
-  }
-  console.log('🔍 Processando:', lowerTranscript);
-  
-  // ✅ PASSO 2: Converter números por extenso
-  const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
-  console.log('🔢 Após conversão:', transcriptWithNumbers);
-  
-  // WhatsApp
-  const whatsappTriggers = [
-    'whatsapp', 'whats', 'zap', 'número', 'contato'
-  ];
-  
-  if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-    console.log('📱 Comando WhatsApp detectado!');
-    const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
-    if (!isEnabled) {
-      await playText('A função WhatsApp está desativada no momento.');
-      return true;
-    }
-    await handleWhatsAppCommand();
-    await registerFunctionUsage('qrcode_whatsapp', 0);
-    return true;
-  }
-  
-  // Instagram
-  const instagramTriggers = [
-    'instagram', 'insta', 'arroba', 'perfil'
-  ];
-  
-  if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-    console.log('📸 Comando Instagram detectado!');
-    const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
-    if (!isEnabled) {
-      await playText('A função Instagram está desativada no momento.');
-      return true;
-    }
-    await handleInstagramCommand();
-    await registerFunctionUsage('qrcode_instagram', 0);
-    return true;
-  }
-  
-  // Confirmar PIX
-  const confirmTriggers = [
-    'confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'
-  ];
-  
-  if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-    console.log('✅ Comando CONFIRMAR PIX detectado!');
-    const currentPixState = pixStateRef.current;
-    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-      console.log('💳 PIX aberto encontrado, confirmando...');
-      await handleConfirmPix();
-      return true;
-    } else {
-      console.log('⚠️ Nenhum PIX aberto para confirmar');
-      await playText('Não há nenhum PIX aberto para confirmar');
-      return true;
-    }
-  }
-  
-  // Cancelar PIX
-  const cancelTriggers = [
-    'cancelar', 'cancela', 'desistir', 'não quero', 'fechar'
-  ];
-  
-  if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
-      lowerTranscript.includes('pix')) {
-    console.log('❌ Comando CANCELAR PIX detectado!');
-    const currentPixState = pixStateRef.current;
-    if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-      console.log('💳 PIX aberto encontrado, cancelando...');
-      await handleCancelPix();
-      return true;
-    } else {
-      console.log('⚠️ Nenhum PIX aberto para cancelar');
-      await playText('Não há nenhum PIX aberto');
-      return true;
-    }
-  }
-  
-  // ✅ PIX Generation - VERSÃO MELHORADA com correção
-  console.log('💰 Procurando padrões PIX...');
-  
-  // Padrões ampliados e mais flexíveis
-  const pixPatterns = [
-    // "gerar/criar/fazer pix de 50"
-    /(?:gerar|gera|criar|cria|fazer|faz|faça|quero)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+  async function detectVoiceCommand(transcript: string): Promise<boolean> {
+    // ✅ PASSO 1: Corrigir erros de transcrição PRIMEIRO
+    const correctedTranscript = correctTranscriptionErrors(transcript);
+    const lowerTranscript = correctedTranscript.toLowerCase().trim();
     
-    // "pix de 100 reais"
-    /(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+    console.log('🔍 Original:', transcript);
+    if (correctedTranscript !== transcript) {
+      console.log('🔧 Corrigido:', correctedTranscript);
+    }
+    console.log('🔍 Processando:', lowerTranscript);
     
-    // "cobrar 25 reais"
-    /(?:cobrar|cobra)\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+    // ✅ PASSO 2: Converter números por extenso
+    const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
+    console.log('🔢 Após conversão:', transcriptWithNumbers);
     
-    // "50 reais no pix" ou "50 no pix"
-    /(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?\s*(?:no|via|pelo|por)?\s*pix/i,
+    // WhatsApp
+    const whatsappTriggers = [
+      'whatsapp', 'whats', 'zap', 'número', 'contato'
+    ];
     
-    // "valor de 30" (quando contexto já é PIX)
-    /(?:valor|no valor)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)/i,
-  ];
-  
-  for (const pattern of pixPatterns) {
-    const match = transcriptWithNumbers.match(pattern);
-    if (match) {
-      console.log('🎯 Pattern matched:', pattern.source);
-      console.log('📝 Match completo:', match[0]);
-      
-      // Tentar extrair valor de diferentes grupos de captura
-      let amountStr = match[2] || match[1];
-      
-      if (!amountStr) {
-        console.log('⚠️ Valor não encontrado no match');
-        continue;
+    if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('📱 Comando WhatsApp detectado!');
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
+      if (!isEnabled) {
+        await playText('A função WhatsApp está desativada no momento.');
+        return true;
       }
-      
-      console.log('💵 Valor extraído:', amountStr);
-      
-      // Limpar e converter
-      amountStr = amountStr.replace(/[^\d,.]/, '').replace(',', '.');
-      const amount = parseFloat(amountStr);
-      
-      console.log('💰 Valor convertido:', amount);
-      
-      if (amount > 0 && amount < 100000) { // Limite razoável
-        console.log(`✅ PIX detectado! Valor: R$ ${amount.toFixed(2)}`);
-        
-        const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
-        
-        if (!isEnabled) {
-          await playText('A função PIX está desativada no momento.');
-          return true;
-        }
-        
-        await handlePixCommand(amount);
-        await registerFunctionUsage('pix_generate', 0);
+      await handleWhatsAppCommand();
+      // ✅ PASSO 3: Usar créditos dinâmicos
+      await registerFunctionUsage(
+        'qrcode_whatsapp',
+        functionSettings['qrcode_whatsapp']?.creditsPerUse ?? 0
+      );
+      return true;
+    }
+    
+    // Instagram
+    const instagramTriggers = [
+      'instagram', 'insta', 'arroba', 'perfil'
+    ];
+    
+    if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('📸 Comando Instagram detectado!');
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
+      if (!isEnabled) {
+        await playText('A função Instagram está desativada no momento.');
+        return true;
+      }
+      await handleInstagramCommand();
+      // ✅ PASSO 3: Usar créditos dinâmicos
+      await registerFunctionUsage(
+        'qrcode_instagram',
+        functionSettings['qrcode_instagram']?.creditsPerUse ?? 0
+      );
+      return true;
+    }
+    
+    // Confirmar PIX
+    const confirmTriggers = [
+      'confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'
+    ];
+    
+    if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('✅ Comando CONFIRMAR PIX detectado!');
+      const currentPixState = pixStateRef.current;
+      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+        console.log('💳 PIX aberto encontrado, confirmando...');
+        await handleConfirmPix();
         return true;
       } else {
-        console.log('⚠️ Valor fora do limite:', amount);
+        console.log('⚠️ Nenhum PIX aberto para confirmar');
+        await playText('Não há nenhum PIX aberto para confirmar');
+        return true;
       }
     }
+    
+    // Cancelar PIX
+    const cancelTriggers = [
+      'cancelar', 'cancela', 'desistir', 'não quero', 'fechar'
+    ];
+    
+    if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
+        lowerTranscript.includes('pix')) {
+      console.log('❌ Comando CANCELAR PIX detectado!');
+      const currentPixState = pixStateRef.current;
+      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
+        console.log('💳 PIX aberto encontrado, cancelando...');
+        await handleCancelPix();
+        return true;
+      } else {
+        console.log('⚠️ Nenhum PIX aberto para cancelar');
+        await playText('Não há nenhum PIX aberto');
+        return true;
+      }
+    }
+    
+    // ✅ PIX Generation - VERSÃO MELHORADA com correção
+    console.log('💰 Procurando padrões PIX...');
+    
+    // Padrões ampliados e mais flexíveis
+    const pixPatterns = [
+      // "gerar/criar/fazer pix de 50"
+      /(?:gerar|gera|criar|cria|fazer|faz|faça|quero)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+      
+      // "pix de 100 reais"
+      /(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+      
+      // "cobrar 25 reais"
+      /(?:cobrar|cobra)\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+      
+      // "50 reais no pix" ou "50 no pix"
+      /(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?\s*(?:no|via|pelo|por)?\s*pix/i,
+      
+      // "valor de 30" (quando contexto já é PIX)
+      /(?:valor|no valor)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)/i,
+    ];
+    
+    for (const pattern of pixPatterns) {
+      const match = transcriptWithNumbers.match(pattern);
+      if (match) {
+        console.log('🎯 Pattern matched:', pattern.source);
+        console.log('📝 Match completo:', match[0]);
+        
+        // Tentar extrair valor de diferentes grupos de captura
+        let amountStr = match[2] || match[1];
+        
+        if (!amountStr) {
+          console.log('⚠️ Valor não encontrado no match');
+          continue;
+        }
+        
+        console.log('💵 Valor extraído:', amountStr);
+        
+        // Limpar e converter
+        amountStr = amountStr.replace(/[^\d,.]/, '').replace(',', '.');
+        const amount = parseFloat(amountStr);
+        
+        console.log('💰 Valor convertido:', amount);
+        
+        if (amount > 0 && amount < 100000) { // Limite razoável
+          console.log(`✅ PIX detectado! Valor: R$ ${amount.toFixed(2)}`);
+          
+          const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
+          
+          if (!isEnabled) {
+            await playText('A função PIX está desativada no momento.');
+            return true;
+          }
+          
+          await handlePixCommand(amount);
+          // ✅ PASSO 3: Usar créditos dinâmicos
+          await registerFunctionUsage(
+            'pix_generate',
+            functionSettings['pix_generate']?.creditsPerUse ?? 0
+          );
+          return true;
+        } else {
+          console.log('⚠️ Valor fora do limite:', amount);
+        }
+      }
+    }
+    
+    // ✅ FALLBACK: Se mencionou PIX mas não encontrou valor
+    if (lowerTranscript.includes('pix')) {
+      console.log('⚠️ Mencionou PIX mas sem valor claro');
+      await playText('Qual o valor do PIX que você deseja gerar?');
+      return true;
+    }
+    
+    console.log('❌ Nenhum comando detectado');
+    return false;
   }
-  
-  // ✅ FALLBACK: Se mencionou PIX mas não encontrou valor
-  if (lowerTranscript.includes('pix')) {
-    console.log('⚠️ Mencionou PIX mas sem valor claro');
-    await playText('Qual o valor do PIX que você deseja gerar?');
-    return true;
-  }
-  
-  console.log('❌ Nenhum comando detectado');
-  return false;
-}
 
   // ========================================
   // COMMAND HANDLERS
@@ -1147,6 +1274,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     }
   }
 
+  // ✅ PASSO 4: Corrigir handleConfirmPix() para salvar no histórico
   async function handleConfirmPix() {
     console.log('🔘 handleConfirmPix chamada');
     
@@ -1192,7 +1320,24 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
       console.log('✅ PIX confirmado:', data);
       setPixConfirmationData(null);
       
-      await playText('Pagamento confirmado com sucesso!');
+      const confirmationMessage = 'Pagamento confirmado com sucesso!';
+      await playText(confirmationMessage);
+      
+      // ✅ PASSO 4: Verificar dinamicamente se deve salvar
+      const shouldSave = functionSettings['pix_confirm']?.saveToHistory ?? false;
+
+      if (shouldSave) {
+        await saveInteractionToHistory(
+          'Confirmar pagamento PIX',
+          `Pagamento PIX de R$ ${currentData.amount} confirmado com sucesso!`,
+        );
+      }
+      
+      // ✅ PASSO 3: Usar créditos dinâmicos
+      await registerFunctionUsage(
+        'pix_confirm',
+        functionSettings['pix_confirm']?.creditsPerUse ?? 0
+      );
       
     } catch (error: any) {
       console.error('❌ Erro geral:', error);
@@ -1619,51 +1764,51 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
     }
   }
 
-async function playProcessingFeedback(): Promise<HTMLAudioElement> {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log('🔔 Tocando bipe de confirmação');
-      
-      // Bipe simples e profissional (440Hz por 150ms)
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 440; // Lá (A4) - tom agradável
-      oscillator.type = 'sine'; // Onda senoidal suave
-      
-      gainNode.gain.value = 0.3; // Volume moderado
-      
-      const currentTime = audioContext.currentTime;
-      
-      // Fade in rápido (50ms)
-      gainNode.gain.setValueAtTime(0, currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, currentTime + 0.05);
-      
-      // Fade out (50ms)
-      gainNode.gain.setValueAtTime(0.3, currentTime + 0.1);
-      gainNode.gain.linearRampToValueAtTime(0, currentTime + 0.15);
-      
-      oscillator.start(currentTime);
-      oscillator.stop(currentTime + 0.15);
-      
-      // Criar um HTMLAudioElement fake para compatibilidade
-      const fakeAudio = new Audio();
-      fakeAudio.onended = () => {};
-      
-      setTimeout(() => {
-        resolve(fakeAudio);
-      }, 150);
-      
-    } catch (err) {
-      console.log('⚠️ Bipe falhou:', err);
-      reject(err);
-    }
-  });
-}
+  async function playProcessingFeedback(): Promise<HTMLAudioElement> {
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('🔔 Tocando bipe de confirmação');
+        
+        // Bipe simples e profissional (440Hz por 150ms)
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 440; // Lá (A4) - tom agradável
+        oscillator.type = 'sine'; // Onda senoidal suave
+        
+        gainNode.gain.value = 0.3; // Volume moderado
+        
+        const currentTime = audioContext.currentTime;
+        
+        // Fade in rápido (50ms)
+        gainNode.gain.setValueAtTime(0, currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, currentTime + 0.05);
+        
+        // Fade out (50ms)
+        gainNode.gain.setValueAtTime(0.3, currentTime + 0.1);
+        gainNode.gain.linearRampToValueAtTime(0, currentTime + 0.15);
+        
+        oscillator.start(currentTime);
+        oscillator.stop(currentTime + 0.15);
+        
+        // Criar um HTMLAudioElement fake para compatibilidade
+        const fakeAudio = new Audio();
+        fakeAudio.onended = () => {};
+        
+        setTimeout(() => {
+          resolve(fakeAudio);
+        }, 150);
+        
+      } catch (err) {
+        console.log('⚠️ Bipe falhou:', err);
+        reject(err);
+      }
+    });
+  }
 
   async function playGoodbye() {
     try {

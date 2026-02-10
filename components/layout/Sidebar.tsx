@@ -18,7 +18,7 @@ import {
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/assistentes', label: 'Assistentes', icon: Bot },
-  { href: '/dashboard/functions', label: 'Funções', icon: Settings },
+  { href: '/dashboard/funcoes', label: 'Funções', icon: Settings },
   { href: '/dashboard/faqs', label: 'FAQs', icon: HelpCircle },
   { href: '/dashboard/saldo', label: 'Saldo', icon: Wallet },
   { href: '/dashboard/historico', label: 'Histórico', icon: MessageSquare },
@@ -66,7 +66,7 @@ export function Sidebar() {
               <h3 className={`text-sm font-semibold ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
-                eAi.app.br
+                Navegação
               </h3>
             </div>
 

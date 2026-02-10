@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ArrowLeft, Save, Loader2, Globe, Lock } from 'lucide-react';
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState(true);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -19,9 +21,12 @@ export default function NovaEmpresaPage() {
     const data = {
       name: formData.get('name') as string,
       slug: formData.get('slug') as string,
+      logo_url: formData.get('logo_url') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
-      system_prompt: formData.get('system_prompt') as string,
+      is_public: isPublic,
+      // Valores padrão para campos que agora são definidos em outros lugares
+      system_prompt: 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.',
     };
 
     try {
@@ -32,11 +37,11 @@ export default function NovaEmpresaPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao criar empresa');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao criar assistente');
       }
 
-      router.push('/dashboard/empresas');
+      router.push('/dashboard/assistentes');
       router.refresh();
     } catch (err: any) {
       setError(err.message);
@@ -54,179 +59,178 @@ export default function NovaEmpresaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image 
-                  src="/logo.png" 
-                  alt="eAi" 
-                  width={150} 
-                  height={68}
-                  className="rounded-lg cursor-pointer"
-                />
-              </Link>
-              <h1 className="text-xl font-bold text-gray-900">
-                Nova Empresa
-              </h1>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-transparent">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Link
-          href="/dashboard/empresas"
-          className="inline-flex items-center text-primary-green hover:text-primary-green-dark mb-6"
+          href="/dashboard/assistentes"
+          className="inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white mb-6 transition"
         >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Voltar para Empresas
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Voltar para Assistentes
         </Link>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
+        <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+          <div className="px-8 py-6 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Novo Assistente
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Configure as informações básicas do seu novo assistente virtual.
+            </p>
+          </div>
 
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-900 mb-2">
-                Nome da Empresa *
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                required
-                placeholder="Ex: Restaurante Bella Vista"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
-                onChange={(e) => {
-                  const slugInput = document.getElementById('slug') as HTMLInputElement;
-                  if (slugInput) {
-                    slugInput.value = generateSlug(e.target.value);
-                  }
-                }}
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="p-8">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
 
-            <div>
-              <label htmlFor="slug" className="block text-sm font-medium text-gray-900 mb-2">
-                Slug (identificador único) *
-              </label>
-              <input
-                type="text"
-                id="slug"
-                name="slug"
-                required
-                placeholder="restaurante-bella-vista"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Será usado na URL pública: <strong>eai.app.br/ia/seu-slug</strong>
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="wake_word" className="block text-sm font-medium text-gray-900 mb-2">
-                Palavras de Ativação *
-              </label>
-              <input
-                type="text"
-                id="wake_word"
-                name="wake_word"
-                required
-                defaultValue="olá assistente"
-                placeholder="Ex: olá assistente, oi gerente, ei computador"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                ✨ <strong>Dica:</strong> Separe múltiplas palavras com vírgula (,)
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Exemplo: "olá assistente, oi gerente, ei sistema"
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {[
-                  'olá assistente',
-                  'oi gerente',
-                  'ei sistema',
-                  'olá assistente, oi gerente',
-                  'atenção, ei computador'
-                ].map((word) => (
-                  <button
-                    key={word}
-                    type="button"
-                    onClick={() => {
-                      const input = document.getElementById('wake_word') as HTMLInputElement;
-                      if (input) input.value = word;
+            <div className="space-y-6">
+              {/* Nome e Slug */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome do Assistente *
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                    placeholder="Ex: Suporte eAi"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                    onChange={(e) => {
+                      const slugInput = document.getElementById('slug') as HTMLInputElement;
+                      if (slugInput) slugInput.value = generateSlug(e.target.value);
                     }}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="slug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Slug (URL Pública) *
+                  </label>
+                  <input
+                    type="text"
+                    id="slug"
+                    name="slug"
+                    required
+                    placeholder="suporte-eai"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition"
+                  />
+                </div>
+              </div>
+
+              {/* Logo URL */}
+              <div>
+                <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Link do Logo (URL da Imagem)
+                </label>
+                <input
+                  type="url"
+                  id="logo_url"
+                  name="logo_url"
+                  placeholder="https://exemplo.com/logo.png"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                />
+              </div>
+
+              {/* Visibilidade */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Visibilidade do Assistente
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(true)}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      isPublic 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' 
+                        : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
+                    }`}
                   >
-                    {word}
+                    <Globe className="w-5 h-5 mr-2" />
+                    <div className="text-left">
+                      <p className="font-bold text-sm">Público</p>
+                      <p className="text-[10px] opacity-70">Acessível via link slug</p>
+                    </div>
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(false)}
+                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                      !isPublic 
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400' 
+                        : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
+                    }`}
+                  >
+                    <Lock className="w-5 h-5 mr-2" />
+                    <div className="text-left">
+                      <p className="font-bold text-sm">Privado</p>
+                      <p className="text-[10px] opacity-70">Acessível via link único</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Palavras de Ativação */}
+              <div>
+                <label htmlFor="wake_word" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Palavras de Ativação *
+                </label>
+                <input
+                  type="text"
+                  id="wake_word"
+                  name="wake_word"
+                  required
+                  defaultValue="olá assistente"
+                  placeholder="Ex: olá assistente, oi gerente"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                />
+                <p className="mt-1 text-xs text-gray-500">Separe múltiplas palavras com vírgula (,)</p>
+              </div>
+
+              {/* Mensagem de Ativação */}
+              <div>
+                <label htmlFor="greeting_message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mensagem de Ativação *
+                </label>
+                <textarea
+                  id="greeting_message"
+                  name="greeting_message"
+                  required
+                  rows={3}
+                  defaultValue="Olá! Como posso ajudar você hoje?"
+                  placeholder="Frase que o assistente dirá ao ser ativado"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="greeting_message" className="block text-sm font-medium text-gray-900 mb-2">
-                Mensagem de Saudação *
-              </label>
-              <textarea
-                id="greeting_message"
-                name="greeting_message"
-                required
-                rows={3}
-                defaultValue="Olá! Como posso ajudar você hoje?"
-                placeholder="Ex: Olá! Como posso ajudar você hoje?"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Frase que o assistente dirá após detectar as palavras de ativação
-              </p>
+            <div className="mt-8 flex items-center gap-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 font-bold shadow-lg shadow-blue-500/20"
+              >
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-5 h-5 mr-2" />
+                )}
+                Criar Assistente
+              </button>
+              <Link
+                href="/dashboard/assistentes"
+                className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold"
+              >
+                Cancelar
+              </Link>
             </div>
-
-            <div>
-              <label htmlFor="system_prompt" className="block text-sm font-medium text-gray-900 mb-2">
-                Prompt do Assistente (Instruções) *
-              </label>
-              <textarea
-                id="system_prompt"
-                name="system_prompt"
-                required
-                rows={8}
-                defaultValue="Você é um assistente virtual prestativo que ajuda os clientes. Responda de forma clara, objetiva e educada. Use um tom profissional e amigável."
-                placeholder="Defina como o assistente deve se comportar, que informações ele tem acesso, como deve responder..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-green focus:border-transparent font-mono text-sm"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Instruções que definem o comportamento do assistente. Seja específico sobre o que ele deve fazer.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 flex items-center space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
-            >
-              {loading ? 'Criando...' : 'Criar Empresa'}
-            </button>
-            <Link
-              href="/dashboard/empresas"
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-semibold"
-            >
-              Cancelar
-            </Link>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

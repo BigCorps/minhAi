@@ -645,7 +645,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                         ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
                         : 'bg-blue-500 text-white'
                     }`}>3</span>
-                    <span>Faça sua pergunta</span>
+                    <span>Faça sua solicitação</span>
                   </div>
                   <div className={`flex items-center space-x-2 transition-colors ${
                     theme === 'dark' ? 'text-white/60' : 'text-gray-600'
@@ -655,7 +655,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                         ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
                         : 'bg-blue-500 text-white'
                     }`}>4</span>
-                    <span>Diga "tchau" para encerrar</span>
+                    <span>Aguarde a resposta ou a execução do que solicitou.</span>
                   </div>
                 </div>
               </div>

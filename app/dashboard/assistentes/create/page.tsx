@@ -1,9 +1,9 @@
+// app/dashboard/assistentes/create/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowLeft, Save, Loader2, Globe, Lock } from 'lucide-react';
 
 export default function NovaEmpresaPage() {
@@ -20,13 +20,11 @@ export default function NovaEmpresaPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get('name') as string,
-      slug: formData.get('slug') as string,
+      slug: isPublic ? (formData.get('slug') as string) : '', // Envia slug vazio se for privado
       logo_url: formData.get('logo_url') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
       is_public: isPublic,
-      // Valores padrão para campos que agora são definidos em outros lugares
-      system_prompt: 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.',
     };
 
     try {
@@ -88,7 +86,7 @@ export default function NovaEmpresaPage() {
 
             <div className="space-y-6">
               {/* Nome e Slug */}
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className={`grid ${isPublic ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nome do Assistente *
@@ -101,25 +99,29 @@ export default function NovaEmpresaPage() {
                     placeholder="Ex: Suporte eAi"
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                     onChange={(e) => {
-                      const slugInput = document.getElementById('slug') as HTMLInputElement;
-                      if (slugInput) slugInput.value = generateSlug(e.target.value);
+                      if (isPublic) {
+                        const slugInput = document.getElementById('slug') as HTMLInputElement;
+                        if (slugInput) slugInput.value = generateSlug(e.target.value);
+                      }
                     }}
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="slug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Slug (URL Pública) *
-                  </label>
-                  <input
-                    type="text"
-                    id="slug"
-                    name="slug"
-                    required
-                    placeholder="suporte-eai"
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition"
-                  />
-                </div>
+                {isPublic && (
+                  <div>
+                    <label htmlFor="slug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Slug (URL Pública) *
+                    </label>
+                    <input
+                      type="text"
+                      id="slug"
+                      name="slug"
+                      required={isPublic}
+                      placeholder="suporte-eai"
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Logo URL */}
@@ -144,7 +146,7 @@ export default function NovaEmpresaPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
-                    onClick={() => setIsPublic(true)}
+                    onClick={( ) => setIsPublic(true)}
                     className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
                       isPublic 
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' 

@@ -278,39 +278,6 @@ export default function PerfilPage() {
           </div>
         )}
 
-        {/* Informações do Usuário */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
-              <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Informações do Usuário</h2>
-          </div>
-
-          <form onSubmit={handleUpdateProfile} className="space-y-6">
-            <div>
-              <label htmlFor="userName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome</label>
-              <input
-                type="text"
-                id="userName"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="Seu nome completo"
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={updating}
-              className="w-full flex items-center justify-center px-6 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50"
-            >
-              {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-              Salvar Informações
-            </button>
-          </form>
-        </div>
-
         {/* Biometria - Horizontal compacto */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -377,6 +344,39 @@ export default function PerfilPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
+          {/* Informações do Usuário */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
+                <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Informações do Usuário</h2>
+            </div>
+
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+              <div>
+                <label htmlFor="userName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome</label>
+                <input
+                  type="text"
+                  id="userName"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Seu nome completo"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={updating}
+                className="w-full flex items-center justify-center px-6 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50"
+              >
+                {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+                Salvar Informações
+              </button>
+            </form>
+          </div>
+
           {/* Configuração Pix */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-3 mb-6">
@@ -437,52 +437,53 @@ export default function PerfilPage() {
             </form>
           </div>
 
-          {/* Alterar Senha */}
-          {!isGoogleUser && (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-red-100 dark:bg-red-500/10 rounded-lg">
-                  <Lock className="w-5 h-5 text-red-600 dark:text-red-400" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Alterar Senha</h2>
-              </div>
-
-              <form onSubmit={handleChangePassword} className="space-y-6">
-                <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nova Senha</label>
-                  <input
-                    type="password"
-                    id="newPassword"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="********"
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirmar Nova Senha</label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="********"
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={updating}
-                  className="w-full flex items-center justify-center px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold disabled:opacity-50"
-                >
-                  {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-                  Alterar Senha
-                </button>
-              </form>
-            </div>
-          )}
-
         </div>
+
+        {/* Alterar Senha */}
+        {!isGoogleUser && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-red-100 dark:bg-red-500/10 rounded-lg">
+                <Lock className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Alterar Senha</h2>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="space-y-6">
+              <div>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nova Senha</label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="********"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirmar Nova Senha</label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="********"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={updating}
+                className="w-full flex items-center justify-center px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-bold disabled:opacity-50"
+              >
+                {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+                Alterar Senha
+              </button>
+            </form>
+          </div>
+        )}
+
       </div>
     </div>
   );

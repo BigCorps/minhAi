@@ -1,6 +1,3 @@
-// app/auth/callback/route.ts
-// Callback OAuth - REDIRECIONA PARA /dashboard
-
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
@@ -8,7 +5,7 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') ?? '/dashboard'; // ✅ MUDANÇA: Redireciona para /dashboard
+  const next = requestUrl.searchParams.get('next') ?? '/dashboard';
 
   if (code) {
     try {
@@ -26,8 +23,17 @@ export async function GET(request: Request) {
         console.log('✅ Sessão criada:', data.session.user.email);
         console.log('🔄 Redirecionando para:', next);
         
-        // ✅ Redirecionar para /dashboard
-        return NextResponse.redirect(new URL(next, requestUrl.origin));
+        const response = NextResponse.redirect(new URL(next, requestUrl.origin));
+
+        // Salvar email no cookie para biometria detectar no login
+        response.cookies.set('lastLoggedInUser', data.session.user.email!, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: 'lax',
+          secure: true,
+        });
+
+        return response;
       }
     } catch (error) {
       console.error('❌ Erro no callback:', error);

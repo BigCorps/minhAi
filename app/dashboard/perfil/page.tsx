@@ -209,6 +209,7 @@ async function registerBiometry() {
 
       if (authDataError) throw authDataError;
       if (authData) setAuthenticators(authData);
+      localStorage.setItem('lastLoggedInUser', user.email);
       setMessage({ type: 'success', text: 'Biometria cadastrada com sucesso!' });
     } catch (error: any) {
       console.error('Erro biometria:', error);

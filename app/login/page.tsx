@@ -35,7 +35,9 @@ export default function LoginPage() {
         const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
         setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
 
-        const lastUserEmail = localStorage.getItem('lastLoggedInUser');
+        const lastUserEmail = localStorage.getItem('lastLoggedInUser') 
+          || document.cookie.match(/lastLoggedInUser=([^;]+)/)?.[1] 
+          || null;
         if (lastUserEmail) {
           try {
             // Check if user has biometric credential via RPC (same as poupeja)

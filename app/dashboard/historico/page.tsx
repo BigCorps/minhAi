@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
-import { Search, RefreshCw, MessageSquare, Trash2, ChevronRight, User } from 'lucide-react';
+import { Search, RefreshCw, MessageSquare, Trash2, ChevronRight, ChevronDown, User } from 'lucide-react';
 
 interface MessagePair {
   id: string;
@@ -22,7 +22,20 @@ export default function HistoricoPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -245,7 +258,7 @@ export default function HistoricoPage() {
                 <input
                   type="text"
                   id="search"
-                  placeholder="Buscar por pergunta, resposta ou empresa..."
+                  placeholder="Buscar por pergunta, resposta ou assistente..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors 
@@ -255,25 +268,61 @@ export default function HistoricoPage() {
               </div>
             </div>
 
-            <div className="w-full md:w-64">
-              <label htmlFor="company" className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
-                Filtrar por Empresa
+            <div className="w-full md:w-64" ref={dropdownRef}>
+              <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
+                Filtrar por Assistente
               </label>
-              <select
-                id="company"
-                value={selectedCompany}
-                onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                bg-white/50 border-gray-300 text-gray-900
-                dark:bg-white/5 dark:border-white/10 dark:text-white"
-              >
-                <option value="all">Todas as empresas</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                  bg-white/50 border-gray-300 text-gray-900
+                  dark:bg-white/5 dark:border-white/10 dark:text-white
+                  flex items-center justify-between text-left"
+                >
+                  <span className="truncate">
+                    {selectedCompany === 'all'
+                      ? 'Todos os assistentes'
+                      : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-full rounded-lg border shadow-lg overflow-hidden
+                    bg-white border-gray-200
+                    dark:bg-gray-800 dark:border-white/10">
+                    <div className="max-h-60 overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedCompany('all'); setDropdownOpen(false); }}
+                        className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                          ${selectedCompany === 'all'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                            : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
+                          }`}
+                      >
+                        Todos os assistentes
+                      </button>
+                      {companies.map((company) => (
+                        <button
+                          key={company.id}
+                          type="button"
+                          onClick={() => { setSelectedCompany(company.id); setDropdownOpen(false); }}
+                          className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                            ${selectedCompany === company.id
+                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
+                            }`}
+                        >
+                          {company.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

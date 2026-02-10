@@ -17,7 +17,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
   );
 
   return (
-    <div className="min-h-screen transition-colors duration-500 bg-gray-50 dark:bg-slate-900">
+    <div className="min-h-screen transition-colors duration-500 bg-transparent">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Cabeçalho da Seção */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
@@ -54,8 +54,8 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 
-              bg-white border-gray-200 text-gray-900 placeholder-gray-400
-              dark:bg-slate-800 dark:border-white/10 dark:text-white dark:placeholder-white/30"
+              bg-white/80 border-gray-200 text-gray-900 placeholder-gray-400
+              dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-white/30 backdrop-blur-sm"
             />
           </div>
         </div>
@@ -66,8 +66,8 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
             <div
               key={assistant.id}
               className="group relative rounded-2xl border transition-all duration-300 p-6
-              bg-white border-gray-200 hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/5
-              dark:bg-slate-800 dark:border-white/10 dark:hover:border-blue-500/30"
+              bg-white/80 border-gray-200 hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/5
+              dark:bg-white/5 dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
             >
               <div className="flex justify-between items-start mb-5">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300
@@ -111,9 +111,9 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
 
           {filteredAssistants.length === 0 && (
             <div className="col-span-full py-20 text-center border-2 border-dashed rounded-2xl transition-colors
-            border-gray-200 bg-gray-50/50
-            dark:border-white/10 dark:bg-slate-800/30">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-100 dark:bg-slate-800">
+            border-gray-200 bg-white/50
+            dark:border-white/10 dark:bg-white/5 backdrop-blur-sm">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-100 dark:bg-white/10">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>

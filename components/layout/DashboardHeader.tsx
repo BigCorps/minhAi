@@ -51,7 +51,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                   className="flex items-center space-x-2 p-1 pr-2 rounded-lg text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition"
                 >
                   {showImage ? (
-                    <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-orange-500">
+                    <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-lime-500">
                       <Image
                         src={avatarUrl}
                         alt={displayName}

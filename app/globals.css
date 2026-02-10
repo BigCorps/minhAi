@@ -13,13 +13,16 @@
 
 .dark {
   --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 2, 6, 23;
-  --background-end-rgb: 2, 6, 23;
+  /* Fundo escuro padrão do dashboard conforme o print */
+  --background-start-rgb: 2, 6, 23; 
+  --background-end-rgb: 15, 23, 42;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
+  /* Aplica o gradiente globalmente no body para ser contínuo em todas as páginas */
+  background: linear-gradient(to bottom right, rgb(var(--background-start-rgb)), rgb(var(--background-end-rgb))) fixed;
+  min-height: 100vh;
 }
 
 @layer utilities {
@@ -60,37 +63,6 @@ body {
   
   .border-primary-green {
     border-color: rgb(var(--primary-green));
-  }
-  
-  /* Hover states - Background */
-  .hover\:bg-primary-blue:hover {
-    background-color: rgb(var(--primary-blue));
-  }
-  
-  .hover\:bg-primary-green:hover {
-    background-color: rgb(var(--primary-green));
-  }
-  
-  .hover\:bg-primary-green-dark:hover {
-    background-color: rgb(var(--primary-green-dark));
-  }
-  
-  /* Hover states - Text */
-  .hover\:text-primary-green:hover {
-    color: rgb(var(--primary-green));
-  }
-  
-  .hover\:text-primary-green-dark:hover {
-    color: rgb(var(--primary-green-dark));
-  }
-  
-  /* Focus states */
-  .focus\:ring-primary-green:focus {
-    --tw-ring-color: rgb(var(--primary-green));
-  }
-  
-  .focus\:ring-primary-blue:focus {
-    --tw-ring-color: rgb(var(--primary-blue));
   }
   
   /* Gradientes */

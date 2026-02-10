@@ -33,6 +33,18 @@ const nextConfig = {
     return config;
   },
 
+  // Redirecionar domínio sem www para www
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'eai.app.br' }],
+        destination: 'https://www.eai.app.br/:path*',
+        permanent: true,
+      },
+    ];
+  },
+
   // Headers para assets
   async headers() {
     return [

@@ -655,7 +655,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                         ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
                         : 'bg-blue-500 text-white'
                     }`}>4</span>
-                    <span>Aguarde a resposta ou a execução do que solicitou.</span>
+                    <span>Aguarde a resposta.</span>
                   </div>
                 </div>
               </div>

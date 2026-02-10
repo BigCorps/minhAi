@@ -76,13 +76,15 @@ export default function HistoricoPage() {
       if (companiesError) throw new Error('Não foi possível carregar as empresas');
       setCompanies(companiesData || []);
 
-      // 3. Carregar conversas
+      // 3. CORREÇÃO: Buscar conversas que REALMENTE possuem mensagens
+      //    Filtramos por total_messages > 0 e aumentamos o limite
       let query = supabase
         .from('conversations')
         .select('id, company_id, started_at')
         .in('company_id', userCompanyIds)
+        .gt('total_messages', 0) // <-- NOVO: apenas conversas com mensagens
         .order('started_at', { ascending: false })
-        .limit(50);
+        .limit(100); // <-- AUMENTADO: de 50 para 100
 
       if (selectedCompany !== 'all') {
         query = query.eq('company_id', selectedCompany);
@@ -100,23 +102,38 @@ export default function HistoricoPage() {
 
       const conversationIds = conversations.map(c => c.id);
 
-      // 4. Buscar todas as mensagens das conversas encontradas
-      const { data: allMessages, error: msgError } = await supabase
-        .from('messages')
-        .select('*')
-        .in('conversation_id', conversationIds)
-        .order('created_at', { ascending: true });
+      // 4. CORREÇÃO: Buscar mensagens em lotes para evitar limites de URL
+      //    O Supabase/PostgREST tem limites no tamanho da URL com .in()
+      const BATCH_SIZE = 20;
+      let allMessages: any[] = [];
 
-      if (msgError) throw new Error('Erro ao carregar mensagens: ' + msgError.message);
+      for (let i = 0; i < conversationIds.length; i += BATCH_SIZE) {
+        const batch = conversationIds.slice(i, i + BATCH_SIZE);
+        const { data: batchMessages, error: msgError } = await supabase
+          .from('messages')
+          .select('*')
+          .in('conversation_id', batch)
+          .order('created_at', { ascending: true });
+
+        if (msgError) throw new Error('Erro ao carregar mensagens: ' + msgError.message);
+        if (batchMessages) {
+          allMessages = allMessages.concat(batchMessages);
+        }
+      }
 
       // 5. Agrupar mensagens em pares (User -> Assistant)
       const pairs: MessagePair[] = [];
       const messagesByConv: Record<string, any[]> = {};
-      allMessages?.forEach(msg => {
+      allMessages.forEach(msg => {
         if (!messagesByConv[msg.conversation_id]) {
           messagesByConv[msg.conversation_id] = [];
         }
         messagesByConv[msg.conversation_id].push(msg);
+      });
+
+      // Ordenar mensagens de cada conversa por created_at
+      Object.values(messagesByConv).forEach(msgs => {
+        msgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       });
 
       conversations.forEach(conv => {
@@ -143,6 +160,9 @@ export default function HistoricoPage() {
           }
         }
       });
+
+      // CORREÇÃO: Ordenar pares por timestamp decrescente
+      pairs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       setMessagePairs(pairs);
     } catch (err: any) {

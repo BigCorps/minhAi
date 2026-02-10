@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { Settings, Wallet } from 'lucide-react';
+import { CreditsCard } from '@/components/CreditsCard';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -38,20 +39,27 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Welcome */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Olá, {displayName}!
-        </h1>
-        <p className="text-lg text-gray-600 dark:text-white/60">
-          Bem-vindo ao seu painel de controle
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Olá, {displayName}!
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-white/60">
+            Bem-vindo ao seu painel de controle
+          </p>
+        </div>
       </div>
+
+      {/* Credit Card - NOVO! Posicionado acima dos outros cards */}
+      {user && (
+        <CreditsCard userId={user.id} />
+      )}
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6">
         {/* Assistentes */}
         <Link href="/dashboard/assistentes">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer h-full">
             <div className="flex items-center space-x-4 mb-4">
               <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +77,7 @@ export default async function DashboardPage() {
 
         {/* Histórico */}
         <Link href="/dashboard/historico">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-cyan-500 dark:hover:border-cyan-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-cyan-500 dark:hover:border-cyan-500/50 transition cursor-pointer h-full">
             <div className="flex items-center space-x-4 mb-4">
               <div className="w-12 h-12 rounded-lg bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +95,7 @@ export default async function DashboardPage() {
 
         {/* FAQs */}
         <Link href="/dashboard/faqs">
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer h-full">
             <div className="flex items-center space-x-4 mb-4">
               <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

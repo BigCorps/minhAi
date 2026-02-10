@@ -151,42 +151,62 @@ export default function PerfilPage() {
     }
   }
 
-  async function registerBiometry() {
+async function registerBiometry() {
     setRegisteringBiometry(true);
     setMessage(null);
+
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) throw new Error('Usuário não autenticado.');
-      const authHeaders = {
-        Authorization: `Bearer ${session.access_token}`,
+
+      const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${session.access_token}`,
       };
+
       // 1. Get registration options
-      const { data: options, error: optionsError } = await supabase.functions.invoke(
-        'webauthn-registration-options',
-        { headers: authHeaders }
-      );
-      if (optionsError) throw new Error(optionsError.message || 'Não foi possível iniciar o registro biométrico.');
+      const optionsRes = await fetch(`${SUPABASE_URL}/functions/v1/webauthn-registration-options`, {
+        method: 'POST',
+        headers,
+      });
+      if (!optionsRes.ok) {
+        const err = await optionsRes.json();
+        throw new Error(err.error || 'Não foi possível iniciar o registro biométrico.');
+      }
+      const options = await optionsRes.json();
+
       // 2. Start browser registration
       const regResponse = await startRegistration(options);
+
       // 3. Verify registration
-      const { data: verification, error: verifyError } = await supabase.functions.invoke(
-        'webauthn-verify-registration',
-        {
-          headers: authHeaders,
-          body: {
-            attestationResponse: regResponse,
-            expectedChallenge: options.challenge,
-          },
-        }
-      );
-      if (verifyError || !verification.verified) {
+      const verifyRes = await fetch(`${SUPABASE_URL}/functions/v1/webauthn-verify-registration`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          attestationResponse: regResponse,
+          expectedChallenge: options.challenge,
+        }),
+      });
+      if (!verifyRes.ok) {
+        const err = await verifyRes.json();
+        throw new Error(err.error || 'Falha na verificação biométrica.');
+      }
+      const verification = await verifyRes.json();
+
+      if (!verification.verified) {
         throw new Error(verification?.error || 'Falha na verificação biométrica.');
       }
+
       // Refresh authenticators list
       const { data: authData, error: authDataError } = await supabase
         .from('webauthn_credentials')
         .select('*')
         .eq('user_id', user.id);
+
       if (authDataError) throw authDataError;
       if (authData) setAuthenticators(authData);
       setMessage({ type: 'success', text: 'Biometria cadastrada com sucesso!' });

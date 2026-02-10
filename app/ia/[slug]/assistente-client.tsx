@@ -665,13 +665,13 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               }`}>
                 <div className="flex items-center justify-center space-x-4 mb-2">
                   <Link href="https://eai.app.br" className={`text-xs font-medium transition-colors ${
-                    theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
+                    theme === 'dark' ? 'text-lime-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
                   }`}>
                     Crie seu assistente
                   </Link>
                   <span className={theme === 'dark' ? 'text-white/20' : 'text-gray-400'}>|</span>
                   <Link href="https://eai.app.br/login" className={`text-xs font-medium transition-colors ${
-                    theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
+                    theme === 'dark' ? 'text-lime-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
                   }`}>
                     Editar Meu Assistente
                   </Link>

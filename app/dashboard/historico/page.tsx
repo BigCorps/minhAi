@@ -161,7 +161,7 @@ export default function HistoricoPage() {
 
           if (msg1.role === 'user' && msg2.role === 'assistant') {
             pairs.push({
-              id: `${msg1.id}-${msg2.id}`,
+              id: `${msg1.id}|${msg2.id}`,
               userMessage: msg1.content,
               assistantMessage: msg2.content,
               conversationId: conv.id,
@@ -192,7 +192,7 @@ export default function HistoricoPage() {
     }
 
     try {
-      const ids = pair.id.split('-');
+      const ids = pair.id.split('|');
       const { error } = await supabase
         .from('messages')
         .delete()

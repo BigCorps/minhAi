@@ -1,89 +1,71 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { 
   User, Mail, Lock, Camera, Save, Loader2, 
-  AlertCircle, CheckCircle2, Fingerprint, Smartphone, 
-  CreditCard, ShieldCheck, Trash2, Smile 
+  AlertCircle, CheckCircle2, Fingerprint, Trash2, 
+  Smartphone, ShieldCheck, Wallet, Key
 } from 'lucide-react';
 import Image from 'next/image';
-import {
-  startRegistration,
-  browserSupportsWebAuthn,
-} from '@simplewebauthn/browser';
+import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
 export default function PerfilPage() {
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
-  // Form states
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [uploading, setUploading] = useState(false);
-
   // Pix states
   const [pixKey, setPixKey] = useState('');
   const [pixKeyType, setPixKeyType] = useState('cpf');
-  const [hasPixKey, setHasPixKey] = useState(false);
-
+  
   // Biometrics states
-  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
-  const [hasBiometric, setHasBiometric] = useState(false);
-  const [isBiometricLoading, setIsBiometricLoading] = useState(true);
-  const [biometricType, setBiometricType] = useState<'fingerprint' | 'face' | 'unknown'>('unknown');
+  const [authenticators, setAuthenticators] = useState<any[]>([]);
+  const [isBiometrySupported, setIsBiometrySupported] = useState(false);
+  const [registeringBiometry, setRegisteringBiometry] = useState(false);
 
   const supabase = createClient();
 
-  const loadData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUser(user);
-      setName(user.user_metadata?.name || user.user_metadata?.full_name || '');
-      setEmail(user.email || '');
-      setAvatarUrl(user.user_metadata?.avatar_url || user.user_metadata?.picture || '');
-
-      // Load Pix data from 'users' table
-      const { data: userData } = await supabase
-        .from('users')
-        .select('pix_key, pix_key_type')
-        .eq('id', user.id)
-        .single();
-
-      if (userData?.pix_key) {
-        setPixKey(userData.pix_key);
-        setPixKeyType(userData.pix_key_type || 'cpf');
-        setHasPixKey(true);
-      }
-
-      // Check Biometrics status via RPC (same as poupeja)
-      try {
-        const { data: hasCred, error: credError } = await supabase.rpc('has_webauthn_credential', { p_user_id: user.id });
-        if (!credError) setHasBiometric(hasCred);
-      } catch (err) {
-        console.error("Erro ao verificar biometria:", err);
-      }
-    }
-
-    // Check WebAuthn support
-    if (browserSupportsWebAuthn()) {
-      setIsBiometricSupported(true);
-      const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
-      setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
-    }
-
-    setIsBiometricLoading(false);
-    setLoading(false);
-  }, [supabase]);
-
   useEffect(() => {
+    async function loadData() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUser(user);
+          
+          // Load user profile (Pix)
+          const { data: profileData } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (profileData) {
+            setProfile(profileData);
+            setPixKey(profileData.pix_key || '');
+            setPixKeyType(profileData.pix_key_type || 'cpf');
+          }
+
+          // Load authenticators
+          const { data: authData } = await supabase
+            .from('webauthn_credentials')
+            .select('*')
+            .eq('user_id', user.id);
+          
+          if (authData) setAuthenticators(authData);
+        }
+        
+        setIsBiometrySupported(browserSupportsWebAuthn());
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
     loadData();
-  }, [loadData]);
+  }, [supabase]);
 
   async function handleUpdateProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -91,15 +73,18 @@ export default function PerfilPage() {
     setMessage(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { name: name, avatar_url: avatarUrl }
-      });
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          user_id: user.id,
+          pix_key: pixKey,
+          pix_key_type: pixKeyType,
+          updated_at: new Date().toISOString()
+        });
 
       if (error) throw error;
       
-      // Also update 'users' table if needed
-      await supabase.from('users').update({ name }).eq('id', user.id);
-      
+      setProfile({ ...profile, pix_key: pixKey, pix_key_type: pixKeyType });
       setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
@@ -108,437 +93,232 @@ export default function PerfilPage() {
     }
   }
 
-  async function handleSavePix(e: React.FormEvent) {
-    e.preventDefault();
-    if (hasPixKey) return;
-
-    setUpdating(true);
+  async function registerBiometry() {
+    setRegisteringBiometry(true);
     setMessage(null);
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          pix_key: pixKey,
-          pix_key_type: pixKeyType
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-      setHasPixKey(true);
-      setMessage({ type: 'success', text: 'Chave Pix configurada com sucesso!' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUpdating(false);
-    }
-  }
-
-  // Biometrics Handlers (using Edge Functions from poupeja)
-  async function handleRegisterBiometry() {
-    setIsBiometricLoading(true);
-    setMessage(null);
-
-    try {
-      // 1. Get options from Edge Function
-      const { data: registrationOptions, error: optionsError } = await supabase.functions.invoke(
-        'webauthn-registration-options'
-      );
-      if (optionsError) throw optionsError;
+      // 1. Get registration options from Edge Function
+      const { data: options, error: optionsError } = await supabase.functions.invoke('webauthn-registration-options');
+      if (optionsError) throw new Error('Não foi possível iniciar o registro biométrico.');
 
       // 2. Start browser registration
-      const registrationResponse = await startRegistration(registrationOptions);
+      const regResponse = await startRegistration(options);
 
       // 3. Verify registration via Edge Function
-      const { data: verificationData, error: verificationError } = await supabase.functions.invoke(
-        'webauthn-verify-registration',
-        { 
-          body: { 
-            expectedChallenge: registrationOptions.challenge,
-            attestationResponse: registrationResponse 
-          } 
-        }
+      const { data: verification, error: verificationError } = await supabase.functions.invoke(
+        'webauthn-verify-registration', 
+        { body: { registrationResponse: regResponse } }
       );
 
-      if (verificationError) {
-        const errorMessage = verificationError.context?.msg || verificationError.message || 'Erro desconhecido.';
-        throw new Error(errorMessage);
+      if (verificationError || !verification.success) {
+        throw new Error(verification.error || 'Falha na verificação biométrica.');
       }
 
-      if (verificationData.verified) {
-        setHasBiometric(true);
-        setMessage({ type: 'success', text: 'Login por biometria ativado com sucesso!' });
-      } else {
-        throw new Error(verificationData.error || 'A verificação da biometria falhou.');
-      }
+      // Refresh authenticators list
+      const { data: authData } = await supabase
+        .from('webauthn_credentials')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (authData) setAuthenticators(authData);
+      setMessage({ type: 'success', text: 'Biometria cadastrada com sucesso!' });
     } catch (error: any) {
-      console.error('Falha no registro biométrico:', error);
-      setMessage({ type: 'error', text: 'Erro ao ativar biometria: ' + error.message });
+      console.error('Erro biometria:', error);
+      setMessage({ type: 'error', text: error.message });
     } finally {
-      setIsBiometricLoading(false);
+      setRegisteringBiometry(false);
     }
   }
 
-  async function handleRemoveBiometry() {
-    if (!window.confirm('Tem certeza que deseja remover o login por biometria deste dispositivo?')) return;
-    
-    setIsBiometricLoading(true);
-    try {
-      const { error } = await supabase.functions.invoke('webauthn-remove-credential');
-      if (error) throw error;
-
-      setHasBiometric(false);
-      setMessage({ type: 'success', text: 'Biometria removida com sucesso.' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Não foi possível remover a biometria.' });
-    } finally {
-      setIsBiometricLoading(false);
-    }
-  }
-
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'As senhas não coincidem.' });
-      return;
-    }
-
-    setUpdating(true);
-    setMessage(null);
+  async function removeAuthenticator(id: string) {
+    if (!confirm('Tem certeza que deseja remover este acesso biométrico?')) return;
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
+      const { error } = await supabase.functions.invoke('webauthn-remove-credential', {
+        body: { credentialId: id }
       });
 
       if (error) throw error;
-      setMessage({ type: 'success', text: 'Senha alterada com sucesso!' });
-      setNewPassword('');
-      setConfirmPassword('');
+
+      setAuthenticators(authenticators.filter(a => a.id !== id));
+      setMessage({ type: 'success', text: 'Acesso removido com sucesso.' });
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUpdating(false);
-    }
-  }
-
-  async function uploadAvatar(e: React.ChangeEvent<HTMLInputElement>) {
-    try {
-      setUploading(true);
-      setMessage(null);
-
-      if (!e.target.files || e.target.files.length === 0) {
-        throw new Error('Selecione uma imagem.');
-      }
-
-      const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      setAvatarUrl(publicUrl);
-      await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
-      });
-
-      setMessage({ type: 'success', text: 'Foto de perfil atualizada!' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUploading(false);
+      setMessage({ type: 'error', text: 'Erro ao remover: ' + error.message });
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   const isGoogleUser = user?.app_metadata?.provider === 'google';
+  const hasPixKey = !!profile?.pix_key;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Meu Perfil</h1>
-        <p className="text-gray-600 dark:text-gray-400">Gerencie suas informações pessoais, pagamentos e segurança</p>
-      </div>
-
-      {message && (
-        <div className={`p-4 rounded-lg flex items-center space-x-3 ${
-          message.type === 'success' 
-            ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20' 
-            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/30'
-        }`}>
-          {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-          <p className="text-sm font-medium">{message.text}</p>
+    <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        
+        {/* Header do Perfil */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5 flex flex-col md:flex-row items-center gap-8">
+          <div className="relative group">
+            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#b0cb1f] shadow-lg">
+              {user?.user_metadata?.avatar_url ? (
+                <Image src={user.user_metadata.avatar_url} alt="Avatar" width={128} height={128} className="object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                  <User className="w-16 h-16 text-gray-400" />
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{user?.user_metadata?.name || 'Usuário'}</h1>
+            <p className="text-gray-500 dark:text-gray-400 flex items-center justify-center md:justify-start mt-1">
+              <Mail className="w-4 h-4 mr-2" /> {user?.email}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
+              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold uppercase tracking-wider">
+                {isGoogleUser ? 'Conta Google' : 'Conta E-mail'}
+              </span>
+              {authenticators.length > 0 && (
+                <span className="px-3 py-1 bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-bold uppercase tracking-wider flex items-center">
+                  <ShieldCheck className="w-3 h-3 mr-1" /> Biometria Ativa
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-      )}
 
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10 text-center shadow-sm">
-            <div className="relative w-32 h-32 mx-auto mb-4">
-              {avatarUrl ? (
-                <Image 
-                  src={avatarUrl} 
-                  alt="Avatar" 
-                  fill 
-                  className="rounded-full object-cover ring-4 ring-[#b0cb1f]"
-                  unoptimized
+        {message && (
+          <div className={`p-4 rounded-2xl flex items-center gap-3 border ${
+            message.type === 'success' 
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-500/30 text-green-700 dark:text-green-400' 
+              : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-500/30 text-red-700 dark:text-red-400'
+          }`}>
+            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <p className="text-sm font-medium">{message.text}</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Configuração Pix */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-green-100 dark:bg-green-500/10 rounded-lg">
+                <Wallet className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Configuração Pix</h2>
+            </div>
+
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Chave</label>
+                <select
+                  value={pixKeyType}
+                  onChange={(e) => setPixKeyType(e.target.value)}
+                  disabled={hasPixKey}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition disabled:opacity-50"
+                >
+                  <option value="cpf">CPF</option>
+                  <option value="cnpj">CNPJ</option>
+                  <option value="email">E-mail</option>
+                  <option value="phone">Telefone</option>
+                  <option value="random">Chave Aleatória</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Chave Pix</label>
+                <input
+                  type="text"
+                  value={pixKey}
+                  onChange={(e) => setPixKey(e.target.value)}
+                  disabled={hasPixKey}
+                  placeholder="Sua chave Pix"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition disabled:opacity-50"
                 />
-              ) : (
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#b0cb1f] to-[#8ca214] flex items-center justify-center text-white text-4xl font-bold">
-                  {name.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-                </div>
-              )}
-              
-              {!isGoogleUser && (
-                <label className="absolute bottom-0 right-0 p-2 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-gray-200 dark:border-white/10 cursor-pointer hover:scale-110 transition-transform">
-                  <Camera className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                  <input type="file" className="hidden" accept="image/*" onChange={uploadAvatar} disabled={uploading} />
-                </label>
-              )}
-            </div>
-            
-            <h3 className="font-bold text-gray-900 dark:text-white">{name || 'Usuário'}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
-            
-            {isGoogleUser && (
-              <div className="mt-4 px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-full inline-block">
-                Conectado via Google
+                {hasPixKey && (
+                  <p className="mt-2 text-xs text-gray-500 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" /> A chave Pix não pode ser alterada após o preenchimento.
+                  </p>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-green-500" />
-              Status de Segurança
-            </h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">Biometria:</span>
-                <span className={hasBiometric ? "text-green-500 font-bold" : "text-amber-500 font-bold"}>
-                  {hasBiometric ? 'Ativada' : 'Desativada'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">Chave Pix:</span>
-                <span className={hasPixKey ? "text-green-500 font-bold" : "text-amber-500 font-bold"}>
-                  {hasPixKey ? 'Configurada' : 'Pendente'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <User className="w-5 h-5 text-[#b0cb1f]" />
-              Informações Pessoais
-            </h2>
-            
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Completo</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-[#b0cb1f] outline-none transition-all text-gray-900 dark:text-white"
-                    placeholder="Seu nome"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-mail</label>
-                  <input
-                    type="email"
-                    value={email}
-                    disabled
-                    className="w-full px-4 py-2 bg-gray-100 dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-lg text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={updating}
-                className="flex items-center justify-center space-x-2 px-6 py-2 bg-[#b0cb1f] hover:bg-[#8ca214] text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
-              >
-                {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span>Salvar Alterações</span>
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-green-500" />
-              Configuração de Saque (Pix)
-            </h2>
-            
-            <form onSubmit={handleSavePix} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Chave</label>
-                  <select
-                    value={pixKeyType}
-                    onChange={(e) => setPixKeyType(e.target.value)}
-                    disabled={hasPixKey}
-                    className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all text-gray-900 dark:text-white disabled:opacity-60"
-                  >
-                    <option value="cpf">CPF</option>
-                    <option value="cnpj">CNPJ</option>
-                    <option value="email">E-mail</option>
-                    <option value="phone">Telefone</option>
-                    <option value="random">Chave Aleatória</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chave Pix</label>
-                  <input
-                    type="text"
-                    value={pixKey}
-                    onChange={(e) => setPixKey(e.target.value)}
-                    disabled={hasPixKey}
-                    placeholder="Sua chave pix"
-                    className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-green-500 outline-none transition-all text-gray-900 dark:text-white disabled:opacity-60"
-                  />
-                </div>
-              </div>
-              
-              {hasPixKey ? (
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-500/20">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>A chave Pix não pode ser alterada após configurada. Entre em contato com o suporte para mudanças.</span>
-                </div>
-              ) : (
+              {!hasPixKey && (
                 <button
                   type="submit"
-                  disabled={updating || !pixKey}
-                  className="flex items-center justify-center space-x-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                  disabled={updating}
+                  className="w-full flex items-center justify-center px-6 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50"
                 >
-                  {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Confirmar Chave Pix</span>
+                  {updating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+                  Salvar Chave Pix
                 </button>
               )}
             </form>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <Fingerprint className="w-5 h-5 text-blue-500" />
-              Login por Biometria
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Vincule seu rosto ou digital a este dispositivo para entrar sem senha.
-            </p>
-            
-            {!isBiometricSupported ? (
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 text-sm">
+          {/* Biometria */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
+                <Fingerprint className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Login por Biometria</h2>
+            </div>
+
+            {!isBiometrySupported ? (
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-500/30 rounded-2xl text-amber-700 dark:text-amber-400 text-sm">
                 Seu navegador ou dispositivo não suporta autenticação biométrica.
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-white/5">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${hasBiometric ? 'bg-green-100 dark:bg-green-500/20' : 'bg-gray-100 dark:bg-white/5'}`}>
-                      {biometricType === 'face' ? (
-                        <Smile className={`w-5 h-5 ${hasBiometric ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
-                      ) : (
-                        <Fingerprint className={`w-5 h-5 ${hasBiometric ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">
-                        {biometricType === 'face' ? 'Acesso por Rosto' : 'Acesso por Digital'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {isBiometricLoading ? 'Verificando...' : hasBiometric ? 'Ativado neste dispositivo' : 'Desativado'}
-                      </p>
-                    </div>
+              <div className="space-y-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Adicione uma camada extra de segurança e acesse sua conta rapidamente usando sua digital ou reconhecimento facial.
+                </p>
+
+                {authenticators.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Dispositivos Cadastrados</p>
+                    {authenticators.map((auth) => (
+                      <div key={auth.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-white/5">
+                        <div className="flex items-center gap-3">
+                          <Smartphone className="w-5 h-5 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">Dispositivo Confiável</p>
+                            <p className="text-xs text-gray-500">Cadastrado em {new Date(auth.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeAuthenticator(auth.credential_id)}
+                          className="p-2 text-gray-400 hover:text-red-500 transition"
+                          title="Remover biometria"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                  
-                  {!isBiometricLoading && (
-                    hasBiometric ? (
-                      <button 
-                        onClick={handleRemoveBiometry}
-                        className="px-4 py-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
-                      >
-                        Remover
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={handleRegisterBiometry}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors"
-                      >
-                        Habilitar
-                      </button>
-                    )
-                  )}
-                </div>
+                )}
+
+                <button
+                  onClick={registerBiometry}
+                  disabled={registeringBiometry}
+                  className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-bold disabled:opacity-50 shadow-lg shadow-blue-500/20"
+                >
+                  {registeringBiometry ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Key className="w-5 h-5 mr-2" />}
+                  Cadastrar Nova Biometria
+                </button>
               </div>
             )}
           </div>
 
-          {!isGoogleUser && (
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <Lock className="w-5 h-5 text-slate-500" />
-                Alterar Senha
-              </h2>
-              
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nova Senha</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none transition-all text-gray-900 dark:text-white"
-                      placeholder="••••••••"
-                      minLength={6}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirmar Senha</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none transition-all text-gray-900 dark:text-white"
-                      placeholder="••••••••"
-                      minLength={6}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={updating || !newPassword}
-                  className="flex items-center justify-center space-x-2 px-6 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
-                >
-                  {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                  <span>Atualizar Senha</span>
-                </button>
-              </form>
-            </div>
-          )}
         </div>
       </div>
     </div>

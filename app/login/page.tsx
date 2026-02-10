@@ -101,7 +101,7 @@ export default function LoginPage() {
     try {
       // 1. Get authentication options from Edge Function
       const { data: options, error: optionsError } = await supabase.functions.invoke('webauthn-authentication-options');
-      if (optionsError) throw new Error(optionsError.context?.msg || 'Não foi possível iniciar a biometria.');
+      if (optionsError) throw new Error('Não foi possível iniciar a biometria.');
 
       // 2. Start browser authentication
       const authResponse = await startAuthentication(options);
@@ -117,42 +117,35 @@ export default function LoginPage() {
         }
       );
 
-      if (verificationError) {
-        const errorMessage = verificationError.context?.msg || verificationError.message || 'Erro desconhecido.';
-        throw new Error(errorMessage);
-      }
-
-      if (verification.success && verification.verified) {
-        // 4. Create session via Edge Function
-        const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
-          'webauthn-create-session', 
-          { 
-            body: { 
-              email: verification.email, 
-              user_id: verification.user_id 
-            } 
-          }
-        );
-
-        if (sessionError || !sessionData.success) {
-          throw new Error(sessionError?.message || sessionData?.error || 'Falha ao criar sessão');
-        }
-
-        // 5. Set session in Supabase client
-        const { error: setSessionError } = await supabase.auth.setSession({
-          access_token: sessionData.session.access_token,
-          refresh_token: sessionData.session.refresh_token,
-        });
-
-        if (setSessionError) {
-          throw new Error('Erro ao estabelecer a sessão: ' + setSessionError.message);
-        }
-
-        localStorage.setItem('lastLoggedInUser', verification.email);
-        router.push('/dashboard');
-      } else {
+      if (verificationError || !verification.success) {
         throw new Error(verification.error || 'Falha na verificação biométrica.');
       }
+
+      // 4. Create session via Edge Function
+      const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
+        'webauthn-create-session', 
+        { 
+          body: { 
+            email: verification.email, 
+            user_id: verification.user_id 
+          } 
+        }
+      );
+
+      if (sessionError || !sessionData.success) {
+        throw new Error('Falha ao estabelecer a sessão.');
+      }
+
+      // 5. Set session in Supabase client
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: sessionData.session.access_token,
+        refresh_token: sessionData.session.refresh_token,
+      });
+
+      if (setSessionError) throw setSessionError;
+
+      localStorage.setItem('lastLoggedInUser', verification.email);
+      router.push('/dashboard');
     } catch (error: any) {
       console.error('Erro no login biométrico:', error);
       setError(error.message);

@@ -5,19 +5,53 @@ import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { 
+  Mail, Lock, Eye, EyeOff, Loader2, 
+  Fingerprint, Smile, AlertCircle 
+} from 'lucide-react';
+import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Biometrics states
+  const [biometricUserEmail, setBiometricUserEmail] = useState<string | null>(null);
+  const [isCheckingBiometrics, setIsCheckingBiometrics] = useState(true);
+  const [biometricType, setBiometricType] = useState<'fingerprint' | 'face' | 'unknown'>('unknown');
+
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
-  }, []);
+
+    const checkBiometricAvailability = async () => {
+      if (browserSupportsWebAuthn()) {
+        const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
+        setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
+
+        const lastUserEmail = localStorage.getItem('lastLoggedInUser');
+        if (lastUserEmail) {
+          try {
+            // Check if user has biometric credential via RPC (same as poupeja)
+            const { data, error } = await supabase.rpc('has_webauthn_credential_by_email', { p_email: lastUserEmail });
+            if (!error && data === true) {
+              setBiometricUserEmail(lastUserEmail);
+            }
+          } catch (err) {
+            console.error("Falha ao verificar disponibilidade de biometria:", err);
+          }
+        }
+      }
+      setIsCheckingBiometrics(false);
+    };
+    checkBiometricAvailability();
+  }, [supabase]);
 
   async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,12 +63,8 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
 
-    console.log('🔐 Tentando autenticação:', { email, mode });
-
     try {
       if (mode === 'signup') {
-        console.log('📝 Criando nova conta...');
-        
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -43,37 +73,89 @@ export default function LoginPage() {
           },
         });
 
-        if (error) {
-          console.error('❌ Erro no signup:', error);
-          throw error;
-        }
-
-        console.log('✅ Conta criada com sucesso!', data);
+        if (error) throw error;
         alert('Cadastro realizado! Verifique seu email para confirmar.');
         setMode('login');
       } else {
-        console.log('🔑 Fazendo login...');
-        
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (error) {
-          console.error('❌ Erro no login:', error);
-          throw error;
-        }
-
-        console.log('✅ Login bem-sucedido!', data);
-        console.log('🔄 Redirecionando para /...');
-        
-        // Redirecionar para raiz (dashboard)
-        router.push('/');
-        router.refresh();
+        if (error) throw error;
+        localStorage.setItem('lastLoggedInUser', email);
+        router.push('/dashboard');
       }
     } catch (error: any) {
-      console.error('❌ Erro na autenticação:', error);
       setError(error.message || 'Erro ao autenticar. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleBiometricLogin() {
+    if (!biometricUserEmail) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Get authentication options from Edge Function
+      const { data: options, error: optionsError } = await supabase.functions.invoke('webauthn-authentication-options');
+      if (optionsError) throw new Error(optionsError.context?.msg || 'Não foi possível iniciar a biometria.');
+
+      // 2. Start browser authentication
+      const authResponse = await startAuthentication(options);
+
+      // 3. Verify authentication via Edge Function
+      const { data: verification, error: verificationError } = await supabase.functions.invoke(
+        'webauthn-verify-authentication', 
+        { 
+          body: { 
+            expectedChallenge: options.challenge, 
+            authenticationResponse: authResponse 
+          } 
+        }
+      );
+
+      if (verificationError) {
+        const errorMessage = verificationError.context?.msg || verificationError.message || 'Erro desconhecido.';
+        throw new Error(errorMessage);
+      }
+
+      if (verification.success && verification.verified) {
+        // 4. Create session via Edge Function
+        const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
+          'webauthn-create-session', 
+          { 
+            body: { 
+              email: verification.email, 
+              user_id: verification.user_id 
+            } 
+          }
+        );
+
+        if (sessionError || !sessionData.success) {
+          throw new Error(sessionError?.message || sessionData?.error || 'Falha ao criar sessão');
+        }
+
+        // 5. Set session in Supabase client
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: sessionData.session.access_token,
+          refresh_token: sessionData.session.refresh_token,
+        });
+
+        if (setSessionError) {
+          throw new Error('Erro ao estabelecer a sessão: ' + setSessionError.message);
+        }
+
+        localStorage.setItem('lastLoggedInUser', verification.email);
+        router.push('/dashboard');
+      } else {
+        throw new Error(verification.error || 'Falha na verificação biométrica.');
+      }
+    } catch (error: any) {
+      console.error('Erro no login biométrico:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -83,8 +165,6 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    console.log('🔐 Iniciando login com Google...');
-
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -93,14 +173,8 @@ export default function LoginPage() {
         },
       });
 
-      if (error) {
-        console.error('❌ Erro no Google OAuth:', error);
-        throw error;
-      }
-
-      console.log('✅ Redirecionando para Google...');
+      if (error) throw error;
     } catch (error: any) {
-      console.error('❌ Erro no Google login:', error);
       setError(error.message || 'Erro ao fazer login com Google.');
       setLoading(false);
     }
@@ -113,7 +187,6 @@ export default function LoginPage() {
         : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
     }`}>
       
-      {/* Botão de Toggle de Tema */}
       <button
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         className={`fixed top-6 right-6 z-50 p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
@@ -162,10 +235,57 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
+
+          {isCheckingBiometrics ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          ) : mode === 'login' && biometricUserEmail ? (
+            <div className="mb-6 space-y-4">
+              <div className="text-center p-4 bg-blue-50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Entrar como</p>
+                <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{biometricUserEmail}</p>
+              </div>
+
+              <button
+                onClick={handleBiometricLogin}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    {biometricType === 'face' ? <Smile className="w-6 h-6" /> : <Fingerprint className="w-6 h-6" />}
+                    <span>{biometricType === 'face' ? 'Entrar com Rosto' : 'Entrar com Digital'}</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setBiometricUserEmail(null)}
+                className={`w-full text-sm transition-colors ${
+                  theme === 'dark' ? 'text-white/40 hover:text-white/60' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Entrar com outra conta
+              </button>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className={`w-full border-t ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className={`px-2 ${theme === 'dark' ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'}`}>ou use seu e-mail</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {mode === 'signup' && (
@@ -216,30 +336,34 @@ export default function LoginPage() {
               }`}>
                 Senha
               </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                required
-                placeholder="••••••••"
-                minLength={6}
-                className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-slate-700/50 border border-white/10 text-white placeholder-white/40'
-                    : 'bg-white border border-gray-300 text-gray-900'
-                }`}
-              />
-              {mode === 'signup' && (
-                <p className={`mt-1 text-xs transition-colors ${
-                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-                }`}>Mínimo 6 caracteres</p>
-              )}
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  required
+                  placeholder="••••••••"
+                  minLength={6}
+                  className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-slate-700/50 border border-white/10 text-white placeholder-white/40'
+                      : 'bg-white border border-gray-300 text-gray-900'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="w-full px-6 py-3 bg-[#b0cb1f] text-white rounded-lg hover:bg-[#8ca214] transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar Conta'}
             </button>
@@ -277,40 +401,6 @@ export default function LoginPage() {
               theme === 'dark' ? 'text-white/90' : 'text-gray-700'
             }`}>Continuar com Google</span>
           </button>
-
-          {/* Termos e Privacidade */}
-          <div className="mt-6 text-center">
-            <p
-              className={`text-xs transition-colors ${
-                theme === 'dark' ? 'text-white/50' : 'text-gray-500'
-              }`}
-            >
-              Ao continuar, estou de acordo com os
-              <br />
-              <Link
-                href="/termos"
-                className={`underline transition-colors ${
-                  theme === 'dark'
-                    ? 'text-blue-400 hover:text-blue-300'
-                    : 'text-blue-600 hover:text-blue-700'
-                }`}
-              >
-                Termos de Uso
-              </Link>{' '}
-              e{' '}
-              <Link
-                href="/aviso"
-                className={`underline transition-colors ${
-                  theme === 'dark'
-                    ? 'text-blue-400 hover:text-blue-300'
-                    : 'text-blue-600 hover:text-blue-700'
-                }`}
-              >
-                Aviso de Privacidade
-              </Link>
-              .
-            </p>
-          </div>
 
           <div className="mt-4 text-center">
             <button

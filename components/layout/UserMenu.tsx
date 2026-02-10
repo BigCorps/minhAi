@@ -146,7 +146,7 @@ export function UserMenu({ user, theme }: UserMenuProps) {
               </Link>
 
               <Link
-                href="/pacotes"
+                href="/credits"
                 onClick={() => setIsOpen(false)}
                 className={`w-full px-4 py-3 text-left text-sm transition flex items-center space-x-3 ${
                   theme === 'dark'

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
   Settings, 
   ExternalLink, 
@@ -82,7 +81,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                         alt={assistant.name} 
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = ''; // Fallback se a imagem falhar
+                          (e.target as HTMLImageElement).src = ''; 
                           (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>';
                         }}
                       />
@@ -113,27 +112,31 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
 
                 {/* Ações */}
                 <div className="flex flex-wrap items-center gap-3">
-                  {/* Copiar Link */}
-                  <button
-                    onClick={() => handleCopy(assistant.slug, assistant.id)}
-                    className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
-                    bg-gray-100 text-gray-700 hover:bg-gray-200
-                    dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
-                  >
-                    {copiedId === assistant.id ? <Check className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
-                    Copiar Link
-                  </button>
+                  {/* Copiar Link (Apenas para Públicos) */}
+                  {assistant.is_public && (
+                    <button
+                      onClick={() => handleCopy(assistant.slug, assistant.id)}
+                      className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                      bg-gray-100 text-gray-700 hover:bg-gray-200
+                      dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                    >
+                      {copiedId === assistant.id ? <Check className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
+                      Copiar Link
+                    </button>
+                  )}
 
-                  {/* QR Code */}
-                  <button
-                    onClick={() => setShowQrModal(assistant)}
-                    className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
-                    bg-gray-100 text-gray-700 hover:bg-gray-200
-                    dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
-                  >
-                    <QrCode className="w-4 h-4 mr-2" />
-                    QR Code
-                  </button>
+                  {/* QR Code (Apenas para Públicos) */}
+                  {assistant.is_public && (
+                    <button
+                      onClick={() => setShowQrModal(assistant)}
+                      className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                      bg-gray-100 text-gray-700 hover:bg-gray-200
+                      dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                    >
+                      <QrCode className="w-4 h-4 mr-2" />
+                      QR Code
+                    </button>
+                  )}
 
                   {/* Funções */}
                   <Link

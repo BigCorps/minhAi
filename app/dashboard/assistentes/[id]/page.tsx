@@ -1,44 +1,44 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Save, Loader2, Globe, Lock, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-import { ArrowLeft, Save, Loader2, Globe, Lock, Trash2 } from 'lucide-react';
 
-export default function EditarAssistentePage() {
+interface PageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default function EditarAssistentePage({ params }: PageProps) {
+  const { id } = use(params);
   const router = useRouter();
-  const params = useParams();
-  const assistantId = params.id as string;
-  const supabase = createClient();
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assistant, setAssistant] = useState<any>(null);
-  const [isPublic, setIsPublic] = useState(true);
 
   useEffect(() => {
     async function loadAssistant() {
-      try {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', assistantId)
-          .single();
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-        if (error) throw error;
+      if (error) {
+        setError('Erro ao carregar assistente');
+      } else {
         setAssistant(data);
-        setIsPublic(data.is_public ?? true);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     }
 
     loadAssistant();
-  }, [assistantId]);
+  }, [id]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,44 +48,22 @@ export default function EditarAssistentePage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get('name') as string,
-      slug: formData.get('slug') as string,
       logo_url: formData.get('logo_url') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
-      is_public: isPublic,
     };
 
     try {
-      const { error } = await supabase
+      const supabase = createClient();
+      const { error: updateError } = await supabase
         .from('companies')
         .update(data)
-        .eq('id', assistantId);
+        .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      alert('✅ Assistente atualizado com sucesso!');
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!confirm('Tem certeza que deseja excluir este assistente? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', assistantId);
-
-      if (error) throw error;
       router.push('/dashboard/assistentes');
+      router.refresh();
     } catch (err: any) {
       setError(err.message);
       setSaving(false);
@@ -95,9 +73,18 @@ export default function EditarAssistentePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-transparent">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!assistant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 border-b-2 border-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Carregando...</p>
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Assistente não encontrado</h2>
+          <Link href="/dashboard/assistentes" className="text-blue-600 hover:underline mt-2 inline-block">Voltar</Link>
         </div>
       </div>
     );
@@ -106,23 +93,13 @@ export default function EditarAssistentePage() {
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <Link
-            href="/dashboard/assistentes"
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Voltar para Assistentes
-          </Link>
-          
-          <button
-            onClick={handleDelete}
-            className="flex items-center text-red-500 hover:text-red-600 transition text-sm font-medium"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Excluir Assistente
-          </button>
-        </div>
+        <Link
+          href="/dashboard/assistentes"
+          className="inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white mb-6 transition"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Voltar para Assistentes
+        </Link>
 
         <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="px-8 py-6 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
@@ -130,7 +107,7 @@ export default function EditarAssistentePage() {
               Configurar Assistente
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Edite as informações básicas e visibilidade do seu assistente.
+              Edite as informações do seu assistente virtual.
             </p>
           </div>
 
@@ -142,35 +119,19 @@ export default function EditarAssistentePage() {
             )}
 
             <div className="space-y-6">
-              {/* Nome e Slug */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nome do Assistente *
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    required
-                    defaultValue={assistant.name}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="slug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Slug (URL Pública) *
-                  </label>
-                  <input
-                    type="text"
-                    id="slug"
-                    name="slug"
-                    required
-                    defaultValue={assistant.slug}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition"
-                  />
-                </div>
+              {/* Nome */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Nome do Assistente *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  defaultValue={assistant.name}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                />
               </div>
 
               {/* Logo URL */}
@@ -188,42 +149,29 @@ export default function EditarAssistentePage() {
                 />
               </div>
 
-              {/* Visibilidade */}
+              {/* Visibilidade (Apenas Leitura) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Visibilidade do Assistente
+                  Visibilidade (Definida na criação)
                 </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsPublic(true)}
-                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      isPublic 
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' 
-                        : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
-                    }`}
-                  >
-                    <Globe className="w-5 h-5 mr-2" />
-                    <div className="text-left">
-                      <p className="font-bold text-sm">Público</p>
-                      <p className="text-[10px] opacity-70">Acessível via link slug</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsPublic(false)}
-                    className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      !isPublic 
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400' 
-                        : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
-                    }`}
-                  >
-                    <Lock className="w-5 h-5 mr-2" />
-                    <div className="text-left">
-                      <p className="font-bold text-sm">Privado</p>
-                      <p className="text-[10px] opacity-70">Acessível via link único</p>
-                    </div>
-                  </button>
+                <div className="flex items-center p-4 rounded-xl border-2 border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 text-gray-500 dark:text-gray-400">
+                  {assistant.is_public ? (
+                    <>
+                      <Globe className="w-5 h-5 mr-3 text-green-500" />
+                      <div>
+                        <p className="font-bold text-sm">Público</p>
+                        <p className="text-[10px] opacity-70">Acessível via link slug: {assistant.slug}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-5 h-5 mr-3 text-amber-500" />
+                      <div>
+                        <p className="font-bold text-sm">Privado</p>
+                        <p className="text-[10px] opacity-70">Acessível apenas via link único de proprietário</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 

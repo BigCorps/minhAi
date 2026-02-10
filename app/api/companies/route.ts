@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
         slug: data.slug,
         logo_url: data.logo_url || null,
         is_public: data.is_public ?? true,
-        private_slug: uuidv4(),
+        private_slug: randomUUID(),
         wake_word: data.wake_word || 'olá assistente',
         greeting_message: data.greeting_message || 'Olá! Como posso ajudar você hoje?',
         system_prompt: data.system_prompt || 'Você é um assistente virtual prestativo. Responda de forma clara, objetiva e educada.',

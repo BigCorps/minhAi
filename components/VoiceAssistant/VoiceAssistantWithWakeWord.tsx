@@ -9,6 +9,8 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
+// ✅ MUDANÇA 1: ADICIONAR IMPORTS
+import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -40,6 +42,10 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [transcript, setTranscript] = useState('');
+
+  // ✅ MUDANÇA 2: ADICIONAR STATES
+  const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
+  const [companyGreeting, setCompanyGreeting] = useState<string>('');
 
   const [qrCodeData, setQrCodeData] = useState<{
     type: 'whatsapp' | 'instagram' | 'pix';
@@ -75,13 +81,6 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   // CONFIGURATION
   // ========================================
-  const wakeWords = [
-    ...wakeWord.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0),
-    'oi',
-    'olá',
-    'ola',
-  ];
-
   const endCommands = [
     'tchau',
     'obrigado',
@@ -125,7 +124,7 @@ export function VoiceAssistantWithWakeWord({
     
     window.addEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
     
-    // ✅ PASSO 4: Atalho ESC para parar
+    // ✅ Atalho ESC para parar
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         console.log('⌨️ ESC pressionado - parando tudo');
@@ -143,16 +142,77 @@ export function VoiceAssistantWithWakeWord({
     };
   }, []);
 
+  // ========================================
+  // ✅ MUDANÇA 3: CARREGAR CONFIG DO BANCO
+  // ========================================
   useEffect(() => {
+    async function loadCompanyConfig() {
+      if (!companyId) return;
+      
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('companies')
+          .select('wake_word, greeting_message')
+          .eq('id', companyId)
+          .single();
+        
+        if (error) {
+          console.error('❌ Erro ao carregar config:', error);
+          return;
+        }
+        
+        if (data) {
+          const wakeWordFromDb = data.wake_word || wakeWord || 'gerente';
+          const greetingFromDb = data.greeting_message || greetingMessage || 'Oi! Como posso ajudar?';
+          
+          setCompanyWakeWord(wakeWordFromDb);
+          setCompanyGreeting(greetingFromDb);
+          
+          console.log('✅ Config carregada:');
+          console.log('   Wake word:', wakeWordFromDb);
+          console.log('   Saudação:', greetingFromDb);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar config:', error);
+      }
+    }
+    
+    loadCompanyConfig();
+  }, [companyId, wakeWord, greetingMessage]);
+
+  // ========================================
+  // ✅ MUDANÇA 4: ATUALIZAR WAKEWORDDETECTOR
+  // ========================================
+  useEffect(() => {
+    if (!companyWakeWord) return;
+    
     console.log('🎯 Inicializando WakeWordDetector...');
+    console.log('   Wake word principal:', companyWakeWord);
+    
+    // Gerar variações automáticas
+    const generated = generateWakeWordVariations(companyWakeWord, true, []);
+    
+    console.log(`   ${generated.variations.length} variações:`, generated.variations);
+    
     wakeWordDetectorRef.current = new WakeWordDetector({
-      keywords: wakeWords,
+      keywords: [
+        companyWakeWord, // Wake word principal do banco
+        ...generated.variations.slice(0, 10), // Primeiras 10 variações
+        'gerente', // Fallbacks
+        'atendente',
+        'assistente',
+        'oi',
+        'olá'
+      ],
       threshold: 0.7,
       contextWindow: 5,
       usePhoneticMatching: true,
       excludeWords: endCommands
     });
-  }, [wakeWords.join(','), endCommands.join(',')]);
+    
+    console.log('✅ WakeWordDetector inicializado');
+  }, [companyWakeWord, endCommands.join(',')]);
 
   // ========================================
   // CLEANUP
@@ -280,7 +340,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ========================================
-  // ✅ PASSO 1: FUNÇÃO DE DETECÇÃO DE STOP
+  // FUNÇÃO DE DETECÇÃO DE STOP
   // ========================================
   function detectStopCommand(text: string): boolean {
     const lowerText = text.toLowerCase().trim();
@@ -340,42 +400,112 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ========================================
-  // ✅ PASSO 2: FUNÇÃO DE PARAR TUDO
+  // ✅ MUDANÇA 5: EXTRACTCOMMAND()
+  // ========================================
+  function extractCommand(
+    transcript: string, 
+    wakeWordResult: { keyword: string; matchedText?: string }
+  ): string {
+    let text = transcript.toLowerCase().trim();
+    
+    // 1. Remover wake word matched (detectada pelo fuzzy matching)
+    if (wakeWordResult.matchedText) {
+      const matched = wakeWordResult.matchedText.toLowerCase();
+      text = text.replace(matched, '');
+    }
+    
+    // 2. Remover wake word original (garantia)
+    const keyword = wakeWordResult.keyword.toLowerCase();
+    text = text.replace(keyword, '');
+    
+    // 3. Remover vírgulas, pontos e espaços no início
+    text = text.replace(/^[,.\s]+/, '');
+    
+    // 4. Normalizar espaços múltiplos
+    text = text.replace(/\s+/g, ' ');
+    
+    return text.trim();
+  }
+
+  // ========================================
+  // ✅ MUDANÇA 6: VAD (Voice Activity Detection)
+  // ========================================
+  function detectHumanVoice(audioData: Float32Array): {
+    isHuman: boolean;
+    volume: number;
+  } {
+    // Calcular RMS (volume médio)
+    let sum = 0;
+    for (let i = 0; i < audioData.length; i++) {
+      sum += audioData[i] * audioData[i];
+    }
+    const rms = Math.sqrt(sum / audioData.length);
+    
+    // Thresholds
+    const BASE_THRESHOLD = 0.08; // 8% volume base
+    
+    // Durante fala do assistente, exigir volume 2x maior
+    // Isso evita processar eco/própria voz (ECONOMIA!)
+    const threshold = isPlayingAudio || isSpeaking
+      ? BASE_THRESHOLD * 2.0  // 16% - precisa falar ALTO
+      : BASE_THRESHOLD;       // 8% - volume normal
+    
+    const isHuman = rms > threshold;
+    
+    if (isHuman && (isPlayingAudio || isSpeaking)) {
+      console.log(`🎤 VOZ ALTA detectada (${(rms * 100).toFixed(1)}%) - possível interrupção`);
+    }
+    
+    return { isHuman, volume: rms };
+  }
+
+  // ========================================
+  // ✅ MUDANÇA 8: STOPEVERYTHING() ATUALIZADO
   // ========================================
   function stopEverything() {
-    console.log('🛑 Comando de parar detectado - interrompendo tudo');
+    console.log('🛑 Parando tudo');
     
     // 1. Parar áudio atual
     if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        currentAudioRef.current.src = '';
+        currentAudioRef.current = null;
+      } catch (e) {
+        console.error('Erro ao parar áudio:', e);
+      }
     }
     
-    // 2. Parar speech (se houver)
+    // 2. Parar speech synthesis (fallback)
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     
-    // 3. Resetar estados
+    // 3. Parar feedback audio
+    if (feedbackAudioRef.current) {
+      try {
+        feedbackAudioRef.current.pause();
+        feedbackAudioRef.current = null;
+      } catch (e) {}
+    }
+    
+    // 4. Resetar estados
     setIsProcessing(false);
     setIsSpeaking(false);
     setIsPlayingAudio(false);
     
-    // 4. Fechar modais abertos
+    // 5. Fechar modais
     setQrCodeData(null);
     setPixConfirmationData(null);
     
-    // 5. Limpar transcrição
-    setTranscript('');
-    
-    // 6. Voltar a escutar
-    shouldProcessAudio.current = true;
+    // 6. Limpar flags
     processingQuestion.current = false;
+    shouldProcessAudio.current = true;
     
-    console.log('✅ Tudo parado - pronto para escutar novamente');
+    console.log('✅ Parado');
     
-    // Reiniciar Google Speech após parar
+    // 7. Reiniciar Google Speech após 500ms
     setTimeout(async () => {
       if (isActiveRef.current) {
         await startGoogleSpeech();
@@ -383,6 +513,9 @@ export function VoiceAssistantWithWakeWord({
     }, 500);
   }
 
+  // ========================================
+  // ✅ MUDANÇA 7: HANDLEGOOGLETRANSCRIPT() SIMPLIFICADO
+  // ========================================
   function handleGoogleTranscript(text: string, isFinal: boolean) {
     if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
     
@@ -390,73 +523,85 @@ export function VoiceAssistantWithWakeWord({
     
     console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
     
-    // ✅ PASSO 3: VERIFICAR COMANDO DE PARAR PRIMEIRO
+    // ============================================
+    // 1. COMANDO DE PARAR (sempre prioridade máxima)
+    // ============================================
     if (detectStopCommand(lowerText)) {
       stopEverything();
-      return; // Sai da função sem processar mais nada
+      return;
     }
     
-    // Detectar wake word
-    const detectionResult = wakeWordDetectorRef.current?.detect(lowerText);
+    // ============================================
+    // 2. DETECTAR WAKE WORD
+    // ============================================
+    const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
     
-    if (detectionResult?.detected) {
-      console.log(`🔍 Wake word: "${detectionResult.keyword}"`);
-      console.log(`📊 Confidence: ${(detectionResult.confidence * 100).toFixed(0)}%`);
+    if (!wakeWordResult?.detected) {
+      console.log('⏭️ Sem wake word - ignorando');
+      return;
+    }
+    
+    console.log(`✅ Wake word: "${wakeWordResult.keyword}"`);
+    console.log(`   Confiança: ${Math.round(wakeWordResult.confidence * 100)}%`);
+    console.log(`   Matched: "${wakeWordResult.matchedText}"`);
+    
+    // ============================================
+    // 3. SE ESTAVA FALANDO, PARA PRIMEIRO
+    // ============================================
+    if (isPlayingAudio || isSpeaking) {
+      console.log('⏸️ Interrupção detectada - parando fala atual');
+      stopEverything();
+      // NÃO retorna - continua processando o novo comando abaixo
+    }
+    
+    // ============================================
+    // 4. SE JÁ ESTÁ PROCESSANDO, IGNORA
+    // ============================================
+    if (processingQuestion.current || isProcessing) {
+      console.log('⏸️ Já processando, ignorando');
+      return;
+    }
+    
+    // ============================================
+    // 5. SE NÃO FOR FINAL, AGUARDA
+    // ============================================
+    if (!isFinal) {
+      console.log('⏳ Aguardando transcrição final...');
+      return;
+    }
+    
+    // ============================================
+    // 6. EXTRAIR COMANDO
+    // ============================================
+    const command = extractCommand(lowerText, wakeWordResult);
+    
+    console.log('💬 Comando extraído:', command || '(vazio - apenas wake word)');
+    
+    // ============================================
+    // 7. PROCESSAR
+    // ============================================
+    if (!audioUnlocked.current) {
+      unlockAudio();
+    }
+    
+    if (!processingQuestion.current) {
+      processingQuestion.current = true;
       
-      const normalizedTranscript = lowerText.replace(/[.,!?]/g, '').trim();
-      
-      // Detectar comandos de stop explícitos
-      const explicitStopPhrases = [
-        'pare',
-        'para',
-        'parar',
-        'cala boca',
-        'cala a boca',
-        'calça boca',
-        'silencio',
-        'silêncio',
-        'stop',
-        'chega',
-        'para de falar',
-        'pare de falar',
-        'para ai',
-        'para aí'
-      ];
-      
-      const hasExplicitStop = explicitStopPhrases.some(phrase => {
-        const normalizedPhrase = phrase.replace(/[.,!?]/g, '').trim();
-        return normalizedTranscript.includes(normalizedPhrase);
-      });
-      
-      const isActuallyPlaying = currentAudioRef.current !== null && !currentAudioRef.current.paused;
-      
-      if (hasExplicitStop && isFinal && (isProcessing || isPlayingAudio || isActuallyPlaying)) {
-        console.log('🛑 COMANDO STOP detectado:', lowerText);
-        stopAudioImmediately();
+      // Sem comando = apenas cumprimentar
+      if (!command) {
+        const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
+        playText(greeting)
+          .then(() => {
+            processingQuestion.current = false;
+          })
+          .catch(() => {
+            processingQuestion.current = false;
+          });
         return;
       }
       
-      // Se está ocupado, ignorar
-      if (processingQuestion.current || isProcessing || isPlayingAudio || isActuallyPlaying) {
-        console.log('⏸️ Ocupado, ignorando captura');
-        return;
-      }
-      
-      // Se for resultado final, processar
-      if (isFinal) {
-        console.log('✅ Processando pergunta completa');
-        
-        if (!audioUnlocked.current) {
-          unlockAudio();
-        }
-        
-        if (!processingQuestion.current) {
-          processingQuestion.current = true;
-          processWakeWordQuestion(lowerText);
-        }
-      } else {
-        console.log('⏳ Aguardando transcrição final...');
-      }
+      // Com comando = processar normalmente
+      processWakeWordQuestion(command);
     }
   }
 
@@ -1110,7 +1255,7 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
   const handleTextMessage = async (message: string) => {
     console.log('📝 Mensagem de texto recebida:', message);
 
-    // ✅ PASSO 3: Verificar comando STOP no texto também
+    // ✅ Verificar comando STOP no texto também
     if (detectStopCommand(message)) {
       stopEverything();
       return;
@@ -1239,10 +1384,6 @@ async function detectVoiceCommand(transcript: string): Promise<boolean> {
       processingQuestion.current = false;
       playGoodbye();
       return;
-    }
-    
-    for (const word of wakeWords) {
-      cleanTranscript = cleanTranscript.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
     }
     
     cleanTranscript = cleanTranscript.replace(/\s+/g, ' ').trim();
@@ -1593,7 +1734,7 @@ async function playProcessingFeedback(): Promise<HTMLAudioElement> {
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    if (isListening) return `Diga: "${wakeWords[0]}" + pergunta`;
+    if (isListening) return companyWakeWord ? `Diga: "${companyWakeWord}" + pergunta` : 'Escutando...';
     return 'Aguarde...';
   };
 
@@ -1611,7 +1752,7 @@ async function playProcessingFeedback(): Promise<HTMLAudioElement> {
   if (isMaximized) {
     return (
       <div className="flex flex-col items-center gap-4 md:gap-8 w-full">
-        {/* ✅ PASSO 5: Botão PARAR (opcional) */}
+        {/* ✅ Botão PARAR (opcional) */}
         {isSpeaking && (
           <button
             onClick={stopEverything}
@@ -1669,7 +1810,7 @@ async function playProcessingFeedback(): Promise<HTMLAudioElement> {
             ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
             : 'bg-white border-gray-200'
         }`}>
-          {/* ✅ PASSO 5: Botão PARAR (opcional) */}
+          {/* ✅ Botão PARAR (opcional) */}
           {isSpeaking && (
             <button
               onClick={stopEverything}

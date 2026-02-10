@@ -49,7 +49,7 @@ export default async function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6">
         {/* Assistentes */}
-        <Link href="/dashboard/empresas">
+        <Link href="/dashboard/assistentes">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer">
             <div className="flex items-center space-x-4 mb-4">
               <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
@@ -105,7 +105,7 @@ export default async function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="grid md:grid-cols-2 gap-6">
-        <Link href="/dashboard/funcoes">
+        <Link href="/dashboard/functions">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">⚙️ Funções</h3>
             <p className="text-sm text-gray-600 dark:text-white/60">Configure funções do assistente</p>
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
         <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6">
           <h3 className="font-semibold text-blue-900 dark:text-white mb-1">🚀 Comece Agora</h3>
           <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
-          <Link href="/dashboard/empresas/novo" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold">
+          <Link href="/dashboard/assistentes/novo" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold">
             + Criar Assistente
           </Link>
         </div>

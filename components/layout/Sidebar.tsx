@@ -3,29 +3,32 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { 
-  Home, 
+  LayoutDashboard, 
   Bot, 
   Settings, 
-  DollarSign, 
-  MessageSquare
+  Wallet, 
+  MessageSquare,
+  Menu,
+  X,
+  HelpCircle
 } from 'lucide-react';
 
-interface SidebarProps {
-  theme: 'dark' | 'light';
-}
-
 const menuItems = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/assistentes', label: 'Assistentes', icon: Bot },
-  { href: '/funcoes', label: 'Funções', icon: Settings },
-  { href: '/saldo', label: 'Saldo', icon: DollarSign },
-  { href: '/historico', label: 'Histórico', icon: MessageSquare },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/assistentes', label: 'Assistentes', icon: Bot },
+  { href: '/dashboard/funcoes', label: 'Funções', icon: Settings },
+  { href: '/dashboard/faqs', label: 'FAQs', icon: HelpCircle },
+  { href: '/dashboard/saldo', label: 'Saldo', icon: Wallet },
+  { href: '/dashboard/historico', label: 'Histórico', icon: MessageSquare },
 ];
 
-export function Sidebar({ theme }: SidebarProps) {
+export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { resolvedTheme } = useTheme();
+  const theme = resolvedTheme || 'dark';
 
   return (
     <div className="relative">
@@ -39,12 +42,10 @@ export function Sidebar({ theme }: SidebarProps) {
         }`}
         aria-label="Menu"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      {/* Lógica do Menu Dropdown (Igual ao UserMenu) */}
+      {/* Lógica do Menu Dropdown */}
       {isOpen && (
         <>
           {/* Overlay para fechar ao clicar fora */}
@@ -59,14 +60,13 @@ export function Sidebar({ theme }: SidebarProps) {
               ? 'bg-slate-800 border-white/10'
               : 'bg-white border-gray-200'
           }`}>
-            {/* Header do Menu (Opcional - Estilo similar ao User Info do UserMenu) */}
             <div className={`px-4 py-3 border-b mb-2 ${
               theme === 'dark' ? 'border-white/10' : 'border-gray-100'
             }`}>
               <h3 className={`text-sm font-semibold ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
-                Menu de Navegação
+                Navegação
               </h3>
             </div>
 

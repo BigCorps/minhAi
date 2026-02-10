@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
+import { Search, RefreshCw, MessageSquare, Trash2, ChevronRight } from 'lucide-react';
 
 interface MessagePair {
   id: string;
@@ -38,7 +39,7 @@ export default function HistoricoPage() {
         throw new Error('Usuário não autenticado');
       }
 
-      // 1. Buscar company_id via company_admins
+      // 1. Buscar empresas onde o usuário é admin
       const { data: adminData } = await supabase
         .from('company_admins')
         .select('company_id')
@@ -49,7 +50,7 @@ export default function HistoricoPage() {
       if (adminData && adminData.length > 0) {
         userCompanyIds = adminData.map(a => a.company_id);
       } else {
-        // FALLBACK: Buscar empresas criadas pelo usuário
+        // Fallback: buscar todas as empresas (ajuste conforme sua política de segurança)
         const { data: allCompanies } = await supabase
           .from('companies')
           .select('id');
@@ -66,7 +67,7 @@ export default function HistoricoPage() {
         return;
       }
 
-      // 2. Carregar empresas
+      // 2. Carregar detalhes das empresas
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, slug')
@@ -74,7 +75,6 @@ export default function HistoricoPage() {
         .order('name');
 
       if (companiesError) throw new Error('Não foi possível carregar as empresas');
-
       setCompanies(companiesData || []);
 
       // 3. Carregar conversas
@@ -99,26 +99,39 @@ export default function HistoricoPage() {
         return;
       }
 
-      // 4. Buscar mensagens
+      const conversationIds = conversations.map(c => c.id);
+
+      // 4. Buscar todas as mensagens das conversas encontradas
+      const { data: allMessages, error: msgError } = await supabase
+        .from('messages')
+        .select('*')
+        .in('conversation_id', conversationIds)
+        .order('created_at', { ascending: true });
+
+      if (msgError) throw new Error('Erro ao carregar mensagens: ' + msgError.message);
+
+      // 5. Agrupar mensagens em pares (User -> Assistant)
       const pairs: MessagePair[] = [];
+      
+      // Agrupar mensagens por conversa
+      const messagesByConv: Record<string, any[]> = {};
+      allMessages?.forEach(msg => {
+        if (!messagesByConv[msg.conversation_id]) {
+          messagesByConv[msg.conversation_id] = [];
+        }
+        messagesByConv[msg.conversation_id].push(msg);
+      });
 
-      for (const conv of conversations) {
+      // Processar cada conversa para criar pares
+      conversations.forEach(conv => {
         const company = companiesData?.find(c => c.id === conv.company_id);
-        if (!company) continue;
+        if (!company) return;
 
-        const { data: messages, error: msgError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: true });
-
-        if (msgError) continue;
-        if (!messages || messages.length === 0) continue;
-
-        // Agrupar em pares
-        for (let i = 0; i < messages.length - 1; i++) {
-          const msg1 = messages[i];
-          const msg2 = messages[i + 1];
+        const convMessages = messagesByConv[conv.id] || [];
+        
+        for (let i = 0; i < convMessages.length - 1; i++) {
+          const msg1 = convMessages[i];
+          const msg2 = convMessages[i + 1];
 
           if (msg1.role === 'user' && msg2.role === 'assistant') {
             pairs.push({
@@ -130,10 +143,10 @@ export default function HistoricoPage() {
               companySlug: company.slug,
               timestamp: msg1.created_at,
             });
-            i++;
+            i++; // Pular a próxima mensagem pois já foi usada no par
           }
         }
-      }
+      });
 
       setMessagePairs(pairs);
     } catch (err: any) {
@@ -158,7 +171,9 @@ export default function HistoricoPage() {
         .in('id', ids);
 
       if (error) throw error;
-      loadData();
+      
+      // Atualizar estado local para remoção imediata
+      setMessagePairs(prev => prev.filter(p => p.id !== pair.id));
     } catch (error: any) {
       alert('Erro ao excluir interação: ' + error.message);
     }
@@ -176,10 +191,7 @@ export default function HistoricoPage() {
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-gray-50 dark:bg-slate-950">
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        
-        {/* Cabeçalho da Página (Interno) */}
         <div className="mb-8">         
           <h1 className="text-3xl font-bold transition-colors text-gray-900 dark:text-white">
             Histórico de Conversas
@@ -192,9 +204,9 @@ export default function HistoricoPage() {
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg p-6 mb-6">
             <div className="flex items-start space-x-3">
-              <svg className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <div className="text-red-600 dark:text-red-400">
+                <Trash2 className="w-6 h-6" />
+              </div>
               <div>
                 <h3 className="text-red-900 dark:text-red-200 font-semibold mb-1">Erro ao carregar histórico</h3>
                 <p className="text-red-800 dark:text-red-300 text-sm mb-3">{error}</p>
@@ -209,23 +221,25 @@ export default function HistoricoPage() {
           </div>
         )}
 
-        {/* Filtros */}
-        <div className="rounded-lg shadow-md p-6 mb-6 transition-colors bg-white dark:bg-slate-900 dark:border dark:border-white/10">
+        <div className="rounded-xl shadow-sm p-6 mb-6 transition-colors bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <label htmlFor="search" className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
                 Buscar
               </label>
-              <input
-                type="text"
-                id="search"
-                placeholder="Buscar por pergunta, resposta ou empresa..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors 
-                bg-white border-gray-300 text-gray-900 
-                dark:bg-slate-800 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
-              />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  id="search"
+                  placeholder="Buscar por pergunta, resposta ou empresa..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors 
+                  bg-white border-gray-300 text-gray-900 
+                  dark:bg-slate-800 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
+                />
+              </div>
             </div>
 
             <div className="w-full md:w-64">
@@ -257,129 +271,92 @@ export default function HistoricoPage() {
             <button
               onClick={loadData}
               disabled={loading}
-              className="px-3 py-1 rounded transition disabled:opacity-50
+              className="flex items-center space-x-2 px-3 py-1 rounded transition disabled:opacity-50
               bg-gray-100 text-gray-700 hover:bg-gray-200
               dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700"
             >
-              Atualizar
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+              <span>Atualizar</span>
             </button>
           </div>
         </div>
 
-        {/* Loading e Lista */}
         {loading ? (
-          <div className="rounded-lg shadow-md p-12 text-center transition-colors bg-white dark:bg-slate-900">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="transition-colors text-gray-600 dark:text-gray-400">Carregando...</p>
+          <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="transition-colors text-gray-600 dark:text-gray-400">Carregando histórico...</p>
           </div>
         ) : filteredPairs.length === 0 && !error ? (
-          <div className="rounded-lg shadow-md p-12 text-center transition-colors bg-white dark:bg-slate-900 dark:border dark:border-white/10">
+          <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gray-100 dark:bg-slate-800">
-              <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
+              <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-500" />
             </div>
             <h2 className="text-xl font-bold mb-2 transition-colors text-gray-900 dark:text-white">
-              Nenhuma conversa ainda
+              Nenhuma conversa encontrada
             </h2>
             <p className="mb-6 transition-colors text-gray-600 dark:text-gray-400">
-              As conversas aparecerão aqui quando os clientes usarem o assistente
+              As conversas aparecerão aqui quando os clientes usarem o assistente.
             </p>
-            <Link
-              href="/dashboard/empresas"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-            >
-              Ver Empresas
-            </Link>
           </div>
         ) : !error && (
-          <>
-            <div className="rounded-lg shadow-md overflow-hidden transition-colors bg-white dark:bg-slate-900 dark:border dark:border-white/10">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="transition-colors bg-gray-50 border-b border-gray-200 dark:bg-slate-800 dark:border-white/10">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
-                        Data/Hora
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
-                        Empresa
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
-                        Pergunta
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
-                        Resposta
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider transition-colors text-gray-500 dark:text-gray-400">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y transition-colors bg-white divide-gray-200 dark:bg-slate-900 dark:divide-white/10">
-                    {filteredPairs.map((pair) => (
-                      <tr key={pair.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm transition-colors text-gray-500 dark:text-gray-400">
-                          {new Date(pair.timestamp).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Link
-                            href={`/ia/${pair.companySlug}`}
-                            target="_blank"
-                            className="text-sm font-medium transition-colors text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            {pair.companyName}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm max-w-md transition-colors text-gray-900 dark:text-gray-100">
-                            <div className="flex items-start space-x-2">
-                              <span className="flex-shrink-0 text-blue-600 dark:text-blue-400">👤</span>
-                              <p className="line-clamp-3">{pair.userMessage}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm max-w-md transition-colors text-gray-700 dark:text-gray-300">
-                            <div className="flex items-start space-x-2">
-                              <span className="flex-shrink-0 text-green-600 dark:text-green-400">🤖</span>
-                              <p className="line-clamp-3">{pair.assistantMessage}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <button
-                            onClick={() => handleDelete(pair)}
-                            className="transition-colors text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                            title="Excluir"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <div className="space-y-4">
+            {filteredPairs.map((pair) => (
+              <div 
+                key={pair.id}
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-bold rounded uppercase tracking-wider">
+                        {pair.companyName}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(pair.timestamp).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => handleDelete(pair)}
+                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      title="Excluir interação"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
 
-            <div className="mt-6 rounded-lg p-4 transition-colors bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-500/30">
-              <h3 className="font-semibold mb-2 transition-colors text-gray-900 dark:text-white">
-                Dica: Use o histórico para melhorar o prompt
-              </h3>
-              <p className="text-sm transition-colors text-gray-700 dark:text-gray-300">
-                Analise as respostas do assistente. Se não estiverem adequadas, vá em <strong>Empresas → Editar</strong> e ajuste o <strong>Prompt do Assistente</strong> com mais detalhes.
-              </p>
-            </div>
-          </>
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400">U</span>
+                      </div>
+                      <div className="flex-1 bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
+                        <p className="text-sm text-gray-800 dark:text-gray-200">{pair.userMessage}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">A</span>
+                      </div>
+                      <div className="flex-1 bg-blue-50/50 dark:bg-blue-500/5 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
+                        <p className="text-sm text-gray-800 dark:text-gray-200">{pair.assistantMessage}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="px-4 py-2 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-white/5 flex justify-end">
+                  <Link 
+                    href={`/dashboard/historico/${pair.conversationId}`}
+                    className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center hover:underline"
+                  >
+                    Ver conversa completa
+                    <ChevronRight className="w-3 h-3 ml-1" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -35,23 +35,38 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
       {/* Conteúdo principal */}
       <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-16 pt-20 md:pt-0">
 
-        {/* LADO ESQUERDO - Texto + CTAs */}
-        <div className="flex-1 text-center md:text-left order-2 md:order-1 max-w-xl">
-          <h1
-            style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-snug mb-5 transition-colors ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            eAi, que tal um{' '}
-            <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-            Atendimento ao Cliente
-            </span>{' '}
-            por Voz com IA{' '}
-            <span className={`${isDark ? 'text-green-400' : 'text-green-600'}`}>
-            eficaz e personalizado?
-            </span>
-          </h1>
+{/* LADO ESQUERDO - Texto + CTAs */}
+<div className="flex-1 text-center md:text-left order-2 md:order-1 max-w-xl">
+  <h1
+    style={{ fontFamily: "'Nunito', sans-serif" }}
+    className={`text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-tight mb-5 transition-colors ${
+      isDark ? 'text-white' : 'text-gray-900'
+    }`}
+  >
+    {/* Linha 1 */}
+    <span className="block">eAi, que tal um</span>
+    
+    {/* Linha 2 */}
+    <span className="block">
+      <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
+        Atendimento ao Cliente
+      </span>{' '}
+      por
+    </span>
+
+    {/* Linha 3 */}
+    <span className="block">
+      Voz com IA{' '}
+      <span className={isDark ? 'text-green-400' : 'text-green-600'}>
+        eficaz e
+      </span>
+    </span>
+
+    {/* Linha 4 */}
+    <span className={`block ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+      personalizado?
+    </span>
+  </h1>
 
           <p
             className={`text-sm sm:text-base md:text-lg max-w-lg mb-6 leading-relaxed transition-colors ${

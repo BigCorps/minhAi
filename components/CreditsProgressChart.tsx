@@ -49,7 +49,10 @@ interface FunctionUsage {
   assistant_functions?: {
     function_name: string;
     color?: string;
-  };
+  } | {
+    function_name: string;
+    color?: string;
+  }[]; // Adicionado para aceitar array do Supabase
 }
 
 interface ChartDataPoint {
@@ -201,7 +204,8 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
         if (usageError) {
           console.error('Error loading function usage:', usageError);
         } else {
-          setFunctionUsage(usageData || []);
+          // Correção: Cast para unknown primeiro e depois para o tipo correto
+          setFunctionUsage((usageData as unknown as FunctionUsage[]) || []);
         }
       }
     } catch (error) {
@@ -246,14 +250,21 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
     return Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
   }, [transactions]);
 
-  // Processar dados para o gráfico de uso por função
+// Processar dados para o gráfico de uso por função
   const usageByFunction = useMemo(() => {
-    return functionUsage.map((func, index) => ({
-      name: func.custom_name || func.assistant_functions?.function_name || func.function_key,
-      value: func.total_credits_consumed,
-      usage: func.usage_count,
-      color: func.assistant_functions?.color || CHART_COLORS[index % CHART_COLORS.length],
-    }));
+    return functionUsage.map((func, index) => {
+      // Garante o acesso aos dados da função, lidando com o fato de vir como array ou objeto
+      const assistantFunc = Array.isArray(func.assistant_functions) 
+        ? func.assistant_functions[0] 
+        : func.assistant_functions;
+
+      return {
+        name: func.custom_name || assistantFunc?.function_name || func.function_key,
+        value: func.total_credits_consumed,
+        usage: func.usage_count,
+        color: assistantFunc?.color || CHART_COLORS[index % CHART_COLORS.length],
+      };
+    });
   }, [functionUsage]);
 
   // Estatísticas gerais

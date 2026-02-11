@@ -5,28 +5,11 @@ import Link from 'next/link';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
 import RecursosSection from '@/components/landing/RecursosSection';
+import FuncoesSection from '@/components/landing/FuncoesSection';
 
 // ============================================================
 // SEÇÕES PLACEHOLDER (serão substituídas nos próximos passos)
 // ============================================================
-
-function FuncoesSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark = theme === 'dark';
-  return (
-    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-950 via-slate-800 to-slate-950'
-        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-    }`}>
-      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-        isDark ? 'text-white' : 'text-gray-900'
-      }`}>Funções</h2>
-      <p className={`text-lg max-w-xl text-center transition-colors ${
-        isDark ? 'text-white/50' : 'text-gray-500'
-      }`}>Seção será implementada no Passo 5</p>
-    </div>
-  );
-}
 
 function PrecosSection({ theme }: { theme: 'dark' | 'light' }) {
   const isDark = theme === 'dark';

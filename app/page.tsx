@@ -1,12 +1,139 @@
 'use client';
 
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import Header from '@/components/landing/Header';
 
-export default function HomePage() {
+// ============================================================
+// SEÇÕES PLACEHOLDER (serão substituídas nos próximos passos)
+// ============================================================
+
+function InicioSection({ theme }: { theme: 'dark' | 'light' }) {
+  const isDark = theme === 'dark';
+  return (
+    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
+      isDark
+        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
+        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
+    }`}>
+      <h1 className={`text-4xl md:text-6xl font-bold leading-tight mb-4 text-center transition-colors ${
+        isDark ? 'text-white' : 'text-gray-900'
+      }`}>
+        eAi, que tal um Atendimento
+        <span className={`block ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+          por Voz com IA?
+        </span>
+      </h1>
+      <p className={`text-lg md:text-xl max-w-2xl text-center mb-8 transition-colors ${
+        isDark ? 'text-white/60' : 'text-gray-600'
+      }`}>
+        Transforme a experiência dos seus clientes com um assistente de voz inteligente,
+        personalizado e disponível 24/7.
+      </p>
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <Link
+          href="/login"
+          className="px-8 py-4 bg-primary-green text-white rounded-full hover:bg-primary-green-dark transition-all duration-300 font-semibold text-lg hover:scale-105 shadow-lg"
+        >
+          Começar Agora
+        </Link>
+        <Link
+          href="/teste-wake-word"
+          className={`px-8 py-4 border-2 rounded-full transition-all duration-300 font-semibold text-lg hover:scale-105 ${
+            isDark
+              ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10'
+              : 'border-blue-600/50 text-blue-600 hover:bg-blue-50'
+          }`}
+        >
+          Ver Demonstração
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function RecursosSection({ theme }: { theme: 'dark' | 'light' }) {
+  const isDark = theme === 'dark';
+  return (
+    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
+      isDark
+        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
+        : 'bg-gradient-to-br from-white via-blue-50 to-white'
+    }`}>
+      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
+        isDark ? 'text-white' : 'text-gray-900'
+      }`}>Recursos</h2>
+      <p className={`text-lg max-w-xl text-center transition-colors ${
+        isDark ? 'text-white/50' : 'text-gray-500'
+      }`}>Seção será implementada no Passo 4</p>
+    </div>
+  );
+}
+
+function FuncoesSection({ theme }: { theme: 'dark' | 'light' }) {
+  const isDark = theme === 'dark';
+  return (
+    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
+      isDark
+        ? 'bg-gradient-to-br from-slate-950 via-slate-800 to-slate-950'
+        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
+    }`}>
+      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
+        isDark ? 'text-white' : 'text-gray-900'
+      }`}>Funções</h2>
+      <p className={`text-lg max-w-xl text-center transition-colors ${
+        isDark ? 'text-white/50' : 'text-gray-500'
+      }`}>Seção será implementada no Passo 5</p>
+    </div>
+  );
+}
+
+function PrecosSection({ theme }: { theme: 'dark' | 'light' }) {
+  const isDark = theme === 'dark';
+  return (
+    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
+      isDark
+        ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950'
+        : 'bg-gradient-to-br from-white via-blue-50 to-white'
+    }`}>
+      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
+        isDark ? 'text-white' : 'text-gray-900'
+      }`}>Preços</h2>
+      <p className={`text-lg max-w-xl text-center transition-colors ${
+        isDark ? 'text-white/50' : 'text-gray-500'
+      }`}>Seção será implementada no Passo 6</p>
+    </div>
+  );
+}
+
+function ContatoSection({ theme }: { theme: 'dark' | 'light' }) {
+  const isDark = theme === 'dark';
+  return (
+    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
+      isDark
+        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
+        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
+    }`}>
+      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
+        isDark ? 'text-white' : 'text-gray-900'
+      }`}>Contato</h2>
+      <p className={`text-lg max-w-xl text-center transition-colors ${
+        isDark ? 'text-white/50' : 'text-gray-500'
+      }`}>Seção será implementada no Passo 7</p>
+    </div>
+  );
+}
+
+// ============================================================
+// COMPONENTE PRINCIPAL DA LANDING PAGE
+// ============================================================
+
+export default function LandingPage() {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState('inicio');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
+  // Detecta preferência de tema do sistema
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
     if (mediaQuery.matches) {
@@ -14,280 +141,134 @@ export default function HomePage() {
     }
   }, []);
 
+  // IntersectionObserver para detectar a seção ativa durante o scroll
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      {
+        root: container,
+        threshold: 0.5,
+      }
+    );
+
+    const sections = container.querySelectorAll('section[id]');
+    sections.forEach((section) => observer.observe(section));
+
+    return () => {
+      sections.forEach((section) => observer.unobserve(section));
+    };
+  }, []);
+
+  // Navegação suave para uma seção
+  const scrollToSection = useCallback((id: string) => {
+    const section = document.getElementById(id);
+    if (section && scrollContainerRef.current) {
+      section.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'start',
+      });
+    }
+  }, []);
+
+  // Suporte a navegação por teclado (setas esquerda/direita)
+  useEffect(() => {
+    const sectionIds = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentIndex = sectionIds.indexOf(activeSection);
+      if (e.key === 'ArrowRight' && currentIndex < sectionIds.length - 1) {
+        e.preventDefault();
+        scrollToSection(sectionIds[currentIndex + 1]);
+      } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        e.preventDefault();
+        scrollToSection(sectionIds[currentIndex - 1]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSection, scrollToSection]);
+
+  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+
+  const isDark = theme === 'dark';
+
   return (
-    <div className={`min-h-screen transition-colors duration-500 ${
-      theme === 'dark' 
-        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
-        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-    }`}>
+    <div
+      className={`relative h-screen w-screen overflow-hidden transition-colors duration-500 ${
+        isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
+      }`}
+    >
+      {/* Header Fixo */}
+      <Header
+        activeSection={activeSection}
+        onNavigate={scrollToSection}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
-<header className={`border-b transition-colors ${
-  theme === 'dark' 
-    ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' 
-    : 'bg-white/80 border-gray-200 backdrop-blur-xl'
-}`}>
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-    <div className="flex justify-between items-center gap-4">
-      
-      {/* 1. LOGO (Lado Esquerdo) */}
-      <div className="flex-shrink-0">
-        <Image 
-          src="/logo.png" 
-          alt="eAi" 
-          width={150} 
-          height={68}
-          className="h-10 md:h-12 w-auto"
-        />
+      {/* Container de Rolagem Horizontal */}
+      <main
+        ref={scrollContainerRef}
+        className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
+        style={{
+          /* Esconde a scrollbar mas mantém funcionalidade */
+          scrollbarWidth: 'none',        /* Firefox */
+          msOverflowStyle: 'none',       /* IE/Edge */
+        }}
+      >
+        <style jsx>{`
+          main::-webkit-scrollbar {
+            display: none;               /* Chrome/Safari/Opera */
+          }
+        `}</style>
+
+        <section id="inicio" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+          <InicioSection theme={theme} />
+        </section>
+
+        <section id="recursos" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+          <RecursosSection theme={theme} />
+        </section>
+
+        <section id="funcoes" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+          <FuncoesSection theme={theme} />
+        </section>
+
+        <section id="precos" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+          <PrecosSection theme={theme} />
+        </section>
+
+        <section id="contato" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+          <ContatoSection theme={theme} />
+        </section>
+      </main>
+
+      {/* Indicador de Progresso (bolinhas na parte inferior) */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
+        {['inicio', 'recursos', 'funcoes', 'precos', 'contato'].map((id) => (
+          <button
+            key={id}
+            onClick={() => scrollToSection(id)}
+            className={`rounded-full transition-all duration-300 ${
+              activeSection === id
+                ? `w-8 h-2 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`
+                : `w-2 h-2 ${isDark ? 'bg-white/30 hover:bg-white/50' : 'bg-gray-300 hover:bg-gray-400'}`
+            }`}
+            aria-label={`Ir para ${id}`}
+          />
+        ))}
       </div>
-
-      {/* 2. NAVEGAÇÃO DESKTOP (Centro) */}
-      <nav className="hidden md:flex items-center space-x-8">
-        <a href="#recursos" className={`transition-colors ${
-          theme === 'dark' ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'
-        }`}>Recursos</a>
-        <a href="#precos" className={`transition-colors ${
-          theme === 'dark' ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'
-        }`}>Preços</a>
-        <a href="#contato" className={`transition-colors ${
-          theme === 'dark' ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'
-        }`}>Contato</a>
-      </nav>
-
-      {/* 3. AÇÕES (Lado Direito: Tema + Entrar) */}
-      <div className="flex items-center space-x-2 md:space-x-4">
-        {/* Botão de Tema agora à esquerda do Entrar */}
-        <button
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className={`p-2 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 ${
-            theme === 'dark'
-              ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-              : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-          }`}
-          aria-label="Alternar tema"
-        >
-          {theme === 'dark' ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-          )}
-        </button>
-
-        <Link
-          href="/login"
-          className="px-4 md:px-6 py-2 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold text-sm md:text-base whitespace-nowrap"
-        >
-          Entrar
-        </Link>
-      </div>
-
     </div>
-  </div>
-</header>
-
-      {/* Hero */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-16">
-          <h1 className={`text-5xl font-bold mb-4 transition-colors ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            eAi, que tal um Atendimento ao Cliente
-          </h1>
-          <h2 className={`text-5xl font-bold mb-6 transition-colors ${
-            theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-          }`}>
-            por Voz com IA eficaz e personalizado?
-          </h2>
-          <p className={`text-xl max-w-3xl mx-auto mb-8 transition-colors ${
-            theme === 'dark' ? 'text-white/70' : 'text-gray-600'
-          }`}>
-            Transforme a experiência dos seus clientes com um assistente de voz inteligente
-            que responde perguntas, executa funções, faz cobranças com geração de pix,
-            marca consultas e agendamentos, com personalização total!
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/login"
-              className="w-full sm:w-auto px-8 py-4 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold text-lg text-center"
-            >
-              Começar Agora
-            </Link>
-            <Link
-              href="/teste-wake-word"
-              className={`w-full sm:w-auto px-8 py-4 border-2 rounded-lg transition font-semibold text-lg text-center ${
-                theme === 'dark'
-                  ? 'border-blue-400 text-blue-400 hover:bg-blue-400/10'
-                  : 'border-blue-600 text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              Ver Demonstração
-            </Link>
-          </div>
-        </div>
-
-        {/* Demo Section */}
-        <div className="max-w-2xl mx-auto">
-          <div className={`rounded-2xl shadow-xl p-12 transition-colors ${
-            theme === 'dark' 
-              ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10' 
-              : 'bg-white'
-          }`}>
-            <div className="flex flex-col items-center">
-              <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 ${
-                theme === 'dark'
-                  ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30'
-                  : 'bg-gradient-to-br from-blue-500 to-blue-600'
-              }`}>
-                <svg className={`w-12 h-12 ${theme === 'dark' ? 'text-blue-400' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <h3 className={`text-2xl font-bold mb-4 transition-colors ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                Diga "Olá Assistente"
-              </h3>
-              <p className={`text-center mb-6 transition-colors ${
-                theme === 'dark' ? 'text-white/60' : 'text-gray-600'
-              }`}>
-                E comece a interagir com seu assistente de voz personalizado
-              </p>
-              <Link
-                href="/teste-wake-word"
-                className="px-6 py-3 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition font-semibold"
-              >
-                Testar Agora Gratuitamente
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="mt-20 grid md:grid-cols-3 gap-8">
-          <div className={`rounded-xl shadow-md p-8 transition-colors ${
-            theme === 'dark'
-              ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10'
-              : 'bg-white'
-          }`}>
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
-              theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
-            }`}>
-              <svg className={`w-6 h-6 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className={`text-xl font-bold mb-2 transition-colors ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>Custo Baixo</h3>
-            <p className={`transition-colors ${
-              theme === 'dark' ? 'text-white/60' : 'text-gray-600'
-            }`}>
-              A partir de R$ 0,12 por interação. Economia de 90% comparado a atendimento humano.
-            </p>
-          </div>
-
-          <div className={`rounded-xl shadow-md p-8 transition-colors ${
-            theme === 'dark'
-              ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10'
-              : 'bg-white'
-          }`}>
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
-              theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
-            }`}>
-              <svg className={`w-6 h-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-            </div>
-            <h3 className={`text-xl font-bold mb-2 transition-colors ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>Totalmente Customizável</h3>
-            <p className={`transition-colors ${
-              theme === 'dark' ? 'text-white/60' : 'text-gray-600'
-            }`}>
-              Configure palavras de ativação, saudações e prompts personalizados para cada empresa.
-            </p>
-          </div>
-
-          <div className={`rounded-xl shadow-md p-8 transition-colors ${
-            theme === 'dark'
-              ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10'
-              : 'bg-white'
-          }`}>
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
-              theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'
-            }`}>
-              <svg className={`w-6 h-6 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className={`text-xl font-bold mb-2 transition-colors ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>Rápido e Fácil</h3>
-            <p className={`transition-colors ${
-              theme === 'dark' ? 'text-white/60' : 'text-gray-600'
-            }`}>
-              Configure em minutos. Sem necessidade de código ou conhecimento técnico.
-            </p>
-          </div>
-        </div>
-      </div>
-
-{/* Footer */}
-<footer className={`border-t py-8 transition-colors ${
-  theme === 'dark'
-    ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
-    : 'bg-white border-gray-200'
-}`}>
-  <div className={`px-4 text-center transition-colors ${
-    theme === 'dark' ? 'text-white/60' : 'text-gray-700'
-  }`}>
-    <p>
-      &copy; {new Date().getFullYear()} eAi - Empowered Artificial Intelligence.
-    </p>
-
-    <small className="block mt-2">
-      <a
-        href="https://bigcorps.com.br"
-        target="_blank"
-        rel="noreferrer"
-        className={`hover:underline transition-colors ${
-          theme === 'dark'
-            ? 'text-white/40 hover:text-white/60'
-            : 'text-gray-600 hover:text-gray-800'
-        }`}
-      >
-        Desenvolvido por BigCorps.
-      </a>
-    </small>
-
-    <small className="block mt-1 text-xs">
-      <Link
-        href="/termos"
-        className={`hover:underline transition-colors ${
-          theme === 'dark'
-            ? 'text-white/40 hover:text-white/60'
-            : 'text-gray-600 hover:text-gray-800'
-        }`}
-      >
-        Termos de Uso
-      </Link>
-      {' '}e{' '}
-      <Link
-        href="/aviso"
-        className={`hover:underline transition-colors ${
-          theme === 'dark'
-            ? 'text-white/40 hover:text-white/60'
-            : 'text-gray-600 hover:text-gray-800'
-        }`}
-      >
-        Aviso de Privacidade
-      </Link>
-    </small>
-  </div>
-</footer>
-    </div>
-  )
+  );
 }

@@ -45,11 +45,11 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           >
             eAi, que tal um{' '}
             <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-              Atendimento ao Cliente
+            Atendimento ao Cliente
             </span>{' '}
             por Voz com IA{' '}
             <span className={`${isDark ? 'text-green-400' : 'text-green-600'}`}>
-              eficaz e personalizado?
+            eficaz e personalizado?
             </span>
           </h1>
 

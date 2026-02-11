@@ -4,8 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardTitle, CardHeader, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
-import { format, parseISO, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { createClient } from '@supabase/supabase-js';
+import { format, parseISO, subDays } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import {
   TrendingUp, TrendingDown, Eye, EyeOff, ChevronLeft, ChevronRight, Calendar,
@@ -17,7 +17,17 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartsRadar,
   ScatterChart, Scatter, ZAxis
 } from 'recharts';
-import { cn } from '@/lib/utils';
+
+// Função cn inline para evitar dependência
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(' ');
+}
+
+// Cliente Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type ChartType = 'line' | 'bar' | 'pie' | 'area' | 'stacked' | 'funnel' | 'radar' | 'scatter';
 type ViewType = '7days' | '30days' | '90days' | 'all';

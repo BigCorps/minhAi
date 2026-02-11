@@ -146,7 +146,7 @@ export default function CreditsPage() {
   return (
     <div className="space-y-8">
       {/* Header com Stats */}
-      <div className={`rounded-3xl shadow-xl p-8 border transition-all ${
+      <div className={`rounded-3xl shadow-lg p-8 border transition-all ${
         isDark
           ? 'bg-slate-900/40 border-white/10 backdrop-blur-xl'
           : 'bg-white border-gray-200'
@@ -161,18 +161,18 @@ export default function CreditsPage() {
             </p>
           </div>
 
-          {/* Stats Cards - Padronizados com o CreditsCard do Dashboard */}
+          {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
             <div className={`rounded-2xl p-4 border transition-colors ${
               isDark ? 'bg-green-500/10 border-green-500/20' : 'bg-green-50 border-green-200'
             }`}>
               <div className="flex items-center gap-2 mb-1">
                 <Zap className={`w-4 h-4 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
-                <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-green-300' : 'text-green-900'}`}>
+                <p className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-green-300' : 'text-green-900'}`}>
                   Disponíveis
                 </p>
               </div>
-              <p className={`text-3xl font-black ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+              <p className={`text-3xl font-bold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
                 {credits?.available_credits || 0}
               </p>
             </div>
@@ -182,11 +182,11 @@ export default function CreditsPage() {
             }`}>
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className={`w-4 h-4 ${isDark ? 'text-white/60' : 'text-gray-600'}`} />
-                <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white/70' : 'text-gray-900'}`}>
+                <p className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-white/70' : 'text-gray-900'}`}>
                   Utilizados
                 </p>
               </div>
-              <p className={`text-3xl font-black ${isDark ? 'text-white' : 'text-gray-700'}`}>
+              <p className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-700'}`}>
                 {credits?.total_used || 0}
               </p>
             </div>
@@ -196,11 +196,11 @@ export default function CreditsPage() {
             }`}>
               <div className="flex items-center gap-2 mb-1">
                 <Shield className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-blue-300' : 'text-blue-900'}`}>
+                <p className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-blue-300' : 'text-blue-900'}`}>
                   Comprados
                 </p>
               </div>
-              <p className={`text-3xl font-black ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+              <p className={`text-3xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
                 {credits?.total_purchased || 0}
               </p>
             </div>
@@ -231,15 +231,15 @@ export default function CreditsPage() {
               className={`relative rounded-2xl transition-all duration-300 flex flex-col ${
                 pkg.is_highlighted
                   ? isDark
-                    ? 'bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-2xl shadow-blue-500/20 scale-105 z-10'
-                    : 'bg-gradient-to-b from-blue-600 to-blue-700 text-white shadow-2xl scale-105 z-10'
+                    ? 'bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-xl scale-105 z-10'
+                    : 'bg-gradient-to-b from-blue-600 to-blue-700 text-white shadow-xl scale-105 z-10'
                   : isDark
                     ? 'bg-slate-900/40 border border-white/10 hover:border-blue-500/50'
                     : 'bg-white border border-gray-200 hover:border-blue-300 shadow-sm'
               }`}
             >
               {pkg.is_highlighted && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg">
                   Mais Popular
                 </div>
               )}
@@ -250,7 +250,7 @@ export default function CreditsPage() {
                     {pkg.name}
                   </h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black">R$ {(pkg.price_cents / 100).toFixed(2)}</span>
+                    <span className="text-3xl font-bold">R$ {(pkg.price_cents / 100).toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -278,7 +278,7 @@ export default function CreditsPage() {
                 <button
                   onClick={() => handlePurchase(pkg.id)}
                   disabled={purchasing !== null}
-                  className={`w-full py-4 rounded-xl font-black transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                  className={`w-full py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 ${
                     pkg.is_highlighted
                       ? 'bg-white text-blue-700 hover:bg-blue-50 shadow-lg'
                       : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'

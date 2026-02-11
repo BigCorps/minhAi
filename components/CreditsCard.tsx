@@ -100,7 +100,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
             <h3 className={`text-xl font-bold transition-colors ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}>
-              Créditos do Sistema
+              Seus Créditos
             </h3>
             <p className={`text-sm transition-colors ${
               isDark ? 'text-white/60' : 'text-gray-600'
@@ -139,7 +139,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
 
         <div className="flex items-center gap-4 shrink-0">
           <div className="text-right hidden sm:block">
-            <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {credits?.available_credits || 0}
             </p>
             <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>

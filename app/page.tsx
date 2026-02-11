@@ -3,54 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Header from '@/components/landing/Header';
+import InicioSection from '@/components/landing/InicioSection';
 
 // ============================================================
 // SEÇÕES PLACEHOLDER (serão substituídas nos próximos passos)
 // ============================================================
-
-function InicioSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark = theme === 'dark';
-  return (
-    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-    }`}>
-      <h1 className={`text-4xl md:text-6xl font-bold leading-tight mb-4 text-center transition-colors ${
-        isDark ? 'text-white' : 'text-gray-900'
-      }`}>
-        eAi, que tal um Atendimento
-        <span className={`block ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-          por Voz com IA?
-        </span>
-      </h1>
-      <p className={`text-lg md:text-xl max-w-2xl text-center mb-8 transition-colors ${
-        isDark ? 'text-white/60' : 'text-gray-600'
-      }`}>
-        Transforme a experiência dos seus clientes com um assistente de voz inteligente,
-        personalizado e disponível 24/7.
-      </p>
-      <div className="flex flex-col sm:flex-row items-center gap-4">
-        <Link
-          href="/login"
-          className="px-8 py-4 bg-primary-green text-white rounded-full hover:bg-primary-green-dark transition-all duration-300 font-semibold text-lg hover:scale-105 shadow-lg"
-        >
-          Começar Agora
-        </Link>
-        <Link
-          href="/teste-wake-word"
-          className={`px-8 py-4 border-2 rounded-full transition-all duration-300 font-semibold text-lg hover:scale-105 ${
-            isDark
-              ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10'
-              : 'border-blue-600/50 text-blue-600 hover:bg-blue-50'
-          }`}
-        >
-          Ver Demonstração
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 function RecursosSection({ theme }: { theme: 'dark' | 'light' }) {
   const isDark = theme === 'dark';

@@ -39,7 +39,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         <div className="flex-1 text-center md:text-left order-2 md:order-1 max-w-xl">
           <h1
             style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-semibold leading-snug mb-5 transition-colors ${
+            className={`text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-bold leading-snug mb-5 transition-colors ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}
           >
@@ -73,7 +73,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </Link>
             <Link
               href="/teste-wake-word"
-              className={`w-full sm:w-auto px-6 py-3 border-2 rounded-full transition-all duration-300 font-semibold text-sm sm:text-base text-center hover:scale-105 ${
+              className={`w-full sm:w-auto px-6 py-3 border-2 rounded-full transition-all duration-300 font-bold text-sm sm:text-base text-center hover:scale-105 ${
                 isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'
@@ -86,9 +86,9 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           {/* Mini destaques */}
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 mt-6">
             {[
-              { icon: '⚡', text: 'Rápido e Fácil' },
-              { icon: '💰', text: 'A partir de R$ 0,12/interação' },
-              { icon: '🎯', text: '100% Customizável' },
+              { text: 'Rápido e Fácil de Começar' },
+              { text: 'Pague por Interação' },
+              { text: '100% Customizável' },
             ].map((item) => (
               <span
                 key={item.text}

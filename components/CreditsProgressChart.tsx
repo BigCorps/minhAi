@@ -350,15 +350,15 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
                 paddingAngle={2}
                 dataKey="value"
                 nameKey="name"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
               >
                 {pieData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Tooltip formatter={(value) => hideValues ? '******' : `${value} créditos`} />
-            </PieChart>
+              <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
+                </PieChart>
           </ResponsiveContainer>
         );
 
@@ -413,8 +413,8 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
         return (
           <ResponsiveContainer width="100%" height={height}>
             <FunnelChart>
-              <Tooltip formatter={(value) => hideValues ? '******' : `${value} créditos`} />
-              <Funnel dataKey="value" data={funnelData} isAnimationActive>
+                  <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
+                  <Funnel dataKey="value" data={funnelData} isAnimationActive>
                 <LabelList position="right" fill="#000" stroke="none" dataKey="name" />
               </Funnel>
             </FunnelChart>
@@ -514,15 +514,15 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
                 paddingAngle={2}
                 dataKey="value"
                 nameKey="name"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
               >
                 {usageByFunction.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
               <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Tooltip formatter={(value) => hideValues ? '******' : `${value} créditos`} />
-            </PieChart>
+              <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
+                </PieChart>
           </ResponsiveContainer>
         );
 
@@ -533,8 +533,8 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value) => hideValues ? '******' : `${value} créditos`} />
-              <Bar dataKey="value" name="Créditos Consumidos">
+              <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
+                <Bar dataKey="value" name="Créditos Consumidos">
                 {usageByFunction.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}

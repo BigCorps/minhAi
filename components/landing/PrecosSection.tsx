@@ -94,15 +94,15 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
             Pacotes em breve disponíveis.
           </p>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
             {packages.map((pkg) => (
               <div
                 key={pkg.id}
                 className={`relative rounded-xl sm:rounded-2xl transition-all duration-300 flex flex-col ${
                   pkg.is_highlighted
                     ? isDark
-                      ? 'bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-lg shadow-blue-500/10 scale-[1.02] z-10'
-                      : 'bg-gradient-to-b from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-300/20 scale-[1.02] z-10'
+                      ? 'bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-lg shadow-blue-500/10 sm:scale-[1.02] z-10'
+                      : 'bg-gradient-to-b from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-300/20 sm:scale-[1.02] z-10'
                     : isDark
                       ? 'bg-slate-800/40 border border-white/5 backdrop-blur-sm'
                       : 'bg-white/80 border border-gray-100 backdrop-blur-sm shadow-sm'
@@ -110,51 +110,48 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               >
                 {/* Badge */}
                 {pkg.is_highlighted && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] sm:text-[10px] font-bold px-2 sm:px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                  <div className="absolute -top-2 sm:-top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] sm:text-[10px] font-bold px-2 sm:px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
                     Mais Popular
                   </div>
                 )}
 
-                <div className="p-3 sm:p-4 md:p-5 lg:p-6 flex-1 flex flex-col">
-                  {/* Nome */}
-                  <h3
-                    style={{ fontFamily: "'Nunito', sans-serif" }}
-                    className={`text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2 ${
-                      !pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')
-                    }`}
-                  >
-                    {pkg.name}
-                  </h3>
-
-                  {/* Preço */}
-                  <div className="mb-3 sm:mb-4">
-                    <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold">
+                {/* Mobile: layout horizontal | Desktop: layout vertical */}
+                <div className="p-2.5 sm:p-4 md:p-5 lg:p-6 flex sm:flex-col items-center sm:items-stretch gap-3 sm:gap-0">
+                  {/* Nome + Preço (mobile: lado esquerdo) */}
+                  <div className="flex-shrink-0 sm:mb-3">
+                    <h3
+                      style={{ fontFamily: "'Nunito', sans-serif" }}
+                      className={`text-xs sm:text-sm md:text-base font-semibold ${
+                        !pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')
+                      }`}
+                    >
+                      {pkg.name}
+                    </h3>
+                    <span className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold">
                       R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
 
-                  {/* Features compactas */}
-                  <div className="space-y-1.5 sm:space-y-2">
-                    {/* Interações */}
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  {/* Features (mobile: lado direito, inline | Desktop: lista vertical) */}
+                  <div className="flex flex-wrap sm:flex-col gap-x-3 gap-y-1 sm:gap-0 sm:space-y-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
                         pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-blue-500/10' : 'bg-blue-50'
                       }`}>
-                        <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-2 h-2 sm:w-2.5 sm:h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                       </div>
-                      <span className="font-semibold text-[11px] sm:text-xs md:text-sm">
+                      <span className="font-semibold text-[10px] sm:text-xs md:text-sm">
                         {pkg.interactions.toLocaleString('pt-BR')} interações
                       </span>
                     </div>
 
-                    {/* Preço por interação */}
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
                         pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-blue-500/10' : 'bg-blue-50'
                       }`}>
-                        <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-2 h-2 sm:w-2.5 sm:h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
@@ -163,12 +160,11 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                       </span>
                     </div>
 
-                    {/* Não expira */}
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
                         pkg.is_highlighted ? 'bg-white/20' : isDark ? 'bg-green-500/10' : 'bg-green-50'
                       }`}>
-                        <svg className={`w-2.5 h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-green-400' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-2 h-2 sm:w-2.5 sm:h-2.5 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-green-400' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>

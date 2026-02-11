@@ -305,9 +305,10 @@ export default function CreditsPage() {
           onClose={() => setIsModalOpen(false)}
           paymentId={paymentData.payment_id}
           pixCode={paymentData.pix_code}
-          pixQrCode={paymentData.pix_qrcode}
+          qrCodeUrl={paymentData.pix_qrcode}
           amount={paymentData.amount}
           packageName={paymentData.packageName}
+          theme={isDark ? 'dark' : 'light'}
         />
       )}
     </div>

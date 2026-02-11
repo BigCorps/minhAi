@@ -39,7 +39,7 @@ const recursos = [
     description: 'Configure em minutos. Sem necessidade de código ou conhecimento técnico para começar.',
     highlight: '< 5 min',
     highlightLabel: 'para configurar',
-    color: 'purple',
+    color: 'green',
   },
 ];
 
@@ -55,12 +55,6 @@ const colorMap: Record<string, { iconBg: [string, string]; iconText: [string, st
     iconText: ['text-blue-400', 'text-blue-600'],
     accent: ['border-blue-500/20', 'border-blue-200'],
     highlightText: ['text-blue-400', 'text-blue-600'],
-  },
-  purple: {
-    iconBg: ['bg-purple-500/15', 'bg-purple-100'],
-    iconText: ['text-purple-400', 'text-purple-600'],
-    accent: ['border-purple-500/20', 'border-purple-200'],
-    highlightText: ['text-purple-400', 'text-purple-600'],
   },
 };
 
@@ -88,7 +82,7 @@ export default function RecursosSection({ theme = 'dark' }: RecursosSectionProps
       {/* Título da seção */}
       <div className="relative z-10 text-center mb-10 md:mb-14">
         <p
-          className={`text-xs sm:text-sm font-semibold uppercase tracking-widest mb-3 transition-colors ${
+          className={`text-xs sm:text-sm font-semibold tracking-widest mb-3 transition-colors ${
             isDark ? 'text-blue-400/70' : 'text-blue-600/70'
           }`}
         >

@@ -37,36 +37,38 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         
         {/* LADO ESQUERDO - Texto + CTAs */}
         <div className="flex-1 text-center md:text-left order-2 md:order-1 max-w-xl">
-          <h1
-            style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-3xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-bold leading-tight mb-5 transition-colors ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            {/* Linha 1 */}
-            <span className="block">eAi, que tal um</span>
-            
-            {/* Linha 2 */}
-            <span className="block">
-              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                Atendimento ao Cliente
-              </span>{' '}
-              por
-            </span>
+<h1
+  style={{ fontFamily: "'Nunito', sans-serif" }}
+  className={`text-2xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.1] mb-6 transition-colors ${
+    isDark ? 'text-white' : 'text-gray-900'
+  }`}
+>
+  {/* Linha 1 - whitespace-nowrap impede quebras extras */}
+  <span className="block whitespace-nowrap">
+    eAi, que tal um
+  </span>
+  
+  {/* Linha 2 */}
+  <span className="block whitespace-nowrap">
+    <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
+      Atendimento ao Cliente
+    </span>{' '}
+    por
+  </span>
 
-            {/* Linha 3 */}
-            <span className="block">
-              Voz com IA{' '}
-              <span className={isDark ? 'text-green-400' : 'text-green-600'}>
-                eficaz e
-              </span>
-            </span>
+  {/* Linha 3 */}
+  <span className="block whitespace-nowrap">
+    Voz com IA{' '}
+    <span className={isDark ? 'text-green-400' : 'text-green-600'}>
+      eficaz e
+    </span>
+  </span>
 
-            {/* Linha 4 */}
-            <span className={`block ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-              personalizado?
-            </span>
-          </h1>
+  {/* Linha 4 */}
+  <span className={`block whitespace-nowrap ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+    personalizado?
+  </span>
+</h1>
 
           <p
             className={`text-sm sm:text-base md:text-lg max-w-lg mb-8 leading-relaxed transition-colors ${
@@ -87,7 +89,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               Começar Agora
             </Link>
             <Link
-              href="/teste-wake-word"
+              href="/ia/suporte"
               className={`w-full sm:w-auto px-8 py-3.5 border-2 rounded-full transition-all duration-300 font-bold text-sm sm:text-base text-center hover:scale-105 ${
                 isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'

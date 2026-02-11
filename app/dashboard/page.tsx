@@ -1,337 +1,150 @@
-'use client';
-
-import { useState, useEffect, useRef, useCallback } from 'react';
+// app/dashboard/page.tsx
+import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
-import Header from '@/components/landing/Header';
-import InicioSection from '@/components/landing/InicioSection';
-import RecursosSection from '@/components/landing/RecursosSection';
+import { Settings, Wallet } from 'lucide-react';
+import { CreditsCard } from '@/components/CreditsCard';
 
-// ============================================================
-// SEÇÕES PLACEHOLDER (serão substituídas nos próximos passos)
-// ============================================================
+export default async function DashboardPage() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-function FuncoesSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark = theme === 'dark';
-  return (
-    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-950 via-slate-800 to-slate-950'
-        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-    }`}>
-      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-        isDark ? 'text-white' : 'text-gray-900'
-      }`}>Funções</h2>
-      <p className={`text-lg max-w-xl text-center transition-colors ${
-        isDark ? 'text-white/50' : 'text-gray-500'
-      }`}>Seção será implementada no Passo 5</p>
-    </div>
-  );
-}
+  let totalCompanies = 0;
+  let totalConversations = 0;
+  let totalFAQs = 0;
 
-function PrecosSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark = theme === 'dark';
-  return (
-    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950'
-        : 'bg-gradient-to-br from-white via-blue-50 to-white'
-    }`}>
-      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-        isDark ? 'text-white' : 'text-gray-900'
-      }`}>Preços</h2>
-      <p className={`text-lg max-w-xl text-center transition-colors ${
-        isDark ? 'text-white/50' : 'text-gray-500'
-      }`}>Seção será implementada no Passo 6</p>
-    </div>
-  );
-}
+  // Carregamento de dados com tratamento de erro
+  try {
+    const { count } = await supabase.from('companies').select('*', { count: 'exact', head: true });
+    totalCompanies = count || 0;
+  } catch (e) {
+    console.error('Error loading companies:', e);
+  }
 
-function ContatoSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark = theme === 'dark';
-  return (
-    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-    }`}>
-      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-        isDark ? 'text-white' : 'text-gray-900'
-      }`}>Contato</h2>
-      <p className={`text-lg max-w-xl text-center transition-colors ${
-        isDark ? 'text-white/50' : 'text-gray-500'
-      }`}>Seção será implementada no Passo 7</p>
-    </div>
-  );
-}
+  try {
+    const { count } = await supabase.from('conversations').select('*', { count: 'exact', head: true });
+    totalConversations = count || 0;
+  } catch (e) {
+    console.error('Error loading conversations:', e);
+  }
 
-// ============================================================
-// COMPONENTE PRINCIPAL DA LANDING PAGE
-// ============================================================
+  try {
+    const { count } = await supabase.from('faq_entries').select('*', { count: 'exact', head: true });
+    totalFAQs = count || 0;
+  } catch (e) {
+    console.error('Error loading FAQs:', e);
+  }
 
-const SECTION_IDS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
-
-export default function LandingPage() {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [activeSection, setActiveSection] = useState('inicio');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const isScrollingRef = useRef(false);
-
-  // Detecta preferência de tema do sistema
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-    if (mediaQuery.matches) {
-      setTheme('light');
-    }
-  }, []);
-
-  // IntersectionObserver para detectar a seção ativa durante o scroll
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            setActiveSection(entry.target.id);
-          }
-        });
-      },
-      {
-        root: container,
-        threshold: 0.5,
-      }
-    );
-
-    const sections = container.querySelectorAll('section[id]');
-    sections.forEach((section) => observer.observe(section));
-
-    return () => {
-      sections.forEach((section) => observer.unobserve(section));
-    };
-  }, []);
-
-  // Navegação suave para uma seção
-  const scrollToSection = useCallback((id: string) => {
-    const section = document.getElementById(id);
-    if (section && scrollContainerRef.current) {
-      isScrollingRef.current = true;
-      section.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'start',
-      });
-      // Libera o scroll após a animação terminar
-      setTimeout(() => {
-        isScrollingRef.current = false;
-      }, 800);
-    }
-  }, []);
-
-  // Navegar para próxima/anterior seção
-  const navigateNext = useCallback(() => {
-    const currentIndex = SECTION_IDS.indexOf(activeSection);
-    if (currentIndex < SECTION_IDS.length - 1) {
-      scrollToSection(SECTION_IDS[currentIndex + 1]);
-    }
-  }, [activeSection, scrollToSection]);
-
-  const navigatePrev = useCallback(() => {
-    const currentIndex = SECTION_IDS.indexOf(activeSection);
-    if (currentIndex > 0) {
-      scrollToSection(SECTION_IDS[currentIndex - 1]);
-    }
-  }, [activeSection, scrollToSection]);
-
-  // =============================================
-  // SCROLL VERTICAL → HORIZONTAL (Desktop)
-  // =============================================
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    let wheelTimeout: NodeJS.Timeout;
-    let canScroll = true;
-
-    const handleWheel = (e: WheelEvent) => {
-      // Só converte se o scroll é predominantemente vertical
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-
-      e.preventDefault();
-
-      if (!canScroll || isScrollingRef.current) return;
-
-      // Threshold mínimo para evitar scrolls acidentais
-      if (Math.abs(e.deltaY) < 30) return;
-
-      canScroll = false;
-
-      if (e.deltaY > 0) {
-        navigateNext();
-      } else {
-        navigatePrev();
-      }
-
-      // Cooldown entre navegações (evita pular seções)
-      wheelTimeout = setTimeout(() => {
-        canScroll = true;
-      }, 1000);
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-      clearTimeout(wheelTimeout);
-    };
-  }, [navigateNext, navigatePrev]);
-
-  // Suporte a navegação por teclado (setas esquerda/direita)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        navigateNext();
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        navigatePrev();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigateNext, navigatePrev]);
-
-  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-
-  const isDark = theme === 'dark';
-  const currentIndex = SECTION_IDS.indexOf(activeSection);
-  const canGoLeft = currentIndex > 0;
-  const canGoRight = currentIndex < SECTION_IDS.length - 1;
+  const displayName = user?.user_metadata?.name || user?.email || 'Usuário';
 
   return (
-    <div
-      className={`relative h-screen w-screen overflow-hidden transition-colors duration-500 ${
-        isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
-      }`}
-    >
-      {/* Header Fixo */}
-      <Header
-        activeSection={activeSection}
-        onNavigate={scrollToSection}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-
-      {/* Container de Rolagem Horizontal */}
-      <main
-        ref={scrollContainerRef}
-        className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
-        style={{
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
-      >
-        <style jsx>{`
-          main::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
-
-        <section id="inicio" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
-          <InicioSection theme={theme} />
-        </section>
-
-        <section id="recursos" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
-          <RecursosSection theme={theme} />
-        </section>
-
-        <section id="funcoes" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
-          <FuncoesSection theme={theme} />
-        </section>
-
-        <section id="precos" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
-          <PrecosSection theme={theme} />
-        </section>
-
-        <section id="contato" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
-          <ContatoSection theme={theme} />
-        </section>
-      </main>
-
-      {/* ================================================ */}
-      {/* SETA ESQUERDA                                   */}
-      {/* ================================================ */}
-      <button
-        onClick={navigatePrev}
-        className={`fixed left-4 md:left-6 top-1/2 -translate-y-1/2 z-40 p-2 md:p-3 rounded-full backdrop-blur-sm border transition-all duration-500 group ${
-          canGoLeft
-            ? 'opacity-100 translate-x-0'
-            : 'opacity-0 -translate-x-4 pointer-events-none'
-        } ${
-          isDark
-            ? 'bg-white/5 border-white/10 hover:bg-white/10'
-            : 'bg-black/5 border-black/5 hover:bg-black/10'
-        }`}
-        aria-label="Seção anterior"
-      >
-        <svg
-          className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:-translate-x-0.5 ${
-            isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-
-      {/* ================================================ */}
-      {/* SETA DIREITA                                    */}
-      {/* ================================================ */}
-      <button
-        onClick={navigateNext}
-        className={`fixed right-4 md:right-6 top-1/2 -translate-y-1/2 z-40 p-2 md:p-3 rounded-full backdrop-blur-sm border transition-all duration-500 group ${
-          canGoRight
-            ? 'opacity-100 translate-x-0'
-            : 'opacity-0 translate-x-4 pointer-events-none'
-        } ${
-          isDark
-            ? 'bg-white/5 border-white/10 hover:bg-white/10'
-            : 'bg-black/5 border-black/5 hover:bg-black/10'
-        }`}
-        aria-label="Próxima seção"
-      >
-        <svg
-          className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:translate-x-0.5 ${
-            isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-
-      {/* ================================================ */}
-      {/* INDICADOR DE PROGRESSO (bolinhas)               */}
-      {/* ================================================ */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
-        {SECTION_IDS.map((id) => (
-          <button
-            key={id}
-            onClick={() => scrollToSection(id)}
-            className={`rounded-full transition-all duration-300 ${
-              activeSection === id
-                ? `w-8 h-2 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`
-                : `w-2 h-2 ${isDark ? 'bg-white/30 hover:bg-white/50' : 'bg-gray-300 hover:bg-gray-400'}`
-            }`}
-            aria-label={`Ir para ${id}`}
-          />
-        ))}
+    <div className="space-y-8">
+      {/* Welcome */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Olá, {displayName}!
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-white/60">
+            Bem-vindo ao seu painel de controle
+          </p>
+        </div>
       </div>
+
+      {/* Credit Card - NOVO! Posicionado acima dos outros cards */}
+      {user && (
+        <CreditsCard userId={user.id} />
+      )}
+
+      {/* Stats Cards */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Assistentes */}
+        <Link href="/dashboard/assistentes">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer h-full">
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Assistentes</h3>
+                <p className="text-sm text-gray-500 dark:text-white/40">{totalCompanies} assistentes</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-white/60">Gerencie seus assistentes virtuais</p>
+          </div>
+        </Link>
+
+        {/* Histórico */}
+        <Link href="/dashboard/historico">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-cyan-500 dark:hover:border-cyan-500/50 transition cursor-pointer h-full">
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Histórico</h3>
+                <p className="text-sm text-gray-500 dark:text-white/40">{totalConversations} conversas</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-white/60">Visualize conversas anteriores</p>
+          </div>
+        </Link>
+
+        {/* FAQs */}
+        <Link href="/dashboard/faqs">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer h-full">
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">FAQs</h3>
+                <p className="text-sm text-gray-500 dark:text-white/40">{totalFAQs} respostas</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-white/60">Respostas automáticas</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Link href="/dashboard/functions">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
+            <div className="flex items-center space-x-3 mb-2">
+              <Settings className="w-5 h-5 text-gray-600 dark:text-white/70" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Funções</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-white/60">Configure funções do assistente</p>
+          </div>
+        </Link>
+
+        <Link href="/dashboard/saldo">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-gray-300 dark:hover:border-white/20 transition cursor-pointer">
+            <div className="flex items-center space-x-3 mb-2">
+              <Wallet className="w-5 h-5 text-gray-600 dark:text-white/70" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Saldo</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-white/60">PIX recebidos e saques</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* CTA */}
+      {totalCompanies === 0 && (
+        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6">
+          <h3 className="font-semibold text-blue-900 dark:text-white mb-1">🚀 Comece Agora</h3>
+          <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
+          <Link href="/dashboard/assistentes/novo" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold">
+            + Criar Assistente
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

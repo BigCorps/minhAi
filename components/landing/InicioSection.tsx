@@ -96,7 +96,6 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                   isDark ? 'text-white/35' : 'text-gray-400'
                 }`}
               >
-                <span>{item.icon}</span>
                 {item.text}
               </span>
             ))}

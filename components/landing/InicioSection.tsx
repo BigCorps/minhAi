@@ -33,12 +33,13 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-12 pt-20 md:pt-0">
+      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-16 pt-20 md:pt-0">
 
         {/* LADO ESQUERDO - Texto + CTAs */}
-        <div className="flex-1 text-center md:text-left order-2 md:order-1">
+        <div className="flex-1 text-center md:text-left order-2 md:order-1 max-w-xl">
           <h1
-            className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 transition-colors ${
+            style={{ fontFamily: "'Nunito', sans-serif" }}
+            className={`text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] font-semibold leading-snug mb-5 transition-colors ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}
           >
@@ -53,9 +54,9 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </h1>
 
           <p
-            className={`text-base sm:text-lg md:text-xl max-w-xl mb-8 leading-relaxed transition-colors ${
-              isDark ? 'text-white/60' : 'text-gray-600'
-            } ${/* Centraliza no mobile */ 'mx-auto md:mx-0'}`}
+            className={`text-sm sm:text-base md:text-lg max-w-lg mb-6 leading-relaxed transition-colors ${
+              isDark ? 'text-white/55' : 'text-gray-600'
+            } mx-auto md:mx-0`}
           >
             Transforme a experiência dos seus clientes com um assistente de voz inteligente
             que responde perguntas, executa funções, faz cobranças com geração de PIX,
@@ -63,16 +64,16 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </p>
 
           {/* Botões CTA */}
-          <div className="flex flex-col sm:flex-row items-center md:items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-center md:items-start gap-3">
             <Link
               href="/login"
-              className="w-full sm:w-auto px-8 py-4 bg-primary-green text-white rounded-full hover:bg-primary-green-dark transition-all duration-300 font-semibold text-lg text-center shadow-lg hover:shadow-xl hover:scale-105"
+              className="w-full sm:w-auto px-6 py-3 bg-primary-green text-white rounded-full hover:bg-primary-green-dark transition-all duration-300 font-semibold text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
               Começar Agora
             </Link>
             <Link
-              href="/ia/suporte"
-              className={`w-full sm:w-auto px-8 py-4 border-2 rounded-full transition-all duration-300 font-semibold text-lg text-center hover:scale-105 ${
+              href="/teste-wake-word"
+              className={`w-full sm:w-auto px-6 py-3 border-2 rounded-full transition-all duration-300 font-semibold text-sm sm:text-base text-center hover:scale-105 ${
                 isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'
@@ -82,8 +83,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </Link>
           </div>
 
-          {/* Mini destaques abaixo dos CTAs */}
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2 mt-8">
+          {/* Mini destaques */}
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 mt-6">
             {[
               { icon: '⚡', text: 'Rápido e Fácil' },
               { icon: '💰', text: 'A partir de R$ 0,12/interação' },
@@ -91,8 +92,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             ].map((item) => (
               <span
                 key={item.text}
-                className={`flex items-center gap-1.5 text-sm transition-colors ${
-                  isDark ? 'text-white/40' : 'text-gray-400'
+                className={`flex items-center gap-1.5 text-xs transition-colors ${
+                  isDark ? 'text-white/35' : 'text-gray-400'
                 }`}
               >
                 <span>{item.icon}</span>
@@ -102,9 +103,9 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </div>
         </div>
 
-        {/* LADO DIREITO - Avatar */}
+        {/* LADO DIREITO - Avatar (maior) */}
         <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
-          <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96 relative">
+          <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-[22rem] lg:h-[22rem] xl:w-[26rem] xl:h-[26rem] relative">
             <LandingAvatarFace theme={theme} />
           </div>
         </div>

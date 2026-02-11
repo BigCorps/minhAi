@@ -4,28 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
+import RecursosSection from '@/components/landing/RecursosSection';
 
 // ============================================================
 // SEÇÕES PLACEHOLDER (serão substituídas nos próximos passos)
 // ============================================================
-
-function RecursosSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark = theme === 'dark';
-  return (
-    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-        : 'bg-gradient-to-br from-white via-blue-50 to-white'
-    }`}>
-      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-        isDark ? 'text-white' : 'text-gray-900'
-      }`}>Recursos</h2>
-      <p className={`text-lg max-w-xl text-center transition-colors ${
-        isDark ? 'text-white/50' : 'text-gray-500'
-      }`}>Seção será implementada no Passo 4</p>
-    </div>
-  );
-}
 
 function FuncoesSection({ theme }: { theme: 'dark' | 'light' }) {
   const isDark = theme === 'dark';
@@ -85,10 +68,13 @@ function ContatoSection({ theme }: { theme: 'dark' | 'light' }) {
 // COMPONENTE PRINCIPAL DA LANDING PAGE
 // ============================================================
 
+const SECTION_IDS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
+
 export default function LandingPage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [activeSection, setActiveSection] = useState('inicio');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const isScrollingRef = useRef(false);
 
   // Detecta preferência de tema do sistema
   useEffect(() => {
@@ -129,36 +115,99 @@ export default function LandingPage() {
   const scrollToSection = useCallback((id: string) => {
     const section = document.getElementById(id);
     if (section && scrollContainerRef.current) {
+      isScrollingRef.current = true;
       section.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
         inline: 'start',
       });
+      // Libera o scroll após a animação terminar
+      setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 800);
     }
   }, []);
 
+  // Navegar para próxima/anterior seção
+  const navigateNext = useCallback(() => {
+    const currentIndex = SECTION_IDS.indexOf(activeSection);
+    if (currentIndex < SECTION_IDS.length - 1) {
+      scrollToSection(SECTION_IDS[currentIndex + 1]);
+    }
+  }, [activeSection, scrollToSection]);
+
+  const navigatePrev = useCallback(() => {
+    const currentIndex = SECTION_IDS.indexOf(activeSection);
+    if (currentIndex > 0) {
+      scrollToSection(SECTION_IDS[currentIndex - 1]);
+    }
+  }, [activeSection, scrollToSection]);
+
+  // =============================================
+  // SCROLL VERTICAL → HORIZONTAL (Desktop)
+  // =============================================
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let wheelTimeout: NodeJS.Timeout;
+    let canScroll = true;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Só converte se o scroll é predominantemente vertical
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+      e.preventDefault();
+
+      if (!canScroll || isScrollingRef.current) return;
+
+      // Threshold mínimo para evitar scrolls acidentais
+      if (Math.abs(e.deltaY) < 30) return;
+
+      canScroll = false;
+
+      if (e.deltaY > 0) {
+        navigateNext();
+      } else {
+        navigatePrev();
+      }
+
+      // Cooldown entre navegações (evita pular seções)
+      wheelTimeout = setTimeout(() => {
+        canScroll = true;
+      }, 1000);
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      clearTimeout(wheelTimeout);
+    };
+  }, [navigateNext, navigatePrev]);
+
   // Suporte a navegação por teclado (setas esquerda/direita)
   useEffect(() => {
-    const sectionIds = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      const currentIndex = sectionIds.indexOf(activeSection);
-      if (e.key === 'ArrowRight' && currentIndex < sectionIds.length - 1) {
+      if (e.key === 'ArrowRight') {
         e.preventDefault();
-        scrollToSection(sectionIds[currentIndex + 1]);
-      } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        navigateNext();
+      } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        scrollToSection(sectionIds[currentIndex - 1]);
+        navigatePrev();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, scrollToSection]);
+  }, [navigateNext, navigatePrev]);
 
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
   const isDark = theme === 'dark';
+  const currentIndex = SECTION_IDS.indexOf(activeSection);
+  const canGoLeft = currentIndex > 0;
+  const canGoRight = currentIndex < SECTION_IDS.length - 1;
 
   return (
     <div
@@ -179,14 +228,13 @@ export default function LandingPage() {
         ref={scrollContainerRef}
         className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
         style={{
-          /* Esconde a scrollbar mas mantém funcionalidade */
-          scrollbarWidth: 'none',        /* Firefox */
-          msOverflowStyle: 'none',       /* IE/Edge */
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
       >
         <style jsx>{`
           main::-webkit-scrollbar {
-            display: none;               /* Chrome/Safari/Opera */
+            display: none;
           }
         `}</style>
 
@@ -211,9 +259,67 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Indicador de Progresso (bolinhas na parte inferior) */}
+      {/* ================================================ */}
+      {/* SETA ESQUERDA                                   */}
+      {/* ================================================ */}
+      <button
+        onClick={navigatePrev}
+        className={`fixed left-4 md:left-6 top-1/2 -translate-y-1/2 z-40 p-2 md:p-3 rounded-full backdrop-blur-sm border transition-all duration-500 group ${
+          canGoLeft
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 -translate-x-4 pointer-events-none'
+        } ${
+          isDark
+            ? 'bg-white/5 border-white/10 hover:bg-white/10'
+            : 'bg-black/5 border-black/5 hover:bg-black/10'
+        }`}
+        aria-label="Seção anterior"
+      >
+        <svg
+          className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:-translate-x-0.5 ${
+            isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      {/* ================================================ */}
+      {/* SETA DIREITA                                    */}
+      {/* ================================================ */}
+      <button
+        onClick={navigateNext}
+        className={`fixed right-4 md:right-6 top-1/2 -translate-y-1/2 z-40 p-2 md:p-3 rounded-full backdrop-blur-sm border transition-all duration-500 group ${
+          canGoRight
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 translate-x-4 pointer-events-none'
+        } ${
+          isDark
+            ? 'bg-white/5 border-white/10 hover:bg-white/10'
+            : 'bg-black/5 border-black/5 hover:bg-black/10'
+        }`}
+        aria-label="Próxima seção"
+      >
+        <svg
+          className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:translate-x-0.5 ${
+            isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      {/* ================================================ */}
+      {/* INDICADOR DE PROGRESSO (bolinhas)               */}
+      {/* ================================================ */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
-        {['inicio', 'recursos', 'funcoes', 'precos', 'contato'].map((id) => (
+        {SECTION_IDS.map((id) => (
           <button
             key={id}
             onClick={() => scrollToSection(id)}

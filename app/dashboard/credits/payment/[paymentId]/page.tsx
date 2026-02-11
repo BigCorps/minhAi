@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Copy, Check, Clock, QrCode, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-
-interface PaymentPageProps {
-  paymentId: string;
-  theme?: 'dark' | 'light';
-}
+import { Copy, Check, Clock, QrCode, Loader2 } from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
+import { useTheme } from 'next-themes';
 
 interface PaymentData {
   id: string;
@@ -23,20 +19,23 @@ interface PaymentData {
   };
 }
 
-export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageProps) {
+export default function PaymentPage() {
+  const params = useParams();
+  const paymentId = params.paymentId as string;
   const [payment, setPayment] = useState<PaymentData | null>(null);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [checking, setChecking] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
   const router = useRouter();
-
-  const isDark = theme === 'dark';
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
+    setMounted(true);
     fetchPayment();
-    const interval = setInterval(checkPaymentStatus, 5000); // Verificar a cada 5s
-    
+    const interval = setInterval(checkPaymentStatus, 5000);
     return () => clearInterval(interval);
   }, [paymentId]);
 
@@ -50,18 +49,16 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
       
       setTimeLeft(Math.max(0, Math.floor(diff / 1000)));
       
-      if (diff <= 0) {
-        // Expirou
-        alert('Pagamento expirado. Gerando novo código...');
+      if (diff <= 0 && payment.status === 'pending') {
+        alert('Pagamento expirado. Por favor, gere um novo pedido.');
         router.push('/dashboard/credits');
       }
     };
     
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
-    
     return () => clearInterval(interval);
-  }, [payment]);
+  }, [payment, router]);
 
   async function fetchPayment() {
     try {
@@ -72,10 +69,9 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
       setPayment(data);
       
       if (data.status === 'paid') {
-        // Pagamento confirmado!
         setTimeout(() => {
           router.push('/dashboard/credits?success=true');
-        }, 2000);
+        }, 3000);
       }
     } catch (err) {
       console.error('Erro ao buscar pagamento:', err);
@@ -83,7 +79,7 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
   }
 
   async function checkPaymentStatus() {
-    if (checking) return;
+    if (checking || !payment || payment.status === 'paid') return;
     
     setChecking(true);
     try {
@@ -93,12 +89,12 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
         body: JSON.stringify({ payment_id: paymentId })
       });
       
-      if (!response.ok) throw new Error('Erro ao verificar status');
-      
       const data = await response.json();
-      
       if (data.status === 'paid') {
         setPayment(prev => prev ? { ...prev, status: 'paid' } : null);
+        setTimeout(() => {
+          router.push('/dashboard/credits?success=true');
+        }, 3000);
       }
     } catch (err) {
       console.error('Erro ao verificar status:', err);
@@ -118,17 +114,18 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
         body: JSON.stringify({ payment_id: paymentId })
       });
       
-      if (!response.ok) throw new Error('Erro ao confirmar pagamento');
-      
       const data = await response.json();
-      
       if (data.success) {
-        alert(`✅ ${data.message}\n💰 ${data.credits_added || 0} créditos adicionados!`);
         setPayment(prev => prev ? { ...prev, status: 'paid' } : null);
+        setTimeout(() => {
+          router.push('/dashboard/credits?success=true');
+        }, 3000);
+      } else {
+        alert('Pagamento ainda não detectado. Por favor, aguarde alguns instantes.');
       }
     } catch (err) {
       console.error('Erro ao confirmar:', err);
-      alert('❌ Erro ao confirmar pagamento. Tente novamente.');
+      alert('Erro ao confirmar pagamento. Tente novamente.');
     } finally {
       setConfirming(false);
     }
@@ -136,7 +133,6 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
 
   function copyPixCode() {
     if (!payment) return;
-    
     navigator.clipboard.writeText(payment.pix_code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -148,66 +144,39 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function formatPrice(cents: number): string {
-    return (cents / 100).toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    });
-  }
-
-  if (!payment) {
+  if (!mounted || !payment) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${
-        isDark ? 'bg-slate-900' : 'bg-gray-50'
-      }`}>
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+        <p className="text-gray-500 animate-pulse">Carregando detalhes do pagamento...</p>
       </div>
     );
   }
 
+  const isDark = resolvedTheme === 'dark';
+
   if (payment.status === 'paid') {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-6 ${
-        isDark ? 'bg-slate-900' : 'bg-gray-50'
-      }`}>
-        <div className={`max-w-md w-full text-center p-8 rounded-2xl ${
-          isDark ? 'bg-slate-800' : 'bg-white'
-        } shadow-xl`}>
-          <div className="mb-6">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="w-10 h-10 text-green-600 dark:text-green-400" />
-            </div>
-            <h2 className={`text-2xl font-bold mb-2 ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}>
-              Pagamento Confirmado! 🎉
-            </h2>
-            <p className={`text-sm ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              Seus créditos foram adicionados
-            </p>
+      <div className="flex flex-col items-center justify-center py-12 px-6">
+        <div className={`max-w-md w-full text-center p-10 rounded-3xl shadow-xl border transition-all ${
+          isDark ? 'bg-slate-900/40 border-green-500/20 backdrop-blur-xl' : 'bg-white border-green-100'
+        }`}>
+          <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check className="w-12 h-12 text-green-500" />
           </div>
-          
-          <div className={`p-4 rounded-lg mb-6 ${
-            isDark ? 'bg-slate-700/50' : 'bg-gray-50'
-          }`}>
-            <p className={`text-sm ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
-            } mb-1`}>
-              Créditos adicionados
+          <h2 className={`text-3xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Pagamento Confirmado!
+          </h2>
+          <div className={`p-6 rounded-2xl mb-8 ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
+            <p className={`text-sm uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Créditos Adicionados
             </p>
-            <p className={`text-3xl font-bold ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}>
+            <p className={`text-4xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               +{payment.package.interactions.toLocaleString('pt-BR')}
             </p>
           </div>
-
-          <p className={`text-xs ${
-            isDark ? 'text-gray-500' : 'text-gray-400'
-          }`}>
-            Redirecionando...
+          <p className="text-blue-500 font-medium animate-pulse">
+            Redirecionando para seus créditos...
           </p>
         </div>
       </div>
@@ -215,206 +184,120 @@ export default function PaymentPage({ paymentId, theme = 'light' }: PaymentPageP
   }
 
   return (
-    <div className={`min-h-screen p-6 ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
-      <div className="max-w-4xl mx-auto">
-        
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className={`text-3xl font-bold mb-2 ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}>
-            Pagamento via PIX
-          </h1>
-          <p className={`text-sm ${
-            isDark ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            Escaneie o QR Code ou copie o código PIX
-          </p>
-        </div>
+    <div className="space-y-8">
+      <div className="text-center max-w-2xl mx-auto">
+        <h1 className={`text-4xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          Finalize seu Pagamento
+        </h1>
+        <p className={`text-lg ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+          Escaneie o QR Code abaixo ou utilize o Copia e Cola para ativar seus créditos instantaneamente.
+        </p>
+      </div>
 
-        {/* Timer */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <Clock className={`w-5 h-5 ${
-            timeLeft < 300 ? 'text-red-500' : 'text-blue-500'
-          }`} />
-          <span className={`text-lg font-mono ${
-            timeLeft < 300 ? 'text-red-500' : 
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}>
-            {formatTime(timeLeft)}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* QR Code */}
-          <div className={`rounded-2xl p-8 ${
-            isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'
-          } border shadow-lg`}>
-            <div className="flex items-center gap-3 mb-6">
-              <QrCode className={`w-6 h-6 ${
-                isDark ? 'text-blue-400' : 'text-blue-600'
-              }`} />
-              <h2 className={`text-xl font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}>
-                1. Escaneie o QR Code
-              </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        {/* QR Code Card */}
+        <div className={`rounded-3xl p-8 border shadow-lg flex flex-col items-center transition-all ${
+          isDark ? 'bg-slate-900/40 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
+        }`}>
+          <div className="flex items-center gap-3 mb-8 w-full">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <QrCode className="w-6 h-6 text-blue-500" />
             </div>
-
-            <div className="bg-white p-4 rounded-xl mb-4">
-              <img 
-                src={payment.pix_qrcode} 
-                alt="QR Code PIX" 
-                className="w-full max-w-xs mx-auto"
-              />
-            </div>
-
-            <p className={`text-sm text-center ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              Abra o app do seu banco e escaneie
-            </p>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              1. Escaneie o QR Code
+            </h2>
           </div>
 
-          {/* Código PIX */}
-          <div className={`rounded-2xl p-8 ${
-            isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'
-          } border shadow-lg`}>
-            <h2 className={`text-xl font-bold mb-6 ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}>
-              2. Ou copie o código
-            </h2>
+          <div className="bg-white p-6 rounded-3xl shadow-inner mb-6 w-full max-w-[280px]">
+            <img 
+              src={payment.pix_qrcode} 
+              alt="QR Code PIX" 
+              className="w-full h-auto"
+            />
+          </div>
 
-            {/* Resumo */}
-            <div className={`p-4 rounded-lg mb-6 ${
-              isDark ? 'bg-slate-700/50' : 'bg-gray-50'
-            }`}>
-              <div className="flex justify-between items-center mb-2">
-                <span className={`text-sm ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  Pacote
-                </span>
-                <span className={`font-semibold ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {payment.package.name}
-                </span>
+          <div className={`flex items-center gap-3 px-6 py-3 rounded-2xl ${
+            timeLeft < 300 ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
+          }`}>
+            <Clock className="w-5 h-5 animate-pulse" />
+            <span className="text-lg font-bold font-mono">
+              Expira em: {formatTime(timeLeft)}
+            </span>
+          </div>
+        </div>
+
+        {/* Info & Copy Card */}
+        <div className={`rounded-3xl p-8 border shadow-lg transition-all ${
+          isDark ? 'bg-slate-900/40 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
+        }`}>
+          <h2 className={`text-xl font-bold mb-8 flex items-center gap-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <Copy className="w-6 h-6 text-blue-500" />
+            </div>
+            2. Copia e Cola
+          </h2>
+
+          <div className={`p-6 rounded-2xl mb-8 border ${
+            isDark ? 'bg-slate-800/50 border-white/5' : 'bg-gray-50 border-gray-100'
+          }`}>
+            <div className="flex justify-between items-center mb-4">
+              <span className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Resumo do Pedido
+              </span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase bg-blue-500/10 text-blue-500`}>
+                Pendente
+              </span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Pacote</span>
+                <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{payment.package.name}</span>
               </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className={`text-sm ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  Créditos
-                </span>
-                <span className={`font-semibold ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {payment.package.interactions.toLocaleString('pt-BR')} interações
-                </span>
+              <div className="flex justify-between">
+                <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Créditos</span>
+                <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{payment.package.interactions.toLocaleString('pt-BR')}</span>
               </div>
-              <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">
-                <span className={`font-semibold ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Total
-                </span>
-                <span className={`text-xl font-bold ${
-                  isDark ? 'text-blue-400' : 'text-blue-600'
-                }`}>
-                  {formatPrice(payment.amount_cents)}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <span className={`text-lg font-bold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Total</span>
+                <span className="text-3xl font-bold text-blue-500">
+                  R$ {(payment.amount_cents / 100).toFixed(2).replace('.', ',')}
                 </span>
               </div>
             </div>
+          </div>
 
-            {/* Código PIX */}
-            <div className="relative mb-6">
-              <div className={`p-4 rounded-lg font-mono text-xs break-all ${
-                isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-100 text-gray-700'
-              }`}>
-                {payment.pix_code}
-              </div>
-              <button
-                onClick={copyPixCode}
-                className={`absolute top-2 right-2 p-2 rounded-lg transition ${
-                  copied
-                    ? 'bg-green-500 text-white'
-                    : isDark
-                    ? 'bg-slate-700 hover:bg-slate-600 text-white'
-                    : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
-                }`}
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </button>
-            </div>
-
+          <div className="space-y-4">
             <button
               onClick={copyPixCode}
-              className="w-full py-3 rounded-lg font-medium bg-blue-500 hover:bg-blue-600 text-white transition mb-4"
-            >
-              {copied ? '✅ Copiado!' : '📋 Copiar Código PIX'}
-            </button>
-
-            {/* Botão de Confirmação Manual */}
-            <button
-              onClick={confirmPaymentManually}
-              disabled={confirming}
-              className={`w-full py-3 rounded-lg font-medium transition ${
-                confirming
-                  ? 'bg-gray-400 cursor-not-allowed text-white'
-                  : isDark
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-green-500 hover:bg-green-600 text-white'
+              className={`w-full py-4 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-3 ${
+                copied 
+                ? 'bg-green-500 text-white' 
+                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20'
               }`}
             >
-              {confirming ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Confirmando...
-                </span>
+              {copied ? (
+                <><Check className="w-6 h-6" /> Código Copiado!</>
               ) : (
-                '✅ Já Paguei - Confirmar Agora'
+                <><Copy className="w-6 h-6" /> Copiar Código PIX</>
               )}
             </button>
 
-            {/* Instruções */}
-            <div className={`mt-6 p-4 rounded-lg ${
-              isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'
-            } border`}>
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div className={`text-sm ${
-                  isDark ? 'text-blue-300' : 'text-blue-700'
-                }`}>
-                  <p className="font-semibold mb-1">Como pagar:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-xs">
-                    <li>Copie o código PIX acima</li>
-                    <li>Abra o app do seu banco</li>
-                    <li>Escolha PIX Copia e Cola</li>
-                    <li>Cole o código e confirme</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={confirmPaymentManually}
+              disabled={confirming}
+              className={`w-full py-4 rounded-2xl font-bold border transition-all flex items-center justify-center gap-3 ${
+                isDark 
+                ? 'border-white/10 text-white hover:bg-white/5' 
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+              } disabled:opacity-50`}
+            >
+              {confirming ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                'Já paguei, verificar agora'
+              )}
+            </button>
           </div>
-        </div>
-
-        {/* Status */}
-        <div className="mt-8 text-center">
-          <p className={`text-sm ${
-            isDark ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            {checking ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                Verificando pagamento...
-              </span>
-            ) : (
-              '⏱️ Aguardando confirmação do pagamento...'
-            )}
-          </p>
         </div>
       </div>
     </div>

@@ -1,9 +1,8 @@
 // app/dashboard/DashboardContent.tsx
-// CLIENT COMPONENT - Usa theme do contexto
-
 'use client';
 
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from 'next-themes'; // ✅ next-themes
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface DashboardContentProps {
@@ -19,8 +18,22 @@ export default function DashboardContent({
   totalConversations,
   totalFAQs
 }: DashboardContentProps) {
-  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme(); // ✅ next-themes
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="h-32 bg-slate-800/50 rounded-xl"></div>
+      </div>
+    );
+  }
   
+  const theme = resolvedTheme === 'dark' ? 'dark' : 'light';
   const displayName = user?.user_metadata?.name || user?.email || 'Usuário';
 
   return (
@@ -186,24 +199,6 @@ export default function DashboardContent({
           </Link>
         </div>
       )}
-
-      {/* Success */}
-      <div className={`rounded-xl p-4 border ${
-        theme === 'dark'
-          ? 'bg-green-500/10 border-green-500/20'
-          : 'bg-green-50 border-green-200'
-      }`}>
-        <div className="flex items-center space-x-2">
-          <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className={`font-semibold ${
-            theme === 'dark' ? 'text-green-400' : 'text-green-700'
-          }`}>
-            ✅ Dashboard funcionando com tema {theme === 'dark' ? 'escuro' : 'claro'}!
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

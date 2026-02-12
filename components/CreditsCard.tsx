@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Zap, CreditCard } from 'lucide-react';
 import Link from 'next/link';
-import { useTheme } from '@/contexts/ThemeContext'; // 🔥 Usando ThemeContext customizado
+import { useTheme } from 'next-themes'; // ✅ next-themes
 
 interface CreditsCardProps {
   userId: string;
@@ -19,7 +19,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const { theme } = useTheme(); // 🔥 Mudança aqui
+  const { resolvedTheme } = useTheme(); // ✅ next-themes
 
   const supabase = createClient();
 
@@ -72,7 +72,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
     );
   }
 
-  const isDark = theme === 'dark'; // 🔥 Mudança aqui
+  const isDark = resolvedTheme === 'dark';
   const totalCredits = (credits?.available_credits || 0) + (credits?.total_used || 0);
   const usagePercentage = totalCredits > 0 
     ? Math.min(100, Math.max(0, ((credits?.available_credits || 0) / totalCredits) * 100))

@@ -86,7 +86,7 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
   ];
 
   return (
-    <div className="flex bg-gray-100 dark:bg-white/5 rounded-lg p-1 flex-wrap gap-1">
+    <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1 flex-wrap gap-1">
       {charts.map(chart => (
         <Button
           key={chart.type}
@@ -106,7 +106,7 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
 const CustomTooltip = ({ active, payload, label, hideValues }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white dark:bg-black p-3 border border-gray-200 dark:border-white/10 rounded-md shadow-sm">
+      <div className="bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-slate-700 rounded-md shadow-sm">
         <p className="text-sm font-medium mb-1 text-gray-900 dark:text-white">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={`item-${index}`} className="text-sm" style={{ color: entry.color }}>
@@ -436,7 +436,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <Card className="bg-white dark:bg-black border-gray-200 dark:border-white/10">
+      <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
         <CardContent className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-gray-600 dark:text-gray-400" />
         </CardContent>
@@ -445,7 +445,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   }
 
   return (
-    <Card className="bg-white dark:bg-black border-gray-200 dark:border-white/10">
+    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="space-y-1">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Progressão de Créditos</CardTitle>
@@ -458,7 +458,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
             variant="outline"
             size="sm"
             onClick={() => setHideValues(!hideValues)}
-            className="border-gray-200 dark:border-white/10"
+            className="border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700"
           >
             {hideValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
@@ -467,11 +467,11 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
-            <SelectTrigger className="w-32 border-gray-200 dark:border-white/10 bg-white dark:bg-black">
+            <SelectTrigger className="w-32 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-white/10">
+            <SelectContent className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
               <SelectItem value="7days">7 dias</SelectItem>
               <SelectItem value="30days">30 dias</SelectItem>
               <SelectItem value="90days">90 dias</SelectItem>
@@ -491,7 +491,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
           </div>
         ) : (
           <div className="flex items-center justify-center h-64">
-            <p className="text-gray-600 dark:text-gray-400">Nenhuma transação encontrada</p>
+            <p className="text-gray-500 dark:text-gray-400">Nenhuma transação encontrada</p>
           </div>
         )}
       </CardContent>

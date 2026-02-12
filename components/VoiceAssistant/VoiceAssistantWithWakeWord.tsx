@@ -1197,7 +1197,11 @@ export function VoiceAssistantWithWakeWord({
       });
       
       await playText(`Aqui está o WhatsApp: ${data.display_text}`);
-      
+      await saveInteractionToHistory(
+        "Me passe o WhatsApp", 
+        `QR Code de WhatsApp gerado para o número: ${data.display_text}`
+      );
+
     } catch (error: any) {
       console.error('Erro WhatsApp:', error);
       await playText('Desculpe, não consegui obter o WhatsApp.');
@@ -1231,6 +1235,10 @@ export function VoiceAssistantWithWakeWord({
       });
       
       await playText(`Aqui está o Instagram: ${data.display_text}`);
+      await saveInteractionToHistory(
+        "Me passe o Instagram", 
+        `QR Code de Instagram gerado para o perfil: ${data.display_text}`
+      );
       
     } catch (error: any) {
       console.error('Erro Instagram:', error);
@@ -1266,7 +1274,10 @@ export function VoiceAssistantWithWakeWord({
       });
       
       await playText(`PIX de ${amount.toFixed(2).replace('.', ',')} reais gerado. Aguardando confirmação.`);
-      
+      await saveInteractionToHistory(
+        `Gerar PIX de R$ ${amount.toFixed(2)}`, 
+        `PIX no valor de R$ ${amount.toFixed(2)} gerado e aguardando confirmação de pagamento.`
+       );
     } catch (error: any) {
       console.error('Erro PIX:', error);
       await playText('Desculpe, não consegui gerar o PIX.');

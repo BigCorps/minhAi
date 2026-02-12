@@ -229,9 +229,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
     return { totalConsumed, totalAdded, currentBalance };
   }, [transactions]);
 
-  const renderProgressChart = (type: ChartType) => {
-    const height = type === 'pie' ? 300 : 250;
-
+  const renderProgressChart = (type: ChartType, height = 250) => {
     switch (type) {
       case 'bar':
         return (
@@ -244,6 +242,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Bar dataKey="added" name="Adicionados" fill={COLORS.added} />
               <Bar dataKey="consumed" name="Consumidos" fill={COLORS.consumed} />
+              <Bar dataKey="balance" name="Saldo" fill={COLORS.balance} />
             </BarChart>
           </ResponsiveContainer>
         );
@@ -271,7 +270,15 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
                 name="Adicionados" 
                 stroke={COLORS.added} 
                 fill={COLORS.added} 
-                fillOpacity={0.2} 
+                fillOpacity={0.3} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="consumed" 
+                name="Consumidos" 
+                stroke={COLORS.consumed} 
+                fill={COLORS.consumed} 
+                fillOpacity={0.3} 
               />
             </AreaChart>
           </ResponsiveContainer>

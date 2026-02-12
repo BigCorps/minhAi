@@ -49,7 +49,15 @@ const COLORS = {
   refund: '#8B5CF6',
 };
 
-const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChange: (type: ChartType) => void }) => {
+const ChartTypeSelector = ({ 
+  selected, 
+  onChange, 
+  isDark 
+}: { 
+  selected: ChartType, 
+  onChange: (type: ChartType) => void,
+  isDark: boolean 
+}) => {
   const charts = [
     { type: 'line' as const, icon: <TrendingUp className="h-4 w-4" />, title: 'Gráfico de Linha' },
     { type: 'bar' as const, icon: <BarChart3 className="h-4 w-4" />, title: 'Gráfico de Barras' },
@@ -62,7 +70,9 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
   ];
 
   return (
-    <div className="grid grid-cols-4 md:grid-cols-8 bg-gray-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
+    <div className={`grid grid-cols-4 md:grid-cols-8 rounded-lg p-1 gap-1 ${
+      isDark ? 'bg-slate-700' : 'bg-gray-100'
+    }`}>
       {charts.map(chart => (
         <Button
           key={chart.type}
@@ -79,11 +89,17 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
   );
 };
 
-const CustomTooltip = ({ active, payload, label, hideValues }: any) => {
+const CustomTooltip = ({ active, payload, label, hideValues, isDark }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-slate-700 rounded-md shadow-sm">
-        <p className="text-sm font-medium mb-1 text-gray-900 dark:text-white">{label}</p>
+      <div className={`p-3 border rounded-md shadow-sm ${
+        isDark 
+          ? 'bg-slate-800 border-slate-700' 
+          : 'bg-white border-gray-200'
+      }`}>
+        <p className={`text-sm font-medium mb-1 ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={`item-${index}`} className="text-sm" style={{ color: entry.color }}>
             {`${entry.name}: ${hideValues ? '******' : entry.value} créditos`}
@@ -95,7 +111,7 @@ const CustomTooltip = ({ active, payload, label, hideValues }: any) => {
   return null;
 };
 
-export function CreditsProgressChart({ userId }: { userId: string }) {
+export function CreditsProgressChart({ userId, isDark }: { userId: string, isDark: boolean }) {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
@@ -211,7 +227,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip hideValues={hideValues} />} />
+              <Tooltip content={<CustomTooltip hideValues={hideValues} isDark={isDark} />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Bar dataKey="added" name="Adicionados" fill={COLORS.added} />
               <Bar dataKey="consumed" name="Consumidos" fill={COLORS.consumed} />
@@ -227,7 +243,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip hideValues={hideValues} />} />
+              <Tooltip content={<CustomTooltip hideValues={hideValues} isDark={isDark} />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Area 
                 type="monotone" 
@@ -294,7 +310,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip hideValues={hideValues} />} />
+              <Tooltip content={<CustomTooltip hideValues={hideValues} isDark={isDark} />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Bar dataKey="added" name="Adicionados" stackId="a" fill={COLORS.added} />
               <Bar dataKey="consumed" name="Consumidos" stackId="a" fill={COLORS.consumed} />
@@ -309,7 +325,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <PolarGrid />
               <PolarAngleAxis dataKey="dateLabel" />
               <PolarRadiusAxis />
-              <Tooltip content={<CustomTooltip hideValues={hideValues} />} />
+              <Tooltip content={<CustomTooltip hideValues={hideValues} isDark={isDark} />} />
               <RechartsRadar 
                 name="Adicionados" 
                 dataKey="added" 
@@ -366,7 +382,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <ZAxis dataKey="dateLabel" name="Data" />
               <Tooltip 
                 cursor={{ strokeDasharray: '3 3' }} 
-                content={<CustomTooltip hideValues={hideValues} />} 
+                content={<CustomTooltip hideValues={hideValues} isDark={isDark} />} 
               />
               <Legend />
               <Scatter 
@@ -385,7 +401,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip hideValues={hideValues} />} />
+              <Tooltip content={<CustomTooltip hideValues={hideValues} isDark={isDark} />} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Line 
                 type="monotone" 
@@ -416,20 +432,32 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+      <Card className={`border ${
+        isDark 
+          ? 'bg-slate-800 border-slate-700' 
+          : 'bg-white border-gray-200'
+      }`}>
         <CardContent className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-600 dark:text-gray-400" />
+          <Loader2 className={`h-8 w-8 animate-spin ${
+            isDark ? 'text-gray-400' : 'text-gray-600'
+          }`} />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+    <Card className={`border ${
+      isDark 
+        ? 'bg-slate-800 border-slate-700' 
+        : 'bg-white border-gray-200'
+    }`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="space-y-1">
-          <CardTitle className="text-lg text-gray-900 dark:text-white">Progressão de Créditos</CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
+          <CardTitle className={`text-lg ${
+            isDark ? 'text-white' : 'text-gray-900'
+          }`}>Progressão de Créditos</CardTitle>
+          <CardDescription className={isDark ? 'text-gray-400' : 'text-gray-600'}>
             Acompanhe o uso e adição de créditos ao longo do tempo
           </CardDescription>
         </div>
@@ -438,7 +466,11 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
             variant="outline"
             size="sm"
             onClick={() => setHideValues(!hideValues)}
-            className="border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700"
+            className={`border ${
+              isDark 
+                ? 'border-slate-600 hover:bg-slate-700' 
+                : 'border-gray-300 hover:bg-gray-100'
+            }`}
           >
             {hideValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
@@ -447,11 +479,19 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
-            <SelectTrigger className="w-32 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+            <SelectTrigger className={`w-32 border ${
+              isDark 
+                ? 'border-slate-600 bg-slate-900' 
+                : 'border-gray-300 bg-white'
+            }`}>
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+            <SelectContent className={`border ${
+              isDark 
+                ? 'bg-slate-800 border-slate-700' 
+                : 'bg-white border-gray-200'
+            }`}>
               <SelectItem value="7days">7 dias</SelectItem>
               <SelectItem value="30days">30 dias</SelectItem>
               <SelectItem value="90days">90 dias</SelectItem>
@@ -459,7 +499,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
             </SelectContent>
           </Select>
 
-          <ChartTypeSelector selected={chartType} onChange={setChartType} />
+          <ChartTypeSelector selected={chartType} onChange={setChartType} isDark={isDark} />
         </div>
 
         {chartData.length > 0 ? (
@@ -471,7 +511,9 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
           </div>
         ) : (
           <div className="flex items-center justify-center h-64">
-            <p className="text-gray-500 dark:text-gray-400">Nenhuma transação encontrada</p>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+              Nenhuma transação encontrada
+            </p>
           </div>
         )}
       </CardContent>

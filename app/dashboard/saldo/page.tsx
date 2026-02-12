@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle } from 'lucide-react';
+import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface CompanyBalance {
   available_balance_cents: number;
@@ -17,7 +17,18 @@ interface PixTransaction {
   requested_at: string;
   confirmed_at?: string;
   cancelled_at?: string;
+  transferred_at?: string;
   destination_pix_key: string;
+  notes?: string;
+}
+
+interface BalanceTransaction {
+  id: string;
+  transaction_type: string;
+  amount_cents: number;
+  description: string;
+  created_at: string;
+  metadata?: any;
 }
 
 export default function SaldoPage() {
@@ -25,6 +36,7 @@ export default function SaldoPage() {
   const [companyId, setCompanyId] = useState<string>('');
   const [balance, setBalance] = useState<CompanyBalance | null>(null);
   const [pixTransactions, setPixTransactions] = useState<PixTransaction[]>([]);
+  const [balanceTransactions, setBalanceTransactions] = useState<BalanceTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pix' | 'withdraw'>('pix');
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -80,24 +92,47 @@ export default function SaldoPage() {
   async function loadBalanceData() {
     setIsLoading(true);
     try {
-      const { data: balanceData } = await supabase
+      // Load company balance
+      const { data: balanceData, error: balanceError } = await supabase
         .from('company_balance')
         .select('*')
         .eq('company_id', companyId)
         .single();
 
-      if (balanceData) {
+      if (balanceError) {
+        console.error('Erro ao carregar saldo:', balanceError);
+      } else if (balanceData) {
         setBalance(balanceData);
+        console.log('Saldo carregado:', balanceData);
       }
 
-      const { data: pixData } = await supabase
+      // Load PIX transactions
+      const { data: pixData, error: pixError } = await supabase
         .from('pix_transactions')
         .select('*')
         .eq('company_id', companyId)
         .order('requested_at', { ascending: false })
         .limit(50);
 
-      if (pixData) setPixTransactions(pixData);
+      if (pixError) {
+        console.error('Erro ao carregar transações PIX:', pixError);
+      } else if (pixData) {
+        setPixTransactions(pixData);
+      }
+
+      // Load balance transactions
+      const { data: balanceTransactionsData, error: balanceTransactionsError } = await supabase
+        .from('balance_transactions')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (balanceTransactionsError) {
+        console.error('Erro ao carregar transações de saldo:', balanceTransactionsError);
+      } else if (balanceTransactionsData) {
+        setBalanceTransactions(balanceTransactionsData);
+      }
 
     } catch (error) {
       console.error('Erro ao carregar dados de saldo:', error);
@@ -150,7 +185,12 @@ export default function SaldoPage() {
 
       setMessage({ type: 'success', text: 'Solicitação de saque enviada com sucesso! O valor será creditado em sua conta em breve.' });
       setWithdrawAmount('');
-      loadBalanceData();
+      
+      // Reload balance data after a short delay
+      setTimeout(() => {
+        loadBalanceData();
+      }, 1000);
+
     } catch (error: any) {
       console.error('Erro ao solicitar saque:', error);
       setMessage({ type: 'error', text: 'Erro ao processar saque: ' + (error.message || 'Tente novamente mais tarde.') });
@@ -166,8 +206,24 @@ export default function SaldoPage() {
     });
   }
 
+  function formatPixKey(key: string) {
+    if (!key) return '';
+    if (key.length > 20) {
+      return key.substring(0, 10) + '...' + key.substring(key.length - 10);
+    }
+    return key;
+  }
+
   const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.005 : 0;
   const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
@@ -237,7 +293,7 @@ export default function SaldoPage() {
                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Histórico de PIX
+              Histórico de Transações
             </button>
             <button
               onClick={() => setActiveTab('withdraw')}
@@ -254,7 +310,7 @@ export default function SaldoPage() {
           <div className="p-8">
             {activeTab === 'pix' ? (
               <div className="space-y-6">
-                {pixTransactions.length === 0 ? (
+                {pixTransactions.length === 0 && balanceTransactions.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-gray-500 dark:text-gray-400">Nenhuma transação encontrada.</p>
                   </div>
@@ -264,9 +320,10 @@ export default function SaldoPage() {
                       <thead>
                         <tr className="text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100 dark:border-white/5">
                           <th className="pb-4 font-bold">Data</th>
+                          <th className="pb-4 font-bold">Tipo</th>
                           <th className="pb-4 font-bold">Valor</th>
                           <th className="pb-4 font-bold">Status</th>
-                          <th className="pb-4 font-bold">Destino</th>
+                          <th className="pb-4 font-bold">Detalhes</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -274,6 +331,11 @@ export default function SaldoPage() {
                           <tr key={tx.id} className="text-sm">
                             <td className="py-4 text-gray-600 dark:text-gray-400">
                               {new Date(tx.requested_at).toLocaleString('pt-BR')}
+                            </td>
+                            <td className="py-4">
+                              <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400">
+                                {tx.notes?.includes('Saque') ? 'Saque' : 'PIX Recebido'}
+                              </span>
                             </td>
                             <td className="py-4 font-bold text-gray-900 dark:text-white">
                               {formatCurrency(tx.amount_cents)}
@@ -286,11 +348,14 @@ export default function SaldoPage() {
                                 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400'
                                 : 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
                               }`}>
-                                {tx.status === 'confirmed' ? 'Confirmado' : tx.status === 'transferred' ? 'Pago' : tx.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                                {tx.status === 'confirmed' ? 'Confirmado' : 
+                                 tx.status === 'transferred' ? 'Concluído' : 
+                                 tx.status === 'pending' ? 'Pendente' : 
+                                 tx.status === 'cancelled' ? 'Cancelado' : tx.status}
                               </span>
                             </td>
                             <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs">
-                              {tx.destination_pix_key}
+                              {tx.notes || formatPixKey(tx.destination_pix_key)}
                             </td>
                           </tr>
                         ))}
@@ -318,8 +383,8 @@ export default function SaldoPage() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-blue-700 dark:text-blue-400">
-                    <span>Chave Pix (Configurada no Perfil)</span>
-                    <span className="font-mono">{userProfile?.pix_key || 'Não configurada'}</span>
+                    <span>Chave Pix</span>
+                    <span className="font-mono">{userProfile?.pix_key ? formatPixKey(userProfile.pix_key) : 'Não configurada'}</span>
                   </div>
                 </div>
 
@@ -336,7 +401,7 @@ export default function SaldoPage() {
                         value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
                         placeholder="0,00"
-                        className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-lg font-bold"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-lg font-bold text-gray-900 dark:text-white"
                       />
                     </div>
                   </div>
@@ -384,13 +449,5 @@ export default function SaldoPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function CheckCircle2({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
   );
 }

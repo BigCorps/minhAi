@@ -62,7 +62,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             href="https://bigcorps.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
               isDark
                 ? 'bg-slate-800/30 border-white/5 hover:border-blue-500/30 hover:bg-slate-800/50'
                 : 'bg-white/70 border-gray-100 hover:border-blue-200 hover:bg-white shadow-sm'
@@ -86,7 +86,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             href="https://wa.me/5511987311425"
             target="_blank"
             rel="noopener noreferrer"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
               isDark
                 ? 'bg-slate-800/30 border-white/5 hover:border-green-500/30 hover:bg-slate-800/50'
                 : 'bg-white/70 border-gray-100 hover:border-green-200 hover:bg-white shadow-sm'
@@ -110,7 +110,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             href="https://instagram.com/bigcorps"
             target="_blank"
             rel="noopener noreferrer"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
               isDark
                 ? 'bg-slate-800/30 border-white/5 hover:border-blue-500/30 hover:bg-slate-800/50'
                 : 'bg-white/70 border-gray-100 hover:border-blue-200 hover:bg-white shadow-sm'
@@ -132,7 +132,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           {/* Email */}
           <a
             href="mailto:contato@bigcorps.com.br"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
               isDark
                 ? 'bg-slate-800/30 border-white/5 hover:border-blue-500/30 hover:bg-slate-800/50'
                 : 'bg-white/70 border-gray-100 hover:border-blue-200 hover:bg-white shadow-sm'

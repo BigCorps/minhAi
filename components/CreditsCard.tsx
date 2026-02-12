@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { Zap, TrendingUp, CreditCard } from 'lucide-react';
+import { Zap, CreditCard } from 'lucide-react';
 import Link from 'next/link';
-import { useTheme } from 'next-themes';
+import { useTheme } from 'next-themes'; // ✅ next-themes
 
 interface CreditsCardProps {
   userId: string;
@@ -19,7 +19,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme } = useTheme(); // ✅ next-themes
 
   const supabase = createClient();
 

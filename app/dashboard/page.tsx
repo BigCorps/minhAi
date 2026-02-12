@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { Settings, Wallet } from 'lucide-react';
 import { CreditsCard } from '@/components/CreditsCard';
+import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -50,9 +51,14 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Credit Card - NOVO! Posicionado acima dos outros cards */}
+      {/* Credit Card */}
       {user && (
         <CreditsCard userId={user.id} />
+      )}
+
+      {/* Credits Progress Chart - Wrapper que carrega apenas no cliente */}
+      {user && (
+        <CreditsProgressChartWrapper userId={user.id} />
       )}
 
       {/* Stats Cards */}

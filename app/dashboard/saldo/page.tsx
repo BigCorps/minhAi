@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-interface CompanyBalance {
+interface UserBalance {
   available_balance_cents: number;
   total_received_cents: number;
   total_transferred_cents: number;
+  withdrawal_pix_key?: string;
+  withdrawal_pix_key_type?: string;
 }
 
 interface PixTransaction {
@@ -20,6 +22,7 @@ interface PixTransaction {
   transferred_at?: string;
   destination_pix_key: string;
   notes?: string;
+  company_id: string;
 }
 
 interface BalanceTransaction {
@@ -29,12 +32,13 @@ interface BalanceTransaction {
   description: string;
   created_at: string;
   metadata?: any;
+  company_id: string;
 }
 
 export default function SaldoPage() {
   const supabase = createClient();
-  const [companyId, setCompanyId] = useState<string>('');
-  const [balance, setBalance] = useState<CompanyBalance | null>(null);
+  const [userId, setUserId] = useState<string>('');
+  const [balance, setBalance] = useState<UserBalance | null>(null);
   const [pixTransactions, setPixTransactions] = useState<PixTransaction[]>([]);
   const [balanceTransactions, setBalanceTransactions] = useState<BalanceTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,39 +55,36 @@ export default function SaldoPage() {
   }, []);
 
   useEffect(() => {
-    if (companyId) {
+    if (userId) {
       loadBalanceData();
     }
-  }, [companyId]);
+  }, [userId]);
 
   async function loadInitialData() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      setUserId(user.id);
+      console.log('User ID:', user.id);
 
       // Load user profile for Pix key
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
       
-      if (profile) {
+      if (profileError) {
+        console.log('Perfil não encontrado, será criado automaticamente no primeiro PIX');
+      } else if (profile) {
         setUserProfile(profile);
+        console.log('Perfil carregado:', profile);
       }
 
-      const { data: admin } = await supabase
-        .from('company_admins')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (admin) {
-        setCompanyId(admin.company_id);
-      } else {
-        setIsLoading(false);
-      }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar dados iniciais:', error);
       setIsLoading(false);
     }
@@ -91,50 +92,76 @@ export default function SaldoPage() {
 
   async function loadBalanceData() {
     setIsLoading(true);
+    
     try {
-      // Load company balance
+      console.log('Carregando saldo do usuário:', userId);
+      
+      // Carregar saldo do usuário
       const { data: balanceData, error: balanceError } = await supabase
-        .from('company_balance')
+        .from('user_balance')
         .select('*')
-        .eq('company_id', companyId)
-        .single();
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (balanceError) {
         console.error('Erro ao carregar saldo:', balanceError);
       } else if (balanceData) {
-        setBalance(balanceData);
         console.log('Saldo carregado:', balanceData);
+        setBalance(balanceData);
+      } else {
+        console.log('Saldo não encontrado, criando registro inicial...');
+        // Criar registro de saldo inicial
+        const { data: newBalance, error: createError } = await supabase
+          .from('user_balance')
+          .insert({
+            user_id: userId,
+            available_balance_cents: 0,
+            total_received_cents: 0,
+            total_transferred_cents: 0
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Erro ao criar saldo inicial:', createError);
+        } else {
+          setBalance(newBalance);
+        }
       }
 
-      // Load PIX transactions
+      // Carregar todas as transações PIX do usuário (de todas as empresas)
+      console.log('Carregando transações PIX...');
       const { data: pixData, error: pixError } = await supabase
         .from('pix_transactions')
         .select('*')
-        .eq('company_id', companyId)
+        .eq('user_id', userId)
         .order('requested_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (pixError) {
         console.error('Erro ao carregar transações PIX:', pixError);
       } else if (pixData) {
+        console.log(`${pixData.length} transações PIX encontradas`);
         setPixTransactions(pixData);
       }
 
-      // Load balance transactions
+      // Carregar transações de saldo
+      console.log('Carregando transações de saldo...');
       const { data: balanceTransactionsData, error: balanceTransactionsError } = await supabase
         .from('balance_transactions')
         .select('*')
-        .eq('company_id', companyId)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (balanceTransactionsError) {
         console.error('Erro ao carregar transações de saldo:', balanceTransactionsError);
       } else if (balanceTransactionsData) {
+        console.log(`${balanceTransactionsData.length} transações de saldo encontradas`);
         setBalanceTransactions(balanceTransactionsData);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar dados de saldo:', error);
     } finally {
       setIsLoading(false);
@@ -144,7 +171,11 @@ export default function SaldoPage() {
   async function handleWithdraw() {
     setMessage(null);
     
-    if (!userProfile?.pix_key) {
+    // Verificar se tem chave PIX configurada
+    const pixKey = userProfile?.pix_key || balance?.withdrawal_pix_key;
+    const pixKeyType = userProfile?.pix_key_type || balance?.withdrawal_pix_key_type;
+    
+    if (!pixKey) {
       setMessage({ type: 'error', text: 'Você precisa configurar sua chave Pix no Perfil antes de solicitar um saque.' });
       return;
     }
@@ -174,7 +205,7 @@ export default function SaldoPage() {
       const { data, error } = await supabase.functions.invoke('request-withdrawal', {
         body: { 
           amount: amount,
-          companyId: companyId
+          userId: userId // Agora passamos userId ao invés de companyId
         },
         headers: {
           Authorization: `Bearer ${session?.access_token}`
@@ -216,11 +247,15 @@ export default function SaldoPage() {
 
   const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.005 : 0;
   const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
+  const pixKey = userProfile?.pix_key || balance?.withdrawal_pix_key;
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Carregando dados...</p>
+        </div>
       </div>
     );
   }
@@ -310,7 +345,7 @@ export default function SaldoPage() {
           <div className="p-8">
             {activeTab === 'pix' ? (
               <div className="space-y-6">
-                {pixTransactions.length === 0 && balanceTransactions.length === 0 ? (
+                {pixTransactions.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-gray-500 dark:text-gray-400">Nenhuma transação encontrada.</p>
                   </div>
@@ -384,7 +419,7 @@ export default function SaldoPage() {
                   </div>
                   <div className="flex justify-between items-center text-xs text-blue-700 dark:text-blue-400">
                     <span>Chave Pix</span>
-                    <span className="font-mono">{userProfile?.pix_key ? formatPixKey(userProfile.pix_key) : 'Não configurada'}</span>
+                    <span className="font-mono">{pixKey ? formatPixKey(pixKey) : 'Não configurada'}</span>
                   </div>
                 </div>
 
@@ -421,7 +456,7 @@ export default function SaldoPage() {
 
                   <button
                     onClick={handleWithdraw}
-                    disabled={isWithdrawing || !userProfile?.pix_key || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                    disabled={isWithdrawing || !pixKey || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
                     className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition disabled:opacity-50 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                   >
                     {isWithdrawing ? (
@@ -437,7 +472,7 @@ export default function SaldoPage() {
                     )}
                   </button>
 
-                  {!userProfile?.pix_key && (
+                  {!pixKey && (
                     <p className="text-center text-xs text-red-500 font-medium">
                       ⚠️ Configure sua chave Pix no Perfil para habilitar saques.
                     </p>

@@ -86,7 +86,7 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
   ];
 
   return (
-    <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1 flex-wrap gap-1">
+    <div className="grid grid-cols-4 md:grid-cols-8 bg-gray-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
       {charts.map(chart => (
         <Button
           key={chart.type}

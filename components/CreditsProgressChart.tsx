@@ -49,10 +49,7 @@ interface FunctionUsage {
   assistant_functions?: {
     function_name: string;
     color?: string;
-  } | {
-    function_name: string;
-    color?: string;
-  }[]; // Adicionado para aceitar array do Supabase
+  };
 }
 
 interface ChartDataPoint {
@@ -89,7 +86,7 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
   ];
 
   return (
-    <div className="flex bg-muted rounded-lg p-1 flex-wrap gap-1">
+    <div className="flex bg-gray-100 dark:bg-white/5 rounded-lg p-1 flex-wrap gap-1">
       {charts.map(chart => (
         <Button
           key={chart.type}
@@ -109,8 +106,8 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
 const CustomTooltip = ({ active, payload, label, hideValues }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card p-3 border rounded-md shadow-sm">
-        <p className="text-sm font-medium mb-1">{label}</p>
+      <div className="bg-white dark:bg-black p-3 border border-gray-200 dark:border-white/10 rounded-md shadow-sm">
+        <p className="text-sm font-medium mb-1 text-gray-900 dark:text-white">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={`item-${index}`} className="text-sm" style={{ color: entry.color }}>
             {`${entry.name}: ${hideValues ? '******' : entry.value} créditos`}
@@ -124,11 +121,9 @@ const CustomTooltip = ({ active, payload, label, hideValues }: any) => {
 
 export function CreditsProgressChart({ userId }: { userId: string }) {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
-  const [functionUsage, setFunctionUsage] = useState<FunctionUsage[]>([]);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
   const [chartType, setChartType] = useState<ChartType>('line');
-  const [usageChartType, setUsageChartType] = useState<ChartType>('pie');
   const [viewType, setViewType] = useState<ViewType>('30days');
 
   useEffect(() => {
@@ -175,39 +170,6 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       } else {
         setTransactions(transactionsData || []);
       }
-
-      // Buscar uso por função
-      const { data: companiesData } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1)
-        .single();
-
-      if (companiesData) {
-        const { data: usageData, error: usageError } = await supabase
-          .from('company_function_settings')
-          .select(`
-            function_key,
-            custom_name,
-            usage_count,
-            total_credits_consumed,
-            assistant_functions (
-              function_name,
-              color
-            )
-          `)
-          .eq('company_id', companiesData.id)
-          .gt('total_credits_consumed', 0)
-          .order('total_credits_consumed', { ascending: false });
-
-        if (usageError) {
-          console.error('Error loading function usage:', usageError);
-        } else {
-          // Correção: Cast para unknown primeiro e depois para o tipo correto
-          setFunctionUsage((usageData as unknown as FunctionUsage[]) || []);
-        }
-      }
     } catch (error) {
       console.error('Error in loadData:', error);
     } finally {
@@ -249,23 +211,6 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
 
     return Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
   }, [transactions]);
-
-// Processar dados para o gráfico de uso por função
-  const usageByFunction = useMemo(() => {
-    return functionUsage.map((func, index) => {
-      // Garante o acesso aos dados da função, lidando com o fato de vir como array ou objeto
-      const assistantFunc = Array.isArray(func.assistant_functions) 
-        ? func.assistant_functions[0] 
-        : func.assistant_functions;
-
-      return {
-        name: func.custom_name || assistantFunc?.function_name || func.function_key,
-        value: func.total_credits_consumed,
-        usage: func.usage_count,
-        color: assistantFunc?.color || CHART_COLORS[index % CHART_COLORS.length],
-      };
-    });
-  }, [functionUsage]);
 
   // Estatísticas gerais
   const stats = useMemo(() => {
@@ -350,15 +295,15 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
                 paddingAngle={2}
                 dataKey="value"
                 nameKey="name"
-                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
               >
                 {pieData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
-                </PieChart>
+              <Tooltip formatter={(value) => hideValues ? '******' : `${value} créditos`} />
+            </PieChart>
           </ResponsiveContainer>
         );
 
@@ -413,8 +358,8 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
         return (
           <ResponsiveContainer width="100%" height={height}>
             <FunnelChart>
-                  <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
-                  <Funnel dataKey="value" data={funnelData} isAnimationActive>
+              <Tooltip formatter={(value) => hideValues ? '******' : `${value} créditos`} />
+              <Funnel dataKey="value" data={funnelData} isAnimationActive>
                 <LabelList position="right" fill="#000" stroke="none" dataKey="name" />
               </Funnel>
             </FunnelChart>
@@ -489,206 +434,67 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
     }
   };
 
-  const renderUsageChart = (type: ChartType) => {
-    if (usageByFunction.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Nenhum uso de função registrado</p>
-        </div>
-      );
-    }
-
-    const height = type === 'pie' ? 300 : 250;
-
-    switch (type) {
-      case 'pie':
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <PieChart>
-              <Pie
-                data={usageByFunction}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                dataKey="value"
-                nameKey="name"
-                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-              >
-                {usageByFunction.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
-                </PieChart>
-          </ResponsiveContainer>
-        );
-
-      case 'bar':
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={usageByFunction}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value: any) => hideValues ? '******' : `${value ?? 0} créditos`} />
-                <Bar dataKey="value" name="Créditos Consumidos">
-                {usageByFunction.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        );
-
-      default:
-        return renderUsageChart('pie');
-    }
-  };
-
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-white dark:bg-black border-gray-200 dark:border-white/10">
         <CardContent className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-8 w-8 animate-spin text-gray-600 dark:text-gray-400" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Estatísticas Resumidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Créditos Adicionados</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {hideValues ? '******' : stats.totalAdded}
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
-                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <Card className="bg-white dark:bg-black border-gray-200 dark:border-white/10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div className="space-y-1">
+          <CardTitle className="text-lg text-gray-900 dark:text-white">Progressão de Créditos</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
+            Acompanhe o uso e adição de créditos ao longo do tempo
+          </CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHideValues(!hideValues)}
+            className="border-gray-200 dark:border-white/10"
+          >
+            {hideValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
+            <SelectTrigger className="w-32 border-gray-200 dark:border-white/10 bg-white dark:bg-black">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-black border-gray-200 dark:border-white/10">
+              <SelectItem value="7days">7 dias</SelectItem>
+              <SelectItem value="30days">30 dias</SelectItem>
+              <SelectItem value="90days">90 dias</SelectItem>
+              <SelectItem value="all">Tudo</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Créditos Consumidos</p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {hideValues ? '******' : stats.totalConsumed}
-                </p>
-              </div>
-              <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-                <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <ChartTypeSelector selected={chartType} onChange={setChartType} />
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Saldo Atual</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {hideValues ? '******' : stats.currentBalance}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                <Circle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Gráfico de Progressão */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div className="space-y-1">
-              <CardTitle className="text-lg">Progressão de Créditos</CardTitle>
-              <CardDescription>
-                Acompanhe o uso e adição de créditos ao longo do tempo
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setHideValues(!hideValues)}
-              >
-                {hideValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
-                <SelectTrigger className="w-32">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7days">7 dias</SelectItem>
-                  <SelectItem value="30days">30 dias</SelectItem>
-                  <SelectItem value="90days">90 dias</SelectItem>
-                  <SelectItem value="all">Tudo</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <ChartTypeSelector selected={chartType} onChange={setChartType} />
-            </div>
-
-            {chartData.length > 0 ? (
-              <div className={cn(
-                "flex items-center justify-center",
-                chartType === 'pie' ? "h-[300px]" : "h-[250px]"
-              )}>
-                {renderProgressChart(chartType)}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-64">
-                <p className="text-muted-foreground">Nenhuma transação encontrada</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Gráfico de Uso por Função */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div className="space-y-1">
-              <CardTitle className="text-lg">Uso por Função</CardTitle>
-              <CardDescription>
-                Distribuição de créditos consumidos por cada função
-              </CardDescription>
-            </div>
-            <ChartTypeSelector 
-              selected={usageChartType} 
-              onChange={setUsageChartType}
-            />
-          </CardHeader>
-          <CardContent>
-            <div className={cn(
-              "flex items-center justify-center",
-              usageChartType === 'pie' ? "h-[300px]" : "h-[250px]"
-            )}>
-              {renderUsageChart(usageChartType)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        {chartData.length > 0 ? (
+          <div className={cn(
+            "flex items-center justify-center",
+            chartType === 'pie' ? "h-[300px]" : "h-[250px]"
+          )}>
+            {renderProgressChart(chartType)}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-600 dark:text-gray-400">Nenhuma transação encontrada</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

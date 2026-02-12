@@ -41,7 +41,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
         <p className={`text-sm sm:text-base mb-8 sm:mb-10 transition-colors ${
           isDark ? 'text-white/40' : 'text-gray-400'
         }`}>
-          O eAi é desenvolvido por{' '}
+          eAi - desenvolvido por{' '}
           <a
             href="https://bigcorps.com.br"
             target="_blank"

@@ -6,28 +6,7 @@ import InicioSection from '@/components/landing/InicioSection';
 import RecursosSection from '@/components/landing/RecursosSection';
 import FuncaoSlide from '@/components/landing/FuncaoSlide';
 import PrecosSection from '@/components/landing/PrecosSection';
-
-// ============================================================
-// SEÇÕES PLACEHOLDER (serão substituídas nos próximos passos)
-// ============================================================
-
-function ContatoSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark = theme === 'dark';
-  return (
-    <div className={`flex flex-col items-center justify-center h-full w-full p-8 transition-colors duration-500 ${
-      isDark
-        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
-        : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
-    }`}>
-      <h2 className={`text-4xl md:text-5xl font-bold mb-6 transition-colors ${
-        isDark ? 'text-white' : 'text-gray-900'
-      }`}>Contato</h2>
-      <p className={`text-lg max-w-xl text-center transition-colors ${
-        isDark ? 'text-white/50' : 'text-gray-500'
-      }`}>Seção será implementada no Passo 7</p>
-    </div>
-  );
-}
+import ContatoSection from '@/components/landing/ContatoSection';
 
 // ============================================================
 // REGISTRY DE FUNÇÕES

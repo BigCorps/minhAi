@@ -12,40 +12,63 @@ interface PageProps {
   }>;
 }
 
-// Função para verificar créditos do USUÁRIO dono da empresa
+// Função para verificar créditos do USUÁRIO dono da empresa.
+// Usa a coluna user_id da tabela companies como fonte primária,
+// com fallback para company_admins — espelho do padrão adotado em [slug]/page.tsx.
 async function checkUserCredits(companyId: string) {
   const supabase = createClient();
-  
-  // 1. Buscar user_id do dono da empresa (usando a coluna user_id que adicionamos)
+
+  // 1. Tentar obter o user_id direto da tabela companies (fonte primária para privados)
   const { data: companyData } = await supabase
     .from('companies')
     .select('user_id')
     .eq('id', companyId)
     .single();
-  
-  if (!companyData?.user_id) {
+
+  let userId = companyData?.user_id;
+
+  // 2. Fallback: tentar via company_admins caso user_id não esteja preenchido
+  if (!userId) {
+    console.log('⚠️ companies.user_id vazio — tentando fallback via company_admins');
+
+    const { data: adminData } = await supabase
+      .from('company_admins')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .limit(1)
+      .single();
+
+    userId = adminData?.user_id;
+  }
+
+  if (!userId) {
+    console.log('⚠️ Empresa sem proprietário definido — companyId:', companyId);
     return 0;
   }
 
-  // 2. Buscar créditos DO USUÁRIO
+  console.log('👤 User ID do dono:', userId);
+
+  // 3. Buscar créditos DO USUÁRIO
   const { data: credits } = await supabase
     .from('user_credits')
     .select('available_credits')
-    .eq('user_id', companyData.user_id)
+    .eq('user_id', userId)
     .single();
-  
-  return credits?.available_credits || 0;
+
+  const availableCredits = credits?.available_credits || 0;
+  console.log('💰 Créditos disponíveis:', availableCredits);
+
+  return availableCredits;
 }
 
 export default async function AssistentePrivadoPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = createClient();
 
-  // 1. Verificar se o usuário está logado
+  // 1. Verificar autenticação — deve ser a primeira checagem
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
+
   if (authError || !user) {
-    // Redirecionar para login se não estiver autenticado
     redirect(`/login?redirectTo=/ia/private/${id}`);
   }
 
@@ -60,23 +83,37 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
     notFound();
   }
 
-  // 3. Verificar se o usuário logado tem permissão (é o dono da empresa)
+  // 3. Verificar se o usuário logado é o dono da empresa
+  //    Deve ocorrer ANTES de qualquer renderização que exponha dados da empresa.
   if (company.user_id !== user.id) {
-    // Se não for o dono, não tem acesso ao chat privado
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Acesso Negado</h1>
-          <p className="text-slate-400">Você não tem permissão para acessar este assistente privado.</p>
-          <a href="/dashboard" className="mt-4 inline-block text-blue-400 hover:underline">Voltar ao Dashboard</a>
+          <p className="text-slate-400">
+            Você não tem permissão para acessar este assistente privado.
+          </p>
+          <a
+            href="/dashboard"
+            className="mt-4 inline-block text-blue-400 hover:underline"
+          >
+            Voltar ao Dashboard
+          </a>
         </div>
       </div>
     );
   }
 
-  // 4. Verificar créditos
+  // 4. Verificar créditos — só após confirmar que o usuário é o dono
   const remainingCredits = await checkUserCredits(company.id);
   const hasCredits = remainingCredits > 0;
+
+  console.log('🔍 Verificação de créditos (privado):', {
+    companyId: company.id,
+    companyName: company.name,
+    remainingCredits,
+    hasCredits,
+  });
 
   if (!hasCredits) {
     return (
@@ -89,15 +126,24 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
               </svg>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Assistente Indisponível</h1>
-          <p className="text-white/60 mb-8">O assistente <span className="text-white font-semibold">{company.name}</span> está sem créditos.</p>
-          <a href="/dashboard" className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">Acessar Painel</a>
+          <h1 className="text-3xl font-bold text-white mb-4">
+            Assistente Indisponível
+          </h1>
+          <p className="text-white/60 mb-8">
+            O assistente <span className="text-white font-semibold">{company.name}</span> está sem créditos.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+          >
+            Acessar Painel
+          </a>
         </div>
       </div>
     );
   }
 
-  // 5. Renderizar o chat (reutilizando o componente público)
+  // 5. Tudo certo — renderizar o chat
   return (
     <AssistenteClient
       company={{
@@ -114,6 +160,7 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const supabase = createClient();
+
   const { data: company } = await supabase
     .from('companies')
     .select('name')
@@ -122,6 +169,6 @@ export async function generateMetadata({ params }: PageProps) {
 
   return {
     title: company ? `${company.name} (Privado) - eAi` : 'Assistente Privado - eAi',
-    robots: 'noindex, nofollow', // Não indexar chats privados
+    robots: 'noindex, nofollow',
   };
 }

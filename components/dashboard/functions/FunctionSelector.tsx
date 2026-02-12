@@ -57,10 +57,16 @@ export default function FunctionSelector({
         .order('name');
       
       setCompanies(allCompanies || []);
-      
-      if (!selectedCompanyId && allCompanies && allCompanies.length > 0) {
+
+      // Só seleciona automaticamente se:
+      // 1. Ainda não há nenhum companyId selecionado (nem via URL nem via estado)
+      // 2. E há exatamente 1 empresa — não faz sentido forçar escolha quando há só uma opção
+      if (!selectedCompanyId && allCompanies && allCompanies.length === 1) {
         onCompanySelect(allCompanies[0].id);
       }
+
+      // Se há múltiplas empresas e nenhuma selecionada, deixa o usuário escolher.
+      // A page.tsx já exibe a mensagem "Selecione um assistente acima".
       
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
@@ -96,6 +102,8 @@ export default function FunctionSelector({
     );
   }
   
+  // Caso de empresa única: renderiza display estático,
+  // mas agora o useEffect já chamou onCompanySelect acima.
   if (companies.length === 1) {
     return (
       <div className={`px-4 py-3 rounded-lg border ${

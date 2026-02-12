@@ -1,3 +1,4 @@
+// app/ia/[slug]/page.tsx
 import { createClient } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import AssistenteClient from './assistente-client';
@@ -14,41 +15,57 @@ interface PageProps {
 // Função para verificar créditos do USUÁRIO dono da empresa
 async function checkUserCredits(companyId: string) {
   const supabase = createClient();
-  
-  // 1. Buscar user_id do dono da empresa via company_admins
+
+  // 1. Tentar obter o user_id via company_admins (fonte primária)
   const { data: adminData } = await supabase
     .from('company_admins')
     .select('user_id')
     .eq('company_id', companyId)
     .limit(1)
     .single();
-  
-  if (!adminData) {
-    console.log('⚠️ Empresa sem admin associado');
+
+  let userId = adminData?.user_id;
+
+  // 2. Fallback: se não houver registro em company_admins,
+  //    usa a coluna user_id diretamente na tabela companies.
+  //    Isso cobre empresas criadas antes da tabela company_admins existir.
+  if (!userId) {
+    console.log('⚠️ Empresa sem admin em company_admins — tentando fallback via companies.user_id');
+
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('user_id')
+      .eq('id', companyId)
+      .single();
+
+    userId = companyData?.user_id;
+  }
+
+  if (!userId) {
+    console.log('⚠️ Empresa sem proprietário definido — companyId:', companyId);
     return 0;
   }
 
-  console.log('👤 User ID do dono:', adminData.user_id);
-  
-  // 2. Buscar créditos DO USUÁRIO
+  console.log('👤 User ID do dono:', userId);
+
+  // 3. Buscar créditos DO USUÁRIO
   const { data: credits } = await supabase
     .from('user_credits')
     .select('available_credits')
-    .eq('user_id', adminData.user_id)
+    .eq('user_id', userId)
     .single();
-  
+
   const availableCredits = credits?.available_credits || 0;
   console.log('💰 Créditos disponíveis:', availableCredits);
-  
+
   return availableCredits;
 }
 
 export default async function AssistentePublicoPage({ params }: PageProps) {
-  // Next.js 16: params agora é async
   const { slug } = await params;
-  
+
   const supabase = createClient();
-  
+
   const { data: company, error } = await supabase
     .from('companies')
     .select('*')
@@ -75,7 +92,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="max-w-md mx-auto p-8 text-center">
-          {/* Ícone de Bloqueado */}
+          {/* Ícone de Aviso */}
           <div className="mb-6 flex justify-center">
             <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center border-2 border-amber-500/30">
               <svg className="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,7 +148,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     );
   }
 
-  // Tem créditos, passar dados para client component
+  // Tem créditos — renderizar o chat
   return (
     <AssistenteClient
       company={{
@@ -148,7 +165,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
 // Gerar metadata dinâmica
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  
+
   const supabase = createClient();
   const { data: company } = await supabase
     .from('companies')
@@ -157,7 +174,9 @@ export async function generateMetadata({ params }: PageProps) {
     .single();
 
   return {
-    title: company ? `${company.name} - eAi - Assistente IA com Voz` : 'eAi - Assistente IA com Voz',
+    title: company
+      ? `${company.name} - eAi - Assistente IA com Voz`
+      : 'eAi - Assistente IA com Voz',
     description: `Converse com o assistente IA da ${company?.name || 'empresa'}`,
   };
 }

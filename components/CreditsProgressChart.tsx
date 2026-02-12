@@ -4,11 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardTitle, CardHeader, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase-browser';
 import { format, parseISO, subDays } from 'date-fns';
-import { pt } from 'date-fns/locale';
 import {
-  TrendingUp, TrendingDown, Eye, EyeOff, ChevronLeft, ChevronRight, Calendar,
+  TrendingUp, TrendingDown, Eye, EyeOff, Calendar,
   BarChart3, AreaChart as AreaChartIcon, Circle, Filter, Radar, Layers, ScanLine, Loader2
 } from 'lucide-react';
 import {
@@ -23,12 +22,6 @@ function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(' ');
 }
 
-// Cliente Supabase
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 type ChartType = 'line' | 'bar' | 'pie' | 'area' | 'stacked' | 'funnel' | 'radar' | 'scatter';
 type ViewType = '7days' | '30days' | '90days' | 'all';
 
@@ -39,17 +32,6 @@ interface CreditTransaction {
   balance_after: number;
   created_at: string;
   notes?: string;
-}
-
-interface FunctionUsage {
-  function_key: string;
-  custom_name?: string;
-  usage_count: number;
-  total_credits_consumed: number;
-  assistant_functions?: {
-    function_name: string;
-    color?: string;
-  };
 }
 
 interface ChartDataPoint {
@@ -67,11 +49,6 @@ const COLORS = {
   bonus: '#F59E0B',
   refund: '#8B5CF6',
 };
-
-const CHART_COLORS = [
-  '#3B82F6', '#26DE81', '#EF4444', '#F59E0B', '#8B5CF6',
-  '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#10B981'
-];
 
 const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChange: (type: ChartType) => void }) => {
   const charts = [
@@ -133,6 +110,9 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Criar cliente Supabase dentro do componente
+      const supabase = createClient();
+
       // Calcular data inicial baseado no viewType
       let startDate: Date | null = null;
       const now = new Date();

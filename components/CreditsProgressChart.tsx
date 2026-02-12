@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { createClient } from '@/lib/supabase-browser';
 import { format, parseISO, subDays } from 'date-fns';
 import {
-  TrendingUp, TrendingDown, Eye, EyeOff, Calendar,
+  TrendingUp, Eye, EyeOff, Calendar,
   BarChart3, AreaChart as AreaChartIcon, Circle, Filter, Radar, Layers, ScanLine, Loader2
 } from 'lucide-react';
 import {
@@ -17,7 +17,6 @@ import {
   ScatterChart, Scatter, ZAxis
 } from 'recharts';
 
-// Função cn inline para evitar dependência
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(' ');
 }
@@ -51,8 +50,6 @@ const COLORS = {
 };
 
 const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChange: (type: ChartType) => void }) => {
-  console.log('🎨 [ChartTypeSelector] Renderizando com tipo:', selected);
-  
   const charts = [
     { type: 'line' as const, icon: <TrendingUp className="h-4 w-4" />, title: 'Gráfico de Linha' },
     { type: 'bar' as const, icon: <BarChart3 className="h-4 w-4" />, title: 'Gráfico de Barras' },
@@ -72,10 +69,7 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
           title={chart.title}
           size="sm"
           variant={selected === chart.type ? 'default' : 'ghost'}
-          onClick={() => {
-            console.log('🖱️ [ChartTypeSelector] Tipo selecionado:', chart.type);
-            onChange(chart.type);
-          }}
+          onClick={() => onChange(chart.type)}
           className="h-8 w-8 p-0"
         >
           {chart.icon}
@@ -102,8 +96,6 @@ const CustomTooltip = ({ active, payload, label, hideValues }: any) => {
 };
 
 export function CreditsProgressChart({ userId }: { userId: string }) {
-  console.log('🚀 [CreditsProgressChart] Iniciando componente para userId:', userId);
-  
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
@@ -111,17 +103,13 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   const [viewType, setViewType] = useState<ViewType>('30days');
 
   useEffect(() => {
-    console.log('🔄 [CreditsProgressChart] useEffect disparado - carregando dados...');
     loadData();
   }, [userId, viewType]);
 
   const loadData = async () => {
-    console.log('📊 [loadData] Iniciando carregamento de dados...');
     setLoading(true);
-    
     try {
       const supabase = createClient();
-      console.log('✅ [loadData] Cliente Supabase criado');
 
       let startDate: Date | null = null;
       const now = new Date();
@@ -141,8 +129,6 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
           break;
       }
 
-      console.log(`📅 [loadData] Período selecionado: ${viewType}, startDate:`, startDate);
-
       let transactionsQuery = supabase
         .from('credit_transactions')
         .select('*')
@@ -156,26 +142,19 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       const { data: transactionsData, error: transactionsError } = await transactionsQuery;
 
       if (transactionsError) {
-        console.error('❌ [loadData] Erro ao carregar transações:', transactionsError);
+        console.error('Error loading transactions:', transactionsError);
       } else {
-        console.log(`✅ [loadData] ${transactionsData?.length || 0} transações carregadas`);
         setTransactions(transactionsData || []);
       }
     } catch (error) {
-      console.error('❌ [loadData] Erro geral:', error);
+      console.error('Error in loadData:', error);
     } finally {
       setLoading(false);
-      console.log('🏁 [loadData] Carregamento finalizado');
     }
   };
 
   const chartData = useMemo<ChartDataPoint[]>(() => {
-    console.log('🧮 [chartData] Processando dados do gráfico...');
-    
-    if (transactions.length === 0) {
-      console.log('⚠️ [chartData] Nenhuma transação para processar');
-      return [];
-    }
+    if (transactions.length === 0) return [];
 
     const dataMap = new Map<string, ChartDataPoint>();
     
@@ -204,14 +183,10 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       dataPoint.balance = transaction.balance_after;
     });
 
-    const result = Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-    console.log(`✅ [chartData] ${result.length} pontos de dados processados`);
-    return result;
+    return Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
   }, [transactions]);
 
   const stats = useMemo(() => {
-    console.log('📈 [stats] Calculando estatísticas...');
-    
     const totalConsumed = transactions
       .filter(t => t.transaction_type === 'usage')
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
@@ -224,13 +199,10 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       ? transactions[transactions.length - 1].balance_after 
       : 0;
 
-    console.log('📊 [stats] Estatísticas:', { totalConsumed, totalAdded, currentBalance });
     return { totalConsumed, totalAdded, currentBalance };
   }, [transactions]);
 
   const renderProgressChart = (type: ChartType, height = 250) => {
-    console.log('🎨 [renderProgressChart] Renderizando gráfico tipo:', type);
-    
     switch (type) {
       case 'bar':
         return (
@@ -443,7 +415,6 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   };
 
   if (loading) {
-    console.log('⏳ [CreditsProgressChart] Renderizando loading state...');
     return (
       <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
         <CardContent className="flex items-center justify-center h-64">
@@ -453,8 +424,6 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
     );
   }
 
-  console.log('✅ [CreditsProgressChart] Renderizando componente completo');
-  
   return (
     <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -468,10 +437,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              console.log('👁️ [Button] Toggle hideValues:', !hideValues);
-              setHideValues(!hideValues);
-            }}
+            onClick={() => setHideValues(!hideValues)}
             className="border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700"
           >
             {hideValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -480,10 +446,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <Select value={viewType} onValueChange={(value: ViewType) => {
-            console.log('📅 [Select] Período alterado para:', value);
-            setViewType(value);
-          }}>
+          <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
             <SelectTrigger className="w-32 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />

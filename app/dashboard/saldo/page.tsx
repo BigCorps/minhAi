@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { Loader2, TrendingUp, RefreshCw, Download } from 'lucide-react';
+import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle } from 'lucide-react';
 
 interface CompanyBalance {
   available_balance_cents: number;
   total_received_cents: number;
   total_transferred_cents: number;
-  withdrawal_pix_key?: string;
-  withdrawal_pix_key_type?: string;
 }
 
 interface PixTransaction {
@@ -29,27 +27,38 @@ export default function SaldoPage() {
   const [pixTransactions, setPixTransactions] = useState<PixTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pix' | 'withdraw'>('pix');
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   // Formulários
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawPixKey, setWithdrawPixKey] = useState('');
-  const [withdrawPixKeyType, setWithdrawPixKeyType] = useState('phone');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
-    loadCompanyId();
+    loadInitialData();
   }, []);
 
   useEffect(() => {
     if (companyId) {
-      loadData();
+      loadBalanceData();
     }
   }, [companyId]);
 
-  async function loadCompanyId() {
+  async function loadInitialData() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
+
+      // Load user profile for Pix key
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (profile) {
+        setUserProfile(profile);
+      }
 
       const { data: admin } = await supabase
         .from('company_admins')
@@ -59,13 +68,16 @@ export default function SaldoPage() {
 
       if (admin) {
         setCompanyId(admin.company_id);
+      } else {
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error('Erro ao carregar company_id:', error);
+      console.error('Erro ao carregar dados iniciais:', error);
+      setIsLoading(false);
     }
   }
 
-  async function loadData() {
+  async function loadBalanceData() {
     setIsLoading(true);
     try {
       const { data: balanceData } = await supabase
@@ -76,47 +88,72 @@ export default function SaldoPage() {
 
       if (balanceData) {
         setBalance(balanceData);
-        setWithdrawPixKey(balanceData.withdrawal_pix_key || '');
-        setWithdrawPixKeyType(balanceData.withdrawal_pix_key_type || 'phone');
       }
 
       const { data: pixData } = await supabase
         .from('pix_transactions')
         .select('*')
         .eq('company_id', companyId)
-        .order('created_at', { ascending: false })
+        .order('requested_at', { ascending: false })
         .limit(50);
 
       if (pixData) setPixTransactions(pixData);
 
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      alert('❌ Erro ao carregar dados');
+      console.error('Erro ao carregar dados de saldo:', error);
     } finally {
       setIsLoading(false);
     }
   }
 
   async function handleWithdraw() {
-    if (!withdrawAmount || !withdrawPixKey) {
-      alert('❌ Preencha todos os campos');
+    setMessage(null);
+    
+    if (!userProfile?.pix_key) {
+      setMessage({ type: 'error', text: 'Você precisa configurar sua chave Pix no Perfil antes de solicitar um saque.' });
       return;
     }
 
-    const amountCents = Math.floor(parseFloat(withdrawAmount) * 100);
+    if (!withdrawAmount) {
+      setMessage({ type: 'error', text: 'Informe o valor do saque.' });
+      return;
+    }
 
-    if (amountCents <= 0 || amountCents > (balance?.available_balance_cents || 0)) {
-      alert('❌ Valor inválido ou insuficiente');
+    const amount = parseFloat(withdrawAmount);
+    const amountCents = Math.floor(amount * 100);
+
+    if (amountCents < 100) {
+      setMessage({ type: 'error', text: 'O valor mínimo para saque é R$ 1,00.' });
+      return;
+    }
+
+    if (amountCents > (balance?.available_balance_cents || 0)) {
+      setMessage({ type: 'error', text: 'Saldo insuficiente.' });
       return;
     }
 
     setIsWithdrawing(true);
     try {
-      alert('✅ Solicitação enviada! Seu saque será processado em breve');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('request-withdrawal', {
+        body: { 
+          amount: amount,
+          companyId: companyId
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: 'Solicitação de saque enviada com sucesso! O valor será creditado em sua conta em breve.' });
       setWithdrawAmount('');
-      loadData();
+      loadBalanceData();
     } catch (error: any) {
-      alert('❌ Erro: ' + error.message);
+      console.error('Erro ao solicitar saque:', error);
+      setMessage({ type: 'error', text: 'Erro ao processar saque: ' + (error.message || 'Tente novamente mais tarde.') });
     } finally {
       setIsWithdrawing(false);
     }
@@ -129,208 +166,231 @@ export default function SaldoPage() {
     });
   }
 
-  function getStatusBadge(status: string) {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
-      confirmed: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
-      transferred: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
-    };
-
-    const labels: Record<string, string> = {
-      pending: 'Pendente',
-      confirmed: 'Confirmado',
-      cancelled: 'Cancelado',
-      transferred: 'Transferido',
-    };
-
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || colors.pending}`}>
-        {labels[status] || status}
-      </span>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
-  }
+  const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.005 : 0;
+  const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Saldo de Transações</h1>
-          <p className="text-gray-600 dark:text-gray-400">Gerencie seus recebimentos via PIX</p>
-        </div>
-        <button
-          onClick={loadData}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition flex items-center gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Atualizar
-        </button>
-      </div>
-
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Saldo Disponível</p>
-          <p className="text-3xl font-bold text-green-600">
-            {formatCurrency(balance?.available_balance_cents || 0)}
-          </p>
+    <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Saldo e Saques</h1>
+            <p className="text-gray-600 dark:text-gray-400">Gerencie seus recebimentos e solicite transferências</p>
+          </div>
+          <button
+            onClick={loadBalanceData}
+            className="inline-flex items-center px-4 py-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Atualizar
+          </button>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Recebido</p>
-          <p className="text-3xl font-bold">
-            {formatCurrency(balance?.total_received_cents || 0)}
-          </p>
+        {/* Cards de Resumo */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-100 dark:bg-green-500/10 rounded-lg">
+                <Wallet className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Saldo Disponível</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(balance?.available_balance_cents || 0)}
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Recebido</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(balance?.total_received_cents || 0)}
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-100 dark:bg-purple-500/10 rounded-lg">
+                <Download className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Sacado</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(balance?.total_transferred_cents || 0)}
+            </p>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Transferido</p>
-          <p className="text-3xl font-bold">
-            {formatCurrency(balance?.total_transferred_cents || 0)}
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
-        {/* Tab Headers */}
-        <div className="flex border-b border-gray-200 dark:border-slate-700">
-          {[
-            { key: 'pix', label: 'PIX Recebidos' },
-            { key: 'withdraw', label: 'Solicitar Saque' },
-          ].map((tab) => (
+        {/* Tabs e Conteúdo */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-100 dark:border-white/5 overflow-hidden">
+          <div className="flex border-b border-gray-100 dark:border-white/5">
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition ${
-                activeTab === tab.key
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              onClick={() => setActiveTab('pix')}
+              className={`flex-1 py-4 text-sm font-bold transition-colors ${
+                activeTab === 'pix' 
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-500/5' 
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              {tab.label}
+              Histórico de PIX
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => setActiveTab('withdraw')}
+              className={`flex-1 py-4 text-sm font-bold transition-colors ${
+                activeTab === 'withdraw' 
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-500/5' 
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Solicitar Saque
+            </button>
+          </div>
 
-        {/* Tab Content */}
-        <div className="p-6">
-          {/* PIX Recebidos */}
-          {activeTab === 'pix' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">PIX Recebidos</h3>
-              {pixTransactions.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">
-                  Nenhum PIX recebido ainda
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {pixTransactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold">{formatCurrency(tx.amount_cents)}</p>
-                          {getStatusBadge(tx.status)}
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(tx.requested_at).toLocaleString('pt-BR')}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Chave: {tx.destination_pix_key}
-                        </p>
-                      </div>
-                      {tx.status === 'confirmed' && (
-                        <TrendingUp className="w-5 h-5 text-green-600" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Solicitar Saque */}
-          {activeTab === 'withdraw' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Solicitar Saque</h3>
-              
-              <div className="p-4 bg-gray-100 dark:bg-slate-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Saldo disponível:</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(balance?.available_balance_cents || 0)}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Valor do Saque</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Tipo de Chave PIX</label>
-                <select
-                  value={withdrawPixKeyType}
-                  onChange={(e) => setWithdrawPixKeyType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900"
-                >
-                  <option value="cpf">CPF</option>
-                  <option value="cnpj">CNPJ</option>
-                  <option value="email">E-mail</option>
-                  <option value="phone">Telefone</option>
-                  <option value="random">Chave Aleatória</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Chave PIX</label>
-                <input
-                  placeholder="Digite sua chave PIX"
-                  value={withdrawPixKey}
-                  onChange={(e) => setWithdrawPixKey(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900"
-                />
-              </div>
-
-              <button
-                onClick={handleWithdraw}
-                disabled={isWithdrawing}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md font-medium transition flex items-center justify-center gap-2"
-              >
-                {isWithdrawing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processando...
-                  </>
+          <div className="p-8">
+            {activeTab === 'pix' ? (
+              <div className="space-y-6">
+                {pixTransactions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 dark:text-gray-400">Nenhuma transação encontrada.</p>
+                  </div>
                 ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Solicitar Saque
-                  </>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100 dark:border-white/5">
+                          <th className="pb-4 font-bold">Data</th>
+                          <th className="pb-4 font-bold">Valor</th>
+                          <th className="pb-4 font-bold">Status</th>
+                          <th className="pb-4 font-bold">Destino</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                        {pixTransactions.map((tx) => (
+                          <tr key={tx.id} className="text-sm">
+                            <td className="py-4 text-gray-600 dark:text-gray-400">
+                              {new Date(tx.requested_at).toLocaleString('pt-BR')}
+                            </td>
+                            <td className="py-4 font-bold text-gray-900 dark:text-white">
+                              {formatCurrency(tx.amount_cents)}
+                            </td>
+                            <td className="py-4">
+                              <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${
+                                tx.status === 'confirmed' || tx.status === 'transferred'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400'
+                                : tx.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
+                              }`}>
+                                {tx.status === 'confirmed' ? 'Confirmado' : tx.status === 'transferred' ? 'Pago' : tx.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                              </span>
+                            </td>
+                            <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs">
+                              {tx.destination_pix_key}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
-              </button>
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="max-w-md mx-auto space-y-6">
+                {message && (
+                  <div className={`p-4 rounded-xl flex items-start gap-3 ${
+                    message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-400'
+                  }`}>
+                    {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 mt-0.5" /> : <AlertCircle className="w-5 h-5 mt-0.5" />}
+                    <p className="text-sm font-medium">{message.text}</p>
+                  </div>
+                )}
+
+                <div className="bg-blue-50 dark:bg-blue-500/5 rounded-2xl p-6 border border-blue-100 dark:border-blue-500/10">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-blue-800 dark:text-blue-300">Saldo Disponível</span>
+                    <span className="text-xl font-bold text-blue-900 dark:text-white">
+                      {formatCurrency(balance?.available_balance_cents || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-blue-700 dark:text-blue-400">
+                    <span>Chave Pix (Configurada no Perfil)</span>
+                    <span className="font-mono">{userProfile?.pix_key || 'Não configurada'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                      Valor do Saque (R$)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        placeholder="0,00"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-lg font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                    <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl space-y-2 border border-gray-100 dark:border-white/5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Taxa de Serviço (0,5%)</span>
+                        <span className="text-red-500 font-medium">-{fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold border-t border-gray-200 dark:border-white/10 pt-2">
+                        <span className="text-gray-900 dark:text-white">Valor Líquido</span>
+                        <span className="text-green-600 dark:text-green-400">{netAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleWithdraw}
+                    disabled={isWithdrawing || !userProfile?.pix_key || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                    className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition disabled:opacity-50 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                  >
+                    {isWithdrawing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5" />
+                        Solicitar Saque
+                      </>
+                    )}
+                  </button>
+
+                  {!userProfile?.pix_key && (
+                    <p className="text-center text-xs text-red-500 font-medium">
+                      ⚠️ Configure sua chave Pix no Perfil para habilitar saques.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function CheckCircle2({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
   );
 }

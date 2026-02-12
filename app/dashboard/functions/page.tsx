@@ -1,10 +1,10 @@
-// app/dashboard/funcoes/page.tsx
+// app/dashboard/functions/page.tsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import FunctionSelector from '@/components/dashboard/functions/FunctionSelector';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
@@ -55,10 +55,19 @@ function FunctionsPageContent() {
   
   const supabase = createClient();
   
+  // Atualiza o companyId se o parâmetro da URL mudar
+  useEffect(() => {
+    if (companyIdFromUrl && companyIdFromUrl !== companyId) {
+      setCompanyId(companyIdFromUrl);
+    }
+  }, [companyIdFromUrl]);
+
   useEffect(() => {
     if (companyId) {
       loadData(companyId);
     } else {
+      // Se não houver ID na URL, o FunctionSelector cuidará de selecionar a primeira empresa
+      // e chamará o setCompanyId, disparando este useEffect novamente.
       setLoading(false);
     }
   }, [companyId]);
@@ -184,7 +193,13 @@ function FunctionsPageContent() {
               </div>
               
               <FunctionSelector
-                onCompanySelect={setCompanyId}
+                onCompanySelect={(id) => {
+                  setCompanyId(id);
+                  // Atualiza a URL sem recarregar a página para manter o estado
+                  const params = new URLSearchParams(window.location.search);
+                  params.set('companyId', id);
+                  window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+                }}
                 selectedCompanyId={companyId}
                 theme={theme}
               />
@@ -239,8 +254,6 @@ function FunctionsPageContent() {
                     
                     <div className="grid md:grid-cols-2 gap-6">
                       {categoryFunctions.map(fn => {
-                        // Validação extra para evitar erro de undefined no SSR/Hydration
-                        // Garante que fn e fn.function_key existam antes de usar
                         if (!fn || !fn.function_key) return null;
                         
                         const enabled = isFunctionEnabled(fn.function_key);

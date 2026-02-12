@@ -102,18 +102,10 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   const [hideValues, setHideValues] = useState(false);
   const [chartType, setChartType] = useState<ChartType>('line');
   const [viewType, setViewType] = useState<ViewType>('30days');
-  const [mounted, setMounted] = useState(false);
-
-  // Evitar problemas de hidratação SSR
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
-    if (mounted) {
-      loadData();
-    }
-  }, [userId, viewType, mounted]);
+    loadData();
+  }, [userId, viewType]);
 
   const loadData = async () => {
     setLoading(true);
@@ -429,10 +421,6 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
     }
   };
 
-  if (!mounted) {
-    return null;
-  }
-
   if (loading) {
     return (
       <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
@@ -444,7 +432,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   }
 
   return (
-    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700" suppressHydrationWarning>
+    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="space-y-1">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Progressão de Créditos</CardTitle>
@@ -463,7 +451,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4" suppressHydrationWarning>
+      <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
             <SelectTrigger className="w-32 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900">

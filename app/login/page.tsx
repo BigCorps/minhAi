@@ -242,10 +242,14 @@ export default function LoginPage() {
             </div>
           ) : mode === 'login' && biometricUserEmail ? (
             <div className="mb-6 space-y-4">
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/20">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Entrar como</p>
-                <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{biometricUserEmail}</p>
-              </div>
+              <div className={`text-center p-4 rounded-2xl border ${
+  theme === 'dark' 
+    ? 'bg-slate-700/50 border-white/10' 
+    : 'bg-blue-50 border-blue-100'
+}`}>
+  <p className={`text-sm mb-1 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>Entrar como</p>
+  <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{biometricUserEmail}</p>
+</div>
 
               <button
                 onClick={handleBiometricLogin}

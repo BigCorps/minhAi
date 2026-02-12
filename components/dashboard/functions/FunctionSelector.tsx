@@ -25,49 +25,68 @@ export default function FunctionSelector({
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  
+
   const supabase = createClient();
-  
+
   useEffect(() => {
     loadCompanies();
   }, []);
-  
+
   async function loadCompanies() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) return;
-      
+
+      // --- Fonte 1: company_admins ---
       const { data: adminRelations } = await supabase
         .from('company_admins')
         .select('company_id')
         .eq('user_id', user.id);
-      
-      if (!adminRelations || adminRelations.length === 0) {
+
+      const adminCompanyIds = (adminRelations || []).map(r => r.company_id);
+
+      // --- Fonte 2: companies.user_id (cobre empresas criadas antes de company_admins) ---
+      const { data: ownedCompanies } = await supabase
+        .from('companies')
+        .select('id, name, slug')
+        .eq('user_id', user.id)
+        .order('name');
+
+      const ownedIds = (ownedCompanies || []).map(c => c.id);
+
+      // Une os dois conjuntos de IDs sem duplicatas
+      const allIds = Array.from(new Set([...adminCompanyIds, ...ownedIds]));
+
+      if (allIds.length === 0) {
         setCompanies([]);
         return;
       }
-      
-      const companyIds = adminRelations.map(r => r.company_id);
-      
-      const { data: allCompanies } = await supabase
-        .from('companies')
-        .select('id, name, slug')
-        .in('id', companyIds)
-        .order('name');
-      
-      setCompanies(allCompanies || []);
 
-      // Só seleciona automaticamente se:
-      // 1. Ainda não há nenhum companyId selecionado (nem via URL nem via estado)
-      // 2. E há exatamente 1 empresa — não faz sentido forçar escolha quando há só uma opção
-      if (!selectedCompanyId && allCompanies && allCompanies.length === 1) {
+      // Se a busca por user_id já trouxe todas, evita query extra
+      const missingIds = adminCompanyIds.filter(id => !ownedIds.includes(id));
+
+      let allCompanies: Company[] = ownedCompanies || [];
+
+      // Busca as empresas que estão em company_admins mas não em companies.user_id
+      if (missingIds.length > 0) {
+        const { data: adminOnlyCompanies } = await supabase
+          .from('companies')
+          .select('id, name, slug')
+          .in('id', missingIds);
+
+        allCompanies = [
+          ...allCompanies,
+          ...(adminOnlyCompanies || [])
+        ].sort((a, b) => a.name.localeCompare(b.name));
+      }
+
+      setCompanies(allCompanies);
+
+      // Seleciona automaticamente apenas quando há exatamente 1 assistente
+      if (!selectedCompanyId && allCompanies.length === 1) {
         onCompanySelect(allCompanies[0].id);
       }
 
-      // Se há múltiplas empresas e nenhuma selecionada, deixa o usuário escolher.
-      // A page.tsx já exibe a mensagem "Selecione um assistente acima".
-      
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
     } finally {

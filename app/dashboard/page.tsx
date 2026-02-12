@@ -51,12 +51,12 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Credit Card */}
+      {/* Credit Card - NOVO! Posicionado acima dos outros cards */}
       {user && (
         <CreditsCard userId={user.id} />
       )}
 
-      {/* Credits Progress Chart - NOVO! */}
+      {/* Credits Progress Chart - NOVO! Logo abaixo do card de créditos */}
       {user && (
         <CreditsProgressChart userId={user.id} />
       )}

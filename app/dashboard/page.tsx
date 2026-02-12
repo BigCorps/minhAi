@@ -1,9 +1,9 @@
-// app/dashboard/page.tsx
+// app/dashboard/page.tsx - VERSÃO DE TESTE
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { Settings, Wallet } from 'lucide-react';
 import { CreditsCard } from '@/components/CreditsCard';
-import { CreditsProgressChart } from '@/components/CreditsProgressChart';
+import { CreditsProgressChartSimple } from '@/components/CreditsProgressChartSimple';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -56,9 +56,9 @@ export default async function DashboardPage() {
         <CreditsCard userId={user.id} />
       )}
 
-      {/* Credits Progress Chart - NOVO! Logo abaixo do card de créditos */}
+      {/* Credits Progress Chart - VERSÃO SIMPLIFICADA PARA TESTE */}
       {user && (
-        <CreditsProgressChart userId={user.id} />
+        <CreditsProgressChartSimple userId={user.id} />
       )}
 
       {/* Stats Cards */}

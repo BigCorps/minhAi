@@ -535,7 +535,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ========================================
-  // ✅ PASSO 2: Adicionar saveInteractionToHistory()
+  // ✅ PASSO 2: CORREÇÃO - saveInteractionToHistory()
   // ========================================
   async function saveInteractionToHistory(
     userMessage: string,
@@ -559,6 +559,7 @@ export function VoiceAssistantWithWakeWord({
         return;
       }
 
+      // --- CORREÇÃO: Mudar de 'conversation_messages' para 'messages' ---
       await supabase.from('messages').insert([
         { conversation_id: conv.id, role: 'user', content: userMessage },
         { conversation_id: conv.id, role: 'assistant', content: assistantMessage },
@@ -1274,7 +1275,7 @@ export function VoiceAssistantWithWakeWord({
     }
   }
 
-  // ✅ PASSO 4: Corrigir handleConfirmPix() para salvar no histórico
+  // ✅ PASSO 4: CORREÇÃO COMPLETA - handleConfirmPix()
   async function handleConfirmPix() {
     console.log('🔘 handleConfirmPix chamada');
     
@@ -1323,6 +1324,8 @@ export function VoiceAssistantWithWakeWord({
       const confirmationMessage = 'Pagamento confirmado com sucesso!';
       await playText(confirmationMessage);
       
+      // --- INÍCIO DA CORREÇÃO ---
+      
       // ✅ PASSO 4: Verificar dinamicamente se deve salvar
       const shouldSave = functionSettings['pix_confirm']?.saveToHistory ?? false;
 
@@ -1336,8 +1339,10 @@ export function VoiceAssistantWithWakeWord({
       // ✅ PASSO 3: Usar créditos dinâmicos
       await registerFunctionUsage(
         'pix_confirm',
-        functionSettings['pix_confirm']?.creditsPerUse ?? 0
+        functionSettings['pix_confirm']?.creditsPerUse ?? 1
       );
+      
+      // --- FIM DA CORREÇÃO ---
       
     } catch (error: any) {
       console.error('❌ Erro geral:', error);

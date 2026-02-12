@@ -192,6 +192,13 @@ export async function POST(request: NextRequest) {
         .update({ usage_count: (matchingFAQ.usage_count || 0) + 1 })
         .eq('id', matchingFAQ.id)
         .then(() => console.log('📊 +1'));
+
+      // ✅ DESCONTAR CRÉDITOS FAQ
+      await supabase.rpc('register_function_usage', {
+        p_company_id: companyId,
+        p_function_key: 'faq',
+        p_credits_consumed: 1
+      });
     } else {
       // Usar OpenAI (GPT-4o-mini)
       console.log('🤖 Usando OpenAI GPT-4o-mini');
@@ -209,6 +216,13 @@ Pergunta: ${userMessage}`;
       responseText = await processWithGPT(userMessage, systemPrompt);
       
       console.log('✅ OpenAI respondeu');
+
+      // ✅ DESCONTAR CRÉDITOS CHATGPT
+      await supabase.rpc('register_function_usage', {
+        p_company_id: companyId,
+        p_function_key: 'chatgpt',
+        p_credits_consumed: 2
+      });
     }
 
     // TTS
@@ -225,21 +239,17 @@ Pergunta: ${userMessage}`;
     let finalConversationId = conversationId || randomUUID();
     
     if (!conversationId || conversationId === 'new') {
-      supabase.from('conversations').insert({
+      await supabase.from('conversations').insert({
         id: finalConversationId,
         company_id: companyId,
-      }).then(() => {
-        supabase.from('conversation_messages').insert([
-          { conversation_id: finalConversationId, role: 'user', content: userMessage },
-          { conversation_id: finalConversationId, role: 'assistant', content: responseText },
-        ]);
       });
-    } else {
-      supabase.from('conversation_messages').insert([
-        { conversation_id: finalConversationId, role: 'user', content: userMessage },
-        { conversation_id: finalConversationId, role: 'assistant', content: responseText },
-      ]);
     }
+
+    // ✅ CORREÇÃO: Usar tabela 'messages' em vez de 'conversation_messages'
+    await supabase.from('messages').insert([
+      { conversation_id: finalConversationId, role: 'user', content: userMessage },
+      { conversation_id: finalConversationId, role: 'assistant', content: responseText },
+    ]);
 
     const totalTime = Date.now() - startTime;
     console.log(`⏱️ Total: ${totalTime}ms\n`);

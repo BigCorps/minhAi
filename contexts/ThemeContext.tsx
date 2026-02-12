@@ -26,9 +26,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Salva o tema no localStorage quando muda
+  // 🔥 CORREÇÃO CRÍTICA: Aplica/remove classe 'dark' no elemento <html>
   useEffect(() => {
     if (mounted) {
+      const root = document.documentElement;
+      
+      if (theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      
+      // Salva no localStorage
       localStorage.setItem('theme', theme);
     }
   }, [theme, mounted]);

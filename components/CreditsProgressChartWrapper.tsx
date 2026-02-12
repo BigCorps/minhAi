@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@/contexts/ThemeContext'; // 🔥 Usando ThemeContext customizado
 
 const CreditsProgressChart = dynamic(
   () => import('./CreditsProgressChart').then(mod => ({ default: mod.CreditsProgressChart })),
@@ -25,7 +25,7 @@ const CreditsProgressChart = dynamic(
 
 export function CreditsProgressChartWrapper({ userId }: { userId: string }) {
   const [mounted, setMounted] = useState(false);
-  const { resolvedTheme } = useTheme();
+  const { theme } = useTheme(); // 🔥 Mudança aqui
   
   // Força remontagem quando tema mudar
   const [themeKey, setThemeKey] = useState(0);
@@ -39,7 +39,7 @@ export function CreditsProgressChartWrapper({ userId }: { userId: string }) {
     if (mounted) {
       setThemeKey(prev => prev + 1);
     }
-  }, [resolvedTheme, mounted]);
+  }, [theme, mounted]);
 
   // Evita erro de hidratação
   if (!mounted) {
@@ -53,7 +53,7 @@ export function CreditsProgressChartWrapper({ userId }: { userId: string }) {
     );
   }
 
-  const isDark = resolvedTheme === 'dark';
+  const isDark = theme === 'dark'; // 🔥 Mudança aqui
 
   // Passa o tema e key para o componente
   return <CreditsProgressChart key={themeKey} userId={userId} isDark={isDark} />;

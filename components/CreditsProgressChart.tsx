@@ -132,7 +132,11 @@
 
   if (loading) {
     return (
-      <Card>
+      <Card className={`border ${
+        isDark 
+          ? 'bg-slate-800 border-slate-700' 
+          : 'bg-white border-gray-200'
+      }`}>
         <CardContent className="flex items-center justify-center h-64">
           <Loader2 className={`h-8 w-8 animate-spin ${
             isDark ? 'text-gray-400' : 'text-gray-600'
@@ -143,7 +147,11 @@
   }
 
   return (
-    <Card>
+    <Card className={`border ${
+      isDark 
+        ? 'bg-slate-800 border-slate-700' 
+        : 'bg-white border-gray-200'
+    }`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="space-y-1">
           <CardTitle className={`text-lg ${

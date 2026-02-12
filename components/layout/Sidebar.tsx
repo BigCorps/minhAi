@@ -66,7 +66,7 @@ export function Sidebar() {
               <h3 className={`text-sm font-semibold ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
-                Navegação
+                Menu Principal
               </h3>
             </div>
 

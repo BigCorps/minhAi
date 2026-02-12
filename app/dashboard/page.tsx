@@ -3,23 +3,7 @@ import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { Settings, Wallet } from 'lucide-react';
 import { CreditsCard } from '@/components/CreditsCard';
-import dynamic from 'next/dynamic';
-
-// Importação dinâmica para evitar problemas de SSR
-const CreditsProgressChart = dynamic(
-  () => import('@/components/CreditsProgressChart').then(mod => ({ default: mod.CreditsProgressChart })),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-48"></div>
-          <div className="h-64 bg-gray-200 dark:bg-slate-700 rounded"></div>
-        </div>
-      </div>
-    )
-  }
-);
+import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -67,14 +51,14 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Credit Card - NOVO! Posicionado acima dos outros cards */}
+      {/* Credit Card */}
       {user && (
         <CreditsCard userId={user.id} />
       )}
 
-      {/* Credits Progress Chart - NOVO! Logo abaixo do card de créditos */}
+      {/* Credits Progress Chart - Wrapper que carrega apenas no cliente */}
       {user && (
-        <CreditsProgressChart userId={user.id} />
+        <CreditsProgressChartWrapper userId={user.id} />
       )}
 
       {/* Stats Cards */}

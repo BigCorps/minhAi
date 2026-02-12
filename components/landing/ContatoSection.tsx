@@ -41,7 +41,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
         <p className={`text-sm sm:text-base mb-8 sm:mb-10 transition-colors ${
           isDark ? 'text-white/40' : 'text-gray-400'
         }`}>
-          eAi - desenvolvido por{' '}
+          O eAi é desenvolvido por{' '}
           <a
             href="https://bigcorps.com.br"
             target="_blank"
@@ -62,7 +62,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             href="https://bigcorps.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
               isDark
                 ? 'bg-slate-800/30 border-white/5 hover:border-blue-500/30 hover:bg-slate-800/50'
                 : 'bg-white/70 border-gray-100 hover:border-blue-200 hover:bg-white shadow-sm'
@@ -77,7 +77,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             </div>
             <div className="text-center">
               <p className={`text-[10px] sm:text-xs font-medium mb-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Site</p>
-              <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>bigcorps.com.br</p>
+              <p className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>bigcorps.com.br</p>
             </div>
           </a>
 
@@ -86,7 +86,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             href="https://wa.me/5511987311425"
             target="_blank"
             rel="noopener noreferrer"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
               isDark
                 ? 'bg-slate-800/30 border-white/5 hover:border-green-500/30 hover:bg-slate-800/50'
                 : 'bg-white/70 border-gray-100 hover:border-green-200 hover:bg-white shadow-sm'
@@ -101,7 +101,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             </div>
             <div className="text-center">
               <p className={`text-[10px] sm:text-xs font-medium mb-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>WhatsApp</p>
-              <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>(11) 98731-1425</p>
+              <p className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>(11) 98731-1425</p>
             </div>
           </a>
 
@@ -110,7 +110,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             href="https://instagram.com/bigcorps"
             target="_blank"
             rel="noopener noreferrer"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
               isDark
                 ? 'bg-slate-800/30 border-white/5 hover:border-blue-500/30 hover:bg-slate-800/50'
                 : 'bg-white/70 border-gray-100 hover:border-blue-200 hover:bg-white shadow-sm'
@@ -125,29 +125,29 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             </div>
             <div className="text-center">
               <p className={`text-[10px] sm:text-xs font-medium mb-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Instagram</p>
-              <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>@bigcorps</p>
+              <p className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>@bigcorps</p>
             </div>
           </a>
 
           {/* Email */}
           <a
             href="mailto:contato@bigcorps.com.br"
-            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[0.90] ${
+            className={`group flex flex-col items-center justify-center gap-2 sm:gap-3 px-3 py-3.5 sm:py-6 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
               isDark
-                ? 'bg-slate-800/30 border-white/5 hover:border-blue-500/30 hover:bg-slate-800/50'
-                : 'bg-white/70 border-gray-100 hover:border-blue-200 hover:bg-white shadow-sm'
+                ? 'bg-slate-800/30 border-white/5 hover:border-green-500/30 hover:bg-slate-800/50'
+                : 'bg-white/70 border-gray-100 hover:border-green-200 hover:bg-white shadow-sm'
             }`}
           >
             <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-              isDark ? 'bg-blue-500/10 group-hover:bg-blue-500/20' : 'bg-blue-50 group-hover:bg-blue-100'
+              isDark ? 'bg-green-500/10 group-hover:bg-green-500/20' : 'bg-green-50 group-hover:bg-green-100'
             }`}>
-              <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${isDark ? 'text-green-400' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
               </svg>
             </div>
             <div className="text-center">
               <p className={`text-[10px] sm:text-xs font-medium mb-0.5 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Email</p>
-              <p className={`text-[10px] sm:text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>contato@bigcorps.com.br</p>
+              <p className={`text-[10px] sm:text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>contato@bigcorps.com.br</p>
             </div>
           </a>
         </div>

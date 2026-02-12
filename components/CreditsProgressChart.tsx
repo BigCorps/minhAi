@@ -51,6 +51,8 @@ const COLORS = {
 };
 
 const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChange: (type: ChartType) => void }) => {
+  console.log('🎨 [ChartTypeSelector] Renderizando com tipo:', selected);
+  
   const charts = [
     { type: 'line' as const, icon: <TrendingUp className="h-4 w-4" />, title: 'Gráfico de Linha' },
     { type: 'bar' as const, icon: <BarChart3 className="h-4 w-4" />, title: 'Gráfico de Barras' },
@@ -70,7 +72,10 @@ const ChartTypeSelector = ({ selected, onChange }: { selected: ChartType, onChan
           title={chart.title}
           size="sm"
           variant={selected === chart.type ? 'default' : 'ghost'}
-          onClick={() => onChange(chart.type)}
+          onClick={() => {
+            console.log('🖱️ [ChartTypeSelector] Tipo selecionado:', chart.type);
+            onChange(chart.type);
+          }}
           className="h-8 w-8 p-0"
         >
           {chart.icon}
@@ -97,6 +102,8 @@ const CustomTooltip = ({ active, payload, label, hideValues }: any) => {
 };
 
 export function CreditsProgressChart({ userId }: { userId: string }) {
+  console.log('🚀 [CreditsProgressChart] Iniciando componente para userId:', userId);
+  
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [hideValues, setHideValues] = useState(false);
@@ -104,16 +111,18 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   const [viewType, setViewType] = useState<ViewType>('30days');
 
   useEffect(() => {
+    console.log('🔄 [CreditsProgressChart] useEffect disparado - carregando dados...');
     loadData();
   }, [userId, viewType]);
 
   const loadData = async () => {
+    console.log('📊 [loadData] Iniciando carregamento de dados...');
     setLoading(true);
+    
     try {
-      // Criar cliente Supabase dentro do componente
       const supabase = createClient();
+      console.log('✅ [loadData] Cliente Supabase criado');
 
-      // Calcular data inicial baseado no viewType
       let startDate: Date | null = null;
       const now = new Date();
 
@@ -132,7 +141,8 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
           break;
       }
 
-      // Buscar transações de crédito
+      console.log(`📅 [loadData] Período selecionado: ${viewType}, startDate:`, startDate);
+
       let transactionsQuery = supabase
         .from('credit_transactions')
         .select('*')
@@ -146,20 +156,26 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       const { data: transactionsData, error: transactionsError } = await transactionsQuery;
 
       if (transactionsError) {
-        console.error('Error loading transactions:', transactionsError);
+        console.error('❌ [loadData] Erro ao carregar transações:', transactionsError);
       } else {
+        console.log(`✅ [loadData] ${transactionsData?.length || 0} transações carregadas`);
         setTransactions(transactionsData || []);
       }
     } catch (error) {
-      console.error('Error in loadData:', error);
+      console.error('❌ [loadData] Erro geral:', error);
     } finally {
       setLoading(false);
+      console.log('🏁 [loadData] Carregamento finalizado');
     }
   };
 
-  // Processar dados para o gráfico de progressão
   const chartData = useMemo<ChartDataPoint[]>(() => {
-    if (transactions.length === 0) return [];
+    console.log('🧮 [chartData] Processando dados do gráfico...');
+    
+    if (transactions.length === 0) {
+      console.log('⚠️ [chartData] Nenhuma transação para processar');
+      return [];
+    }
 
     const dataMap = new Map<string, ChartDataPoint>();
     
@@ -185,15 +201,17 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
         dataPoint.added += transaction.amount;
       }
       
-      // Atualizar saldo com a transação mais recente do dia
       dataPoint.balance = transaction.balance_after;
     });
 
-    return Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    const result = Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    console.log(`✅ [chartData] ${result.length} pontos de dados processados`);
+    return result;
   }, [transactions]);
 
-  // Estatísticas gerais
   const stats = useMemo(() => {
+    console.log('📈 [stats] Calculando estatísticas...');
+    
     const totalConsumed = transactions
       .filter(t => t.transaction_type === 'usage')
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
@@ -206,10 +224,13 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       ? transactions[transactions.length - 1].balance_after 
       : 0;
 
+    console.log('📊 [stats] Estatísticas:', { totalConsumed, totalAdded, currentBalance });
     return { totalConsumed, totalAdded, currentBalance };
   }, [transactions]);
 
   const renderProgressChart = (type: ChartType, height = 250) => {
+    console.log('🎨 [renderProgressChart] Renderizando gráfico tipo:', type);
+    
     switch (type) {
       case 'bar':
         return (
@@ -422,6 +443,7 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
   };
 
   if (loading) {
+    console.log('⏳ [CreditsProgressChart] Renderizando loading state...');
     return (
       <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
         <CardContent className="flex items-center justify-center h-64">
@@ -431,6 +453,8 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
     );
   }
 
+  console.log('✅ [CreditsProgressChart] Renderizando componente completo');
+  
   return (
     <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -444,7 +468,10 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setHideValues(!hideValues)}
+            onClick={() => {
+              console.log('👁️ [Button] Toggle hideValues:', !hideValues);
+              setHideValues(!hideValues);
+            }}
             className="border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700"
           >
             {hideValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -453,7 +480,10 @@ export function CreditsProgressChart({ userId }: { userId: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <Select value={viewType} onValueChange={(value: ViewType) => setViewType(value)}>
+          <Select value={viewType} onValueChange={(value: ViewType) => {
+            console.log('📅 [Select] Período alterado para:', value);
+            setViewType(value);
+          }}>
             <SelectTrigger className="w-32 border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />

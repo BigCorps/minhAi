@@ -423,7 +423,7 @@ export default function LoginPage() {
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
               <Link 
-                href="/terms"
+                href="/termos"
                 className={`transition-colors ${
                   theme === 'dark'
                     ? 'text-white/60 hover:text-white/80'
@@ -436,7 +436,7 @@ export default function LoginPage() {
                 theme === 'dark' ? 'text-white/30' : 'text-gray-300'
               }`}>•</span>
               <Link 
-                href="/privacy"
+                href="/aviso"
                 className={`transition-colors ${
                   theme === 'dark'
                     ? 'text-white/60 hover:text-white/80'

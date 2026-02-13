@@ -2,7 +2,7 @@
 'use client';
 
 import { Settings, CreditCard } from 'lucide-react';
-import { Switch } from '@/components/ui/switch'; // Supondo o uso de um componente de UI como ShadCN
+import { Switch } from '@/components/ui/switch';
 
 interface FunctionCardProps {
   function: {
@@ -34,6 +34,18 @@ interface FunctionCardProps {
   theme?: 'dark' | 'light';
 }
 
+// ===== MAPEAMENTO DE CATEGORIAS PARA PT-BR =====
+const CATEGORY_NAMES: { [key: string]: string } = {
+  'knowledge': 'Conhecimento',
+  'configuration': 'Configuração',
+  'contact': 'Contato',
+  'payment': 'Pagamento',
+  'schedule': 'Agendamento',
+  'information': 'Informação',
+  'ai_assistant': 'Assistente IA',
+  'other': 'Outros',
+};
+
 export default function FunctionCard({
   function: fn,
   isEnabled,
@@ -44,17 +56,26 @@ export default function FunctionCard({
   theme = 'dark'
 }: FunctionCardProps) {
   
-  // Proteção contra undefined para evitar o erro TypeError
   if (!fn) return null;
   
-  const hasEditModal = !!fn.edit_modal_component;
+  // ===== SEMPRE MOSTRAR BOTÃO DE CONFIGURAR =====
+  const hasEditModal = !!fn.edit_modal_component || [
+    'qrcode_whatsapp',
+    'qrcode_instagram', 
+    'pix_generate',
+    'chatgpt',
+    'faq'
+  ].includes(fn.function_key);
+
+  // Traduzir categoria
+  const categoryName = CATEGORY_NAMES[fn.function_category] || fn.function_category;
 
   return (
     <div
       className={`relative border rounded-2xl p-4 transition-all duration-300 flex flex-col justify-between h-full ${
         isEnabled
-          ? 'bg-white dark:bg-slate-900 shadow-sm'
-          : 'bg-gray-50 dark:bg-slate-900/50'
+          ? 'bg-white dark:bg-slate-900 shadow-sm border-gray-200 dark:border-white/10'
+          : 'bg-gray-50 dark:bg-slate-900/50 border-gray-200 dark:border-white/10'
       }`}
     >
       <div className="flex-grow">
@@ -66,7 +87,7 @@ export default function FunctionCard({
               style={{ backgroundColor: fn.color || '#6B7280' }}
             />
             <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-              {fn.function_category}
+              {categoryName}
             </span>
           </div>
         </div>

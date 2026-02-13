@@ -44,10 +44,21 @@ const InstagramForm = ({ settings, onChange }: any) => (
 );
 
 const PixForm = ({ settings, onChange }: any) => (
-  <div>
-    <div className="text-sm mb-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-      <p className="text-blue-900 dark:text-blue-100">
-        ℹ️ O assistente gera um PIX em nome da <strong>BigCorps</strong>. Os valores recebidos são creditados na sua seção de <strong>Saldo</strong> na plataforma. Você pode confirmar o recebimento ou cancelar o PIX através do assistente.
+  <div className="space-y-4">
+    <div className="text-sm bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+        💰 Como funciona o PIX
+      </h4>
+      <ul className="space-y-2 text-blue-800 dark:text-blue-200 text-sm">
+        <li>✓ <strong>Gerar PIX:</strong> Diga "Gerar PIX de 50 reais" para criar um QR Code instantaneamente</li>
+        <li>✓ <strong>Confirmar recebimento:</strong> Após o cliente pagar, diga "Confirmar PIX" para creditar na sua conta</li>
+        <li>✓ <strong>Cancelar:</strong> Se não utilizado, diga "Cancelar PIX" para invalidar o QR Code</li>
+      </ul>
+    </div>
+
+    <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+      <p className="text-sm text-green-900 dark:text-green-100">
+        Os valores recebidos são creditados automaticamente na sua <strong>seção de Saldo</strong> na plataforma BigCorps.
       </p>
     </div>
     
@@ -61,8 +72,8 @@ const PixForm = ({ settings, onChange }: any) => (
       onChange={e => onChange('pix_key', e.target.value)}
       className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
     />
-    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-      Esta chave será usada para identificar sua conta ao receber pagamentos.
+    <p className="text-xs text-gray-500 dark:text-gray-400">
+      Esta chave será usada para identificar sua conta ao receber pagamentos via PIX.
     </p>
   </div>
 );

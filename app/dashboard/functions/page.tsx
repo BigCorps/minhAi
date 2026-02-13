@@ -346,30 +346,26 @@ const categories = [
                     ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6' 
                     : 'space-y-4'
                 }>
-                  {filteredFunctions.map(fn => {
-                    if (!fn || !fn.function_key) return null;
+{filteredFunctions.map(fn => {
+  if (!fn || !fn.function_key) return null;
 
-                    const enabled = isFunctionEnabled(fn.function_key);
-                    const stats = getFunctionStats(fn.function_key);
-                    const isUpdating = updating === fn.function_key;
+  const enabled = isFunctionEnabled(fn.function_key);
+  const stats = getFunctionStats(fn.function_key);
+  const isUpdating = updating === fn.function_key;
 
-                    return (
-                      <FunctionCard
-                        key={fn.id}
-                        function={fn}
-                        isEnabled={enabled}
-                        stats={stats}
-                        onToggle={() => toggleFunction(fn.function_key, enabled)}
-                        onEdit={
-                          fn.edit_modal_component
-                            ? () => handleEdit(fn)
-                            : undefined
-                        }
-                        isUpdating={isUpdating}
-                        theme={theme}
-                      />
-                    );
-                  })}
+  return (
+    <FunctionCard
+      key={fn.id}
+      function={fn}
+      isEnabled={enabled}
+      stats={stats}
+      onToggle={() => toggleFunction(fn.function_key, enabled)}
+      onEdit={() => handleEdit(fn)}  // <--- VERIFICAR SE ESTÁ ASSIM
+      isUpdating={isUpdating}
+      theme={theme}
+    />
+  );
+})}
                 </div>
               )}
               {/* ===== FIM DO GRID/LISTA ===== */}

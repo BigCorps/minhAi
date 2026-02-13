@@ -34,7 +34,6 @@ interface FunctionCardProps {
   theme?: 'dark' | 'light';
 }
 
-// ===== MAPEAMENTO DE CATEGORIAS PARA PT-BR =====
 const CATEGORY_NAMES: { [key: string]: string } = {
   'knowledge': 'Conhecimento',
   'configuration': 'Configuração',
@@ -45,6 +44,14 @@ const CATEGORY_NAMES: { [key: string]: string } = {
   'ai_assistant': 'Assistente IA',
   'other': 'Outros',
 };
+
+const CONFIGURABLE_FUNCTIONS = [
+  'qrcode_whatsapp',
+  'qrcode_instagram',
+  'pix_generate',
+  'chatgpt',
+  'faq'
+];
 
 export default function FunctionCard({
   function: fn,
@@ -58,16 +65,7 @@ export default function FunctionCard({
   
   if (!fn) return null;
   
-  // ===== SEMPRE MOSTRAR BOTÃO DE CONFIGURAR =====
-  const hasEditModal = !!fn.edit_modal_component || [
-    'qrcode_whatsapp',
-    'qrcode_instagram', 
-    'pix_generate',
-    'chatgpt',
-    'faq'
-  ].includes(fn.function_key);
-
-  // Traduzir categoria
+  const hasEditModal = CONFIGURABLE_FUNCTIONS.includes(fn.function_key);
   const categoryName = CATEGORY_NAMES[fn.function_category] || fn.function_category;
 
   return (
@@ -79,7 +77,6 @@ export default function FunctionCard({
       }`}
     >
       <div className="flex-grow">
-        {/* Header com Categoria e Cor */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div
@@ -92,7 +89,6 @@ export default function FunctionCard({
           </div>
         </div>
 
-        {/* Título e Descrição */}
         <h3 className="font-bold text-md text-gray-900 dark:text-white mb-1.5 truncate">
           {fn.function_name}
         </h3>
@@ -101,7 +97,6 @@ export default function FunctionCard({
         </p>
       </div>
 
-      {/* Footer com Créditos e Ações */}
       <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           {fn.consumes_credits && (
@@ -121,12 +116,20 @@ export default function FunctionCard({
             disabled={isUpdating}
             aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
           />
+          
+          {/* BOTÃO SEMPRE VISÍVEL PARA FUNÇÕES CONFIGURÁVEIS */}
           {hasEditModal && onEdit && (
             <button
-              onClick={onEdit}
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔧 Botão configurar clicado:', fn.function_key);
+                onEdit();
+              }}
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
               disabled={isUpdating}
               aria-label="Configurar função"
+              title="Configurar função"
             >
               <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
@@ -134,7 +137,6 @@ export default function FunctionCard({
         </div>
       </div>
 
-      {/* Overlay de Loading */}
       {isUpdating && (
         <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center rounded-2xl">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>

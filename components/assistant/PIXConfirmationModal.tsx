@@ -11,6 +11,7 @@ interface PIXConfirmationModalProps {
   pixCode: string;
   onConfirm: () => Promise<void>;
   onCancel: () => Promise<void>;
+  theme?: 'dark' | 'light';
 }
 
 export default function PIXConfirmationModal({
@@ -20,6 +21,7 @@ export default function PIXConfirmationModal({
   pixCode,
   onConfirm,
   onCancel,
+  theme = 'dark',
 }: PIXConfirmationModalProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -136,7 +138,9 @@ export default function PIXConfirmationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-[340px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden">
+      <div className={`relative w-full max-w-[340px] rounded-2xl shadow-2xl overflow-hidden ${
+        theme === 'dark' ? 'bg-slate-900' : 'bg-white'
+      }`}>
         
         {/* Toast de notificação */}
         {toast && (
@@ -155,7 +159,9 @@ export default function PIXConfirmationModal({
         )}
         
         {/* Container Quadrado */}
-        <div className="relative w-full aspect-square bg-white dark:bg-slate-900">
+        <div className={`relative w-full aspect-square ${
+          theme === 'dark' ? 'bg-slate-900' : 'bg-white'
+        }`}>
           
           {/* QR Code */}
           <div className="absolute inset-0 pt-4 pb-36 px-6">
@@ -178,12 +184,22 @@ export default function PIXConfirmationModal({
           </div>
 
           {/* Barra de Info + Botões */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-gray-200 dark:border-slate-700">
+          <div className={`absolute bottom-0 left-0 right-0 backdrop-blur-sm border-t ${
+            theme === 'dark' 
+              ? 'bg-slate-900/95 border-slate-700' 
+              : 'bg-white/95 border-gray-200'
+          }`}>
             
             {/* Linha 1: Valor + Botões Confirmar/Cancelar */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
+            <div className={`flex items-center justify-between gap-2 px-3 py-2 border-b ${
+              theme === 'dark'
+                ? 'border-slate-700 bg-blue-900/20'
+                : 'border-gray-200 bg-blue-50'
+            }`}>
               <div className="flex-1">
-                <p className="text-xl font-bold text-blue-600 dark:text-blue-400 leading-tight">
+                <p className={`text-xl font-bold leading-tight ${
+                  theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                }`}>
                   R$ {amount}
                 </p>
               </div>
@@ -220,11 +236,15 @@ export default function PIXConfirmationModal({
             </div>
 
             {/* Linha 2: Nome Empresa + Banco */}
-            <div className="px-3 py-1.5 border-b border-gray-200 dark:border-slate-700">
-              <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-tight">
+            <div className={`px-3 py-1.5 border-b ${
+              theme === 'dark' ? 'border-slate-700' : 'border-gray-200'
+            }`}>
+              <p className={`text-[10px] leading-tight ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}>
                 INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
               </p>
-              <p className="text-[9px] text-gray-500 dark:text-gray-500 leading-tight">
+              <p className="text-[9px] text-gray-500 leading-tight">
                 Banco Inter
               </p>
             </div>
@@ -232,10 +252,16 @@ export default function PIXConfirmationModal({
             {/* Linha 3: Código PIX + Botão Copiar */}
             <div className="flex items-center gap-2 px-3 py-2">
               <div 
-                className="flex-1 text-left py-1.5 px-2 bg-gray-100 dark:bg-slate-800 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+                className={`flex-1 text-left py-1.5 px-2 rounded cursor-pointer transition ${
+                  theme === 'dark'
+                    ? 'bg-slate-800 hover:bg-slate-700'
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
                 onClick={handleCopy}
               >
-                <p className="text-[10px] font-mono text-gray-900 dark:text-white truncate">
+                <p className={`text-[10px] font-mono truncate ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>
                   {pixCode.substring(0, 35)}...
                 </p>
               </div>

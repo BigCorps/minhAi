@@ -8,7 +8,7 @@ import { User } from '@supabase/supabase-js';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { FAQManagerClient } from '@/components/FAQManagerClient';
+import { FAQManagerClient } from '@/components/FAQManager';
 
 interface Company {
   id: string;

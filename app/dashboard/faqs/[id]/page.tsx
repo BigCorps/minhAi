@@ -1,121 +1,152 @@
 // app/dashboard/faqs/[id]/page.tsx
-import { createClient, getUser } from '@/lib/supabase-server';
-import { redirect, notFound } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase-browser';
+import { User } from '@supabase/supabase-js';
+import { useTheme } from 'next-themes';
 import Link from 'next/link';
-import Image from 'next/image';
-import { UserProfile } from '@/components/UserProfile';
-import { FAQManager } from '@/components/FAQManager';
+import { ArrowLeft } from 'lucide-react';
+import { FAQManagerClient } from '@/components/FAQManagerClient';
 
-export const dynamic = 'force-dynamic';
+interface Company {
+  id: string;
+  name: string;
+  user_id: string | null;
+}
 
-type PageProps = {
-  params: Promise<{ id: string }> | { id: string };
-};
-
-export default async function CompanyFAQsPage({ params }: PageProps) {
-  // Resolver params (compatível com Next.js 14 e 15)
-  const resolvedParams = await Promise.resolve(params);
-  const companyId = resolvedParams.id;
-
-  // Verificar autenticação
-  const user = await getUser();
-  if (!user) {
-    redirect('/login');
-  }
-
+export default function CompanyFAQsPage() {
+  const params = useParams();
+  const router = useRouter();
+  const companyId = params.id as string;
+  
+  const [user, setUser] = useState<User | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  const { resolvedTheme } = useTheme();
   const supabase = createClient();
 
-  // Buscar empresa
-  const { data: company, error: companyError } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', companyId)
-    .single();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Se a empresa não existe, retorna 404
-  if (companyError || !company) {
-    console.error('Empresa não encontrada:', companyError);
-    notFound();
+  // Carregar usuário
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      setUser(user);
+    };
+    getUser();
+  }, [router, supabase]);
+
+  // Carregar empresa e verificar acesso
+  useEffect(() => {
+    const loadCompany = async () => {
+      if (!user || !companyId) return;
+
+      try {
+        // Buscar empresa
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', companyId)
+          .single();
+
+        if (companyError || !companyData) {
+          console.error('Empresa não encontrada:', companyError);
+          router.push('/dashboard/faqs');
+          return;
+        }
+
+        setCompany(companyData);
+
+        // Verificar acesso via company_admins
+        const { data: adminAccess } = await supabase
+          .from('company_admins')
+          .select('*')
+          .eq('company_id', companyId)
+          .eq('user_id', user.id)
+          .single();
+
+        // Verificar se é dono direto
+        const hasDirectOwnership = companyData.user_id === user.id;
+        const hasAdminAccess = !!adminAccess;
+
+        if (!hasAdminAccess && !hasDirectOwnership) {
+          console.error('Acesso negado');
+          router.push('/dashboard/faqs');
+          return;
+        }
+
+        setHasAccess(true);
+      } catch (error) {
+        console.error('Erro ao carregar empresa:', error);
+        router.push('/dashboard/faqs');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCompany();
+  }, [user, companyId, router, supabase]);
+
+  if (!mounted || loading) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="h-32 rounded-2xl bg-gray-200 dark:bg-slate-800/50"></div>
+        <div className="h-96 rounded-2xl bg-gray-200 dark:bg-slate-800/50"></div>
+      </div>
+    );
   }
 
-  // Verificar permissões via company_admins (tabela principal de permissões)
-  const { data: adminAccess, error: adminError } = await supabase
-    .from('company_admins')
-    .select('*')
-    .eq('company_id', companyId)
-    .eq('user_id', user.id)
-    .single();
-
-  // Se não tem acesso via company_admins, verifica se é o dono direto via companies.user_id
-  const hasDirectOwnership = company.user_id === user.id;
-  const hasAdminAccess = adminAccess && !adminError;
-
-  // Usuário precisa ter acesso via company_admins OU ser o dono direto
-  if (!hasAdminAccess && !hasDirectOwnership) {
-    console.error('Acesso negado:', {
-      userId: user.id,
-      companyUserId: company.user_id,
-      hasAdminAccess,
-      hasDirectOwnership
-    });
-    redirect('/dashboard/faqs');
+  if (!hasAccess || !company) {
+    return null;
   }
 
-  // Debug logs (apenas em desenvolvimento)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('=== FAQ Access Check ===');
-    console.log('Company ID:', companyId);
-    console.log('User ID:', user.id);
-    console.log('Company Name:', company.name);
-    console.log('Has Admin Access:', hasAdminAccess);
-    console.log('Has Direct Ownership:', hasDirectOwnership);
-    console.log('Access Granted:', hasAdminAccess || hasDirectOwnership);
-  }
+  const isDark = resolvedTheme === 'dark';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-transparent transition-colors duration-500">
-      <header className="bg-white dark:bg-white/5 border-b border-gray-200 dark:border-white/10 backdrop-blur-sm transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <Link href="/dashboard">
-                <Image 
-                  src="/logo.png" 
-                  alt="eAi" 
-                  width={150} 
-                  height={68}
-                  className="rounded-lg cursor-pointer"
-                />
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {company.name}
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-white/50">
-                  Respostas Rápidas
-                </p>
-              </div>
-            </div>
-            <UserProfile user={user} />
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
+    <div className="space-y-8">
+      {/* Header com Info da Empresa */}
+      <div className={`rounded-3xl shadow-lg p-8 border transition-all ${
+        isDark
+          ? 'bg-slate-900/40 border-white/10 backdrop-blur-xl'
+          : 'bg-white border-gray-200'
+      }`}>
+        <div className="flex flex-col gap-6">
           <Link
             href="/dashboard/faqs"
-            className="inline-flex items-center text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 mb-4 transition"
+            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors w-fit ${
+              isDark
+                ? 'text-green-400 hover:text-green-300'
+                : 'text-green-600 hover:text-green-700'
+            }`}
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+            <ArrowLeft className="w-4 h-4" />
             Voltar para lista de empresas
           </Link>
-        </div>
 
-        <FAQManager companyId={companyId} />
+          <div>
+            <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {company.name}
+            </h1>
+            <p className={`text-lg ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+              Configure perguntas frequentes e suas respostas automáticas
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Componente de Gerenciamento de FAQs */}
+      <FAQManagerClient companyId={companyId} isDark={isDark} />
     </div>
   );
 }

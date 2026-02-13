@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -26,9 +26,17 @@ const menuItems = [
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
-  const theme = resolvedTheme || 'dark';
+
+  // Garantir que o componente está montado para evitar erros de hidratação
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fallback seguro para o tema
+  const theme = mounted ? (resolvedTheme || 'dark') : 'dark';
 
   return (
     <div className="relative">

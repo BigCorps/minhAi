@@ -5,6 +5,7 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import { useTheme } from 'next-themes';
 import Image from 'next/image';
 
 interface AssistenteClientProps {
@@ -18,7 +19,8 @@ interface AssistenteClientProps {
 }
 
 export default function AssistenteClient({ company }: AssistenteClientProps) {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const { theme: globalTheme, setTheme: setGlobalTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
   const [showControls, setShowControls] = useState(false);
@@ -27,16 +29,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [assistantStarted, setAssistantStarted] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const voiceAssistantRef = useRef<any>(null);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
 
+  // Sincronizar montagem para evitar erros de hidratação
   useEffect(() => {
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setTheme(isDark ? 'dark' : 'light');
+    setMounted(true);
     
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -51,6 +52,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       }
     };
   }, []);
+
+  // O tema efetivo que será usado pelos componentes
+  const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
   const handleZoomChange = (value: number) => {
     setZoomLevel(value);
@@ -106,6 +110,12 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       }, 5000);
     }
   };
+
+  const toggleTheme = () => {
+    setGlobalTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  if (!mounted) return null;
 
   return (
     <>
@@ -414,7 +424,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     )}
 
                     <button
-                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                      onClick={toggleTheme}
                       className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
                         theme === 'dark'
                           ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
@@ -540,7 +550,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   )}
 
                   <button
-                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    onClick={toggleTheme}
                     className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
                       theme === 'dark'
                         ? 'bg-white/5 border-white/10 text-white'

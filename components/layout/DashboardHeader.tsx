@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { createClient } from '@/lib/supabase-browser';
-import { User, CreditCard, LogOut } from 'lucide-react';
+import { User, CreditCard, LogOut, LifeBuoy } from 'lucide-react';
 
 interface DashboardHeaderProps {
   user: any;
@@ -93,6 +93,14 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                       >
                         <CreditCard className="w-4 h-4" />
                         <span>Créditos</span>
+                      </Link>
+                      <Link
+                        href="/dashboard/ajuda"
+                        className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <LifeBuoy className="w-4 h-4" />
+                        <span>Ajuda</span>
                       </Link>
                       <hr className="my-1 border-gray-100 dark:border-white/5" />
                       <button 

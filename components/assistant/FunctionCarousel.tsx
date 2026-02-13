@@ -137,26 +137,26 @@ export default function FunctionCarousel({
               const borderColor = getCardColor(originalIndex);
               const isEnabled = fn.is_enabled_for_company;
               
-              return (
-                <button
-                  key={`${fn.function_key}-${idx}`}
-                  onClick={() => handleClick(fn)}
-                  disabled={!isEnabled} // ===== DESABILITA SE INATIVA =====
-                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
-                    theme === 'dark'
-                      ? 'bg-white/10 hover:bg-white/20 text-white'
-                      : 'bg-white hover:bg-gray-50 text-gray-900'
-                  } ${!isEnabled ? 'opacity-40 cursor-not-allowed' : ''}`} {/* ===== TRANSPARÊNCIA =====*/}
-                  style={{
-                    borderLeft: `4px solid ${borderColor}`,
-                    boxShadow: theme === 'dark' 
-                      ? '0 2px 4px rgba(0, 0, 0, 0.2)' 
-                      : '0 2px 8px rgba(0, 0, 0, 0.05)'
-                  }}
-                >
-                  <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
-                </button>
-              );
+return (
+  <button
+    key={`${fn.function_key}-${idx}`}
+    onClick={() => handleClick(fn)}
+    disabled={!isEnabled}
+    className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
+      theme === 'dark'
+        ? 'bg-white/10 hover:bg-white/20 text-white'
+        : 'bg-white hover:bg-gray-50 text-gray-900'
+    } ${!isEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+    style={{
+      borderLeft: `4px solid ${borderColor}`,
+      boxShadow: theme === 'dark' 
+        ? '0 2px 4px rgba(0, 0, 0, 0.2)' 
+        : '0 2px 8px rgba(0, 0, 0, 0.05)'
+    }}
+  >
+    <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
+  </button>
+);
             })}
           </div>
         </div>

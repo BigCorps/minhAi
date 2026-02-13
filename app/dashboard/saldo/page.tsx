@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle, CheckCircle2, Filter } from 'lucide-react';
 
 interface CompanyBalance {
   company_id: string;
@@ -25,6 +25,8 @@ interface PixTransaction {
   company_id: string;
 }
 
+type StatusFilter = 'confirmed' | 'cancelled' | 'all';
+
 export default function SaldoPage() {
   const supabase = createClient();
   const [userId, setUserId] = useState<string>('');
@@ -35,6 +37,8 @@ export default function SaldoPage() {
     total_transferred_cents: 0
   });
   const [pixTransactions, setPixTransactions] = useState<PixTransaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<PixTransaction[]>([]);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('confirmed');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pix' | 'withdraw'>('pix');
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -53,6 +57,33 @@ export default function SaldoPage() {
       loadBalanceData();
     }
   }, [userId]);
+
+  // ✅ Filtrar transações quando mudar o filtro
+  useEffect(() => {
+    filterTransactions();
+  }, [pixTransactions, statusFilter]);
+
+  function filterTransactions() {
+    let filtered = [...pixTransactions];
+
+    switch (statusFilter) {
+      case 'confirmed':
+        filtered = filtered.filter(tx => 
+          tx.status === 'confirmed' || tx.status === 'transferred'
+        );
+        break;
+      case 'cancelled':
+        filtered = filtered.filter(tx => 
+          tx.status === 'cancelled' || tx.status === 'expired'
+        );
+        break;
+      case 'all':
+        // Mostra todos
+        break;
+    }
+
+    setFilteredTransactions(filtered);
+  }
 
   async function loadInitialData() {
     try {
@@ -89,7 +120,7 @@ export default function SaldoPage() {
     try {
       console.log('Carregando saldo do usuário:', userId);
       
-      // ✅ HÍBRIDO: Buscar saldo de TODAS as empresas do usuário
+      // Buscar saldo de TODAS as empresas do usuário
       const { data: balanceData, error: balanceError } = await supabase
         .from('company_balance')
         .select('*')
@@ -118,7 +149,7 @@ export default function SaldoPage() {
         console.log('Nenhum saldo encontrado');
       }
 
-      // Carregar todas as transações PIX do usuário (de todas as empresas)
+      // Carregar todas as transações PIX do usuário
       const { data: pixData, error: pixError } = await supabase
         .from('pix_transactions')
         .select('*')
@@ -143,9 +174,7 @@ export default function SaldoPage() {
   async function handleWithdraw() {
     setMessage(null);
     
-    // Verificar se tem chave PIX configurada
     const pixKey = userProfile?.pix_key;
-    const pixKeyType = userProfile?.pix_key_type;
     
     if (!pixKey) {
       setMessage({ type: 'error', text: 'Você precisa configurar sua chave Pix no Perfil antes de solicitar um saque.' });
@@ -174,7 +203,6 @@ export default function SaldoPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // ✅ MUDANÇA: Passar userId ao invés de companyId
       const { data, error } = await supabase.functions.invoke('request-withdrawal', {
         body: { 
           amount: amount,
@@ -217,9 +245,49 @@ export default function SaldoPage() {
     return key;
   }
 
+  function getStatusBadge(status: string) {
+    const statusMap: Record<string, { label: string; className: string }> = {
+      'confirmed': { 
+        label: 'Confirmado', 
+        className: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400'
+      },
+      'transferred': { 
+        label: 'Concluído', 
+        className: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400'
+      },
+      'pending': { 
+        label: 'Pendente', 
+        className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400'
+      },
+      'cancelled': { 
+        label: 'Cancelado', 
+        className: 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
+      },
+      'expired': { 
+        label: 'Expirado', 
+        className: 'bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400'
+      },
+    };
+
+    const config = statusMap[status] || { label: status, className: 'bg-gray-100 text-gray-700' };
+    
+    return (
+      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${config.className}`}>
+        {config.label}
+      </span>
+    );
+  }
+
   const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.005 : 0;
   const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
   const pixKey = userProfile?.pix_key;
+
+  // Contar por status
+  const statusCounts = {
+    confirmed: pixTransactions.filter(tx => tx.status === 'confirmed' || tx.status === 'transferred').length,
+    cancelled: pixTransactions.filter(tx => tx.status === 'cancelled' || tx.status === 'expired').length,
+    all: pixTransactions.length
+  };
 
   if (isLoading) {
     return (
@@ -322,9 +390,52 @@ export default function SaldoPage() {
           <div className="p-8">
             {activeTab === 'pix' ? (
               <div className="space-y-6">
-                {pixTransactions.length === 0 ? (
+                {/* ✅ Filtros de Status */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Filter className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filtrar:</span>
+                  
+                  <button
+                    onClick={() => setStatusFilter('confirmed')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      statusFilter === 'confirmed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400 ring-2 ring-green-500'
+                        : 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    Confirmados ({statusCounts.confirmed})
+                  </button>
+                  
+                  <button
+                    onClick={() => setStatusFilter('cancelled')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      statusFilter === 'cancelled'
+                        ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400 ring-2 ring-red-500'
+                        : 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    Cancelados ({statusCounts.cancelled})
+                  </button>
+                  
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      statusFilter === 'all'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 ring-2 ring-blue-500'
+                        : 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    Todos ({statusCounts.all})
+                  </button>
+                </div>
+
+                {filteredTransactions.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-500 dark:text-gray-400">Nenhuma transação encontrada.</p>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {statusFilter === 'confirmed' && 'Nenhuma transação confirmada.'}
+                      {statusFilter === 'cancelled' && 'Nenhuma transação cancelada.'}
+                      {statusFilter === 'all' && 'Nenhuma transação encontrada.'}
+                    </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -339,7 +450,7 @@ export default function SaldoPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                        {pixTransactions.map((tx) => (
+                        {filteredTransactions.map((tx) => (
                           <tr key={tx.id} className="text-sm">
                             <td className="py-4 text-gray-600 dark:text-gray-400">
                               {new Date(tx.requested_at).toLocaleString('pt-BR')}
@@ -353,18 +464,7 @@ export default function SaldoPage() {
                               {formatCurrency(tx.amount_cents)}
                             </td>
                             <td className="py-4">
-                              <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${
-                                tx.status === 'confirmed' || tx.status === 'transferred'
-                                ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400'
-                                : tx.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400'
-                                : 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
-                              }`}>
-                                {tx.status === 'confirmed' ? 'Confirmado' : 
-                                 tx.status === 'transferred' ? 'Concluído' : 
-                                 tx.status === 'pending' ? 'Pendente' : 
-                                 tx.status === 'cancelled' ? 'Cancelado' : tx.status}
-                              </span>
+                              {getStatusBadge(tx.status)}
                             </td>
                             <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs">
                               {tx.notes || formatPixKey(tx.destination_pix_key)}

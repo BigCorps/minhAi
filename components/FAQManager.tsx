@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/lib/supabase-client';
 
 interface FAQ {
   id: string;

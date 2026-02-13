@@ -1,5 +1,5 @@
 // app/dashboard/faqs/page.tsx (Server Component)
-import { createClient, getUser } from '@/lib/supabase-browser';
+import { createClient, getUser } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
 import FAQsClient from './FAQsClient';
 

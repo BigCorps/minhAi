@@ -1,5 +1,5 @@
 // app/dashboard/faqs/[id]/page.tsx
-import { createClient, getUser } from '@/lib/supabase-browser';
+import { createClient, getUser } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';

@@ -1,7 +1,7 @@
 // components/ui/toaster.tsx
 'use client';
 
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/VoiceAssistant/hooks/use-toast";
 import { X, CheckCircle2, AlertCircle } from "lucide-react";
 
 export function Toaster() {

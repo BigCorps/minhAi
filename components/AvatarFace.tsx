@@ -243,31 +243,12 @@ export function AvatarFace({
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
       {qrCodeData && !pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
-          <QRCodeDisplay 
-            type={qrCodeData.type} 
-            qrCodeUrl={qrCodeData.qrCodeUrl} 
-            qrContent={qrCodeData.qrContent} 
-            displayText={qrCodeData.displayText} 
-            amount={qrCodeData.amount} 
-            companyName={qrCodeData.companyName} 
-            onClose={onCloseQRCode || (() => {})} 
-            onCopy={onCopyQRCode} 
-            autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15}
-            theme={theme}
-          />
+          <QRCodeDisplay type={qrCodeData.type} qrCodeUrl={qrCodeData.qrCodeUrl} qrContent={qrCodeData.qrContent} displayText={qrCodeData.displayText} amount={qrCodeData.amount} companyName={qrCodeData.companyName} onClose={onCloseQRCode || (() => {})} onCopy={onCopyQRCode} autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15} />
         </div>
       )}
       {pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
-          <PIXConfirmationModal 
-            transactionId={pixConfirmationData.transactionId} 
-            amount={pixConfirmationData.amount} 
-            qrCodeUrl={pixConfirmationData.qrCodeUrl} 
-            pixCode={pixConfirmationData.pixCode} 
-            onConfirm={onConfirmPix || (async () => {})} 
-            onCancel={onCancelPix || (async () => {})} 
-            theme={theme}
-          />
+          <PIXConfirmationModal transactionId={pixConfirmationData.transactionId} amount={pixConfirmationData.amount} qrCodeUrl={pixConfirmationData.qrCodeUrl} pixCode={pixConfirmationData.pixCode} onConfirm={onConfirmPix || (async () => {})} onCancel={onCancelPix || (async () => {})} />
         </div>
       )}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -383,10 +364,48 @@ export function AvatarFace({
               <circle cx="100" cy="100" r="45" fill="url(#coreGradient1)"><animate attributeName="r" values="40;55;40" dur="1.8s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.5s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="3.2s" repeatCount="indefinite" /></circle>
               <circle cx="65" cy="100" r="35" fill="url(#coreGradient2)" opacity="0.95"><animate attributeName="r" values="32;42;32" dur="2s" repeatCount="indefinite" /><animate attributeName="cx" values="65;58;72;65" dur="2.8s" repeatCount="indefinite" /><animate attributeName="cy" values="100;108;92;100" dur="3.6s" repeatCount="indefinite" /></circle>
               <circle cx="135" cy="100" r="35" fill="url(#coreGradient3)" opacity="0.95"><animate attributeName="r" values="33;43;33" dur="1.9s" repeatCount="indefinite" /><animate attributeName="cx" values="135;142;128;135" dur="3.2s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="2.9s" repeatCount="indefinite" /></circle>
+              <circle cx="100" cy="65" r="30" fill="url(#coreGradient1)" opacity="0.9"><animate attributeName="r" values="27;37;27" dur="2.2s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.8s" repeatCount="indefinite" /><animate attributeName="cy" values="65;58;72;65" dur="2.7s" repeatCount="indefinite" /></circle>
+              <circle cx="100" cy="135" r="30" fill="url(#coreGradient2)" opacity="0.9"><animate attributeName="r" values="28;38;28" dur="2.4s" repeatCount="indefinite" /><animate attributeName="cx" values="100;92;108;100" dur="3.1s" repeatCount="indefinite" /><animate attributeName="cy" values="135;142;128;135" dur="3.5s" repeatCount="indefinite" /></circle>
+              <circle cx="72" cy="72" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.1s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="3.3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="2.8s" repeatCount="indefinite" /></circle>
+              <circle cx="128" cy="72" r="26" fill="url(#coreGradient1)" opacity="0.85"><animate attributeName="r" values="24;34;24" dur="2.3s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="3.4s" repeatCount="indefinite" /></circle>
+              <circle cx="72" cy="128" r="26" fill="url(#coreGradient2)" opacity="0.85"><animate attributeName="r" values="22;32;22" dur="2.5s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="2.9s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="3.2s" repeatCount="indefinite" /></circle>
+              <circle cx="128" cy="128" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.6s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3.6s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="2.6s" repeatCount="indefinite" /></circle>
+              {[...Array(isSpeaking ? 16 : 8)].map((_, i) => {
+                const angle = (i * Math.PI * 2) / (isSpeaking ? 16 : 8);
+                const radius = isSpeaking ? 55 : 50;
+                return (
+                  <circle key={`small-orb-${i}`} cx={100 + Math.cos(angle) * radius} cy={100 + Math.sin(angle) * radius} r={isSpeaking ? "20" : "16"} fill={i % 3 === 0 ? colors.primary : i % 3 === 1 ? colors.secondary : colors.ring} opacity="0.75">
+                    <animate attributeName="r" values={isSpeaking ? "15;28;15" : "13;23;13"} dur={`${0.8 + (i * 0.08)}s`} repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(angle) * 18},${Math.sin(angle) * 18}; 0,0`} dur={`${1.2 + (i * 0.07)}s`} repeatCount="indefinite" /><animate attributeName="opacity" values="0.4;1;0.4" dur={`${0.9 + (i * 0.06)}s`} repeatCount="indefinite" />
+                  </circle>
+                );
+              })}
             </g>
           </svg>
         </div>
+
+        {/* Barras de Áudio - Visíveis apenas durante a fala */}
+        {isSpeaking && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50 transition-opacity duration-700">
+            <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
+              {audioLevels.map((level, i) => (
+                <div key={`audio-bar-${i}`} className="flex-1 rounded-t-sm transition-all duration-75" style={{ height: `${Math.max(5, level * 100)}%`, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, opacity: 0.7 + level * 0.3, boxShadow: `0 0 ${level * 12}px ${i % 2 === 0 ? colors.primary : colors.secondary}`, filter: `blur(${0.3}px)` }} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      <div className="absolute inset-0 rounded-full pointer-events-none" style={{ aspectRatio: '1/1' }}>
+        {[1, 2, 3].map(ring => (
+          <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
+        ))}
+      </div>
+
+      <style jsx>{`
+        @keyframes float { 0%, 100% { transform: translateY(0) translateX(0); } 33% { transform: translateY(-20px) translateX(10px); } 66% { transform: translateY(-10px) translateX(-10px); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-float { animation: float ease-in-out infinite; }
+      `}</style>
     </div>
   );
 }

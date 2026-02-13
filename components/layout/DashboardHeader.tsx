@@ -33,7 +33,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left: Hamburger (Sidebar Component) + Logo */}
-            {/* CORREÇÃO AQUI: Adicionado text-gray-700 e dark:text-white para controlar a cor do ícone */}
+            {/* CORREÇÃO: Garantindo que o container do Sidebar tenha cores explícitas para o ícone hambúrguer */}
             <div className="flex items-center space-x-4 text-gray-700 dark:text-white">
               <Sidebar />
               

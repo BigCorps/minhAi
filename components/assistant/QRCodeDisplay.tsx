@@ -17,6 +17,7 @@ interface QRCodeDisplayProps {
   onClose: () => void;
   onCopy?: () => void;
   autoCloseSeconds?: number;
+  theme?: 'dark' | 'light';
 }
 
 export default function QRCodeDisplay({
@@ -29,6 +30,7 @@ export default function QRCodeDisplay({
   onClose,
   onCopy,
   autoCloseSeconds = 15,
+  theme = 'dark',
 }: QRCodeDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(autoCloseSeconds);
@@ -76,30 +78,46 @@ export default function QRCodeDisplay({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-      <div className="relative w-full max-w-[340px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+      <div className={`relative w-full max-w-[340px] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${
+        theme === 'dark' ? 'bg-slate-900' : 'bg-white'
+      }`}>
         
-        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-slate-700">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+        <div className={`flex items-center justify-between px-4 py-2 border-b ${
+          theme === 'dark' ? 'border-slate-700' : 'border-gray-200'
+        }`}>
+          <h2 className={`text-lg font-bold ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
             {getTitle()}
           </h2>
           
           <div className="flex items-center gap-2">
             {autoCloseSeconds > 0 && (
-              <div className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
+              <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                theme === 'dark' 
+                  ? 'bg-blue-900/30 text-blue-300' 
+                  : 'bg-blue-100 text-blue-700'
+              }`}>
                 {timeLeft}s
               </div>
             )}
             
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition"
+              className={`p-1.5 rounded-full transition ${
+                theme === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-gray-100'
+              }`}
             >
-              <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <X className={`w-4 h-4 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`} />
             </button>
           </div>
         </div>
 
-        <div className="relative w-full aspect-square bg-white dark:bg-slate-900">
+        <div className={`relative w-full aspect-square ${
+          theme === 'dark' ? 'bg-slate-900' : 'bg-white'
+        }`}>
           
           <div 
             className="absolute inset-0 pt-4 pb-16 px-6 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
@@ -123,15 +141,27 @@ export default function QRCodeDisplay({
             )}
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-gray-200 dark:border-slate-700">
+          <div className={`absolute bottom-0 left-0 right-0 backdrop-blur-sm border-t ${
+            theme === 'dark' 
+              ? 'bg-slate-900/95 border-slate-700' 
+              : 'bg-white/95 border-gray-200'
+          }`}>
             
             {type === 'pix' && amount && (
-              <div className="px-3 py-1.5 border-b border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
-                <p className="text-xl font-bold text-blue-600 dark:text-blue-400 text-center leading-tight">
+              <div className={`px-3 py-1.5 border-b ${
+                theme === 'dark'
+                  ? 'border-slate-700 bg-blue-900/20'
+                  : 'border-gray-200 bg-blue-50'
+              }`}>
+                <p className={`text-xl font-bold text-center leading-tight ${
+                  theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                }`}>
                   R$ {amount}
                 </p>
                 {companyName && (
-                  <p className="text-[9px] text-gray-600 dark:text-gray-400 text-center leading-tight mt-0.5">
+                  <p className={`text-[9px] text-center leading-tight mt-0.5 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
                     {companyName}
                   </p>
                 )}
@@ -141,10 +171,16 @@ export default function QRCodeDisplay({
             <div className="flex items-center gap-2 px-3 py-2">
               
               <div 
-                className="flex-1 text-center py-1.5 px-2 bg-gray-100 dark:bg-slate-800 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+                className={`flex-1 text-center py-1.5 px-2 rounded cursor-pointer transition ${
+                  theme === 'dark'
+                    ? 'bg-slate-800 hover:bg-slate-700'
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
                 onClick={handleCopy}
               >
-                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                <p className={`text-xs font-bold truncate ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>
                   {displayText}
                 </p>
               </div>

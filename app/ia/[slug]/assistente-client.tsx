@@ -5,7 +5,6 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
-import { useTheme } from 'next-themes';
 import Image from 'next/image';
 
 interface AssistenteClientProps {
@@ -19,8 +18,7 @@ interface AssistenteClientProps {
 }
 
 export default function AssistenteClient({ company }: AssistenteClientProps) {
-  const { theme: globalTheme, setTheme: setGlobalTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isMaximized, setIsMaximized] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
   const [showControls, setShowControls] = useState(false);
@@ -29,15 +27,16 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [assistantStarted, setAssistantStarted] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const voiceAssistantRef = useRef<any>(null);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
 
-  // Sincronizar montagem para evitar erros de hidratação
   useEffect(() => {
-    setMounted(true);
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(isDark ? 'dark' : 'light');
     
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -52,9 +51,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       }
     };
   }, []);
-
-  // O tema efetivo que será usado pelos componentes
-  const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
   const handleZoomChange = (value: number) => {
     setZoomLevel(value);
@@ -110,12 +106,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       }, 5000);
     }
   };
-
-  const toggleTheme = () => {
-    setGlobalTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
-  if (!mounted) return null;
 
   return (
     <>
@@ -424,7 +414,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     )}
 
                     <button
-                      onClick={toggleTheme}
+                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                       className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
                         theme === 'dark'
                           ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
@@ -550,7 +540,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   )}
 
                   <button
-                    onClick={toggleTheme}
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                     className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
                       theme === 'dark'
                         ? 'bg-white/5 border-white/10 text-white'
@@ -616,6 +606,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
+          {/* 🚫 CARROSSEL DUPLICADO REMOVIDO - Agora só existe dentro do VoiceAssistantWithWakeWord */}
+
           {/* Footer */}
           <div className={`w-full py-6 px-4 border-t transition-colors ${
             theme === 'dark'
@@ -628,32 +620,67 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   <div className={`flex items-center space-x-2 transition-colors ${
                     theme === 'dark' ? 'text-white/60' : 'text-gray-600'
                   }`}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{company.name}</span>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      theme === 'dark' 
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                        : 'bg-blue-500 text-white'
+                    }`}>1</span>
+                    <span>Permita o microfone</span>
                   </div>
                   <div className={`flex items-center space-x-2 transition-colors ${
                     theme === 'dark' ? 'text-white/60' : 'text-gray-600'
                   }`}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    <span>Ambiente Seguro</span>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      theme === 'dark' 
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                        : 'bg-blue-500 text-white'
+                    }`}>2</span>
+                    <span>Diga: "{company.wake_word}"</span>
+                  </div>
+                  <div className={`flex items-center space-x-2 transition-colors ${
+                    theme === 'dark' ? 'text-white/60' : 'text-gray-600'
+                  }`}>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      theme === 'dark' 
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                        : 'bg-blue-500 text-white'
+                    }`}>3</span>
+                    <span>Faça sua solicitação</span>
+                  </div>
+                  <div className={`flex items-center space-x-2 transition-colors ${
+                    theme === 'dark' ? 'text-white/60' : 'text-gray-600'
+                  }`}>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      theme === 'dark' 
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                        : 'bg-blue-500 text-white'
+                    }`}>4</span>
+                    <span>Aguarde a resposta.</span>
                   </div>
                 </div>
               </div>
-              <div className="text-center">
-                <a 
-                  href="https://eai.app.br" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={`text-[10px] uppercase tracking-[0.2em] transition-colors hover:opacity-100 ${
-                    theme === 'dark' ? 'text-white/20 hover:text-white/40' : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  Powered by eAi - Empowered Artificial Intelligence
-                </a>
+
+              <div className={`text-center border-t pt-4 transition-colors ${
+                theme === 'dark' ? 'border-white/5' : 'border-gray-200'
+              }`}>
+                <div className="flex items-center justify-center space-x-4 mb-2">
+                  <Link href="https://eai.app.br" className={`text-xs font-medium transition-colors ${
+                    theme === 'dark' ? 'text-lime-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
+                  }`}>
+                    Crie seu assistente
+                  </Link>
+                  <span className={theme === 'dark' ? 'text-white/20' : 'text-gray-400'}>|</span>
+                  <Link href="https://eai.app.br/login" className={`text-xs font-medium transition-colors ${
+                    theme === 'dark' ? 'text-lime-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
+                  }`}>
+                    Editar Meu Assistente
+                  </Link>
+                </div>
+                <Link href="https://bigcorps.com.br" target="_blank" rel="noopener noreferrer" className={`text-[10px] transition-colors ${
+                  theme === 'dark' ? 'text-white/30 hover:text-white/50' : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                  eAi App - Desenvolvido por BigCorps
+                </Link>
               </div>
             </div>
           </div>

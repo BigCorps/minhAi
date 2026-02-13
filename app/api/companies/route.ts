@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
-
+    
     const { data: company, error } = await supabase
       .from('companies')
       .insert({
@@ -42,6 +42,37 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // ===== INÍCIO DA CORREÇÃO: INICIALIZAR FUNÇÕES PARA NOVA EMPRESA =====
+    if (company) {
+      // BUSCAR TODAS AS FUNÇÕES GLOBAIS ATIVAS
+      const { data: allFunctions } = await supabase
+        .from('assistant_functions')
+        .select('function_key, consumes_credits, credits_per_use')
+        .eq('is_active', true);
+
+      if (allFunctions && allFunctions.length > 0) {
+        const settingsToInsert = allFunctions.map(fn => ({
+          company_id: company.id,
+          function_key: fn.function_key,
+          is_enabled: true, // Ativar por padrão
+          custom_credits_per_use: fn.credits_per_use, // Usar o padrão global inicialmente
+          enabled_at: new Date().toISOString(),
+          enabled_by: user.id,
+        }));
+
+        // INSERIR AS CONFIGURAÇÕES PADRÃO PARA A NOVA EMPRESA
+        const { error: settingsError } = await supabase
+          .from('company_function_settings')
+          .insert(settingsToInsert);
+
+        if (settingsError) {
+          console.error('Erro ao inserir configurações de função padrão:', settingsError);
+          // Não bloqueia a criação da empresa, mas loga o erro para investigação
+        }
+      }
+    }
+    // ===== FIM DA CORREÇÃO =====
 
     return NextResponse.json(company, { status: 201 });
   } catch (error: any) {

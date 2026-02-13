@@ -5,8 +5,10 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { Search, LayoutGrid, List } from 'lucide-react';
 import FunctionSelector from '@/components/dashboard/functions/FunctionSelector';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
+import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 
 interface AssistantFunction {
   id: string;
@@ -46,7 +48,6 @@ function FunctionsPageContent() {
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [settings, setSettings] = useState<CompanyFunctionSetting[]>([]);
   const [loading, setLoading] = useState(false);
-  // Usa undefined em vez de '' para que as condições !companyId funcionem corretamente
   const [companyId, setCompanyId] = useState<string | undefined>(
     companyIdFromUrl || undefined
   );
@@ -54,25 +55,27 @@ function FunctionsPageContent() {
   const { resolvedTheme } = useTheme();
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
 
+  // ===== NOVOS ESTADOS PARA FILTROS E VISUALIZAÇÃO =====
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'inactive'
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [editingFunction, setEditingFunction] = useState<AssistantFunction | null>(null);
+  // ===== FIM DOS NOVOS ESTADOS =====
+
   const supabase = createClient();
 
-  // Sincroniza o estado interno sempre que o parâmetro da URL mudar
-  // (ex: usuário navegar de /functions?companyId=A para /functions?companyId=B)
   useEffect(() => {
     const urlId = companyIdFromUrl || undefined;
     if (urlId !== companyId) {
       setCompanyId(urlId);
     }
   }, [companyIdFromUrl]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Nota: companyId intencionalmente omitido para evitar loop —
-  // este efeito só deve reagir a mudanças na URL.
 
-  // Carrega os dados sempre que o companyId mudar
   useEffect(() => {
     if (companyId) {
       loadData(companyId);
     } else {
-      // Sem empresa selecionada: limpa os dados e para o loading
       setFunctions([]);
       setSettings([]);
       setLoading(false);
@@ -140,8 +143,11 @@ function FunctionsPageContent() {
           .insert({
             company_id: companyId,
             function_key: functionKey,
-            is_enabled: false,
-            disabled_at: new Date().toISOString()
+            is_enabled: !currentlyEnabled,
+            ...(currentlyEnabled
+              ? { disabled_at: new Date().toISOString() }
+              : { enabled_at: new Date().toISOString() }
+            )
           });
 
         if (error) throw error;
@@ -171,13 +177,12 @@ function FunctionsPageContent() {
     };
   }
 
-  function handleEdit(functionKey: string) {
-    console.log('Editar função:', functionKey);
-    alert(`Modal de edição para ${functionKey} ainda não implementado.`);
+  // ===== HANDLER ATUALIZADO PARA ABRIR O MODAL =====
+  function handleEdit(fn: AssistantFunction) {
+    setEditingFunction(fn);
   }
+  // ===== FIM DO HANDLER ATUALIZADO =====
 
-  // Callback para quando o FunctionSelector escolhe uma empresa.
-  // Atualiza o estado interno E a URL (sem recarregar a página).
   function handleCompanySelect(id: string) {
     setCompanyId(id);
     const params = new URLSearchParams(window.location.search);
@@ -193,6 +198,24 @@ function FunctionsPageContent() {
     { key: 'schedule',       name: 'Agendamento',   color: '#8B5CF6' },
     { key: 'other',          name: 'Outros',        color: '#6B7280' },
   ];
+
+  // ===== LÓGICA DE FILTRO =====
+  const filteredFunctions = functions.filter(fn => {
+    if (!fn) return false;
+
+    const matchesCategory = selectedCategory === 'all' || fn.function_category === selectedCategory;
+    const matchesSearch = fn.function_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          fn.short_description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const isEnabled = isFunctionEnabled(fn.function_key);
+    const matchesStatus = 
+      filterStatus === 'all' || 
+      (filterStatus === 'active' && isEnabled) || 
+      (filterStatus === 'inactive' && !isEnabled);
+
+    return matchesCategory && matchesSearch && matchesStatus;
+  });
+  // ===== FIM DA LÓGICA DE FILTRO =====
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -245,62 +268,123 @@ function FunctionsPageContent() {
           {/* Estado: funções carregadas */}
           {!loading && companyId && functions.length > 0 && (
             <>
-              {categories.map(category => {
-                const categoryFunctions = functions.filter(
-                  f => f && f.function_category === category.key
-                );
+              {/* ===== BARRA DE FILTROS E BUSCA ===== */}
+              <div className="mb-8 flex flex-wrap items-center justify-between gap-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
+                <div className="flex-grow max-w-xs relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-4 flex-wrap">
+                  <select 
+                    value={selectedCategory} 
+                    onChange={e => setSelectedCategory(e.target.value)}
+                    className="border rounded-lg px-3 py-2 dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">Todas as Categorias</option>
+                    {categories.map(cat => (
+                      <option key={cat.key} value={cat.key}>{cat.name}</option>
+                    ))}
+                  </select>
 
-                if (categoryFunctions.length === 0) return null;
+                  <select 
+                    value={filterStatus} 
+                    onChange={e => setFilterStatus(e.target.value)}
+                    className="border rounded-lg px-3 py-2 dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">Todos os Status</option>
+                    <option value="active">Ativas</option>
+                    <option value="inactive">Inativas</option>
+                  </select>
 
-                return (
-                  <div key={category.key} className="mb-12">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `${category.color}20` }}
-                      >
-                        <div className="w-6 h-6 rounded-full" style={{ backgroundColor: category.color }} />
-                      </div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {category.name}
-                      </h2>
-                      <span className="px-3 py-1 rounded-full bg-gray-200 dark:bg-white/10 text-sm text-gray-700 dark:text-gray-300">
-                        {categoryFunctions.length}{' '}
-                        {categoryFunctions.length === 1 ? 'função' : 'funções'}
-                      </span>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {categoryFunctions.map(fn => {
-                        if (!fn || !fn.function_key) return null;
-
-                        const enabled = isFunctionEnabled(fn.function_key);
-                        const stats = getFunctionStats(fn.function_key);
-                        const isUpdating = updating === fn.function_key;
-
-                        return (
-                          <FunctionCard
-                            key={fn.id}
-                            function={fn}
-                            isEnabled={enabled}
-                            stats={stats}
-                            onToggle={() => toggleFunction(fn.function_key, enabled)}
-                            onEdit={
-                              fn.edit_modal_component
-                                ? () => handleEdit(fn.function_key)
-                                : undefined
-                            }
-                            isUpdating={isUpdating}
-                            theme={theme}
-                          />
-                        );
-                      })}
-                    </div>
+                  <div className="flex items-center border rounded-lg p-1 dark:bg-slate-800 dark:border-white/10">
+                    <button 
+                      onClick={() => setViewMode('grid')} 
+                      className={`p-1.5 rounded-md transition-colors ${
+                        viewMode === 'grid' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'hover:bg-gray-100 dark:hover:bg-white/10'
+                      }`}
+                      aria-label="Visualização em grade"
+                    >
+                      <LayoutGrid size={20} />
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('list')} 
+                      className={`p-1.5 rounded-md transition-colors ${
+                        viewMode === 'list' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'hover:bg-gray-100 dark:hover:bg-white/10'
+                      }`}
+                      aria-label="Visualização em lista"
+                    >
+                      <List size={20} />
+                    </button>
                   </div>
-                );
-              })}
+                </div>
+              </div>
+              {/* ===== FIM DA BARRA DE FILTROS ===== */}
+
+              {/* ===== GRID/LISTA DE FUNÇÕES ===== */}
+              {filteredFunctions.length === 0 ? (
+                <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-white/10">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Nenhuma função encontrada com os filtros selecionados.
+                  </p>
+                </div>
+              ) : (
+                <div className={
+                  viewMode === 'grid' 
+                    ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6' 
+                    : 'space-y-4'
+                }>
+                  {filteredFunctions.map(fn => {
+                    if (!fn || !fn.function_key) return null;
+
+                    const enabled = isFunctionEnabled(fn.function_key);
+                    const stats = getFunctionStats(fn.function_key);
+                    const isUpdating = updating === fn.function_key;
+
+                    return (
+                      <FunctionCard
+                        key={fn.id}
+                        function={fn}
+                        isEnabled={enabled}
+                        stats={stats}
+                        onToggle={() => toggleFunction(fn.function_key, enabled)}
+                        onEdit={
+                          fn.edit_modal_component
+                            ? () => handleEdit(fn)
+                            : undefined
+                        }
+                        isUpdating={isUpdating}
+                        theme={theme}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              {/* ===== FIM DO GRID/LISTA ===== */}
             </>
           )}
+
+          {/* ===== MODAL DE CONFIGURAÇÃO ===== */}
+          {editingFunction && companyId && (
+            <FunctionConfigModal
+              isOpen={!!editingFunction}
+              onClose={() => setEditingFunction(null)}
+              functionData={editingFunction}
+              companyId={companyId}
+              onUpdate={() => loadData(companyId)}
+            />
+          )}
+          {/* ===== FIM DO MODAL ===== */}
         </div>
       </div>
     </div>

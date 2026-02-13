@@ -1,0 +1,280 @@
+// components/dashboard/functions/FunctionConfigModal.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
+
+// ===== COMPONENTES DE FORMULÁRIO ESPECÍFICOS PARA CADA FUNÇÃO =====
+
+const WhatsappForm = ({ settings, onChange }: any) => (
+  <div>
+    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+      Número de WhatsApp
+    </label>
+    <input 
+      type="text" 
+      placeholder="(XX) XXXXX-XXXX"
+      value={settings.whatsapp_number || ''}
+      onChange={e => onChange('whatsapp_number', e.target.value)}
+      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      O número que será usado para gerar o QR Code do WhatsApp.
+    </p>
+  </div>
+);
+
+const InstagramForm = ({ settings, onChange }: any) => (
+  <div>
+    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+      Usuário do Instagram
+    </label>
+    <input 
+      type="text" 
+      placeholder="@seuusuario"
+      value={settings.instagram_username || ''}
+      onChange={e => onChange('instagram_username', e.target.value)}
+      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      O @ do Instagram que será usado para gerar o QR Code.
+    </p>
+  </div>
+);
+
+const PixForm = ({ settings, onChange }: any) => (
+  <div>
+    <div className="text-sm mb-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+      <p className="text-blue-900 dark:text-blue-100">
+        ℹ️ O assistente gera um PIX em nome da <strong>BigCorps</strong>. Os valores recebidos são creditados na sua seção de <strong>Saldo</strong> na plataforma. Você pode confirmar o recebimento ou cancelar o PIX através do assistente.
+      </p>
+    </div>
+    
+    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+      Chave PIX para Recebimento
+    </label>
+    <input 
+      type="text" 
+      placeholder="Sua chave PIX (CPF, e-mail, telefone ou chave aleatória)"
+      value={settings.pix_key || ''}
+      onChange={e => onChange('pix_key', e.target.value)}
+      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      Esta chave será usada para identificar sua conta ao receber pagamentos.
+    </p>
+  </div>
+);
+
+const ChatGptForm = ({ settings, onChange }: any) => (
+  <div>
+    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+      Prompt do Sistema (ChatGPT)
+    </label>
+    <textarea 
+      rows={6}
+      placeholder="Ex: Você é um assistente de vendas. Seja sempre cordial e ajude o cliente a encontrar o melhor produto. Use a tabela de preços fornecida para fazer orçamentos precisos..."
+      value={settings.system_prompt || ''}
+      onChange={e => onChange('system_prompt', e.target.value)}
+      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+    />
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      Determine como o assistente deve responder, fazer cálculos, usar tabelas de preços, etc. Seja específico para obter melhores resultados.
+    </p>
+  </div>
+);
+
+const FaqForm = () => (
+  <div>
+    <div className="text-sm bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 mb-4">
+      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+        💡 Vantagens das Respostas Rápidas (FAQs)
+      </h4>
+      <ul className="space-y-2 text-green-800 dark:text-green-200">
+        <li>✓ Gastam <strong>metade dos créditos</strong> de uma interação com ChatGPT</li>
+        <li>✓ Respostas instantâneas e consistentes</li>
+        <li>✓ Você pode usar o histórico para configurar respostas</li>
+        <li>✓ Ideal para perguntas frequentes e repetitivas</li>
+      </ul>
+    </div>
+
+    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800 mb-4">
+      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+        ⚠️ <strong>Limitação:</strong> FAQs não processam cálculos ou informações complexas. Para isso, use o ChatGPT.
+      </p>
+    </div>
+    
+    <a 
+      href="/dashboard/faqs" 
+      className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+    >
+      Gerenciar FAQs
+    </a>
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+      Ative ou desative esta função no card principal. A configuração detalhada das perguntas e respostas é feita na seção de FAQs.
+    </p>
+  </div>
+);
+
+// ===== MAPEAMENTO DE COMPONENTES POR FUNCTION_KEY =====
+const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
+  'qrcode_whatsapp': WhatsappForm,
+  'qrcode_instagram': InstagramForm,
+  'pix_generate': PixForm,
+  'chatgpt': ChatGptForm,
+  'faq': FaqForm,
+};
+
+// ===== INTERFACE DO MODAL =====
+interface FunctionConfigModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  functionData: any;
+  companyId: string;
+  onUpdate: () => void;
+}
+
+export default function FunctionConfigModal({ 
+  isOpen, 
+  onClose, 
+  functionData, 
+  companyId, 
+  onUpdate 
+}: FunctionConfigModalProps) {
+  const supabase = createClient();
+  const [settings, setSettings] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const fetchSettings = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('companies')
+        .select('whatsapp_number, instagram_username, pix_key, pix_key_type, system_prompt')
+        .eq('id', companyId)
+        .single();
+      
+      if (data) {
+        setSettings(data);
+      } else if (error) {
+        console.error('Erro ao carregar configurações:', error);
+      }
+      setIsLoading(false);
+    };
+    
+    fetchSettings();
+  }, [isOpen, companyId, supabase]);
+
+  const handleSettingChange = (key: string, value: any) => {
+    setSettings((prev: any) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    const { error } = await supabase
+      .from('companies')
+      .update(settings)
+      .eq('id', companyId);
+
+    if (!error) {
+      onUpdate();
+      onClose();
+    } else {
+      console.error('Erro ao salvar:', error);
+      alert('Erro ao salvar as configurações. Tente novamente.');
+    }
+    
+    setIsSaving(false);
+  };
+
+  if (!isOpen) return null;
+
+  const FormComponent = FORM_COMPONENTS[functionData.function_key];
+  const hasForm = !!FormComponent;
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" 
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 relative" 
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Botão de Fechar */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+          aria-label="Fechar"
+        >
+          <X size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+        
+        {/* Header */}
+        <div className="mb-6 pr-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: functionData.color || '#6B7280' }}
+            />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              {functionData.function_name}
+            </h2>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {functionData.description}
+          </p>
+        </div>
+
+        {/* Conteúdo */}
+        {isLoading ? (
+          <div className="min-h-[150px] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <div className="space-y-4 mb-6">
+            {hasForm ? (
+              <FormComponent settings={settings} onChange={handleSettingChange} />
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                Esta função não possui configurações editáveis.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer com Botões */}
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
+          <button 
+            onClick={onClose} 
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-gray-700 dark:text-gray-300 font-medium"
+            disabled={isSaving}
+          >
+            Cancelar
+          </button>
+          {hasForm && (
+            <button 
+              onClick={handleSave} 
+              disabled={isSaving || isLoading}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                'Salvar Configurações'
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

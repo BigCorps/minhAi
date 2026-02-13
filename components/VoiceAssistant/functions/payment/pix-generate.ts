@@ -1,5 +1,4 @@
 // components/VoiceAssistant/functions/payment/pix-generate.ts
-
 import { FunctionHandler, FunctionContext } from '../types';
 
 export const pixGenerateHandler: FunctionHandler = {
@@ -36,6 +35,39 @@ export const pixGenerateHandler: FunctionHandler = {
     
     console.log('💰 Executando função: Gerar PIX');
     console.log('📝 Transcript:', transcript);
+    
+    // ===== VALIDAÇÃO: VERIFICAR SE A CHAVE PIX ESTÁ CONFIGURADA =====
+    try {
+      const { data: company, error: companyError } = await context.supabase
+        .from('companies')
+        .select('pix_key, pix_key_type')
+        .eq('id', context.companyId)
+        .single();
+      
+      if (companyError) {
+        console.error('❌ Erro ao buscar dados da empresa:', companyError);
+        await context.playText('Erro ao verificar configurações do PIX.');
+        return;
+      }
+      
+      if (!company?.pix_key) {
+        console.log('⚠️ Chave PIX não configurada para esta empresa');
+        await context.playText(
+          'A função PIX ainda não foi configurada. Por favor, configure sua chave PIX nas configurações do assistente.'
+        );
+        return;
+      }
+      
+      console.log('✅ Chave PIX configurada:', {
+        pix_key: company.pix_key,
+        pix_key_type: company.pix_key_type
+      });
+    } catch (error) {
+      console.error('❌ Erro ao validar configuração PIX:', error);
+      await context.playText('Erro ao verificar configurações do PIX.');
+      return;
+    }
+    // ===== FIM DA VALIDAÇÃO =====
     
     // Extrair valor do PIX
     const pixRegex = /(?:pix|pics|pic|picks|pixs).*?([\d]+(?:[,.]\d{1,2})?)/i;

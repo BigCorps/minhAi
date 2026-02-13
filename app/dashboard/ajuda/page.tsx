@@ -62,7 +62,7 @@ const cardsDeAjuda: AjudaCard[] = [
     titulo: 'Exclusão de Dados', 
     descricao: 'Solicite a exclusão permanente da sua conta e de todos os seus dados.', 
     icone: <Trash2 className="w-6 h-6" />, 
-    acao: { tipo: 'link', valor: '/exclusion' }, 
+    acao: { tipo: 'link', valor: '/exclusao' }, 
     textoBotao: 'Ver Instruções' 
   },
   { 
@@ -70,7 +70,7 @@ const cardsDeAjuda: AjudaCard[] = [
     titulo: 'Termos de Uso', 
     descricao: 'Leia os termos e condições que regem o uso do nosso aplicativo.', 
     icone: <FileText className="w-6 h-6" />, 
-    acao: { tipo: 'link', valor: '/terms' }, 
+    acao: { tipo: 'link', valor: '/termos' }, 
     textoBotao: 'Ler Termos' 
   },
   { 
@@ -78,7 +78,7 @@ const cardsDeAjuda: AjudaCard[] = [
     titulo: 'Aviso de Privacidade', 
     descricao: 'Entenda como coletamos, usamos e protegemos suas informações pessoais.', 
     icone: <ShieldCheck className="w-6 h-6" />, 
-    acao: { tipo: 'link', valor: '/privacy' }, 
+    acao: { tipo: 'link', valor: '/aviso' }, 
     textoBotao: 'Ler Aviso' 
   },
 ];

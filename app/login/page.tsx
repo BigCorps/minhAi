@@ -418,6 +418,35 @@ export default function LoginPage() {
                 : 'Já tem conta? Fazer login'}
             </button>
           </div>
+
+          {/* Links de Termos e Privacidade */}
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+              <Link 
+                href="/terms"
+                className={`transition-colors ${
+                  theme === 'dark'
+                    ? 'text-white/60 hover:text-white/80'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Termos de Uso
+              </Link>
+              <span className={`hidden sm:inline ${
+                theme === 'dark' ? 'text-white/30' : 'text-gray-300'
+              }`}>•</span>
+              <Link 
+                href="/privacy"
+                className={`transition-colors ${
+                  theme === 'dark'
+                    ? 'text-white/60 hover:text-white/80'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Aviso de Privacidade
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

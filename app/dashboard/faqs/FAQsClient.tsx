@@ -38,7 +38,7 @@ export default function FAQsClient({ companies }: FAQsClientProps) {
               </p>
               <Link
                 href="/dashboard/empresas/nova"
-                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 + Criar Primeira Empresa
               </Link>
@@ -51,11 +51,11 @@ export default function FAQsClient({ companies }: FAQsClientProps) {
               <Link
                 key={company.id}
                 href={`/dashboard/faqs/${company.id}`}
-                className="block rounded-xl shadow-md p-6 hover:shadow-lg transition group bg-white/80 hover:shadow-xl dark:bg-white/5 dark:border dark:border-white/10 dark:hover:border-purple-500/30 backdrop-blur-sm"
+                className="block rounded-xl shadow-md p-6 hover:shadow-lg transition group bg-white/80 hover:shadow-xl dark:bg-white/5 dark:border dark:border-white/10 dark:hover:border-green-500/30 backdrop-blur-sm"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-2 transition-colors text-gray-900 group-hover:text-purple-600 dark:text-white dark:group-hover:text-purple-400">
+                    <h3 className="text-xl font-bold mb-2 transition-colors text-gray-900 group-hover:text-green-600 dark:text-white dark:group-hover:text-green-400">
                       {company.name}
                     </h3>
                     {company.wake_word && (
@@ -64,14 +64,14 @@ export default function FAQsClient({ companies }: FAQsClientProps) {
                       </p>
                     )}
                   </div>
-                  <svg className="w-6 h-6 transition-colors text-gray-400 group-hover:text-purple-600 dark:text-white/40 dark:group-hover:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 transition-colors text-gray-400 group-hover:text-green-600 dark:text-white/40 dark:group-hover:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
                 
                 <div className="pt-4 border-t transition-colors border-gray-100 dark:border-white/10">
                   <div className="flex items-center text-sm transition-colors text-gray-600 dark:text-white/60">
-                    <svg className="w-4 h-4 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                     Configurar FAQs

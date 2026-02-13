@@ -1,6 +1,8 @@
+// components/FAQManager.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase-browser';
 
 interface FAQ {
   id: string;
@@ -11,97 +13,27 @@ interface FAQ {
   is_active: boolean;
   usage_count: number;
   created_at: string;
+  updated_at: string;
 }
 
 interface FAQManagerProps {
   companyId: string;
-  companyName?: string;
 }
 
-// FAQs SUGERIDAS PADRÃO
-const SUGGESTED_FAQS = [
-  {
-    category: 'Horário',
-    question: 'Qual o horário de funcionamento?',
-    answer: 'Funcionamos de segunda a sexta, das 9h às 18h.',
-    variations: [
-      'que horas abrem',
-      'horário de atendimento',
-      'quando funciona',
-      'horario de funcionamento'
-    ]
-  },
-  {
-    category: 'Localização',
-    question: 'Onde vocês ficam localizados?',
-    answer: 'Estamos localizados na [Seu endereço completo].',
-    variations: [
-      'onde fica',
-      'endereço',
-      'localização',
-      'como chegar'
-    ]
-  },
-  {
-    category: 'Contato',
-    question: 'Como entrar em contato?',
-    answer: 'Você pode nos contatar pelo telefone [seu telefone] ou email [seu email].',
-    variations: [
-      'telefone',
-      'email',
-      'whatsapp',
-      'falar com vocês'
-    ]
-  },
-  {
-    category: 'Preços',
-    question: 'Quais são os valores dos serviços?',
-    answer: 'Nossos planos começam em R$ [valor]. Entre em contato para um orçamento personalizado.',
-    variations: [
-      'quanto custa',
-      'preço',
-      'valor',
-      'orçamento'
-    ]
-  },
-  {
-    category: 'Pagamento',
-    question: 'Quais formas de pagamento aceitam?',
-    answer: 'Aceitamos cartão de crédito, débito, PIX e transferência bancária.',
-    variations: [
-      'como pagar',
-      'aceita cartão',
-      'aceita pix',
-      'formas de pagamento'
-    ]
-  },
-  {
-    category: 'Agendamento',
-    question: 'Como agendar um horário?',
-    answer: 'Você pode agendar pelo nosso site, WhatsApp ou ligando diretamente.',
-    variations: [
-      'marcar horário',
-      'fazer agendamento',
-      'reservar',
-      'agendar atendimento'
-    ]
-  },
-];
-
-export function FAQManager({ companyId, companyName = 'empresa' }: FAQManagerProps) {
+export function FAQManager({ companyId }: FAQManagerProps) {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null);
-  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
   const [formData, setFormData] = useState({
     question: '',
     answer: '',
     variations: '',
     category: '',
+    is_active: true,
   });
+
+  const supabase = createClient();
 
   useEffect(() => {
     loadFAQs();
@@ -109,9 +41,15 @@ export function FAQManager({ companyId, companyName = 'empresa' }: FAQManagerPro
 
   async function loadFAQs() {
     try {
-      const response = await fetch(`/api/faq?companyId=${companyId}`);
-      const data = await response.json();
-      setFaqs(data.faqs || []);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('faq_entries')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setFaqs(data || []);
     } catch (error) {
       console.error('Erro ao carregar FAQs:', error);
     } finally {
@@ -119,471 +57,349 @@ export function FAQManager({ companyId, companyName = 'empresa' }: FAQManagerPro
     }
   }
 
-  async function handleCreate() {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    
     try {
-      const response = await fetch('/api/faq', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId,
-          question: formData.question,
-          answer: formData.answer,
-          variations: formData.variations.split('\n').filter(v => v.trim()),
-          category: formData.category || null,
-        }),
-      });
+      const variations = formData.variations
+        .split('\n')
+        .map(v => v.trim())
+        .filter(v => v.length > 0);
 
-      if (response.ok) {
-        setFormData({ question: '', answer: '', variations: '', category: '' });
-        setShowNewForm(false);
-        setSelectedSuggestion(null);
-        loadFAQs();
+      const faqData = {
+        company_id: companyId,
+        question: formData.question,
+        answer: formData.answer,
+        variations,
+        category: formData.category || null,
+        is_active: formData.is_active,
+      };
+
+      if (editingFaq) {
+        // Atualizar FAQ existente
+        const { error } = await supabase
+          .from('faq_entries')
+          .update(faqData)
+          .eq('id', editingFaq.id);
+
+        if (error) throw error;
+      } else {
+        // Criar nova FAQ
+        const { error } = await supabase
+          .from('faq_entries')
+          .insert(faqData);
+
+        if (error) throw error;
       }
-    } catch (error) {
-      console.error('Erro ao criar FAQ:', error);
-    }
-  }
 
-  async function handleUpdate(id: string) {
-    try {
-      const faq = faqs.find(f => f.id === id);
-      if (!faq) return;
-
-      const response = await fetch('/api/faq', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          question: formData.question || faq.question,
-          answer: formData.answer || faq.answer,
-          variations: formData.variations 
-            ? formData.variations.split('\n').filter(v => v.trim())
-            : faq.variations,
-          category: formData.category || faq.category,
-        }),
+      // Resetar formulário e recarregar lista
+      setFormData({
+        question: '',
+        answer: '',
+        variations: '',
+        category: '',
+        is_active: true,
       });
-
-      if (response.ok) {
-        setEditingId(null);
-        setFormData({ question: '', answer: '', variations: '', category: '' });
-        loadFAQs();
-      }
+      setShowAddModal(false);
+      setEditingFaq(null);
+      loadFAQs();
     } catch (error) {
-      console.error('Erro ao atualizar FAQ:', error);
+      console.error('Erro ao salvar FAQ:', error);
+      alert('Erro ao salvar FAQ. Tente novamente.');
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja deletar esta FAQ?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta FAQ?')) return;
 
     try {
-      const response = await fetch(`/api/faq?id=${id}`, {
-        method: 'DELETE',
-      });
+      const { error } = await supabase
+        .from('faq_entries')
+        .delete()
+        .eq('id', id);
 
-      if (response.ok) {
-        loadFAQs();
-      }
-    } catch (error) {
-      console.error('Erro ao deletar FAQ:', error);
-    }
-  }
-
-  async function handleToggleActive(id: string, currentStatus: boolean) {
-    try {
-      await fetch('/api/faq', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          is_active: !currentStatus,
-        }),
-      });
+      if (error) throw error;
       loadFAQs();
     } catch (error) {
-      console.error('Erro ao alterar status:', error);
+      console.error('Erro ao excluir FAQ:', error);
+      alert('Erro ao excluir FAQ. Tente novamente.');
     }
   }
 
-  function startEdit(faq: FAQ) {
-    setEditingId(faq.id);
+  async function toggleActive(faq: FAQ) {
+    try {
+      const { error } = await supabase
+        .from('faq_entries')
+        .update({ is_active: !faq.is_active })
+        .eq('id', faq.id);
+
+      if (error) throw error;
+      loadFAQs();
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+    }
+  }
+
+  function openEditModal(faq: FAQ) {
+    setEditingFaq(faq);
     setFormData({
       question: faq.question,
       answer: faq.answer,
       variations: faq.variations.join('\n'),
       category: faq.category || '',
+      is_active: faq.is_active,
     });
+    setShowAddModal(true);
   }
 
-  function useSuggestion(suggestion: any) {
-    setSelectedSuggestion(suggestion);
+  function closeModal() {
+    setShowAddModal(false);
+    setEditingFaq(null);
     setFormData({
-      question: suggestion.question,
-      answer: suggestion.answer,
-      variations: suggestion.variations.join('\n'),
-      category: suggestion.category,
+      question: '',
+      answer: '',
+      variations: '',
+      category: '',
+      is_active: true,
     });
-    setShowNewForm(true);
-    setShowSuggestions(false);
   }
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
-        <div className="text-center py-8">Carregando FAQs...</div>
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 dark:border-green-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">💬 Respostas Rápidas</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Configure respostas automáticas para perguntas frequentes
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Respostas Rápidas (FAQs)
+          </h2>
+          <p className="text-gray-600 dark:text-white/60 mt-1">
+            Configure perguntas frequentes e suas respostas automáticas
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowSuggestions(!showSuggestions)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            Sugestões
-          </button>
-          <button
-            onClick={() => {
-              setShowNewForm(!showNewForm);
-              setSelectedSuggestion(null);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Nova FAQ
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition shadow-lg hover:shadow-xl"
+        >
+          + Adicionar FAQ
+        </button>
       </div>
-
-      {/* FAQs Sugeridas */}
-      {showSuggestions && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg text-blue-900">💡 FAQs Sugeridas</h3>
-            <button
-              onClick={() => setShowSuggestions(false)}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              Fechar
-            </button>
-          </div>
-          <p className="text-sm text-blue-700">
-            Clique em uma sugestão para personalizar e adicionar às suas FAQs
-          </p>
-          <div className="grid md:grid-cols-2 gap-3">
-            {SUGGESTED_FAQS.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => useSuggestion(suggestion)}
-                className="text-left p-4 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 transition"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-medium">
-                    {suggestion.category}
-                  </span>
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-                <p className="font-semibold text-gray-900 text-sm mb-1">
-                  {suggestion.question}
-                </p>
-                <p className="text-xs text-gray-600 line-clamp-2">
-                  {suggestion.answer}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Formulário Nova FAQ */}
-      {showNewForm && (
-        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg text-gray-900">
-              {selectedSuggestion ? '✏️ Personalize a FAQ' : '➕ Nova Resposta Rápida'}
-            </h3>
-            {selectedSuggestion && (
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                Baseado em sugestão
-              </span>
-            )}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Pergunta Principal *
-            </label>
-            <input
-              type="text"
-              value={formData.question}
-              onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-              placeholder="Ex: Qual o horário de funcionamento?"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Resposta * <span className="text-xs text-gray-500">(personalize com os dados da sua {companyName})</span>
-            </label>
-            <textarea
-              value={formData.answer}
-              onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-              placeholder="Ex: Funcionamos de segunda a sexta, das 9h às 18h"
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Variações da Pergunta (uma por linha)
-            </label>
-            <textarea
-              value={formData.variations}
-              onChange={(e) => setFormData({ ...formData, variations: e.target.value })}
-              placeholder="que horas abrem&#10;horário de atendimento&#10;quando funciona"
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              💡 Adicione formas diferentes de fazer a mesma pergunta para o assistente entender melhor
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoria (opcional)
-            </label>
-            <input
-              type="text"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="Ex: Horário, Preços, Localização"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleCreate}
-              disabled={!formData.question || !formData.answer}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Salvar FAQ
-            </button>
-            <button
-              onClick={() => {
-                setShowNewForm(false);
-                setSelectedSuggestion(null);
-                setFormData({ question: '', answer: '', variations: '', category: '' });
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Lista de FAQs */}
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-3">
-          📋 Suas FAQs ({faqs.length})
-        </h3>
-        
-        {faqs.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-            <div className="max-w-sm mx-auto">
-              <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <p className="text-gray-600 font-medium mb-2">Nenhuma FAQ cadastrada ainda</p>
-              <p className="text-sm text-gray-500 mb-4">
-                Comece adicionando respostas para as perguntas mais comuns dos seus clientes
-              </p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => setShowSuggestions(true)}
-                  className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm font-medium"
-                >
-                  Ver Sugestões
-                </button>
-                <button
-                  onClick={() => setShowNewForm(true)}
-                  className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition text-sm font-medium"
-                >
-                  Criar do Zero
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {faqs.map((faq) => (
-              <div
-                key={faq.id}
-                className={`bg-gray-50 border rounded-xl p-5 ${
-                  !faq.is_active ? 'opacity-50' : ''
-                }`}
-              >
-                {editingId === faq.id ? (
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={formData.question}
-                      onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                    <textarea
-                      value={formData.answer}
-                      onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                    <textarea
-                      value={formData.variations}
-                      onChange={(e) => setFormData({ ...formData, variations: e.target.value })}
-                      rows={2}
-                      placeholder="Variações (uma por linha)"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => handleUpdate(faq.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Salvar
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingId(null);
-                          setFormData({ question: '', answer: '', variations: '', category: '' });
-                        }}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
+      {faqs.length === 0 ? (
+        <div className="bg-white dark:bg-white/5 dark:border dark:border-white/10 rounded-xl shadow-md p-12 text-center">
+          <svg className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
+            Nenhuma FAQ cadastrada
+          </h3>
+          <p className="text-gray-600 dark:text-white/60 mb-6">
+            Comece adicionando perguntas frequentes e suas respostas
+          </p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition"
+          >
+            + Adicionar Primeira FAQ
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {faqs.map((faq) => (
+            <div
+              key={faq.id}
+              className={`bg-white dark:bg-white/5 dark:border dark:border-white/10 rounded-xl shadow-md p-6 transition ${
+                !faq.is_active ? 'opacity-60' : ''
+              }`}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      {faq.question}
+                    </h3>
+                    {faq.category && (
+                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs font-semibold rounded-full">
+                        {faq.category}
+                      </span>
+                    )}
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                      faq.is_active
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {faq.is_active ? 'Ativa' : 'Inativa'}
+                    </span>
                   </div>
-                ) : (
-                  <>
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-bold text-gray-900">{faq.question}</h4>
-                          {faq.category && (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
-                              {faq.category}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-700">{faq.answer}</p>
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <button
-                          onClick={() => handleToggleActive(faq.id, faq.is_active)}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                            faq.is_active
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                          }`}
-                        >
-                          {faq.is_active ? '✓ Ativa' : '○ Inativa'}
-                        </button>
-                        <button
-                          onClick={() => startEdit(faq)}
-                          className="p-2 hover:bg-gray-200 rounded-lg transition"
-                          title="Editar"
-                        >
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(faq.id)}
-                          className="p-2 hover:bg-red-50 rounded-lg transition"
-                          title="Deletar"
-                        >
-                          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                  <p className="text-gray-700 dark:text-white/70 mb-3">
+                    {faq.answer}
+                  </p>
+                  {faq.variations.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-500 dark:text-white/50 mb-2">
+                        Variações da pergunta:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {faq.variations.map((variation, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs rounded"
+                          >
+                            {variation}
+                          </span>
+                        ))}
                       </div>
                     </div>
-
-                    {faq.variations.length > 0 && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <p className="text-xs font-semibold text-gray-600 mb-2">🔄 Variações reconhecidas:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {faq.variations.map((v, i) => (
-                            <span
-                              key={i}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
-                            >
-                              "{v}"
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                  )}
+                  {faq.usage_count > 0 && (
+                    <p className="text-sm text-gray-500 dark:text-white/50 mt-3">
+                      Usada {faq.usage_count} {faq.usage_count === 1 ? 'vez' : 'vezes'}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 ml-4">
+                  <button
+                    onClick={() => toggleActive(faq)}
+                    className="p-2 text-gray-600 dark:text-white/60 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                    title={faq.is_active ? 'Desativar' : 'Ativar'}
+                  >
+                    {faq.is_active ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
                     )}
-
-                    {faq.usage_count > 0 && (
-                      <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        Usada {faq.usage_count}x pelos clientes
-                      </div>
-                    )}
-                  </>
-                )}
+                  </button>
+                  <button
+                    onClick={() => openEditModal(faq)}
+                    className="p-2 text-gray-600 dark:text-white/60 hover:text-green-600 dark:hover:text-green-400 transition"
+                    title="Editar"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(faq.id)}
+                    className="p-2 text-gray-600 dark:text-white/60 hover:text-red-600 dark:hover:text-red-400 transition"
+                    title="Excluir"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Dica de uso */}
-      {faqs.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex gap-3">
-            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="text-sm">
-              <p className="font-semibold text-blue-900 mb-1">💡 Como funciona</p>
-              <p className="text-blue-700">
-                Quando um cliente fizer uma pergunta parecida com as FAQs cadastradas, o assistente responderá automaticamente em menos de 1 segundo! 
-                As perguntas que não têm FAQ cadastrada serão respondidas pela IA (leva 2-3 segundos).
-              </p>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal de Adicionar/Editar */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-900 dark:border dark:border-white/10 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-white/10">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                {editingFaq ? 'Editar FAQ' : 'Adicionar Nova FAQ'}
+              </h3>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-white/80 mb-2">
+                  Pergunta *
+                </label>
+                <input
+                  type="text"
+                  value={formData.question}
+                  onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  required
+                  placeholder="Ex: Qual é o horário de funcionamento?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-white/80 mb-2">
+                  Resposta *
+                </label>
+                <textarea
+                  value={formData.answer}
+                  onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  rows={4}
+                  required
+                  placeholder="Ex: Funcionamos de segunda a sexta, das 9h às 18h."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-white/80 mb-2">
+                  Variações da Pergunta (uma por linha)
+                </label>
+                <textarea
+                  value={formData.variations}
+                  onChange={(e) => setFormData({ ...formData, variations: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  rows={3}
+                  placeholder="Ex:&#10;Que horas vocês abrem?&#10;Horário de atendimento&#10;Quando posso ir aí?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-white/80 mb-2">
+                  Categoria (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="Ex: Atendimento, Produtos, Entrega"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="w-4 h-4 text-green-600 dark:text-green-400 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-white/10 rounded focus:ring-green-500 dark:focus:ring-green-400"
+                />
+                <label htmlFor="is_active" className="ml-2 text-sm text-gray-700 dark:text-white/80">
+                  FAQ ativa (responderá automaticamente)
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition"
+                >
+                  {editingFaq ? 'Salvar Alterações' : 'Adicionar FAQ'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-semibold transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

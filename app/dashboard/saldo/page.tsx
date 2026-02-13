@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-interface UserBalance {
+interface CompanyBalance {
+  company_id: string;
   available_balance_cents: number;
   total_received_cents: number;
   total_transferred_cents: number;
-  withdrawal_pix_key?: string;
-  withdrawal_pix_key_type?: string;
+  user_id: string;
 }
 
 interface PixTransaction {
@@ -25,22 +25,16 @@ interface PixTransaction {
   company_id: string;
 }
 
-interface BalanceTransaction {
-  id: string;
-  transaction_type: string;
-  amount_cents: number;
-  description: string;
-  created_at: string;
-  metadata?: any;
-  company_id: string;
-}
-
 export default function SaldoPage() {
   const supabase = createClient();
   const [userId, setUserId] = useState<string>('');
-  const [balance, setBalance] = useState<UserBalance | null>(null);
+  const [companyBalances, setCompanyBalances] = useState<CompanyBalance[]>([]);
+  const [totalBalance, setTotalBalance] = useState({
+    available_balance_cents: 0,
+    total_received_cents: 0,
+    total_transferred_cents: 0
+  });
   const [pixTransactions, setPixTransactions] = useState<PixTransaction[]>([]);
-  const [balanceTransactions, setBalanceTransactions] = useState<BalanceTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pix' | 'withdraw'>('pix');
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -78,10 +72,9 @@ export default function SaldoPage() {
         .single();
       
       if (profileError) {
-        console.log('Perfil não encontrado, será criado automaticamente no primeiro PIX');
+        console.log('Perfil não encontrado');
       } else if (profile) {
         setUserProfile(profile);
-        console.log('Perfil carregado:', profile);
       }
 
     } catch (error: any) {
@@ -96,41 +89,36 @@ export default function SaldoPage() {
     try {
       console.log('Carregando saldo do usuário:', userId);
       
-      // Carregar saldo do usuário
+      // ✅ HÍBRIDO: Buscar saldo de TODAS as empresas do usuário
       const { data: balanceData, error: balanceError } = await supabase
-        .from('user_balance')
+        .from('company_balance')
         .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (balanceError) {
         console.error('Erro ao carregar saldo:', balanceError);
-      } else if (balanceData) {
-        console.log('Saldo carregado:', balanceData);
-        setBalance(balanceData);
+      } else if (balanceData && balanceData.length > 0) {
+        console.log('Saldos carregados:', balanceData);
+        setCompanyBalances(balanceData);
+        
+        // Calcular total consolidado
+        const total = balanceData.reduce((acc, curr) => ({
+          available_balance_cents: acc.available_balance_cents + curr.available_balance_cents,
+          total_received_cents: acc.total_received_cents + curr.total_received_cents,
+          total_transferred_cents: acc.total_transferred_cents + curr.total_transferred_cents
+        }), {
+          available_balance_cents: 0,
+          total_received_cents: 0,
+          total_transferred_cents: 0
+        });
+        
+        setTotalBalance(total);
+        console.log('Saldo total consolidado:', total);
       } else {
-        console.log('Saldo não encontrado, criando registro inicial...');
-        // Criar registro de saldo inicial
-        const { data: newBalance, error: createError } = await supabase
-          .from('user_balance')
-          .insert({
-            user_id: userId,
-            available_balance_cents: 0,
-            total_received_cents: 0,
-            total_transferred_cents: 0
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Erro ao criar saldo inicial:', createError);
-        } else {
-          setBalance(newBalance);
-        }
+        console.log('Nenhum saldo encontrado');
       }
 
       // Carregar todas as transações PIX do usuário (de todas as empresas)
-      console.log('Carregando transações PIX...');
       const { data: pixData, error: pixError } = await supabase
         .from('pix_transactions')
         .select('*')
@@ -145,22 +133,6 @@ export default function SaldoPage() {
         setPixTransactions(pixData);
       }
 
-      // Carregar transações de saldo
-      console.log('Carregando transações de saldo...');
-      const { data: balanceTransactionsData, error: balanceTransactionsError } = await supabase
-        .from('balance_transactions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (balanceTransactionsError) {
-        console.error('Erro ao carregar transações de saldo:', balanceTransactionsError);
-      } else if (balanceTransactionsData) {
-        console.log(`${balanceTransactionsData.length} transações de saldo encontradas`);
-        setBalanceTransactions(balanceTransactionsData);
-      }
-
     } catch (error: any) {
       console.error('Erro ao carregar dados de saldo:', error);
     } finally {
@@ -172,8 +144,8 @@ export default function SaldoPage() {
     setMessage(null);
     
     // Verificar se tem chave PIX configurada
-    const pixKey = userProfile?.pix_key || balance?.withdrawal_pix_key;
-    const pixKeyType = userProfile?.pix_key_type || balance?.withdrawal_pix_key_type;
+    const pixKey = userProfile?.pix_key;
+    const pixKeyType = userProfile?.pix_key_type;
     
     if (!pixKey) {
       setMessage({ type: 'error', text: 'Você precisa configurar sua chave Pix no Perfil antes de solicitar um saque.' });
@@ -193,7 +165,7 @@ export default function SaldoPage() {
       return;
     }
 
-    if (amountCents > (balance?.available_balance_cents || 0)) {
+    if (amountCents > totalBalance.available_balance_cents) {
       setMessage({ type: 'error', text: 'Saldo insuficiente.' });
       return;
     }
@@ -202,10 +174,11 @@ export default function SaldoPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      // ✅ MUDANÇA: Passar userId ao invés de companyId
       const { data, error } = await supabase.functions.invoke('request-withdrawal', {
         body: { 
           amount: amount,
-          userId: userId // Agora passamos userId ao invés de companyId
+          userId: userId
         },
         headers: {
           Authorization: `Bearer ${session?.access_token}`
@@ -217,7 +190,6 @@ export default function SaldoPage() {
       setMessage({ type: 'success', text: 'Solicitação de saque enviada com sucesso! O valor será creditado em sua conta em breve.' });
       setWithdrawAmount('');
       
-      // Reload balance data after a short delay
       setTimeout(() => {
         loadBalanceData();
       }, 1000);
@@ -247,7 +219,7 @@ export default function SaldoPage() {
 
   const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.005 : 0;
   const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
-  const pixKey = userProfile?.pix_key || balance?.withdrawal_pix_key;
+  const pixKey = userProfile?.pix_key;
 
   if (isLoading) {
     return (
@@ -268,6 +240,11 @@ export default function SaldoPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Saldo e Saques</h1>
             <p className="text-gray-600 dark:text-gray-400">Gerencie seus recebimentos e solicite transferências</p>
+            {companyBalances.length > 1 && (
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                Saldo consolidado de {companyBalances.length} empresas
+              </p>
+            )}
           </div>
           <button
             onClick={loadBalanceData}
@@ -288,7 +265,7 @@ export default function SaldoPage() {
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Saldo Disponível</p>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(balance?.available_balance_cents || 0)}
+              {formatCurrency(totalBalance.available_balance_cents)}
             </p>
           </div>
 
@@ -300,7 +277,7 @@ export default function SaldoPage() {
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Recebido</p>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(balance?.total_received_cents || 0)}
+              {formatCurrency(totalBalance.total_received_cents)}
             </p>
           </div>
 
@@ -312,7 +289,7 @@ export default function SaldoPage() {
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Sacado</p>
             </div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(balance?.total_transferred_cents || 0)}
+              {formatCurrency(totalBalance.total_transferred_cents)}
             </p>
           </div>
         </div>
@@ -412,9 +389,9 @@ export default function SaldoPage() {
 
                 <div className="bg-blue-50 dark:bg-blue-500/5 rounded-2xl p-6 border border-blue-100 dark:border-blue-500/10">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-blue-800 dark:text-blue-300">Saldo Disponível</span>
+                    <span className="text-sm text-blue-800 dark:text-blue-300">Saldo Disponível Total</span>
                     <span className="text-xl font-bold text-blue-900 dark:text-white">
-                      {formatCurrency(balance?.available_balance_cents || 0)}
+                      {formatCurrency(totalBalance.available_balance_cents)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-blue-700 dark:text-blue-400">

@@ -368,36 +368,41 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   // GOOGLE SPEECH WEBSOCKET
   // ========================================
-  async function startGoogleSpeech() {
-    try {
-      console.log('🎤 Iniciando Google Speech Streaming...');
-      
-      const client = new GoogleSpeechWebSocket({
-        onTranscript: (text, isFinal) => {
-          handleGoogleTranscript(text, isFinal);
-        },
-        onError: (error) => {
-          console.error('❌ Erro Google Speech:', error);
-          setError('Erro no reconhecimento de voz');
-        },
-        onReady: () => {
-          console.log('✅ Google Speech pronto');
-          setIsListening(true);
-        },
-        languageCode: 'pt-BR',
-        sampleRate: 16000,
-      });
-      
-      googleSpeechRef.current = client;
-      
-      await client.connect();
-      await client.startRecording();
-      
-    } catch (error: any) {
-      console.error('❌ Erro ao iniciar Google Speech:', error);
-      setError('Erro ao acessar microfone');
+
+async function startGoogleSpeech() {
+  if (!isActiveRef.current || !shouldProcessAudio.current) return;
+  
+  try {
+    if (googleSpeechRef.current) {
+      googleSpeechRef.current.stopRecording();
+      googleSpeechRef.current.disconnect();
     }
+    
+    googleSpeechRef.current = new GoogleSpeechWebSocket({
+      onTranscript: (text, isFinal) => {
+        handleGoogleTranscript(text, isFinal);
+      },
+      onError: (err) => {
+        console.error('❌ Erro Google Speech:', err);
+        setIsListening(false);
+      },
+      // ✅ ADICIONE/ATUALIZE ESTE CALLBACK:
+      onStatusChange: (status) => {
+        // O status 'recording' agora significa que voz real foi detectada localmente
+        setIsListening(status === 'recording');
+      }
+    });
+    
+    await googleSpeechRef.current.connect();
+    await googleSpeechRef.current.startRecording();
+    
+    console.log('🎤 Google Speech WebSocket iniciado (VAD Local Ativo)');
+    
+  } catch (err) {
+    console.error('❌ Erro ao iniciar Google Speech:', err);
+    setIsListening(false);
   }
+}
 
   async function stopGoogleSpeech() {
     if (googleSpeechRef.current) {

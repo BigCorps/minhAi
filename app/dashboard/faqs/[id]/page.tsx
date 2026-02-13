@@ -1,18 +1,24 @@
 // app/dashboard/faqs/[id]/page.tsx
 import { createClient, getUser } from '@/lib/supabase-server';
-import { redirect } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { UserProfile } from '@/components/UserProfile';
 import { FAQManager } from '@/components/FAQManager';
 
-export default async function CompanyFAQsPage({ 
-  params 
-}: { 
-  params: { id: string } 
-}) {
+export const dynamic = 'force-dynamic';
+
+type PageProps = {
+  params: Promise<{ id: string }> | { id: string };
+};
+
+export default async function CompanyFAQsPage({ params }: PageProps) {
+  // Resolver params (compatível com Next.js 14 e 15)
+  const resolvedParams = await Promise.resolve(params);
+  const companyId = resolvedParams.id;
+
+  // Verificar autenticação
   const user = await getUser();
-  
   if (!user) {
     redirect('/login');
   }
@@ -20,14 +26,50 @@ export default async function CompanyFAQsPage({
   const supabase = createClient();
 
   // Buscar empresa
-  const { data: company } = await supabase
+  const { data: company, error: companyError } = await supabase
     .from('companies')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', companyId)
     .single();
 
-  if (!company) {
+  // Se a empresa não existe, retorna 404
+  if (companyError || !company) {
+    console.error('Empresa não encontrada:', companyError);
+    notFound();
+  }
+
+  // Verificar permissões via company_admins (tabela principal de permissões)
+  const { data: adminAccess, error: adminError } = await supabase
+    .from('company_admins')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('user_id', user.id)
+    .single();
+
+  // Se não tem acesso via company_admins, verifica se é o dono direto via companies.user_id
+  const hasDirectOwnership = company.user_id === user.id;
+  const hasAdminAccess = adminAccess && !adminError;
+
+  // Usuário precisa ter acesso via company_admins OU ser o dono direto
+  if (!hasAdminAccess && !hasDirectOwnership) {
+    console.error('Acesso negado:', {
+      userId: user.id,
+      companyUserId: company.user_id,
+      hasAdminAccess,
+      hasDirectOwnership
+    });
     redirect('/dashboard/faqs');
+  }
+
+  // Debug logs (apenas em desenvolvimento)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== FAQ Access Check ===');
+    console.log('Company ID:', companyId);
+    console.log('User ID:', user.id);
+    console.log('Company Name:', company.name);
+    console.log('Has Admin Access:', hasAdminAccess);
+    console.log('Has Direct Ownership:', hasDirectOwnership);
+    console.log('Access Granted:', hasAdminAccess || hasDirectOwnership);
   }
 
   return (
@@ -72,7 +114,7 @@ export default async function CompanyFAQsPage({
           </Link>
         </div>
 
-        <FAQManager companyId={params.id} />
+        <FAQManager companyId={companyId} />
       </div>
     </div>
   );

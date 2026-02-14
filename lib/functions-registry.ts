@@ -55,6 +55,19 @@ export interface FunctionDefinition {
   creditsPerUse: number;
   requiresPayment: boolean;
   isPremium: boolean;
+  
+  // Handler customizado (opcional)
+  // Usado quando a função precisa de lógica específica
+  handler?: (context: {
+    transcript: string;
+    companyId: string;
+    functionSettings: any;
+    playText: (text: string) => Promise<void>;
+    setIsProcessing: (processing: boolean) => void;
+    setActiveModal?: (modal: any) => void;
+    registerFunctionUsage?: (key: string, credits: number) => Promise<void>;
+    checkIfFunctionIsEnabled?: (key: string) => Promise<boolean>;
+  }) => Promise<boolean>;
 }
 
 /**
@@ -74,7 +87,7 @@ export interface FunctionDefinition {
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   
   // ========================================
-  // EXEMPLO: RESUMO DE VENDAS
+  // EXEMPLO: RESUMO DE VENDAS (com handler customizado)
   // ========================================
   // 
   // Descomente e adapte este exemplo para criar sua primeira função nova:
@@ -114,11 +127,46 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     creditsPerUse: 2,
     requiresPayment: false,
     isPremium: true,
+    
+    // Handler customizado (opcional)
+    // Use quando precisar de lógica específica
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      try {
+        // Chamar Edge Function
+        const response = await fetch('/api/supabase-function', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            function: 'resumo-vendas',
+            company_id: companyId,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        // Falar resultado
+        await playText(`Você vendeu ${data.total} reais hoje.`);
+        
+        // Abrir modal (se tiver)
+        if (setActiveModal) {
+          setActiveModal({
+            componentName: 'SalesSummaryModal',
+            data: data,
+          });
+        }
+        
+        return true; // Comando foi processado
+      } catch (error) {
+        console.error('Erro ao buscar vendas:', error);
+        await playText('Erro ao buscar resumo de vendas.');
+        return false;
+      }
+    },
   },
   */
   
   // ========================================
-  // EXEMPLO: CONSULTA DE ESTOQUE
+  // EXEMPLO: CONSULTA DE ESTOQUE (sem handler - usa Edge Function)
   // ========================================
   
   /*
@@ -155,6 +203,9 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     creditsPerUse: 1,
     requiresPayment: false,
     isPremium: false,
+    
+    // Sem handler - usa automaticamente o voice-command-processor
+    // que chama a Edge Function especificada
   },
   */
   

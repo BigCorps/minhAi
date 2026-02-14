@@ -3,10 +3,69 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
-import RecursosSection from '@/components/landing/RecursosSection';
+import RecursoSlide from '@/components/landing/RecursoSlide';
 import FuncaoSlide from '@/components/landing/FuncaoSlide';
 import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';
+
+// ============================================================
+// REGISTRY DE RECURSOS
+// Cada recurso vira uma tela no scroll horizontal.
+// ============================================================
+const RECURSOS = [
+  {
+    id: 'recurso-custo-baixo',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    title: 'Custo Baixo',
+    highlight: 'R$ 0,12',
+    highlightLabel: 'por interação',
+    description: 'A partir de R$ 0,12 por interação. Economia de até 90% comparado a atendimento humano tradicional.',
+    color: 'green' as const,
+  },
+  {
+    id: 'recurso-customizavel',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+      </svg>
+    ),
+    title: 'Totalmente Customizável',
+    highlight: '100%',
+    highlightLabel: 'personalizado',
+    description: 'Configure palavras de ativação, saudações, prompts e funções personalizadas para cada empresa.',
+    color: 'blue' as const,
+  },
+  {
+    id: 'recurso-rapido',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+    title: 'Rápido e Fácil',
+    highlight: '< 5 min',
+    highlightLabel: 'para configurar',
+    description: 'Configure em minutos. Sem necessidade de código ou conhecimento técnico para começar.',
+    color: 'green' as const,
+  },
+  {
+    id: 'recurso-24h',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    title: 'Atendimento 24 Horas',
+    highlight: '24/7',
+    highlightLabel: 'sempre disponível',
+    description: 'Seu assistente nunca dorme. Atendimento automático a qualquer hora do dia ou da noite, sem custos extras.',
+    color: 'blue' as const,
+  },
+];
 
 // ============================================================
 // REGISTRY DE FUNÇÕES
@@ -75,7 +134,7 @@ const FUNCOES = [
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
-  'recursos',
+  ...RECURSOS.map((r) => r.id),
   ...FUNCOES.map((f) => f.id),
   'precos',
   'contato',
@@ -87,6 +146,7 @@ const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
 // Mapeia ID da seção → qual nav item destacar no header
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
+  if (sectionId.startsWith('recurso-')) return 'recursos';
   return sectionId;
 }
 
@@ -133,7 +193,7 @@ export default function LandingPage() {
   // Scroll para seção por ID
   const scrollToSection = useCallback((id: string) => {
     // Se o header clica em "funcoes", vai para a primeira função
-    const targetId = id === 'funcoes' ? FUNCOES[0].id : id;
+    const targetId = id === 'funcoes' ? FUNCOES[0].id : id === 'recursos' ? RECURSOS[0].id : id;
     const section = document.getElementById(targetId);
     if (section && scrollContainerRef.current) {
       isScrollingRef.current = true;
@@ -217,10 +277,26 @@ export default function LandingPage() {
           <InicioSection theme={theme} />
         </section>
 
-        {/* RECURSOS */}
-        <section id="recursos" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
-          <RecursosSection theme={theme} />
-        </section>
+        {/* RECURSOS (cada um é uma tela cheia) */}
+        {RECURSOS.map((recurso, index) => (
+          <section
+            key={recurso.id}
+            id={recurso.id}
+            className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+          >
+            <RecursoSlide
+              theme={theme}
+              icon={recurso.icon}
+              title={recurso.title}
+              highlight={recurso.highlight}
+              highlightLabel={recurso.highlightLabel}
+              description={recurso.description}
+              color={recurso.color}
+              currentIndex={index}
+              totalCount={RECURSOS.length}
+            />
+          </section>
+        ))}
 
         {/* FUNÇÕES (cada uma é uma tela cheia) */}
         {FUNCOES.map((funcao, index) => (

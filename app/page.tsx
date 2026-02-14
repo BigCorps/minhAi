@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
-import RecursoSlide from '@/components/landing/RecursoSlide';
+import RecursoSlide from '@/components/landing/RecursosSection';
 import FuncaoSlide from '@/components/landing/FuncaoSlide';
 import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';

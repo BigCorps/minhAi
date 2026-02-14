@@ -9,8 +9,9 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
-// ✅ MUDANÇA 1: ADICIONAR IMPORTS
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
+import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
+import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -51,6 +52,7 @@ export function VoiceAssistantWithWakeWord({
   const [functionSettings, setFunctionSettings] = useState<Record<string, {
     saveToHistory: boolean;
     creditsPerUse: number;
+    isEnabled: boolean;
   }>>({});
 
   const [qrCodeData, setQrCodeData] = useState<{
@@ -68,6 +70,9 @@ export function VoiceAssistantWithWakeWord({
     qrCodeUrl: string;
     pixCode: string;
   } | null>(null);
+
+  // ✅ SISTEMA HÍBRIDO: Processador de novas funções
+  const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);
 
   // ========================================
   // REFS
@@ -240,6 +245,7 @@ export function VoiceAssistantWithWakeWord({
           settings[f.function_key] = {
             saveToHistory: f.save_to_history,
             creditsPerUse: companySetting?.custom_credits_per_use ?? f.credits_per_use,
+            isEnabled: companySetting?.is_enabled ?? true,
           };
         });
 
@@ -252,6 +258,23 @@ export function VoiceAssistantWithWakeWord({
     }
 
     loadFunctionSettings();
+  }, [companyId]);
+
+  // ========================================
+  // ✅ SISTEMA HÍBRIDO: Inicializar Processador de Novas Funções
+  // ========================================
+  useEffect(() => {
+    async function initCommandProcessor() {
+      if (!companyId) return;
+      
+      const processor = new VoiceCommandProcessor(companyId);
+      await processor.initialize();
+      setCommandProcessor(processor);
+      
+      console.log('✅ VoiceCommandProcessor inicializado (sistema híbrido)');
+    }
+    
+    initCommandProcessor();
   }, [companyId]);
 
   // ========================================
@@ -1169,7 +1192,37 @@ export function VoiceAssistantWithWakeWord({
       return true;
     }
     
-    console.log('❌ Nenhum comando detectado');
+    // ========================================
+    // ✅ SISTEMA HÍBRIDO: Tentar novas funções do registry
+    // ========================================
+    console.log('🔍 Tentando detectar nova função no registry...');
+    
+    if (commandProcessor) {
+      const result = await commandProcessor.processCommand(transcript);
+      
+      if (result.success) {
+        console.log('✅ Nova função detectada:', result.functionKey);
+        
+        // Falar resultado
+        if (result.speechText) {
+          await playText(result.speechText);
+        }
+        
+        // Abrir modal (se tiver)
+        if (result.modalData && result.modalType) {
+          console.log('📋 Modal da nova função:', result.modalType);
+          // TODO: Implementar renderização de modais dinâmicos
+          // Por enquanto, só loga. Você pode adicionar setActiveModal aqui depois
+        }
+        
+        // Registrar uso
+        await commandProcessor.registerUsage(result.functionKey);
+        
+        return true;
+      }
+    }
+    
+    console.log('❌ Nenhum comando detectado (legado ou novo)');
     return false;
   }
 

@@ -1215,7 +1215,9 @@ export function VoiceAssistantWithWakeWord({
         }
         
         // Registrar uso
-        await commandProcessor.registerUsage(result.functionKey);
+        if (result.functionKey) {
+          await commandProcessor.registerUsage(result.functionKey);
+        }
         
         return true;
       }

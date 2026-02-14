@@ -1,8 +1,16 @@
 /**
- * Sistema de Registro de Funções do Assistente eAi
+ * Sistema de Registro de Funções NOVAS - eAi
  * 
- * Este arquivo centraliza TODAS as funções disponíveis no assistente.
- * Para adicionar uma nova função, basta adicionar uma nova entrada aqui.
+ * ⚠️ IMPORTANTE: Este registry é apenas para NOVAS funções.
+ * Funções existentes (WhatsApp, Instagram, PIX, FAQ, ChatGPT) continuam
+ * funcionando pelo sistema legado no VoiceAssistant.
+ * 
+ * Como adicionar uma nova função:
+ * 1. Adicionar entrada neste arquivo
+ * 2. Criar Edge Function (se necessário)
+ * 3. Criar Modal (se necessário)
+ * 4. Adicionar no banco de dados
+ * 5. PRONTO! O VoiceAssistant detecta automaticamente
  */
 
 export type ResponseType = 'voice' | 'modal' | 'page' | 'voice+modal' | 'voice+page';
@@ -51,255 +59,96 @@ export interface FunctionDefinition {
 
 /**
  * ========================================
- * REGISTRO DE FUNÇÕES
+ * REGISTRO DE NOVAS FUNÇÕES
  * ========================================
  * 
- * ✅ 100% ALINHADO COM O BANCO DE DADOS
- * Categorias: contact, payment, information, ai_assistant
+ * ⚠️ NÃO ADICIONE as funções legadas aqui:
+ * - qrcode_whatsapp (já existe no VoiceAssistant)
+ * - qrcode_instagram (já existe no VoiceAssistant)
+ * - pix_generate (já existe no VoiceAssistant)
+ * - pix_confirm (já existe no VoiceAssistant)
+ * - pix_cancel (já existe no VoiceAssistant)
+ * - faq (já existe no VoiceAssistant)
+ * - chatgpt (já existe no VoiceAssistant)
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   
   // ========================================
-  // CONTATO (contact)
+  // EXEMPLO: RESUMO DE VENDAS
   // ========================================
+  // 
+  // Descomente e adapte este exemplo para criar sua primeira função nova:
   
-  qrcode_whatsapp: {
-    functionKey: 'qrcode_whatsapp',
-    functionName: 'Nosso WhatsApp',
-    category: 'contact',
+  /*
+  resumo_vendas: {
+    functionKey: 'resumo_vendas',
+    functionName: 'Resumo de Vendas',
+    category: 'productivity',
     responseType: 'voice+modal',
     
     voiceTriggers: [
-      'whatsapp',
-      'whats',
-      'zap',
-      'contato',
-      'falar',
-      'número',
-      'telefone',
-      'watts',
-      'what\'s',
+      'vendas',
+      'quanto vendemos',
+      'faturamento',
+      'resultado',
+      'quanto vendeu',
     ],
     
     examplePhrases: [
-      'Mostre o WhatsApp',
-      'Qual o WhatsApp?',
-      'Quero falar no WhatsApp',
-      'Me dá o zap',
+      'Quanto vendemos hoje?',
+      'Qual o faturamento desta semana?',
+      'Resumo de vendas',
     ],
     
-    edgeFunction: 'gerar-qrcode-contato',
-    uiComponent: 'QRCodeDisplay',
+    edgeFunction: 'resumo-vendas',
+    uiComponent: 'SalesSummaryModal',
     
     requiresInput: false,
     
-    description: 'Exibe QR Code do WhatsApp da empresa para facilitar o contato',
-    shortDescription: 'Mostrar WhatsApp',
-    icon: '📱',
-    color: '#25D366',
-    
-    saveToHistory: true,
-    creditsPerUse: 1,
-    requiresPayment: false,
-    isPremium: false,
-  },
-  
-  qrcode_instagram: {
-    functionKey: 'qrcode_instagram',
-    functionName: 'Nosso Instagram',
-    category: 'contact',
-    responseType: 'voice+modal',
-    
-    voiceTriggers: [
-      'instagram',
-      'insta',
-      'perfil',
-      'seguir',
-      'arroba',
-      'instagran',
-      'istagran',
-    ],
-    
-    examplePhrases: [
-      'Mostre o Instagram',
-      'Qual o Instagram?',
-      'Quero seguir no Instagram',
-    ],
-    
-    edgeFunction: 'gerar-qrcode-contato',
-    uiComponent: 'QRCodeDisplay',
-    
-    requiresInput: false,
-    
-    description: 'Exibe QR Code do Instagram da empresa',
-    shortDescription: 'Mostrar Instagram',
-    icon: '📸',
-    color: '#E4405F',
-    
-    saveToHistory: true,
-    creditsPerUse: 1,
-    requiresPayment: false,
-    isPremium: false,
-  },
-  
-  // ========================================
-  // PAGAMENTOS
-  // ========================================
-  
-  pix_generate: {
-    functionKey: 'pix_generate',
-    functionName: 'Gerar PIX',
-    category: 'payment',
-    responseType: 'voice+modal',
-    
-    voiceTriggers: [
-      'pix',
-      'gerar pix',
-      'criar pix',
-      'cobrar',
-      'cobrança',
-      'cobranca',
-      'pagamento',
-      'picos',
-      'picks',
-      'piche',
-      'pics',
-    ],
-    
-    examplePhrases: [
-      'Gerar PIX de 50 reais',
-      'Criar cobrança de 100',
-      'Quero cobrar 25 no PIX',
-    ],
-    
-    edgeFunction: 'gerar-pix-assistente',
-    uiComponent: 'PIXConfirmationModal',
-    
-    requiresInput: true,
-    inputType: 'number',
-    inputPrompt: 'Qual o valor do PIX que você deseja gerar?',
-    
-    description: 'Gera cobrança PIX para o cliente com QR Code',
-    shortDescription: 'Cobrar via PIX',
-    icon: '💰',
-    color: '#32BCAD',
+    description: 'Fornece resumo de vendas do período com total e quantidade',
+    shortDescription: 'Ver vendas',
+    icon: '📊',
+    color: '#F59E0B',
     
     saveToHistory: true,
     creditsPerUse: 2,
     requiresPayment: false,
-    isPremium: false,
+    isPremium: true,
   },
-  
-  pix_confirm: {
-    functionKey: 'pix_confirm',
-    functionName: 'Confirmar PIX',
-    category: 'payment',
-    responseType: 'voice',
-    
-    voiceTriggers: [
-      'confirmar pix',
-      'paguei',
-      'confirmado',
-      'já paguei',
-      'pagamento confirmado',
-      'pago',
-    ],
-    
-    examplePhrases: [
-      'Confirmar PIX',
-      'Já paguei',
-    ],
-    
-    edgeFunction: 'confirmar-pix-assistente',
-    
-    requiresInput: false,
-    
-    description: 'Confirma recebimento do PIX e atualiza o saldo',
-    shortDescription: 'Confirmar pagamento',
-    icon: '✅',
-    color: '#10B981',
-    
-    saveToHistory: true,
-    creditsPerUse: 1,
-    requiresPayment: false,
-    isPremium: false,
-  },
-  
-  pix_cancel: {
-    functionKey: 'pix_cancel',
-    functionName: 'Cancelar PIX',
-    category: 'payment',
-    responseType: 'voice',
-    
-    voiceTriggers: [
-      'cancelar pix',
-      'desistir do pix',
-      'cancela pix',
-      'fechar pix',
-    ],
-    
-    examplePhrases: [
-      'Cancelar PIX',
-    ],
-    
-    edgeFunction: 'cancelar-pix-assistente',
-    
-    requiresInput: false,
-    
-    description: 'Cancela cobrança PIX pendente',
-    shortDescription: 'Cancelar PIX',
-    icon: '❌',
-    color: '#EF4444',
-    
-    saveToHistory: false,
-    creditsPerUse: 0,
-    requiresPayment: false,
-    isPremium: false,
-  },
+  */
   
   // ========================================
-  // INFORMAÇÃO (information)
+  // EXEMPLO: CONSULTA DE ESTOQUE
   // ========================================
   
-  faq: {
-    functionKey: 'faq',
-    functionName: 'Perguntas Frequentes',
-    category: 'information',
+  /*
+  consulta_estoque: {
+    functionKey: 'consulta_estoque',
+    functionName: 'Consultar Estoque',
+    category: 'productivity',
     responseType: 'voice',
     
     voiceTriggers: [
-      'faq',
-      'perguntas frequentes',
-      'duvidas',
-      'dúvidas',
-      'ajuda',
-      'horário',
-      'funciona',
-      'endereço',
-      'localização',
-      'preço',
-      'valor',
-      'aceita',
-      'forma de pagamento',
-      'delivery',
-      'entrega',
+      'estoque',
+      'tem disponível',
+      'quantidade',
+      'quantos tem',
     ],
     
     examplePhrases: [
-      'Quais são seus horários?',
-      'Qual o prazo de entrega?',
-      'Quais formas de pagamento?',
-      'Como funciona a troca?',
+      'Quantos produtos X tem em estoque?',
+      'Consultar estoque de Y',
     ],
     
-    apiEndpoint: '/api/voice/process',
-    configPath: '/dashboard/faq',
+    edgeFunction: 'consultar-estoque',
     
-    requiresInput: false,
+    requiresInput: true,
+    inputType: 'text',
+    inputPrompt: 'Qual produto você quer consultar?',
     
-    description: 'Responde perguntas frequentes configuradas pela empresa',
-    shortDescription: 'Dúvidas comuns',
-    icon: '❓',
+    description: 'Consulta quantidade em estoque de um produto',
+    shortDescription: 'Ver estoque',
+    icon: '📦',
     color: '#3B82F6',
     
     saveToHistory: true,
@@ -307,48 +156,12 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     requiresPayment: false,
     isPremium: false,
   },
+  */
   
   // ========================================
-  // ASSISTENTE IA (ai_assistant)
+  // ADICIONE SUAS NOVAS FUNÇÕES AQUI
   // ========================================
   
-  chatgpt: {
-    functionKey: 'chatgpt',
-    functionName: 'Perguntas Gerais (ChatGPT)',
-    category: 'ai_assistant',
-    responseType: 'voice',
-    
-    voiceTriggers: [
-      'chatgpt',
-      'perguntas gerais',
-      'ajuda geral',
-      'curiosidade',
-      'calcular',
-      // Sem triggers específicos - é o fallback para qualquer pergunta
-    ],
-    
-    examplePhrases: [
-      'Quanto é 15% de 350?',
-      'Converta 100 dólares para reais',
-      'Me conte uma curiosidade',
-      'Qual a capital da França?',
-    ],
-    
-    apiEndpoint: '/api/voice/process',
-    
-    requiresInput: true,
-    inputType: 'text',
-    
-    description: 'Responde perguntas gerais usando IA (Gemini)',
-    shortDescription: 'Perguntas gerais',
-    icon: '🤖',
-    color: '#8B5CF6',
-    
-    saveToHistory: true,
-    creditsPerUse: 2,
-    requiresPayment: false,
-    isPremium: false,
-  },
 };
 
 /**
@@ -425,7 +238,7 @@ export function detectFunctionFromTranscript(transcript: string): {
 }
 
 /**
- * Extrai número de um texto (para PIX, valores, etc)
+ * Extrai número de um texto (para valores, quantidades, etc)
  */
 function extractNumberFromText(text: string): number | null {
   // Converter palavras em números primeiro

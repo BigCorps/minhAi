@@ -23,7 +23,7 @@ const RECURSOS = [
     title: 'Custo Baixo',
     highlight: 'R$ 0,10',
     highlightLabel: 'por interação',
-    description: 'A partir de R$ 0,12 por interação. Economia de até 90% comparado a atendimento humano tradicional.',
+    description: 'Planos com custo baixo por interação. Uma economia de até 90% comparado a atendimento humano tradicional.',
     color: 'green' as const,
   },
   {

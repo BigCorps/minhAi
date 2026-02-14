@@ -41,6 +41,7 @@ export default function QRCodeDisplay({
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
+          // ✅ Chamar onClose sem await aqui (auto-close)
           onClose();
           return 0;
         }
@@ -49,7 +50,7 @@ export default function QRCodeDisplay({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [autoCloseSeconds, onClose]);
+  }, [autoCloseSeconds]); // ✅ Removido onClose das dependências
 
   const handleCopy = async () => {
     try {
@@ -61,6 +62,12 @@ export default function QRCodeDisplay({
     } catch (err) {
       console.error('Erro ao copiar:', err);
     }
+  };
+
+  // ✅ Handler específico para fechar manualmente
+  const handleManualClose = () => {
+    // Chama onClose que é async no pai
+    onClose();
   };
 
   const getTitle = () => {
@@ -103,7 +110,7 @@ export default function QRCodeDisplay({
             )}
             
             <button
-              onClick={onClose}
+              onClick={handleManualClose}
               className={`p-1.5 rounded-full transition ${
                 theme === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-gray-100'
               }`}

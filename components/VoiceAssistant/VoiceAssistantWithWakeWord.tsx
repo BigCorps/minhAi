@@ -9,7 +9,9 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
+// ✅ MUDANÇA 1: ADICIONAR IMPORTS
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
+// ✅ SISTEMA HÍBRIDO: Imports para novas funções
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
 
@@ -231,6 +233,7 @@ export function VoiceAssistantWithWakeWord({
               settings[f.function_key] = {
                 saveToHistory: f.save_to_history,
                 creditsPerUse: f.credits_per_use,
+                isEnabled: true,
               };
             });
             setFunctionSettings(settings);
@@ -392,37 +395,33 @@ export function VoiceAssistantWithWakeWord({
   // GOOGLE SPEECH WEBSOCKET
   // ========================================
   async function startGoogleSpeech() {
-    if (!isActiveRef.current || !shouldProcessAudio.current) return;
-    
     try {
-      if (googleSpeechRef.current) {
-        googleSpeechRef.current.stopRecording();
-        googleSpeechRef.current.disconnect();
-      }
+      console.log('🎤 Iniciando Google Speech Streaming...');
       
-      googleSpeechRef.current = new GoogleSpeechWebSocket({
+      const client = new GoogleSpeechWebSocket({
         onTranscript: (text, isFinal) => {
           handleGoogleTranscript(text, isFinal);
         },
-        onError: (err) => {
-          console.error('❌ Erro Google Speech:', err);
-          setIsListening(false);
+        onError: (error) => {
+          console.error('❌ Erro Google Speech:', error);
+          setError('Erro no reconhecimento de voz');
         },
-        // ✅ ADICIONE/ATUALIZE ESTE CALLBACK:
-        onStatusChange: (status) => {
-          // O status 'recording' agora significa que voz real foi detectada localmente
-          setIsListening(status === 'recording');
-        }
+        onReady: () => {
+          console.log('✅ Google Speech pronto');
+          setIsListening(true);
+        },
+        languageCode: 'pt-BR',
+        sampleRate: 16000,
       });
       
-      await googleSpeechRef.current.connect();
-      await googleSpeechRef.current.startRecording();
+      googleSpeechRef.current = client;
       
-      console.log('🎤 Google Speech WebSocket iniciado (VAD Local Ativo)');
+      await client.connect();
+      await client.startRecording();
       
-    } catch (err) {
-      console.error('❌ Erro ao iniciar Google Speech:', err);
-      setIsListening(false);
+    } catch (error: any) {
+      console.error('❌ Erro ao iniciar Google Speech:', error);
+      setError('Erro ao acessar microfone');
     }
   }
 
@@ -1352,15 +1351,6 @@ export function VoiceAssistantWithWakeWord({
     if (!currentData) {
       console.log('⚠️ pixConfirmationData não existe no ref');
       await playText('Não há nenhum PIX aberto para confirmar');
-      
-      // ✅ Reiniciar Google Speech após mensagem
-      setTimeout(async () => {
-        if (isActiveRef.current) {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-        }
-      }, 500);
-      
       return;
     }
     
@@ -1384,15 +1374,6 @@ export function VoiceAssistantWithWakeWord({
         console.log('❌ Erro detectado:', response.error);
         
         await playText('PIX ainda não foi pago. Aguarde alguns segundos após o pagamento e tente novamente.');
-        
-        // ✅ Reiniciar Google Speech após erro
-        setTimeout(async () => {
-          if (isActiveRef.current) {
-            shouldProcessAudio.current = true;
-            await startGoogleSpeech();
-          }
-        }, 500);
-        
         return;
       }
       
@@ -1401,15 +1382,6 @@ export function VoiceAssistantWithWakeWord({
       if (!data || !data.success) {
         console.log('⏳ Resposta sem sucesso:', data);
         await playText('PIX ainda não foi pago. Aguarde e tente novamente.');
-        
-        // ✅ Reiniciar Google Speech após mensagem
-        setTimeout(async () => {
-          if (isActiveRef.current) {
-            shouldProcessAudio.current = true;
-            await startGoogleSpeech();
-          }
-        }, 500);
-        
         return;
       }
       
@@ -1444,15 +1416,6 @@ export function VoiceAssistantWithWakeWord({
       await playText('Erro ao confirmar pagamento. Tente novamente.');
     } finally {
       setIsProcessing(false);
-      
-      // ✅ Reiniciar Google Speech após confirmar PIX
-      setTimeout(async () => {
-        if (isActiveRef.current) {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-          console.log('🎤 Google Speech reiniciado após confirmar PIX');
-        }
-      }, 500);
     }
   }
 
@@ -1464,15 +1427,6 @@ export function VoiceAssistantWithWakeWord({
     if (!currentData) {
       console.log('⚠️ pixConfirmationData não existe no ref');
       await playText('Não há nenhum PIX aberto para cancelar');
-      
-      // ✅ Reiniciar Google Speech após mensagem
-      setTimeout(async () => {
-        if (isActiveRef.current) {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-        }
-      }, 500);
-      
       return;
     }
     
@@ -1502,34 +1456,12 @@ export function VoiceAssistantWithWakeWord({
       await playText('Erro ao cancelar PIX.');
     } finally {
       setIsProcessing(false);
-      
-      // ✅ Reiniciar Google Speech após cancelar PIX
-      setTimeout(async () => {
-        if (isActiveRef.current) {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-          console.log('🎤 Google Speech reiniciado após cancelar PIX');
-        }
-      }, 500);
     }
   }
 
-  async function handleCloseQRCode() {
-    console.log('🔘 handleCloseQRCode chamada');
-    
+  function handleCloseQRCode() {
     setQrCodeData(null);
-    setIsProcessing(false); // ✅ Garantir que não fica em processamento
-    
-    await playText('QR Code fechado.').catch(() => {});
-    
-    // ✅ Reiniciar Google Speech após fechar modal
-    setTimeout(async () => {
-      if (isActiveRef.current) {
-        shouldProcessAudio.current = true;
-        await startGoogleSpeech();
-        console.log('🎤 Google Speech reiniciado após fechar QR Code');
-      }
-    }, 500);
+    playText('QR Code fechado.').catch(() => {});
   }
 
   function handleCopyQRCode() {
@@ -2021,20 +1953,19 @@ export function VoiceAssistantWithWakeWord({
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
-    
-    // isListening = VAD detectou ruído, mas ainda aguarda wake word
-    // Aguardando = silêncio, também aguarda wake word
-    // Ambos mostram a mesma mensagem de instrução
-    const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-    return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+    if (isListening) {
+      const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Escutando...';
+    }
+    return 'Aguarde...';
   };
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
-    if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // Falando = azul
-    if (isProcessing) return 'bg-yellow-400 animate-pulse'; // Processando = amarelo
-    if (isListening) return 'bg-blue-400 animate-pulse'; // Detectou ruído (aguardando wake word) = azul
-    return 'bg-green-400 animate-pulse'; // Silêncio (aguardando wake word) = verde
+    if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
+    if (isProcessing) return 'bg-green-600 animate-pulse';
+    if (isListening) return 'bg-green-400 animate-pulse';
+    return 'bg-gray-400';
   };
 
   // ========================================

@@ -11,8 +11,8 @@ import TextInputChat from './TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 // ✅ SISTEMA HÍBRIDO: Apenas para NOVAS funções
-import { ASSISTANT_FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
-import DynamicModalManager from '@/components/assistant/DynamicModalManager';
+import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
+import BaseModal from '@/components/assistant/BaseModal';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;

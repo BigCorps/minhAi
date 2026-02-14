@@ -1299,6 +1299,15 @@ export function VoiceAssistantWithWakeWord({
     if (!currentData) {
       console.log('⚠️ pixConfirmationData não existe no ref');
       await playText('Não há nenhum PIX aberto para confirmar');
+      
+      // ✅ Reiniciar Google Speech após mensagem
+      setTimeout(async () => {
+        if (isActiveRef.current) {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+        }
+      }, 500);
+      
       return;
     }
     
@@ -1322,6 +1331,15 @@ export function VoiceAssistantWithWakeWord({
         console.log('❌ Erro detectado:', response.error);
         
         await playText('PIX ainda não foi pago. Aguarde alguns segundos após o pagamento e tente novamente.');
+        
+        // ✅ Reiniciar Google Speech após erro
+        setTimeout(async () => {
+          if (isActiveRef.current) {
+            shouldProcessAudio.current = true;
+            await startGoogleSpeech();
+          }
+        }, 500);
+        
         return;
       }
       
@@ -1330,6 +1348,15 @@ export function VoiceAssistantWithWakeWord({
       if (!data || !data.success) {
         console.log('⏳ Resposta sem sucesso:', data);
         await playText('PIX ainda não foi pago. Aguarde e tente novamente.');
+        
+        // ✅ Reiniciar Google Speech após mensagem
+        setTimeout(async () => {
+          if (isActiveRef.current) {
+            shouldProcessAudio.current = true;
+            await startGoogleSpeech();
+          }
+        }, 500);
+        
         return;
       }
       
@@ -1364,6 +1391,15 @@ export function VoiceAssistantWithWakeWord({
       await playText('Erro ao confirmar pagamento. Tente novamente.');
     } finally {
       setIsProcessing(false);
+      
+      // ✅ Reiniciar Google Speech após confirmar PIX
+      setTimeout(async () => {
+        if (isActiveRef.current) {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+          console.log('🎤 Google Speech reiniciado após confirmar PIX');
+        }
+      }, 500);
     }
   }
 
@@ -1375,6 +1411,15 @@ export function VoiceAssistantWithWakeWord({
     if (!currentData) {
       console.log('⚠️ pixConfirmationData não existe no ref');
       await playText('Não há nenhum PIX aberto para cancelar');
+      
+      // ✅ Reiniciar Google Speech após mensagem
+      setTimeout(async () => {
+        if (isActiveRef.current) {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+        }
+      }, 500);
+      
       return;
     }
     
@@ -1404,12 +1449,30 @@ export function VoiceAssistantWithWakeWord({
       await playText('Erro ao cancelar PIX.');
     } finally {
       setIsProcessing(false);
+      
+      // ✅ Reiniciar Google Speech após cancelar PIX
+      setTimeout(async () => {
+        if (isActiveRef.current) {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+          console.log('🎤 Google Speech reiniciado após cancelar PIX');
+        }
+      }, 500);
     }
   }
 
-  function handleCloseQRCode() {
+  async function handleCloseQRCode() {
     setQrCodeData(null);
-    playText('QR Code fechado.').catch(() => {});
+    await playText('QR Code fechado.').catch(() => {});
+    
+    // ✅ Reiniciar Google Speech após fechar modal
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+        console.log('🎤 Google Speech reiniciado após fechar QR Code');
+      }
+    }, 500);
   }
 
   function handleCopyQRCode() {
@@ -1902,18 +1965,20 @@ export function VoiceAssistantWithWakeWord({
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     if (isListening) {
-      const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Escutando...';
+      // isListening agora = voz detectada pelo VAD local
+      return 'Ouvindo...';
     }
-    return 'Aguarde...';
+    // Aguardando = pronto mas sem voz detectada
+    const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+    return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
   };
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
     if (isProcessing) return 'bg-green-600 animate-pulse';
-    if (isListening) return 'bg-green-400 animate-pulse';
-    return 'bg-gray-400';
+    if (isListening) return 'bg-yellow-400 animate-pulse'; // Ouvindo = amarelo
+    return 'bg-green-400 animate-pulse'; // Aguardando (pronto) = verde
   };
 
   // ========================================

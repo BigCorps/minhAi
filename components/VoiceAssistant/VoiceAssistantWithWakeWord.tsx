@@ -11,8 +11,8 @@ import TextInputChat from './TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 // ✅ SISTEMA HÍBRIDO: Apenas para NOVAS funções
-import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
-import BaseModal from '@/components/assistant/BaseModal';
+import { ASSISTANT_FUNCTIONS_REGISTRY } from '@/lib/assistant-functions-registry';
+import DynamicModalManager from '@/components/assistant/DynamicModalManager';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -834,14 +834,14 @@ export function VoiceAssistantWithWakeWord({
       // ========================================
       // 🔹 PARTE 1: Tentar NOVAS funções dinâmicas primeiro
       // ========================================
-      const dynamicFunc = FUNCTIONS_REGISTRY[functionKey];
+      const dynamicFunc = ASSISTANT_FUNCTIONS_REGISTRY[functionKey];
       if (dynamicFunc && dynamicFunc.handler) {
         const isEnabled = await checkIfFunctionIsEnabled(functionKey);
         if (!isEnabled) {
           await playText('Esta função está desativada.');
           return;
         }
-        console.log(`🎯 Executando função dinâmica: ${dynamicFunc.functionName}`);
+        console.log(`🎯 Executando função dinâmica: ${dynamicFunc.function_name}`);
         await dynamicFunc.handler({
           transcript: '',
           companyId,
@@ -1060,8 +1060,8 @@ export function VoiceAssistantWithWakeWord({
     // ========================================
     console.log('🔧 Tentando funções dinâmicas do registry...');
     
-    for (const functionKey in FUNCTIONS_REGISTRY) {
-      const func = FUNCTIONS_REGISTRY[functionKey];
+    for (const functionKey in ASSISTANT_FUNCTIONS_REGISTRY) {
+      const func = ASSISTANT_FUNCTIONS_REGISTRY[functionKey];
       if (!func.voice_triggers || func.voice_triggers.length === 0) continue;
       
       const isEnabled = await checkIfFunctionIsEnabled(functionKey);

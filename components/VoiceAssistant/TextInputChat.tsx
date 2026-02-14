@@ -20,9 +20,12 @@ export default function TextInputChat({
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus no input quando não estiver processando
+  // Auto-focus no input quando não estiver processando (apenas desktop)
   useEffect(() => {
-    if (!isProcessing && !disabled && inputRef.current) {
+    // Detectar se é mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (!isMobile && !isProcessing && !disabled && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isProcessing, disabled]);

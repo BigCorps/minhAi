@@ -1462,7 +1462,11 @@ export function VoiceAssistantWithWakeWord({
   }
 
   async function handleCloseQRCode() {
+    console.log('🔘 handleCloseQRCode chamada');
+    
     setQrCodeData(null);
+    setIsProcessing(false); // ✅ Garantir que não fica em processamento
+    
     await playText('QR Code fechado.').catch(() => {});
     
     // ✅ Reiniciar Google Speech após fechar modal

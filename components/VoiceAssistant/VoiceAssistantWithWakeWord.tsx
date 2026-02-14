@@ -834,9 +834,9 @@ export function VoiceAssistantWithWakeWord({
       // ========================================
       // 🔹 PARTE 1: Tentar NOVAS funções dinâmicas primeiro
       // ========================================
-      const dynamicFunc = FUNCTIONS_REGISTRY[functionKey];
+      const dynamicFunc = ASSISTANT_FUNCTIONS_REGISTRY[functionKey];
       if (dynamicFunc && dynamicFunc.handler) {
-        const isEnabled = functionSettings[functionKey]?.isEnabled ?? true;
+        const isEnabled = await checkIfFunctionIsEnabled(functionKey);
         if (!isEnabled) {
           await playText('Esta função está desativada.');
           return;
@@ -1060,11 +1060,11 @@ export function VoiceAssistantWithWakeWord({
     // ========================================
     console.log('🔧 Tentando funções dinâmicas do registry...');
     
-    for (const functionKey in ASSISTANT_FUNCTIONS_REGISTRY) {
-      const func = ASSISTANT_FUNCTIONS_REGISTRY[functionKey];
+    for (const functionKey in FUNCTIONS_REGISTRY) {
+      const func = FUNCTIONS_REGISTRY[functionKey];
       if (!func.voice_triggers || func.voice_triggers.length === 0) continue;
       
-      const isEnabled = functionSettings[functionKey]?.isEnabled ?? true;
+      const isEnabled = await checkIfFunctionIsEnabled(functionKey);
       if (!isEnabled) continue;
       
       for (const trigger of func.voice_triggers) {

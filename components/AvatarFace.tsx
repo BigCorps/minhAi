@@ -115,147 +115,133 @@ export function AvatarFace({
 
   useEffect(() => {
     const scheduleNextBlink = () => {
-      const nextBlinkDelay = Math.random() * 4000 + 2000;
+      if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current);
+      const delay = 2000 + Math.random() * 4000;
       blinkTimeoutRef.current = setTimeout(() => {
-        // Ajuste Refinado: Impedir piscada no flirt (olho aberto deve ficar aberto) e outras expressões fechadas
-        if (eyeExpr === 'flirt' || eyeExpr === 'sleeping' || eyeExpr === 'happy' || isBlinking) {
-          scheduleNextBlink();
-          return;
-        }
         setIsBlinking(true);
-        const blinkDuration = Math.random() * 60 + 120;
         setTimeout(() => {
           setIsBlinking(false);
-          if (Math.random() < 0.15) {
-            setTimeout(() => {
-              setIsBlinking(true);
-              setTimeout(() => {
-                setIsBlinking(false);
-                scheduleNextBlink();
-              }, blinkDuration);
-            }, 200);
-          } else {
-            scheduleNextBlink();
-          }
-        }, blinkDuration);
-      }, nextBlinkDelay);
+          scheduleNextBlink();
+        }, 150);
+      }, delay);
     };
-    if (showFace) scheduleNextBlink();
-    return () => { if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current); };
-  }, [showFace, eyeExpr, isBlinking]);
+    scheduleNextBlink();
+    return () => {
+      if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
-    const shouldAnimate = !isSpeaking && !isProcessing;
-    
-    if (!shouldAnimate) {
-      setEyeExpr('idle');
-      return;
-    }
-
-    const expressions: EyeExpression[] = [
-      'idle', 'sleeping', 'surprised', 'attentive', 'flirt', 'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy'
-    ];
-
-    const changeExpression = () => {
-      const nonIdleExpressions = expressions.filter(e => e !== 'idle');
-      const randomExpr = nonIdleExpressions[Math.floor(Math.random() * nonIdleExpressions.length)];
-      setEyeExpr(randomExpr);
-
+    const expressions: EyeExpression[] = ['idle', 'surprised', 'attentive', 'flirt', 'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy'];
+    const scheduleNextExpression = () => {
+      if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current);
+      const delay = 5000 + Math.random() * 8000;
       exprTimeoutRef.current = setTimeout(() => {
-        setEyeExpr('idle');
-      }, 2000 + Math.random() * 1000);
+        const randomExpr = expressions[Math.floor(Math.random() * expressions.length)];
+        setEyeExpr(randomExpr);
+        setTimeout(() => {
+          setEyeExpr('idle');
+          scheduleNextExpression();
+        }, 2000);
+      }, delay);
     };
-
-    // Ajuste Refinado: Manter o avatar normal (idle) por pelo menos 10 segundos
-    const interval = setInterval(() => {
-      changeExpression();
-    }, 10000 + Math.random() * 5000); // Mínimo 10s entre expressões
-
-    // Primeira expressão após 10 segundos
-    const initialTimeout = setTimeout(() => {
-      changeExpression();
-    }, 10000);
-
+    scheduleNextExpression();
     return () => {
-      clearInterval(interval);
-      clearTimeout(initialTimeout);
       if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current);
     };
-  }, [isSpeaking, isProcessing]);
-
-  useEffect(() => {
-    const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
-    const newParticles = Array.from({ length: particleCount }, () => ({
-      x: Math.random() * 500,
-      y: Math.random() * 500,
-      size: Math.random() * 4 + 2,
-      speed: Math.random() * 0.8 + 0.3
-    }));
-    setParticles(newParticles);
-  }, [isSpeaking, isProcessing, isListening]);
+  }, []);
 
   useEffect(() => {
     if (isSpeaking) {
+      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
       audioIntervalRef.current = setInterval(() => {
-        setAudioLevels(prev => prev.map((_, i) => {
-          const base = Math.random() * 0.8;
-          const wave = Math.sin(Date.now() / 200 + i * 0.5) * 0.3;
-          return Math.max(0, Math.min(1, base + wave));
-        }));
-      }, 50);
+        setAudioLevels(prev => prev.map(() => Math.random() * 0.4 + 0.2));
+      }, 80);
     } else {
-      if (audioIntervalRef.current) { clearInterval(audioIntervalRef.current); audioIntervalRef.current = null; }
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current);
+        audioIntervalRef.current = null;
+      }
       setAudioLevels(Array(10).fill(0));
     }
-    return () => { if (audioIntervalRef.current) clearInterval(audioIntervalRef.current); };
+    return () => {
+      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
+    };
   }, [isSpeaking]);
+
+  useEffect(() => {
+    const newParticles = Array.from({ length: 12 }, () => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 4 + 2,
+      speed: Math.random() * 0.5 + 0.5
+    }));
+    setParticles(newParticles);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    let animationId: number;
+    let animationFrameId: number;
     let time = 0;
-    const animate = () => {
+    const drawWaves = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      time += 0.01;
-      particles.forEach((particle, i) => {
-        const x = particle.x + Math.sin(time + i) * 40;
-        const y = particle.y + Math.cos(time + i * 0.5) * 40;
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, particle.size * 3);
-        gradient.addColorStop(0, i % 2 === 0 ? colors.primary : colors.secondary);
-        gradient.addColorStop(1, 'transparent');
-        ctx.fillStyle = gradient;
+      ctx.strokeStyle = colors.primary;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.3;
+      for (let i = 0; i < 3; i++) {
         ctx.beginPath();
-        ctx.arc(x, y, particle.size * 3, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      animationId = requestAnimationFrame(animate);
+        for (let x = 0; x < canvas.width; x += 5) {
+          const y = canvas.height / 2 + Math.sin((x / 50) + time + i) * (20 + i * 10);
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      time += 0.05;
+      animationFrameId = requestAnimationFrame(drawWaves);
     };
-    animate();
-    return () => { if (animationId) cancelAnimationFrame(animationId); };
-  }, [particles, colors]);
+    drawWaves();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [colors.primary]);
 
-  const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
+  const orbSize = isListening ? 'scale-110' : isSpeaking ? 'scale-125' : isProcessing ? 'scale-105' : 'scale-100';
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
+    <div className="relative w-full aspect-square flex items-center justify-center overflow-visible">
       {qrCodeData && !pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
-          <QRCodeDisplay type={qrCodeData.type} qrCodeUrl={qrCodeData.qrCodeUrl} qrContent={qrCodeData.qrContent} displayText={qrCodeData.displayText} amount={qrCodeData.amount} companyName={qrCodeData.companyName} onClose={onCloseQRCode || (() => {})} onCopy={onCopyQRCode} autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15} />
+          <QRCodeDisplay
+            type={qrCodeData.type}
+            qrCodeUrl={qrCodeData.qrCodeUrl}
+            qrContent={qrCodeData.qrContent}
+            displayText={qrCodeData.displayText}
+            amount={qrCodeData.amount}
+            companyName={qrCodeData.companyName}
+            onClose={onCloseQRCode || (() => {})}
+            onCopy={onCopyQRCode}
+            autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15}
+            theme={theme}
+          />
         </div>
       )}
+
       {pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
-          <PIXConfirmationModal transactionId={pixConfirmationData.transactionId} amount={pixConfirmationData.amount} qrCodeUrl={pixConfirmationData.qrCodeUrl} pixCode={pixConfirmationData.pixCode} onConfirm={onConfirmPix || (async () => {})} onCancel={onCancelPix || (async () => {})} />
+          <PIXConfirmationModal
+            transactionId={pixConfirmationData.transactionId}
+            amount={pixConfirmationData.amount}
+            qrCodeUrl={pixConfirmationData.qrCodeUrl}
+            pixCode={pixConfirmationData.pixCode}
+            onConfirm={onConfirmPix || (async () => {})}
+            onCancel={onCancelPix || (async () => {})}
+            theme={theme}
+          />
         </div>
       )}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {[1, 2].map((ring) => (
-          <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{ width: `${60 + ring * 15}%`, aspectRatio: '1 / 1', borderColor: colors.ring, opacity: isSpeaking ? 0.4 : 0.2, animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`, animationDelay: `${ring * 0.3}s` }} />
-        ))}
-      </div>
+
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
         <div className="rounded-full opacity-20" style={{ width: '95%', aspectRatio: '1 / 1', background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, filter: 'blur(20px)' }} />
       </div>
@@ -361,15 +347,24 @@ export function AvatarFace({
               <radialGradient id="coreGradient3"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.8" /><stop offset="100%" stopColor={colors.secondary} stopOpacity="0.4" /></radialGradient>
             </defs>
             <g filter="url(#gooey)">
+              {/* Círculo Central Principal */}
               <circle cx="100" cy="100" r="45" fill="url(#coreGradient1)"><animate attributeName="r" values="40;55;40" dur="1.8s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.5s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="3.2s" repeatCount="indefinite" /></circle>
+              
+              {/* Círculos Laterais (Esquerda e Direita) */}
               <circle cx="65" cy="100" r="35" fill="url(#coreGradient2)" opacity="0.95"><animate attributeName="r" values="32;42;32" dur="2s" repeatCount="indefinite" /><animate attributeName="cx" values="65;58;72;65" dur="2.8s" repeatCount="indefinite" /><animate attributeName="cy" values="100;108;92;100" dur="3.6s" repeatCount="indefinite" /></circle>
               <circle cx="135" cy="100" r="35" fill="url(#coreGradient3)" opacity="0.95"><animate attributeName="r" values="33;43;33" dur="1.9s" repeatCount="indefinite" /><animate attributeName="cx" values="135;142;128;135" dur="3.2s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="2.9s" repeatCount="indefinite" /></circle>
+              
+              {/* Círculos nas Posições Cardinais (Topo e Base) */}
               <circle cx="100" cy="65" r="30" fill="url(#coreGradient1)" opacity="0.9"><animate attributeName="r" values="27;37;27" dur="2.2s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.8s" repeatCount="indefinite" /><animate attributeName="cy" values="65;58;72;65" dur="2.7s" repeatCount="indefinite" /></circle>
               <circle cx="100" cy="135" r="30" fill="url(#coreGradient2)" opacity="0.9"><animate attributeName="r" values="28;38;28" dur="2.4s" repeatCount="indefinite" /><animate attributeName="cx" values="100;92;108;100" dur="3.1s" repeatCount="indefinite" /><animate attributeName="cy" values="135;142;128;135" dur="3.5s" repeatCount="indefinite" /></circle>
+              
+              {/* Círculos nas Diagonais */}
               <circle cx="72" cy="72" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.1s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="3.3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="2.8s" repeatCount="indefinite" /></circle>
               <circle cx="128" cy="72" r="26" fill="url(#coreGradient1)" opacity="0.85"><animate attributeName="r" values="24;34;24" dur="2.3s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="3.4s" repeatCount="indefinite" /></circle>
               <circle cx="72" cy="128" r="26" fill="url(#coreGradient2)" opacity="0.85"><animate attributeName="r" values="22;32;22" dur="2.5s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="2.9s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="3.2s" repeatCount="indefinite" /></circle>
               <circle cx="128" cy="128" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.6s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3.6s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="2.6s" repeatCount="indefinite" /></circle>
+              
+              {/* Círculos Orbitais Pequenos (8 ou 16 dependendo do estado) */}
               {[...Array(isSpeaking ? 16 : 8)].map((_, i) => {
                 const angle = (i * Math.PI * 2) / (isSpeaking ? 16 : 8);
                 const radius = isSpeaking ? 55 : 50;
@@ -395,6 +390,7 @@ export function AvatarFace({
         )}
       </div>
 
+      {/* Anéis de Ping ao Redor */}
       <div className="absolute inset-0 rounded-full pointer-events-none" style={{ aspectRatio: '1/1' }}>
         {[1, 2, 3].map(ring => (
           <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />

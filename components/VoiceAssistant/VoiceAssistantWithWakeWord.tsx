@@ -9,8 +9,9 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
-// ✅ MUDANÇA 1: ADICIONAR IMPORTS
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
+import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
+import { FUNCTIONS_REGISTRY } from '@/lib/functions-registry';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -67,6 +68,13 @@ export function VoiceAssistantWithWakeWord({
     amount: string;
     qrCodeUrl: string;
     pixCode: string;
+  } | null>(null);
+
+  // ✅ NOVA ARQUITETURA: Processador de comandos
+  const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);
+  const [activeModal, setActiveModal] = useState<{
+    type: string;
+    data: any;
   } | null>(null);
 
   // ========================================
@@ -252,6 +260,23 @@ export function VoiceAssistantWithWakeWord({
     }
 
     loadFunctionSettings();
+  }, [companyId]);
+
+  // ========================================
+  // ✅ NOVA ARQUITETURA: Inicializar Processador
+  // ========================================
+  useEffect(() => {
+    async function initProcessor() {
+      if (!companyId) return;
+      
+      const processor = new VoiceCommandProcessor(companyId);
+      await processor.initialize();
+      setCommandProcessor(processor);
+      
+      console.log('✅ VoiceCommandProcessor inicializado');
+    }
+    
+    initProcessor();
   }, [companyId]);
 
   // ========================================
@@ -809,25 +834,16 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ✅ PASSO 3: Atualizar handleFunctionClick() para usar créditos dinâmicos
+  // ✅ NOVA ARQUITETURA: Atualizar handleFunctionClick()
   async function handleFunctionClick(functionKey: string) {
-    console.log('🎯 Função clicada no carrossel:', functionKey);
-    
-    const isEnabled = await checkIfFunctionIsEnabled(functionKey);
-    
-    if (!isEnabled) {
-      console.log('⚠️ Função desativada:', functionKey);
-      await playText('Esta função está desativada no momento. Entre em contato com o suporte para ativá-la.');
-      
-      setTimeout(async () => {
-        if (isActiveRef.current) {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-        }
-      }, 500);
-      
+    if (!commandProcessor) {
+      console.warn('⚠️ CommandProcessor não inicializado');
       return;
     }
-
+    
+    console.log('🎯 Função clicada no carrossel:', functionKey);
+    
+    // Parar áudio atual
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.currentTime = 0;
@@ -837,46 +853,63 @@ export function VoiceAssistantWithWakeWord({
     setIsProcessing(true);
 
     try {
-      switch (functionKey) {
-        // ✅ Perguntas Frequentes
-        case 'faq':
-          await playText('Me faça qualquer pergunta sobre nossos produtos, serviços, horários ou políticas. Estou aqui para te ajudar!');
-          break;
-        
-        // ✅ ChatGPT / Perguntas Gerais
-        case 'chatgpt':
-          await playText('Pode me fazer qualquer pergunta! Estou aqui para conversar e te ajudar com informações gerais.');
-          break;
-        
-        // PIX
-        case 'pix_generate':
-          await playText('Para gerar um pix, me diga o valor. Por exemplo: gerar pix de 50 reais.');
-          break;
-          
-        // WhatsApp
-        case 'qrcode_whatsapp':
-          await handleWhatsAppCommand();
-          break;
-          
-        // Instagram
-        case 'qrcode_instagram':
-          await handleInstagramCommand();
-          break;
-          
-        // Fallback
-        default:
-          console.log('⚠️ Função não mapeada:', functionKey);
-          await playText(`A função ${functionKey} ainda não está configurada.`);
+      // ✅ Buscar definição da função
+      const func = FUNCTIONS_REGISTRY[functionKey];
+      
+      if (!func) {
+        console.error('❌ Função não encontrada no registry:', functionKey);
+        await playText('Esta função não está disponível no momento.');
+        return;
       }
       
-      // ✅ PASSO 3: Usar créditos dinâmicos do functionSettings
-      await registerFunctionUsage(
-        functionKey,
-        functionSettings[functionKey]?.creditsPerUse ?? 0
-      );
+      // ✅ Executar função usando o processador
+      const result = await commandProcessor.executeFunction(func, undefined);
+      
+      if (!result.success) {
+        await playText(result.error || 'Erro ao executar função');
+        return;
+      }
+      
+      // ✅ Executar ação (mesmo código do detectVoiceCommand)
+      switch (result.action) {
+        case 'voice':
+          if (result.speechText) {
+            await playText(result.speechText);
+          }
+          break;
+        
+        case 'voice+modal':
+          if (result.speechText) {
+            await playText(result.speechText);
+          }
+          
+          // Mapear para o modal correto
+          if (result.functionKey === 'qrcode_whatsapp' || result.functionKey === 'qrcode_instagram') {
+            setQrCodeData({
+              type: result.functionKey === 'qrcode_whatsapp' ? 'whatsapp' : 'instagram',
+              qrCodeUrl: result.modalData.qr_code_url,
+              qrContent: result.modalData.qr_content,
+              displayText: result.modalData.display_text,
+              companyName: result.modalData.company_name,
+            });
+          }
+          
+          if (result.functionKey === 'pix_generate') {
+            setPixConfirmationData({
+              transactionId: result.modalData.transaction_id,
+              amount: result.modalData.amount_brl,
+              qrCodeUrl: result.modalData.qr_code_url,
+              pixCode: result.modalData.pix_code,
+            });
+          }
+          break;
+      }
+      
+      // ✅ Registrar uso
+      await commandProcessor.registerUsage(functionKey);
       
     } catch (error) {
-      console.error('Erro ao executar função:', error);
+      console.error('❌ Erro ao executar função:', error);
       await playText('Desculpe, ocorreu um erro ao executar esta função.');
     } finally {
       setIsProcessing(false);
@@ -891,405 +924,95 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ========================================
-  // NUMBER CONVERSION
-  // ========================================
-  function convertWordsToNumbers(text: string): string {
-    const numberWords: {[key: string]: string} = {
-      // Unidades
-      'zero': '0', 'um': '1', 'dois': '2', 'três': '3', 'tres': '3',
-      'quatro': '4', 'cinco': '5', 'seis': '6', 'sete': '7',
-      'oito': '8', 'nove': '9',
-      
-      // Dezenas especiais
-      'dez': '10', 'onze': '11', 'doze': '12', 'treze': '13',
-      'catorze': '14', 'quatorze': '14', 'quinze': '15',
-      'dezesseis': '16', 'dezessete': '17', 'dezoito': '18', 'dezenove': '19',
-      
-      // Dezenas
-      'vinte': '20', 'trinta': '30', 'quarenta': '40', 'cinquenta': '50',
-      'sessenta': '60', 'setenta': '70', 'oitenta': '80', 'noventa': '90',
-      
-      // Centenas
-      'cem': '100', 'cento': '100',
-      'duzentos': '200', 'trezentos': '300', 'quatrocentos': '400',
-      'quinhentos': '500', 'seiscentos': '600', 'setecentos': '700',
-      'oitocentos': '800', 'novecentos': '900',
-      
-      // Milhares
-      'mil': '1000',
-    };
-    
-    let result = text;
-    
-    // ✅ Processar composições como "vinte e cinco" → "25"
-    const composicoes = [
-      { pattern: /vinte e um/gi, value: '21' },
-      { pattern: /vinte e dois/gi, value: '22' },
-      { pattern: /vinte e três/gi, value: '23' },
-      { pattern: /vinte e quatro/gi, value: '24' },
-      { pattern: /vinte e cinco/gi, value: '25' },
-      { pattern: /trinta e cinco/gi, value: '35' },
-      { pattern: /quarenta e cinco/gi, value: '45' },
-      { pattern: /cinquenta e cinco/gi, value: '55' },
-      // Adicione mais conforme necessário
-    ];
-    
-    for (const comp of composicoes) {
-      result = result.replace(comp.pattern, comp.value);
-    }
-    
-    // ✅ Substituir palavras individuais
-    for (const [word, number] of Object.entries(numberWords)) {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
-      result = result.replace(regex, number);
-    }
-    
-    return result;
-  }
-
-  function correctTranscriptionErrors(text: string): string {
-    let corrected = text;
-    
-    // Mapa de correções (palavra errada → palavra correta)
-    const corrections: { [key: string]: string } = {
-      // PIX e variações
-      'picos': 'pix',
-      'picks': 'pix',
-      'pix': 'pix', // manter original
-      'piche': 'pix',
-      'pics': 'pix',
-      'pixel': 'pix',
-      
-      // Cobrança
-      'cobranca': 'cobrança',
-      'cobranças': 'cobrança',
-      
-      // WhatsApp
-      'watts': 'whatsapp',
-      'what\'s': 'whatsapp',
-      'whats': 'whatsapp',
-      'zap': 'whatsapp',
-      'zapp': 'whatsapp',
-      
-      // Instagram
-      'instagran': 'instagram',
-      'insta': 'instagram',
-      'istagran': 'instagram',
-      
-      // Números problemáticos
-      'sentavos': 'centavos',
-      'reais': 'reais',
-      'real': 'reais',
-      
-      // Ações
-      'gera': 'gerar',
-      'cria': 'criar',
-      'faz': 'fazer',
-      'cobra': 'cobrar',
-    };
-    
-    // Aplicar correções (case-insensitive)
-    for (const [wrong, right] of Object.entries(corrections)) {
-      const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-      corrected = corrected.replace(regex, right);
-    }
-    
-    return corrected;
-  }
-
-  // ========================================
-  // VOICE COMMAND DETECTION
+  // ✅ NOVA ARQUITETURA: VOICE COMMAND DETECTION
   // ========================================
   async function detectVoiceCommand(transcript: string): Promise<boolean> {
-    // ✅ PASSO 1: Corrigir erros de transcrição PRIMEIRO
-    const correctedTranscript = correctTranscriptionErrors(transcript);
-    const lowerTranscript = correctedTranscript.toLowerCase().trim();
-    
-    console.log('🔍 Original:', transcript);
-    if (correctedTranscript !== transcript) {
-      console.log('🔧 Corrigido:', correctedTranscript);
-    }
-    console.log('🔍 Processando:', lowerTranscript);
-    
-    // ✅ PASSO 2: Converter números por extenso
-    const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
-    console.log('🔢 Após conversão:', transcriptWithNumbers);
-    
-    // WhatsApp
-    const whatsappTriggers = [
-      'whatsapp', 'whats', 'zap', 'número', 'contato'
-    ];
-    
-    if (whatsappTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📱 Comando WhatsApp detectado!');
-      const isEnabled = await checkIfFunctionIsEnabled('qrcode_whatsapp');
-      if (!isEnabled) {
-        await playText('A função WhatsApp está desativada no momento.');
-        return true;
-      }
-      await handleWhatsAppCommand();
-      // ✅ PASSO 3: Usar créditos dinâmicos
-      await registerFunctionUsage(
-        'qrcode_whatsapp',
-        functionSettings['qrcode_whatsapp']?.creditsPerUse ?? 0
-      );
-      return true;
+    if (!commandProcessor) {
+      console.warn('⚠️ CommandProcessor não inicializado ainda');
+      return false;
     }
     
-    // Instagram
-    const instagramTriggers = [
-      'instagram', 'insta', 'arroba', 'perfil'
-    ];
+    console.log('🎯 Detectando comando:', transcript);
     
-    if (instagramTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('📸 Comando Instagram detectado!');
-      const isEnabled = await checkIfFunctionIsEnabled('qrcode_instagram');
-      if (!isEnabled) {
-        await playText('A função Instagram está desativada no momento.');
-        return true;
-      }
-      await handleInstagramCommand();
-      // ✅ PASSO 3: Usar créditos dinâmicos
-      await registerFunctionUsage(
-        'qrcode_instagram',
-        functionSettings['qrcode_instagram']?.creditsPerUse ?? 0
-      );
-      return true;
+    // ✅ Processar comando dinamicamente
+    const result = await commandProcessor.processCommand(transcript);
+    
+    if (!result.success) {
+      console.log('❌ Nenhuma função detectada ou erro:', result.error);
+      return false;
     }
     
-    // Confirmar PIX
-    const confirmTriggers = [
-      'confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'
-    ];
+    console.log('✅ Função detectada:', result.functionKey);
     
-    if (confirmTriggers.some(trigger => lowerTranscript.includes(trigger))) {
-      console.log('✅ Comando CONFIRMAR PIX detectado!');
-      const currentPixState = pixStateRef.current;
-      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-        console.log('💳 PIX aberto encontrado, confirmando...');
-        await handleConfirmPix();
-        return true;
-      } else {
-        console.log('⚠️ Nenhum PIX aberto para confirmar');
-        await playText('Não há nenhum PIX aberto para confirmar');
-        return true;
-      }
-    }
-    
-    // Cancelar PIX
-    const cancelTriggers = [
-      'cancelar', 'cancela', 'desistir', 'não quero', 'fechar'
-    ];
-    
-    if (cancelTriggers.some(trigger => lowerTranscript.includes(trigger)) && 
-        lowerTranscript.includes('pix')) {
-      console.log('❌ Comando CANCELAR PIX detectado!');
-      const currentPixState = pixStateRef.current;
-      if (currentPixState?.pixConfirmationData || currentPixState?.qrCodeData) {
-        console.log('💳 PIX aberto encontrado, cancelando...');
-        await handleCancelPix();
-        return true;
-      } else {
-        console.log('⚠️ Nenhum PIX aberto para cancelar');
-        await playText('Não há nenhum PIX aberto');
-        return true;
-      }
-    }
-    
-    // ✅ PIX Generation - VERSÃO MELHORADA com correção
-    console.log('💰 Procurando padrões PIX...');
-    
-    // Padrões ampliados e mais flexíveis
-    const pixPatterns = [
-      // "gerar/criar/fazer pix de 50"
-      /(?:gerar|gera|criar|cria|fazer|faz|faça|quero)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+    // ✅ Executar ação baseado no tipo
+    switch (result.action) {
+      case 'voice':
+        if (result.speechText) {
+          await playText(result.speechText);
+        }
+        break;
       
-      // "pix de 100 reais"
-      /(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-      
-      // "cobrar 25 reais"
-      /(?:cobrar|cobra)\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-      
-      // "50 reais no pix" ou "50 no pix"
-      /(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?\s*(?:no|via|pelo|por)?\s*pix/i,
-      
-      // "valor de 30" (quando contexto já é PIX)
-      /(?:valor|no valor)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)/i,
-    ];
-    
-    for (const pattern of pixPatterns) {
-      const match = transcriptWithNumbers.match(pattern);
-      if (match) {
-        console.log('🎯 Pattern matched:', pattern.source);
-        console.log('📝 Match completo:', match[0]);
-        
-        // Tentar extrair valor de diferentes grupos de captura
-        let amountStr = match[2] || match[1];
-        
-        if (!amountStr) {
-          console.log('⚠️ Valor não encontrado no match');
-          continue;
+      case 'voice+modal':
+        if (result.speechText) {
+          await playText(result.speechText);
         }
         
-        console.log('💵 Valor extraído:', amountStr);
-        
-        // Limpar e converter
-        amountStr = amountStr.replace(/[^\d,.]/, '').replace(',', '.');
-        const amount = parseFloat(amountStr);
-        
-        console.log('💰 Valor convertido:', amount);
-        
-        if (amount > 0 && amount < 100000) { // Limite razoável
-          console.log(`✅ PIX detectado! Valor: R$ ${amount.toFixed(2)}`);
-          
-          const isEnabled = await checkIfFunctionIsEnabled('pix_generate');
-          
-          if (!isEnabled) {
-            await playText('A função PIX está desativada no momento.');
-            return true;
-          }
-          
-          await handlePixCommand(amount);
-          // ✅ PASSO 3: Usar créditos dinâmicos
-          await registerFunctionUsage(
-            'pix_generate',
-            functionSettings['pix_generate']?.creditsPerUse ?? 0
-          );
-          return true;
-        } else {
-          console.log('⚠️ Valor fora do limite:', amount);
+        // Mapear para o modal correto
+        if (result.functionKey === 'qrcode_whatsapp' || result.functionKey === 'qrcode_instagram') {
+          setQrCodeData({
+            type: result.functionKey === 'qrcode_whatsapp' ? 'whatsapp' : 'instagram',
+            qrCodeUrl: result.modalData.qr_code_url,
+            qrContent: result.modalData.qr_content,
+            displayText: result.modalData.display_text,
+            companyName: result.modalData.company_name,
+          });
         }
-      }
+        
+        if (result.functionKey === 'pix_generate') {
+          setPixConfirmationData({
+            transactionId: result.modalData.transaction_id,
+            amount: result.modalData.amount_brl,
+            qrCodeUrl: result.modalData.qr_code_url,
+            pixCode: result.modalData.pix_code,
+          });
+        }
+        break;
+      
+      case 'modal':
+        // Modal sem voz
+        if (result.functionKey === 'qrcode_whatsapp' || result.functionKey === 'qrcode_instagram') {
+          setQrCodeData({
+            type: result.functionKey === 'qrcode_whatsapp' ? 'whatsapp' : 'instagram',
+            qrCodeUrl: result.modalData.qr_code_url,
+            qrContent: result.modalData.qr_content,
+            displayText: result.modalData.display_text,
+            companyName: result.modalData.company_name,
+          });
+        }
+        break;
+      
+      default:
+        console.warn('⚠️ Action desconhecida:', result.action);
     }
     
-    // ✅ FALLBACK: Se mencionou PIX mas não encontrou valor
-    if (lowerTranscript.includes('pix')) {
-      console.log('⚠️ Mencionou PIX mas sem valor claro');
-      await playText('Qual o valor do PIX que você deseja gerar?');
-      return true;
+    // ✅ Registrar uso
+    if (result.functionKey) {
+      await commandProcessor.registerUsage(result.functionKey);
     }
     
-    console.log('❌ Nenhum comando detectado');
-    return false;
+    // ✅ Salvar histórico (se necessário)
+    if (result.saveToHistory && result.functionKey && result.speechText) {
+      const userMessage = transcript;
+      const assistantMessage = result.speechText;
+      await saveInteractionToHistory(userMessage, assistantMessage);
+    }
+    
+    return true;
   }
 
   // ========================================
   // COMMAND HANDLERS
   // ========================================
-  async function handleWhatsAppCommand() {
-    try {
-      setIsProcessing(true);
-      
-      const supabase = createClient();
-      const response = await supabase.functions.invoke('gerar-qrcode-contato', {
-        body: {
-          company_id: companyId,
-          qr_type: 'whatsapp'
-        }
-      });
-      
-      if (response.error) throw response.error;
-      
-      const data = response.data;
-      
-      setQrCodeData({
-        type: 'whatsapp',
-        qrCodeUrl: data.qr_code_url,
-        qrContent: data.qr_content,
-        displayText: data.display_text,
-        companyName: data.company_name
-      });
-      
-      await playText(`Aqui está o WhatsApp: ${data.display_text}`);
-      await saveInteractionToHistory(
-        "Me passe o WhatsApp", 
-        `QR Code de WhatsApp gerado para o número: ${data.display_text}`
-      );
-
-    } catch (error: any) {
-      console.error('Erro WhatsApp:', error);
-      await playText('Desculpe, não consegui obter o WhatsApp.');
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  async function handleInstagramCommand() {
-    try {
-      setIsProcessing(true);
-      
-      const supabase = createClient();
-      const response = await supabase.functions.invoke('gerar-qrcode-contato', {
-        body: {
-          company_id: companyId,
-          qr_type: 'instagram'
-        }
-      });
-      
-      if (response.error) throw response.error;
-      
-      const data = response.data;
-      
-      setQrCodeData({
-        type: 'instagram',
-        qrCodeUrl: data.qr_code_url,
-        qrContent: data.qr_content,
-        displayText: data.display_text,
-        companyName: data.company_name
-      });
-      
-      await playText(`Aqui está o Instagram: ${data.display_text}`);
-      await saveInteractionToHistory(
-        "Me passe o Instagram", 
-        `QR Code de Instagram gerado para o perfil: ${data.display_text}`
-      );
-      
-    } catch (error: any) {
-      console.error('Erro Instagram:', error);
-      await playText('Desculpe, não consegui obter o Instagram.');
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  async function handlePixCommand(amount: number) {
-    try {
-      setIsProcessing(true);
-      
-      const amountCents = Math.round(amount * 100);
-      
-      const supabase = createClient();
-      const response = await supabase.functions.invoke('gerar-pix-assistente', {
-        body: {
-          company_id: companyId,
-          amount_cents: amountCents
-        }
-      });
-      
-      if (response.error) throw response.error;
-      
-      const data = response.data;
-      
-      setPixConfirmationData({
-        transactionId: data.transaction_id,
-        amount: data.amount_brl,
-        qrCodeUrl: data.qr_code_url,
-        pixCode: data.pix_code
-      });
-      
-      await playText(`PIX de ${amount.toFixed(2).replace('.', ',')} reais gerado. Aguardando confirmação.`);
-      await saveInteractionToHistory(
-        `Gerar PIX de R$ ${amount.toFixed(2)}`, 
-        `PIX no valor de R$ ${amount.toFixed(2)} gerado e aguardando confirmação de pagamento.`
-       );
-    } catch (error: any) {
-      console.error('Erro PIX:', error);
-      await playText('Desculpe, não consegui gerar o PIX.');
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
   // ✅ PASSO 4: CORREÇÃO COMPLETA - handleConfirmPix()
   async function handleConfirmPix() {
     console.log('🔘 handleConfirmPix chamada');
@@ -1378,11 +1101,10 @@ export function VoiceAssistantWithWakeWord({
         );
       }
       
-      // ✅ PASSO 3: Usar créditos dinâmicos
-      await registerFunctionUsage(
-        'pix_confirm',
-        functionSettings['pix_confirm']?.creditsPerUse ?? 1
-      );
+      // ✅ NOVA ARQUITETURA: Usar processador para registrar uso
+      if (commandProcessor) {
+        await commandProcessor.registerUsage('pix_confirm');
+      }
       
       // --- FIM DA CORREÇÃO ---
       
@@ -1443,6 +1165,11 @@ export function VoiceAssistantWithWakeWord({
       setPixConfirmationData(null);
       
       await playText('PIX cancelado.');
+      
+      // ✅ NOVA ARQUITETURA: Registrar uso do cancelamento
+      if (commandProcessor) {
+        await commandProcessor.registerUsage('pix_cancel');
+      }
       
     } catch (error: any) {
       console.error('❌ Erro cancelar PIX:', error);

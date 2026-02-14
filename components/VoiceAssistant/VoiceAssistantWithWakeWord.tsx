@@ -369,33 +369,37 @@ export function VoiceAssistantWithWakeWord({
   // GOOGLE SPEECH WEBSOCKET
   // ========================================
   async function startGoogleSpeech() {
+    if (!isActiveRef.current || !shouldProcessAudio.current) return;
+    
     try {
-      console.log('🎤 Iniciando Google Speech Streaming...');
+      if (googleSpeechRef.current) {
+        googleSpeechRef.current.stopRecording();
+        googleSpeechRef.current.disconnect();
+      }
       
-      const client = new GoogleSpeechWebSocket({
+      googleSpeechRef.current = new GoogleSpeechWebSocket({
         onTranscript: (text, isFinal) => {
           handleGoogleTranscript(text, isFinal);
         },
-        onError: (error) => {
-          console.error('❌ Erro Google Speech:', error);
-          setError('Erro no reconhecimento de voz');
+        onError: (err) => {
+          console.error('❌ Erro Google Speech:', err);
+          setIsListening(false);
         },
-        onReady: () => {
-          console.log('✅ Google Speech pronto');
-          setIsListening(true);
-        },
-        languageCode: 'pt-BR',
-        sampleRate: 16000,
+        // ✅ ADICIONE/ATUALIZE ESTE CALLBACK:
+        onStatusChange: (status) => {
+          // O status 'recording' agora significa que voz real foi detectada localmente
+          setIsListening(status === 'recording');
+        }
       });
       
-      googleSpeechRef.current = client;
+      await googleSpeechRef.current.connect();
+      await googleSpeechRef.current.startRecording();
       
-      await client.connect();
-      await client.startRecording();
+      console.log('🎤 Google Speech WebSocket iniciado (VAD Local Ativo)');
       
-    } catch (error: any) {
-      console.error('❌ Erro ao iniciar Google Speech:', error);
-      setError('Erro ao acessar microfone');
+    } catch (err) {
+      console.error('❌ Erro ao iniciar Google Speech:', err);
+      setIsListening(false);
     }
   }
 

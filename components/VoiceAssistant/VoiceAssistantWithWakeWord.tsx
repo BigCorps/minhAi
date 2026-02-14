@@ -841,7 +841,7 @@ export function VoiceAssistantWithWakeWord({
           await playText('Esta função está desativada.');
           return;
         }
-        console.log(`🎯 Executando função dinâmica: ${dynamicFunc.function_name}`);
+        console.log(`🎯 Executando função dinâmica: ${dynamicFunc.functionName}`);
         await dynamicFunc.handler({
           transcript: '',
           companyId,

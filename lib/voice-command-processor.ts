@@ -1,8 +1,12 @@
 /**
- * Processador Dinâmico de Comandos de Voz - eAi
+ * Processador de Comandos de Voz (Sistema Híbrido) - eAi
  * 
- * Este módulo processa comandos de voz usando o functions-registry
- * de forma automática e dinâmica.
+ * ⚠️ IMPORTANTE: Este processador é usado APENAS para NOVAS funções.
+ * As funções legadas (WhatsApp, Instagram, PIX, etc.) são processadas
+ * diretamente no VoiceAssistant através do detectVoiceCommand().
+ * 
+ * Este processador é chamado como FALLBACK quando nenhuma função
+ * legada foi detectada.
  */
 
 import { createClient } from '@/lib/supabase-browser';
@@ -35,7 +39,7 @@ export interface CommandProcessResult {
 }
 
 /**
- * Classe principal do processador
+ * Processador de Comandos para Novas Funções
  */
 export class VoiceCommandProcessor {
   private companyId: string;
@@ -58,10 +62,23 @@ export class VoiceCommandProcessor {
   
   /**
    * Carrega configurações de funções do banco
+   * 
+   * ⚠️ NOTA: Só carrega funções NOVAS (não as legadas)
    */
   private async loadFunctionSettings() {
     try {
       const supabase = createClient();
+      
+      // Buscar apenas funções que NÃO são legadas
+      const legacyFunctions = [
+        'qrcode_whatsapp',
+        'qrcode_instagram',
+        'pix_generate',
+        'pix_confirm',
+        'pix_cancel',
+        'faq',
+        'chatgpt'
+      ];
       
       const { data, error } = await supabase
         .from('assistant_functions')
@@ -75,10 +92,11 @@ export class VoiceCommandProcessor {
             custom_credits_per_use
           )
         `)
-        .eq('company_function_settings.company_id', this.companyId);
+        .eq('company_function_settings.company_id', this.companyId)
+        .not('function_key', 'in', `(${legacyFunctions.join(',')})`);
       
       if (error) {
-        console.warn('⚠️ Erro ao carregar settings, usando defaults do registry');
+        console.warn('⚠️ Erro ao carregar settings novas funções, usando defaults');
         return;
       }
       
@@ -94,7 +112,7 @@ export class VoiceCommandProcessor {
         });
         
         this.functionSettings = settings;
-        console.log('✅ Function settings carregados:', Object.keys(settings).length, 'funções');
+        console.log('✅ Settings de novas funções carregados:', Object.keys(settings).length);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar function settings:', error);
@@ -102,16 +120,18 @@ export class VoiceCommandProcessor {
   }
   
   /**
-   * Processa um comando de voz
+   * Processa um comando de voz (APENAS PARA NOVAS FUNÇÕES)
+   * 
+   * Retorna false se não encontrar nenhuma função nova
    */
   async processCommand(transcript: string): Promise<CommandProcessResult> {
-    console.log('🎯 Processando comando:', transcript);
+    console.log('🔍 Processando comando (novas funções):', transcript);
     
     // 1. Detectar qual função deve ser ativada
     const detection = detectFunctionFromTranscript(transcript);
     
     if (!detection.function) {
-      console.log('❌ Nenhuma função detectada');
+      console.log('❌ Nenhuma nova função detectada');
       return {
         success: false,
         action: 'none',
@@ -120,7 +140,7 @@ export class VoiceCommandProcessor {
     }
     
     const func = detection.function;
-    console.log(`✅ Função detectada: ${func.functionKey} (${Math.round(detection.confidence * 100)}%)`);
+    console.log(`✅ Nova função detectada: ${func.functionKey} (${Math.round(detection.confidence * 100)}%)`);
     
     // 2. Verificar se a função está habilitada
     const isEnabled = this.checkIfFunctionEnabled(func.functionKey);
@@ -156,7 +176,7 @@ export class VoiceCommandProcessor {
     extractedValue?: any
   ): Promise<CommandProcessResult> {
     try {
-      console.log(`⚡ Executando: ${func.functionKey}`);
+      console.log(`⚡ Executando nova função: ${func.functionKey}`);
       
       // Executar baseado no tipo de resposta
       switch (func.responseType) {
@@ -171,7 +191,7 @@ export class VoiceCommandProcessor {
       }
       
     } catch (error: any) {
-      console.error('❌ Erro ao executar função:', error);
+      console.error('❌ Erro ao executar nova função:', error);
       
       return {
         success: false,
@@ -250,17 +270,9 @@ export class VoiceCommandProcessor {
       company_id: this.companyId,
     };
     
-    // Adicionar valor específico baseado na função
-    if (functionKey === 'pix_generate' && typeof value === 'number') {
-      payload.amount_cents = Math.round(value * 100);
-    }
-    
-    if (functionKey === 'qrcode_whatsapp') {
-      payload.qr_type = 'whatsapp';
-    }
-    
-    if (functionKey === 'qrcode_instagram') {
-      payload.qr_type = 'instagram';
+    // Adicionar valor específico conforme a função
+    if (value !== undefined) {
+      payload.value = value;
     }
     
     console.log(`📤 Chamando Edge Function: ${functionName}`, payload);
@@ -282,7 +294,6 @@ export class VoiceCommandProcessor {
    * Verifica se função está habilitada
    */
   private checkIfFunctionEnabled(functionKey: string): boolean {
-    // Verificar cache primeiro
     if (this.functionSettings[functionKey] !== undefined) {
       return this.functionSettings[functionKey].isEnabled;
     }

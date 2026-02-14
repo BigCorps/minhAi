@@ -21,7 +21,7 @@ const RECURSOS = [
       </svg>
     ),
     title: 'Custo Baixo',
-    highlight: 'R$ 0,12',
+    highlight: 'R$ 0,10',
     highlightLabel: 'por interação',
     description: 'A partir de R$ 0,12 por interação. Economia de até 90% comparado a atendimento humano tradicional.',
     color: 'green' as const,
@@ -36,7 +36,7 @@ const RECURSOS = [
     title: 'Totalmente Customizável',
     highlight: '100%',
     highlightLabel: 'personalizado',
-    description: 'Configure palavras de ativação, saudações, prompts e funções personalizadas para cada empresa.',
+    description: 'Configure palavras de ativação, saudações, prompts e funções personalizadas para cada assistente.',
     color: 'blue' as const,
   },
   {

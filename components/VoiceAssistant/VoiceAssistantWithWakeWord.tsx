@@ -834,7 +834,7 @@ export function VoiceAssistantWithWakeWord({
       // ========================================
       // 🔹 PARTE 1: Tentar NOVAS funções dinâmicas primeiro
       // ========================================
-      const dynamicFunc = ASSISTANT_FUNCTIONS_REGISTRY[functionKey];
+      const dynamicFunc = FUNCTIONS_REGISTRY[functionKey];
       if (dynamicFunc && dynamicFunc.handler) {
         const isEnabled = functionSettings[functionKey]?.isEnabled ?? true;
         if (!isEnabled) {

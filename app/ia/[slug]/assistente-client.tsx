@@ -692,13 +692,12 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 </div>
               </div>
               
-              {/* 🆕 Relógio Digital Centralizado - VERSÃO MAXIMIZADA */}
+              {/* 🆕 Relógio Digital Centralizado - VERSÃO MAXIMIZADA (SEMPRE VISÍVEL) */}
               {!isPortrait && (
-                <DigitalClock className={`absolute left-1/2 -translate-x-1/2 text-2xl font-bold transition-opacity duration-300 ${
-                  showControls ? 'opacity-100' : 'opacity-0'
-                } ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`} />
+                <DigitalClock 
+                  className="absolute left-1/2 -translate-x-1/2" 
+                  theme={theme}
+                />
               )}
               
               {/* Botão Fechar + Logo eAi (Direita) */}
@@ -880,9 +879,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
                 {/* 🆕 Relógio Digital Centralizado - VERSÃO NORMAL DESKTOP */}
                 {!isPortrait && (
-                  <DigitalClock className={`absolute left-1/2 -translate-x-1/2 text-xl font-bold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`} />
+                  <DigitalClock 
+                    className="absolute left-1/2 -translate-x-1/2" 
+                    theme={theme}
+                  />
                 )}
 
                 {/* LADO DIREITO - Desktop */}

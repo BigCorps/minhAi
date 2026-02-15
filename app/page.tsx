@@ -21,8 +21,8 @@ const RECURSOS = [
       </svg>
     ),
     title: 'Custo Baixo',
-    highlight: 'R$ 0,10',
-    highlightLabel: 'por interação',
+    highlight: 'R$ 0,09',
+    highlightLabel: 'por interação (a partir)',
     description: 'Planos com custo baixo por interação. Uma economia de até 90% comparado a atendimento humano tradicional.',
     color: 'green' as const,
   },

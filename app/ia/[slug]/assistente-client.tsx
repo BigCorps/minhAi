@@ -747,15 +747,17 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 transition: 'transform 0.2s ease-out'
               }}
             >
-              <VoiceAssistantWithWakeWord 
-                companyId={company.id} 
-                companyName={company.name}
-                wakeWord={company.wake_word || 'olá assistente'}
-                greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
-                theme={theme}
-                isMaximized={true}
-                onAssistantStart={() => setAssistantStarted(true)}
-              />
+<VoiceAssistantWithWakeWord 
+  companyId={company.id} 
+  companyName={company.name}
+  wakeWord={company.wake_word || 'olá assistente'}
+  greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
+  theme={theme}
+  isMaximized={false}
+  onAssistantStart={() => setAssistantStarted(true)}
+  hideDisabledFunctions={company.hide_disabled_functions_carousel}
+  autoScroll={company.carousel_auto_scroll}
+/>
             </div>
           </div>
 

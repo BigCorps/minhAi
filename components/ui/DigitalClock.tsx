@@ -27,7 +27,7 @@ export default function DigitalClock({ className, theme = 'dark' }: DigitalClock
   return (
     <div className={className}>
       <div 
-        className={`text-3xl font-bold tracking-widest ${
+        className={`text-xl font-bold tracking-widest ${
           theme === 'dark' ? 'text-white' : 'text-gray-900'
         }`}
         style={{
@@ -48,7 +48,7 @@ export default function DigitalClock({ className, theme = 'dark' }: DigitalClock
                url('https://cdn.jsdelivr.net/gh/duszekmestre/fonts@master/ds-digital/DSEG7Classic-Bold.woff') format('woff');
           font-weight: bold;
           font-style: normal;
-          font-display: swap;
+          font-display: block;
         }
       `}</style>
     </div>

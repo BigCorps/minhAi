@@ -244,30 +244,30 @@ export default function CreditsPage() {
                 </div>
               )}
 
-              <div className="p-8 flex-1 flex flex-col">
+              <div className="p-8 flex-1 flex flex-col items-center text-center">
                 <div className="mb-6">
                   <h3 className={`text-xl font-bold mb-2 ${!pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')}`}>
                     {pkg.name}
                   </h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">R$ {(pkg.price_cents / 100).toFixed(2)}</span>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-3xl font-bold">R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}</span>
                   </div>
                 </div>
 
                 <div className="space-y-4 mb-8 flex-1">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center gap-3">
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center ${pkg.is_highlighted ? 'bg-white/20' : 'bg-blue-500/10'}`}>
                       <Zap className={`w-3 h-3 ${pkg.is_highlighted ? 'text-white' : 'text-blue-500'}`} />
                     </div>
-                    <span className="font-bold">{pkg.interactions} Interações</span>
+                    <span className="font-bold">{pkg.interactions.toLocaleString('pt-BR')} Interações</span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center gap-3">
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center ${pkg.is_highlighted ? 'bg-white/20' : 'bg-blue-500/10'}`}>
                       <Check className={`w-3 h-3 ${pkg.is_highlighted ? 'text-white' : 'text-blue-500'}`} />
                     </div>
-                    <span className="text-sm opacity-90">R$ {(pkg.price_per_interaction).toFixed(2)} / interação</span>
+                    <span className="text-sm opacity-90">R$ {(pkg.price_per_interaction / 100).toFixed(2).replace('.', ',')} / interação</span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center gap-3">
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center ${pkg.is_highlighted ? 'bg-white/20' : 'bg-blue-500/10'}`}>
                       <Clock className={`w-3 h-3 ${pkg.is_highlighted ? 'text-white' : 'text-blue-500'}`} />
                     </div>

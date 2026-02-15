@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
+import DigitalClock from '@/components/ui/DigitalClock';
 
 interface AssistenteClientProps {
   company: {
@@ -30,6 +31,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [assistantStarted, setAssistantStarted] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // 🆕 Estado para detectar orientação portrait
+  const [isPortrait, setIsPortrait] = useState(false);
+  
   // 🆕 ESTADOS PARA MODO KIOSK COM SENHA
   const [isKioskMode, setIsKioskMode] = useState(false);
   const [kioskPassword, setKioskPassword] = useState<string | null>(null);
@@ -52,11 +56,21 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
+    
+    // 🆕 Verificar orientação
+    const checkOrientation = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+    
     checkMobile();
+    checkOrientation();
+    
     window.addEventListener('resize', checkMobile);
+    window.addEventListener('resize', checkOrientation);
     
     return () => {
       window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('resize', checkOrientation);
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
@@ -678,6 +692,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 </div>
               </div>
               
+              {/* 🆕 Relógio Digital Centralizado - VERSÃO MAXIMIZADA */}
+              {!isPortrait && (
+                <DigitalClock className={`absolute left-1/2 -translate-x-1/2 text-2xl font-bold transition-opacity duration-300 ${
+                  showControls ? 'opacity-100' : 'opacity-0'
+                } ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`} />
+              )}
+              
               {/* Botão Fechar + Logo eAi (Direita) */}
               <div className="relative flex items-center space-x-3">
                 <button
@@ -854,6 +877,13 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     </p>
                   </div>
                 </div>
+
+                {/* 🆕 Relógio Digital Centralizado - VERSÃO NORMAL DESKTOP */}
+                {!isPortrait && (
+                  <DigitalClock className={`absolute left-1/2 -translate-x-1/2 text-xl font-bold ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`} />
+                )}
 
                 {/* LADO DIREITO - Desktop */}
                 <div className="flex items-center space-x-3">

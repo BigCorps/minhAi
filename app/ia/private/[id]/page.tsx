@@ -162,7 +162,7 @@ export async function generateMetadata({ params }: PageProps) {
     .single();
 
   return {
-    title: company ? `${company.name} (Privado) - eAi` : Employee Automation Intelligence',
+    title: company ? `${company.name} (Privado) - eAi` : 'Funcionário IA - eAi',
     robots: 'noindex, nofollow',
   };
 }

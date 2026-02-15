@@ -8,12 +8,10 @@ interface DigitalClockProps {
 }
 
 export default function DigitalClock({ className, theme = 'dark' }: DigitalClockProps) {
-  const [time, setTime] = useState<Date | null>(null); // Começa null para evitar erro de hidratação no Next.js
+  const [time, setTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    // Define a hora inicial apenas no cliente
     setTime(new Date());
-
     const timerId = setInterval(() => {
       setTime(new Date());
     }, 1000);
@@ -27,13 +25,12 @@ export default function DigitalClock({ className, theme = 'dark' }: DigitalClock
     return `${hours}:${minutes}`;
   };
 
-  // Se a hora ainda não carregou (server-side), retorna null ou um esqueleto
   if (!time) return null;
 
   return (
     <div className={className}>
       <div 
-        className={`digital-clock-text ${
+        className={`digital-clock-container ${
           theme === 'dark' ? 'theme-dark' : 'theme-light'
         }`}
       >
@@ -41,31 +38,30 @@ export default function DigitalClock({ className, theme = 'dark' }: DigitalClock
       </div>
       
       <style jsx>{`
-        /* Importando a fonte Orbitron do Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap');
         
-        .digital-clock-text {
-          font-family: 'Orbitron', sans-serif; /* Fonte moderna e limpa */
-          font-weight: 700;
-          letter-spacing: 0.15em; /* Espaçamento levemente maior */
+        .digital-clock-container {
+          font-family: 'Orbitron', sans-serif;
+          /* AJUSTE DE TAMANHO: text-sm ou text-xs equivalente */
+          font-size: 0.875rem; 
+          font-weight: 600;
+          letter-spacing: 0.05em; /* Reduzi o espaçamento para ficar melhor em tamanho menor */
           line-height: 1;
           display: inline-block;
-          transition: all 0.3s ease;
+          padding: 2px 4px;
         }
 
-        /* Estilo para modo escuro (Efeito Neon) */
+        /* Verde Limão Neon */
         .theme-dark {
-          color: #00f0ff; /* Ciano Neon */
+          color: #adff2f; /* GreenYellow */
           text-shadow: 
-            0 0 5px rgba(0, 240, 255, 0.4),
-            0 0 10px rgba(0, 240, 255, 0.3),
-            0 0 20px rgba(0, 240, 255, 0.2);
+            0 0 4px rgba(173, 255, 47, 0.5),
+            0 0 8px rgba(173, 255, 47, 0.3);
         }
 
-        /* Estilo para modo claro (Estilo LCD desligado/escuro) */
         .theme-light {
-          color: #2d3748;
-          text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+          color: #1a202c;
+          text-shadow: none;
         }
       `}</style>
     </div>

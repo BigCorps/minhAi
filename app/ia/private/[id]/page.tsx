@@ -13,8 +13,6 @@ interface PageProps {
 }
 
 // Função para verificar créditos do USUÁRIO dono da empresa.
-// Usa a coluna user_id da tabela companies como fonte primária,
-// com fallback para company_admins — espelho do padrão adotado em [slug]/page.tsx.
 async function checkUserCredits(companyId: string) {
   const supabase = createClient();
 
@@ -84,7 +82,6 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
   }
 
   // 3. Verificar se o usuário logado é o dono da empresa
-  //    Deve ocorrer ANTES de qualquer renderização que exponha dados da empresa.
   if (company.user_id !== user.id) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-4">
@@ -93,7 +90,7 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
           <p className="text-slate-400">
             Você não tem permissão para acessar este assistente privado.
           </p>
-          <a
+          
             href="/dashboard"
             className="mt-4 inline-block text-blue-400 hover:underline"
           >
@@ -132,7 +129,7 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
           <p className="text-white/60 mb-8">
             O assistente <span className="text-white font-semibold">{company.name}</span> está sem créditos.
           </p>
-          <a
+          
             href="/dashboard"
             className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
           >
@@ -144,20 +141,21 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
   }
 
   // 5. Tudo certo — renderizar o chat
-return (
-  <AssistenteClient
-    company={{
-      id: company.id,
-      name: company.name,
-      wake_word: company.wake_word || 'olá assistente',
-      greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
-      logo_url: company.logo_url || undefined,
-      assistant_role: company.assistant_role,                                    // ✅ ADICIONAR
-      hide_disabled_functions_carousel: company.hide_disabled_functions_carousel, // ✅ ADICIONAR
-      carousel_auto_scroll: company.carousel_auto_scroll,                        // ✅ ADICIONAR
-    }}
-  />
-);
+  return (
+    <AssistenteClient
+      company={{
+        id: company.id,
+        name: company.name,
+        wake_word: company.wake_word || 'olá assistente',
+        greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
+        logo_url: company.logo_url || undefined,
+        assistant_role: company.assistant_role,
+        hide_disabled_functions_carousel: company.hide_disabled_functions_carousel,
+        carousel_auto_scroll: company.carousel_auto_scroll,
+      }}
+    />
+  );
+}
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;

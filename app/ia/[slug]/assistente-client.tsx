@@ -16,6 +16,9 @@ interface AssistenteClientProps {
     wake_word: string;
     greeting_message: string;
     logo_url?: string;
+    assistant_role?: string; // 🆕 NOVO
+    hide_disabled_functions_carousel?: boolean; // 🆕 NOVO
+    carousel_auto_scroll?: boolean; // 🆕 NOVO
   };
 }
 
@@ -784,7 +787,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* Carrossel FIXO no rodapé */}
+          {/* Carrossel FIXO no rodapé - 🆕 COM NOVAS PROPS */}
           {assistantStarted && (
             <div className="fixed bottom-0 left-0 right-0 w-full z-30">
               <FunctionCarousel
@@ -795,6 +798,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   }));
                 }}
                 theme={theme}
+                hideDisabledFunctions={company.hide_disabled_functions_carousel ?? false}
+                autoScroll={company.carousel_auto_scroll ?? true}
               />
             </div>
           )}
@@ -869,10 +874,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     }`}>
                       {company.name}
                     </h1>
+                    {/* 🆕 SUBSTITUÍDO "Assistente Virtual de Voz" pela função configurada */}
                     <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
                       theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                     }`}>
-                      Assistente Virtual de Voz
+                      {company.assistant_role || 'Assistente Virtual de Voz'}
                     </p>
                   </div>
                 </div>
@@ -997,10 +1003,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     }`}>
                       {company.name}
                     </h1>
+                    {/* 🆕 MOBILE - Função configurada */}
                     <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${
                       theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                     }`}>
-                      Assistente Virtual de Voz
+                      {company.assistant_role || 'Assistente Virtual de Voz'}
                     </p>
                   </div>
 

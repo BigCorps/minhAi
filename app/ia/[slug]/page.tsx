@@ -113,11 +113,9 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
               Se você é o responsável por este assistente:
             </p>
             
-              href="/dashboard"
-href="/dashboard"
-  className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
-  Acessar Painel
-</a>
+            <a href="/dashboard" className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
+              Acessar Painel
+            </a>
           </div>
 
           <div className="text-center">

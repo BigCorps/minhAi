@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { LandingAvatarFace } from './LandingAvatarFace';
 
@@ -7,8 +8,36 @@ interface InicioSectionProps {
   theme?: 'dark' | 'light';
 }
 
+const OPCOES = [
+  'Assistente',
+  'Funcionário',
+  'Atendente',
+  'Gerente',
+  'Auxiliar',
+  'Secretário',
+  'Operador',
+  'Agente',
+  'Analista',
+  'Consultor',
+  'Coordenador',
+];
+
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
   const isDark = theme === 'dark';
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % OPCOES.length);
+        setIsAnimating(false);
+      }, 300);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div
@@ -37,47 +66,53 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         
         {/* LADO ESQUERDO - Texto + CTAs */}
         <div className="flex-1 text-center md:text-left order-2 md:order-1 max-w-xl">
-<h1
-  style={{ fontFamily: "'Nunito', sans-serif" }}
-  className={`text-2xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.1] mb-6 transition-colors ${
-    isDark ? 'text-white' : 'text-gray-900'
-  }`}
->
-  {/* Linha 1 - whitespace-nowrap impede quebras extras */}
-  <span className="block whitespace-nowrap">
-    eAi, que tal um
-  </span>
-  
-  {/* Linha 2 */}
-  <span className="block whitespace-nowrap">
-    <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-      Atendimento ao Cliente
-    </span>{' '}
-    por
-  </span>
+          <h1
+            style={{ fontFamily: "'Nunito', sans-serif" }}
+            className={`text-2xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.1] mb-6 transition-colors ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}
+          >
+            {/* Linha 1 */}
+            <span className="block whitespace-nowrap">
+              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>eAi</span>, pronto para ter
+            </span>
 
-  {/* Linha 3 */}
-  <span className="block whitespace-nowrap">
-    Voz com IA{' '}
-    <span className={isDark ? 'text-green-400' : 'text-green-600'}>
-      eficaz e
-    </span>
-  </span>
+            {/* Linha 2 - com rolagem vertical */}
+            <span className="block whitespace-nowrap">
+              um{' '}
+              <span className="inline-block relative overflow-hidden align-bottom" style={{ height: '1.15em', width: 'auto' }}>
+                <span
+                  className={`inline-block transition-all duration-300 ease-in-out ${
+                    isAnimating
+                      ? '-translate-y-full opacity-0'
+                      : 'translate-y-0 opacity-100'
+                  } ${isDark ? 'text-green-400' : 'text-green-600'}`}
+                >
+                  {OPCOES[currentIndex]}
+                </span>
+              </span>
+              {' '}IA
+            </span>
 
-  {/* Linha 4 */}
-  <span className={`block whitespace-nowrap ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-    personalizado?
-  </span>
-</h1>
+            {/* Linha 3 */}
+            <span className="block whitespace-nowrap">
+              trabalhando{' '}
+              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
+                por você
+              </span>
+              ?
+            </span>
+          </h1>
 
           <p
             className={`text-sm sm:text-base md:text-lg max-w-lg mb-8 leading-relaxed transition-colors ${
               isDark ? 'text-white/55' : 'text-gray-600'
             } mx-auto md:mx-0`}
           >
-            Transforme a experiência dos seus clientes com um assistente de voz inteligente
-            que responde perguntas, executa funções, faz cobranças com geração de PIX,
-            marca consultas e agendamentos, com personalização total!
+            Personalize seus assistentes e transforme a experiência dos seus clientes com um 
+            funcionário de voz inteligente que trabalha 24 horas por dia. E o melhor, você paga 
+            apenas quando ele trabalha. Configure do seu jeito para responder perguntas, executar 
+            funções, gerar cobranças, agendar consultas, recomendar vídeos, produtos e muito mais.
           </p>
 
           {/* Botões CTA */}
@@ -86,7 +121,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               href="/login"
               className="w-full sm:w-auto px-8 py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
-              Começar Agora
+              Comece Gratuitamente
             </Link>
             <Link
               href="/ia/suporte"
@@ -123,11 +158,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
           <div className={`
             relative transition-all duration-500
-            /* Mobile: 50% maior que os 14rem originais */
             w-[21rem] h-[21rem] 
-            /* Tablet/Telas pequenas: Mantém o tamanho para não encolher */
             sm:w-[23rem] sm:h-[23rem] 
-            /* Desktop em diante: Seus tamanhos originais favoritos */
             md:w-80 md:h-80 
             lg:w-[22rem] lg:h-[22rem] 
             xl:w-[26rem] xl:h-[26rem]

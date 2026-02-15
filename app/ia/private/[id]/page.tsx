@@ -90,7 +90,6 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
           <p className="text-slate-400">
             Você não tem permissão para acessar este assistente privado.
           </p>
-          
           <a href="/dashboard" className="mt-4 inline-block text-blue-400 hover:underline">
             Voltar ao Dashboard
           </a>
@@ -127,10 +126,7 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
           <p className="text-white/60 mb-8">
             O assistente <span className="text-white font-semibold">{company.name}</span> está sem créditos.
           </p>
-          
-            href="/dashboard"
-            className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
-          >
+          <a href="/dashboard" className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
             Acessar Painel
           </a>
         </div>
@@ -166,7 +162,7 @@ export async function generateMetadata({ params }: PageProps) {
     .single();
 
   return {
-    title: company ? `${company.name} (Privado) - eAi` : 'Assistente Privado - eAi',
+    title: company ? `${company.name} (Privado) - eAi` : Employee Automation Intelligence',
     robots: 'noindex, nofollow',
   };
 }

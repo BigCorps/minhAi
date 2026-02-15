@@ -25,34 +25,31 @@ export default function DigitalClock({ className, theme = 'dark' }: DigitalClock
   };
 
   return (
-    <div className={`${className}`}>
-      <div className={`
-        inline-flex items-center justify-center
-        px-6 py-3 rounded-xl
-        border-2 shadow-lg
-        ${theme === 'dark' 
-          ? 'bg-slate-900/90 border-slate-700/50 shadow-slate-900/50' 
-          : 'bg-gray-800/90 border-gray-700/50 shadow-gray-900/50'
-        }
-      `}>
-        <div 
-          className="text-4xl font-bold tracking-wider relative"
-          style={{
-            fontFamily: '"Orbitron", "DS-Digital", "Courier New", monospace',
-            textShadow: theme === 'dark' 
-              ? '0 0 10px rgba(34, 211, 238, 0.8), 0 0 20px rgba(34, 211, 238, 0.4)' 
-              : '0 0 10px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4)',
-            color: theme === 'dark' ? '#22d3ee' : '#ef4444', // cyan para dark, red para light
-            letterSpacing: '0.15em'
-          }}
-        >
-          {formatTime(time)}
-        </div>
+    <div className={className}>
+      <div 
+        className={`text-3xl font-bold tracking-widest ${
+          theme === 'dark' ? 'text-white' : 'text-gray-900'
+        }`}
+        style={{
+          fontFamily: '"DS-Digital", "Orbitron", "Courier New", monospace',
+          letterSpacing: '0.1em'
+        }}
+      >
+        {formatTime(time)}
       </div>
       
-      {/* Adicionar fonte Orbitron do Google Fonts */}
+      {/* Adicionar fontes digitais */}
       <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+        
+        @font-face {
+          font-family: 'DS-Digital';
+          src: url('https://cdn.jsdelivr.net/gh/duszekmestre/fonts@master/ds-digital/DSEG7Classic-Bold.woff2') format('woff2'),
+               url('https://cdn.jsdelivr.net/gh/duszekmestre/fonts@master/ds-digital/DSEG7Classic-Bold.woff') format('woff');
+          font-weight: bold;
+          font-style: normal;
+          font-display: swap;
+        }
       `}</style>
     </div>
   );

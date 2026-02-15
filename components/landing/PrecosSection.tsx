@@ -100,7 +100,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               Comece grátis!
             </span>
             <span className={`text-[10px] sm:text-xs ml-1.5 sm:ml-2 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-              Todo novo cadastro recebe 20 créditos gratuitos para testar.
+              Comece agora e receba 20 créditos grátis para usar a vontade.
             </span>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                         </span>
                       </div>
                       <span className={`text-[11px] ${pkg.is_highlighted ? 'text-white/70' : isDark ? 'text-white/40' : 'text-gray-400'}`}>
-                        R$ {pkg.price_per_interaction.toFixed(2).replace('.', ',')} por interação
+                        R$ {(pkg.price_per_interaction / 100).toFixed(2).replace('.', ',')} por interação
                       </span>
                     </div>
                   </div>
@@ -241,7 +241,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                           </svg>
                         </div>
                         <span className={`text-xs md:text-sm ${pkg.is_highlighted ? 'opacity-90' : isDark ? 'text-white/55' : 'text-gray-500'}`}>
-                          R$ {pkg.price_per_interaction.toFixed(2).replace('.', ',')} por interação
+                          R$ {(pkg.price_per_interaction / 100).toFixed(2).replace('.', ',')} por interação
                         </span>
                       </div>
 

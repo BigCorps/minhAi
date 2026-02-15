@@ -51,6 +51,9 @@ export default function EditarAssistentePage({ params }: PageProps) {
       logo_url: formData.get('logo_url') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
+      assistant_role: formData.get('assistant_role') as string,
+      hide_disabled_functions_carousel: formData.get('hide_disabled_functions_carousel') === 'on',
+      carousel_auto_scroll: formData.get('carousel_auto_scroll') === 'on',
     };
 
     try {
@@ -149,6 +152,32 @@ export default function EditarAssistentePage({ params }: PageProps) {
                 />
               </div>
 
+              {/* Função do Assistente - NOVO */}
+              <div>
+                <label htmlFor="assistant_role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Função do Assistente *
+                </label>
+                <select
+                  id="assistant_role"
+                  name="assistant_role"
+                  required
+                  defaultValue={assistant.assistant_role || 'Assistente IA'}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
+                >
+                  <option value="Assistente IA">Assistente IA</option>
+                  <option value="Funcionário IA">Funcionário IA</option>
+                  <option value="Atendente IA">Atendente IA</option>
+                  <option value="Gerente IA">Gerente IA</option>
+                  <option value="Auxiliar IA">Auxiliar IA</option>
+                  <option value="Secretário IA">Secretário IA</option>
+                  <option value="Operador IA">Operador IA</option>
+                  <option value="Agente IA">Agente IA</option>
+                  <option value="Analista IA">Analista IA</option>
+                  <option value="Consultor IA">Consultor IA</option>
+                  <option value="Coordenador IA">Coordenador IA</option>
+                </select>
+              </div>
+
               {/* Visibilidade (Apenas Leitura) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -203,6 +232,49 @@ export default function EditarAssistentePage({ params }: PageProps) {
                   defaultValue={assistant.greeting_message}
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                 />
+              </div>
+
+              {/* Configurações do Carrossel - NOVO */}
+              <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configurações do Carrossel de Funções</h3>
+
+                {/* Ocultar Funções Desabilitadas */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
+                  <div>
+                    <label htmlFor="hide_disabled_functions_carousel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Ocultar funções desabilitadas no carrossel
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Quando ativado, funções desabilitadas não aparecerão no carrossel
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="hide_disabled_functions_carousel"
+                    name="hide_disabled_functions_carousel"
+                    defaultChecked={assistant.hide_disabled_functions_carousel ?? false}
+                    className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                  />
+                </div>
+
+                {/* Carrossel com Rolagem Automática */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
+                  <div>
+                    <label htmlFor="carousel_auto_scroll" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Carrossel de funções com rolagem automática
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Quando ativado, o carrossel rola automaticamente de forma contínua
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="carousel_auto_scroll"
+                    name="carousel_auto_scroll"
+                    defaultChecked={assistant.carousel_auto_scroll ?? true}
+                    className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
+                  />
+                </div>
               </div>
             </div>
 

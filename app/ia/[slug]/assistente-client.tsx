@@ -788,21 +788,21 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           )}
 
           {/* Carrossel FIXO no rodapé - 🆕 COM NOVAS PROPS */}
-          {assistantStarted && (
-            <div className="fixed bottom-0 left-0 right-0 w-full z-30">
-              <FunctionCarousel
-                companyId={company.id}
-                onFunctionClick={(functionKey) => {
-                  window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
-                    detail: { functionKey }
-                  }));
-                }}
-                theme={theme}
-                hideDisabledFunctions={company.hide_disabled_functions_carousel ?? false}
-                autoScroll={company.carousel_auto_scroll ?? true}
-              />
-            </div>
-          )}
+{assistantStarted && (
+  <div className="fixed bottom-0 left-0 right-0 w-full z-30">
+    <FunctionCarousel
+      companyId={company.id}
+      onFunctionClick={(functionKey) => {
+        window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+          detail: { functionKey }
+        }));
+      }}
+      theme={theme}
+      hideDisabledFunctions={company.hide_disabled_functions_carousel}
+      autoScroll={company.carousel_auto_scroll}
+    />
+  </div>
+)}
 
           <style jsx>{`
             @keyframes slide-down {

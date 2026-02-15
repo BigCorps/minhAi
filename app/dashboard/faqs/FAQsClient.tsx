@@ -19,7 +19,7 @@ export default function FAQsClient({ companies }: FAQsClientProps) {
             Perguntas e Respostas (FAQ)
           </h2>
           <p className="transition-colors text-gray-600 dark:text-white/60">
-            Selecione uma empresa para configurar as perguntas e respostas automáticas
+            Selecione uma empresa para configurar as perguntas frequentes automáticas
           </p>
         </div>
 

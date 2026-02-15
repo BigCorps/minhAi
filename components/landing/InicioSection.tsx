@@ -162,6 +162,22 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               </span>
             ))}
           </div>
+
+          {/* Slogan */}
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 mt-8">
+            {[
+              { text: 'eAi - Employee Automation Intelligence' },
+            ].map((item) => (
+              <span
+                key={item.text}
+                className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
+                  isDark ? 'text-white/35' : 'text-gray-400'
+                }`}
+              >
+                {item.text}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* LADO DIREITO - Avatar (Orbe) */}

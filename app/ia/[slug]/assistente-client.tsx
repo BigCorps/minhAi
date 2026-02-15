@@ -30,6 +30,14 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [assistantStarted, setAssistantStarted] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // 🆕 ESTADOS PARA MODO KIOSK COM SENHA
+  const [isKioskMode, setIsKioskMode] = useState(false);
+  const [kioskPassword, setKioskPassword] = useState<string | null>(null);
+  const [showPasswordOverlay, setShowPasswordOverlay] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [modalType, setModalType] = useState<'setup' | 'verify'>('setup');
+  
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -53,7 +61,62 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     };
   }, []);
 
-  // O tema efetivo que será usado pelos componentes
+  // 🆕 BLOQUEAR TECLAS EM MODO KIOSK
+  useEffect(() => {
+    if (!isKioskMode) return;
+    
+    const blockKeys = (e: KeyboardEvent) => {
+      const blockedKeys = ['F11', 'Escape', 'F5'];
+      const blockedCombos = [
+        e.altKey && e.key === 'Tab',
+        e.altKey && e.key === 'F4',
+        e.ctrlKey && e.key === 'w',
+        e.ctrlKey && e.key === 'q',
+        e.ctrlKey && e.shiftKey && e.key === 'q',
+        e.metaKey && e.key === 'q',
+      ];
+      
+      if (blockedKeys.includes(e.key) || blockedCombos.some(combo => combo)) {
+        e.preventDefault();
+        e.stopPropagation();
+        showToastMessage('⚠️ Modo protegido ativo', 'warning');
+      }
+    };
+    
+    window.addEventListener('keydown', blockKeys, true);
+    return () => window.removeEventListener('keydown', blockKeys, true);
+  }, [isKioskMode]);
+
+  // 🆕 DETECTAR SAÍDA DE FULLSCREEN
+  useEffect(() => {
+    if (!isKioskMode) return;
+    
+    const handleFullscreenChange = () => {
+      if (isKioskMode && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {
+          showToastMessage('⚠️ Digite a senha para sair', 'warning');
+          setModalType('verify');
+          setShowPasswordOverlay(true);
+        });
+      }
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isKioskMode]);
+
+  // 🆕 BLOQUEAR MENU DE CONTEXTO
+  useEffect(() => {
+    if (!isKioskMode) return;
+    
+    const blockContext = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+    
+    window.addEventListener('contextmenu', blockContext);
+    return () => window.removeEventListener('contextmenu', blockContext);
+  }, [isKioskMode]);
+
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
   const handleZoomChange = (value: number) => {
@@ -86,6 +149,96 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     }
   };
 
+  // 🆕 ENTRAR EM MODO KIOSK (com senha)
+  const handleEnterKioskMode = () => {
+    setModalType('setup');
+    setShowPasswordOverlay(true);
+  };
+
+  // 🆕 DEFINIR SENHA E ATIVAR FULLSCREEN
+  const handleSetPassword = async () => {
+    if (passwordInput.length < 4) {
+      showToastMessage('Senha deve ter no mínimo 4 caracteres', 'warning');
+      return;
+    }
+    
+    setKioskPassword(passwordInput);
+    setPasswordInput('');
+    setShowPasswordOverlay(false);
+    
+    try {
+      await document.documentElement.requestFullscreen();
+      setIsKioskMode(true);
+      setIsMaximized(true);
+      setZoomLevel(100);
+      setAssistantStarted(false);
+      showToastMessage('Modo Kiosk ativado!', 'success');
+      
+      // Mostrar controles inicialmente
+      setShowControls(true);
+      setShowCloseButton(true);
+      
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+        setShowCloseButton(false);
+      }, 5000);
+    } catch (error) {
+      console.error('Erro ao ativar fullscreen:', error);
+      showToastMessage('Erro ao ativar tela cheia. Permita em seu navegador.', 'error');
+      setKioskPassword(null);
+    }
+  };
+
+  // 🆕 TENTAR SAIR (pede senha se estiver em modo kiosk)
+  const handleTryExitKiosk = () => {
+    if (isKioskMode) {
+      setModalType('verify');
+      setShowPasswordOverlay(true);
+    } else {
+      exitKioskMode();
+    }
+  };
+
+  // 🆕 VERIFICAR SENHA
+  const handleVerifyPassword = async () => {
+    // TODO: Implementar validação com backend quando disponível
+    // const isValid = await validateFullscreenPassword(passwordInput, company.id);
+    
+    const isValid = passwordInput === kioskPassword;
+    
+    if (isValid) {
+      setPasswordInput('');
+      setPasswordError(false);
+      setShowPasswordOverlay(false);
+      await exitKioskMode();
+    } else {
+      setPasswordError(true);
+      setPasswordInput('');
+      setTimeout(() => setPasswordError(false), 2000);
+    }
+  };
+
+  // 🆕 SAIR DO MODO KIOSK
+  const exitKioskMode = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error('Erro ao sair do fullscreen:', error);
+    }
+    
+    setIsKioskMode(false);
+    setIsMaximized(false);
+    setKioskPassword(null);
+    showToastMessage('Modo Kiosk desativado', 'success');
+  };
+
+  // MAXIMIZAR NORMAL (sem senha) - mantido para compatibilidade
   const handleToggleMaximize = () => {
     const willMaximize = !isMaximized;
     setIsMaximized(willMaximize);
@@ -119,8 +272,200 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
   return (
     <>
+      {/* 🆕 MODAL DE SENHA PARA MODO KIOSK */}
+      {showPasswordOverlay && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`rounded-2xl shadow-2xl max-w-md w-full p-8 ${
+            theme === 'dark' 
+              ? 'bg-slate-800 border border-white/10' 
+              : 'bg-white border border-gray-200'
+          }`}>
+            {modalType === 'setup' ? (
+              // DEFINIR SENHA
+              <>
+                <div className="text-center mb-6">
+                  <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
+                    theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
+                  }`}>
+                    <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h2 className={`text-2xl font-bold mb-2 ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Modo Kiosk Protegido
+                  </h2>
+                  <p className={`text-sm ${
+                    theme === 'dark' ? 'text-white/60' : 'text-gray-600'
+                  }`}>
+                    Defina uma senha para bloquear a saída do modo tela cheia
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      theme === 'dark' ? 'text-white/80' : 'text-gray-700'
+                    }`}>
+                      Senha (mínimo 4 caracteres)
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSetPassword()}
+                      className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:border-blue-500 transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-slate-700 border-white/10 text-white placeholder-white/40'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                      }`}
+                      placeholder="••••••••"
+                      autoFocus
+                    />
+                  </div>
+                  
+                  <div className={`p-4 rounded-lg ${
+                    theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
+                  }`}>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className={`text-sm font-medium ${
+                          theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                        }`}>
+                          Importante
+                        </p>
+                        <p className={`text-xs mt-1 ${
+                          theme === 'dark' ? 'text-yellow-500/80' : 'text-yellow-700'
+                        }`}>
+                          Guarde esta senha! Ela será necessária para sair do modo tela cheia.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => {
+                        setShowPasswordOverlay(false);
+                        setPasswordInput('');
+                      }}
+                      className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-white/5 hover:bg-white/10 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSetPassword}
+                      disabled={passwordInput.length < 4}
+                      className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+                        passwordInput.length < 4
+                          ? 'bg-gray-400 cursor-not-allowed text-white/50'
+                          : 'bg-blue-500 hover:bg-blue-600 text-white active:scale-95'
+                      }`}
+                    >
+                      Ativar Modo Kiosk
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // VERIFICAR SENHA
+              <>
+                <div className="text-center mb-6">
+                  <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
+                    theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
+                  }`}>
+                    <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h2 className={`text-2xl font-bold mb-2 ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Modo Protegido Ativo
+                  </h2>
+                  <p className={`text-sm ${
+                    theme === 'dark' ? 'text-white/60' : 'text-gray-600'
+                  }`}>
+                    Digite a senha para sair do modo tela cheia
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <input
+                      type="password"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                      className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                        passwordError
+                          ? 'border-red-500 focus:border-red-500'
+                          : 'focus:border-blue-500'
+                      } ${
+                        theme === 'dark'
+                          ? 'bg-slate-700 border-white/10 text-white placeholder-white/40'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                      }`}
+                      placeholder="••••••••"
+                      autoFocus
+                    />
+                    {passwordError && (
+                      <p className="text-red-500 text-sm mt-2 flex items-center space-x-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span>Senha incorreta!</span>
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setShowPasswordOverlay(false)}
+                      className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-white/5 hover:bg-white/10 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleVerifyPassword}
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium transition-all active:scale-95"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 🆕 BADGE DE MODO KIOSK ATIVO */}
+      {isKioskMode && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9998] pointer-events-none">
+          <div className="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2 shadow-lg">
+            <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
+            <span>Modo Protegido Ativo</span>
+          </div>
+        </div>
+      )}
+
       {/* ========================================== */}
-      {/* VERSÃO MAXIMIZADA (com Zoom) */}
+      {/* VERSÃO MAXIMIZADA */}
       {/* ========================================== */}
       {isMaximized && (
         <div 
@@ -220,7 +565,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               {/* Botão Fechar + Logo eAi (Direita) */}
               <div className="relative flex items-center space-x-3">
                 <button
-                  onClick={() => setIsMaximized(false)}
+                  onClick={handleTryExitKiosk}
                   className={`p-2 rounded-full transition-all duration-300 ${
                     showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   } ${
@@ -253,7 +598,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
-          {/* Orbe + Status (com Zoom aplicado) - SEM CARROSSEL AQUI */}
+          {/* Orbe + Status (com Zoom aplicado) */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pb-24">
             <div 
               style={{ 
@@ -301,13 +646,12 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* Carrossel FIXO no rodapé - FORA do zoom */}
+          {/* Carrossel FIXO no rodapé */}
           {assistantStarted && (
             <div className="fixed bottom-0 left-0 right-0 w-full z-30">
               <FunctionCarousel
                 companyId={company.id}
                 onFunctionClick={(functionKey) => {
-                  // Chamar a função do VoiceAssistant através de um evento customizado
                   window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
                     detail: { functionKey }
                   }));
@@ -387,18 +731,25 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   
                   <div className="flex items-center space-x-2">
                     
+                    {/* 🆕 BOTÃO MODO KIOSK (substitui maximizar) */}
                     <button
-                      onClick={handleToggleMaximize}
+                      onClick={handleEnterKioskMode}
                       className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
                         theme === 'dark'
                           ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                           : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-                      }`}
-                      title="Modo tela cheia"
+                      } ${isKioskMode ? 'ring-2 ring-red-500 ring-opacity-50' : ''}`}
+                      title={isKioskMode ? "Modo Kiosk Ativo" : "Ativar Modo Kiosk"}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      </svg>
+                      {isKioskMode ? (
+                        <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        </svg>
+                      )}
                     </button>
 
                     {isSupported && (
@@ -513,18 +864,25 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
                 <div className="flex items-center justify-center space-x-2">
                   
+                  {/* 🆕 BOTÃO MODO KIOSK - Mobile */}
                   <button
-                    onClick={handleToggleMaximize}
+                    onClick={handleEnterKioskMode}
                     className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
                       theme === 'dark'
                         ? 'bg-white/5 border-white/10 text-white'
                         : 'bg-black/5 border-black/10 text-black'
-                    }`}
-                    title="Modo tela cheia"
+                    } ${isKioskMode ? 'ring-2 ring-red-500 ring-opacity-50' : ''}`}
+                    title="Modo Kiosk"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                    </svg>
+                    {isKioskMode ? (
+                      <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
+                    )}
                   </button>
 
                   {isSupported && (
@@ -601,7 +959,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* Orbe + Carrossel DENTRO do VoiceAssistant (única renderização) */}
+          {/* Orbe + Carrossel */}
           <div className="flex-1 flex flex-col items-center justify-center py-8">
             <div className="w-full max-w-5xl px-4">
               <VoiceAssistantWithWakeWord 
@@ -615,8 +973,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               />
             </div>
           </div>
-
-          {/* 🚫 CARROSSEL DUPLICADO REMOVIDO - Agora só existe dentro do VoiceAssistantWithWakeWord */}
 
           {/* Footer */}
           <div className={`w-full py-6 px-4 border-t transition-colors ${

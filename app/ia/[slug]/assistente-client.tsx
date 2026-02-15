@@ -37,6 +37,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [modalType, setModalType] = useState<'setup' | 'verify'>('setup');
+  const [showKioskBadge, setShowKioskBadge] = useState(false); // 🆕 Controla exibição do badge
+  const badgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -79,12 +81,48 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       if (blockedKeys.includes(e.key) || blockedCombos.some(combo => combo)) {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation(); // 🆕 Parar propagação imediata
         showToastMessage('⚠️ Modo protegido ativo', 'warning');
+        return false; // 🆕 Garantir bloqueio
       }
     };
     
-    window.addEventListener('keydown', blockKeys, true);
-    return () => window.removeEventListener('keydown', blockKeys, true);
+    // 🆕 Adicionar em múltiplas fases para garantir bloqueio do F11
+    window.addEventListener('keydown', blockKeys, { capture: true });
+    document.addEventListener('keydown', blockKeys, { capture: true });
+    document.body.addEventListener('keydown', blockKeys, { capture: true });
+    
+    return () => {
+      window.removeEventListener('keydown', blockKeys, { capture: true });
+      document.removeEventListener('keydown', blockKeys, { capture: true });
+      document.body.removeEventListener('keydown', blockKeys, { capture: true });
+    };
+  }, [isKioskMode]);
+
+  // 🆕 ESCONDER BADGE APÓS 5 SEGUNDOS
+  useEffect(() => {
+    if (isKioskMode) {
+      setShowKioskBadge(true);
+      
+      if (badgeTimeoutRef.current) {
+        clearTimeout(badgeTimeoutRef.current);
+      }
+      
+      badgeTimeoutRef.current = setTimeout(() => {
+        setShowKioskBadge(false);
+      }, 5000);
+    } else {
+      setShowKioskBadge(false);
+      if (badgeTimeoutRef.current) {
+        clearTimeout(badgeTimeoutRef.current);
+      }
+    }
+    
+    return () => {
+      if (badgeTimeoutRef.current) {
+        clearTimeout(badgeTimeoutRef.current);
+      }
+    };
   }, [isKioskMode]);
 
   // 🆕 DETECTAR SAÍDA DE FULLSCREEN
@@ -117,10 +155,83 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     return () => window.removeEventListener('contextmenu', blockContext);
   }, [isKioskMode]);
 
+  // 🆕 BLOQUEAR SCROLL E GESTOS NO MOBILE
+  useEffect(() => {
+    if (!isKioskMode) return;
+    
+    // Bloquear scroll
+    const preventScroll = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    };
+    
+    // Bloquear gestos de touch (arrastar para cima/baixo)
+    const preventTouch = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        // Bloquear multi-touch (pinch zoom, etc)
+        e.preventDefault();
+        return;
+      }
+      
+      // Permitir apenas toques na área do app, bloquear arrastar
+      const touch = e.touches[0];
+      const target = e.target as HTMLElement;
+      
+      // Se não for um elemento interativo, bloquear
+      if (!target.closest('button') && !target.closest('input')) {
+        e.preventDefault();
+      }
+    };
+    
+    // Adicionar estilos para bloquear scroll
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    
+    // Event listeners
+    window.addEventListener('scroll', preventScroll, { passive: false });
+    window.addEventListener('touchmove', preventTouch, { passive: false });
+    document.addEventListener('touchmove', preventTouch, { passive: false });
+    document.body.addEventListener('touchmove', preventTouch, { passive: false });
+    
+    return () => {
+      // Restaurar estilos
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      
+      // Remover listeners
+      window.removeEventListener('scroll', preventScroll);
+      window.removeEventListener('touchmove', preventTouch);
+      document.removeEventListener('touchmove', preventTouch);
+      document.body.removeEventListener('touchmove', preventTouch);
+    };
+  }, [isKioskMode]);
+
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
   const handleZoomChange = (value: number) => {
     setZoomLevel(value);
+  };
+
+  // 🆕 MOSTRAR BADGE TEMPORARIAMENTE (quando usuário tenta sair)
+  const showBadgeTemporarily = () => {
+    setShowKioskBadge(true);
+    
+    if (badgeTimeoutRef.current) {
+      clearTimeout(badgeTimeoutRef.current);
+    }
+    
+    badgeTimeoutRef.current = setTimeout(() => {
+      setShowKioskBadge(false);
+    }, 3000); // 3 segundos quando é aviso
   };
 
   const showToastMessage = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -128,6 +239,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     setToastType(type);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
+    
+    // 🆕 Se for aviso de modo protegido, mostrar badge também
+    if (type === 'warning' && message.includes('protegido')) {
+      showBadgeTemporarily();
+    }
   };
 
   const handleToggleWakeLock = async () => {
@@ -452,9 +568,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       )}
 
-      {/* 🆕 BADGE DE MODO KIOSK ATIVO */}
-      {isKioskMode && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9998] pointer-events-none">
+      {/* 🆕 BADGE DE MODO KIOSK ATIVO - APARECE POR 5 SEGUNDOS */}
+      {showKioskBadge && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9998] pointer-events-none animate-fade-in">
           <div className="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2 shadow-lg">
             <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -672,8 +788,21 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 opacity: 1;
               }
             }
+            @keyframes fade-in {
+              from {
+                opacity: 0;
+                transform: translate(-50%, -10px);
+              }
+              to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+              }
+            }
             .animate-slide-down {
               animation: slide-down 0.3s ease-out;
+            }
+            .animate-fade-in {
+              animation: fade-in 0.3s ease-out;
             }
           `}</style>
         </div>
@@ -1062,8 +1191,21 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 opacity: 1;
               }
             }
+            @keyframes fade-in {
+              from {
+                opacity: 0;
+                transform: translate(-50%, -10px);
+              }
+              to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+              }
+            }
             .animate-slide-down {
               animation: slide-down 0.3s ease-out;
+            }
+            .animate-fade-in {
+              animation: fade-in 0.3s ease-out;
             }
           `}</style>
         </div>

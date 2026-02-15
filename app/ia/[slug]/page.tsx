@@ -92,7 +92,6 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="max-w-md mx-auto p-8 text-center">
-          {/* Ícone de Aviso */}
           <div className="mb-6 flex justify-center">
             <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center border-2 border-amber-500/30">
               <svg className="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,22 +100,19 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Título */}
           <h1 className="text-3xl font-bold text-white mb-4">
             Assistente Temporariamente Indisponível
           </h1>
 
-          {/* Descrição */}
           <p className="text-white/60 mb-8">
             O assistente de <span className="text-white font-semibold">{company.name}</span> está sendo atualizado no momento.
           </p>
 
-          {/* Botão para Admin */}
           <div className="bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-xl p-6 mb-6">
             <p className="text-white/70 text-sm mb-4">
               Se você é o responsável por este assistente:
             </p>
-            <a
+            
               href="/dashboard"
               className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
             >
@@ -124,7 +120,6 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
             </a>
           </div>
 
-          {/* Contato Alternativo */}
           <div className="text-center">
             <p className="text-white/40 text-xs mb-2">
               Caso contrário, entre em contato:
@@ -134,13 +129,12 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
             </p>
           </div>
 
-          {/* Footer */}
           <div className="mt-8 pt-6 border-t border-white/5">
-            <a
+            
               href="https://eai.app.br"
               className="text-xs text-white/30 hover:text-white/50 transition"
             >
-              eAi - Employee Automation Intelligenc
+              eAi - Employee Automation Intelligence
             </a>
           </div>
         </div>
@@ -149,20 +143,21 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
   }
 
   // Tem créditos — renderizar o chat
-return (
-  <AssistenteClient
-    company={{
-      id: company.id,
-      name: company.name,
-      wake_word: company.wake_word || 'olá assistente',
-      greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
-      logo_url: company.logo_url || undefined,
-      assistant_role: company.assistant_role,                                    // ✅ ADICIONAR
-      hide_disabled_functions_carousel: company.hide_disabled_functions_carousel, // ✅ ADICIONAR
-      carousel_auto_scroll: company.carousel_auto_scroll,                        // ✅ ADICIONAR
-    }}
-  />
-);
+  return (
+    <AssistenteClient
+      company={{
+        id: company.id,
+        name: company.name,
+        wake_word: company.wake_word || 'olá assistente',
+        greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
+        logo_url: company.logo_url || undefined,
+        assistant_role: company.assistant_role,
+        hide_disabled_functions_carousel: company.hide_disabled_functions_carousel,
+        carousel_auto_scroll: company.carousel_auto_scroll,
+      }}
+    />
+  );
+}
 
 // Gerar metadata dinâmica
 export async function generateMetadata({ params }: PageProps) {

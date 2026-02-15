@@ -27,7 +27,7 @@ export default function DigitalClock({ className, theme = 'dark' }: DigitalClock
   return (
     <div className={className}>
       <div 
-        className={`text-xl font-bold tracking-widest ${
+        className={`text-base font-bold tracking-widest ${
           theme === 'dark' ? 'text-white' : 'text-gray-900'
         }`}
         style={{

@@ -4,8 +4,8 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'eAi - Empowered Artificial Intelligence',
-  description: 'Plataforma de assistentes virtuais por voz',
+  title: 'eAi - Employee Automation Intelligence',
+  description: 'Funcionários de IA',
 };
 
 export default function RootLayout({

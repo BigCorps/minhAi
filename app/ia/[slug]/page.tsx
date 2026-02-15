@@ -149,18 +149,20 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
   }
 
   // Tem créditos — renderizar o chat
-  return (
-    <AssistenteClient
-      company={{
-        id: company.id,
-        name: company.name,
-        wake_word: company.wake_word || 'olá assistente',
-        greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
-        logo_url: company.logo_url || undefined,
-      }}
-    />
-  );
-}
+return (
+  <AssistenteClient
+    company={{
+      id: company.id,
+      name: company.name,
+      wake_word: company.wake_word || 'olá assistente',
+      greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
+      logo_url: company.logo_url || undefined,
+      assistant_role: company.assistant_role,                                    // ✅ ADICIONAR
+      hide_disabled_functions_carousel: company.hide_disabled_functions_carousel, // ✅ ADICIONAR
+      carousel_auto_scroll: company.carousel_auto_scroll,                        // ✅ ADICIONAR
+    }}
+  />
+);
 
 // Gerar metadata dinâmica
 export async function generateMetadata({ params }: PageProps) {

@@ -185,91 +185,70 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                       showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
                     } ${
                       theme === 'dark'
-                        ? 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
-                        : 'bg-black/5 hover:bg-black/10 text-gray-600 hover:text-gray-900'
+                        ? 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+                        : 'bg-black/5 hover:bg-black/10 text-black border border-black/10'
                     }`}
-                    title="Zoom"
+                    title="Controlar zoom"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                     </svg>
                   </button>
-                  
-                  {/* Slider + Valor */}
-                  <div className={`flex items-center space-x-2 transition-all duration-300 ${
-                    showZoomControl && showControls ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
-                  }`}>
-                    <input
-                      type="range"
-                      min="50"
-                      max="500"
-                      step="10"
-                      value={zoomLevel}
-                      onChange={(e) => handleZoomChange(Number(e.target.value))}
-                      className="w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 hover:[&::-webkit-slider-thumb]:bg-blue-600"
-                    />
-                    <span className={`text-xs font-mono min-w-[3rem] text-right ${
-                      theme === 'dark' ? 'text-white/70' : 'text-gray-600'
+
+                  {showZoomControl && (
+                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all ${
+                      theme === 'dark'
+                        ? 'bg-slate-800/95 border-white/10 text-white'
+                        : 'bg-white/95 border-gray-200 text-gray-900'
                     }`}>
-                      {zoomLevel}%
-                    </span>
-                  </div>
+                      <button
+                        onClick={() => handleZoomChange(Math.max(50, zoomLevel - 10))}
+                        className={`p-1 rounded transition-all ${
+                          theme === 'dark'
+                            ? 'hover:bg-white/10 text-white'
+                            : 'hover:bg-black/10 text-black'
+                        }`}
+                        disabled={zoomLevel <= 50}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <span className="text-sm font-medium min-w-[3rem] text-center">{zoomLevel}%</span>
+                      <button
+                        onClick={() => handleZoomChange(Math.min(200, zoomLevel + 10))}
+                        className={`p-1 rounded transition-all ${
+                          theme === 'dark'
+                            ? 'hover:bg-white/10 text-white'
+                            : 'hover:bg-black/10 text-black'
+                        }`}
+                        disabled={zoomLevel >= 200}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-              
-              {/* Botão Fechar + Logo eAi (Direita) */}
-              <div className="relative flex items-center space-x-3">
-                <button
-                  onClick={() => setIsMaximized(false)}
-                  className={`p-2 rounded-full transition-all duration-300 ${
-                    showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                  } ${
-                    theme === 'dark'
-                      ? 'bg-white/10 hover:bg-white/20 text-white'
-                      : 'bg-black/10 hover:bg-black/20 text-black'
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
 
-                <Link 
-                  href="https://eai.app.br" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="hover:opacity-80 transition-opacity"
-                  title="Visite eAi.app.br"
-                >
-                  <Image
-                    src="/icon192.png"
-                    alt="eAi logo"
-                    width={36}
-                    height={36}
-                    className="rounded-lg"
-                  />
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Orbe + Status (com Zoom aplicado) - SEM CARROSSEL AQUI */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pb-24">
-            <div 
-              style={{ 
-                transform: `scale(${zoomLevel / 100})`,
-                transition: 'transform 0.2s ease-out'
-              }}
-            >
-              <VoiceAssistantWithWakeWord 
-                companyId={company.id} 
-                companyName={company.name}
-                wakeWord={company.wake_word || 'olá assistente'}
-                greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
-                theme={theme}
-                isMaximized={true}
-                onAssistantStart={() => setAssistantStarted(true)}
-              />
+              {/* Botão Fechar (Direita) */}
+              <button
+                onClick={handleToggleMaximize}
+                className={`p-2 rounded-lg transition-all duration-300 ${
+                  showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                } ${
+                  theme === 'dark'
+                    ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20'
+                    : 'bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/20'
+                }`}
+                title="Sair do modo tela cheia"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -301,21 +280,26 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* Carrossel FIXO no rodapé - FORA do zoom */}
-          {assistantStarted && (
-            <div className="fixed bottom-0 left-0 right-0 w-full z-30">
-              <FunctionCarousel
-                companyId={company.id}
-                onFunctionClick={(functionKey) => {
-                  // Chamar a função do VoiceAssistant através de um evento customizado
-                  window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
-                    detail: { functionKey }
-                  }));
-                }}
+          {/* Orbe + Carrossel DENTRO do VoiceAssistant (única renderização) */}
+          <div 
+            className="flex-1 flex flex-col items-center justify-center py-8"
+            style={{ 
+              transform: `scale(${zoomLevel / 100})`,
+              transformOrigin: 'center center'
+            }}
+          >
+            <div className="w-full max-w-5xl px-4">
+              <VoiceAssistantWithWakeWord 
+                companyId={company.id} 
+                companyName={company.name}
+                wakeWord={company.wake_word || 'olá assistente'}
+                greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                 theme={theme}
+                isMaximized={true}
+                onAssistantStart={() => setAssistantStarted(true)}
               />
             </div>
-          )}
+          </div>
 
           <style jsx>{`
             @keyframes slide-down {
@@ -336,161 +320,42 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       )}
 
       {/* ========================================== */}
-      {/* VERSÃO NORMAL */}
+      {/* VERSÃO NORMAL (sem Zoom) */}
       {/* ========================================== */}
       {!isMaximized && (
-        <div className={`min-h-screen overflow-x-hidden transition-colors duration-500 ${
+        <div className={`min-h-screen flex flex-col transition-colors duration-500 ${
           theme === 'dark' 
             ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
             : 'bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200'
         }`}>
-          
-          {/* Header */}
-          <header className={`w-full border-b transition-colors ${
+          {/* Header Normal */}
+          <header className={`w-full py-6 px-4 border-b transition-colors ${
             theme === 'dark'
               ? 'bg-slate-900/50 border-white/5 backdrop-blur-xl'
               : 'bg-white/80 border-gray-200 backdrop-blur-xl'
           }`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {/* Desktop Layout */}
-              <div className="hidden md:flex md:items-center md:justify-between py-4">
-                
-                {/* LADO ESQUERDO - Desktop */}
-                <div className="flex items-center space-x-4">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4 flex-1">
                   {company.logo_url && (
-                    <div className="flex-shrink-0">
-                      <img
-                        src={company.logo_url}
-                        alt={`${company.name} logo`}
-                        className="rounded-lg object-contain"
-                        style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }}
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="flex flex-col">
-                    <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      {company.name}
-                    </h1>
-                    <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
-                      theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-                    }`}>
-                      Assistente Virtual de Voz
-                    </p>
-                  </div>
-                </div>
-
-                {/* LADO DIREITO - Desktop */}
-                <div className="flex items-center space-x-3">
-                  
-                  <div className="flex items-center space-x-2">
-                    
-                    <button
-                      onClick={handleToggleMaximize}
-                      className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
-                        theme === 'dark'
-                          ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                          : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-                      }`}
-                      title="Modo tela cheia"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      </svg>
-                    </button>
-
-                    {isSupported && (
-                      <button
-                        onClick={handleToggleWakeLock}
-                        className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
-                          theme === 'dark'
-                            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                            : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-                        } ${isActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
-                        title={isActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-                      >
-                        {isActive ? (
-                          <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                        )}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={toggleTheme}
-                      className={`p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
-                        theme === 'dark'
-                          ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                          : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-                      }`}
-                      title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-                    >
-                      {theme === 'dark' ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className={`w-px h-10 ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'
-                  }`}></div>
-
-                  <Link 
-                    href="https://eai.app.br" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex-shrink-0 hover:opacity-80 transition-opacity"
-                    title="Visite eAi.app.br"
-                  >
-                    <Image
-                      src="/icon192.png"
-                      alt="eAi logo"
-                      width={40}
-                      height={40}
-                      className="rounded-lg"
+                    <img
+                      src={company.logo_url}
+                      alt={`${company.name} logo`}
+                      className="rounded-lg object-contain"
+                      style={{ maxHeight: '48px', height: 'auto', width: 'auto' }}
                     />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Mobile Layout */}
-              <div className="md:hidden py-4 space-y-4">
-                
-                <div className="relative flex items-center justify-center min-h-[48px] px-4">
-                  {company.logo_url && (
-                    <div className="absolute left-4 flex-shrink-0">
-                      <img
-                        src={company.logo_url}
-                        alt={`${company.name} logo`}
-                        className="rounded-lg object-contain"
-                        style={{ maxHeight: '36px', height: 'auto', width: 'auto', maxWidth: '80px' }}
-                      />
-                    </div>
                   )}
                   
-                  <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center">
-                    <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${
+                  <div className="flex-1 min-w-0">
+                    <h1 className={`text-2xl md:text-3xl font-bold transition-colors truncate ${
                       theme === 'dark' ? 'text-white' : 'text-gray-900'
                     }`}>
                       {company.name}
                     </h1>
-                    <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${
-                      theme === 'dark' ? 'text-white/40' : 'text-gray-500'
+                    <p className={`text-sm transition-colors ${
+                      theme === 'dark' ? 'text-white/60' : 'text-gray-600'
                     }`}>
-                      Assistente Virtual de Voz
+                      Assistente de Voz Inteligente
                     </p>
                   </div>
 

@@ -1957,7 +1957,7 @@ export function VoiceAssistantWithWakeWord({
     if (isProcessing) return 'Processando...';
     if (isListening) {
       const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Escutando...';
+      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + o que precisa` : 'Escutando...';
     }
     return 'Aguarde...';
   };

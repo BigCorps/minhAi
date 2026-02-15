@@ -1204,30 +1204,30 @@ export function VoiceAssistantWithWakeWord({
     // ========================================
     console.log('🔍 Tentando detectar nova função no registry...');
     
-    if (commandProcessor) {
-      const result = await commandProcessor.processCommand(transcript);
-      
-      if (result.success) {
-        console.log('✅ Nova função detectada:', result.functionKey);
-        
-        // Falar resultado
-        if (result.speechText) {
-          await playText(result.speechText);
-        }
-        
-        // Abrir modal (se tiver)
-        if (result.modalData && result.modalType) {
-          console.log('📋 Modal da nova função:', result.modalType);
-          // TODO: Implementar renderização de modais dinâmicos
-          // Por enquanto, só loga. Você pode adicionar setActiveModal aqui depois
-        }
-        
-        // Registrar uso
-        await commandProcessor.registerUsage(result.functionKey);
-        
-        return true;
-      }
+if (commandProcessor) {
+  const result = await commandProcessor.processCommand(transcript);
+  
+  if (result.success && result.functionKey) { // ✅ ADICIONAR && result.functionKey
+    console.log('✅ Nova função detectada:', result.functionKey);
+    
+    // Falar resultado
+    if (result.speechText) {
+      await playText(result.speechText);
     }
+    
+    // Abrir modal (se tiver)
+    if (result.modalData && result.modalType) {
+      console.log('📋 Modal da nova função:', result.modalType);
+      // TODO: Implementar renderização de modais dinâmicos
+      // Por enquanto, só loga. Você pode adicionar setActiveModal aqui depois
+    }
+    
+    // Registrar uso
+    await commandProcessor.registerUsage(result.functionKey); // ✅ AGORA É SEGURO
+    
+    return true;
+  }
+}
     
     console.log('❌ Nenhum comando detectado (legado ou novo)');
     return false;

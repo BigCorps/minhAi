@@ -23,12 +23,16 @@ interface FunctionCarouselProps {
   companyId: string;
   onFunctionClick: (functionKey: string) => void;
   theme?: 'dark' | 'light';
+  hideDisabledFunctions: boolean; // 🆕 NOVO
+  autoScroll: boolean; // 🆕 NOVO
 }
 
 export default function FunctionCarousel({
   companyId,
   onFunctionClick,
-  theme = 'dark'
+  theme = 'dark',
+  hideDisabledFunctions, // 🆕 NOVO
+  autoScroll, // 🆕 NOVO
 }: FunctionCarouselProps) {
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,8 +99,13 @@ export default function FunctionCarousel({
     onFunctionClick(fn.function_key);
   }
   
-  // Quadruplicar funções para garantir loop infinito PERFEITO
-  const quadruplicatedFunctions = [...functions, ...functions, ...functions, ...functions];
+  // 🆕 FILTRAR FUNÇÕES COM BASE NA CONFIGURAÇÃO
+  const filteredFunctions = hideDisabledFunctions
+    ? functions.filter(fn => fn.is_enabled_for_company)
+    : functions;
+  
+  // Quadruplicar funções para garantir loop infinito PERFEITO (agora usando filteredFunctions)
+  const quadruplicatedFunctions = [...filteredFunctions, ...filteredFunctions, ...filteredFunctions, ...filteredFunctions];
   
   // Cores alternadas azul/verde eAi
   const getCardColor = (index: number) => {
@@ -120,9 +129,10 @@ export default function FunctionCarousel({
     <>
       <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
-          <div className="flex gap-3 pl-3 animate-scroll-infinite w-max">
+          {/* 🆕 APLICAR CLASSE DE ANIMAÇÃO CONDICIONALMENTE */}
+          <div className={`flex gap-3 pl-3 ${autoScroll ? 'animate-scroll-infinite' : ''} w-max`}>
             {quadruplicatedFunctions.map((fn, idx) => {
-              const originalIndex = idx % functions.length;
+              const originalIndex = idx % filteredFunctions.length; // 🆕 Usar filteredFunctions.length
               const borderColor = getCardColor(originalIndex);
               const isEnabled = fn.is_enabled_for_company;
               
@@ -135,7 +145,7 @@ export default function FunctionCarousel({
                     theme === 'dark'
                       ? 'bg-white/10 hover:bg-white/20 text-white'
                       : 'bg-white hover:bg-gray-50 text-gray-900'
-                  } ${!isEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  } ${!isEnabled && !hideDisabledFunctions ? 'opacity-40 cursor-not-allowed' : ''}`}
                   style={{
                     borderLeft: `4px solid ${borderColor}`,
                     boxShadow: theme === 'dark' 

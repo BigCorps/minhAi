@@ -81,8 +81,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             <span className="block whitespace-nowrap">
               um{' '}
               <span 
-                className="inline-block relative overflow-hidden align-baseline text-center"
-                style={{ height: '1.2em' }}
+                className="inline-block relative overflow-hidden text-center"
+                style={{ height: '1.2em', verticalAlign: '-0.15em' }}
               >
                 {/* Palavras invisíveis para definir a largura máxima */}
                 {OPCOES.map((palavra) => (

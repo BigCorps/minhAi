@@ -157,12 +157,12 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           isDark ? 'border-white/5' : 'border-gray-100'
         }`}>
           <p className={`text-[10px] sm:text-xs mb-1 transition-colors ${
-            isDark ? 'text-white/25' : 'text-gray-300'
+            isDark ? 'text-white/25' : 'text-gray-500'
           }`}>
             INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
           </p>
           <p className={`text-[10px] sm:text-xs transition-colors ${
-            isDark ? 'text-white/20' : 'text-gray-300'
+            isDark ? 'text-white/20' : 'text-gray-500'
           }`}>
             CNPJ: 14.282.244/0001-19
           </p>

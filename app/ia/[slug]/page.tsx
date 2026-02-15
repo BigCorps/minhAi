@@ -112,7 +112,6 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
             <p className="text-white/70 text-sm mb-4">
               Se você é o responsável por este assistente:
             </p>
-            
             <a href="/dashboard" className="inline-block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
               Acessar Painel
             </a>
@@ -128,10 +127,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/5">
-            
-              href="https://eai.app.br"
-              className="text-xs text-white/30 hover:text-white/50 transition"
-            >
+            <a href="https://eai.app.br" className="text-xs text-white/30 hover:text-white/50 transition">
               eAi - Employee Automation Intelligence
             </a>
           </div>
@@ -170,8 +166,8 @@ export async function generateMetadata({ params }: PageProps) {
 
   return {
     title: company
-      ? `${company.name} - eAi - Assistente IA com Voz`
-      : 'eAi - Assistente IA com Voz',
+      ? `${company.name} - eAi - Employee Automation Intelligence`
+      : 'eAi - Employee Automation Intelligence',
     description: `Converse com o assistente IA da ${company?.name || 'empresa'}`,
   };
 }

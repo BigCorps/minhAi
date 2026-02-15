@@ -23,16 +23,16 @@ interface FunctionCarouselProps {
   companyId: string;
   onFunctionClick: (functionKey: string) => void;
   theme?: 'dark' | 'light';
-  hideDisabledFunctions: boolean; // 🆕 NOVO
-  autoScroll: boolean; // 🆕 NOVO
+  hideDisabledFunctions?: boolean; // 🆕 OPCIONAL (com ?)
+  autoScroll?: boolean;            // 🆕 OPCIONAL (com ?)
 }
 
 export default function FunctionCarousel({
   companyId,
   onFunctionClick,
   theme = 'dark',
-  hideDisabledFunctions, // 🆕 NOVO
-  autoScroll, // 🆕 NOVO
+  hideDisabledFunctions = false, // 🆕 Valor padrão
+  autoScroll = true,             // 🆕 Valor padrão
 }: FunctionCarouselProps) {
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [loading, setLoading] = useState(true);

@@ -23,6 +23,8 @@ interface VoiceAssistantWithWakeWordProps {
   theme?: 'dark' | 'light';
   isMaximized?: boolean;
   onAssistantStart?: () => void;
+  hideDisabledFunctions?: boolean; // ✅ OPCIONAL
+  autoScroll?: boolean;            // ✅ OPCIONAL
 }
 
 export function VoiceAssistantWithWakeWord({
@@ -33,6 +35,8 @@ export function VoiceAssistantWithWakeWord({
   theme = 'dark',
   isMaximized = false,
   onAssistantStart,
+  hideDisabledFunctions = false, // ✅ Padrão = desabilitadas VISÍVEIS
+  autoScroll = true,             // ✅ Padrão = rola automaticamente
 }: VoiceAssistantWithWakeWordProps) {
   // ========================================
   // STATES
@@ -2122,15 +2126,17 @@ export function VoiceAssistantWithWakeWord({
         </div>
       </div>
 
-      {!showStartButton && (
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
-          <FunctionCarousel
-            companyId={companyId}
-            onFunctionClick={handleFunctionClick}
-            theme={theme}
-          />
-        </div>
-      )}
+{!showStartButton && (
+  <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
+    <FunctionCarousel
+      companyId={companyId}
+      onFunctionClick={handleFunctionClick}
+      theme={theme}
+      hideDisabledFunctions={hideDisabledFunctions}
+      autoScroll={autoScroll}
+    />
+  </div>
+)}
     </div>
   );
 }

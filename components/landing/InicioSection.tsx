@@ -80,9 +80,19 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             {/* Linha 2 - com rolagem vertical */}
             <span className="block whitespace-nowrap">
               um{' '}
-              <span className="inline-block relative overflow-hidden align-bottom" style={{ height: '1.15em', width: 'auto' }}>
+              <span 
+                className="inline-block relative overflow-hidden align-baseline text-center"
+                style={{ height: '1.2em' }}
+              >
+                {/* Palavras invisíveis para definir a largura máxima */}
+                {OPCOES.map((palavra) => (
+                  <span key={palavra} className="invisible block h-0 px-1" aria-hidden="true">
+                    {palavra}
+                  </span>
+                ))}
+                {/* Palavra visível animada */}
                 <span
-                  className={`inline-block transition-all duration-300 ease-in-out ${
+                  className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-in-out ${
                     isAnimating
                       ? '-translate-y-full opacity-0'
                       : 'translate-y-0 opacity-100'

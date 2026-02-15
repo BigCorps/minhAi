@@ -41,7 +41,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
         <p className={`text-sm sm:text-base mb-8 sm:mb-10 transition-colors ${
           isDark ? 'text-white/40' : 'text-gray-400'
         }`}>
-          eAi - desenvolvido por{' '}
+          O eAi é desenvolvido por{' '}
           <a
             href="https://bigcorps.com.br"
             target="_blank"
@@ -166,6 +166,26 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           }`}>
             CNPJ: 14.282.244/0001-19
           </p>
+        </div>
+
+        {/* CTAs */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mt-6 sm:mt-8">
+          <a
+            href="/login"
+            className="w-full sm:w-auto px-8 py-3 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-sm text-center shadow-lg hover:shadow-xl hover:scale-105"
+          >
+            Comece Gratuitamente
+          </a>
+          <a
+            href="/ia/suporte"
+            className={`w-full sm:w-auto px-8 py-3 border-2 rounded-full transition-all duration-300 font-bold text-sm text-center hover:scale-105 ${
+              isDark
+                ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
+                : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'
+            }`}
+          >
+            Ver Demonstração
+          </a>
         </div>
       </div>
     </div>

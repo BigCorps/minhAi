@@ -753,7 +753,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   wakeWord={company.wake_word || 'olá assistente'}
   greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
   theme={theme}
-  isMaximized={false}
+  isMaximized={true}
   onAssistantStart={() => setAssistantStarted(true)}
   hideDisabledFunctions={company.hide_disabled_functions_carousel}
   autoScroll={company.carousel_auto_scroll}
@@ -1130,15 +1130,17 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           {/* Orbe + Carrossel */}
           <div className="flex-1 flex flex-col items-center justify-center py-8">
             <div className="w-full max-w-5xl px-4">
-              <VoiceAssistantWithWakeWord 
-                companyId={company.id} 
-                companyName={company.name}
-                wakeWord={company.wake_word || 'olá assistente'}
-                greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
-                theme={theme}
-                isMaximized={false}
-                onAssistantStart={() => setAssistantStarted(true)}
-              />
+<VoiceAssistantWithWakeWord 
+  companyId={company.id} 
+  companyName={company.name}
+  wakeWord={company.wake_word || 'olá assistente'}
+  greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
+  theme={theme}
+  isMaximized={false}
+  onAssistantStart={() => setAssistantStarted(true)}
+  hideDisabledFunctions={company.hide_disabled_functions_carousel}  // ✅ ADICIONADO
+  autoScroll={company.carousel_auto_scroll}  // ✅ ADICIONADO
+/>
             </div>
           </div>
 

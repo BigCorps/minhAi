@@ -82,7 +82,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               um{' '}
               <span 
                 className="inline-block relative overflow-hidden text-center"
-                style={{ height: '1.2em', verticalAlign: '-0.15em' }}
+                style={{ height: '1.2em', verticalAlign: '-0.25em' }}
               >
                 {/* Palavras invisíveis para definir a largura máxima */}
                 {OPCOES.map((palavra) => (

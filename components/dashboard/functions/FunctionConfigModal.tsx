@@ -43,40 +43,56 @@ const InstagramForm = ({ settings, onChange }: any) => (
   </div>
 );
 
-const PixForm = ({ settings, onChange }: any) => (
-  <div className="space-y-4">
-    <div className="text-sm bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-        💰 Como funciona o PIX
-      </h4>
-      <ul className="space-y-2 text-blue-800 dark:text-blue-200 text-sm">
-        <li>✓ <strong>Gerar PIX:</strong> Diga "Gerar PIX de 50 reais" para criar um QR Code instantaneamente</li>
-        <li>✓ <strong>Confirmar recebimento:</strong> Após o cliente pagar, diga "Confirmar PIX" para creditar na sua conta</li>
-        <li>✓ <strong>Cancelar:</strong> Se não utilizado, diga "Cancelar PIX" para invalidar o QR Code</li>
-      </ul>
-    </div>
+const PixForm = ({ settings, onChange }: any) => {
+  // Verifica se já existia uma chave salva no momento em que o formulário abriu.
+  // O uso de useState aqui garante que o valor seja calculado apenas uma vez (na montagem),
+  // impedindo que o campo bloqueie enquanto um NOVO usuário digita.
+  const [isLocked] = useState(!!settings.pix_key);
 
-    <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
-      <p className="text-sm text-green-900 dark:text-green-100">
-        Os valores recebidos são creditados automaticamente na sua <strong>seção de Saldo</strong> na plataforma BigCorps.
-      </p>
+  return (
+    <div className="space-y-4">
+      <div className="text-sm bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          Como funciona o Recebimento via PIX
+        </h4>
+        <ul className="space-y-2 text-blue-800 dark:text-blue-200 text-sm">
+          <li>✓ <strong>Gerar PIX:</strong> Diga "Gerar PIX de 50 reais" para criar um QR Code instantaneamente</li>
+          <li>✓ <strong>Confirmar recebimento:</strong> Após o cliente pagar, diga "Confirmar PIX" para creditar na sua conta</li>
+          <li>✓ <strong>Cancelar:</strong> Se não utilizado, diga "Cancelar PIX" para invalidar o QR Code</li>
+        </ul>
+      </div>
+
+      <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-sm text-green-900 dark:text-green-100">
+          Os valores recebidos são creditados automaticamente na seção <strong>seção Recebimentos</strong> no Menu Principal.
+        </p>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Chave PIX para Recebimento
+        </label>
+        <input 
+          type="text" 
+          placeholder="Sua chave PIX (CPF, e-mail, telefone ou chave aleatória)"
+          value={settings.pix_key || ''}
+          onChange={e => onChange('pix_key', e.target.value)}
+          disabled={isLocked}
+          className={`w-full p-2 border rounded-md 
+            dark:bg-slate-800 dark:border-white/10 
+            focus:ring-2 focus:ring-blue-500 focus:border-transparent
+            disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed
+            dark:disabled:bg-slate-900 dark:disabled:text-gray-500`}
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {isLocked 
+            ? "Esta chave já foi configurada. Entre em contato com o suporte para alterar." 
+            : "Esta chave será usada para identificar sua conta ao receber pagamentos via PIX."}
+        </p>
+      </div>
     </div>
-    
-    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-      Chave PIX para Recebimento
-    </label>
-    <input 
-      type="text" 
-      placeholder="Sua chave PIX (CPF, e-mail, telefone ou chave aleatória)"
-      value={settings.pix_key || ''}
-      onChange={e => onChange('pix_key', e.target.value)}
-      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    />
-    <p className="text-xs text-gray-500 dark:text-gray-400">
-      Esta chave será usada para identificar sua conta ao receber pagamentos via PIX.
-    </p>
-  </div>
-);
+  );
+};
 
 const ChatGptForm = ({ settings, onChange }: any) => (
   <div>

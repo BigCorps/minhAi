@@ -8,12 +8,15 @@ interface DigitalClockProps {
 }
 
 export default function DigitalClock({ className, theme = 'dark' }: DigitalClockProps) {
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState<Date | null>(null); // Começa null para evitar erro de hidratação no Next.js
 
   useEffect(() => {
+    // Define a hora inicial apenas no cliente
+    setTime(new Date());
+
     const timerId = setInterval(() => {
       setTime(new Date());
-    }, 1000); // Atualiza a cada segundo para precisão
+    }, 1000);
 
     return () => clearInterval(timerId);
   }, []);
@@ -24,31 +27,45 @@ export default function DigitalClock({ className, theme = 'dark' }: DigitalClock
     return `${hours}:${minutes}`;
   };
 
+  // Se a hora ainda não carregou (server-side), retorna null ou um esqueleto
+  if (!time) return null;
+
   return (
     <div className={className}>
       <div 
-        className={`text-base font-bold tracking-widest ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
+        className={`digital-clock-text ${
+          theme === 'dark' ? 'theme-dark' : 'theme-light'
         }`}
-        style={{
-          fontFamily: '"DS-Digital", "Orbitron", "Courier New", monospace',
-          letterSpacing: '0.1em'
-        }}
       >
         {formatTime(time)}
       </div>
       
-      {/* Adicionar fontes digitais */}
       <style jsx>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+        /* Importando a fonte Orbitron do Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
         
-        @font-face {
-          font-family: 'DS-Digital';
-          src: url('https://cdn.jsdelivr.net/gh/duszekmestre/fonts@master/ds-digital/DSEG7Classic-Bold.woff2') format('woff2'),
-               url('https://cdn.jsdelivr.net/gh/duszekmestre/fonts@master/ds-digital/DSEG7Classic-Bold.woff') format('woff');
-          font-weight: bold;
-          font-style: normal;
-          font-display: block;
+        .digital-clock-text {
+          font-family: 'Orbitron', sans-serif; /* Fonte moderna e limpa */
+          font-weight: 700;
+          letter-spacing: 0.15em; /* Espaçamento levemente maior */
+          line-height: 1;
+          display: inline-block;
+          transition: all 0.3s ease;
+        }
+
+        /* Estilo para modo escuro (Efeito Neon) */
+        .theme-dark {
+          color: #00f0ff; /* Ciano Neon */
+          text-shadow: 
+            0 0 5px rgba(0, 240, 255, 0.4),
+            0 0 10px rgba(0, 240, 255, 0.3),
+            0 0 20px rgba(0, 240, 255, 0.2);
+        }
+
+        /* Estilo para modo claro (Estilo LCD desligado/escuro) */
+        .theme-light {
+          color: #2d3748;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
       `}</style>
     </div>

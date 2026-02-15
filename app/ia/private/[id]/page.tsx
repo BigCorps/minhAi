@@ -91,10 +91,9 @@ export default async function AssistentePrivadoPage({ params }: PageProps) {
             Você não tem permissão para acessar este assistente privado.
           </p>
           
-href="/dashboard"
-  className="mt-4 inline-block text-blue-400 hover:underline">
-  Voltar ao Dashboard
-</a>
+          <a href="/dashboard" className="mt-4 inline-block text-blue-400 hover:underline">
+            Voltar ao Dashboard
+          </a>
         </div>
       </div>
     );

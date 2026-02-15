@@ -57,14 +57,14 @@ const PixForm = ({ settings, onChange }: any) => {
         </h4>
         <ul className="space-y-2 text-blue-800 dark:text-blue-200 text-sm">
           <li>✓ <strong>Gerar PIX:</strong> Diga "Gerar PIX de 50 reais" para criar um QR Code instantaneamente</li>
-          <li>✓ <strong>Confirmar recebimento:</strong> Após o cliente pagar, diga "Confirmar PIX" para creditar na sua conta</li>
+          <li>✓ <strong>Confirmar recebimento:</strong> Após o cliente pagar, diga "Confirmar PIX" para a confimação automatica e já creditar na sua conta</li>
           <li>✓ <strong>Cancelar:</strong> Se não utilizado, diga "Cancelar PIX" para invalidar o QR Code</li>
         </ul>
       </div>
 
       <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
         <p className="text-sm text-green-900 dark:text-green-100">
-          Os valores recebidos são creditados automaticamente na seção <strong>seção Recebimentos</strong> no Menu Principal.
+          Os valores recebidos são creditados automaticamente na seção <strong>Recebimentos</strong> do Menu Principal.
         </p>
       </div>
       

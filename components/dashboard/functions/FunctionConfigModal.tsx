@@ -43,6 +43,62 @@ const InstagramForm = ({ settings, onChange }: any) => (
   </div>
 );
 
+const WebsiteForm = ({ settings, onChange }: any) => (
+  <div>
+    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+      URL do Site
+    </label>
+    <input 
+      type="url" 
+      placeholder="https://www.seusite.com.br"
+      value={settings.website || ''}
+      onChange={e => onChange('website', e.target.value)}
+      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      A URL completa do seu site que será usada para gerar o QR Code.
+    </p>
+    
+    {settings.website && (
+      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-xs text-blue-800 dark:text-blue-200">
+          <strong>Preview:</strong> O QR Code levará para: <br />
+          <span className="font-mono">{settings.website}</span>
+        </p>
+      </div>
+    )}
+  </div>
+);
+
+const FacebookForm = ({ settings, onChange }: any) => (
+  <div>
+    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+      Username do Facebook
+    </label>
+    <input 
+      type="text" 
+      placeholder="@suapagina ou suapagina"
+      value={settings.facebook || ''}
+      onChange={e => onChange('facebook', e.target.value)}
+      className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      O username da sua página/perfil do Facebook (sem espaços).
+    </p>
+    
+    {settings.facebook && (
+      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-xs text-blue-800 dark:text-blue-200">
+          <strong>Preview:</strong> O QR Code levará para: <br />
+          <span className="font-mono">
+            facebook.com/{settings.facebook.replace('@', '')}
+          </span>
+        </p>
+      </div>
+    )}
+  </div>
+);
+
 const PixForm = ({ settings, onChange }: any) => {
   // Verifica se já existia uma chave salva no momento em que o formulário abriu.
   // O uso de useState aqui garante que o valor seja calculado apenas uma vez (na montagem),
@@ -148,6 +204,8 @@ const FaqForm = () => (
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_whatsapp': WhatsappForm,
   'qrcode_instagram': InstagramForm,
+  'qrcode_website': WebsiteForm,
+  'qrcode_facebook': FacebookForm,
   'pix_generate': PixForm,
   'chatgpt': ChatGptForm,
   'faq': FaqForm,
@@ -181,7 +239,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, pix_key, pix_key_type, system_prompt')
+        .select('whatsapp_number, instagram_username, website, facebook, pix_key, pix_key_type, system_prompt')
         .eq('id', companyId)
         .single();
       

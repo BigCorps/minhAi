@@ -85,6 +85,90 @@ export interface FunctionDefinition {
  * - chatgpt (já existe no VoiceAssistant)
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
+
+  // ========================================
+  // NOSSO SITE
+  // ========================================
+  qrcode_website: {
+    functionKey: 'qrcode_website',
+    functionName: 'Nosso Site',
+    category: 'contact',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'site',
+      'website',
+      'nosso site',
+      'página',
+      'pagina',
+      'endereço',
+      'endereco',
+      'url',
+    ],
+    
+    examplePhrases: [
+      'Qual o site?',
+      'Me passa o site',
+      'Qual o endereço do site?',
+      'Mostre o site',
+    ],
+    
+    edgeFunction: 'gerar-qrcode-contato',
+    uiComponent: 'QRCodeDisplay',
+    
+    requiresInput: false,
+    
+    description: 'Exibe QR Code do site da empresa',
+    shortDescription: 'Mostrar Site',
+    icon: '🌐',
+    color: '#3B82F6',
+    
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+  },
+
+  // ========================================
+  // NOSSO FACEBOOK
+  // ========================================
+  qrcode_facebook: {
+    functionKey: 'qrcode_facebook',
+    functionName: 'Nosso Facebook',
+    category: 'contact',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'facebook',
+      'face',
+      'fb',
+      'perfil facebook',
+      'página facebook',
+      'pagina facebook',
+    ],
+    
+    examplePhrases: [
+      'Qual o Facebook?',
+      'Me passa o Facebook',
+      'Mostre o Facebook',
+      'Perfil do Facebook',
+    ],
+    
+    edgeFunction: 'gerar-qrcode-contato',
+    uiComponent: 'QRCodeDisplay',
+    
+    requiresInput: false,
+    
+    description: 'Exibe QR Code do perfil do Facebook da empresa',
+    shortDescription: 'Mostrar Facebook',
+    icon: '👍',
+    color: '#1877F2',
+    
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+  },
   
   // ========================================
   // EXEMPLO: RESUMO DE VENDAS (com handler customizado)

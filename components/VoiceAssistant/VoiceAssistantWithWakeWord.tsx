@@ -91,10 +91,9 @@ export function VoiceAssistantWithWakeWord({
   const processingQuestion = useRef<boolean>(false);
   const conversationIdRef = useRef<string | null>(null);
   
-  // ✅ Google Speech WebSocket refs
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
   const shouldProcessAudio = useRef<boolean>(true);
-
+  const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null); // ✅ ADICIONAR ESTA LINHA
   // ========================================
   // CONFIGURATION
   // ========================================

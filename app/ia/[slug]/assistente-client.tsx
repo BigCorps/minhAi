@@ -487,6 +487,16 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                           <p><strong>🍎 iOS/iPad:</strong> Configurações → Acessibilidade → Acesso Guiado</p>
                           <p><strong>🐧 Linux:</strong> Cage (Wayland), Porteus Kiosk, ou KioWare</p>
                         </div>
+                        <button
+                          onClick={() => window.open('https://eai.app.br/kiosk')}
+                          className={`mt-3 w-full text-xs py-2 px-3 rounded-md font-medium transition-colors ${
+                            theme === 'dark'
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          📚 Ver Guia Completo de Configuração
+                        </button>
                       </div>
                     </div>
                   </div>

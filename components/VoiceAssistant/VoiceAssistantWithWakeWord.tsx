@@ -659,45 +659,40 @@ export function VoiceAssistantWithWakeWord({
     }, 500);
   }
 
-  // ========================================
-  // ✅ MUDANÇA 7: HANDLEGOOGLETRANSCRIPT() SIMPLIFICADO
-  // ========================================
+// ========================================
+// ✅ HANDLEGOOGLETRANSCRIPT() - SINTAXE CORRIGIDA
+// ========================================
 function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
   
   const lowerText = text.toLowerCase().trim();
   
-  console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
+  console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`); // ✅ CORRIGIDO
   
   // ============================================
-  // 1. COMANDO DE PARAR (sempre prioridade máxima - não precisa de wake word)
+  // 1. COMANDO DE PARAR (sempre prioridade máxima)
   // ============================================
   if (detectStopCommand(lowerText)) {
-    console.log('🛑 Comando de parada detectado');
     stopEverything();
     return;
   }
   
   // ============================================
-  // 2. DETECTAR WAKE WORD (obrigatório para processar comandos)
+  // 2. DETECTAR WAKE WORD
   // ============================================
   const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
   
   if (!wakeWordResult?.detected) {
-    // Sem wake word = ignora completamente
     console.log('⏭️ Sem wake word - ignorando');
     return;
   }
   
-  // ============================================
-  // 3. WAKE WORD DETECTADA - Processar
-  // ============================================
-  console.log(`✅ Wake word: "${wakeWordResult.keyword}"`);
-  console.log(`   Confiança: ${Math.round(wakeWordResult.confidence * 100)}%`);
-  console.log(`   Matched: "${wakeWordResult.matchedText}"`);
+  console.log(`✅ Wake word: "${wakeWordResult.keyword}"`); // ✅ CORRIGIDO
+  console.log(`   Confiança: ${Math.round(wakeWordResult.confidence * 100)}%`); // ✅ CORRIGIDO
+  console.log(`   Matched: "${wakeWordResult.matchedText}"`); // ✅ CORRIGIDO
   
   // ============================================
-  // 4. SE ESTAVA FALANDO, PARA PRIMEIRO
+  // 3. SE ESTAVA FALANDO, PARA PRIMEIRO
   // ============================================
   if (isPlayingAudio || isSpeaking) {
     console.log('⏸️ Interrupção detectada - parando fala atual');
@@ -706,7 +701,7 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   }
   
   // ============================================
-  // 5. SE JÁ ESTÁ PROCESSANDO, IGNORA
+  // 4. SE JÁ ESTÁ PROCESSANDO, IGNORA
   // ============================================
   if (processingQuestion.current || isProcessing) {
     console.log('⏸️ Já processando, ignorando');
@@ -714,7 +709,7 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   }
   
   // ============================================
-  // 6. SE NÃO FOR FINAL, AGUARDA
+  // 5. SE NÃO FOR FINAL, AGUARDA
   // ============================================
   if (!isFinal) {
     console.log('⏳ Aguardando transcrição final...');
@@ -722,14 +717,14 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   }
   
   // ============================================
-  // 7. EXTRAIR COMANDO
+  // 6. EXTRAIR COMANDO
   // ============================================
   const command = extractCommand(lowerText, wakeWordResult);
   
   console.log('💬 Comando extraído:', command || '(vazio - apenas wake word)');
   
   // ============================================
-  // 8. PROCESSAR
+  // 7. PROCESSAR
   // ============================================
   if (!audioUnlocked.current) {
     unlockAudio();

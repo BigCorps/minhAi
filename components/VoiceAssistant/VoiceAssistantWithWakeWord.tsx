@@ -240,6 +240,10 @@ export function VoiceAssistantWithWakeWord({
               };
             });
             setFunctionSettings(settings);
+            console.log('✅ Function settings carregados:', settings);
+            console.log('💰 Créditos por função:', Object.entries(settings).map(([key, val]) => 
+              `${key}: ${val.creditsPerUse} créditos`
+            ).join(', '));
           }
           return;
         }
@@ -805,21 +809,34 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   }
 
   // ✅ PASSO 3: Corrigir registerFunctionUsage() para usar functionSettings
-  async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
-    try {
-      const supabase = createClient();
-      
-      await supabase.rpc('register_function_usage', {
-        p_company_id: companyId,
-        p_function_key: functionKey,
-        p_credits_consumed: creditsConsumed
-      });
-      
-      console.log(`✅ Uso registrado: ${functionKey} (${creditsConsumed} créditos)`);
-    } catch (error) {
-      console.error('Erro ao registrar uso:', error);
+async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
+  console.log('🔵 INICIANDO registerFunctionUsage:', {
+    functionKey,
+    creditsConsumed,
+    companyId
+  });
+  
+  try {
+    const supabase = createClient();
+    
+    const { data, error } = await supabase.rpc('register_function_usage', {
+      p_company_id: companyId,
+      p_function_key: functionKey,
+      p_credits_consumed: creditsConsumed
+    });
+    
+    if (error) {
+      console.error('❌ ERRO RPC:', error);
+      return;
     }
+    
+    console.log('✅ Uso registrado com sucesso:', functionKey, creditsConsumed, 'créditos');
+    console.log('📊 Resposta RPC:', data);
+    
+  } catch (error) {
+    console.error('❌ ERRO GERAL ao registrar uso:', error);
   }
+}
 
   // ✅ PASSO 3: Atualizar handleFunctionClick() para usar créditos dinâmicos
   async function handleFunctionClick(functionKey: string) {

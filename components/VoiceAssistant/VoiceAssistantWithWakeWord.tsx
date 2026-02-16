@@ -407,14 +407,35 @@ export function VoiceAssistantWithWakeWord({
         googleSpeechRef.current.disconnect();
       }
       
-      googleSpeechRef.current = new GoogleSpeechWebSocket({
-        onTranscript: (text, isFinal) => {
-          handleGoogleTranscript(text, isFinal);
-        },
-        onError: (err) => {
-          console.error('❌ Erro Google Speech:', err);
-          setIsListening(false);
-        },
+googleSpeechRef.current = new GoogleSpeechWebSocket({
+  onTranscript: (text, isFinal) => {
+    // ✅ CONTROLE DE ESTADO VISUAL
+    if (text && text.trim().length > 0) {
+      // Limpar timeout anterior
+      if (listeningTimeoutRef.current) {
+        clearTimeout(listeningTimeoutRef.current);
+      }
+      
+      if (!isFinal) {
+        // Recebendo transcrição = há voz chegando (AZUL)
+        setIsListening(true);
+      } else {
+        // Transcrição final = voz parou
+        // Aguardar 1 segundo para voltar ao verde
+        listeningTimeoutRef.current = setTimeout(() => {
+          if (!isProcessing && !isPlayingAudio) {
+            setIsListening(false); // VERDE
+          }
+        }, 1000);
+      }
+    }
+    
+    handleGoogleTranscript(text, isFinal);
+  },
+  onError: (err) => {
+    console.error('❌ Erro Google Speech:', err);
+    setIsListening(false);
+  },
         // ✅ CALLBACK VAD LOCAL: só ativa isListening quando detectar voz real
         onStatusChange: (status) => {
           // O status 'recording' agora significa que voz real foi detectada localmente
@@ -1919,26 +1940,26 @@ if (commandProcessor) {
   // ========================================
   // STATUS DISPLAY
   // ========================================
-  const getStatusMessage = () => {
-    if (!permissionGranted) return 'Aguardando permissão...';
-    if (showStartButton) return 'Clique em "Iniciar"';
-    if (isPlayingAudio) return 'Falando...';
-    if (isProcessing) return 'Processando...';
-    if (isListening) {
-      const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + o que precisa` : 'Escutando...';
-    }
-    return primaryWakeWord ? 'Diga: "${primaryWakeWord}" + o que precisa` :
-  };
+const getStatusMessage = () => {
+  if (!permissionGranted) return 'Aguardando permissão...';
+  if (showStartButton) return 'Clique em "Iniciar"';
+  if (isPlayingAudio) return 'Falando...';
+  if (isProcessing) return 'Processando...';
+  
+  // isListening = VAD detectou ruído, mas ainda aguarda wake word
+  // Aguardando = silêncio, também aguarda wake word
+  // Ambos mostram a mesma mensagem de instrução
+  const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+  return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+};
 
-  const getStatusColor = () => {
-    if (!permissionGranted) return 'bg-green-600 animate-pulse';
-    if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
-    if (isProcessing) return 'bg-yellow-600 animate-pulse';
-    if (isListening) return 'bg-green-400 animate-pulse';
-    return 'bg-gray-400';
-  };
-
+const getStatusColor = () => {
+  if (!permissionGranted) return 'bg-gray-400';
+  if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // Falando = azul
+  if (isProcessing) return 'bg-yellow-400 animate-pulse'; // Processando = amarelo
+  if (isListening) return 'bg-blue-400 animate-pulse'; // Detectou ruído (aguardando wake word) = azul
+  return 'bg-green-400 animate-pulse'; // Silêncio (aguardando wake word) = verde
+};
   // ========================================
   // RENDER
   // ========================================

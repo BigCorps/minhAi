@@ -65,7 +65,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
       <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-16 pt-20 md:pt-0">
         
         {/* LADO ESQUERDO - Texto + CTAs */}
-        <div className="flex-1 text-center md:text-left order-2 md:order-1 max-w-xl">
+        <div className="flex-1 text-center order-2 md:order-1 max-w-xl">
           <h1
             style={{ fontFamily: "'Nunito', sans-serif" }}
             className={`text-2xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.1] mb-6 transition-colors ${
@@ -117,7 +117,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           <p
             className={`text-sm sm:text-base md:text-lg max-w-lg mb-8 leading-relaxed transition-colors ${
               isDark ? 'text-white/55' : 'text-gray-600'
-            } mx-auto md:mx-0`}
+            } mx-auto`}
           >
             Personalize seus assistentes e transforme a experiência dos seus clientes com um 
             funcionário de voz inteligente que trabalha 24 horas por dia. E o melhor, você paga 
@@ -126,7 +126,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </p>
 
           {/* Botões CTA */}
-          <div className="flex flex-col sm:flex-row items-center md:items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/login"
               className="w-full sm:w-auto px-8 py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
@@ -145,44 +145,44 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </Link>
           </div>
 
-{/* Mini destaques */}
-<div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 mt-8">
-  {[
-    { text: 'Rápido e Fácil de Começar' },
-    { text: 'Pague por Interação' },
-    { text: '100% Customizável' },
-  ].map((item) => (
-    <span
-      key={item.text}
-      className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
-        isDark ? 'text-white/35' : 'text-gray-400'
-      }`}
-    >
-      {item.text}
-    </span>
-  ))}
-</div>
+          {/* Mini destaques */}
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-8">
+            {[
+              { text: 'Rápido e Fácil de Começar' },
+              { text: 'Pague por Interação' },
+              { text: '100% Customizável' },
+            ].map((item) => (
+              <span
+                key={item.text}
+                className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
+                  isDark ? 'text-white/35' : 'text-gray-400'
+                }`}
+              >
+                {item.text}
+              </span>
+            ))}
+          </div>
 
-{/* Traço separador */}
-<div className="flex justify-center md:justify-start my-5">
-  <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
-</div>
+          {/* Traço separador */}
+          <div className="flex justify-center my-5">
+            <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
+          </div>
 
-{/* Slogan */}
-<div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2">
-  {[
-    { text: 'eAi - Employee Automation Intelligence' },
-  ].map((item) => (
-    <span
-      key={item.text}
-      className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
-        isDark ? 'text-white/35' : 'text-gray-400'
-      }`}
-    >
-      {item.text}
-    </span>
-  ))}
-</div>
+          {/* Slogan */}
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            {[
+              { text: 'eAi - Employee Automation Intelligence' },
+            ].map((item) => (
+              <span
+                key={item.text}
+                className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
+                  isDark ? 'text-white/35' : 'text-gray-400'
+                }`}
+              >
+                {item.text}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* LADO DIREITO - Avatar (Orbe) */}

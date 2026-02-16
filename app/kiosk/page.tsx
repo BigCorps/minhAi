@@ -794,55 +794,6 @@ sudo systemctl start kiosk.service`}
 
               <hr className="my-6" />
 
-              {/* CHECKLIST */}
-              <h2>✅ CHECKLIST FINAL</h2>
-              <p>Antes de colocar em produção:</p>
-
-              <div className={`space-y-2 ${theme === 'dark' ? 'text-white/80' : 'text-gray-800'}`}>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Modo Kiosk do SO configurado</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Senha/PIN definida</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Botões físicos bloqueados</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Sleep/screensaver desabilitado</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Boot automático configurado</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>URL do assistente testada</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Internet estável verificada</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Backup de energia instalado</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Monitoramento remoto ativo</span>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input type="checkbox" className="w-5 h-5 rounded" />
-                  <span>Procedimento de emergência documentado</span>
-                </label>
-              </div>
-
-              <hr className="my-6" />
-
               <div className={`text-center text-sm ${
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>

@@ -61,14 +61,14 @@ export function VoiceAssistantWithWakeWord({
     isEnabled: boolean;
   }>>({});
 
-  const [qrCodeData, setQrCodeData] = useState<{
-    type: 'whatsapp' | 'instagram' | 'pix';
-    qrCodeUrl: string;
-    qrContent: string;
-    displayText: string;
-    amount?: string;
-    companyName?: string;
-  } | null>(null);
+const [qrCodeData, setQrCodeData] = useState<{
+  type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook';
+  qrCodeUrl: string;
+  qrContent: string;
+  displayText: string;
+  amount?: string;
+  companyName?: string;
+} | null>(null);
 
   const [pixConfirmationData, setPixConfirmationData] = useState<{
     transactionId: string;
@@ -892,6 +892,16 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         case 'qrcode_instagram':
           await handleInstagramCommand();
           break;
+
+        // Nosso Site
+        case 'qrcode_website':
+          await handleWebsiteCommand();
+          break;
+        
+        // Nosso Facebook  
+        case 'qrcode_facebook':
+          await handleFacebookCommand();
+          break;
           
         // Fallback
         default:
@@ -1083,6 +1093,46 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       await registerFunctionUsage(
         'qrcode_instagram',
         functionSettings['qrcode_instagram']?.creditsPerUse ?? 0
+      );
+      return true;
+    }
+
+    // Site
+    const siteTriggers = [
+      'site', 'website', 'nosso site', 'página', 'pagina', 'endereço', 'url'
+    ];
+    
+    if (siteTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('🌐 Comando Site detectado!');
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_website');
+      if (!isEnabled) {
+        await playText('A função Site está desativada no momento.');
+        return true;
+      }
+      await handleWebsiteCommand();
+      await registerFunctionUsage(
+        'qrcode_website',
+        functionSettings['qrcode_website']?.creditsPerUse ?? 0
+      );
+      return true;
+    }
+    
+    // Facebook
+    const facebookTriggers = [
+      'facebook', 'face', 'fb', 'perfil facebook'
+    ];
+    
+    if (facebookTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      console.log('👍 Comando Facebook detectado!');
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_facebook');
+      if (!isEnabled) {
+        await playText('A função Facebook está desativada no momento.');
+        return true;
+      }
+      await handleFacebookCommand();
+      await registerFunctionUsage(
+        'qrcode_facebook',
+        functionSettings['qrcode_facebook']?.creditsPerUse ?? 0
       );
       return true;
     }
@@ -1307,6 +1357,82 @@ if (commandProcessor) {
     } catch (error: any) {
       console.error('Erro Instagram:', error);
       await playText('Desculpe, não consegui obter o Instagram.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleWebsiteCommand() {
+    try {
+      setIsProcessing(true);
+      
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('gerar-qrcode-contato', {
+        body: {
+          company_id: companyId,
+          qr_type: 'website'
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      const data = response.data;
+      
+      setQrCodeData({
+        type: 'website',
+        qrCodeUrl: data.qr_code_url,
+        qrContent: data.qr_content,
+        displayText: data.display_text,
+        companyName: data.company_name
+      });
+      
+      await playText(`Aqui está o site: ${data.display_text}`);
+      await saveInteractionToHistory(
+        "Me passe o site", 
+        `QR Code do site gerado: ${data.display_text}`
+      );
+
+    } catch (error: any) {
+      console.error('Erro Site:', error);
+      await playText('Desculpe, não consegui obter o site.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleFacebookCommand() {
+    try {
+      setIsProcessing(true);
+      
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('gerar-qrcode-contato', {
+        body: {
+          company_id: companyId,
+          qr_type: 'facebook'
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      const data = response.data;
+      
+      setQrCodeData({
+        type: 'facebook',
+        qrCodeUrl: data.qr_code_url,
+        qrContent: data.qr_content,
+        displayText: data.display_text,
+        companyName: data.company_name
+      });
+      
+      await playText(`Aqui está o Facebook: ${data.display_text}`);
+      await saveInteractionToHistory(
+        "Me passe o Facebook", 
+        `QR Code do Facebook gerado: ${data.display_text}`
+      );
+
+    } catch (error: any) {
+      console.error('Erro Facebook:', error);
+      await playText('Desculpe, não consegui obter o Facebook.');
     } finally {
       setIsProcessing(false);
     }

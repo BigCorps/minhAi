@@ -23,8 +23,6 @@ interface VoiceAssistantWithWakeWordProps {
   theme?: 'dark' | 'light';
   isMaximized?: boolean;
   onAssistantStart?: () => void;
-  hideDisabledFunctions?: boolean; // ✅ OPCIONAL
-  autoScroll?: boolean;            // ✅ OPCIONAL
 }
 
 export function VoiceAssistantWithWakeWord({
@@ -35,8 +33,6 @@ export function VoiceAssistantWithWakeWord({
   theme = 'dark',
   isMaximized = false,
   onAssistantStart,
-  hideDisabledFunctions = false, // ✅ Padrão = desabilitadas VISÍVEIS
-  autoScroll = true,             // ✅ Padrão = rola automaticamente
 }: VoiceAssistantWithWakeWordProps) {
   // ========================================
   // STATES
@@ -94,7 +90,7 @@ export function VoiceAssistantWithWakeWord({
   // ✅ Google Speech WebSocket refs
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
   const shouldProcessAudio = useRef<boolean>(true);
-  const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null); // ← ADICIONAR ESTA LINHA
+
   // ========================================
   // CONFIGURATION
   // ========================================
@@ -398,90 +394,49 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   // GOOGLE SPEECH WEBSOCKET
   // ========================================
-async function startGoogleSpeech() {
-  if (!isActiveRef.current || !shouldProcessAudio.current) return;
-  
-  try {
+  async function startGoogleSpeech() {
+    try {
+      console.log('🎤 Iniciando Google Speech Streaming...');
+      
+      const client = new GoogleSpeechWebSocket({
+        onTranscript: (text, isFinal) => {
+          handleGoogleTranscript(text, isFinal);
+        },
+        onError: (error) => {
+          console.error('❌ Erro Google Speech:', error);
+          setError('Erro no reconhecimento de voz');
+        },
+        onReady: () => {
+          console.log('✅ Google Speech pronto');
+          setIsListening(true);
+        },
+        languageCode: 'pt-BR',
+        sampleRate: 16000,
+      });
+      
+      googleSpeechRef.current = client;
+      
+      await client.connect();
+      await client.startRecording();
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao iniciar Google Speech:', error);
+      setError('Erro ao acessar microfone');
+    }
+  }
+
+  async function stopGoogleSpeech() {
     if (googleSpeechRef.current) {
-      googleSpeechRef.current.stopRecording();
+      console.log('🛑 Parando Google Speech...');
+      
+      await googleSpeechRef.current.stopRecording();
       googleSpeechRef.current.disconnect();
+      googleSpeechRef.current = null;
+      
+      setIsListening(false);
+      console.log('✅ Google Speech parado');
     }
-    
-    googleSpeechRef.current = new GoogleSpeechWebSocket({
-      onTranscript: (text, isFinal) => {
-        console.log('📡 TRANSCRIPT RECEBIDO:', text, 'isFinal:', isFinal);
-        // ✅ SOLUÇÃO: Ignorar VAD, usar transcritos para controlar estado
-        if (text && text.trim().length > 0) {
-          // Limpar timeout anterior
-          if (listeningTimeoutRef.current) {
-            clearTimeout(listeningTimeoutRef.current);
-          }
-          
-          if (!isFinal) {
-            // Recebendo transcrição = há voz chegando
-            setIsListening(true);
-            console.log('🎤 Voz detectada via transcript:', text);
-          } else {
-            // Transcrição final = voz parou
-            // Aguardar 1 segundo para voltar ao verde (caso continue falando)
-            listeningTimeoutRef.current = setTimeout(() => {
-              if (!isProcessing && !isPlayingAudio) {
-                setIsListening(false);
-                console.log('✅ Voz parou, voltando ao verde');
-              }
-            }, 1000);
-          }
-        }
-        
-        handleGoogleTranscript(text, isFinal);
-      },
-      onError: (err) => {
-        console.error('❌ Erro Google Speech:', err);
-        setIsListening(false);
-      },
-      // ✅ VAD agora é apenas para debug (não controla mais o estado)
-      onStatusChange: (status) => {
-        console.log('🎙️ Status VAD (apenas debug):', status);
-        // NÃO usar para controlar estado no desktop
-      }
-    });
-    
-    await googleSpeechRef.current.connect();
-    await googleSpeechRef.current.startRecording();
-    
-    console.log('🎤 Google Speech WebSocket iniciado (Controle por Transcrição)');
-    
-  } catch (err) {
-    console.error('❌ Erro ao iniciar Google Speech:', err);
-    setIsListening(false);
   }
-}
-
-async function stopGoogleSpeech() {
-  if (googleSpeechRef.current) {
-    console.log('🛑 Parando Google Speech...');
-    
-    // Limpar timeout de listening
-    if (listeningTimeoutRef.current) {console.log('🎤 Google Speech WebSocket iniciado (Controle por Transcrição)');
-
-// ✅ DEBUG TEMPORÁRIO - REMOVER DEPOIS
-console.log('🔊 TESTE: Fale algo agora!');
-setTimeout(() => {
-  console.log('⏰ 5 segundos se passaram. Você falou algo?');
-  console.log('📋 Se não apareceu nenhum log de transcrição, o problema está no google-speech-websocket.ts');
-}, 5000);
-      clearTimeout(listeningTimeoutRef.current);
-      listeningTimeoutRef.current = null;
-    }
-    
-    await googleSpeechRef.current.stopRecording();
-    googleSpeechRef.current.disconnect();
-    googleSpeechRef.current = null;
-    
-    setIsListening(false);
-    console.log('✅ Google Speech parado');
-  }
-}
 
   // ========================================
   // FUNÇÃO DE DETECÇÃO DE STOP
@@ -699,30 +654,10 @@ setTimeout(() => {
   // ========================================
   // ✅ MUDANÇA 7: HANDLEGOOGLETRANSCRIPT() SIMPLIFICADO
   // ========================================
-// ✅ REF para timer de reset do isListening
-const listeningResetTimer = useRef<NodeJS.Timeout | null>(null);
-
-// Atualizar handleGoogleTranscript() no início:
-function handleGoogleTranscript(text: string, isFinal: boolean) {
-  if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
-  
-  // ✅ FALLBACK: Reset automático após 3 segundos sem áudio
-  if (listeningResetTimer.current) {
-    clearTimeout(listeningResetTimer.current);
-  }
-  
-  if (!isFinal) {
-    setIsListening(true); // Azul ao detectar interim
+  function handleGoogleTranscript(text: string, isFinal: boolean) {
+    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
     
-    // Reset depois de 3s de silêncio
-    listeningResetTimer.current = setTimeout(() => {
-      if (!isProcessing && !isPlayingAudio) {
-        setIsListening(false); // Volta ao verde
-      }
-    }, 3000);
-  }
-  
-  const lowerText = text.toLowerCase().trim();
+    const lowerText = text.toLowerCase().trim();
     
     console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
     
@@ -1261,30 +1196,32 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
     // ========================================
     console.log('🔍 Tentando detectar nova função no registry...');
     
-if (commandProcessor) {
-  const result = await commandProcessor.processCommand(transcript);
-  
-  if (result.success && result.functionKey) { // ✅ ADICIONAR && result.functionKey
-    console.log('✅ Nova função detectada:', result.functionKey);
-    
-    // Falar resultado
-    if (result.speechText) {
-      await playText(result.speechText);
+    if (commandProcessor) {
+      const result = await commandProcessor.processCommand(transcript);
+      
+      if (result.success) {
+        console.log('✅ Nova função detectada:', result.functionKey);
+        
+        // Falar resultado
+        if (result.speechText) {
+          await playText(result.speechText);
+        }
+        
+        // Abrir modal (se tiver)
+        if (result.modalData && result.modalType) {
+          console.log('📋 Modal da nova função:', result.modalType);
+          // TODO: Implementar renderização de modais dinâmicos
+          // Por enquanto, só loga. Você pode adicionar setActiveModal aqui depois
+        }
+        
+        // Registrar uso
+        if (result.functionKey) {
+          await commandProcessor.registerUsage(result.functionKey);
+        }
+        
+        return true;
+      }
     }
-    
-    // Abrir modal (se tiver)
-    if (result.modalData && result.modalType) {
-      console.log('📋 Modal da nova função:', result.modalType);
-      // TODO: Implementar renderização de modais dinâmicos
-      // Por enquanto, só loga. Você pode adicionar setActiveModal aqui depois
-    }
-    
-    // Registrar uso
-    await commandProcessor.registerUsage(result.functionKey); // ✅ AGORA É SEGURO
-    
-    return true;
-  }
-}
     
     console.log('❌ Nenhum comando detectado (legado ou novo)');
     return false;
@@ -2013,26 +1950,25 @@ if (commandProcessor) {
   // ========================================
   // STATUS DISPLAY
   // ========================================
-const getStatusMessage = () => {
-  if (!permissionGranted) return 'Aguardando permissão...';
-  if (showStartButton) return 'Clique em "Iniciar"';
-  if (isPlayingAudio) return 'Falando...';
-  if (isProcessing) return 'Processando...';
-  
-  // isListening = VAD detectou ruído, mas ainda aguarda wake word
-  // Aguardando = silêncio, também aguarda wake word
-  // Ambos mostram a mesma mensagem de instrução
-  const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-  return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
-};
+  const getStatusMessage = () => {
+    if (!permissionGranted) return 'Aguardando permissão...';
+    if (showStartButton) return 'Clique em "Iniciar"';
+    if (isPlayingAudio) return 'Falando...';
+    if (isProcessing) return 'Processando...';
+    if (isListening) {
+      const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + o que precisa` : 'Escutando...';
+    }
+    return 'Aguarde...';
+  };
 
-const getStatusColor = () => {
-  if (!permissionGranted) return 'bg-gray-400';
-  if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // Falando = azul
-  if (isProcessing) return 'bg-yellow-400 animate-pulse'; // Processando = amarelo
-  if (isListening) return 'bg-blue-400 animate-pulse'; // Detectou ruído (aguardando wake word) = azul
-  return 'bg-green-400 animate-pulse'; // Silêncio (aguardando wake word) = verde
-};
+  const getStatusColor = () => {
+    if (!permissionGranted) return 'bg-gray-400';
+    if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
+    if (isProcessing) return 'bg-green-600 animate-pulse';
+    if (isListening) return 'bg-green-400 animate-pulse';
+    return 'bg-gray-400';
+  };
 
   // ========================================
   // RENDER
@@ -2184,17 +2120,15 @@ const getStatusColor = () => {
         </div>
       </div>
 
-{!showStartButton && (
-  <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
-    <FunctionCarousel
-      companyId={companyId}
-      onFunctionClick={handleFunctionClick}
-      theme={theme}
-      hideDisabledFunctions={hideDisabledFunctions}
-      autoScroll={autoScroll}
-    />
-  </div>
-)}
+      {!showStartButton && (
+        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
+          <FunctionCarousel
+            companyId={companyId}
+            onFunctionClick={handleFunctionClick}
+            theme={theme}
+          />
+        </div>
+      )}
     </div>
   );
 }

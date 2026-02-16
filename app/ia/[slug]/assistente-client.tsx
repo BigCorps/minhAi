@@ -407,248 +407,268 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     <>
       {/* 🆕 MODAL DE SENHA PARA MODO KIOSK */}
       {showPasswordOverlay && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`rounded-2xl shadow-2xl max-w-md w-full p-8 ${
-            theme === 'dark' 
-              ? 'bg-slate-800 border border-white/10' 
-              : 'bg-white border border-gray-200'
-          }`}>
-            {modalType === 'setup' ? (
-              // DEFINIR SENHA
-              <>
-                <div className="text-center mb-6">
-                  <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
-                    theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
-                  }`}>
-                    <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <h2 className={`text-2xl font-bold mb-2 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    Modo Kiosk Protegido
-                  </h2>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-white/60' : 'text-gray-600'
-                  }`}>
-                    Defina uma senha para bloquear a saída do modo tela cheia
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${
-                      theme === 'dark' ? 'text-white/80' : 'text-gray-700'
-                    }`}>
-                      Senha (mínimo 4 caracteres)
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSetPassword()}
-                      className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:border-blue-500 transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-slate-700 border-white/10 text-white placeholder-white/40'
-                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                      }`}
-                      placeholder="••••••••"
-                      autoFocus
-                    />
-                  </div>
+  <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4">
+    {/* Container com largura adaptável */}
+    <div className={`rounded-2xl shadow-2xl overflow-hidden ${
+      isMobile 
+        ? 'max-w-md w-full' // Mobile: Portrait (vertical)
+        : 'max-w-5xl w-full max-h-[85vh]' // Desktop: Landscape (horizontal)
+    } ${
+      theme === 'dark' 
+        ? 'bg-slate-800 border border-white/10' 
+        : 'bg-white border border-gray-200'
+    }`}>
+      
+      {/* Layout flexível: Coluna no mobile, Linha no desktop */}
+      <div className={`${
+        isMobile 
+          ? 'flex flex-col p-6' // Mobile: vertical
+          : 'flex flex-row' // Desktop: horizontal
+      }`}>
+        
+        {/* ========================================== */}
+        {/* LADO ESQUERDO: Ícone + Título + Descrição */}
+        {/* ========================================== */}
+        <div className={`${
+          isMobile 
+            ? 'mb-6' // Mobile: margem inferior
+            : 'w-2/5 p-8 border-r' // Desktop: 40% largura + borda direita
+        } ${
+          theme === 'dark' ? 'border-white/10' : 'border-gray-200'
+        }`}>
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className={`w-20 h-20 rounded-full mb-4 flex items-center justify-center ${
+              modalType === 'setup'
+                ? theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
+                : theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
+            }`}>
+              <svg className={`w-10 h-10 ${
+                modalType === 'setup' ? 'text-blue-500' : 'text-red-500'
+              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            
+            <h2 className={`text-2xl md:text-3xl font-bold mb-3 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              {modalType === 'setup' ? 'Modo Kiosk Protegido' : 'Modo Protegido Ativo'}
+            </h2>
+            
+            <p className={`text-sm md:text-base ${
+              theme === 'dark' ? 'text-white/60' : 'text-gray-600'
+            }`}>
+              {modalType === 'setup' 
+                ? 'Defina uma senha para bloquear a saída do modo tela cheia' 
+                : 'Digite a senha para sair do modo tela cheia'}
+            </p>
 
-                 {/* 🆕 INFORMAÇÕES SOBRE MODO KIOSK DO SISTEMA */}
-                  <div className={`p-4 rounded-lg border-2 ${
-                    theme === 'dark' 
-                      ? 'bg-blue-500/10 border-blue-500/30' 
-                      : 'bg-blue-50 border-blue-200'
-                  }`}>
-                    <div className="flex items-start space-x-2">
-                      <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div className="flex-1">
-                        <p className={`text-sm font-semibold mb-1 ${
-                          theme === 'dark' ? 'text-blue-300' : 'text-blue-900'
-                        }`}>
-                          💡 Bloqueio Total Recomendado
-                        </p>
-                        <p className={`text-xs leading-relaxed mb-2 ${
-                          theme === 'dark' ? 'text-blue-400/90' : 'text-blue-800'
-                        }`}>
-                          Para segurança máxima em ambientes públicos, configure o Modo Kiosk no sistema operacional:
-                        </p>
-                        <div className={`text-xs space-y-1 ${
-                          theme === 'dark' ? 'text-blue-400/80' : 'text-blue-700'
-                        }`}>
-                          <p><strong>🪟 Windows:</strong> Configurações → Contas → Outras pessoas → Configurar Quiosque</p>
-                          <p><strong>🤖 Android:</strong> Configurações → Segurança → Fixação de apps (App Pinning)</p>
-                          <p><strong>🍎 iOS/iPad:</strong> Configurações → Acessibilidade → Acesso Guiado</p>
-                          <p><strong>🐧 Linux:</strong> Cage (Wayland), Porteus Kiosk, ou KioWare</p>
-                        </div>
-                        <button
-                          onClick={() => window.open('https://eai.app.br/kiosk')}
-                          className={`mt-3 w-full text-xs py-2 px-3 rounded-md font-medium transition-colors ${
-                            theme === 'dark'
-                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                              : 'bg-blue-600 hover:bg-blue-700 text-white'
-                          }`}
-                        >
-                          📚 Ver Guia Completo de Configuração
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className={`p-4 rounded-lg ${
-                    theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
-                  }`}>
-                    <div className="flex items-start space-x-2">
-                      <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div>
-                        <p className={`text-sm font-medium ${
-                          theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
-                        }`}>
-                          Atenção
-                        </p>
-                        <p className={`text-xs mt-1 ${
-                          theme === 'dark' ? 'text-yellow-500/80' : 'text-yellow-700'
-                        }`}>
-                          Este modo bloqueia a maioria das saídas, mas teclas como F11 podem funcionar. Para bloqueio total, use as configurações do sistema acima.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className={`p-4 rounded-lg ${
-                    theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
-                  }`}>
-                    <div className="flex items-start space-x-2">
-                      <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div>
-                        <p className={`text-sm font-medium ${
-                          theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
-                        }`}>
-                          Importante
-                        </p>
-                        <p className={`text-xs mt-1 ${
-                          theme === 'dark' ? 'text-yellow-500/80' : 'text-yellow-700'
-                        }`}>
-                          Guarde esta senha! Ela será necessária para sair do modo tela cheia.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => {
-                        setShowPasswordOverlay(false);
-                        setPasswordInput('');
-                      }}
-                      className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-white/5 hover:bg-white/10 text-white'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleSetPassword}
-                      disabled={passwordInput.length < 4}
-                      className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                        passwordInput.length < 4
-                          ? 'bg-gray-400 cursor-not-allowed text-white/50'
-                          : 'bg-blue-500 hover:bg-blue-600 text-white active:scale-95'
-                      }`}
-                    >
-                      Ativar Modo Kiosk
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              // VERIFICAR SENHA
-              <>
-                <div className="text-center mb-6">
-                  <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
-                    theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
-                  }`}>
-                    <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <h2 className={`text-2xl font-bold mb-2 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    Modo Protegido Ativo
-                  </h2>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-white/60' : 'text-gray-600'
-                  }`}>
-                    Digite a senha para sair do modo tela cheia
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <input
-                      type="password"
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleVerifyPassword()}
-                      className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
-                        passwordError
-                          ? 'border-red-500 focus:border-red-500'
-                          : 'focus:border-blue-500'
-                      } ${
-                        theme === 'dark'
-                          ? 'bg-slate-700 border-white/10 text-white placeholder-white/40'
-                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                      }`}
-                      placeholder="••••••••"
-                      autoFocus
-                    />
-                    {passwordError && (
-                      <p className="text-red-500 text-sm mt-2 flex items-center space-x-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        <span>Senha incorreta!</span>
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => setShowPasswordOverlay(false)}
-                      className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-white/5 hover:bg-white/10 text-white'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleVerifyPassword}
-                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium transition-all active:scale-95"
-                    >
-                      Confirmar
-                    </button>
-                  </div>
-                </div>
-              </>
+            {/* 🆕 IMAGEM/ILUSTRAÇÃO OPCIONAL (só desktop) */}
+            {!isMobile && (
+              <div className="mt-6 opacity-20">
+                <svg className="w-32 h-32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
             )}
           </div>
         </div>
-      )}
+
+        {/* ========================================== */}
+        {/* LADO DIREITO: Formulário */}
+        {/* ========================================== */}
+        <div className={`${
+          isMobile 
+            ? 'flex-1' // Mobile: ocupa espaço restante
+            : 'w-3/5 p-8' // Desktop: 60% largura
+        }`}>
+          {modalType === 'setup' ? (
+            // ==================== DEFINIR SENHA ====================
+            <>
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-white/80' : 'text-gray-700'
+                  }`}>
+                    Senha (mínimo 4 caracteres)
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSetPassword()}
+                    className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:border-blue-500 transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 border-white/10 text-white placeholder-white/40'
+                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`}
+                    placeholder="••••••••"
+                    autoFocus
+                  />
+                </div>
+                
+                {/* Alert Box com ícone de bloqueio recomendado */}
+                <div className={`p-4 rounded-lg ${
+                  theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
+                }`}>
+                  <div className="flex items-start space-x-3">
+                    <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <p className={`text-sm font-medium ${
+                        theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                      }`}>
+                        💡 Bloqueio Total Recomendado
+                      </p>
+                      <p className={`text-xs mt-1 ${
+                        theme === 'dark' ? 'text-yellow-500/80' : 'text-yellow-700'
+                      }`}>
+                        Para segurança máxima em ambientes públicos, configure o <strong>Modo Kiosk no sistema operacional</strong>. Este bloqueio via navegador tem limitações (F11, Task Manager podem funcionar).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botão Ver Guia - LINK CORRETO */}
+                <a
+                  href="/kiosk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`w-full flex items-center justify-center space-x-2 py-2.5 rounded-lg border transition-all text-sm font-medium ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span>🔗 Ver Guia Completo de Configuração</span>
+                </a>
+                
+                {/* Importante */}
+                <div className={`p-4 rounded-lg border-2 ${
+                  theme === 'dark' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'
+                }`}>
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className={`text-sm font-medium ${
+                        theme === 'dark' ? 'text-blue-400' : 'text-blue-800'
+                      }`}>
+                        Importante
+                      </p>
+                      <p className={`text-xs mt-1 ${
+                        theme === 'dark' ? 'text-blue-500/80' : 'text-blue-700'
+                      }`}>
+                        Guarde esta senha! Ela será necessária para sair do modo tela cheia.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Botões */}
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowPasswordOverlay(false);
+                      setPasswordInput('');
+                    }}
+                    className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-white/5 hover:bg-white/10 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSetPassword}
+                    disabled={passwordInput.length < 4}
+                    className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+                      passwordInput.length < 4
+                        ? 'bg-gray-400 cursor-not-allowed text-white/50'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white active:scale-95'
+                    }`}
+                  >
+                    Ativar Modo Kiosk
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            // ==================== VERIFICAR SENHA ====================
+            <>
+              <div className="space-y-4">
+                <div>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                    className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none transition-colors ${
+                      passwordError
+                        ? 'border-red-500 focus:border-red-500'
+                        : 'focus:border-blue-500'
+                    } ${
+                      theme === 'dark'
+                        ? 'bg-slate-700 border-white/10 text-white placeholder-white/40'
+                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`}
+                    placeholder="••••••••"
+                    autoFocus
+                  />
+                  {passwordError && (
+                    <p className="text-red-500 text-sm mt-2 flex items-center space-x-1 animate-shake">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span>Senha incorreta!</span>
+                    </p>
+                  )}
+                </div>
+                
+                {/* Dica de ajuda */}
+                <div className={`p-4 rounded-lg ${
+                  theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'
+                }`}>
+                  <p className={`text-xs ${
+                    theme === 'dark' ? 'text-white/60' : 'text-gray-600'
+                  }`}>
+                    💡 <strong>Esqueceu a senha?</strong> Será necessário recarregar a página e reconfigurar o modo kiosk.
+                  </p>
+                </div>
+                
+                {/* Botões */}
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    onClick={() => setShowPasswordOverlay(false)}
+                    className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-white/5 hover:bg-white/10 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleVerifyPassword}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium transition-all active:scale-95"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* 🆕 BADGE DE MODO KIOSK ATIVO - APARECE POR 5 SEGUNDOS */}
       {showKioskBadge && (

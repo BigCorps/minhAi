@@ -1,6 +1,6 @@
 /**
  * Cliente WebSocket para Google Speech-to-Text Streaming
- * VERSÃO V2 - MAIOR RESILIÊNCIA E SENSIBILIDADE
+ * VERSÃO V3 - THRESHOLD ADAPTATIVO (Mobile + Desktop)
  */
 
 export interface GoogleSpeechConfig {
@@ -21,20 +21,22 @@ export class GoogleSpeechWebSocket {
   private isRecording: boolean = false;
   private config: Required<GoogleSpeechConfig>;
   
-  // ✅ AJUSTES DE SENSIBILIDADE (V2)
+  // ✅ AJUSTES DE SENSIBILIDADE (V3)
   private isVoiceDetected: boolean = false;
   private preRollBuffer: ArrayBuffer[] = [];
-  private readonly MAX_PRE_ROLL_CHUNKS = 8; // Aumentado para ~2s de contexto inicial
+  private readonly MAX_PRE_ROLL_CHUNKS = 8; // ~2s de contexto inicial
   private silenceCounter: number = 0;
   
   // ✅ "PACIÊNCIA" DO ASSISTENTE:
-  // Aumentado para ~10s (40 chunks * 256ms) antes de pausar a transmissão
-  // Isso evita que o assistente fique "oscilando" entre ativo e aguarde durante pausas naturais da fala.
+  // ~10s (40 chunks * 256ms) antes de pausar a transmissão
   private readonly SILENCE_THRESHOLD = 40; 
   
-  // ✅ LIMITE DE VOLUME MAIS SENSÍVEL:
-  // Reduzido de 0.045 para 0.015 para captar falas mais baixas ou distantes.
-  private readonly VOLUME_THRESHOLD = 0.015; 
+  // ✅ THRESHOLD ADAPTATIVO (V3):
+  // Detecta automaticamente se é mobile ou desktop
+  private readonly VOLUME_THRESHOLD: number;
+  
+  // ✅ DEBUG: Contador para logs periódicos
+  private debugCounter: number = 0;
 
   constructor(config: GoogleSpeechConfig) {
     this.config = {
@@ -45,6 +47,19 @@ export class GoogleSpeechWebSocket {
       languageCode: config.languageCode || 'pt-BR',
       sampleRate: config.sampleRate || 16000,
     };
+    
+    // ✅ DETECÇÃO AUTOMÁTICA: Mobile vs Desktop
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Mobile: Threshold original (funciona bem)
+      this.VOLUME_THRESHOLD = 0.015; // 1.5%
+      console.log('📱 Detectado MOBILE - Threshold: 1.5%');
+    } else {
+      // Desktop: Threshold reduzido (mais sensível)
+      this.VOLUME_THRESHOLD = 0.003; // 0.3%
+      console.log('💻 Detectado DESKTOP - Threshold: 0.3%');
+    }
   }
   
   async connect(): Promise<void> {
@@ -131,6 +146,14 @@ export class GoogleSpeechWebSocket {
         }
         const rms = Math.sqrt(sum / inputData.length);
         
+        // ✅ DEBUG: Log periódico de volume (a cada 20 chunks ~5s)
+        this.debugCounter++;
+        if (this.debugCounter % 20 === 0) {
+          const rmsPercent = (rms * 100).toFixed(3);
+          const thresholdPercent = (this.VOLUME_THRESHOLD * 100).toFixed(3);
+          console.log(`🎚️ Volume: ${rmsPercent}% | Threshold: ${thresholdPercent}% | Detectando: ${this.isVoiceDetected ? 'SIM ✅' : 'NÃO ⭕'}`);
+        }
+        
         // Converter para Int16
         const int16Data = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
@@ -139,14 +162,15 @@ export class GoogleSpeechWebSocket {
         }
         const buffer = int16Data.buffer;
 
-        // LÓGICA DE VAD V2
+        // ✅ LÓGICA DE VAD V3 (Threshold Adaptativo)
         if (rms > this.VOLUME_THRESHOLD) {
           this.silenceCounter = 0;
           if (!this.isVoiceDetected) {
-            console.log('🎤 VOZ DETECTADA');
+            console.log('🎤 VOZ DETECTADA - Volume:', (rms * 100).toFixed(3) + '%');
             this.isVoiceDetected = true;
             this.config.onStatusChange('recording');
             
+            // Enviar buffer acumulado (pre-roll)
             if (this.ws?.readyState === WebSocket.OPEN) {
               this.preRollBuffer.forEach(chunk => this.ws!.send(chunk));
               this.preRollBuffer = [];
@@ -154,19 +178,21 @@ export class GoogleSpeechWebSocket {
           }
         } else {
           this.silenceCounter++;
-          // Só para de transmitir após um longo período de silêncio real
+          // Só para de transmitir após longo período de silêncio
           if (this.isVoiceDetected && this.silenceCounter > this.SILENCE_THRESHOLD) {
-            console.log('🤫 SILÊNCIO PROLONGADO - Pausando');
+            console.log('🤫 SILÊNCIO PROLONGADO - Pausando transmissão');
             this.isVoiceDetected = false;
             this.config.onStatusChange('idle');
           }
         }
 
+        // Transmitir ou acumular
         if (this.isVoiceDetected) {
           if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(buffer);
           }
         } else {
+          // Acumular pre-roll buffer
           this.preRollBuffer.push(buffer);
           if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
             this.preRollBuffer.shift();
@@ -179,6 +205,8 @@ export class GoogleSpeechWebSocket {
       this.isRecording = true;
       this.config.onStatusChange('idle');
       
+      console.log('🎙️ Gravação iniciada com threshold:', (this.VOLUME_THRESHOLD * 100).toFixed(3) + '%');
+      
     } catch (error) {
       this.config.onError(error as Error);
       throw error;
@@ -187,13 +215,19 @@ export class GoogleSpeechWebSocket {
   
   async stopRecording(): Promise<void> {
     if (!this.isRecording) return;
+    
+    console.log('🛑 Parando gravação');
+    
     this.isRecording = false;
     this.isVoiceDetected = false;
     this.preRollBuffer = [];
+    this.debugCounter = 0;
+    
     if (this.scriptProcessor) this.scriptProcessor.disconnect();
     if (this.source) this.source.disconnect();
     if (this.audioContext) await this.audioContext.close();
     if (this.mediaStream) this.mediaStream.getTracks().forEach(t => t.stop());
+    
     this.config.onStatusChange('idle');
   }
 

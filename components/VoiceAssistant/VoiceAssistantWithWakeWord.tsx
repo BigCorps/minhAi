@@ -409,6 +409,7 @@ async function startGoogleSpeech() {
     
     googleSpeechRef.current = new GoogleSpeechWebSocket({
       onTranscript: (text, isFinal) => {
+        console.log('📡 TRANSCRIPT RECEBIDO:', text, 'isFinal:', isFinal);
         // ✅ SOLUÇÃO: Ignorar VAD, usar transcritos para controlar estado
         if (text && text.trim().length > 0) {
           // Limpar timeout anterior
@@ -461,7 +462,14 @@ async function stopGoogleSpeech() {
     console.log('🛑 Parando Google Speech...');
     
     // Limpar timeout de listening
-    if (listeningTimeoutRef.current) {
+    if (listeningTimeoutRef.current) {console.log('🎤 Google Speech WebSocket iniciado (Controle por Transcrição)');
+
+// ✅ DEBUG TEMPORÁRIO - REMOVER DEPOIS
+console.log('🔊 TESTE: Fale algo agora!');
+setTimeout(() => {
+  console.log('⏰ 5 segundos se passaram. Você falou algo?');
+  console.log('📋 Se não apareceu nenhum log de transcrição, o problema está no google-speech-websocket.ts');
+}, 5000);
       clearTimeout(listeningTimeoutRef.current);
       listeningTimeoutRef.current = null;
     }

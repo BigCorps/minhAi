@@ -57,7 +57,7 @@ export class GoogleSpeechWebSocket {
       console.log('📱 Detectado MOBILE - Threshold: 1.5%');
     } else {
       // Desktop: Threshold reduzido (mais sensível)
-      this.VOLUME_THRESHOLD = 0.003; // 0.3%
+      this.VOLUME_THRESHOLD = 0.009; // 0.3%
       console.log('💻 Detectado DESKTOP - Threshold: 0.3%');
     }
   }

@@ -164,10 +164,12 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 </div>
 
 {/* Traço separador */}
-<div className={`h-px my-6 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
+<div className="flex justify-center md:justify-start my-5">
+  <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
+</div>
 
 {/* Slogan */}
-<div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 mt-8">
+<div className="flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2">
   {[
     { text: 'eAi - Employee Automation Intelligence' },
   ].map((item) => (

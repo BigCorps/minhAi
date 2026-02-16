@@ -103,7 +103,6 @@ export default function KioskGuidePage() {
               <p className={`text-sm mb-4 ${
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>
-                <strong>Última atualização:</strong> Fevereiro 2026
               </p>
 
               {/* IMPORTANTE */}
@@ -111,7 +110,7 @@ export default function KioskGuidePage() {
                 theme === 'dark' ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'
               }`}>
                 <h2 className="!mt-0 !mb-2">⚠️ IMPORTANTE</h2>
-                <p className="!mb-2">O modo Kiosk via navegador (JavaScript) tem limitações:</p>
+                <p className="!mb-2">O modo Kiosk via navegador tem limitações:</p>
                 <ul className="!mb-2">
                   <li>✅ Bloqueia a maioria das saídas</li>
                   <li>❌ F11 pode funcionar em alguns casos</li>
@@ -145,7 +144,7 @@ export default function KioskGuidePage() {
                   <ul>
                     <li>Selecione <strong>Microsoft Edge</strong> como aplicativo</li>
                     <li>Ou escolha <strong>Chrome</strong> (se instalado)</li>
-                    <li>Defina URL: <code>https://seu-assistente.eai.app.br</code></li>
+                    <li>Defina URL: <code>https://eai.app.br/ia/[sua-url]</code></li>
                   </ul>
                 </li>
                 <li>
@@ -188,7 +187,7 @@ export default function KioskGuidePage() {
                   <pre className={`p-3 rounded text-xs overflow-x-auto ${
                     theme === 'dark' ? 'bg-slate-900/50' : 'bg-gray-100'
                   }`}>
-{`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk "https://seu-assistente.eai.app.br" --start-fullscreen --disable-pinch --overscroll-history-navigation=0`}
+{`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk "https://eai.app.br/ia/[sua-url]" --start-fullscreen --disable-pinch --overscroll-history-navigation=0`}
                   </pre>
                 </li>
                 <li>
@@ -524,7 +523,7 @@ sudo nano /usr/local/bin/kiosk.sh`}
 cage -d chromium-browser --kiosk --no-first-run \\
   --disable-pinch \\
   --overscroll-history-navigation=0 \\
-  "https://seu-assistente.eai.app.br"`}
+  "https://eai.app.br/ia/[sua-slug]"`}
               </pre>
 
               <pre className={`p-3 rounded text-xs overflow-x-auto ${
@@ -798,7 +797,6 @@ sudo systemctl start kiosk.service`}
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>
                 <p><strong>Criado por:</strong> BigCorps / eAi App</p>
-                <p className="mt-2"><strong>Atualizado:</strong> Fevereiro 2026</p>
                 <p className="mt-2"><strong>Suporte:</strong> <a href="https://eai.app.br/suporte" className="text-blue-500 underline">https://eai.app.br/suporte</a></p>
               </div>
             </div>

@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -13,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Search, Trash2, User, MessageSquare } from 'lucide-react'
-import Link from 'next/link'
 
 interface Message {
   id: string
@@ -43,7 +41,7 @@ export default function HistoricoPage() {
   const [selectedAssistant, setSelectedAssistant] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
 
   useEffect(() => {
     loadAssistants()
@@ -176,11 +174,12 @@ export default function HistoricoPage() {
             <label className="text-sm font-medium mb-2 block">Buscar</label>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
+              <input
+                type="text"
                 placeholder="Buscar por pergunta, resposta ou assistente..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>

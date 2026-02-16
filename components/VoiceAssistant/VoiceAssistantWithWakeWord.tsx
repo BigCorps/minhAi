@@ -668,10 +668,30 @@ async function startGoogleSpeech() {
   // ========================================
   // ✅ MUDANÇA 7: HANDLEGOOGLETRANSCRIPT() SIMPLIFICADO
   // ========================================
-  function handleGoogleTranscript(text: string, isFinal: boolean) {
-    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
+// ✅ REF para timer de reset do isListening
+const listeningResetTimer = useRef<NodeJS.Timeout | null>(null);
+
+// Atualizar handleGoogleTranscript() no início:
+function handleGoogleTranscript(text: string, isFinal: boolean) {
+  if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
+  
+  // ✅ FALLBACK: Reset automático após 3 segundos sem áudio
+  if (listeningResetTimer.current) {
+    clearTimeout(listeningResetTimer.current);
+  }
+  
+  if (!isFinal) {
+    setIsListening(true); // Azul ao detectar interim
     
-    const lowerText = text.toLowerCase().trim();
+    // Reset depois de 3s de silêncio
+    listeningResetTimer.current = setTimeout(() => {
+      if (!isProcessing && !isPlayingAudio) {
+        setIsListening(false); // Volta ao verde
+      }
+    }, 3000);
+  }
+  
+  const lowerText = text.toLowerCase().trim();
     
     console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
     

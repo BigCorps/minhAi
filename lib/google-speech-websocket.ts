@@ -34,7 +34,7 @@ export class GoogleSpeechWebSocket {
   
   // ✅ LIMITE DE VOLUME MAIS SENSÍVEL:
   // Reduzido de 0.045 para 0.015 para captar falas mais baixas ou distantes.
-  private readonly VOLUME_THRESHOLD = 0.015; 
+  private readonly VOLUME_THRESHOLD = 0.03; 
 
   constructor(config: GoogleSpeechConfig) {
     this.config = {

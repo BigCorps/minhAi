@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Zap, CreditCard } from 'lucide-react';
 import Link from 'next/link';
-import { useTheme } from 'next-themes'; // ✅ next-themes
+import { useTheme } from 'next-themes';
 
 interface CreditsCardProps {
   userId: string;
@@ -19,7 +19,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const { resolvedTheme } = useTheme(); // ✅ next-themes
+  const { resolvedTheme } = useTheme();
 
   const supabase = createClient();
 
@@ -61,6 +61,36 @@ export function CreditsCard({ userId }: CreditsCardProps) {
     if (userId) {
       loadCredits();
     }
+
+    // ✅ ADICIONAR: Realtime subscription para atualizar automaticamente
+    const channel = supabase
+      .channel('user_credits_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // UPDATE, INSERT, DELETE
+          schema: 'public',
+          table: 'user_credits',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('💰 Créditos atualizados em tempo real:', payload);
+          
+          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            const newData = payload.new as UserCredits;
+            setCredits({
+              available_credits: newData.available_credits,
+              total_used: newData.total_used
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup ao desmontar
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId, supabase]);
 
   // Evita erro de hidratação e garante que o tema foi detectado

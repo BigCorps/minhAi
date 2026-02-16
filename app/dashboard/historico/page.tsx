@@ -23,13 +23,28 @@ export default function HistoricoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const supabase = createClient();
+
+  // Calcular posição do dropdown
+  useEffect(() => {
+    if (dropdownOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  }, [dropdownOpen]);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
     }
@@ -268,12 +283,13 @@ export default function HistoricoPage() {
               </div>
             </div>
 
-            <div className="w-full md:w-64" ref={dropdownRef}>
+            <div className="w-full md:w-64">
               <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
                 Filtrar por Assistente
               </label>
               <div className="relative">
                 <button
+                  ref={buttonRef}
                   type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
@@ -288,40 +304,6 @@ export default function HistoricoPage() {
                   </span>
                   <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-
-                {dropdownOpen && (
-                  <div className="absolute z-[9999] mt-1 w-full rounded-lg border shadow-lg overflow-hidden
-                    bg-white border-gray-200
-                    dark:bg-gray-800 dark:border-white/10">
-                    <div className="max-h-60 overflow-y-auto">
-                      <button
-                        type="button"
-                        onClick={() => { setSelectedCompany('all'); setDropdownOpen(false); }}
-                        className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                          ${selectedCompany === 'all'
-                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
-                          }`}
-                      >
-                        Todos os assistentes
-                      </button>
-                      {companies.map((company) => (
-                        <button
-                          key={company.id}
-                          type="button"
-                          onClick={() => { setSelectedCompany(company.id); setDropdownOpen(false); }}
-                          className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                            ${selectedCompany === company.id
-                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                              : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
-                            }`}
-                        >
-                          {company.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -413,6 +395,49 @@ export default function HistoricoPage() {
           </div>
         )}
       </div>
+
+      {/* ✅ DROPDOWN COM POSITION FIXED (sempre por cima) */}
+      {dropdownOpen && (
+        <div
+          ref={dropdownRef}
+          className="fixed z-[99999] rounded-lg border shadow-lg overflow-hidden
+            bg-white border-gray-200
+            dark:bg-gray-800 dark:border-white/10"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`
+          }}
+        >
+          <div className="max-h-60 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => { setSelectedCompany('all'); setDropdownOpen(false); }}
+              className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                ${selectedCompany === 'all'
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
+                }`}
+            >
+              Todos os assistentes
+            </button>
+            {companies.map((company) => (
+              <button
+                key={company.id}
+                type="button"
+                onClick={() => { setSelectedCompany(company.id); setDropdownOpen(false); }}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                  ${selectedCompany === company.id
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
+                  }`}
+              >
+                {company.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

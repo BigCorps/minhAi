@@ -1965,13 +1965,13 @@ if (commandProcessor) {
       const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
       return primaryWakeWord ? `Diga: "${primaryWakeWord}" + o que precisa` : 'Escutando...';
     }
-    return 'Aguarde...';
+    return 'Diga: '${primaryWakeWord}' + o que precisa';
   };
 
   const getStatusColor = () => {
-    if (!permissionGranted) return 'bg-gray-400';
+    if (!permissionGranted) return 'bg-green-600 animate-pulse';
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
-    if (isProcessing) return 'bg-green-600 animate-pulse';
+    if (isProcessing) return 'bg-yellow-600 animate-pulse';
     if (isListening) return 'bg-green-400 animate-pulse';
     return 'bg-gray-400';
   };

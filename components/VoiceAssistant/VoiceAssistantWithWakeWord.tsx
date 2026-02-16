@@ -1956,25 +1956,26 @@ if (commandProcessor) {
   // ========================================
   // STATUS DISPLAY
   // ========================================
-  const getStatusMessage = () => {
-    if (!permissionGranted) return 'Aguardando permissão...';
-    if (showStartButton) return 'Clique em "Iniciar"';
-    if (isPlayingAudio) return 'Falando...';
-    if (isProcessing) return 'Processando...';
-    if (isListening) {
-      const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-      return primaryWakeWord ? `Diga: "${primaryWakeWord}" + o que precisa` : 'Escutando...';
-    }
-    return 'Aguarde...';
-  };
+const getStatusMessage = () => {
+  if (!permissionGranted) return 'Aguardando permissão...';
+  if (showStartButton) return 'Clique em "Iniciar"';
+  if (isPlayingAudio) return 'Falando...';
+  if (isProcessing) return 'Processando...';
+  
+  // isListening = VAD detectou ruído, mas ainda aguarda wake word
+  // Aguardando = silêncio, também aguarda wake word
+  // Ambos mostram a mesma mensagem de instrução
+  const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
+  return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+};
 
-  const getStatusColor = () => {
-    if (!permissionGranted) return 'bg-gray-400';
-    if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
-    if (isProcessing) return 'bg-green-600 animate-pulse';
-    if (isListening) return 'bg-green-400 animate-pulse';
-    return 'bg-gray-400';
-  };
+const getStatusColor = () => {
+  if (!permissionGranted) return 'bg-gray-400';
+  if (isPlayingAudio) return 'bg-blue-500 animate-pulse'; // Falando = azul
+  if (isProcessing) return 'bg-yellow-400 animate-pulse'; // Processando = amarelo
+  if (isListening) return 'bg-blue-400 animate-pulse'; // Detectou ruído (aguardando wake word) = azul
+  return 'bg-green-400 animate-pulse'; // Silêncio (aguardando wake word) = verde
+};
 
   // ========================================
   // RENDER

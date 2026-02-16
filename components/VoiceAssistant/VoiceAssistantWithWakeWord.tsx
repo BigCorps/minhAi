@@ -94,7 +94,7 @@ export function VoiceAssistantWithWakeWord({
   // ✅ Google Speech WebSocket refs
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
   const shouldProcessAudio = useRef<boolean>(true);
-
+  const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null); // ← ADICIONAR ESTA LINHA
   // ========================================
   // CONFIGURATION
   // ========================================
@@ -409,10 +409,27 @@ async function startGoogleSpeech() {
     
     googleSpeechRef.current = new GoogleSpeechWebSocket({
       onTranscript: (text, isFinal) => {
-        // ✅ FALLBACK: Se receber transcript, significa que há áudio chegando
-        // Isso funciona mesmo se onStatusChange não for chamado
-        if (text && text.length > 0 && !isFinal) {
-          setIsListening(true); // Ativa estado azul ao detectar qualquer áudio
+        // ✅ SOLUÇÃO: Ignorar VAD, usar transcritos para controlar estado
+        if (text && text.trim().length > 0) {
+          // Limpar timeout anterior
+          if (listeningTimeoutRef.current) {
+            clearTimeout(listeningTimeoutRef.current);
+          }
+          
+          if (!isFinal) {
+            // Recebendo transcrição = há voz chegando
+            setIsListening(true);
+            console.log('🎤 Voz detectada via transcript:', text);
+          } else {
+            // Transcrição final = voz parou
+            // Aguardar 1 segundo para voltar ao verde (caso continue falando)
+            listeningTimeoutRef.current = setTimeout(() => {
+              if (!isProcessing && !isPlayingAudio) {
+                setIsListening(false);
+                console.log('✅ Voz parou, voltando ao verde');
+              }
+            }, 1000);
+          }
         }
         
         handleGoogleTranscript(text, isFinal);
@@ -421,17 +438,17 @@ async function startGoogleSpeech() {
         console.error('❌ Erro Google Speech:', err);
         setIsListening(false);
       },
-      // ✅ VAD LOCAL (funciona no mobile, pode não funcionar no desktop)
+      // ✅ VAD agora é apenas para debug (não controla mais o estado)
       onStatusChange: (status) => {
-        console.log('🎙️ Status VAD:', status); // Debug
-        setIsListening(status === 'recording');
+        console.log('🎙️ Status VAD (apenas debug):', status);
+        // NÃO usar para controlar estado no desktop
       }
     });
     
     await googleSpeechRef.current.connect();
     await googleSpeechRef.current.startRecording();
     
-    console.log('🎤 Google Speech WebSocket iniciado (VAD Local Ativo)');
+    console.log('🎤 Google Speech WebSocket iniciado (Controle por Transcrição)');
     
   } catch (err) {
     console.error('❌ Erro ao iniciar Google Speech:', err);
@@ -439,18 +456,24 @@ async function startGoogleSpeech() {
   }
 }
 
-  async function stopGoogleSpeech() {
-    if (googleSpeechRef.current) {
-      console.log('🛑 Parando Google Speech...');
-      
-      await googleSpeechRef.current.stopRecording();
-      googleSpeechRef.current.disconnect();
-      googleSpeechRef.current = null;
-      
-      setIsListening(false);
-      console.log('✅ Google Speech parado');
+async function stopGoogleSpeech() {
+  if (googleSpeechRef.current) {
+    console.log('🛑 Parando Google Speech...');
+    
+    // Limpar timeout de listening
+    if (listeningTimeoutRef.current) {
+      clearTimeout(listeningTimeoutRef.current);
+      listeningTimeoutRef.current = null;
     }
+    
+    await googleSpeechRef.current.stopRecording();
+    googleSpeechRef.current.disconnect();
+    googleSpeechRef.current = null;
+    
+    setIsListening(false);
+    console.log('✅ Google Speech parado');
   }
+}
 
   // ========================================
   // FUNÇÃO DE DETECÇÃO DE STOP

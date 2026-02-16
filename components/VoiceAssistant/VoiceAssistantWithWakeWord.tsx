@@ -1928,7 +1928,7 @@ if (commandProcessor) {
       const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
       return primaryWakeWord ? `Diga: "${primaryWakeWord}" + o que precisa` : 'Escutando...';
     }
-    return primaryWakeWord ? 'Diga: "${primaryWakeWord}" + o que precisa';
+    return primaryWakeWord ? 'Diga: "${primaryWakeWord}" + o que precisa` : 'Escutando...';
   };
 
   const getStatusColor = () => {

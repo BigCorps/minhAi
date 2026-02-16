@@ -659,100 +659,97 @@ export function VoiceAssistantWithWakeWord({
     }, 500);
   }
 
-// ========================================
-// ✅ HANDLEGOOGLETRANSCRIPT() - SINTAXE CORRIGIDA
-// ========================================
-// ========================================
-// ✅ HANDLEGOOGLETRANSCRIPT() - SINTAXE CORRIGIDA
-// ========================================
-function handleGoogleTranscript(text: string, isFinal: boolean) {
-  if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
-  
-  const lowerText = text.toLowerCase().trim();
-  
-  console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`); // ✅ CORRIGIDO
-  
-  // ============================================
-  // 1. COMANDO DE PARAR (sempre prioridade máxima)
-  // ============================================
-  if (detectStopCommand(lowerText)) {
-    stopEverything();
-    return;
-  }
-  
-  // ============================================
-  // 2. DETECTAR WAKE WORD
-  // ============================================
-  const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
-  
-  if (!wakeWordResult?.detected) {
-    console.log('⏭️ Sem wake word - ignorando');
-    return;
-  }
-  
-  console.log(`✅ Wake word: "${wakeWordResult.keyword}"`); // ✅ CORRIGIDO
-  console.log(`   Confiança: ${Math.round(wakeWordResult.confidence * 100)}%`); // ✅ CORRIGIDO
-  console.log(`   Matched: "${wakeWordResult.matchedText}"`); // ✅ CORRIGIDO
-  
-  // ============================================
-  // 3. SE ESTAVA FALANDO, PARA PRIMEIRO
-  // ============================================
-  if (isPlayingAudio || isSpeaking) {
-    console.log('⏸️ Interrupção detectada - parando fala atual');
-    stopEverything();
-    // NÃO retorna - continua processando o novo comando abaixo
-  }
-  
-  // ============================================
-  // 4. SE JÁ ESTÁ PROCESSANDO, IGNORA
-  // ============================================
-  if (processingQuestion.current || isProcessing) {
-    console.log('⏸️ Já processando, ignorando');
-    return;
-  }
-  
-  // ============================================
-  // 5. SE NÃO FOR FINAL, AGUARDA
-  // ============================================
-  if (!isFinal) {
-    console.log('⏳ Aguardando transcrição final...');
-    return;
-  }
-  
-  // ============================================
-  // 6. EXTRAIR COMANDO
-  // ============================================
-  const command = extractCommand(lowerText, wakeWordResult);
-  
-  console.log('💬 Comando extraído:', command || '(vazio - apenas wake word)');
-  
-  // ============================================
-  // 7. PROCESSAR
-  // ============================================
-  if (!audioUnlocked.current) {
-    unlockAudio();
-  }
-  
-  if (!processingQuestion.current) {
-    processingQuestion.current = true;
+  // ========================================
+  // ✅ MUDANÇA 7: HANDLEGOOGLETRANSCRIPT() SIMPLIFICADO
+  // ========================================
+  function handleGoogleTranscript(text: string, isFinal: boolean) {
+    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
     
-    // Sem comando = apenas cumprimentar
-    if (!command) {
-      const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
-      playText(greeting)
-        .then(() => {
-          processingQuestion.current = false;
-        })
-        .catch(() => {
-          processingQuestion.current = false;
-        });
+    const lowerText = text.toLowerCase().trim();
+    
+    console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
+    
+    // ============================================
+    // 1. COMANDO DE PARAR (sempre prioridade máxima)
+    // ============================================
+    if (detectStopCommand(lowerText)) {
+      stopEverything();
       return;
     }
     
-    // Com comando = processar normalmente
-    processWakeWordQuestion(command);
+    // ============================================
+    // 2. DETECTAR WAKE WORD
+    // ============================================
+    const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
+    
+    if (!wakeWordResult?.detected) {
+      console.log('⏭️ Sem wake word - ignorando');
+      return;
+    }
+    
+    console.log(`✅ Wake word: "${wakeWordResult.keyword}"`);
+    console.log(`   Confiança: ${Math.round(wakeWordResult.confidence * 100)}%`);
+    console.log(`   Matched: "${wakeWordResult.matchedText}"`);
+    
+    // ============================================
+    // 3. SE ESTAVA FALANDO, PARA PRIMEIRO
+    // ============================================
+    if (isPlayingAudio || isSpeaking) {
+      console.log('⏸️ Interrupção detectada - parando fala atual');
+      stopEverything();
+      // NÃO retorna - continua processando o novo comando abaixo
+    }
+    
+    // ============================================
+    // 4. SE JÁ ESTÁ PROCESSANDO, IGNORA
+    // ============================================
+    if (processingQuestion.current || isProcessing) {
+      console.log('⏸️ Já processando, ignorando');
+      return;
+    }
+    
+    // ============================================
+    // 5. SE NÃO FOR FINAL, AGUARDA
+    // ============================================
+    if (!isFinal) {
+      console.log('⏳ Aguardando transcrição final...');
+      return;
+    }
+    
+    // ============================================
+    // 6. EXTRAIR COMANDO
+    // ============================================
+    const command = extractCommand(lowerText, wakeWordResult);
+    
+    console.log('💬 Comando extraído:', command || '(vazio - apenas wake word)');
+    
+    // ============================================
+    // 7. PROCESSAR
+    // ============================================
+    if (!audioUnlocked.current) {
+      unlockAudio();
+    }
+    
+    if (!processingQuestion.current) {
+      processingQuestion.current = true;
+      
+      // Sem comando = apenas cumprimentar
+      if (!command) {
+        const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
+        playText(greeting)
+          .then(() => {
+            processingQuestion.current = false;
+          })
+          .catch(() => {
+            processingQuestion.current = false;
+          });
+        return;
+      }
+      
+      // Com comando = processar normalmente
+      processWakeWordQuestion(command);
+    }
   }
-}
 
   // ========================================
   // START ASSISTANT
@@ -825,23 +822,21 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   }
 
   // ✅ PASSO 3: Corrigir registerFunctionUsage() para usar functionSettings
-async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
-  try {
-    console.log(`💰 REGISTRANDO USO: ${functionKey} = ${creditsConsumed} créditos`); // ✅ ADD
-    
-    const supabase = createClient();
-    
-    await supabase.rpc('register_function_usage', {
-      p_company_id: companyId,
-      p_function_key: functionKey,
-      p_credits_consumed: creditsConsumed
-    });
-    
-    console.log(`✅ Uso registrado: ${functionKey} (${creditsConsumed} créditos)`);
-  } catch (error) {
-    console.error('❌ Erro ao registrar uso:', error); // ✅ Ver erro
+  async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
+    try {
+      const supabase = createClient();
+      
+      await supabase.rpc('register_function_usage', {
+        p_company_id: companyId,
+        p_function_key: functionKey,
+        p_credits_consumed: creditsConsumed
+      });
+      
+      console.log(`✅ Uso registrado: ${functionKey} (${creditsConsumed} créditos)`);
+    } catch (error) {
+      console.error('Erro ao registrar uso:', error);
+    }
   }
-}
 
   // ✅ PASSO 3: Atualizar handleFunctionClick() para usar créditos dinâmicos
   async function handleFunctionClick(functionKey: string) {

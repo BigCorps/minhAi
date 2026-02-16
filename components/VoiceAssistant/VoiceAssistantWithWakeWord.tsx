@@ -398,40 +398,46 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   // GOOGLE SPEECH WEBSOCKET
   // ========================================
-  async function startGoogleSpeech() {
-    if (!isActiveRef.current || !shouldProcessAudio.current) return;
-    
-    try {
-      if (googleSpeechRef.current) {
-        googleSpeechRef.current.stopRecording();
-        googleSpeechRef.current.disconnect();
-      }
-      
-      googleSpeechRef.current = new GoogleSpeechWebSocket({
-        onTranscript: (text, isFinal) => {
-          handleGoogleTranscript(text, isFinal);
-        },
-        onError: (err) => {
-          console.error('❌ Erro Google Speech:', err);
-          setIsListening(false);
-        },
-        // ✅ CALLBACK VAD LOCAL: só ativa isListening quando detectar voz real
-        onStatusChange: (status) => {
-          // O status 'recording' agora significa que voz real foi detectada localmente
-          setIsListening(status === 'recording');
-        }
-      });
-      
-      await googleSpeechRef.current.connect();
-      await googleSpeechRef.current.startRecording();
-      
-      console.log('🎤 Google Speech WebSocket iniciado (VAD Local Ativo)');
-      
-    } catch (err) {
-      console.error('❌ Erro ao iniciar Google Speech:', err);
-      setIsListening(false);
+async function startGoogleSpeech() {
+  if (!isActiveRef.current || !shouldProcessAudio.current) return;
+  
+  try {
+    if (googleSpeechRef.current) {
+      googleSpeechRef.current.stopRecording();
+      googleSpeechRef.current.disconnect();
     }
+    
+    googleSpeechRef.current = new GoogleSpeechWebSocket({
+      onTranscript: (text, isFinal) => {
+        // ✅ FALLBACK: Se receber transcript, significa que há áudio chegando
+        // Isso funciona mesmo se onStatusChange não for chamado
+        if (text && text.length > 0 && !isFinal) {
+          setIsListening(true); // Ativa estado azul ao detectar qualquer áudio
+        }
+        
+        handleGoogleTranscript(text, isFinal);
+      },
+      onError: (err) => {
+        console.error('❌ Erro Google Speech:', err);
+        setIsListening(false);
+      },
+      // ✅ VAD LOCAL (funciona no mobile, pode não funcionar no desktop)
+      onStatusChange: (status) => {
+        console.log('🎙️ Status VAD:', status); // Debug
+        setIsListening(status === 'recording');
+      }
+    });
+    
+    await googleSpeechRef.current.connect();
+    await googleSpeechRef.current.startRecording();
+    
+    console.log('🎤 Google Speech WebSocket iniciado (VAD Local Ativo)');
+    
+  } catch (err) {
+    console.error('❌ Erro ao iniciar Google Speech:', err);
+    setIsListening(false);
   }
+}
 
   async function stopGoogleSpeech() {
     if (googleSpeechRef.current) {

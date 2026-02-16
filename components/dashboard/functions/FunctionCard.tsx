@@ -48,6 +48,8 @@ const CATEGORY_NAMES: { [key: string]: string } = {
 const CONFIGURABLE_FUNCTIONS = [
   'qrcode_whatsapp',
   'qrcode_instagram',
+  'qrcode_website',    // ← ADICIONAR
+  'qrcode_facebook',   // ← ADICIONAR
   'pix_generate',
   'chatgpt',
   'faq'

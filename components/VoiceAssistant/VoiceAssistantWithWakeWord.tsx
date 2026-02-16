@@ -786,21 +786,23 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   }
 
   // ✅ PASSO 3: Corrigir registerFunctionUsage() para usar functionSettings
-  async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
-    try {
-      const supabase = createClient();
-      
-      await supabase.rpc('register_function_usage', {
-        p_company_id: companyId,
-        p_function_key: functionKey,
-        p_credits_consumed: creditsConsumed
-      });
-      
-      console.log(`✅ Uso registrado: ${functionKey} (${creditsConsumed} créditos)`);
-    } catch (error) {
-      console.error('Erro ao registrar uso:', error);
-    }
+async function registerFunctionUsage(functionKey: string, creditsConsumed: number) {
+  try {
+    console.log(`💰 REGISTRANDO USO: ${functionKey} = ${creditsConsumed} créditos`); // ✅ ADD
+    
+    const supabase = createClient();
+    
+    await supabase.rpc('register_function_usage', {
+      p_company_id: companyId,
+      p_function_key: functionKey,
+      p_credits_consumed: creditsConsumed
+    });
+    
+    console.log(`✅ Uso registrado: ${functionKey} (${creditsConsumed} créditos)`);
+  } catch (error) {
+    console.error('❌ Erro ao registrar uso:', error); // ✅ Ver erro
   }
+}
 
   // ✅ PASSO 3: Atualizar handleFunctionClick() para usar créditos dinâmicos
   async function handleFunctionClick(functionKey: string) {

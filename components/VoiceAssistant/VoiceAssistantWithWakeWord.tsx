@@ -23,6 +23,8 @@ interface VoiceAssistantWithWakeWordProps {
   theme?: 'dark' | 'light';
   isMaximized?: boolean;
   onAssistantStart?: () => void;
+  hideDisabledFunctions?: boolean; // ✅ OPCIONAL
+  autoScroll?: boolean;            // ✅ OPCIONAL
 }
 
 export function VoiceAssistantWithWakeWord({
@@ -33,6 +35,8 @@ export function VoiceAssistantWithWakeWord({
   theme = 'dark',
   isMaximized = false,
   onAssistantStart,
+  hideDisabledFunctions = false, // ✅ Padrão = desabilitadas VISÍVEIS
+  autoScroll = true,             // ✅ Padrão = rola automaticamente
 }: VoiceAssistantWithWakeWordProps) {
   // ========================================
   // STATES
@@ -395,33 +399,37 @@ export function VoiceAssistantWithWakeWord({
   // GOOGLE SPEECH WEBSOCKET
   // ========================================
   async function startGoogleSpeech() {
+    if (!isActiveRef.current || !shouldProcessAudio.current) return;
+    
     try {
-      console.log('🎤 Iniciando Google Speech Streaming...');
+      if (googleSpeechRef.current) {
+        googleSpeechRef.current.stopRecording();
+        googleSpeechRef.current.disconnect();
+      }
       
-      const client = new GoogleSpeechWebSocket({
+      googleSpeechRef.current = new GoogleSpeechWebSocket({
         onTranscript: (text, isFinal) => {
           handleGoogleTranscript(text, isFinal);
         },
-        onError: (error) => {
-          console.error('❌ Erro Google Speech:', error);
-          setError('Erro no reconhecimento de voz');
+        onError: (err) => {
+          console.error('❌ Erro Google Speech:', err);
+          setIsListening(false);
         },
-        onReady: () => {
-          console.log('✅ Google Speech pronto');
-          setIsListening(true);
-        },
-        languageCode: 'pt-BR',
-        sampleRate: 16000,
+        // ✅ CALLBACK VAD LOCAL: só ativa isListening quando detectar voz real
+        onStatusChange: (status) => {
+          // O status 'recording' agora significa que voz real foi detectada localmente
+          setIsListening(status === 'recording');
+        }
       });
       
-      googleSpeechRef.current = client;
+      await googleSpeechRef.current.connect();
+      await googleSpeechRef.current.startRecording();
       
-      await client.connect();
-      await client.startRecording();
+      console.log('🎤 Google Speech WebSocket iniciado (VAD Local Ativo)');
       
-    } catch (error: any) {
-      console.error('❌ Erro ao iniciar Google Speech:', error);
-      setError('Erro ao acessar microfone');
+    } catch (err) {
+      console.error('❌ Erro ao iniciar Google Speech:', err);
+      setIsListening(false);
     }
   }
 
@@ -1196,32 +1204,30 @@ export function VoiceAssistantWithWakeWord({
     // ========================================
     console.log('🔍 Tentando detectar nova função no registry...');
     
-    if (commandProcessor) {
-      const result = await commandProcessor.processCommand(transcript);
-      
-      if (result.success) {
-        console.log('✅ Nova função detectada:', result.functionKey);
-        
-        // Falar resultado
-        if (result.speechText) {
-          await playText(result.speechText);
-        }
-        
-        // Abrir modal (se tiver)
-        if (result.modalData && result.modalType) {
-          console.log('📋 Modal da nova função:', result.modalType);
-          // TODO: Implementar renderização de modais dinâmicos
-          // Por enquanto, só loga. Você pode adicionar setActiveModal aqui depois
-        }
-        
-        // Registrar uso
-        if (result.functionKey) {
-          await commandProcessor.registerUsage(result.functionKey);
-        }
-        
-        return true;
-      }
+if (commandProcessor) {
+  const result = await commandProcessor.processCommand(transcript);
+  
+  if (result.success && result.functionKey) { // ✅ ADICIONAR && result.functionKey
+    console.log('✅ Nova função detectada:', result.functionKey);
+    
+    // Falar resultado
+    if (result.speechText) {
+      await playText(result.speechText);
     }
+    
+    // Abrir modal (se tiver)
+    if (result.modalData && result.modalType) {
+      console.log('📋 Modal da nova função:', result.modalType);
+      // TODO: Implementar renderização de modais dinâmicos
+      // Por enquanto, só loga. Você pode adicionar setActiveModal aqui depois
+    }
+    
+    // Registrar uso
+    await commandProcessor.registerUsage(result.functionKey); // ✅ AGORA É SEGURO
+    
+    return true;
+  }
+}
     
     console.log('❌ Nenhum comando detectado (legado ou novo)');
     return false;
@@ -2120,15 +2126,17 @@ export function VoiceAssistantWithWakeWord({
         </div>
       </div>
 
-      {!showStartButton && (
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
-          <FunctionCarousel
-            companyId={companyId}
-            onFunctionClick={handleFunctionClick}
-            theme={theme}
-          />
-        </div>
-      )}
+{!showStartButton && (
+  <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
+    <FunctionCarousel
+      companyId={companyId}
+      onFunctionClick={handleFunctionClick}
+      theme={theme}
+      hideDisabledFunctions={hideDisabledFunctions}
+      autoScroll={autoScroll}
+    />
+  </div>
+)}
     </div>
   );
 }

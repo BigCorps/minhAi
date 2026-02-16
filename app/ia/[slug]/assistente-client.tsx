@@ -457,6 +457,71 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                       autoFocus
                     />
                   </div>
+
+                 {/* 🆕 INFORMAÇÕES SOBRE MODO KIOSK DO SISTEMA */}
+                  <div className={`p-4 rounded-lg border-2 ${
+                    theme === 'dark' 
+                      ? 'bg-blue-500/10 border-blue-500/30' 
+                      : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className={`text-sm font-semibold mb-1 ${
+                          theme === 'dark' ? 'text-blue-300' : 'text-blue-900'
+                        }`}>
+                          💡 Bloqueio Total Recomendado
+                        </p>
+                        <p className={`text-xs leading-relaxed mb-2 ${
+                          theme === 'dark' ? 'text-blue-400/90' : 'text-blue-800'
+                        }`}>
+                          Para segurança máxima em ambientes públicos, configure o Modo Kiosk no sistema operacional:
+                        </p>
+                        <div className={`text-xs space-y-1 ${
+                          theme === 'dark' ? 'text-blue-400/80' : 'text-blue-700'
+                        }`}>
+                          <p><strong>🪟 Windows:</strong> Configurações → Contas → Outras pessoas → Configurar Quiosque</p>
+                          <p><strong>🤖 Android:</strong> Configurações → Segurança → Fixação de apps (App Pinning)</p>
+                          <p><strong>🍎 iOS/iPad:</strong> Configurações → Acessibilidade → Acesso Guiado</p>
+                          <p><strong>🐧 Linux:</strong> Cage (Wayland), Porteus Kiosk, ou KioWare</p>
+                        </div>
+                        <button
+                          onClick={() => window.open('https://support.google.com/chrome/a/answer/3273084?hl=pt-BR', '_blank')}
+                          className={`mt-3 w-full text-xs py-2 px-3 rounded-md font-medium transition-colors ${
+                            theme === 'dark'
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          📚 Ver Guia Completo de Configuração
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className={`p-4 rounded-lg ${
+                    theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
+                  }`}>
+                    <div className="flex items-start space-x-2">
+                      <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className={`text-sm font-medium ${
+                          theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                        }`}>
+                          Atenção
+                        </p>
+                        <p className={`text-xs mt-1 ${
+                          theme === 'dark' ? 'text-yellow-500/80' : 'text-yellow-700'
+                        }`}>
+                          Este modo bloqueia a maioria das saídas, mas teclas como F11 podem funcionar. Para bloqueio total, use as configurações do sistema acima.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                   
                   <div className={`p-4 rounded-lg ${
                     theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'

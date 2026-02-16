@@ -14,16 +14,6 @@ import {
 } from '@/components/ui/select'
 import { Search, Trash2, User, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 
 interface Message {
   id: string
@@ -53,8 +43,6 @@ export default function HistoricoPage() {
   const [selectedAssistant, setSelectedAssistant] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null)
   const supabase = createClientComponentClient()
 
   useEffect(() => {
@@ -135,28 +123,21 @@ export default function HistoricoPage() {
     }
   }
 
-  const handleDelete = async () => {
-    if (!conversationToDelete) return
+  const handleDelete = async (conversationId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta conversa?')) return
 
     try {
       const { error } = await supabase
         .from('conversations')
         .delete()
-        .eq('id', conversationToDelete)
+        .eq('id', conversationId)
 
       if (error) throw error
 
-      setConversations(conversations.filter(c => c.id !== conversationToDelete))
-      setDeleteDialogOpen(false)
-      setConversationToDelete(null)
+      setConversations(conversations.filter(c => c.id !== conversationId))
     } catch (error) {
       console.error('Erro ao deletar conversa:', error)
     }
-  }
-
-  const openDeleteDialog = (conversationId: string) => {
-    setConversationToDelete(conversationId)
-    setDeleteDialogOpen(true)
   }
 
   const filteredConversations = conversations.filter(conv => {
@@ -245,7 +226,7 @@ export default function HistoricoPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => openDeleteDialog(conversation.id)}
+                      onClick={() => handleDelete(conversation.id)}
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -269,23 +250,6 @@ export default function HistoricoPage() {
           ))
         )}
       </div>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta conversa? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

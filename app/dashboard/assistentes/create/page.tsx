@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Loader2, Globe, Lock } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function NovaEmpresaPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get('name') as string,
-      slug: isPublic ? (formData.get('slug') as string) : '', // Envia slug vazio se for privado
+      slug: isPublic ? (formData.get('slug') as string) : '',
       logo_url: formData.get('logo_url') as string,
       wake_word: formData.get('wake_word') as string,
       greeting_message: formData.get('greeting_message') as string,
@@ -37,6 +38,26 @@ export default function NovaEmpresaPage() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erro ao criar assistente');
+      }
+
+      const result = await response.json();
+      const newCompanyId = result.company?.id;
+
+      // ✅ NOVO: Inicializar funções padrão
+      if (newCompanyId) {
+        console.log('🔧 Inicializando funções padrão para empresa:', newCompanyId);
+        
+        const supabase = createClient();
+        const { error: funcError } = await supabase.rpc('initialize_company_functions', {
+          p_company_id: newCompanyId
+        });
+
+        if (funcError) {
+          console.error('⚠️ Erro ao inicializar funções:', funcError);
+          // Não é crítico, continua mesmo se falhar
+        } else {
+          console.log('✅ Funções padrão inicializadas com sucesso');
+        }
       }
 
       router.push('/dashboard/assistentes');
@@ -146,7 +167,7 @@ export default function NovaEmpresaPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
-                    onClick={( ) => setIsPublic(true)}
+                    onClick={() => setIsPublic(true)}
                     className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
                       isPublic 
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' 
@@ -208,6 +229,22 @@ export default function NovaEmpresaPage() {
                   placeholder="Frase que o assistente dirá ao ser ativado"
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                 />
+              </div>
+
+              {/* ✅ NOVA INFO BOX */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex gap-3">
+                  <span className="text-blue-600 dark:text-blue-400 text-xl">ℹ️</span>
+                  <div className="text-sm">
+                    <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                      Funções Padrão
+                    </p>
+                    <p className="text-blue-800 dark:text-blue-200">
+                      Seu assistente será criado com as funções essenciais ativas (FAQ, ChatGPT e WhatsApp). 
+                      Você poderá habilitar funções adicionais na página de <strong>Funções</strong> após a criação.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 

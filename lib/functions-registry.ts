@@ -308,6 +308,107 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     isPremium: false,
   },
 
+    // ========================================
+  // CRIAR ORÇAMENTO
+  // ========================================
+  orcamento: {
+    functionKey: 'orcamento',
+    functionName: 'Criar Orçamento',
+    category: 'ai_assistant',
+    responseType: 'voice',
+    
+    voiceTriggers: [
+      'orçamento',
+      'fazer orçamento',
+      'quanto custa',
+      'preço',
+      'valor',
+      'cotação',
+      'orçar',
+    ],
+    
+    examplePhrases: [
+      'Quanto custa [produto/serviço]?',
+      'Preciso de um orçamento',
+      'Qual o valor de [item]?',
+      'Faça um orçamento de [produto]',
+    ],
+    
+    requiresInput: true,  // Precisa de contexto do que orçar
+    description: 'Gera orçamentos personalizados usando IA com tabelas de preços configuradas',
+    shortDescription: 'Gerar orçamentos com IA',
+    icon: '💰',
+    color: '#8B5CF6',
+    saveToHistory: true,
+    creditsPerUse: 2,  // Mesmo que ChatGPT
+    requiresPayment: false,
+    isPremium: false,
+    
+    // Handler customizado (executa lógica de orçamento)
+    handler: async ({ 
+      transcript, 
+      playText, 
+      companyId, 
+      saveInteractionToHistory,
+      checkCreditsAndConsume 
+    }) => {
+      try {
+        // Verificar e consumir créditos
+        const hasCredits = await checkCreditsAndConsume(2);
+        if (!hasCredits) {
+          await playText('Você não tem créditos suficientes para gerar orçamentos.');
+          return false;
+        }
+
+        // Buscar configuração de orçamento da empresa
+        const supabase = createClient();
+        const { data: company } = await supabase
+          .from('companies')
+          .select('orcamento_prompt')
+          .eq('id', companyId)
+          .single();
+
+        if (!company?.orcamento_prompt) {
+          await playText('A função de orçamento não está configurada. Configure as tabelas de preços no painel de funções.');
+          return false;
+        }
+
+        // Chamar Gemini com o prompt customizado
+        await playText('Gerando seu orçamento. Um momento...');
+
+        const response = await fetch('/api/gemini-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: transcript,
+            systemPrompt: company.orcamento_prompt,
+            conversationHistory: [], // Orçamento é stateless
+          }),
+        });
+
+        if (!response.ok) throw new Error('Erro ao gerar orçamento');
+
+        const { reply } = await response.json();
+
+        // Falar a resposta
+        await playText(reply);
+
+        // Salvar no histórico
+        await saveInteractionToHistory(
+          transcript,
+          reply,
+          'orcamento'
+        );
+
+        return true;
+      } catch (error) {
+        console.error('Erro orçamento:', error);
+        await playText('Desculpe, não consegui gerar o orçamento. Tente novamente.');
+        return false;
+      }
+    },
+  },
+
   // ========================================
   // NOSSO FACEBOOK
   // ========================================

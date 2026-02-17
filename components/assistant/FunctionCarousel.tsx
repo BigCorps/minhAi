@@ -1,7 +1,7 @@
 // components/assistant/FunctionCarousel.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface AssistantFunction {
@@ -36,7 +36,7 @@ export default function FunctionCarousel({
 }: FunctionCarouselProps) {
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isPausedMobile, setIsPausedMobile] = useState(false); // 🆕 Controle de pausa no mobile
+  const carouselRef = useRef<HTMLDivElement>(null);
   
   const supabase = createClient();
   
@@ -99,6 +99,18 @@ export default function FunctionCarousel({
     console.log('🎯 Função clicada:', fn.function_key);
     onFunctionClick(fn.function_key);
   }
+
+  function pauseAnimation() {
+    if (carouselRef.current) {
+      carouselRef.current.style.animationPlayState = 'paused';
+    }
+  }
+
+  function resumeAnimation() {
+    if (carouselRef.current) {
+      carouselRef.current.style.animationPlayState = 'running';
+    }
+  }
   
   // 🆕 FILTRAR FUNÇÕES COM BASE NA CONFIGURAÇÃO
   const filteredFunctions = hideDisabledFunctions
@@ -133,11 +145,13 @@ export default function FunctionCarousel({
       <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           {/* 🆕 APLICAR CLASSE DE ANIMAÇÃO CONDICIONALMENTE */}
-          <div className={`${
-            autoScroll
-              ? `flex gap-3 pl-3 animate-scroll-infinite w-max ${isPausedMobile ? 'paused' : ''}`
+          <div 
+            ref={carouselRef}
+            className={autoScroll
+              ? 'flex gap-3 pl-3 animate-scroll-infinite w-max'
               : 'flex gap-3 flex-wrap justify-center w-full px-4'
-          }`}>
+            }
+          >
             {displayFunctions.map((fn, idx) => {
               const originalIndex = idx % filteredFunctions.length;
               const borderColor = getCardColor(originalIndex);
@@ -147,9 +161,32 @@ export default function FunctionCarousel({
                 <button
                   key={`${fn.function_key}-${idx}`}
                   onClick={() => handleClick(fn)}
-                  onTouchStart={() => setIsPausedMobile(true)}
-                  onTouchEnd={() => setIsPausedMobile(false)}
-                  onTouchCancel={() => setIsPausedMobile(false)}
+                  onTouchStart={(e) => {
+                    if (autoScroll) {
+                      e.preventDefault();
+                      pauseAnimation();
+                    }
+                  }}
+                  onTouchEnd={() => {
+                    if (autoScroll) {
+                      resumeAnimation();
+                    }
+                  }}
+                  onTouchCancel={() => {
+                    if (autoScroll) {
+                      resumeAnimation();
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (autoScroll) {
+                      pauseAnimation();
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (autoScroll) {
+                      resumeAnimation();
+                    }
+                  }}
                   disabled={!isEnabled}
                   className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
                     theme === 'dark'
@@ -183,16 +220,6 @@ export default function FunctionCarousel({
         
         .animate-scroll-infinite {
           animation: scroll-infinite 24s linear infinite;
-        }
-        
-        /* Pausar ao passar o mouse (desktop) */
-        .animate-scroll-infinite:hover {
-          animation-play-state: paused;
-        }
-        
-        /* Pausar quando tocado (mobile) */
-        .animate-scroll-infinite.paused {
-          animation-play-state: paused;
         }
         
         @media (max-width: 768px) {

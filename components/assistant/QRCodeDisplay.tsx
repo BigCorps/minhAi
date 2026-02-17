@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 
 interface QRCodeDisplayProps {
-  type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook';
+  type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
   qrCodeUrl: string;
   qrContent: string;
   displayText: string;

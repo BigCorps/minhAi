@@ -30,7 +30,7 @@ interface AssistantFunction {
   is_active: boolean;
   display_order: number;
   edit_modal_component?: string;
-  default_enabled?: boolean; // ✅ ADICIONADO
+  default_enabled?: boolean;
 }
 
 interface CompanyFunctionSetting {
@@ -85,10 +85,9 @@ function FunctionsPageContent() {
     try {
       setLoading(true);
 
-      // ✅ ADICIONAR default_enabled na query
       const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
-        .select('*, default_enabled') // ✅ ADICIONADO
+        .select('*, default_enabled')
         .eq('is_active', true)
         .order('display_order');
 
@@ -163,9 +162,18 @@ function FunctionsPageContent() {
     }
   }
 
+  // ✅ FUNÇÃO CORRIGIDA
   function isFunctionEnabled(functionKey: string): boolean {
     const setting = settings.find(s => s.function_key === functionKey);
-    return setting ? setting.is_enabled : true;
+    
+    // Se tem configuração salva, usar o is_enabled dela
+    if (setting) {
+      return setting.is_enabled;
+    }
+    
+    // Se NÃO tem configuração, verificar se a função é default_enabled
+    const func = functions.find(f => f.function_key === functionKey);
+    return func?.default_enabled ?? false;
   }
 
   function getFunctionStats(functionKey: string) {

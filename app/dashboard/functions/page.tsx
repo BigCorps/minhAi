@@ -88,7 +88,7 @@ function FunctionsPageContent() {
 
       const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
-        .select('*')
+        .select('id, function_key, function_name, ..., default_enabled') 
         .eq('is_active', true)
         .order('display_order');
 

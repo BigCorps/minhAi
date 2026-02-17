@@ -299,6 +299,88 @@ const ChatGptForm = ({ settings, onChange }: any) => (
   </div>
 );
 
+const OrcamentoForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    {/* Info Box Explicativa */}
+    <div className="text-sm bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+      <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">
+        Como funciona o Orçamento com IA
+      </h4>
+      <ul className="space-y-2 text-purple-800 dark:text-purple-200">
+        <li>✓ Configure tabelas de preços e produtos abaixo</li>
+        <li>✓ O assistente usa essas informações para calcular orçamentos</li>
+        <li>✓ Cobra <strong>2 créditos</strong> por orçamento (igual ChatGPT)</li>
+        <li>✓ Ideal para vendas, cotações e atendimento comercial</li>
+      </ul>
+    </div>
+
+    {/* Dica de Uso */}
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+      <p className="text-sm text-blue-900 dark:text-blue-100">
+        <strong>💡 Dica:</strong> Seja específico! Inclua tabelas de preços, condições de pagamento, 
+        prazos de validade e qualquer informação relevante para orçamentos precisos.
+      </p>
+    </div>
+
+    {/* Prompt de Configuração */}
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Configuração de Orçamento (Prompt)
+      </label>
+      <textarea 
+        rows={12}
+        placeholder={`Exemplo:
+
+Você é um assistente de vendas especializado em criar orçamentos.
+
+TABELA DE PREÇOS:
+- Produto A: R$ 100,00
+- Produto B: R$ 250,00
+- Serviço de Instalação: R$ 150,00
+
+CONDIÇÕES:
+- Pagamento à vista: 10% desconto
+- Parcelado em até 3x sem juros
+- Validade: 7 dias
+
+Ao gerar orçamento:
+1. Calcule valores com base na tabela
+2. Aplique descontos quando mencionado
+3. Apresente de forma profissional
+4. Inclua condições e validade`}
+        value={settings.orcamento_prompt || ''}
+        onChange={e => onChange('orcamento_prompt', e.target.value)}
+        className="w-full p-3 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none font-mono text-sm"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Configure preços, produtos, serviços e regras. O assistente usará estas informações 
+        para criar orçamentos precisos quando solicitado.
+      </p>
+    </div>
+
+    {/* Exemplos de Uso */}
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">
+        📝 Exemplos de Comandos de Voz
+      </h5>
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+        <li>• "Quanto custa 5 unidades do Produto A?"</li>
+        <li>• "Preciso de um orçamento para instalação"</li>
+        <li>• "Qual o valor total com desconto à vista?"</li>
+        <li>• "Faça um orçamento de 3 Produtos B"</li>
+      </ul>
+    </div>
+
+    {/* Aviso de Créditos */}
+    <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+      <p className="text-sm text-amber-800 dark:text-amber-200">
+        ⚠️ <strong>Consumo:</strong> Cada orçamento gerado consome 2 créditos 
+        (mesmo valor do ChatGPT).
+      </p>
+    </div>
+  </div>
+);
+
 const FaqForm = () => (
   <div>
     <div className="text-sm bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 mb-4">
@@ -338,6 +420,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_telefone': TelefoneForm,
   'pix_generate': PixForm,
   'chatgpt': ChatGptForm,
+  'orcamento': OrcamentoForm,  // ← ADICIONAR
   'faq': FaqForm,
 };
 
@@ -369,9 +452,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select(
-          'whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, pix_key, pix_key_type, system_prompt'
-        )
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, pix_key, pix_key_type, system_prompt, orcamento_prompt')
         .eq('id', companyId)
         .single();
 

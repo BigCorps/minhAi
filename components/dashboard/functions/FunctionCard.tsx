@@ -21,6 +21,7 @@ interface FunctionCardProps {
     credits_per_use: number;
     example_phrases?: string[];
     edit_modal_component?: string;
+    default_enabled?: boolean;
   };
   isEnabled: boolean;
   stats: {

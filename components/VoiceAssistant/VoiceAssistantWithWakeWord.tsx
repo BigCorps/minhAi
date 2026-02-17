@@ -62,7 +62,7 @@ export function VoiceAssistantWithWakeWord({
   }>>({});
 
 const [qrCodeData, setQrCodeData] = useState<{
-  type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook';
+  type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
   qrCodeUrl: string;
   qrContent: string;
   displayText: string;
@@ -902,7 +902,27 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         case 'qrcode_facebook':
           await handleFacebookCommand();
           break;
-          
+
+      case 'qrcode_email':
+        await handleQRCodeCommand('email');
+        break;
+        
+      case 'qrcode_linkedin':
+        await handleQRCodeCommand('linkedin');
+        break;
+        
+      case 'qrcode_tiktok':
+        await handleQRCodeCommand('tiktok');
+        break;
+        
+      case 'qrcode_twitter':
+        await handleQRCodeCommand('twitter');
+        break;
+        
+      case 'qrcode_telefone':
+        await handleQRCodeCommand('telefone');
+        break;
+            
         // Fallback
         default:
           console.log('⚠️ Função não mapeada:', functionKey);
@@ -1134,6 +1154,56 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         'qrcode_facebook',
         functionSettings['qrcode_facebook']?.creditsPerUse ?? 0
       );
+      return true;
+    }
+
+    // Email
+    const emailTriggers = ['email', 'e-mail', 'nosso email', 'endereço de email'];
+    if (emailTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_email');
+      if (!isEnabled) { await playText('A função Email está desativada no momento.'); return true; }
+      await handleQRCodeCommand('email');
+      await registerFunctionUsage('qrcode_email', functionSettings['qrcode_email']?.creditsPerUse ?? 1);
+      return true;
+    }
+
+    // LinkedIn
+    const linkedinTriggers = ['linkedin', 'linked in', 'perfil linkedin'];
+    if (linkedinTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_linkedin');
+      if (!isEnabled) { await playText('A função LinkedIn está desativada no momento.'); return true; }
+      await handleQRCodeCommand('linkedin');
+      await registerFunctionUsage('qrcode_linkedin', functionSettings['qrcode_linkedin']?.creditsPerUse ?? 1);
+      return true;
+    }
+
+    // TikTok
+    const tiktokTriggers = ['tiktok', 'tik tok', 'nosso tiktok'];
+    if (tiktokTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_tiktok');
+      if (!isEnabled) { await playText('A função TikTok está desativada no momento.'); return true; }
+      await handleQRCodeCommand('tiktok');
+      await registerFunctionUsage('qrcode_tiktok', functionSettings['qrcode_tiktok']?.creditsPerUse ?? 1);
+      return true;
+    }
+
+    // Twitter/X
+    const twitterTriggers = ['twitter', 'nosso twitter', 'nosso x'];
+    if (twitterTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_twitter');
+      if (!isEnabled) { await playText('A função Twitter está desativada no momento.'); return true; }
+      await handleQRCodeCommand('twitter');
+      await registerFunctionUsage('qrcode_twitter', functionSettings['qrcode_twitter']?.creditsPerUse ?? 1);
+      return true;
+    }
+
+    // Telefone Fixo
+    const telefoneTriggers = ['telefone fixo', 'nosso telefone', 'número de telefone'];
+    if (telefoneTriggers.some(trigger => lowerTranscript.includes(trigger))) {
+      const isEnabled = await checkIfFunctionIsEnabled('qrcode_telefone');
+      if (!isEnabled) { await playText('A função Telefone está desativada no momento.'); return true; }
+      await handleQRCodeCommand('telefone');
+      await registerFunctionUsage('qrcode_telefone', functionSettings['qrcode_telefone']?.creditsPerUse ?? 1);
       return true;
     }
     
@@ -1437,6 +1507,55 @@ if (commandProcessor) {
       setIsProcessing(false);
     }
   }
+
+  async function handleQRCodeCommand(qrType: string) {
+    try {
+      setIsProcessing(true);
+      
+      const supabase = createClient();
+      const response = await supabase.functions.invoke('gerar-qrcode-contato', {
+        body: {
+          company_id: companyId,
+          qr_type: qrType,
+        }
+      });
+      
+      if (response.error) throw response.error;
+      
+      const data = response.data;
+      
+      setQrCodeData({
+        type: qrType as any,
+        qrCodeUrl: data.qr_code_url,
+        qrContent: data.qr_content,
+        displayText: data.display_text,
+        companyName: data.company_name,
+      });
+      
+      const speechMap: Record<string, string> = {
+        email: `Aqui está o email: ${data.display_text}`,
+        linkedin: `Aqui está o LinkedIn`,
+        tiktok: `Aqui está o TikTok: ${data.display_text}`,
+        twitter: `Aqui está o Twitter: ${data.display_text}`,
+        telefone: `Aqui está o telefone: ${data.display_text}. Escaneie o QR Code para ligar diretamente.`,
+        website: `Aqui está o site: ${data.display_text}`,
+        facebook: `Aqui está o Facebook: ${data.display_text}`,
+      };
+      
+      await playText(speechMap[qrType] || `Aqui está o ${qrType}: ${data.display_text}`);
+      
+      await saveInteractionToHistory(
+        `Me passe o ${qrType}`,
+        `QR Code de ${qrType} gerado: ${data.display_text}`
+      );
+
+    } catch (error: any) {
+      console.error(`Erro ${qrType}:`, error);
+      await playText(`Desculpe, não consegui obter o ${qrType}. Verifique se foi configurado.`);
+    } finally {
+      setIsProcessing(false);
+    }
+  }  
 
   async function handlePixCommand(amount: number) {
     try {

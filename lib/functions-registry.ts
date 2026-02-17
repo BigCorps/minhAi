@@ -13,6 +13,9 @@
  * 5. PRONTO! O VoiceAssistant detecta automaticamente
  */
 
+// ✅ ADICIONAR ESTE IMPORT NO TOPO
+import { createClient } from '@/lib/supabase-browser';
+
 export type ResponseType = 'voice' | 'modal' | 'page' | 'voice+modal' | 'voice+page';
 
 /**
@@ -57,7 +60,6 @@ export interface FunctionDefinition {
   isPremium: boolean;
   
   // Handler customizado (opcional)
-  // Usado quando a função precisa de lógica específica
   handler?: (context: {
     transcript: string;
     companyId: string;
@@ -74,15 +76,6 @@ export interface FunctionDefinition {
  * ========================================
  * REGISTRO DE NOVAS FUNÇÕES
  * ========================================
- * 
- * ⚠️ NÃO ADICIONE as funções legadas aqui:
- * - qrcode_whatsapp (já existe no VoiceAssistant)
- * - qrcode_instagram (já existe no VoiceAssistant)
- * - pix_generate (já existe no VoiceAssistant)
- * - pix_confirm (já existe no VoiceAssistant)
- * - pix_cancel (já existe no VoiceAssistant)
- * - faq (já existe no VoiceAssistant)
- * - chatgpt (já existe no VoiceAssistant)
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
@@ -129,7 +122,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     isPremium: false,
   },
 
-    // ========================================
+  // ========================================
   // NOSSO EMAIL
   // ========================================
   qrcode_email: {
@@ -309,105 +302,6 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   },
 
   // ========================================
-  // CRIAR ORÇAMENTO
-  // ========================================
-  orcamento: {
-    functionKey: 'orcamento',
-    functionName: 'Criar Orçamento',
-    category: 'ai_assistant',
-    responseType: 'voice',
-    
-    voiceTriggers: [
-      'orçamento',
-      'fazer orçamento',
-      'quanto custa',
-      'preço',
-      'valor',
-      'cotação',
-      'orçar',
-    ],
-    
-    examplePhrases: [
-      'Quanto custa [produto/serviço]?',
-      'Preciso de um orçamento',
-      'Qual o valor de [item]?',
-      'Faça um orçamento de [produto]',
-    ],
-    
-    requiresInput: true,
-    description: 'Gera orçamentos personalizados usando IA com tabelas de preços configuradas',
-    shortDescription: 'Gerar orçamentos com IA',
-    icon: '💰',
-    color: '#8B5CF6',
-    saveToHistory: true,
-    creditsPerUse: 2,
-    requiresPayment: false,
-    isPremium: false,
-    
-    // ✅ CORRIGIDO: Sem saveInteractionToHistory
-    handler: async ({ 
-      transcript, 
-      playText, 
-      companyId
-    }) => {
-      try {
-        // Buscar configuração de orçamento da empresa
-        const supabase = createClient();
-        
-        // Verificar se tem créditos (essa função deve existir no contexto)
-        // Se não existir, remova esta verificação
-        // const hasCredits = await checkCreditsAndConsume?.(2);
-        // if (!hasCredits) {
-        //   await playText('Você não tem créditos suficientes para gerar orçamentos.');
-        //   return false;
-        // }
-
-        const { data: company } = await supabase
-          .from('companies')
-          .select('orcamento_prompt')
-          .eq('id', companyId)
-          .single();
-
-        if (!company?.orcamento_prompt) {
-          await playText('A função de orçamento não está configurada. Configure as tabelas de preços no painel de funções.');
-          return false;
-        }
-
-        // Mostrar feedback ao usuário
-        await playText('Gerando seu orçamento. Um momento...');
-
-        // Chamar Gemini
-        const response = await fetch('/api/gemini-chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: transcript,
-            systemPrompt: company.orcamento_prompt,
-            conversationHistory: [],
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Erro ao gerar orçamento');
-        }
-
-        const { reply } = await response.json();
-
-        // Falar a resposta
-        await playText(reply);
-
-        // O histórico será salvo automaticamente pelo saveToHistory: true
-        return true;
-        
-      } catch (error) {
-        console.error('Erro orçamento:', error);
-        await playText('Desculpe, não consegui gerar o orçamento. Tente novamente.');
-        return false;
-      }
-    },
-  },
-
-  // ========================================
   // NOSSO FACEBOOK
   // ========================================
   qrcode_facebook: {
@@ -447,133 +341,92 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     requiresPayment: false,
     isPremium: false,
   },
-  
+
   // ========================================
-  // EXEMPLO: RESUMO DE VENDAS (com handler customizado)
+  // CRIAR ORÇAMENTO
   // ========================================
-  // 
-  // Descomente e adapte este exemplo para criar sua primeira função nova:
-  
-  /*
-  resumo_vendas: {
-    functionKey: 'resumo_vendas',
-    functionName: 'Resumo de Vendas',
-    category: 'productivity',
-    responseType: 'voice+modal',
+  orcamento: {
+    functionKey: 'orcamento',
+    functionName: 'Criar Orçamento',
+    category: 'ai_assistant',
+    responseType: 'voice',
     
     voiceTriggers: [
-      'vendas',
-      'quanto vendemos',
-      'faturamento',
-      'resultado',
-      'quanto vendeu',
+      'orçamento',
+      'fazer orçamento',
+      'quanto custa',
+      'preço',
+      'valor',
+      'cotação',
+      'orçar',
     ],
     
     examplePhrases: [
-      'Quanto vendemos hoje?',
-      'Qual o faturamento desta semana?',
-      'Resumo de vendas',
+      'Quanto custa [produto/serviço]?',
+      'Preciso de um orçamento',
+      'Qual o valor de [item]?',
+      'Faça um orçamento de [produto]',
     ],
     
-    edgeFunction: 'resumo-vendas',
-    uiComponent: 'SalesSummaryModal',
-    
-    requiresInput: false,
-    
-    description: 'Fornece resumo de vendas do período com total e quantidade',
-    shortDescription: 'Ver vendas',
-    icon: '📊',
-    color: '#F59E0B',
-    
+    requiresInput: true,
+    description: 'Gera orçamentos personalizados usando IA com tabelas de preços configuradas',
+    shortDescription: 'Gerar orçamentos com IA',
+    icon: '💰',
+    color: '#8B5CF6',
     saveToHistory: true,
     creditsPerUse: 2,
     requiresPayment: false,
-    isPremium: true,
+    isPremium: false,
     
-    // Handler customizado (opcional)
-    // Use quando precisar de lógica específica
-    handler: async ({ playText, setActiveModal, companyId }) => {
+    // Handler com createClient já importado
+    handler: async ({ 
+      transcript, 
+      playText, 
+      companyId
+    }) => {
       try {
-        // Chamar Edge Function
-        const response = await fetch('/api/supabase-function', {
+        const supabase = createClient(); // ✅ Agora funciona
+
+        const { data: company } = await supabase
+          .from('companies')
+          .select('orcamento_prompt')
+          .eq('id', companyId)
+          .single();
+
+        if (!company?.orcamento_prompt) {
+          await playText('A função de orçamento não está configurada. Configure as tabelas de preços no painel de funções.');
+          return false;
+        }
+
+        await playText('Gerando seu orçamento. Um momento...');
+
+        const response = await fetch('/api/gemini-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            function: 'resumo-vendas',
-            company_id: companyId,
+            message: transcript,
+            systemPrompt: company.orcamento_prompt,
+            conversationHistory: [],
           }),
         });
-        
-        const data = await response.json();
-        
-        // Falar resultado
-        await playText(`Você vendeu ${data.total} reais hoje.`);
-        
-        // Abrir modal (se tiver)
-        if (setActiveModal) {
-          setActiveModal({
-            componentName: 'SalesSummaryModal',
-            data: data,
-          });
+
+        if (!response.ok) {
+          throw new Error('Erro ao gerar orçamento');
         }
+
+        const { reply } = await response.json();
+
+        await playText(reply);
+
+        return true;
         
-        return true; // Comando foi processado
       } catch (error) {
-        console.error('Erro ao buscar vendas:', error);
-        await playText('Erro ao buscar resumo de vendas.');
+        console.error('Erro orçamento:', error);
+        await playText('Desculpe, não consegui gerar o orçamento. Tente novamente.');
         return false;
       }
     },
   },
-  */
-  
-  // ========================================
-  // EXEMPLO: CONSULTA DE ESTOQUE (sem handler - usa Edge Function)
-  // ========================================
-  
-  /*
-  consulta_estoque: {
-    functionKey: 'consulta_estoque',
-    functionName: 'Consultar Estoque',
-    category: 'productivity',
-    responseType: 'voice',
-    
-    voiceTriggers: [
-      'estoque',
-      'tem disponível',
-      'quantidade',
-      'quantos tem',
-    ],
-    
-    examplePhrases: [
-      'Quantos produtos X tem em estoque?',
-      'Consultar estoque de Y',
-    ],
-    
-    edgeFunction: 'consultar-estoque',
-    
-    requiresInput: true,
-    inputType: 'text',
-    inputPrompt: 'Qual produto você quer consultar?',
-    
-    description: 'Consulta quantidade em estoque de um produto',
-    shortDescription: 'Ver estoque',
-    icon: '📦',
-    color: '#3B82F6',
-    
-    saveToHistory: true,
-    creditsPerUse: 1,
-    requiresPayment: false,
-    isPremium: false,
-    
-    // Sem handler - usa automaticamente o voice-command-processor
-    // que chama a Edge Function especificada
-  },
-  */
-  
-  // ========================================
-  // ADICIONE SUAS NOVAS FUNÇÕES AQUI
-  // ========================================
   
 };
 
@@ -583,25 +436,16 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
  * ========================================
  */
 
-/**
- * Busca função por key
- */
 export function getFunctionByKey(key: string): FunctionDefinition | undefined {
   return FUNCTIONS_REGISTRY[key];
 }
 
-/**
- * Busca todas as funções de uma categoria
- */
 export function getFunctionsByCategory(category: string): FunctionDefinition[] {
   return Object.values(FUNCTIONS_REGISTRY).filter(
     fn => fn.category === category
   );
 }
 
-/**
- * Detecta qual função deve ser ativada baseado no texto transcrito
- */
 export function detectFunctionFromTranscript(transcript: string): {
   function: FunctionDefinition | null;
   confidence: number;
@@ -609,7 +453,6 @@ export function detectFunctionFromTranscript(transcript: string): {
 } {
   const lowerTranscript = transcript.toLowerCase().trim();
   
-  // Percorrer todas as funções e calcular score de match
   let bestMatch: FunctionDefinition | null = null;
   let bestScore = 0;
   let extractedValue: any = undefined;
@@ -617,14 +460,12 @@ export function detectFunctionFromTranscript(transcript: string): {
   for (const func of Object.values(FUNCTIONS_REGISTRY)) {
     let score = 0;
     
-    // Verificar triggers
     for (const trigger of func.voiceTriggers) {
       if (lowerTranscript.includes(trigger.toLowerCase())) {
         score += 10;
       }
     }
     
-    // Se a função precisa de input numérico, tentar extrair
     if (func.requiresInput && func.inputType === 'number') {
       const numberMatch = extractNumberFromText(lowerTranscript);
       if (numberMatch) {
@@ -633,14 +474,12 @@ export function detectFunctionFromTranscript(transcript: string): {
       }
     }
     
-    // Atualizar melhor match
     if (score > bestScore) {
       bestScore = score;
       bestMatch = func;
     }
   }
   
-  // Threshold mínimo de confiança
   const confidence = bestScore / 10;
   
   return {
@@ -650,21 +489,15 @@ export function detectFunctionFromTranscript(transcript: string): {
   };
 }
 
-/**
- * Extrai número de um texto (para valores, quantidades, etc)
- */
 function extractNumberFromText(text: string): number | null {
-  // Converter palavras em números primeiro
   const converted = convertWordsToNumbers(text);
   
-  // Remover palavras comuns
   let cleaned = converted
     .replace(/reais?|real/gi, '')
     .replace(/centavos?/gi, '')
     .replace(/r\$/gi, '')
     .trim();
   
-  // Buscar padrões numéricos
   const patterns = [
     /(\d+[,.]?\d{0,2})/g,
   ];
@@ -683,9 +516,6 @@ function extractNumberFromText(text: string): number | null {
   return null;
 }
 
-/**
- * Converte palavras em números
- */
 function convertWordsToNumbers(text: string): string {
   const numberWords: {[key: string]: string} = {
     'zero': '0', 'um': '1', 'dois': '2', 'três': '3', 'tres': '3',
@@ -706,16 +536,10 @@ function convertWordsToNumbers(text: string): string {
   return result;
 }
 
-/**
- * Lista todas as funções disponíveis
- */
 export function getAllFunctions(): FunctionDefinition[] {
   return Object.values(FUNCTIONS_REGISTRY);
 }
 
-/**
- * Busca funções que precisam de página de configuração
- */
 export function getFunctionsWithConfigPage(): FunctionDefinition[] {
   return Object.values(FUNCTIONS_REGISTRY).filter(
     fn => fn.configPath !== undefined

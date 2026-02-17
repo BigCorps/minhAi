@@ -301,23 +301,11 @@ const ChatGptForm = ({ settings, onChange }: any) => (
 
 const OrcamentoForm = ({ settings, onChange }: any) => (
   <div className="space-y-4">
-    {/* Info Box Explicativa */}
-    <div className="text-sm bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-      <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">
-        Como funciona o Orçamento com IA
-      </h4>
-      <ul className="space-y-2 text-purple-800 dark:text-purple-200">
-        <li>✓ Configure tabelas de preços e produtos abaixo</li>
-        <li>✓ O assistente usa essas informações para calcular orçamentos</li>
-        <li>✓ Cobra <strong>2 créditos</strong> por orçamento (igual ChatGPT)</li>
-        <li>✓ Ideal para vendas, cotações e atendimento comercial</li>
-      </ul>
-    </div>
 
     {/* Dica de Uso */}
     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
       <p className="text-sm text-blue-900 dark:text-blue-100">
-        <strong>💡 Dica:</strong> Seja específico! Inclua tabelas de preços, condições de pagamento, 
+        <strong>Dica:</strong> Seja específico! Inclua tabelas de preços, condições de pagamento, 
         prazos de validade e qualquer informação relevante para orçamentos precisos.
       </p>
     </div>
@@ -369,14 +357,6 @@ Ao gerar orçamento:
         <li>• "Qual o valor total com desconto à vista?"</li>
         <li>• "Faça um orçamento de 3 Produtos B"</li>
       </ul>
-    </div>
-
-    {/* Aviso de Créditos */}
-    <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-      <p className="text-sm text-amber-800 dark:text-amber-200">
-        ⚠️ <strong>Consumo:</strong> Cada orçamento gerado consome 2 créditos 
-        (mesmo valor do ChatGPT).
-      </p>
     </div>
   </div>
 );

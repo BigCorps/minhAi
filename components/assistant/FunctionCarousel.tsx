@@ -36,6 +36,7 @@ export default function FunctionCarousel({
 }: FunctionCarouselProps) {
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPausedMobile, setIsPausedMobile] = useState(false); // 🆕 Controle de pausa no mobile
   
   const supabase = createClient();
   
@@ -132,10 +133,11 @@ export default function FunctionCarousel({
       <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           {/* 🆕 APLICAR CLASSE DE ANIMAÇÃO CONDICIONALMENTE */}
-          <div className={autoScroll
-            ? 'flex gap-3 pl-3 animate-scroll-infinite w-max'
-            : 'flex gap-3 flex-wrap justify-center w-full px-4'
-          }>
+          <div className={`${
+            autoScroll
+              ? `flex gap-3 pl-3 animate-scroll-infinite w-max ${isPausedMobile ? 'paused' : ''}`
+              : 'flex gap-3 flex-wrap justify-center w-full px-4'
+          }`}>
             {displayFunctions.map((fn, idx) => {
               const originalIndex = idx % filteredFunctions.length;
               const borderColor = getCardColor(originalIndex);
@@ -145,6 +147,9 @@ export default function FunctionCarousel({
                 <button
                   key={`${fn.function_key}-${idx}`}
                   onClick={() => handleClick(fn)}
+                  onTouchStart={() => setIsPausedMobile(true)}
+                  onTouchEnd={() => setIsPausedMobile(false)}
+                  onTouchCancel={() => setIsPausedMobile(false)}
                   disabled={!isEnabled}
                   className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
                     theme === 'dark'
@@ -180,7 +185,13 @@ export default function FunctionCarousel({
           animation: scroll-infinite 24s linear infinite;
         }
         
-        .animate-scroll-infinite:hover, .animate-scroll-infinite:active {
+        /* Pausar ao passar o mouse (desktop) */
+        .animate-scroll-infinite:hover {
+          animation-play-state: paused;
+        }
+        
+        /* Pausar quando tocado (mobile) */
+        .animate-scroll-infinite.paused {
           animation-play-state: paused;
         }
         

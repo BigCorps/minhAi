@@ -230,22 +230,6 @@ export default function NovaEmpresaPage() {
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                 />
               </div>
-
-              {/* ✅ NOVA INFO BOX */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex gap-3">
-                  <span className="text-blue-600 dark:text-blue-400 text-xl">ℹ️</span>
-                  <div className="text-sm">
-                    <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                      Funções Padrão
-                    </p>
-                    <p className="text-blue-800 dark:text-blue-200">
-                      Seu assistente será criado com as funções essenciais ativas (FAQ, ChatGPT e WhatsApp). 
-                      Você poderá habilitar funções adicionais na página de <strong>Funções</strong> após a criação.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="mt-8 flex items-center gap-4">

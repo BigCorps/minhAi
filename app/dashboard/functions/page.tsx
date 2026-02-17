@@ -30,6 +30,7 @@ interface AssistantFunction {
   is_active: boolean;
   display_order: number;
   edit_modal_component?: string;
+  default_enabled?: boolean; // ✅ ADICIONADO
 }
 
 interface CompanyFunctionSetting {
@@ -55,13 +56,11 @@ function FunctionsPageContent() {
   const { resolvedTheme } = useTheme();
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
 
-  // ===== NOVOS ESTADOS PARA FILTROS E VISUALIZAÇÃO =====
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'inactive'
+  const [filterStatus, setFilterStatus] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [editingFunction, setEditingFunction] = useState<AssistantFunction | null>(null);
-  // ===== FIM DOS NOVOS ESTADOS =====
 
   const supabase = createClient();
 
@@ -70,7 +69,7 @@ function FunctionsPageContent() {
     if (urlId !== companyId) {
       setCompanyId(urlId);
     }
-  }, [companyIdFromUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [companyIdFromUrl]);
 
   useEffect(() => {
     if (companyId) {
@@ -80,15 +79,16 @@ function FunctionsPageContent() {
       setSettings([]);
       setLoading(false);
     }
-  }, [companyId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [companyId]);
 
   async function loadData(selectedCompanyId: string) {
     try {
       setLoading(true);
 
+      // ✅ ADICIONAR default_enabled na query
       const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
-        .select('id, function_key, function_name, ..., default_enabled') 
+        .select('*, default_enabled') // ✅ ADICIONADO
         .eq('is_active', true)
         .order('display_order');
 
@@ -177,11 +177,9 @@ function FunctionsPageContent() {
     };
   }
 
-  // ===== HANDLER ATUALIZADO PARA ABRIR O MODAL =====
   function handleEdit(fn: AssistantFunction) {
     setEditingFunction(fn);
   }
-  // ===== FIM DO HANDLER ATUALIZADO =====
 
   function handleCompanySelect(id: string) {
     setCompanyId(id);
@@ -190,18 +188,17 @@ function FunctionsPageContent() {
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
   }
 
-const categories = [
-  { key: 'knowledge',      name: 'Conhecimento', color: '#3B82F6' },
-  { key: 'configuration',  name: 'Configuração',  color: '#8B5CF6' },
-  { key: 'contact',        name: 'Contato',       color: '#10B981' },
-  { key: 'payment',        name: 'Pagamento',     color: '#F59E0B' },
-  { key: 'schedule',       name: 'Agendamento',   color: '#8B5CF6' },
-  { key: 'information',    name: 'Informação',    color: '#3B82F6' },  // NOVO
-  { key: 'ai_assistant',   name: 'Assistente IA', color: '#8B5CF6' },  // NOVO
-  { key: 'other',          name: 'Outros',        color: '#6B7280' },
-];
+  const categories = [
+    { key: 'knowledge',      name: 'Conhecimento', color: '#3B82F6' },
+    { key: 'configuration',  name: 'Configuração',  color: '#8B5CF6' },
+    { key: 'contact',        name: 'Contato',       color: '#10B981' },
+    { key: 'payment',        name: 'Pagamento',     color: '#F59E0B' },
+    { key: 'schedule',       name: 'Agendamento',   color: '#8B5CF6' },
+    { key: 'information',    name: 'Informação',    color: '#3B82F6' },
+    { key: 'ai_assistant',   name: 'Assistente IA', color: '#8B5CF6' },
+    { key: 'other',          name: 'Outros',        color: '#6B7280' },
+  ];
 
-  // ===== LÓGICA DE FILTRO =====
   const filteredFunctions = functions.filter(fn => {
     if (!fn) return false;
 
@@ -217,7 +214,6 @@ const categories = [
 
     return matchesCategory && matchesSearch && matchesStatus;
   });
-  // ===== FIM DA LÓGICA DE FILTRO =====
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -242,7 +238,6 @@ const categories = [
             </div>
           </div>
 
-          {/* Estado: nenhum assistente selecionado */}
           {!companyId && !loading && (
             <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
               <p className="text-gray-600 dark:text-gray-400">
@@ -251,14 +246,12 @@ const categories = [
             </div>
           )}
 
-          {/* Estado: carregando */}
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           )}
 
-          {/* Estado: sem funções cadastradas */}
           {!loading && companyId && functions.length === 0 && (
             <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-white/10">
               <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -267,10 +260,8 @@ const categories = [
             </div>
           )}
 
-          {/* Estado: funções carregadas */}
           {!loading && companyId && functions.length > 0 && (
             <>
-              {/* ===== BARRA DE FILTROS E BUSCA ===== */}
               <div className="mb-8 flex flex-wrap items-center justify-between gap-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
                 <div className="flex-grow max-w-xs relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -331,9 +322,7 @@ const categories = [
                   </div>
                 </div>
               </div>
-              {/* ===== FIM DA BARRA DE FILTROS ===== */}
 
-              {/* ===== GRID/LISTA DE FUNÇÕES ===== */}
               {filteredFunctions.length === 0 ? (
                 <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-white/10">
                   <p className="text-gray-600 dark:text-gray-400">
@@ -346,33 +335,31 @@ const categories = [
                     ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6' 
                     : 'space-y-4'
                 }>
-{filteredFunctions.map(fn => {
-  if (!fn || !fn.function_key) return null;
+                  {filteredFunctions.map(fn => {
+                    if (!fn || !fn.function_key) return null;
 
-  const enabled = isFunctionEnabled(fn.function_key);
-  const stats = getFunctionStats(fn.function_key);
-  const isUpdating = updating === fn.function_key;
+                    const enabled = isFunctionEnabled(fn.function_key);
+                    const stats = getFunctionStats(fn.function_key);
+                    const isUpdating = updating === fn.function_key;
 
-  return (
-    <FunctionCard
-      key={fn.id}
-      function={fn}
-      isEnabled={enabled}
-      stats={stats}
-      onToggle={() => toggleFunction(fn.function_key, enabled)}
-      onEdit={() => handleEdit(fn)}  // <--- VERIFICAR SE ESTÁ ASSIM
-      isUpdating={isUpdating}
-      theme={theme}
-    />
-  );
-})}
+                    return (
+                      <FunctionCard
+                        key={fn.id}
+                        function={fn}
+                        isEnabled={enabled}
+                        stats={stats}
+                        onToggle={() => toggleFunction(fn.function_key, enabled)}
+                        onEdit={() => handleEdit(fn)}
+                        isUpdating={isUpdating}
+                        theme={theme}
+                      />
+                    );
+                  })}
                 </div>
               )}
-              {/* ===== FIM DO GRID/LISTA ===== */}
             </>
           )}
 
-          {/* ===== MODAL DE CONFIGURAÇÃO ===== */}
           {editingFunction && companyId && (
             <FunctionConfigModal
               isOpen={!!editingFunction}
@@ -382,7 +369,6 @@ const categories = [
               onUpdate={() => loadData(companyId)}
             />
           )}
-          {/* ===== FIM DO MODAL ===== */}
         </div>
       </div>
     </div>

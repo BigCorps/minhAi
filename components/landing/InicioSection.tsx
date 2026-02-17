@@ -22,7 +22,7 @@ const OPCOES = [
   'Analista',
   'Consultor',
   'Coordenador',
-  'Divukgador',
+  'Divulgador',
 ];
 
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {

@@ -51,13 +51,14 @@ const CONFIGURABLE_FUNCTIONS = [
   'qrcode_instagram',
   'qrcode_website',
   'qrcode_facebook',
-  'qrcode_email',      // ← NOVO
-  'qrcode_linkedin',   // ← NOVO
-  'qrcode_tiktok',     // ← NOVO
-  'qrcode_twitter',    // ← NOVO
-  'qrcode_telefone',   // ← NOVO
+  'qrcode_email',
+  'qrcode_linkedin',
+  'qrcode_tiktok',
+  'qrcode_twitter',
+  'qrcode_telefone',
   'pix_generate',
   'chatgpt',
+  'orcamento',  // ← ADICIONAR
   'faq'
 ];
 

@@ -408,7 +408,7 @@ async function registerBiometry() {
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-500/30">
-              💡 Esta chave Pix será utilizada para receber os pagamentos enviados pelos seus assistentes virtuais.
+              Esta chave Pix será utilizada para receber os pagamentos enviados pelos seus assistentes virtuais.
             </p>
 
             <form onSubmit={handleUpdateProfile} className="space-y-6">

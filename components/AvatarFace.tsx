@@ -10,7 +10,7 @@ interface AvatarFaceProps {
   isProcessing: boolean;
   theme?: 'dark' | 'light';
   qrCodeData?: {
-    type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook';
+    type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
     qrCodeUrl: string;
     qrContent: string;
     displayText: string;

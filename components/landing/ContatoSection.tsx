@@ -159,7 +159,7 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
           <p className={`text-[10px] sm:text-xs mb-1 transition-colors ${
             isDark ? 'text-white/25' : 'text-gray-500'
           }`}>
-            INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
+            BIGCORPS TECNOLOGIA LTA
           </p>
           <p className={`text-[10px] sm:text-xs transition-colors ${
             isDark ? 'text-white/20' : 'text-gray-500'

@@ -78,7 +78,7 @@ export default function FunctionCarousel({
       const processedFunctions = (allFunctions || []).map(fn => ({
         ...fn,
         // Se não houver setting, considerar ATIVA por padrão
-        is_enabled_for_company: settingsMap.get(fn.function_key) ?? true,
+        is_enabled_for_company: settingsMap.get(fn.function_key) ?? fn.default_enabled,
       }));
 
       setFunctions(processedFunctions);
@@ -104,8 +104,10 @@ export default function FunctionCarousel({
     ? functions.filter(fn => fn.is_enabled_for_company)
     : functions;
   
-  // Quadruplicar funções para garantir loop infinito PERFEITO (agora usando filteredFunctions)
-  const quadruplicatedFunctions = [...filteredFunctions, ...filteredFunctions, ...filteredFunctions, ...filteredFunctions];
+  // Se autoScroll, quadruplicar para loop infinito. Se fixo, usar apenas uma vez.
+  const displayFunctions = autoScroll
+    ? [...filteredFunctions, ...filteredFunctions, ...filteredFunctions, ...filteredFunctions]
+    : filteredFunctions;
   
   // Cores alternadas azul/verde eAi
   const getCardColor = (index: number) => {
@@ -130,9 +132,12 @@ export default function FunctionCarousel({
       <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           {/* 🆕 APLICAR CLASSE DE ANIMAÇÃO CONDICIONALMENTE */}
-          <div className={`flex gap-3 pl-3 ${autoScroll ? 'animate-scroll-infinite' : ''} w-max`}>
-            {quadruplicatedFunctions.map((fn, idx) => {
-              const originalIndex = idx % filteredFunctions.length; // 🆕 Usar filteredFunctions.length
+          <div className={autoScroll
+            ? 'flex gap-3 pl-3 animate-scroll-infinite w-max'
+            : 'flex gap-3 flex-wrap justify-center w-full px-4'
+          }>
+            {displayFunctions.map((fn, idx) => {
+              const originalIndex = idx % filteredFunctions.length;
               const borderColor = getCardColor(originalIndex);
               const isEnabled = fn.is_enabled_for_company;
               

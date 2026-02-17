@@ -903,6 +903,10 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
           await handleFacebookCommand();
           break;
 
+      case 'orcamento':
+        await playText('Posso calcular orçamentos, prazos e valores totais, basta me dizer pra que você precisa de um orçamento e descrever detalhes do produto ou serviço.');
+        break;
+
       case 'qrcode_email':
         await handleQRCodeCommand('email');
         break;

@@ -129,6 +129,185 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     isPremium: false,
   },
 
+    // ========================================
+  // NOSSO EMAIL
+  // ========================================
+  qrcode_email: {
+    functionKey: 'qrcode_email',
+    functionName: 'Nosso Email',
+    category: 'contact',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'email',
+      'nosso email',
+      'endereço de email',
+      'e-mail',
+      'contato email',
+    ],
+    
+    examplePhrases: [
+      'Qual o email?',
+      'Me passa o email',
+      'Mostre o email de contato',
+    ],
+    
+    edgeFunction: 'gerar-qrcode-contato',
+    uiComponent: 'QRCodeDisplay',
+    requiresInput: false,
+    description: 'Exibe QR Code do email da empresa',
+    shortDescription: 'Mostrar Email',
+    icon: '📧',
+    color: '#10B981',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+  },
+
+  // ========================================
+  // NOSSO LINKEDIN
+  // ========================================
+  qrcode_linkedin: {
+    functionKey: 'qrcode_linkedin',
+    functionName: 'Nosso LinkedIn',
+    category: 'contact',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'linkedin',
+      'linked in',
+      'perfil linkedin',
+      'página linkedin',
+    ],
+    
+    examplePhrases: [
+      'Qual o LinkedIn?',
+      'Me passa o LinkedIn',
+      'Mostre o LinkedIn',
+    ],
+    
+    edgeFunction: 'gerar-qrcode-contato',
+    uiComponent: 'QRCodeDisplay',
+    requiresInput: false,
+    description: 'Exibe QR Code do perfil LinkedIn da empresa',
+    shortDescription: 'Mostrar LinkedIn',
+    icon: '💼',
+    color: '#10B981',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+  },
+
+  // ========================================
+  // NOSSO TIKTOK
+  // ========================================
+  qrcode_tiktok: {
+    functionKey: 'qrcode_tiktok',
+    functionName: 'Nosso TikTok',
+    category: 'contact',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'tiktok',
+      'tik tok',
+      'nosso tiktok',
+      'perfil tiktok',
+    ],
+    
+    examplePhrases: [
+      'Qual o TikTok?',
+      'Me passa o TikTok',
+      'Mostre o TikTok',
+    ],
+    
+    edgeFunction: 'gerar-qrcode-contato',
+    uiComponent: 'QRCodeDisplay',
+    requiresInput: false,
+    description: 'Exibe QR Code do perfil TikTok da empresa',
+    shortDescription: 'Mostrar TikTok',
+    icon: '🎵',
+    color: '#10B981',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+  },
+
+  // ========================================
+  // NOSSO TWITTER/X
+  // ========================================
+  qrcode_twitter: {
+    functionKey: 'qrcode_twitter',
+    functionName: 'Nosso Twitter/X',
+    category: 'contact',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'twitter',
+      'x',
+      'nosso twitter',
+      'perfil twitter',
+      'nosso x',
+    ],
+    
+    examplePhrases: [
+      'Qual o Twitter?',
+      'Me passa o X',
+      'Mostre o Twitter',
+    ],
+    
+    edgeFunction: 'gerar-qrcode-contato',
+    uiComponent: 'QRCodeDisplay',
+    requiresInput: false,
+    description: 'Exibe QR Code do perfil Twitter/X da empresa',
+    shortDescription: 'Mostrar Twitter/X',
+    icon: '🐦',
+    color: '#10B981',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+  },
+
+  // ========================================
+  // NOSSO TELEFONE FIXO
+  // ========================================
+  qrcode_telefone: {
+    functionKey: 'qrcode_telefone',
+    functionName: 'Nosso Telefone',
+    category: 'contact',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'telefone',
+      'telefone fixo',
+      'número de telefone',
+      'ligar',
+      'nosso telefone',
+      'fixo',
+    ],
+    
+    examplePhrases: [
+      'Qual o telefone?',
+      'Me passa o telefone',
+      'Qual o número para ligar?',
+    ],
+    
+    edgeFunction: 'gerar-qrcode-contato',
+    uiComponent: 'QRCodeDisplay',
+    requiresInput: false,
+    description: 'Exibe QR Code do telefone fixo - abre direto no app de ligações',
+    shortDescription: 'Mostrar Telefone',
+    icon: '📞',
+    color: '#10B981',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+  },
+
   // ========================================
   // NOSSO FACEBOOK
   // ========================================

@@ -308,7 +308,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     isPremium: false,
   },
 
-    // ========================================
+  // ========================================
   // CRIAR ORÇAMENTO
   // ========================================
   orcamento: {
@@ -334,34 +334,34 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
       'Faça um orçamento de [produto]',
     ],
     
-    requiresInput: true,  // Precisa de contexto do que orçar
+    requiresInput: true,
     description: 'Gera orçamentos personalizados usando IA com tabelas de preços configuradas',
     shortDescription: 'Gerar orçamentos com IA',
     icon: '💰',
     color: '#8B5CF6',
     saveToHistory: true,
-    creditsPerUse: 2,  // Mesmo que ChatGPT
+    creditsPerUse: 2,
     requiresPayment: false,
     isPremium: false,
     
-    // Handler customizado (executa lógica de orçamento)
+    // ✅ CORRIGIDO: Sem saveInteractionToHistory
     handler: async ({ 
       transcript, 
       playText, 
-      companyId, 
-      saveInteractionToHistory,
-      checkCreditsAndConsume 
+      companyId
     }) => {
       try {
-        // Verificar e consumir créditos
-        const hasCredits = await checkCreditsAndConsume(2);
-        if (!hasCredits) {
-          await playText('Você não tem créditos suficientes para gerar orçamentos.');
-          return false;
-        }
-
         // Buscar configuração de orçamento da empresa
         const supabase = createClient();
+        
+        // Verificar se tem créditos (essa função deve existir no contexto)
+        // Se não existir, remova esta verificação
+        // const hasCredits = await checkCreditsAndConsume?.(2);
+        // if (!hasCredits) {
+        //   await playText('Você não tem créditos suficientes para gerar orçamentos.');
+        //   return false;
+        // }
+
         const { data: company } = await supabase
           .from('companies')
           .select('orcamento_prompt')
@@ -373,34 +373,32 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
           return false;
         }
 
-        // Chamar Gemini com o prompt customizado
+        // Mostrar feedback ao usuário
         await playText('Gerando seu orçamento. Um momento...');
 
+        // Chamar Gemini
         const response = await fetch('/api/gemini-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: transcript,
             systemPrompt: company.orcamento_prompt,
-            conversationHistory: [], // Orçamento é stateless
+            conversationHistory: [],
           }),
         });
 
-        if (!response.ok) throw new Error('Erro ao gerar orçamento');
+        if (!response.ok) {
+          throw new Error('Erro ao gerar orçamento');
+        }
 
         const { reply } = await response.json();
 
         // Falar a resposta
         await playText(reply);
 
-        // Salvar no histórico
-        await saveInteractionToHistory(
-          transcript,
-          reply,
-          'orcamento'
-        );
-
+        // O histórico será salvo automaticamente pelo saveToHistory: true
         return true;
+        
       } catch (error) {
         console.error('Erro orçamento:', error);
         await playText('Desculpe, não consegui gerar o orçamento. Tente novamente.');

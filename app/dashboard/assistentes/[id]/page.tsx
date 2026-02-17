@@ -172,8 +172,11 @@ export default function EditarAssistentePage({ params }: PageProps) {
                   <option value="Secretário IA">Secretário IA</option>
                   <option value="Operador IA">Operador IA</option>
                   <option value="Agente IA">Agente IA</option>
+                  <option value="Coordenador IA">Vendedor IA</option>
+                  <option value="Coordenador IA">Recepcionista IA</option>
                   <option value="Analista IA">Analista IA</option>
                   <option value="Consultor IA">Consultor IA</option>
+                  <option value="Coordenador IA">Divulgador IA</option>
                   <option value="Coordenador IA">Coordenador IA</option>
                 </select>
               </div>

@@ -16,10 +16,13 @@ const OPCOES = [
   'Auxiliar',
   'Secretário',
   'Operador',
+  'Vendedor',
+  'Recepcionista',
   'Agente',
   'Analista',
   'Consultor',
   'Coordenador',
+  'Divukgador',
 ];
 
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {

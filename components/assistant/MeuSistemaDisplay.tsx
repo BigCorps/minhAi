@@ -1,6 +1,3 @@
-// ============================================
-// COMPONENTE CORRIGIDO COMPLETO
-// ============================================
 // components/assistant/MeuSistemaDisplay.tsx
 
 'use client';
@@ -193,23 +190,23 @@ export default function MeuSistemaDisplay({
             </div>
 
             {/* Textos */}
-            <div className="flex-1">
-              <h3 className={`text-3xl font-bold mb-2
+            <div>
+              <h3 className={`text-2xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                Assistente de Voz Inteligente
+                Assistente de Voz
               </h3>
-              <p className={`text-lg mb-4
+              <p className={`text-base mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
               `}>
                 Transforme o atendimento com um Funcionário IA
               </p>
-              <p className={`text-base mb-6
+              <p className={`text-sm mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
               `}>
-                Sistema completo de assistente de voz para empresas. 
-                Escaneie o QR Code para conhecer todas as funcionalidades.
+                Sistema completo para empresas
               </p>
+            </div>
 
             {/* QR Code */}
             <div>

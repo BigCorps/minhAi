@@ -137,9 +137,7 @@ export default function MeuSistemaDisplay({
 
             {/* QR Code */}
             <div className="flex-shrink-0">
-              <div className={`p-4 rounded-xl
-                ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
-              `}>
+              <div className="p-4 rounded-xl bg-white">
                 {qrCodeUrl ? (
                   <img
                     src={qrCodeUrl}
@@ -163,9 +161,7 @@ export default function MeuSistemaDisplay({
           {/* Layout Mobile: Vertical */}
           <div className="md:hidden flex flex-col items-center text-center gap-6">
             {/* Logo */}
-            <div className={`w-32 h-32 rounded-2xl flex items-center justify-center p-4
-              ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
-            `}>
+            <div className="w-32 h-32 flex items-center justify-center">
               <img
                 src="/logo-circle.png"
                 alt="Logo eAi"
@@ -198,9 +194,7 @@ export default function MeuSistemaDisplay({
 
             {/* QR Code */}
             <div>
-              <div className={`p-3 rounded-xl inline-block
-                ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
-              `}>
+              <div className="p-3 rounded-xl inline-block bg-white">
                 {qrCodeUrl ? (
                   <img
                     src={qrCodeUrl}

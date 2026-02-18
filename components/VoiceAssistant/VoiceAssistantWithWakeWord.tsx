@@ -1976,7 +1976,7 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       const usedFAQ = response.headers.get('X-Used-FAQ') === 'true';
       const processingTime = Date.now() - startTime;
 
-      console.log(usedFAQ ? '⚡ FAQ' : '🤖 Gemini');
+      console.log(usedFAQ ? '⚡ FAQ' : '🤖 ChatGPT');
       console.log(`⏱️ Tempo total: ${processingTime}ms`);
 
       clearTimeout(feedbackTimeout);

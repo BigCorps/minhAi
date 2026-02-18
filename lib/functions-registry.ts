@@ -389,7 +389,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         console.log('🧊 [MEU SISTEMA] Abrindo informações');
         
         // Falar sobre o sistema
-        await playText('E A I, sou um funcionário de I Á inteligente. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.');
+        await playText('E A I, sou um funcionário de Voz com Inteligência Artifical. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades. eai.app.br');
         
         // Abrir modal especial (se setActiveModal estiver disponível)
     if (setActiveModal) {
@@ -408,7 +408,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         }
         
     // 2. Falar DEPOIS (sem await - não bloqueia)
-    playText('Este é o eAi, seu assistente de voz inteligente. Escaneie o QR Code para saber mais sobre o sistema e suas funcionalidades.').catch(err => {
+    playText('E A I, sou um funcionário de Voz com Inteligência Artifical. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades. eai.app.br').catch(err => {
       console.error('Erro ao falar:', err);
     });
     

@@ -1962,23 +1962,14 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       formData.append('audio', textBlob, 'question.txt');
       formData.append('companyId', companyId);
       formData.append('directQuestion', questionText);
+
+      // ✅ Enviar sessionId se existir
       if (sessionId) {
         formData.append('sessionId', sessionId);
       }
 
-      const response = await fetch('/api/voice/process', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const newSessionId = response.headers.get('X-Session-Id');
-      if (newSessionId && !sessionId) {
-        setSessionId(newSessionId);
-        console.log('💬 Session ID recebido:', newSessionId);
-      }
-
       console.log('📤 Enviando para API...');
-      
+
       let feedbackStarted = false;
       const feedbackTimeout = setTimeout(() => {
         if (!feedbackStarted) {
@@ -1991,11 +1982,19 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
           });
         }
       }, 1000);
-      
+
+      // ✅ UMA ÚNICA declaração "const response"
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
       });
+
+      // ✅ Capturar sessionId da resposta (Passo 3)
+      const newSessionId = response.headers.get('X-Session-Id');
+      if (newSessionId && !sessionId) {
+        setSessionId(newSessionId);
+        console.log('💬 Session ID recebido:', newSessionId);
+      }
 
       if (!response.ok) {
         throw new Error(`Erro: ${response.status}`);

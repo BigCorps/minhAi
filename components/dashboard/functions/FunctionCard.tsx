@@ -63,7 +63,7 @@ const CONFIGURABLE_FUNCTIONS = [
 ];
 
 // ✅ NOVO: Funções que NÃO têm toggle (sempre visíveis)
-const SYSTEM_FUNCTIONS = ['faq', 'chatgpt', 'meu_sistema'];
+const SYSTEM_FUNCTIONS = ['meu_sistema'];
 
 export default function FunctionCard({
   function: fn,

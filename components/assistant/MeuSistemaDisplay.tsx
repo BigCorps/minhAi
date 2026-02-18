@@ -17,7 +17,6 @@ export default function MeuSistemaDisplay({
 }: MeuSistemaDisplayProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(20);
-  const [loading, setLoading] = useState(true);
   const websiteUrl = 'https://eai.app.br';
 
  // ✅ SOLUÇÃO SIMPLES: Gerar QR Code direto via API (sem Edge Function)

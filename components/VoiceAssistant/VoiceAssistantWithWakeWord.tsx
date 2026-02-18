@@ -1392,7 +1392,6 @@ if (registryFunc?.handler) {
     };
     console.log(`🎯 Contexto de ${registryFunc.functionKey} ativado por 5 minutos`);
   }
-}
           
         } else {
           // Função sem handler - usar resposta padrão do processor

@@ -389,6 +389,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         
         const supabase = createClient();
 
+        // Buscar prompt de orçamento
         const { data: company } = await supabase
           .from('companies')
           .select('orcamento_prompt')
@@ -404,17 +405,20 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
         await playText('Gerando seu orçamento. Um momento...');
 
-        console.log('💰 [ORCAMENTO] Chamando API ChatGPT...');
+        console.log('💰 [ORCAMENTO] Chamando API voice/process...');
 
-        // ✅ USAR /api/chat (ChatGPT via OpenAI) ao invés de /api/gemini-chat
-        const response = await fetch('/api/chat', {
+        // ✅ USAR /api/voice/process (mesma API que ChatGPT usa)
+        // Criar um FormData com o texto
+        const formData = new FormData();
+        const textBlob = new Blob([transcript], { type: 'text/plain' });
+        formData.append('audio', textBlob, 'question.txt');
+        formData.append('companyId', companyId);
+        formData.append('directQuestion', transcript);
+        formData.append('useOrcamentoPrompt', 'true'); // ← Flag especial
+
+        const response = await fetch('/api/voice/process', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: transcript,
-            companyId: companyId,
-            systemPrompt: company.orcamento_prompt, // Prompt customizado de orçamento
-          }),
+          body: formData,
         });
 
         console.log('💰 [ORCAMENTO] Response status:', response.status);
@@ -425,16 +429,27 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
           throw new Error('Erro ao gerar orçamento');
         }
 
-        const data = await response.json();
-        const reply = data.response || data.reply || data.message;
+        // A resposta é um áudio (ArrayBuffer)
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
         
-        console.log('💰 [ORCAMENTO] Reply recebido:', reply?.substring(0, 100) + '...');
+        console.log('💰 [ORCAMENTO] Áudio recebido, tocando...');
 
-        if (!reply) {
-          throw new Error('Resposta vazia da API');
-        }
-
-        await playText(reply);
+        // Tocar o áudio diretamente
+        const audio = new Audio(audioUrl);
+        audio.playbackRate = 1.05;
+        
+        await new Promise<void>((resolve, reject) => {
+          audio.onended = () => {
+            console.log('💰 [ORCAMENTO] Áudio tocado com sucesso');
+            resolve();
+          };
+          audio.onerror = () => {
+            console.error('💰 [ORCAMENTO] Erro ao tocar áudio');
+            reject(new Error('Erro ao tocar áudio'));
+          };
+          audio.play().catch(reject);
+        });
 
         return true;
         

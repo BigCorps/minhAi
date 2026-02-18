@@ -47,11 +47,11 @@ const categories = [
   { key: 'knowledge',     name: 'Aprendizado',  color: '#FFFF00' },
   { key: 'configuration', name: 'Configuração', color: '#800080' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
-  { key: 'video',         name: 'Vídeos',       color: '#6B7280' },
-  { key: 'payment',       name: 'Pagamento',    color: '#F59E0B' },
+  { key: 'video',         name: 'Vídeos',       color: '#A52A2A' },
+  { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
   { key: 'schedule',      name: 'Agendamento',  color: '#FFA500' },
   { key: 'information',   name: 'Informação',   color: '#00FFF7' },
-  { key: 'ai_assistant',  name: 'Conhecimento', color: '#A855F7' },
+  { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
 ];
 
 const statusOptions = [
@@ -99,7 +99,7 @@ function CategoryPillSelector({
       onClick={onSelectAll}
       className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
     >
-      Todas as Categorias
+      Categorias
     </button>
   );
 

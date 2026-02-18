@@ -59,7 +59,7 @@ export default function MeuSistemaDisplay({
           <h2 className={`text-xl font-bold
             ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
           `}>
-            Sistema eAi
+            www.eAi.app.br
           </h2>
           
           <div className="flex items-center gap-3">
@@ -117,18 +117,17 @@ export default function MeuSistemaDisplay({
               <h3 className={`text-3xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                Assistente de Voz Inteligente
+                eAi, sou um funcionário de Voz com Inteligência Artifical.
               </h3>
               <p className={`text-lg mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
               `}>
-                Transforme o atendimento com um Funcionário IA
+                Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.
               </p>
               <p className={`text-base mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
               `}>
-                Sistema completo de assistente de voz para empresas. 
-                Escaneie o QR Code para conhecer todas as funcionalidades.
+                www.eAi.app.br
               </p>
               
               <a
@@ -194,17 +193,17 @@ export default function MeuSistemaDisplay({
               <h3 className={`text-2xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                Assistente de Voz
+                eAi, sou um funcionário de Voz com Inteligência Artifical.
               </h3>
               <p className={`text-base mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
               `}>
-                Transforme o atendimento com um Funcionário IA
+                Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.
               </p>
               <p className={`text-sm mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
               `}>
-                Sistema completo para empresas
+                eai.app.br
               </p>
             </div>
 

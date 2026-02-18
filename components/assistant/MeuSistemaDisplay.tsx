@@ -1,5 +1,5 @@
 // ============================================
-// COMPONENTE CORRIGIDO: MeuSistemaDisplay
+// COMPONENTE CORRIGIDO COMPLETO
 // ============================================
 // components/assistant/MeuSistemaDisplay.tsx
 
@@ -7,7 +7,6 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import Image from 'next/image';
 
 interface MeuSistemaDisplayProps {
   onClose: () => void;
@@ -22,9 +21,11 @@ export default function MeuSistemaDisplay({
   const [timeLeft, setTimeLeft] = useState(15);
   const websiteUrl = 'https://eai.app.br';
 
-  // Gerar QR Code via API do Google Charts (sem dependências)
+  // Gerar QR Code via API do Google Charts
   useEffect(() => {
-    const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chl=${encodeURIComponent(websiteUrl)}&chs=300x300&choe=UTF-8`;
+    // ✅ CORREÇÃO: QR Code maior e com melhor qualidade
+    const size = 400; // Tamanho maior
+    const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chl=${encodeURIComponent(websiteUrl)}&chs=${size}x${size}&choe=UTF-8&chld=M|2`;
     setQrCodeUrl(qrUrl);
   }, []);
 
@@ -61,7 +62,7 @@ export default function MeuSistemaDisplay({
           <h2 className={`text-xl font-bold
             ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
           `}>
-            eAi App
+            Sistema eAi
           </h2>
           
           <div className="flex items-center gap-3">
@@ -97,21 +98,25 @@ export default function MeuSistemaDisplay({
           <div className="hidden md:flex items-center gap-8">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <div className={`w-48 h-48 rounded-2xl flex items-center justify-center
+              <div className={`w-48 h-48 rounded-2xl flex items-center justify-center p-4
                 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
               `}>
-                <Image
-                  src="/public/logo-circle.png"
+                {/* ✅ CORREÇÃO: Usar imagem da pasta public */}
+                <img
+                  src="/logo-circle.png"
                   alt="Logo eAi"
-                  width={120}
-                  height={120}
-                  priority
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.error('Erro ao carregar logo');
+                    // Fallback se não carregar
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               </div>
             </div>
 
-            {/* Textos */}
-            <div className="flex-1">
+            {/* Textos - ✅ CENTRALIZADO */}
+            <div className="flex-1 text-center">
               <h3 className={`text-3xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
@@ -144,11 +149,16 @@ export default function MeuSistemaDisplay({
               <div className={`p-4 rounded-xl
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
+                {/* ✅ CORREÇÃO: QR Code maior e melhor */}
                 {qrCodeUrl ? (
                   <img
                     src={qrCodeUrl}
                     alt="QR Code eAi"
-                    className="w-48 h-48"
+                    className="w-48 h-48 object-contain"
+                    onError={(e) => {
+                      console.error('Erro ao carregar QR Code');
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EQR Code%3C/text%3E%3C/svg%3E';
+                    }}
                   />
                 ) : (
                   <div className="w-48 h-48 flex items-center justify-center">
@@ -164,50 +174,58 @@ export default function MeuSistemaDisplay({
             </div>
           </div>
 
-          {/* Layout Mobile: Vertical */}
+          {/* Layout Mobile: Vertical - ✅ JÁ ESTAVA CENTRALIZADO */}
           <div className="md:hidden flex flex-col items-center text-center gap-6">
             {/* Logo */}
-            <div className={`w-32 h-32 rounded-2xl flex items-center justify-center
+            <div className={`w-32 h-32 rounded-2xl flex items-center justify-center p-4
               ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
             `}>
-              <Image
-                src="/public/logo-circle.png"
+              {/* ✅ CORREÇÃO: Usar imagem da pasta public */}
+              <img
+                src="/logo-circle.png"
                 alt="Logo eAi"
-                width={80}
-                height={80}
-                priority
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  console.error('Erro ao carregar logo mobile');
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </div>
 
             {/* Textos */}
-            <div>
-              <h3 className={`text-2xl font-bold mb-2
+            <div className="flex-1">
+              <h3 className={`text-3xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                Assistente de Voz
+                Assistente de Voz Inteligente
               </h3>
-              <p className={`text-base mb-4
+              <p className={`text-lg mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
               `}>
                 Transforme o atendimento com um Funcionário IA
               </p>
-              <p className={`text-sm mb-6
+              <p className={`text-base mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
               `}>
-                Sistema completo para empresas
+                Sistema completo de assistente de voz para empresas. 
+                Escaneie o QR Code para conhecer todas as funcionalidades.
               </p>
-            </div>
 
             {/* QR Code */}
             <div>
               <div className={`p-3 rounded-xl inline-block
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
+                {/* ✅ CORREÇÃO: QR Code maior e melhor */}
                 {qrCodeUrl ? (
                   <img
                     src={qrCodeUrl}
                     alt="QR Code eAi"
-                    className="w-40 h-40"
+                    className="w-40 h-40 object-contain"
+                    onError={(e) => {
+                      console.error('Erro ao carregar QR Code mobile');
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="160"%3E%3Crect fill="%23ddd" width="160" height="160"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EQR Code%3C/text%3E%3C/svg%3E';
+                    }}
                   />
                 ) : (
                   <div className="w-40 h-40 flex items-center justify-center">

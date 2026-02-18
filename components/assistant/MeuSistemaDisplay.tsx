@@ -16,7 +16,7 @@ export default function MeuSistemaDisplay({
   theme = 'dark'
 }: MeuSistemaDisplayProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(20);
   const [loading, setLoading] = useState(true);
   const websiteUrl = 'https://eai.app.br';
 
@@ -59,7 +59,7 @@ export default function MeuSistemaDisplay({
     generateQRCode();
   }, []);
 
-  // Auto-close após 15 segundos com contador
+  // Auto-close após 20 segundos com contador
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -290,14 +290,14 @@ export default function MeuSistemaDisplay({
           </div>
         </div>
 
-        {/* Barra de progresso (15 segundos) */}
+        {/* Barra de progresso (20 segundos) */}
         <div className={`h-1 
           ${theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'}
         `}>
           <div
             className="h-full bg-indigo-600 transition-all duration-1000 ease-linear"
             style={{
-              width: `${(timeLeft / 15) * 100}%`
+              width: `${(timeLeft / 20) * 100}%`
             }}
           />
         </div>

@@ -44,12 +44,12 @@ interface CompanyFunctionSetting {
 
 // "Outros" removido dos botões visíveis conforme solicitado
 const categories = [
-  { key: 'knowledge',     name: 'Aprendizado',  color: '#3B82F6' },
-  { key: 'configuration', name: 'Configuração', color: '#8B5CF6' },
+  { key: 'knowledge',     name: 'Aprendizado',  color: '#FFFF00' },
+  { key: 'configuration', name: 'Configuração', color: '#800080' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
   { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
-  { key: 'schedule',      name: 'Agendamento',  color: '#555CF6' },
-  { key: 'information',   name: 'Informação',   color: '#800080' },
+  { key: 'schedule',      name: 'Agendamento',  color: '#FFA500' },
+  { key: 'information',   name: 'Informação',   color: '#00FFF7' },
   { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
 ];
 

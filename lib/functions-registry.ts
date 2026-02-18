@@ -389,7 +389,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         console.log('🧊 [MEU SISTEMA] Abrindo informações');
         
         // Falar sobre o sistema
-        await playText('E A I, sou um funcionário de I A inteligente. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.');
+        await playText('E A I, sou um funcionário de I Á inteligente. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.');
         
         // Abrir modal especial (se setActiveModal estiver disponível)
     if (setActiveModal) {

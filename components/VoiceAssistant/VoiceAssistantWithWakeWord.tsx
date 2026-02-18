@@ -1971,57 +1971,58 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
     console.log('🛑 Google Speech parado para evitar feedback');
 
     // ✅ NOVO: Verificar contexto ativo ANTES de detectar comando
-    const activeFunction = getActiveFunctionContext();
+const activeFunction = getActiveFunctionContext();
 
-    if (activeFunction) {
-      console.log(`🎯 Contexto ativo detectado: ${activeFunction} (forçando uso)`);
+if (activeFunction) {
+  console.log(`🎯 Contexto ativo detectado: ${activeFunction} (forçando uso)`);
 
-      const func = getFunctionByKey(activeFunction);
+  const func = getFunctionByKey(activeFunction); // ← Aqui é "func"
 
-      if (func?.handler) {
-        console.log(`🎯 Usando ${activeFunction} pelo contexto ativo`);
+  if (func?.handler) {
+    console.log(`🎯 Usando ${activeFunction} pelo contexto ativo`);
 
-        setIsProcessing(true);
+    setIsProcessing(true);
 
-        try {
-          const handlerSuccess = await func.handler({
-            transcript: questionText,
-            companyId,
-            functionSettings,
-            playText,
-            setIsProcessing,
-            sessionId,
-          });
+    try {
+      const handlerSuccess = await func.handler({
+        transcript: questionText,
+        companyId,
+        functionSettings,
+        playText,
+        setIsProcessing,
+        sessionId,
+      });
 
-          if (handlerSuccess) {
-            activeFunctionContextRef.current = {
-             functionKey: registryFunc.functionKey || '',
-             activatedAt: Date.now(),
-             expiresIn: 5 * 60 * 1000,
-            };
-            console.log(`🔄 Contexto de ${activeFunction} renovado por mais 5 minutos`);
+      if (handlerSuccess) {
+        // ✅ CORRIGIR AQUI - usar "func", não "registryFunc"
+        activeFunctionContextRef.current = {
+          functionKey: func.functionKey, // ← "func", não "registryFunc"
+          activatedAt: Date.now(),
+          expiresIn: 5 * 60 * 1000,
+        };
+        console.log(`🔄 Contexto de ${func.functionKey} renovado por mais 5 minutos`); // ← "func"
 
-            await registerFunctionUsage(
-              activeFunction,
-              functionSettings[activeFunction]?.creditsPerUse ?? 2
-            );
-          }
-        } catch (error) {
-          console.error('❌ Erro ao executar handler do contexto:', error);
-          setIsProcessing(false);
-        }
-
-        processingQuestion.current = false;
-
-        setTimeout(async () => {
-          shouldProcessAudio.current = true;
-          await startGoogleSpeech();
-          console.log('🎤 Google Speech reiniciado após contexto');
-        }, 500);
-
-        return; // ← Sair aqui, não continuar para detectVoiceCommand
+        await registerFunctionUsage(
+          activeFunction,
+          functionSettings[activeFunction]?.creditsPerUse ?? 2
+        );
       }
+    } catch (error) {
+      console.error('❌ Erro ao executar handler do contexto:', error);
+      setIsProcessing(false);
     }
+
+    processingQuestion.current = false;
+
+    setTimeout(async () => {
+      shouldProcessAudio.current = true;
+      await startGoogleSpeech();
+      console.log('🎤 Google Speech reiniciado após contexto');
+    }, 500);
+
+    return;
+  }
+}
     
     // ── A partir daqui, tudo igual ao original ──────────────────
 

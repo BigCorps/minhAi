@@ -138,7 +138,7 @@ export default function FunctionCard({
           {/* ✅ MODIFICADO: Mostrar badge "Sistema" para funções sem toggle */}
           {isSystemFunction && (
             <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">
-              Sistema
+              Padrão
             </span>
           )}
           

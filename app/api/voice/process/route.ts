@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     const companyId = formData.get('companyId') as string;
     const conversationId = formData.get('conversationId') as string | null;
     const directQuestion = formData.get('directQuestion') as string | null;
-    const returnText = formData.get('returnText') === 'true'; // ✅ NOVO
+    const returnText = formData.get('returnText') === 'true';
 
     if (!audioFile || !companyId) {
       return NextResponse.json(
@@ -154,6 +154,44 @@ export async function POST(request: NextRequest) {
 
     if (!company) {
       throw new Error('Company not found');
+    }
+
+    // ✅ NOVO: Gerenciar sessão de contexto
+    const sessionId = formData.get('sessionId') as string | null;
+    let currentSession: any = null;
+    let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+    if (sessionId) {
+      // Buscar sessão existente
+      const { data: session } = await supabase
+        .from('assistant_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .eq('company_id', companyId)
+        .single();
+      
+      if (session && new Date(session.expires_at) > new Date()) {
+        currentSession = session;
+        conversationHistory = session.messages || [];
+        console.log(`💬 Sessão encontrada com ${conversationHistory.length} mensagens`);
+      } else {
+        console.log('⚠️ Sessão expirada ou não encontrada, criando nova');
+      }
+    }
+
+    if (!currentSession) {
+      // Criar nova sessão
+      const { data: newSession } = await supabase
+        .from('assistant_sessions')
+        .insert({
+          company_id: companyId,
+          messages: [],
+        })
+        .select()
+        .single();
+      
+      currentSession = newSession;
+      console.log('✨ Nova sessão criada:', currentSession.id);
     }
 
     const userMessage = directQuestion || '';
@@ -221,7 +259,9 @@ Pergunta: ${userMessage}`;
 
       console.log('📋 Usando prompt:', useOrcamentoPrompt ? 'ORÇAMENTO' : 'PADRÃO');
 
-      responseText = await processWithGPT(userMessage, systemPrompt);
+      // ✅ ATUALIZADO: Passa conversationHistory para contexto
+      responseText = await processWithGPT(userMessage, systemPrompt, conversationHistory);
+      console.log(`🧠 Usando contexto de ${conversationHistory.length} mensagens`);
       
       console.log('✅ OpenAI respondeu');
 
@@ -235,6 +275,30 @@ Pergunta: ${userMessage}`;
         p_credits_consumed: creditsConsumed
       });
     }
+
+    // ✅ ATUALIZAR histórico da sessão
+    conversationHistory.push(
+      { role: 'user', content: userMessage },
+      { role: 'assistant', content: responseText }
+    );
+
+    // Manter apenas as últimas 10 mensagens (5 turnos)
+    const MAX_MESSAGES = 10;
+    if (conversationHistory.length > MAX_MESSAGES) {
+      conversationHistory = conversationHistory.slice(-MAX_MESSAGES);
+    }
+
+    // Atualizar sessão no banco
+    await supabase
+      .from('assistant_sessions')
+      .update({
+        messages: conversationHistory,
+        last_activity_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // +30min
+      })
+      .eq('id', currentSession.id);
+
+    console.log(`💾 Sessão atualizada: ${conversationHistory.length} mensagens`);
 
     // ✅ NOVO: Retornar texto se solicitado
     if (returnText) {
@@ -260,6 +324,7 @@ Pergunta: ${userMessage}`;
 
       return NextResponse.json({
         response: responseText,
+        sessionId: currentSession.id, // ✅ NOVO
         conversationId: finalConversationId,
         usedFAQ,
         processingTime: totalTime,
@@ -302,6 +367,7 @@ Pergunta: ${userMessage}`;
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Conversation-Id': finalConversationId,
+        'X-Session-Id': currentSession.id, // ✅ NOVO
         'X-Used-FAQ': String(usedFAQ),
         'X-Processing-Time': String(totalTime),
         'X-Transcription': encodeURIComponent(userMessage),

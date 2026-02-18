@@ -1363,8 +1363,8 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
     if (commandProcessor) {
       const result = await commandProcessor.processCommand(transcript);
       
-if (result?.success) {
-  console.log('✅ Nova função detectada:', result.functionKey); // ← AQUI É result
+    if (result?.success) {
+      console.log('✅ Nova função detectada:', result.functionKey); // ← AQUI É result
   
   // Verificar se a função tem handler customizado
   const registryFunc = getFunctionByKey(result.functionKey || ''); // ← AQUI É result

@@ -48,6 +48,11 @@ export function VoiceAssistantWithWakeWord({
   const [showStartButton, setShowStartButton] = useState(true);
   const [transcript, setTranscript] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [activeFunctionContext, setActiveFunctionContext] = useState<{
+    functionKey: string;
+    activatedAt: number;
+    expiresIn: number; // milissegundos
+  } | null>(null);
 
   // ✅ MUDANÇA 2: ADICIONAR STATES
   const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
@@ -469,6 +474,29 @@ googleSpeechRef.current = new GoogleSpeechWebSocket({
     }
   }
 
+// ============================================
+// Criar função para verificar contexto ativo
+// ============================================
+
+// ADICIONAR esta função:
+function getActiveFunctionContext(): string | null {
+  if (!activeFunctionContext) return null;
+  
+  const now = Date.now();
+  const elapsed = now - activeFunctionContext.activatedAt;
+  
+  if (elapsed > activeFunctionContext.expiresIn) {
+    console.log('⏰ Contexto de função expirou');
+    setActiveFunctionContext(null);
+    return null;
+  }
+  
+  const remainingSeconds = Math.floor((activeFunctionContext.expiresIn - elapsed) / 1000);
+  console.log(`🎯 Contexto ativo: ${activeFunctionContext.functionKey} (${remainingSeconds}s restantes)`);
+  
+  return activeFunctionContext.functionKey;
+}
+
   // ========================================
   // FUNÇÃO DE DETECÇÃO DE STOP
   // ========================================
@@ -673,8 +701,12 @@ googleSpeechRef.current = new GoogleSpeechWebSocket({
     shouldProcessAudio.current = true;
     
     console.log('✅ Parado');
+
+    // 7. Limpar contexto de função
+    setActiveFunctionContext(null);
+    console.log('🧹 Contexto de função limpo');
     
-    // 7. Reiniciar Google Speech após 500ms
+    // 8. Reiniciar Google Speech após 500ms
     setTimeout(async () => {
       if (isActiveRef.current) {
         await startGoogleSpeech();
@@ -1065,6 +1097,7 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
   // VOICE COMMAND DETECTION
   // ========================================
   async function detectVoiceCommand(transcript: string): Promise<boolean> {
+    
     // ✅ PASSO 1: Corrigir erros de transcrição PRIMEIRO
     const correctedTranscript = correctTranscriptionErrors(transcript);
     const lowerTranscript = correctedTranscript.toLowerCase().trim();
@@ -1074,6 +1107,45 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       console.log('🔧 Corrigido:', correctedTranscript);
     }
     console.log('🔍 Processando:', lowerTranscript);
+
+      const activeFunction = getActiveFunctionContext();
+  
+  if (activeFunction) {
+    console.log(`🎯 Contexto ativo detectado: ${activeFunction}`);
+    
+    // Buscar a função no registry
+    const func = getFunctionByKey(activeFunction);
+    
+    if (func?.handler) {
+      console.log(`🎯 Forçando uso de ${activeFunction} pelo contexto`);
+      
+      const handlerSuccess = await func.handler({
+        transcript: lowerTranscript,
+        companyId,
+        functionSettings,
+        playText,
+        setIsProcessing,
+        sessionId,
+      });
+      
+      if (handlerSuccess) {
+        // Renovar contexto
+        setActiveFunctionContext({
+          functionKey: activeFunction,
+          activatedAt: Date.now(),
+          expiresIn: 5 * 60 * 1000,
+        });
+        console.log(`🔄 Contexto de ${activeFunction} renovado por mais 5 minutos`);
+        
+        await registerFunctionUsage(
+          activeFunction,
+          functionSettings[activeFunction]?.creditsPerUse ?? 2
+        );
+      }
+      
+      return true;
+    }
+  }
     
     // ✅ PASSO 2: Converter números por extenso
     const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
@@ -1341,17 +1413,26 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
           console.log('🎯 Executando handler customizado para:', result.functionKey);
           
           // Executar handler customizado
-          const handlerSuccess = await registryFunc.handler({
-            transcript: lowerTranscript,
-            companyId,
-            functionSettings,
-            playText,
-            setIsProcessing,
-          });
-          
-          if (handlerSuccess) {
-            console.log('✅ Handler customizado executado com sucesso');
-          }
+  const handlerSuccess = await registryFunc.handler({
+    transcript: lowerTranscript,
+    companyId,
+    functionSettings,
+    playText,
+    setIsProcessing,
+    sessionId,
+  });
+  
+  if (handlerSuccess) {
+    console.log('✅ Handler customizado executado com sucesso');
+    
+    // ✅ ADICIONAR: Ativar contexto de função
+    setActiveFunctionContext({
+      functionKey: result.functionKey || '',
+      activatedAt: Date.now(),
+      expiresIn: 5 * 60 * 1000, // 5 minutos
+    });
+    console.log(`🎯 Contexto de ${result.functionKey} ativado por 5 minutos`);
+  }
           
         } else {
           // Função sem handler - usar resposta padrão do processor

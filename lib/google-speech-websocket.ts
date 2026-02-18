@@ -30,7 +30,7 @@ export class GoogleSpeechWebSocket {
   // ✅ "PACIÊNCIA" DO ASSISTENTE:
   // Aumentado para ~10s (40 chunks * 256ms) antes de pausar a transmissão
   // Isso evita que o assistente fique "oscilando" entre ativo e aguarde durante pausas naturais da fala.
-  private readonly SILENCE_THRESHOLD = 80; 
+  private readonly SILENCE_THRESHOLD = 100; 
   
   // ✅ LIMITE DE VOLUME MAIS SENSÍVEL:
   // Reduzido de 0.045 para 0.015 para captar falas mais baixas ou distantes.

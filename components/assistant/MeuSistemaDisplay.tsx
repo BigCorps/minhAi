@@ -101,7 +101,7 @@ export default function MeuSistemaDisplay({
                 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
               `}>
                 <Image
-                  src="/app/favicon.svg"
+                  src="/public/logo-circle.png"
                   alt="Logo eAi"
                   width={120}
                   height={120}
@@ -171,7 +171,7 @@ export default function MeuSistemaDisplay({
               ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
             `}>
               <Image
-                src="/app/favicon.svg"
+                src="/public/logo-circle.png"
                 alt="Logo eAi"
                 width={80}
                 height={80}

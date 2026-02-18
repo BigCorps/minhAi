@@ -139,9 +139,9 @@ function CategoryPillSelector({
     );
   }
 
-  // Desktop: flex-wrap, quebra em múltiplas linhas conforme a tela
+  // Desktop: flex-wrap centralizado, quebra em múltiplas linhas conforme a tela
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap justify-center gap-2">
       {allBtn}
       {catBtns}
     </div>
@@ -367,8 +367,9 @@ function FunctionsPageContent() {
         <div className="max-w-6xl mx-auto">
 
           {/* ── Header ── */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6">
+          <div className="mb-4 sm:mb-8">
+            {/* Desktop: flex row — título à esquerda, seletor à direita */}
+            <div className="hidden sm:flex items-start justify-between gap-4 mb-6">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Funções do Assistente
@@ -382,6 +383,26 @@ function FunctionsPageContent() {
                 selectedCompanyId={companyId}
                 theme={theme}
               />
+            </div>
+
+            {/* Mobile: título + seletor full-width empilhados */}
+            <div className="sm:hidden flex flex-col gap-3 mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  Funções do Assistente
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Ative ou desative as funções que seu assistente pode executar
+                </p>
+              </div>
+              {/* Seletor ocupa toda a largura disponível */}
+              <div className="w-full">
+                <FunctionSelector
+                  onCompanySelect={handleCompanySelect}
+                  selectedCompanyId={companyId}
+                  theme={theme}
+                />
+              </div>
             </div>
           </div>
 
@@ -447,9 +468,9 @@ function FunctionsPageContent() {
                   FILTER BAR — DESKTOP  (≥ sm)
                   ════════════════════════════════════ */}
               <div className="hidden sm:flex flex-col gap-3 mb-6 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
-                {/* Linha 1: busca + status pills + view toggle */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative flex-grow min-w-[160px] max-w-xs">
+                {/* Linha 1: busca à esquerda | status + view toggle à direita */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-grow min-w-[160px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
@@ -460,14 +481,16 @@ function FunctionsPageContent() {
                     />
                   </div>
 
-                  <StatusPillSelector
-                    filterStatus={filterStatus}
-                    onSetStatus={setFilterStatus}
-                    isMobile={false}
-                  />
+                  {/* Status pills + view toggle agrupados à direita */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <StatusPillSelector
+                      filterStatus={filterStatus}
+                      onSetStatus={setFilterStatus}
+                      isMobile={false}
+                    />
 
                   {/* View mode toggle */}
-                  <div className="flex items-center border border-gray-300 dark:border-white/10 rounded-lg p-1 dark:bg-slate-800 ml-auto">
+                  <div className="flex items-center border border-gray-300 dark:border-white/10 rounded-lg p-1 dark:bg-slate-800">
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`p-1.5 rounded-md transition-colors ${
@@ -499,9 +522,10 @@ function FunctionsPageContent() {
                       </svg>
                     </button>
                   </div>
-                </div>
+                  </div>{/* end status+toggle group */}
+                </div>{/* end row 1 */}
 
-                {/* Linha 2: categorias — flex-wrap, quebra automaticamente conforme a largura */}
+                {/* Linha 2: categorias — centralizadas, quebra automaticamente conforme a largura */}
                 <CategoryPillSelector
                   selectedCategories={selectedCategories}
                   onToggleCategory={handleToggleCategory}

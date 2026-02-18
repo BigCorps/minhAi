@@ -36,13 +36,13 @@ interface FunctionCardProps {
 }
 
 const CATEGORY_NAMES: { [key: string]: string } = {
-  'knowledge': 'Conhecimento',
+  'knowledge': 'Aprendizado',
   'configuration': 'Configuração',
   'contact': 'Contato',
   'payment': 'Pagamento',
   'schedule': 'Agendamento',
   'information': 'Informação',
-  'ai_assistant': 'Assistente IA',
+  'ai_assistant': 'Conhecimento',
   'other': 'Outros',
 };
 

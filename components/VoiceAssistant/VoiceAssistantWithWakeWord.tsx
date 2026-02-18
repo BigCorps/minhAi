@@ -1363,70 +1363,66 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
     if (commandProcessor) {
       const result = await commandProcessor.processCommand(transcript);
       
-      if (result?.success) {
-        console.log('✅ Nova função detectada:', registryFunc.functionKey);
-        
-        // Verificar se a função tem handler customizado
-        const registryFunc = getFunctionByKey(registryFunc.functionKey || '');
-        
-if (registryFunc?.handler) {
-  console.log('🎯 Executando handler customizado para:', registryFunc.functionKey);
+if (result?.success) {
+  console.log('✅ Nova função detectada:', result.functionKey); // ← AQUI É result
   
-  const handlerSuccess = await registryFunc.handler({
-    transcript: lowerTranscript,
-    companyId,
-    functionSettings,
-    playText,
-    setIsProcessing,
-    sessionId,
-  });
+  // Verificar se a função tem handler customizado
+  const registryFunc = getFunctionByKey(result.functionKey || ''); // ← AQUI É result
   
-  if (handlerSuccess) {
-    console.log('✅ Handler customizado executado com sucesso');
+  if (registryFunc?.handler) {
+    console.log('🎯 Executando handler customizado para:', result.functionKey); // ← AQUI É result
     
-    // ✅ CORRETO - usar registryFunc.functionKey
-    activeFunctionContextRef.current = {
-      functionKey: registryFunc.functionKey, // ← CORRIGIDO
-      activatedAt: Date.now(),
-      expiresIn: 5 * 60 * 1000,
-    };
-    console.log(`🎯 Contexto de ${registryFunc.functionKey} ativado por 5 minutos`);
-  }
-          
-        } else {
-          // Função sem handler - usar resposta padrão do processor
-          if (result.speechText) {
-            await playText(result.speechText);
-          }
-          
-          // Abrir modal (se tiver)
-          if (result.modalData && result.modalType) {
-            console.log('📋 Modal:', result.modalType);
-            
-            if (result.modalType === 'QRCodeDisplay') {
-              setQrCodeData({
-                type: registryFunc.functionKey?.replace('qrcode_', '') as any,
-                qrCodeUrl: result.modalData.qr_code_url,
-                qrContent: result.modalData.qr_content,
-                displayText: result.modalData.display_text,
-                companyName: result.modalData.company_name,
-              });
-            }
-          }
-        }
-        
-        // Registrar uso
-        if (registryFunc.functionKey) {
-          await commandProcessor.registerUsage(registryFunc.functionKey);
-        }
-        
-        return true;
-      }
+    // Executar handler customizado
+    const handlerSuccess = await registryFunc.handler({
+      transcript: lowerTranscript,
+      companyId,
+      functionSettings,
+      playText,
+      setIsProcessing,
+      sessionId,
+    });
+    
+    if (handlerSuccess) {
+      console.log('✅ Handler customizado executado com sucesso');
+      
+      // ✅ AQUI É registryFunc (dentro do handler)
+      activeFunctionContextRef.current = {
+        functionKey: registryFunc.functionKey, // ← registryFunc
+        activatedAt: Date.now(),
+        expiresIn: 5 * 60 * 1000,
+      };
+      console.log(`🎯 Contexto de ${registryFunc.functionKey} ativado por 5 minutos`); // ← registryFunc
     }
     
-    console.log('❌ Nenhum comando detectado (legado ou novo)');
-    return false;
+  } else {
+    // Função sem handler - usar resposta padrão do processor
+    if (result.speechText) {
+      await playText(result.speechText);
+    }
+    
+    // Abrir modal (se tiver)
+    if (result.modalData && result.modalType) {
+      console.log('📋 Modal:', result.modalType);
+      
+      if (result.modalType === 'QRCodeDisplay') {
+        setQrCodeData({
+          type: result.functionKey?.replace('qrcode_', '') as any,
+          qrCodeUrl: result.modalData.qr_code_url,
+          qrContent: result.modalData.qr_content,
+          displayText: result.modalData.display_text,
+          companyName: result.modalData.company_name,
+        });
+      }
+    }
   }
+  
+  // Registrar uso
+  if (result.functionKey) {
+    await commandProcessor.registerUsage(result.functionKey);
+  }
+  
+  return true;
+}
 
   // ========================================
   // COMMAND HANDLERS

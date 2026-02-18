@@ -396,7 +396,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
       setActiveModal({
         type: 'MeuSistemaDisplay',
         data: {
-              logoUrl: '/app/favicon.svg',
+              logoUrl: '/public/logo-circle.png',
               websiteUrl: 'https://eai.app.br',
               qrCodeUrl: '', // Será gerado no componente
               title: 'Sistema eAi',

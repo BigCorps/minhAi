@@ -12,6 +12,7 @@ import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { FUNCTIONS_REGISTRY, getFunctionByKey } from '@/lib/functions-registry';
+import MeuSistemaDisplay from '@/components/assistant/MeuSistemaDisplay';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -57,6 +58,7 @@ export function VoiceAssistantWithWakeWord({
   // ✅ MUDANÇA 2: ADICIONAR STATES
   const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
   const [companyGreeting, setCompanyGreeting] = useState<string>('');
+  const [meuSistemaModalOpen, setMeuSistemaModalOpen] = useState(false);
 
   // ✅ PASSO 1: Novo state para guardar configs das funções
   const [functionSettings, setFunctionSettings] = useState<Record<string, {
@@ -957,6 +959,11 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       case 'qrcode_telefone':
         await handleQRCodeCommand('telefone');
         break;
+
+      case 'meu_sistema':
+        await playText('E Ai, sou o que há de mais moderno do universo de funcionários IA. Sou seu assistente de voz inteligente, parecido com uma Alexa. Escaneie o QR Code para saber mais informações.');
+        setMeuSistemaModalOpen(true);
+        break;
             
         // Fallback
         default:
@@ -1378,6 +1385,11 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
             playText,
             setIsProcessing,
             sessionId,
+            setActiveModal: (modal: any) => {
+              if (modal.type === 'MeuSistemaDisplay') {
+                setMeuSistemaModalOpen(true);
+              }
+            },
           });
           
           if (handlerSuccess) {
@@ -1991,6 +2003,11 @@ if (activeFunction) {
         playText,
         setIsProcessing,
         sessionId,
+        setActiveModal: (modal: any) => {
+          if (modal.type === 'MeuSistemaDisplay') {
+            setMeuSistemaModalOpen(true);
+          }
+        },
       });
 
       if (handlerSuccess) {
@@ -2520,6 +2537,14 @@ const getStatusColor = () => {
       autoScroll={autoScroll}
     />
   </div>
+)}
+
+{/* Modal Meu Sistema */}
+{meuSistemaModalOpen && (
+  <MeuSistemaDisplay
+    onClose={() => setMeuSistemaModalOpen(false)}
+    theme={theme}
+  />
 )}
     </div>
   );

@@ -2320,9 +2320,11 @@ const getStatusColor = () => {
     );
   }
 
-  return (
+return (
     <div className="w-full max-w-6xl mx-auto">
       <div className="grid md:grid-cols-2 gap-8">
+        
+        {/* Coluna 1 - Avatar */}
         <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark'
             ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
@@ -2354,6 +2356,7 @@ const getStatusColor = () => {
           </div>
         </div>
 
+        {/* Coluna 2 - Controles e Chat */}
         <div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${
           theme === 'dark'
             ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
@@ -2414,17 +2417,18 @@ const getStatusColor = () => {
         </div>
       </div>
 
-{!showStartButton && (
-  <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
-    <FunctionCarousel
-      companyId={companyId}
-      onFunctionClick={handleFunctionClick}
-      theme={theme}
-      hideDisabledFunctions={hideDisabledFunctions}
-      autoScroll={autoScroll}
-    />
-  </div>
-)}
+      {/* Fora do Grid, mas dentro do Container principal */}
+      {!showStartButton && (
+        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
+          <FunctionCarousel
+            companyId={companyId}
+            onFunctionClick={handleFunctionClick}
+            theme={theme}
+            hideDisabledFunctions={hideDisabledFunctions}
+            autoScroll={autoScroll}
+          />
+        </div>
+      )}
     </div>
   );
 }

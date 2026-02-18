@@ -197,13 +197,13 @@ function FunctionsPageContent() {
   }
 
   const categories = [
-    { key: 'knowledge',      name: 'Conhecimento', color: '#3B82F6' },
+    { key: 'knowledge',      name: 'Aprendizado', color: '#3B82F6' },
     { key: 'configuration',  name: 'Configuração',  color: '#8B5CF6' },
     { key: 'contact',        name: 'Contato',       color: '#10B981' },
     { key: 'payment',        name: 'Pagamento',     color: '#F59E0B' },
     { key: 'schedule',       name: 'Agendamento',   color: '#8B5CF6' },
     { key: 'information',    name: 'Informação',    color: '#3B82F6' },
-    { key: 'ai_assistant',   name: 'Assistente IA', color: '#8B5CF6' },
+    { key: 'ai_assistant',   name: 'Conhecinento', color: '#8B5CF6' },
     { key: 'other',          name: 'Outros',        color: '#6B7280' },
   ];
 

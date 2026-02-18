@@ -343,6 +343,80 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     isPremium: false,
   },
 
+  // ADICIONAR esta entrada no FUNCTIONS_REGISTRY:
+
+  meu_sistema: {
+    functionKey: 'meu_sistema',
+    functionName: 'Meu Sistema',
+    category: 'informacao',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'meu sistema',
+      'sobre o sistema',
+      'como funciona',
+      'o que é isso',
+      'o que é este sistema',
+      'que sistema é esse',
+      'informações do sistema',
+      'sobre eai',
+      'sobre e a i',
+    ],
+    
+    examplePhrases: [
+      'Como funciona este sistema?',
+      'Me fale sobre o sistema',
+      'O que é o eAi?',
+      'Quero saber mais sobre isso',
+    ],
+    
+    requiresInput: false,
+    description: 'Informações sobre o sistema eAi - assistente de voz inteligente para empresas',
+    shortDescription: 'Sobre o sistema',
+    icon: '🤖',
+    color: '#6366F1',
+    saveToHistory: false,
+    creditsPerUse: 0, // Gratuito
+    requiresPayment: false,
+    isPremium: false,
+    
+    // Handler customizado
+    handler: async ({ 
+      playText, 
+      setActiveModal 
+    }) => {
+      try {
+        console.log('🧊 [MEU SISTEMA] Abrindo informações');
+        
+        // Falar sobre o sistema
+        await playText('Este é o eAi, seu assistente de voz inteligente. Escaneie o QR Code para saber mais sobre o sistema e suas funcionalidades.');
+        
+        // Abrir modal especial (se setActiveModal estiver disponível)
+        if (setActiveModal) {
+          setActiveModal({
+            type: 'MeuSistemaDisplay',
+            data: {
+              logoUrl: '/favicon.svg',
+              websiteUrl: 'https://eai.app.br',
+              qrCodeUrl: '', // Será gerado no componente
+              title: 'Sistema eAi',
+              subtitle: 'Assistente de Voz Inteligente',
+              description: 'Transforme o atendimento da sua empresa com inteligência artificial',
+              autoCloseDuration: 15000, // 15 segundos
+            }
+          });
+        }
+        
+        return true;
+        
+      } catch (error) {
+        console.error('🧊 [MEU SISTEMA] ERRO:', error);
+        await playText('Desculpe, não consegui exibir as informações do sistema.');
+        return false;
+      }
+    },
+  },
+
   // ========================================
   // CRIAR ORÇAMENTO
   // ========================================

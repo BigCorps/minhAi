@@ -61,7 +61,7 @@ export default function MeuSistemaDisplay({
           <h2 className={`text-xl font-bold
             ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
           `}>
-            Sistema eAi
+            eAi App
           </h2>
           
           <div className="flex items-center gap-3">
@@ -120,7 +120,7 @@ export default function MeuSistemaDisplay({
               <p className={`text-lg mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
               `}>
-                Transforme o atendimento com IA
+                Transforme o atendimento com um Funcionário IA
               </p>
               <p className={`text-base mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
@@ -189,7 +189,7 @@ export default function MeuSistemaDisplay({
               <p className={`text-base mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
               `}>
-                Transforme o atendimento com IA
+                Transforme o atendimento com um Funcionário IA
               </p>
               <p className={`text-sm mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}

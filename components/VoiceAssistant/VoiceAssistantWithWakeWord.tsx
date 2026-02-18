@@ -1326,74 +1326,65 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
     // ========================================
     console.log('🔍 Tentando detectar nova função no registry...');
     
-if (commandProcessor) {
-const result = await commandProcessor?.processCommand(lowerTranscript);
-
-if (result?.success) {
-  console.log('✅ [VoiceAssistant] Função detectada pelo processor:', result.functionKey);
-  
-  // Verificar se a função tem handler customizado
-  const registryFunc = getFunctionByKey(result.functionKey);
-  
-  if (registryFunc?.handler) {
-    console.log('🎯 [VoiceAssistant] Executando handler customizado para:', result.functionKey);
-    
-    // Executar handler customizado
-    const handlerSuccess = await registryFunc.handler({
-      transcript: lowerTranscript,
-      companyId,
-      functionSettings,
-      playText,
-      setIsProcessing,
-      setActiveModal: (modal: any) => {
-        console.log('📋 Modal solicitado:', modal);
-        // Implementar se necessário
-      },
-    });
-    
-    if (handlerSuccess) {
-      console.log('✅ [VoiceAssistant] Handler customizado executado com sucesso');
-    }
-    
-  } else {
-    // Função sem handler - usar resposta padrão do processor
-    if (result.speechText) {
-      await playText(result.speechText);
-    }
-    
-    if (result.modalData && result.modalType) {
-      // Abrir modal
-      if (result.modalType === 'QRCodeDisplay') {
-        setQrCodeData({
-          type: result.functionKey.replace('qrcode_', '') as any,
-          qrCodeUrl: result.modalData.qr_code_url,
-          qrContent: result.modalData.qr_content,
-          displayText: result.modalData.display_text,
-          companyName: result.modalData.company_name,
-        });
+    if (commandProcessor) {
+      const result = await commandProcessor.processCommand(transcript);
+      
+      if (result?.success) {
+        console.log('✅ Nova função detectada:', result.functionKey);
+        
+        // Verificar se a função tem handler customizado
+        const registryFunc = getFunctionByKey(result.functionKey || '');
+        
+        if (registryFunc?.handler) {
+          console.log('🎯 Executando handler customizado para:', result.functionKey);
+          
+          // Executar handler customizado
+          const handlerSuccess = await registryFunc.handler({
+            transcript: lowerTranscript,
+            companyId,
+            functionSettings,
+            playText,
+            setIsProcessing,
+          });
+          
+          if (handlerSuccess) {
+            console.log('✅ Handler customizado executado com sucesso');
+          }
+          
+        } else {
+          // Função sem handler - usar resposta padrão do processor
+          if (result.speechText) {
+            await playText(result.speechText);
+          }
+          
+          // Abrir modal (se tiver)
+          if (result.modalData && result.modalType) {
+            console.log('📋 Modal:', result.modalType);
+            
+            if (result.modalType === 'QRCodeDisplay') {
+              setQrCodeData({
+                type: result.functionKey?.replace('qrcode_', '') as any,
+                qrCodeUrl: result.modalData.qr_code_url,
+                qrContent: result.modalData.qr_content,
+                displayText: result.modalData.display_text,
+                companyName: result.modalData.company_name,
+              });
+            }
+          }
+        }
+        
+        // Registrar uso
+        if (result.functionKey) {
+          await commandProcessor.registerUsage(result.functionKey);
+        }
+        
+        return true;
       }
     }
+    
+    console.log('❌ Nenhum comando detectado (legado ou novo)');
+    return false;
   }
-  
-  // Registrar uso
-  if (result.creditsConsumed) {
-    await registerFunctionUsage(result.functionKey, result.creditsConsumed);
-  }
-  
-// Salvar no histórico
-  if (result.saveToHistory) {
-    await saveInteractionToHistory(
-      lowerTranscript, // ✅ CORREÇÃO: Usando a transcrição atual no lugar de userMessage
-      result.speechText || 'Função executada' // ✅ CORREÇÃO: Removido o 3º argumento que não existe na função original
-    );
-  }
-  
-return true;
-  }
-} // ✅ CORREÇÃO: Esta chave fecha o if (commandProcessor)
-
-  console.log('❌ Nenhum comando detectado (legado ou novo)');
-  return false;
 
   // ========================================
   // COMMAND HANDLERS
@@ -2319,11 +2310,9 @@ const getStatusColor = () => {
     );
   }
 
-return (
+  return (
     <div className="w-full max-w-6xl mx-auto">
       <div className="grid md:grid-cols-2 gap-8">
-        
-        {/* Coluna 1 - Avatar */}
         <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark'
             ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
@@ -2355,7 +2344,6 @@ return (
           </div>
         </div>
 
-        {/* Coluna 2 - Controles e Chat */}
         <div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${
           theme === 'dark'
             ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl'
@@ -2416,17 +2404,17 @@ return (
         </div>
       </div>
 
-      {/* Fora do Grid, mas dentro do Container principal */}
-      {!showStartButton && (
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
-          <FunctionCarousel
-            companyId={companyId}
-            onFunctionClick={handleFunctionClick}
-            theme={theme}
-            hideDisabledFunctions={hideDisabledFunctions}
-            autoScroll={autoScroll}
-          />
-        </div>
-      )}
+{!showStartButton && (
+  <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
+    <FunctionCarousel
+      companyId={companyId}
+      onFunctionClick={handleFunctionClick}
+      theme={theme}
+      hideDisabledFunctions={hideDisabledFunctions}
+      autoScroll={autoScroll}
+    />
+  </div>
+)}
     </div>
   );
+}

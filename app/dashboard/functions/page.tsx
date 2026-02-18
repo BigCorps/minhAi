@@ -49,7 +49,7 @@ const categories = [
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
   { key: 'video',         name: 'Vídeos',       color: '#A52A2A' },
   { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
-  { key: 'schedule',      name: 'Agendamento',  color: '#FFA500' },
+  { key: 'schedule',      name: 'Agendamento',  color: '#FFC0CB' },
   { key: 'information',   name: 'Informação',   color: '#00FFF7' },
   { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
 ];
@@ -99,7 +99,7 @@ function CategoryPillSelector({
       onClick={onSelectAll}
       className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
     >
-      Categorias
+      Todas as Funções
     </button>
   );
 

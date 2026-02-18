@@ -59,7 +59,7 @@ export default function MeuSistemaDisplay({
           <h2 className={`text-xl font-bold
             ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
           `}>
-            www.eAi.app.br
+            eAi App
           </h2>
           
           <div className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export default function MeuSistemaDisplay({
               <h3 className={`text-3xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                eAi, sou um funcionário de Voz com Inteligência Artifical.
+                eAi, sou um funcionário de Voz com Inteligência Artificial.
               </h3>
               <p className={`text-lg mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
@@ -193,7 +193,7 @@ export default function MeuSistemaDisplay({
               <h3 className={`text-2xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                eAi, sou um funcionário de Voz com Inteligência Artifical.
+                eAi, sou um funcionário de Voz com Inteligência Artificial.
               </h3>
               <p className={`text-base mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
@@ -203,7 +203,7 @@ export default function MeuSistemaDisplay({
               <p className={`text-sm mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
               `}>
-                eai.app.br
+                www.eai.app.br
               </p>
             </div>
 

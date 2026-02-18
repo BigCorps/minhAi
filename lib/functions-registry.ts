@@ -385,77 +385,54 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     }) => {
       try {
         console.log('💰 [ORCAMENTO] Handler iniciado');
-        console.log('💰 [ORCAMENTO] Transcript:', transcript);
         
         const supabase = createClient();
 
-        // Buscar prompt de orçamento
         const { data: company } = await supabase
           .from('companies')
           .select('orcamento_prompt')
           .eq('id', companyId)
           .single();
 
-        console.log('💰 [ORCAMENTO] Prompt encontrado:', company?.orcamento_prompt ? 'SIM' : 'NÃO');
-
         if (!company?.orcamento_prompt) {
-          await playText('A função de orçamento não está configurada. Configure as tabelas de preços no painel de funções.');
+          await playText('A função de orçamento não está configurada.');
           return false;
         }
 
         await playText('Gerando seu orçamento. Um momento...');
 
-        console.log('💰 [ORCAMENTO] Chamando API voice/process...');
-
-        // ✅ USAR /api/voice/process (mesma API que ChatGPT usa)
-        // Criar um FormData com o texto
+        // ✅ Criar FormData com flag returnText
         const formData = new FormData();
         const textBlob = new Blob([transcript], { type: 'text/plain' });
         formData.append('audio', textBlob, 'question.txt');
         formData.append('companyId', companyId);
         formData.append('directQuestion', transcript);
-        formData.append('useOrcamentoPrompt', 'true'); // ← Flag especial
+        formData.append('useOrcamentoPrompt', 'true');
+        formData.append('returnText', 'true'); // ← PEDIR TEXTO
 
         const response = await fetch('/api/voice/process', {
           method: 'POST',
           body: formData,
         });
 
-        console.log('💰 [ORCAMENTO] Response status:', response.status);
-
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('💰 [ORCAMENTO] Erro response:', errorText);
           throw new Error('Erro ao gerar orçamento');
         }
 
-        // A resposta é um áudio (ArrayBuffer)
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
+        // ✅ Receber JSON com texto
+        const data = await response.json();
+        const reply = data.response || data.reply;
         
-        console.log('💰 [ORCAMENTO] Áudio recebido, tocando...');
-
-        // Tocar o áudio diretamente
-        const audio = new Audio(audioUrl);
-        audio.playbackRate = 1.05;
+        console.log('💰 [ORCAMENTO] Orçamento gerado:', reply.substring(0, 100) + '...');
         
-        await new Promise<void>((resolve, reject) => {
-          audio.onended = () => {
-            console.log('💰 [ORCAMENTO] Áudio tocado com sucesso');
-            resolve();
-          };
-          audio.onerror = () => {
-            console.error('💰 [ORCAMENTO] Erro ao tocar áudio');
-            reject(new Error('Erro ao tocar áudio'));
-          };
-          audio.play().catch(reject);
-        });
+        // ✅ Usar playText (ativa orbe do avatar)
+        await playText(reply);
 
         return true;
         
       } catch (error) {
         console.error('💰 [ORCAMENTO] ERRO:', error);
-        await playText('Desculpe, não consegui gerar o orçamento. Tente novamente.');
+        await playText('Desculpe, não consegui gerar o orçamento.');
         return false;
       }
     },

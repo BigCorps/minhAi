@@ -58,9 +58,12 @@ const CONFIGURABLE_FUNCTIONS = [
   'qrcode_telefone',
   'pix_generate',
   'chatgpt',
-  'orcamento',  // ← ADICIONAR
+  'orcamento',
   'faq'
 ];
+
+// ✅ NOVO: Funções que NÃO têm toggle (sempre visíveis)
+const SYSTEM_FUNCTIONS = ['faq', 'chatgpt', 'meu_sistema'];
 
 export default function FunctionCard({
   function: fn,
@@ -76,6 +79,9 @@ export default function FunctionCard({
   
   const hasEditModal = CONFIGURABLE_FUNCTIONS.includes(fn.function_key);
   const categoryName = CATEGORY_NAMES[fn.function_category] || fn.function_category;
+  
+  // ✅ NOVO: Verificar se é função de sistema (sem toggle)
+  const isSystemFunction = SYSTEM_FUNCTIONS.includes(fn.function_key);
 
   return (
     <div
@@ -119,12 +125,22 @@ export default function FunctionCard({
         </div>
 
         <div className="flex items-center gap-3">
-          <Switch
-            checked={isEnabled}
-            onCheckedChange={onToggle}
-            disabled={isUpdating}
-            aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
-          />
+          {/* ✅ MODIFICADO: Toggle só aparece se NÃO for função de sistema */}
+          {!isSystemFunction && (
+            <Switch
+              checked={isEnabled}
+              onCheckedChange={onToggle}
+              disabled={isUpdating}
+              aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
+            />
+          )}
+          
+          {/* ✅ MODIFICADO: Mostrar badge "Sistema" para funções sem toggle */}
+          {isSystemFunction && (
+            <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">
+              Sistema
+            </span>
+          )}
           
           {/* BOTÃO SEMPRE VISÍVEL PARA FUNÇÕES CONFIGURÁVEIS */}
           {hasEditModal && onEdit && (

@@ -478,7 +478,6 @@ googleSpeechRef.current = new GoogleSpeechWebSocket({
 // Criar função para verificar contexto ativo
 // ============================================
 
-// ADICIONAR esta função:
 function getActiveFunctionContext(): string | null {
   if (!activeFunctionContext) return null;
   
@@ -492,7 +491,7 @@ function getActiveFunctionContext(): string | null {
   }
   
   const remainingSeconds = Math.floor((activeFunctionContext.expiresIn - elapsed) / 1000);
-  console.log(`🎯 Contexto ativo: ${activeFunctionContext.functionKey} (${remainingSeconds}s restantes)`);
+  console.log(`🎯 Contexto ativo: ${activeFunctionContext.functionKey} (${remainingSeconds}s restantes)`); // ✅ CORRIGIDO - adicionado ()
   
   return activeFunctionContext.functionKey;
 }

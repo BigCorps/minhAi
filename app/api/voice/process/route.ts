@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     // Buscar company
     const { data: company } = await supabase
       .from('companies')
-      .select('id, name, system_prompt, greeting_message, welcome_message')
+      .select('id, name, system_prompt, orcamento_prompt, greeting_message, welcome_message')
       .eq('id', companyId)
       .single();
 
@@ -203,7 +203,13 @@ export async function POST(request: NextRequest) {
       // Usar OpenAI (GPT-4o-mini)
       console.log('🤖 Usando OpenAI GPT-4o-mini');
       
-      const systemPrompt = `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
+const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
+
+const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
+  ? company.orcamento_prompt  // ← Usa prompt de orçamento (sem concatenar com system_prompt)
+  : `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}  // ← Usa prompt padrão
+
+console.log('📋 Usando prompt:', useOrcamentoPrompt ? 'ORÇAMENTO' : 'PADRÃO');
 
 Regras:
 - Seja breve (máximo 2-3 frases)

@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Search, LayoutGrid, List } from 'lucide-react';
+import { Search } from 'lucide-react';
 import FunctionSelector from '@/components/dashboard/functions/FunctionSelector';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
@@ -42,6 +42,73 @@ interface CompanyFunctionSetting {
   last_used_at?: string;
 }
 
+const categories = [
+  { key: 'knowledge',      name: 'Aprendizado',  color: '#3B82F6' },
+  { key: 'configuration',  name: 'Configuração', color: '#8B5CF6' },
+  { key: 'contact',        name: 'Contato',      color: '#10B981' },
+  { key: 'payment',        name: 'Pagamento',    color: '#F59E0B' },
+  { key: 'schedule',       name: 'Agendamento',  color: '#8B5CF6' },
+  { key: 'information',    name: 'Informação',   color: '#00BCD4' },
+  { key: 'ai_assistant',   name: 'Conhecimento', color: '#A855F7' },
+  { key: 'other',          name: 'Outros',       color: '#6B7280' },
+];
+
+function CategoryPillSelector({
+  selectedCategories,
+  onToggleCategory,
+  onSelectAll,
+  isAllSelected,
+}: {
+  selectedCategories: string[];
+  onToggleCategory: (key: string) => void;
+  onSelectAll: () => void;
+  isAllSelected: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {/* "Todas as Categorias" pill */}
+      <button
+        onClick={onSelectAll}
+        className={`
+          inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium
+          border transition-all duration-150
+          ${isAllSelected
+            ? 'bg-white text-gray-900 border-white shadow-sm'
+            : 'bg-transparent text-gray-300 border-white/20 hover:border-white/40 hover:text-white'
+          }
+        `}
+      >
+        Todas as Categorias
+      </button>
+
+      {categories.map(cat => {
+        const isSelected = selectedCategories.includes(cat.key);
+        return (
+          <button
+            key={cat.key}
+            onClick={() => onToggleCategory(cat.key)}
+            className={`
+              inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium
+              border transition-all duration-150
+              ${isSelected
+                ? 'border-transparent text-white shadow-sm'
+                : 'bg-transparent text-gray-300 border-white/20 hover:border-white/40 hover:text-white'
+              }
+            `}
+            style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+          >
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : cat.color }}
+            />
+            {cat.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function FunctionsPageContent() {
   const searchParams = useSearchParams();
   const companyIdFromUrl = searchParams.get('companyId');
@@ -57,8 +124,10 @@ function FunctionsPageContent() {
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  // Multi-select categories: empty = "all"
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
+  // viewMode only relevant on desktop; mobile always uses list
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [editingFunction, setEditingFunction] = useState<AssistantFunction | null>(null);
 
@@ -162,16 +231,11 @@ function FunctionsPageContent() {
     }
   }
 
-  // ✅ FUNÇÃO CORRIGIDA
   function isFunctionEnabled(functionKey: string): boolean {
     const setting = settings.find(s => s.function_key === functionKey);
-    
-    // Se tem configuração salva, usar o is_enabled dela
     if (setting) {
       return setting.is_enabled;
     }
-    
-    // Se NÃO tem configuração, verificar se a função é default_enabled
     const func = functions.find(f => f.function_key === functionKey);
     return func?.default_enabled ?? false;
   }
@@ -196,28 +260,38 @@ function FunctionsPageContent() {
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
   }
 
-  const categories = [
-    { key: 'knowledge',      name: 'Aprendizado', color: '#3B82F6' },
-    { key: 'configuration',  name: 'Configuração',  color: '#8B5CF6' },
-    { key: 'contact',        name: 'Contato',       color: '#10B981' },
-    { key: 'payment',        name: 'Pagamento',     color: '#F59E0B' },
-    { key: 'schedule',       name: 'Agendamento',   color: '#8B5CF6' },
-    { key: 'information',    name: 'Informação',    color: '#00FFF7' },
-    { key: 'ai_assistant',   name: 'Conhecimento', color: '#8B5CF6' },
-    { key: 'other',          name: 'Outros',        color: '#6B7280' },
-  ];
+  // Category multi-select handlers
+  const isAllSelected = selectedCategories.length === 0;
+
+  function handleToggleCategory(key: string) {
+    setSelectedCategories(prev => {
+      if (prev.includes(key)) {
+        // Deselect — if last one, go back to "all"
+        const next = prev.filter(k => k !== key);
+        return next;
+      } else {
+        return [...prev, key];
+      }
+    });
+  }
+
+  function handleSelectAll() {
+    setSelectedCategories([]);
+  }
 
   const filteredFunctions = functions.filter(fn => {
     if (!fn) return false;
 
-    const matchesCategory = selectedCategory === 'all' || fn.function_category === selectedCategory;
-    const matchesSearch = fn.function_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          fn.short_description.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesCategory =
+      isAllSelected || selectedCategories.includes(fn.function_category);
+    const matchesSearch =
+      fn.function_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      fn.short_description.toLowerCase().includes(searchQuery.toLowerCase());
+
     const isEnabled = isFunctionEnabled(fn.function_key);
-    const matchesStatus = 
-      filterStatus === 'all' || 
-      (filterStatus === 'active' && isEnabled) || 
+    const matchesStatus =
+      filterStatus === 'all' ||
+      (filterStatus === 'active' && isEnabled) ||
       (filterStatus === 'inactive' && !isEnabled);
 
     return matchesCategory && matchesSearch && matchesStatus;
@@ -270,32 +344,24 @@ function FunctionsPageContent() {
 
           {!loading && companyId && functions.length > 0 && (
             <>
-              <div className="mb-8 flex flex-wrap items-center justify-between gap-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
-                <div className="flex-grow max-w-xs relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nome..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div className="flex items-center gap-4 flex-wrap">
-                  <select 
-                    value={selectedCategory} 
-                    onChange={e => setSelectedCategory(e.target.value)}
-                    className="border rounded-lg px-3 py-2 dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">Todas as Categorias</option>
-                    {categories.map(cat => (
-                      <option key={cat.key} value={cat.key}>{cat.name}</option>
-                    ))}
-                  </select>
+              {/* ── Filter bar ── */}
+              <div className="mb-6 flex flex-col gap-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
 
-                  <select 
-                    value={filterStatus} 
+                {/* Row 1: search + status + view toggle (view toggle hidden on mobile) */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex-grow max-w-xs relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nome..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <select
+                    value={filterStatus}
                     onChange={e => setFilterStatus(e.target.value)}
                     className="border rounded-lg px-3 py-2 dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
@@ -304,31 +370,49 @@ function FunctionsPageContent() {
                     <option value="inactive">Inativas</option>
                   </select>
 
-                  <div className="flex items-center border rounded-lg p-1 dark:bg-slate-800 dark:border-white/10">
-                    <button 
-                      onClick={() => setViewMode('grid')} 
+                  {/* View mode toggle — hidden on mobile */}
+                  <div className="hidden sm:flex items-center border rounded-lg p-1 dark:bg-slate-800 dark:border-white/10 ml-auto">
+                    <button
+                      onClick={() => setViewMode('grid')}
                       className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'grid' 
-                          ? 'bg-blue-500 text-white' 
+                        viewMode === 'grid'
+                          ? 'bg-blue-500 text-white'
                           : 'hover:bg-gray-100 dark:hover:bg-white/10'
                       }`}
                       aria-label="Visualização em grade"
                     >
-                      <LayoutGrid size={20} />
+                      {/* LayoutGrid icon inline to avoid import issues */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                      </svg>
                     </button>
-                    <button 
-                      onClick={() => setViewMode('list')} 
+                    <button
+                      onClick={() => setViewMode('list')}
                       className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'list' 
-                          ? 'bg-blue-500 text-white' 
+                        viewMode === 'list'
+                          ? 'bg-blue-500 text-white'
                           : 'hover:bg-gray-100 dark:hover:bg-white/10'
                       }`}
                       aria-label="Visualização em lista"
                     >
-                      <List size={20} />
+                      {/* List icon inline */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                      </svg>
                     </button>
                   </div>
                 </div>
+
+                {/* Row 2: Category pill selector */}
+                <CategoryPillSelector
+                  selectedCategories={selectedCategories}
+                  onToggleCategory={handleToggleCategory}
+                  onSelectAll={handleSelectAll}
+                  isAllSelected={isAllSelected}
+                />
               </div>
 
               {filteredFunctions.length === 0 ? (
@@ -338,18 +422,23 @@ function FunctionsPageContent() {
                   </p>
                 </div>
               ) : (
+                /*
+                  On mobile (< sm): always single-column list layout.
+                  On desktop (sm+): respect viewMode state (grid or list).
+                */
                 <div className={
-                  viewMode === 'grid' 
-                    ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6' 
-                    : 'space-y-4'
+                  // Mobile: always space-y-4 (list)
+                  // Desktop: grid or list based on viewMode
+                  `sm:hidden space-y-4`
+                  // We render two containers — one for mobile, one for desktop
+                  // Actually simpler: use a wrapper that switches class
                 }>
+                  {/* This div handles mobile (always list) */}
                   {filteredFunctions.map(fn => {
                     if (!fn || !fn.function_key) return null;
-
                     const enabled = isFunctionEnabled(fn.function_key);
                     const stats = getFunctionStats(fn.function_key);
                     const isUpdating = updating === fn.function_key;
-
                     return (
                       <FunctionCard
                         key={fn.id}
@@ -363,6 +452,38 @@ function FunctionsPageContent() {
                       />
                     );
                   })}
+                </div>
+              )}
+
+              {/* Desktop grid/list — hidden on mobile */}
+              {filteredFunctions.length > 0 && (
+                <div className={
+                  `hidden sm:block`
+                }>
+                  <div className={
+                    viewMode === 'grid'
+                      ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6'
+                      : 'space-y-4'
+                  }>
+                    {filteredFunctions.map(fn => {
+                      if (!fn || !fn.function_key) return null;
+                      const enabled = isFunctionEnabled(fn.function_key);
+                      const stats = getFunctionStats(fn.function_key);
+                      const isUpdating = updating === fn.function_key;
+                      return (
+                        <FunctionCard
+                          key={fn.id}
+                          function={fn}
+                          isEnabled={enabled}
+                          stats={stats}
+                          onToggle={() => toggleFunction(fn.function_key, enabled)}
+                          onEdit={() => handleEdit(fn)}
+                          isUpdating={isUpdating}
+                          theme={theme}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </>

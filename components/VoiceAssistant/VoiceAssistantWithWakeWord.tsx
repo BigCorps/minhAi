@@ -1133,7 +1133,7 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         setActiveFunctionContext({
           functionKey: activeFunction,
           activatedAt: Date.now(),
-          expiresIn: 5 * 60 * 1000,
+          expiresIn: 2 * 60 * 1000,
         });
         console.log(`🔄 Contexto de ${activeFunction} renovado por mais 5 minutos`);
         

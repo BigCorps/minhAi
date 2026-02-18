@@ -348,7 +348,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   meu_sistema: {
     functionKey: 'meu_sistema',
     functionName: 'Meu Sistema',
-    category: 'informacao',
+    category: 'information',
     responseType: 'voice+modal',
     
     voiceTriggers: [

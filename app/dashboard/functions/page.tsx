@@ -47,10 +47,10 @@ const categories = [
   { key: 'knowledge',     name: 'Aprendizado',  color: '#FFFF00' },
   { key: 'configuration', name: 'Configuração', color: '#800080' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
-  { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
+  { key: 'payment',       name: 'Pagamento',    color: '#F59E0B' },
   { key: 'schedule',      name: 'Agendamento',  color: '#FFA500' },
   { key: 'information',   name: 'Informação',   color: '#00FFF7' },
-  { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
+  { key: 'ai_assistant',  name: 'Conhecimento', color: '#A855F7' },
 ];
 
 const statusOptions = [
@@ -98,7 +98,7 @@ function CategoryPillSelector({
       onClick={onSelectAll}
       className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
     >
-      {isMobile ? 'Todas' : 'Todas as Categorias'}
+      Todas as Categorias
     </button>
   );
 
@@ -128,7 +128,8 @@ function CategoryPillSelector({
 
     return (
       <div className="flex flex-col gap-2 w-full">
-        <div className="grid grid-cols-2 gap-2">
+        {/* Linha 1: flex (não grid) para que cada botão ocupe só o espaço necessário */}
+        <div className="flex gap-2">
           {allBtn}
           {firstRowCats}
         </div>

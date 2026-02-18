@@ -965,7 +965,7 @@ case 'meu_sistema':
   setMeuSistemaModalOpen(true);
   
   // ✅ 2. Falar DEPOIS (sem await)
-  playText('E A I, sou um funcionário de Voz com Inteligência Artifical. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades. eai.app.br').catch(err => {
+  playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades. eai.app.br').catch(err => {
     console.error('Erro ao falar:', err);
   });
   break;

@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
 
 interface MeuSistemaDisplayProps {
   onClose: () => void;
@@ -16,14 +17,46 @@ export default function MeuSistemaDisplay({
 }: MeuSistemaDisplayProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(15);
+  const [loading, setLoading] = useState(true);
   const websiteUrl = 'https://eai.app.br';
 
-  // Gerar QR Code via API do Google Charts
+  // ✅ Gerar QR Code via Edge Function (igual QRCodeDisplay)
   useEffect(() => {
-    // ✅ CORREÇÃO: QR Code maior e com melhor qualidade
-    const size = 400; // Tamanho maior
-    const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chl=${encodeURIComponent(websiteUrl)}&chs=${size}x${size}&choe=UTF-8&chld=M|2`;
-    setQrCodeUrl(qrUrl);
+    async function generateQRCode() {
+      try {
+        const supabase = createClient();
+        
+        // Usar a mesma Edge Function que gera QR codes de contato
+        // Passando um tipo especial "meu_sistema"
+        const response = await supabase.functions.invoke('gerar-qrcode-contato', {
+          body: {
+            qr_type: 'custom',
+            qr_content: websiteUrl, // ← URL do eAi
+            display_text: 'eai.app.br',
+            label: 'Sistema eAi'
+          }
+        });
+
+        if (response.error) {
+          console.error('Erro ao gerar QR Code:', response.error);
+          // Fallback: usar API direta
+          const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
+          setQrCodeUrl(fallbackUrl);
+        } else {
+          setQrCodeUrl(response.data.qr_code_url);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro gerar QR Code:', error);
+        // Fallback: usar API direta
+        const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
+        setQrCodeUrl(fallbackUrl);
+        setLoading(false);
+      }
+    }
+
+    generateQRCode();
   }, []);
 
   // Auto-close após 15 segundos com contador
@@ -95,10 +128,7 @@ export default function MeuSistemaDisplay({
           <div className="hidden md:flex items-center gap-8">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <div className={`w-48 h-48 rounded-2xl flex items-center justify-center p-4
-                ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
-              `}>
-                {/* ✅ CORREÇÃO: Usar imagem da pasta public */}
+              <div className="w-48 h-48 flex items-center justify-center">
                 <img
                   src="/logo-circle.png"
                   alt="Logo eAi"
@@ -146,21 +176,27 @@ export default function MeuSistemaDisplay({
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
                 {/* ✅ CORREÇÃO: QR Code maior e melhor */}
-                {qrCodeUrl ? (
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code eAi"
-                    className="w-48 h-48 object-contain"
-                    onError={(e) => {
-                      console.error('Erro ao carregar QR Code');
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EQR Code%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                ) : (
-                  <div className="w-48 h-48 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
-                  </div>
-                )}
+{loading ? (
+  <div className="w-48 h-48 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+  </div>
+) : qrCodeUrl ? (
+  <img
+    src={qrCodeUrl}
+    alt="QR Code eAi"
+    className="w-48 h-48 object-contain"
+    onError={(e) => {
+      console.error('Erro ao carregar QR Code');
+      if (!e.currentTarget.src.includes('api.qrserver.com')) {
+        e.currentTarget.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
+      }
+    }}
+  />
+) : (
+  <div className="w-48 h-48 flex items-center justify-center text-gray-400">
+    QR Code indisponível
+  </div>
+)}
               </div>
               <p className={`text-sm text-center mt-2
                 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}
@@ -213,21 +249,27 @@ export default function MeuSistemaDisplay({
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
                 {/* ✅ CORREÇÃO: QR Code maior e melhor */}
-                {qrCodeUrl ? (
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code eAi"
-                    className="w-40 h-40 object-contain"
-                    onError={(e) => {
-                      console.error('Erro ao carregar QR Code mobile');
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="160"%3E%3Crect fill="%23ddd" width="160" height="160"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EQR Code%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                ) : (
-                  <div className="w-40 h-40 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
-                  </div>
-                )}
+{loading ? (
+  <div className="w-40 h-40 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+  </div>
+) : qrCodeUrl ? (
+  <img
+    src={qrCodeUrl}
+    alt="QR Code eAi"
+    className="w-40 h-40 object-contain"
+    onError={(e) => {
+      console.error('Erro ao carregar QR Code mobile');
+      if (!e.currentTarget.src.includes('api.qrserver.com')) {
+        e.currentTarget.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
+      }
+    }}
+  />
+) : (
+  <div className="w-40 h-40 flex items-center justify-center text-gray-400 text-sm">
+    QR Code indisponível
+  </div>
+)}
               </div>
               <p className={`text-sm mt-2
                 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}

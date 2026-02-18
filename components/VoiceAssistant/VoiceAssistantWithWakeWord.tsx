@@ -1369,10 +1369,9 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         // Verificar se a função tem handler customizado
         const registryFunc = getFunctionByKey(result.functionKey || '');
         
-        if (registryFunc?.handler) {
-          console.log('🎯 Executando handler customizado para:', result.functionKey);
-          
-          // Executar handler customizado
+if (registryFunc?.handler) {
+  console.log('🎯 Executando handler customizado para:', result.functionKey);
+  
   const handlerSuccess = await registryFunc.handler({
     transcript: lowerTranscript,
     companyId,
@@ -1385,14 +1384,15 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
   if (handlerSuccess) {
     console.log('✅ Handler customizado executado com sucesso');
     
-    // ✅ ADICIONAR: Ativar contexto de função
+    // ✅ CORRETO - usar registryFunc.functionKey
     activeFunctionContextRef.current = {
-      functionKey: result.functionKey || '',
+      functionKey: registryFunc.functionKey, // ← CORRIGIDO
       activatedAt: Date.now(),
       expiresIn: 5 * 60 * 1000,
     };
-    console.log(`🎯 Contexto de ${result.functionKey} ativado por 5 minutos`);
+    console.log(`🎯 Contexto de ${registryFunc.functionKey} ativado por 5 minutos`);
   }
+}
           
         } else {
           // Função sem handler - usar resposta padrão do processor

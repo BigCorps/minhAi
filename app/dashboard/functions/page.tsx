@@ -47,6 +47,7 @@ const categories = [
   { key: 'knowledge',     name: 'Aprendizado',  color: '#FFFF00' },
   { key: 'configuration', name: 'Configuração', color: '#800080' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
+  { key: 'video',         name: 'Vídeos',       color: '#6B7280' },
   { key: 'payment',       name: 'Pagamento',    color: '#F59E0B' },
   { key: 'schedule',      name: 'Agendamento',  color: '#FFA500' },
   { key: 'information',   name: 'Informação',   color: '#00FFF7' },
@@ -123,13 +124,13 @@ function CategoryPillSelector({
   if (isMobile) {
     // Linha 1: [Todas] [Contato]  — 2 cols
     // Linhas 2+: restante — 3 cols
-    const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact');
-    const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact');
+    const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
+    const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
 
     return (
       <div className="flex flex-col gap-2 w-full">
-        {/* Linha 1: flex (não grid) para que cada botão ocupe só o espaço necessário */}
-        <div className="flex gap-2">
+        {/* Linha 1: grid 3 colunas — Todas as Categorias | Contato | Vídeos */}
+        <div className="grid grid-cols-3 gap-2">
           {allBtn}
           {firstRowCats}
         </div>

@@ -1762,7 +1762,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
   const handleTextMessage = async (message: string) => {
     console.log('📝 Mensagem de texto recebida:', message);
 
-    // ✅ Verificar comando STOP no texto também
     if (detectStopCommand(message)) {
       stopEverything();
       return;
@@ -1791,15 +1790,19 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       formData.append('audio', textBlob);
       formData.append('companyId', companyId);
       formData.append('directQuestion', message);
+
+      // ✅ PASSO 4: Enviar sessionId se existir
       if (sessionId) {
         formData.append('sessionId', sessionId);
       }
 
+      // ✅ UMA ÚNICA variável "response" (sem duplicar)
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
       });
 
+      // ✅ PASSO 4: Capturar sessionId da resposta
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionId) {
         setSessionId(newSessionId);

@@ -20,43 +20,11 @@ export default function MeuSistemaDisplay({
   const [loading, setLoading] = useState(true);
   const websiteUrl = 'https://eai.app.br';
 
-  // ✅ Gerar QR Code via Edge Function (igual QRCodeDisplay)
+ // ✅ SOLUÇÃO SIMPLES: Gerar QR Code direto via API (sem Edge Function)
   useEffect(() => {
-    async function generateQRCode() {
-      try {
-        const supabase = createClient();
-        
-        // Usar a mesma Edge Function que gera QR codes de contato
-        // Passando um tipo especial "meu_sistema"
-        const response = await supabase.functions.invoke('gerar-qrcode-contato', {
-          body: {
-            qr_type: 'custom',
-            qr_content: websiteUrl, // ← URL do eAi
-            display_text: 'eai.app.br',
-            label: 'Sistema eAi'
-          }
-        });
-
-        if (response.error) {
-          console.error('Erro ao gerar QR Code:', response.error);
-          // Fallback: usar API direta
-          const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
-          setQrCodeUrl(fallbackUrl);
-        } else {
-          setQrCodeUrl(response.data.qr_code_url);
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Erro gerar QR Code:', error);
-        // Fallback: usar API direta
-        const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
-        setQrCodeUrl(fallbackUrl);
-        setLoading(false);
-      }
-    }
-
-    generateQRCode();
+    const size = 400;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(websiteUrl)}&margin=10`;
+    setQrCodeUrl(qrUrl);
   }, []);
 
   // Auto-close após 20 segundos com contador

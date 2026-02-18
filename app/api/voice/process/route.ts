@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
     const companyId = formData.get('companyId') as string;
     const conversationId = formData.get('conversationId') as string | null;
     const directQuestion = formData.get('directQuestion') as string | null;
+    const returnText = formData.get('returnText') === 'true'; // ✅ NOVO
 
     if (!audioFile || !companyId) {
       return NextResponse.json(
@@ -203,13 +204,12 @@ export async function POST(request: NextRequest) {
       // Usar OpenAI (GPT-4o-mini)
       console.log('🤖 Usando OpenAI GPT-4o-mini');
       
-const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
+      // ✅ CORREÇÃO: Verificar se deve usar prompt de orçamento
+      const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
 
-const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
-  ? company.orcamento_prompt  // ← Usa prompt de orçamento (sem concatenar com system_prompt)
-  : `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}  // ← Usa prompt padrão
-
-console.log('📋 Usando prompt:', useOrcamentoPrompt ? 'ORÇAMENTO' : 'PADRÃO');
+      const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
+        ? company.orcamento_prompt  // ← Usa prompt de orçamento puro
+        : `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
 
 Regras:
 - Seja breve (máximo 2-3 frases)
@@ -219,19 +219,58 @@ Regras:
 
 Pergunta: ${userMessage}`;
 
+      console.log('📋 Usando prompt:', useOrcamentoPrompt ? 'ORÇAMENTO' : 'PADRÃO');
+
       responseText = await processWithGPT(userMessage, systemPrompt);
       
       console.log('✅ OpenAI respondeu');
 
-      // ✅ DESCONTAR CRÉDITOS CHATGPT
+      // ✅ DESCONTAR CRÉDITOS CHATGPT ou ORÇAMENTO
+      const functionKey = useOrcamentoPrompt ? 'orcamento' : 'chatgpt';
+      const creditsConsumed = useOrcamentoPrompt ? 2 : 2; // Ambos consomem 2
+      
       await supabase.rpc('register_function_usage', {
         p_company_id: companyId,
-        p_function_key: 'chatgpt',
-        p_credits_consumed: 2
+        p_function_key: functionKey,
+        p_credits_consumed: creditsConsumed
       });
     }
 
-    // TTS
+    // ✅ NOVO: Retornar texto se solicitado
+    if (returnText) {
+      console.log('📄 Retornando texto (sem áudio)');
+      
+      // Salvar histórico
+      let finalConversationId = conversationId || randomUUID();
+      
+      if (!conversationId || conversationId === 'new') {
+        await supabase.from('conversations').insert({
+          id: finalConversationId,
+          company_id: companyId,
+        });
+      }
+
+      await supabase.from('messages').insert([
+        { conversation_id: finalConversationId, role: 'user', content: userMessage },
+        { conversation_id: finalConversationId, role: 'assistant', content: responseText },
+      ]);
+
+      const totalTime = Date.now() - startTime;
+      console.log(`⏱️ Total: ${totalTime}ms\n`);
+
+      return NextResponse.json({
+        response: responseText,
+        conversationId: finalConversationId,
+        usedFAQ,
+        processingTime: totalTime,
+      }, {
+        headers: {
+          'X-Used-FAQ': String(usedFAQ),
+        },
+      });
+    }
+
+    // TTS (comportamento padrão)
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
       voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
@@ -251,7 +290,6 @@ Pergunta: ${userMessage}`;
       });
     }
 
-    // ✅ CORREÇÃO: Usar tabela 'messages' em vez de 'conversation_messages'
     await supabase.from('messages').insert([
       { conversation_id: finalConversationId, role: 'user', content: userMessage },
       { conversation_id: finalConversationId, role: 'assistant', content: responseText },

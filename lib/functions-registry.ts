@@ -371,7 +371,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     ],
     
     requiresInput: false,
-    description: 'Informações sobre o sistema eAi - assistente de voz inteligente para empresas',
+    description: 'Informações sobre o eAi App - assistente de voz inteligente para empresas',
     shortDescription: 'Sobre o sistema',
     icon: '🤖',
     color: '#6366F1',
@@ -389,7 +389,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         console.log('🧊 [MEU SISTEMA] Abrindo informações');
         
         // Falar sobre o sistema
-        await playText('Sou o E A I, seu funcionário de I A inteligente. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.');
+        await playText('E A I, sou um funcionário de I A inteligente. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.');
         
         // Abrir modal especial (se setActiveModal estiver disponível)
     if (setActiveModal) {

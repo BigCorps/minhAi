@@ -1364,13 +1364,13 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       const result = await commandProcessor.processCommand(transcript);
       
       if (result?.success) {
-        console.log('✅ Nova função detectada:', result.functionKey);
+        console.log('✅ Nova função detectada:', registryFunc.functionKey);
         
         // Verificar se a função tem handler customizado
-        const registryFunc = getFunctionByKey(result.functionKey || '');
+        const registryFunc = getFunctionByKey(registryFunc.functionKey || '');
         
 if (registryFunc?.handler) {
-  console.log('🎯 Executando handler customizado para:', result.functionKey);
+  console.log('🎯 Executando handler customizado para:', registryFunc.functionKey);
   
   const handlerSuccess = await registryFunc.handler({
     transcript: lowerTranscript,
@@ -1405,7 +1405,7 @@ if (registryFunc?.handler) {
             
             if (result.modalType === 'QRCodeDisplay') {
               setQrCodeData({
-                type: result.functionKey?.replace('qrcode_', '') as any,
+                type: registryFunc.functionKey?.replace('qrcode_', '') as any,
                 qrCodeUrl: result.modalData.qr_code_url,
                 qrContent: result.modalData.qr_content,
                 displayText: result.modalData.display_text,
@@ -1416,8 +1416,8 @@ if (registryFunc?.handler) {
         }
         
         // Registrar uso
-        if (result.functionKey) {
-          await commandProcessor.registerUsage(result.functionKey);
+        if (registryFunc.functionKey) {
+          await commandProcessor.registerUsage(registryFunc.functionKey);
         }
         
         return true;
@@ -2001,7 +2001,7 @@ if (registryFunc?.handler) {
 
           if (handlerSuccess) {
             activeFunctionContextRef.current = {
-             functionKey: result.functionKey || '',
+             functionKey: registryFunc.functionKey || '',
              activatedAt: Date.now(),
              expiresIn: 5 * 60 * 1000,
             };

@@ -378,20 +378,24 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     requiresPayment: false,
     isPremium: false,
     
-    // Handler com createClient já importado
     handler: async ({ 
       transcript, 
       playText, 
       companyId
     }) => {
       try {
-        const supabase = createClient(); // ✅ Agora funciona
+        console.log('💰 [ORCAMENTO] Handler iniciado');
+        console.log('💰 [ORCAMENTO] Transcript:', transcript);
+        
+        const supabase = createClient();
 
         const { data: company } = await supabase
           .from('companies')
           .select('orcamento_prompt')
           .eq('id', companyId)
           .single();
+
+        console.log('💰 [ORCAMENTO] Prompt encontrado:', company?.orcamento_prompt ? 'SIM' : 'NÃO');
 
         if (!company?.orcamento_prompt) {
           await playText('A função de orçamento não está configurada. Configure as tabelas de preços no painel de funções.');
@@ -400,28 +404,42 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
         await playText('Gerando seu orçamento. Um momento...');
 
-        const response = await fetch('/api/gemini-chat', {
+        console.log('💰 [ORCAMENTO] Chamando API ChatGPT...');
+
+        // ✅ USAR /api/chat (ChatGPT via OpenAI) ao invés de /api/gemini-chat
+        const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: transcript,
-            systemPrompt: company.orcamento_prompt,
-            conversationHistory: [],
+            companyId: companyId,
+            systemPrompt: company.orcamento_prompt, // Prompt customizado de orçamento
           }),
         });
 
+        console.log('💰 [ORCAMENTO] Response status:', response.status);
+
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error('💰 [ORCAMENTO] Erro response:', errorText);
           throw new Error('Erro ao gerar orçamento');
         }
 
-        const { reply } = await response.json();
+        const data = await response.json();
+        const reply = data.response || data.reply || data.message;
+        
+        console.log('💰 [ORCAMENTO] Reply recebido:', reply?.substring(0, 100) + '...');
+
+        if (!reply) {
+          throw new Error('Resposta vazia da API');
+        }
 
         await playText(reply);
 
         return true;
         
       } catch (error) {
-        console.error('Erro orçamento:', error);
+        console.error('💰 [ORCAMENTO] ERRO:', error);
         await playText('Desculpe, não consegui gerar o orçamento. Tente novamente.');
         return false;
       }

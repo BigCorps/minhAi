@@ -1107,45 +1107,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       console.log('🔧 Corrigido:', correctedTranscript);
     }
     console.log('🔍 Processando:', lowerTranscript);
-
-      const activeFunction = getActiveFunctionContext();
-  
-  if (activeFunction) {
-    console.log(`🎯 Contexto ativo detectado: ${activeFunction}`);
-    
-    // Buscar a função no registry
-    const func = getFunctionByKey(activeFunction);
-    
-    if (func?.handler) {
-      console.log(`🎯 Forçando uso de ${activeFunction} pelo contexto`);
-      
-      const handlerSuccess = await func.handler({
-        transcript: lowerTranscript,
-        companyId,
-        functionSettings,
-        playText,
-        setIsProcessing,
-        sessionId,
-      });
-      
-      if (handlerSuccess) {
-        // Renovar contexto
-        setActiveFunctionContext({
-          functionKey: activeFunction,
-          activatedAt: Date.now(),
-          expiresIn: 2 * 60 * 1000,
-        });
-        console.log(`🔄 Contexto de ${activeFunction} renovado por mais 5 minutos`);
-        
-        await registerFunctionUsage(
-          activeFunction,
-          functionSettings[activeFunction]?.creditsPerUse ?? 2
-        );
-      }
-      
-      return true;
-    }
-  }
     
     // ✅ PASSO 2: Converter números por extenso
     const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
@@ -2016,14 +1977,68 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
     shouldProcessAudio.current = false;
     await stopGoogleSpeech();
     console.log('🛑 Google Speech parado para evitar feedback');
+
+    // ✅ NOVO: Verificar contexto ativo ANTES de detectar comando
+    const activeFunction = getActiveFunctionContext();
+
+    if (activeFunction) {
+      console.log(`🎯 Contexto ativo detectado: ${activeFunction} (forçando uso)`);
+
+      const func = getFunctionByKey(activeFunction);
+
+      if (func?.handler) {
+        console.log(`🎯 Usando ${activeFunction} pelo contexto ativo`);
+
+        setIsProcessing(true);
+
+        try {
+          const handlerSuccess = await func.handler({
+            transcript: questionText,
+            companyId,
+            functionSettings,
+            playText,
+            setIsProcessing,
+            sessionId,
+          });
+
+          if (handlerSuccess) {
+            setActiveFunctionContext({
+              functionKey: activeFunction,
+              activatedAt: Date.now(),
+              expiresIn: 5 * 60 * 1000,
+            });
+            console.log(`🔄 Contexto de ${activeFunction} renovado por mais 5 minutos`);
+
+            await registerFunctionUsage(
+              activeFunction,
+              functionSettings[activeFunction]?.creditsPerUse ?? 2
+            );
+          }
+        } catch (error) {
+          console.error('❌ Erro ao executar handler do contexto:', error);
+          setIsProcessing(false);
+        }
+
+        processingQuestion.current = false;
+
+        setTimeout(async () => {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+          console.log('🎤 Google Speech reiniciado após contexto');
+        }, 500);
+
+        return; // ← Sair aqui, não continuar para detectVoiceCommand
+      }
+    }
     
+    // ── A partir daqui, tudo igual ao original ──────────────────
+
     const isCommand = await detectVoiceCommand(questionText);
     
     if (isCommand) {
       console.log('✅ Comando processado');
       processingQuestion.current = false;
       
-      // ✅ REATIVAR GOOGLE SPEECH APÓS 500MS
       setTimeout(async () => {
         shouldProcessAudio.current = true;
         await startGoogleSpeech();
@@ -2044,7 +2059,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       formData.append('companyId', companyId);
       formData.append('directQuestion', questionText);
 
-      // ✅ Enviar sessionId se existir
       if (sessionId) {
         formData.append('sessionId', sessionId);
       }
@@ -2064,13 +2078,11 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         }
       }, 1000);
 
-      // ✅ UMA ÚNICA declaração "const response"
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
       });
 
-      // ✅ Capturar sessionId da resposta (Passo 3)
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionId) {
         setSessionId(newSessionId);
@@ -2116,9 +2128,7 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       const audio = new Audio(audioUrl);
       
       audio.playbackRate = 1.05;
-      
       currentAudioRef.current = audio;
-      
       setIsPlayingAudio(true);
       
       audio.onplay = () => {
@@ -2126,7 +2136,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         setIsPlayingAudio(true);
       };
       
-      // ✅ REATIVAR GOOGLE SPEECH APÓS 2 SEGUNDOS
       audio.onended = () => {
         console.log('✅ Resposta concluída');
         setIsPlayingAudio(false);
@@ -2140,7 +2149,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         }, 2000);
       };
 
-      // ✅ REATIVAR GOOGLE SPEECH APÓS 1 SEGUNDO (erro)
       audio.onerror = (e) => {
         console.error('❌ Erro ao tocar áudio:', e);
         setIsPlayingAudio(false);
@@ -2192,7 +2200,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
                   .catch(e => {
                     console.error('❌ Retry falhou:', e);
                     clearTimeout(safetyTimeout);
-                    
                     setIsPlayingAudio(false);
                     currentAudioRef.current = null;
                     processingQuestion.current = false;
@@ -2221,7 +2228,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         } catch (e) {}
       }
       
-      // ✅ REATIVAR GOOGLE SPEECH APÓS 1 SEGUNDO
       setTimeout(async () => {
         shouldProcessAudio.current = true;
         await startGoogleSpeech();
@@ -2229,7 +2235,6 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       }, 1000);
     }
   }
-
   async function playProcessingFeedback(): Promise<HTMLAudioElement> {
     return new Promise((resolve, reject) => {
       try {

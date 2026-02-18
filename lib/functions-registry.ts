@@ -389,32 +389,37 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         console.log('🧊 [MEU SISTEMA] Abrindo informações');
         
         // Falar sobre o sistema
-        await playText('Este é o eAi, seu assistente de voz inteligente. Escaneie o QR Code para saber mais sobre o sistema e suas funcionalidades.');
+        await playText('Sou o E A I, seu funcionário de I A inteligente. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.');
         
         // Abrir modal especial (se setActiveModal estiver disponível)
-        if (setActiveModal) {
-          setActiveModal({
-            type: 'MeuSistemaDisplay',
-            data: {
-              logoUrl: '/favicon.svg',
+    if (setActiveModal) {
+      setActiveModal({
+        type: 'MeuSistemaDisplay',
+        data: {
+              logoUrl: '/app/favicon.svg',
               websiteUrl: 'https://eai.app.br',
               qrCodeUrl: '', // Será gerado no componente
               title: 'Sistema eAi',
               subtitle: 'Assistente de Voz Inteligente',
-              description: 'Transforme o atendimento da sua empresa com inteligência artificial',
+              description: 'Transforme o atendimento da sua empresa com um Funcionário IA',
               autoCloseDuration: 15000, // 15 segundos
             }
           });
         }
         
-        return true;
-        
-      } catch (error) {
-        console.error('🧊 [MEU SISTEMA] ERRO:', error);
-        await playText('Desculpe, não consegui exibir as informações do sistema.');
-        return false;
-      }
-    },
+    // 2. Falar DEPOIS (sem await - não bloqueia)
+    playText('Este é o eAi, seu assistente de voz inteligente. Escaneie o QR Code para saber mais sobre o sistema e suas funcionalidades.').catch(err => {
+      console.error('Erro ao falar:', err);
+    });
+    
+    return true;
+    
+  } catch (error) {
+    console.error('🤖 [MEU SISTEMA] ERRO:', error);
+    await playText('Desculpe, não consegui exibir as informações do sistema.');
+    return false;
+  }
+},
   },
 
   // ========================================

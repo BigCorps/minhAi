@@ -1380,21 +1380,20 @@ if (result?.success) {
     await registerFunctionUsage(result.functionKey, result.creditsConsumed);
   }
   
-  // Salvar no histórico
+// Salvar no histórico
   if (result.saveToHistory) {
     await saveInteractionToHistory(
-      userMessage,
-      result.speechText || 'Função executada',
-      result.functionKey
+      lowerTranscript, // ✅ CORREÇÃO: Usando a transcrição atual no lugar de userMessage
+      result.speechText || 'Função executada' // ✅ CORREÇÃO: Removido o 3º argumento que não existe na função original
     );
   }
   
-  return true;
-}
-    
-    console.log('❌ Nenhum comando detectado (legado ou novo)');
-    return false;
+return true;
   }
+} // ✅ CORREÇÃO: Esta chave fecha o if (commandProcessor)
+
+  console.log('❌ Nenhum comando detectado (legado ou novo)');
+  return false;
 
   // ========================================
   // COMMAND HANDLERS

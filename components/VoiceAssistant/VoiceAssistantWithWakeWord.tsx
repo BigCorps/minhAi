@@ -960,10 +960,15 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
         await handleQRCodeCommand('telefone');
         break;
 
-      case 'meu_sistema':
-        await playText('E Ai, sou o que há de mais moderno do universo de funcionários IA. Sou seu assistente de voz inteligente, parecido com uma Alexa. Escaneie o QR Code para saber mais informações.');
-        setMeuSistemaModalOpen(true);
-        break;
+case 'meu_sistema':
+  // ✅ 1. Abrir modal PRIMEIRO
+  setMeuSistemaModalOpen(true);
+  
+  // ✅ 2. Falar DEPOIS (sem await)
+  playText('E A I, sou um funcionário de I A inteligente. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades.').catch(err => {
+    console.error('Erro ao falar:', err);
+  });
+  break;
             
         // Fallback
         default:

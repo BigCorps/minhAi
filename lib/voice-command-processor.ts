@@ -171,36 +171,51 @@ export class VoiceCommandProcessor {
   /**
    * Executa uma função específica
    */
-  async executeFunction(
-    func: FunctionDefinition,
-    extractedValue?: any
-  ): Promise<CommandProcessResult> {
-    try {
-      console.log(`⚡ Executando nova função: ${func.functionKey}`);
+async executeFunction(
+  func: FunctionDefinition,
+  extractedValue?: any
+): Promise<CommandProcessResult> {
+  try {
+    console.log(`⚡ [Processor] Executando função: ${func.functionKey}`);
+    
+    // ✅ NOVO: Verificar se tem handler customizado
+    if (func.handler) {
+      console.log(`🎯 [Processor] Função tem handler customizado, delegando...`);
       
-      // Executar baseado no tipo de resposta
-      switch (func.responseType) {
-        case 'voice':
-          return await this.handleVoiceOnly(func, extractedValue);
-        
-        case 'voice+modal':
-          return await this.handleVoiceWithModal(func, extractedValue);
-        
-        default:
-          throw new Error(`Response type não suportado: ${func.responseType}`);
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Erro ao executar nova função:', error);
-      
+      // Retornar sem executar aqui - será executado no VoiceAssistant
       return {
-        success: false,
+        success: true,
+        functionKey: func.functionKey,
         action: 'voice',
-        speechText: `Desculpe, ocorreu um erro ao executar ${func.functionName}.`,
-        error: error.message,
+        speechText: '', // Vazio - handler vai gerar
+        creditsConsumed: this.getFunctionCredits(func.functionKey),
+        saveToHistory: this.shouldSaveToHistory(func.functionKey),
       };
     }
+    
+    // Executar baseado no tipo de resposta (funções sem handler)
+    switch (func.responseType) {
+      case 'voice':
+        return await this.handleVoiceOnly(func, extractedValue);
+      
+      case 'voice+modal':
+        return await this.handleVoiceWithModal(func, extractedValue);
+      
+      default:
+        throw new Error(`Response type não suportado: ${func.responseType}`);
+    }
+    
+  } catch (error: any) {
+    console.error('❌ [Processor] Erro ao executar função:', error);
+    
+    return {
+      success: false,
+      action: 'voice',
+      speechText: `Desculpe, ocorreu um erro ao executar ${func.functionName}.`,
+      error: error.message,
+    };
   }
+}
   
   /**
    * Handler para funções que só retornam voz

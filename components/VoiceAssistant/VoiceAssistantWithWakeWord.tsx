@@ -48,10 +48,10 @@ export function VoiceAssistantWithWakeWord({
   const [showStartButton, setShowStartButton] = useState(true);
   const [transcript, setTranscript] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [activeFunctionContext, setActiveFunctionContext] = useState<{
+  const activeFunctionContextRef = useRef<{
     functionKey: string;
     activatedAt: number;
-    expiresIn: number; // milissegundos
+    expiresIn: number;
   } | null>(null);
 
   // ✅ MUDANÇA 2: ADICIONAR STATES
@@ -479,21 +479,21 @@ googleSpeechRef.current = new GoogleSpeechWebSocket({
 // ============================================
 
 function getActiveFunctionContext(): string | null {
-  if (!activeFunctionContext) return null;
+  if (!activeFunctionContextRef.current) return null; // ✅ Mudar para .current
   
   const now = Date.now();
-  const elapsed = now - activeFunctionContext.activatedAt;
+  const elapsed = now - activeFunctionContextRef.current.activatedAt;
   
-  if (elapsed > activeFunctionContext.expiresIn) {
+  if (elapsed > activeFunctionContextRef.current.expiresIn) {
     console.log('⏰ Contexto de função expirou');
-    setActiveFunctionContext(null);
+    activeFunctionContextRef.current = null; // ✅ Mudar para .current
     return null;
   }
   
-  const remainingSeconds = Math.floor((activeFunctionContext.expiresIn - elapsed) / 1000);
-  console.log(`🎯 Contexto ativo: ${activeFunctionContext.functionKey} (${remainingSeconds}s restantes)`); // ✅ CORRIGIDO - adicionado ()
+  const remainingSeconds = Math.floor((activeFunctionContextRef.current.expiresIn - elapsed) / 1000);
+  console.log(`🎯 Contexto ativo: ${activeFunctionContextRef.current.functionKey} (${remainingSeconds}s restantes)`);
   
-  return activeFunctionContext.functionKey;
+  return activeFunctionContextRef.current.functionKey;
 }
 
   // ========================================
@@ -702,7 +702,7 @@ function getActiveFunctionContext(): string | null {
     console.log('✅ Parado');
 
     // 7. Limpar contexto de função
-    setActiveFunctionContext(null);
+    activeFunctionContextRef.current = null;
     console.log('🧹 Contexto de função limpo');
     
     // 8. Reiniciar Google Speech após 500ms
@@ -1386,11 +1386,11 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
     console.log('✅ Handler customizado executado com sucesso');
     
     // ✅ ADICIONAR: Ativar contexto de função
-    setActiveFunctionContext({
+    activeFunctionContextRef.current = {
       functionKey: result.functionKey || '',
       activatedAt: Date.now(),
-      expiresIn: 5 * 60 * 1000, // 5 minutos
-    });
+      expiresIn: 5 * 60 * 1000,
+    };
     console.log(`🎯 Contexto de ${result.functionKey} ativado por 5 minutos`);
   }
           
@@ -2001,11 +2001,11 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
           });
 
           if (handlerSuccess) {
-            setActiveFunctionContext({
-              functionKey: activeFunction,
-              activatedAt: Date.now(),
-              expiresIn: 5 * 60 * 1000,
-            });
+            activeFunctionContextRef.current = {
+             functionKey: result.functionKey || '',
+             activatedAt: Date.now(),
+             expiresIn: 5 * 60 * 1000,
+            };
             console.log(`🔄 Contexto de ${activeFunction} renovado por mais 5 minutos`);
 
             await registerFunctionUsage(

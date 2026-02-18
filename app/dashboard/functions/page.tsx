@@ -42,73 +42,143 @@ interface CompanyFunctionSetting {
   last_used_at?: string;
 }
 
+// "Outros" removido dos botões visíveis conforme solicitado
 const categories = [
-  { key: 'knowledge',      name: 'Aprendizado',  color: '#3B82F6' },
-  { key: 'configuration',  name: 'Configuração', color: '#8B5CF6' },
-  { key: 'contact',        name: 'Contato',      color: '#10B981' },
-  { key: 'payment',        name: 'Pagamento',    color: '#F59E0B' },
-  { key: 'schedule',       name: 'Agendamento',  color: '#8B5CF6' },
-  { key: 'information',    name: 'Informação',   color: '#00BCD4' },
-  { key: 'ai_assistant',   name: 'Conhecimento', color: '#A855F7' },
-  { key: 'other',          name: 'Outros',       color: '#6B7280' },
+  { key: 'knowledge',     name: 'Aprendizado',  color: '#3B82F6' },
+  { key: 'configuration', name: 'Configuração', color: '#8B5CF6' },
+  { key: 'contact',       name: 'Contato',      color: '#10B981' },
+  { key: 'payment',       name: 'Pagamento',    color: '#F59E0B' },
+  { key: 'schedule',      name: 'Agendamento',  color: '#8B5CF6' },
+  { key: 'information',   name: 'Informação',   color: '#00BCD4' },
+  { key: 'ai_assistant',  name: 'Conhecimento', color: '#A855F7' },
 ];
 
+const statusOptions = [
+  { key: 'all',      label: 'Todos os Status' },
+  { key: 'active',   label: 'Ativas' },
+  { key: 'inactive', label: 'Inativas' },
+];
+
+// ── Shared pill classes ────────────────────────────────────────────────────────
+const pillCommon =
+  'inline-flex items-center justify-center gap-1.5 ' +
+  'px-3 py-1.5 rounded-full text-sm font-medium border ' +
+  'transition-all duration-150 whitespace-nowrap';
+
+// Inactive: legível em light E dark
+const pillInactive =
+  'bg-transparent ' +
+  'text-gray-700 border-gray-300 hover:border-gray-500 hover:text-gray-900 ' +
+  'dark:text-gray-300 dark:border-white/20 dark:hover:border-white/40 dark:hover:text-white';
+
+// Active neutral (Todas / Status)
+const pillActiveNeutral =
+  'bg-gray-800 text-white border-gray-800 shadow-sm ' +
+  'dark:bg-white dark:text-gray-900 dark:border-white';
+
+// Active colored (categorias com cor própria)
+const pillActiveColored = 'text-white shadow-sm border-transparent';
+
+// ─── CategoryPillSelector ──────────────────────────────────────────────────────
 function CategoryPillSelector({
   selectedCategories,
   onToggleCategory,
   onSelectAll,
   isAllSelected,
+  isMobile,
 }: {
   selectedCategories: string[];
   onToggleCategory: (key: string) => void;
   onSelectAll: () => void;
   isAllSelected: boolean;
+  isMobile: boolean;
 }) {
+  const allBtn = (
+    <button
+      onClick={onSelectAll}
+      className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
+    >
+      {isMobile ? 'Todas' : 'Todas as Categorias'}
+    </button>
+  );
+
+  const catBtns = categories.map(cat => {
+    const isSelected = selectedCategories.includes(cat.key);
+    return (
+      <button
+        key={cat.key}
+        onClick={() => onToggleCategory(cat.key)}
+        className={`${pillCommon} ${isSelected ? pillActiveColored : pillInactive}`}
+        style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+      >
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : cat.color }}
+        />
+        {cat.name}
+      </button>
+    );
+  });
+
+  if (isMobile) {
+    // Linha 1: [Todas] [Contato]  — 2 cols
+    // Linhas 2+: restante — 3 cols
+    const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact');
+    const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact');
+
+    return (
+      <div className="flex flex-col gap-2 w-full">
+        <div className="grid grid-cols-2 gap-2">
+          {allBtn}
+          {firstRowCats}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {restCats}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: flex-wrap, quebra em múltiplas linhas conforme a tela
   return (
     <div className="flex flex-wrap gap-2">
-      {/* "Todas as Categorias" pill */}
-      <button
-        onClick={onSelectAll}
-        className={`
-          inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium
-          border transition-all duration-150
-          ${isAllSelected
-            ? 'bg-white text-gray-900 border-white shadow-sm'
-            : 'bg-transparent text-gray-300 border-white/20 hover:border-white/40 hover:text-white'
-          }
-        `}
-      >
-        Todas as Categorias
-      </button>
-
-      {categories.map(cat => {
-        const isSelected = selectedCategories.includes(cat.key);
-        return (
-          <button
-            key={cat.key}
-            onClick={() => onToggleCategory(cat.key)}
-            className={`
-              inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium
-              border transition-all duration-150
-              ${isSelected
-                ? 'border-transparent text-white shadow-sm'
-                : 'bg-transparent text-gray-300 border-white/20 hover:border-white/40 hover:text-white'
-              }
-            `}
-            style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
-          >
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : cat.color }}
-            />
-            {cat.name}
-          </button>
-        );
-      })}
+      {allBtn}
+      {catBtns}
     </div>
   );
 }
 
+// ─── StatusPillSelector ────────────────────────────────────────────────────────
+function StatusPillSelector({
+  filterStatus,
+  onSetStatus,
+  isMobile,
+}: {
+  filterStatus: string;
+  onSetStatus: (key: string) => void;
+  isMobile: boolean;
+}) {
+  const btns = statusOptions.map(opt => {
+    const isSelected = filterStatus === opt.key;
+    return (
+      <button
+        key={opt.key}
+        onClick={() => onSetStatus(opt.key)}
+        className={`${pillCommon} ${isSelected ? pillActiveNeutral : pillInactive}`}
+      >
+        {opt.label}
+      </button>
+    );
+  });
+
+  if (isMobile) {
+    return <div className="grid grid-cols-3 gap-2 w-full">{btns}</div>;
+  }
+
+  return <div className="flex gap-2">{btns}</div>;
+}
+
+// ─── Main page ─────────────────────────────────────────────────────────────────
 function FunctionsPageContent() {
   const searchParams = useSearchParams();
   const companyIdFromUrl = searchParams.get('companyId');
@@ -124,10 +194,8 @@ function FunctionsPageContent() {
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
 
   const [searchQuery, setSearchQuery] = useState('');
-  // Multi-select categories: empty = "all"
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
-  // viewMode only relevant on desktop; mobile always uses list
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [editingFunction, setEditingFunction] = useState<AssistantFunction | null>(null);
 
@@ -135,9 +203,7 @@ function FunctionsPageContent() {
 
   useEffect(() => {
     const urlId = companyIdFromUrl || undefined;
-    if (urlId !== companyId) {
-      setCompanyId(urlId);
-    }
+    if (urlId !== companyId) setCompanyId(urlId);
   }, [companyIdFromUrl]);
 
   useEffect(() => {
@@ -153,30 +219,20 @@ function FunctionsPageContent() {
   async function loadData(selectedCompanyId: string) {
     try {
       setLoading(true);
-
       const { data: allFunctions, error: functionsError } = await supabase
         .from('assistant_functions')
         .select('*, default_enabled')
         .eq('is_active', true)
         .order('display_order');
-
-      if (functionsError) {
-        console.error('Erro ao buscar funções:', functionsError);
-      }
-
+      if (functionsError) console.error('Erro ao buscar funções:', functionsError);
       setFunctions(allFunctions || []);
 
       const { data: companySettings, error: settingsError } = await supabase
         .from('company_function_settings')
         .select('*')
         .eq('company_id', selectedCompanyId);
-
-      if (settingsError) {
-        console.error('Erro ao buscar settings:', settingsError);
-      }
-
+      if (settingsError) console.error('Erro ao buscar settings:', settingsError);
       setSettings(companySettings || []);
-
     } catch (error) {
       console.error('Erro ao carregar:', error);
     } finally {
@@ -186,12 +242,9 @@ function FunctionsPageContent() {
 
   async function toggleFunction(functionKey: string, currentlyEnabled: boolean) {
     if (!companyId) return;
-
     try {
       setUpdating(functionKey);
-
       const setting = settings.find(s => s.function_key === functionKey);
-
       if (setting) {
         const { error } = await supabase
           .from('company_function_settings')
@@ -199,11 +252,9 @@ function FunctionsPageContent() {
             is_enabled: !currentlyEnabled,
             ...(currentlyEnabled
               ? { disabled_at: new Date().toISOString() }
-              : { enabled_at: new Date().toISOString() }
-            )
+              : { enabled_at: new Date().toISOString() }),
           })
           .eq('id', setting.id);
-
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -214,15 +265,11 @@ function FunctionsPageContent() {
             is_enabled: !currentlyEnabled,
             ...(currentlyEnabled
               ? { disabled_at: new Date().toISOString() }
-              : { enabled_at: new Date().toISOString() }
-            )
+              : { enabled_at: new Date().toISOString() }),
           });
-
         if (error) throw error;
       }
-
       await loadData(companyId);
-
     } catch (error) {
       console.error('Erro ao atualizar:', error);
       alert('Erro ao atualizar função. Tente novamente.');
@@ -233,9 +280,7 @@ function FunctionsPageContent() {
 
   function isFunctionEnabled(functionKey: string): boolean {
     const setting = settings.find(s => s.function_key === functionKey);
-    if (setting) {
-      return setting.is_enabled;
-    }
+    if (setting) return setting.is_enabled;
     const func = functions.find(f => f.function_key === functionKey);
     return func?.default_enabled ?? false;
   }
@@ -245,7 +290,7 @@ function FunctionsPageContent() {
     return {
       usageCount: setting?.usage_count || 0,
       creditsConsumed: setting?.total_credits_consumed || 0,
-      lastUsed: setting?.last_used_at || null
+      lastUsed: setting?.last_used_at || null,
     };
   }
 
@@ -260,19 +305,12 @@ function FunctionsPageContent() {
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
   }
 
-  // Category multi-select handlers
   const isAllSelected = selectedCategories.length === 0;
 
   function handleToggleCategory(key: string) {
-    setSelectedCategories(prev => {
-      if (prev.includes(key)) {
-        // Deselect — if last one, go back to "all"
-        const next = prev.filter(k => k !== key);
-        return next;
-      } else {
-        return [...prev, key];
-      }
-    });
+    setSelectedCategories(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
   }
 
   function handleSelectAll() {
@@ -281,26 +319,54 @@ function FunctionsPageContent() {
 
   const filteredFunctions = functions.filter(fn => {
     if (!fn) return false;
-
-    const matchesCategory =
-      isAllSelected || selectedCategories.includes(fn.function_category);
+    const matchesCategory = isAllSelected || selectedCategories.includes(fn.function_category);
     const matchesSearch =
       fn.function_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       fn.short_description.toLowerCase().includes(searchQuery.toLowerCase());
-
     const isEnabled = isFunctionEnabled(fn.function_key);
     const matchesStatus =
       filterStatus === 'all' ||
       (filterStatus === 'active' && isEnabled) ||
       (filterStatus === 'inactive' && !isEnabled);
-
     return matchesCategory && matchesSearch && matchesStatus;
   });
+
+  // Shared search input classes
+  const searchInputClass =
+    'w-full pl-10 pr-4 py-2 rounded-lg border ' +
+    'bg-white text-gray-900 border-gray-300 placeholder-gray-400 ' +
+    'dark:bg-slate-800 dark:text-white dark:border-white/10 dark:placeholder-gray-500 ' +
+    'focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+
+  const renderCards = (
+    <>
+      {filteredFunctions.map(fn => {
+        if (!fn || !fn.function_key) return null;
+        const enabled = isFunctionEnabled(fn.function_key);
+        const stats = getFunctionStats(fn.function_key);
+        const isUpdating = updating === fn.function_key;
+        return (
+          <FunctionCard
+            key={fn.id}
+            function={fn}
+            isEnabled={enabled}
+            stats={stats}
+            onToggle={() => toggleFunction(fn.function_key, enabled)}
+            onEdit={() => handleEdit(fn)}
+            isUpdating={isUpdating}
+            theme={theme}
+          />
+        );
+      })}
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
+
+          {/* ── Header ── */}
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6">
               <div className="flex-1">
@@ -311,7 +377,6 @@ function FunctionsPageContent() {
                   Ative ou desative as funções que seu assistente pode executar
                 </p>
               </div>
-
               <FunctionSelector
                 onCompanySelect={handleCompanySelect}
                 selectedCompanyId={companyId}
@@ -320,6 +385,7 @@ function FunctionsPageContent() {
             </div>
           </div>
 
+          {/* ── Empty states ── */}
           {!companyId && !loading && (
             <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
               <p className="text-gray-600 dark:text-gray-400">
@@ -330,7 +396,7 @@ function FunctionsPageContent() {
 
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
             </div>
           )}
 
@@ -344,44 +410,73 @@ function FunctionsPageContent() {
 
           {!loading && companyId && functions.length > 0 && (
             <>
-              {/* ── Filter bar ── */}
-              <div className="mb-6 flex flex-col gap-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
+              {/* ════════════════════════════════════
+                  FILTER BAR — MOBILE  (< sm)
+                  ════════════════════════════════════ */}
+              <div className="sm:hidden mb-6 flex flex-col gap-3 bg-white dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
+                {/* Busca ocupa toda a largura */}
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className={searchInputClass}
+                  />
+                </div>
 
-                {/* Row 1: search + status + view toggle (view toggle hidden on mobile) */}
+                {/* Status — 3 colunas */}
+                <StatusPillSelector
+                  filterStatus={filterStatus}
+                  onSetStatus={setFilterStatus}
+                  isMobile
+                />
+
+                {/* Categorias — layout mobile específico */}
+                <CategoryPillSelector
+                  selectedCategories={selectedCategories}
+                  onToggleCategory={handleToggleCategory}
+                  onSelectAll={handleSelectAll}
+                  isAllSelected={isAllSelected}
+                  isMobile
+                />
+              </div>
+
+              {/* ════════════════════════════════════
+                  FILTER BAR — DESKTOP  (≥ sm)
+                  ════════════════════════════════════ */}
+              <div className="hidden sm:flex flex-col gap-3 mb-6 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
+                {/* Linha 1: busca + status pills + view toggle */}
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex-grow max-w-xs relative">
+                  <div className="relative flex-grow min-w-[160px] max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Buscar por nome..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className={searchInputClass}
                     />
                   </div>
 
-                  <select
-                    value={filterStatus}
-                    onChange={e => setFilterStatus(e.target.value)}
-                    className="border rounded-lg px-3 py-2 dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">Todos os Status</option>
-                    <option value="active">Ativas</option>
-                    <option value="inactive">Inativas</option>
-                  </select>
+                  <StatusPillSelector
+                    filterStatus={filterStatus}
+                    onSetStatus={setFilterStatus}
+                    isMobile={false}
+                  />
 
-                  {/* View mode toggle — hidden on mobile */}
-                  <div className="hidden sm:flex items-center border rounded-lg p-1 dark:bg-slate-800 dark:border-white/10 ml-auto">
+                  {/* View mode toggle */}
+                  <div className="flex items-center border border-gray-300 dark:border-white/10 rounded-lg p-1 dark:bg-slate-800 ml-auto">
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`p-1.5 rounded-md transition-colors ${
                         viewMode === 'grid'
                           ? 'bg-blue-500 text-white'
-                          : 'hover:bg-gray-100 dark:hover:bg-white/10'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
                       }`}
                       aria-label="Visualização em grade"
                     >
-                      {/* LayoutGrid icon inline to avoid import issues */}
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
                         <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
@@ -392,29 +487,31 @@ function FunctionsPageContent() {
                       className={`p-1.5 rounded-md transition-colors ${
                         viewMode === 'list'
                           ? 'bg-blue-500 text-white'
-                          : 'hover:bg-gray-100 dark:hover:bg-white/10'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
                       }`}
                       aria-label="Visualização em lista"
                     >
-                      {/* List icon inline */}
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-                        <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
-                        <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18"/>
                       </svg>
                     </button>
                   </div>
                 </div>
 
-                {/* Row 2: Category pill selector */}
+                {/* Linha 2: categorias — flex-wrap, quebra automaticamente conforme a largura */}
                 <CategoryPillSelector
                   selectedCategories={selectedCategories}
                   onToggleCategory={handleToggleCategory}
                   onSelectAll={handleSelectAll}
                   isAllSelected={isAllSelected}
+                  isMobile={false}
                 />
               </div>
 
+              {/* ── Cards ── */}
               {filteredFunctions.length === 0 ? (
                 <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-white/10">
                   <p className="text-gray-600 dark:text-gray-400">
@@ -422,69 +519,21 @@ function FunctionsPageContent() {
                   </p>
                 </div>
               ) : (
-                /*
-                  On mobile (< sm): always single-column list layout.
-                  On desktop (sm+): respect viewMode state (grid or list).
-                */
-                <div className={
-                  // Mobile: always space-y-4 (list)
-                  // Desktop: grid or list based on viewMode
-                  `sm:hidden space-y-4`
-                  // We render two containers — one for mobile, one for desktop
-                  // Actually simpler: use a wrapper that switches class
-                }>
-                  {/* This div handles mobile (always list) */}
-                  {filteredFunctions.map(fn => {
-                    if (!fn || !fn.function_key) return null;
-                    const enabled = isFunctionEnabled(fn.function_key);
-                    const stats = getFunctionStats(fn.function_key);
-                    const isUpdating = updating === fn.function_key;
-                    return (
-                      <FunctionCard
-                        key={fn.id}
-                        function={fn}
-                        isEnabled={enabled}
-                        stats={stats}
-                        onToggle={() => toggleFunction(fn.function_key, enabled)}
-                        onEdit={() => handleEdit(fn)}
-                        isUpdating={isUpdating}
-                        theme={theme}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+                <>
+                  {/* Mobile: sempre lista */}
+                  <div className="sm:hidden space-y-4">{renderCards}</div>
 
-              {/* Desktop grid/list — hidden on mobile */}
-              {filteredFunctions.length > 0 && (
-                <div className={
-                  `hidden sm:block`
-                }>
-                  <div className={
-                    viewMode === 'grid'
-                      ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6'
-                      : 'space-y-4'
-                  }>
-                    {filteredFunctions.map(fn => {
-                      if (!fn || !fn.function_key) return null;
-                      const enabled = isFunctionEnabled(fn.function_key);
-                      const stats = getFunctionStats(fn.function_key);
-                      const isUpdating = updating === fn.function_key;
-                      return (
-                        <FunctionCard
-                          key={fn.id}
-                          function={fn}
-                          isEnabled={enabled}
-                          stats={stats}
-                          onToggle={() => toggleFunction(fn.function_key, enabled)}
-                          onEdit={() => handleEdit(fn)}
-                          isUpdating={isUpdating}
-                          theme={theme}
-                        />
-                      );
-                    })}
+                  {/* Desktop: grid ou lista */}
+                  <div className="hidden sm:block">
+                    <div className={
+                      viewMode === 'grid'
+                        ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6'
+                        : 'space-y-4'
+                    }>
+                      {renderCards}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </>
           )}
@@ -509,7 +558,7 @@ export default function AssistantFunctionsPage() {
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-screen bg-transparent">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
         </div>
       </div>

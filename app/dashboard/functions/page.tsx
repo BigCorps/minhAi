@@ -203,7 +203,7 @@ function FunctionsPageContent() {
     { key: 'payment',        name: 'Pagamento',     color: '#F59E0B' },
     { key: 'schedule',       name: 'Agendamento',   color: '#8B5CF6' },
     { key: 'information',    name: 'Informação',    color: '#3B82F6' },
-    { key: 'ai_assistant',   name: 'Conhecinento', color: '#8B5CF6' },
+    { key: 'ai_assistant',   name: 'Conhecimento', color: '#8B5CF6' },
     { key: 'other',          name: 'Outros',        color: '#6B7280' },
   ];
 

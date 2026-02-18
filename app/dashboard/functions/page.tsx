@@ -47,10 +47,10 @@ const categories = [
   { key: 'knowledge',     name: 'Aprendizado',  color: '#3B82F6' },
   { key: 'configuration', name: 'Configuração', color: '#8B5CF6' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
-  { key: 'payment',       name: 'Pagamento',    color: '#F59E0B' },
-  { key: 'schedule',      name: 'Agendamento',  color: '#8B5CF6' },
-  { key: 'information',   name: 'Informação',   color: '#00BCD4' },
-  { key: 'ai_assistant',  name: 'Conhecimento', color: '#A855F7' },
+  { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
+  { key: 'schedule',      name: 'Agendamento',  color: '#555CF6' },
+  { key: 'information',   name: 'Informação',   color: '#800080' },
+  { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
 ];
 
 const statusOptions = [

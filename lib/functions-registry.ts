@@ -69,6 +69,7 @@ export interface FunctionDefinition {
     setActiveModal?: (modal: any) => void;
     registerFunctionUsage?: (key: string, credits: number) => Promise<void>;
     checkIfFunctionIsEnabled?: (key: string) => Promise<boolean>;
+    sessionId?: string | null; // ✅ NOVO
   }) => Promise<boolean>;
 }
 
@@ -381,7 +382,8 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     handler: async ({ 
       transcript, 
       playText, 
-      companyId
+      companyId,
+      sessionId, // ✅ NOVO
     }) => {
       try {
         console.log('💰 [ORCAMENTO] Handler iniciado');
@@ -408,7 +410,12 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         formData.append('companyId', companyId);
         formData.append('directQuestion', transcript);
         formData.append('useOrcamentoPrompt', 'true');
-        formData.append('returnText', 'true'); // ← PEDIR TEXTO
+        formData.append('returnText', 'true');
+
+        // ✅ NOVO: Passar sessionId se existir
+        if (sessionId) {
+          formData.append('sessionId', sessionId);
+        }
 
         const response = await fetch('/api/voice/process', {
           method: 'POST',

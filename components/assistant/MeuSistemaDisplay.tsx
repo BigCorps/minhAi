@@ -4,7 +4,6 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
 
 interface MeuSistemaDisplayProps {
   onClose: () => void;
@@ -19,7 +18,7 @@ export default function MeuSistemaDisplay({
   const [timeLeft, setTimeLeft] = useState(20);
   const websiteUrl = 'https://eai.app.br';
 
- // ✅ SOLUÇÃO SIMPLES: Gerar QR Code direto via API (sem Edge Function)
+  // ✅ SOLUÇÃO SIMPLES: Gerar QR Code direto via API (sem Edge Function)
   useEffect(() => {
     const size = 400;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(websiteUrl)}&margin=10`;
@@ -102,19 +101,18 @@ export default function MeuSistemaDisplay({
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     console.error('Erro ao carregar logo');
-                    // Fallback se não carregar
                     e.currentTarget.style.display = 'none';
                   }}
                 />
               </div>
             </div>
 
-            {/* Textos - ✅ CENTRALIZADO */}
+            {/* Textos - Centralizados */}
             <div className="flex-1 text-center">
               <h3 className={`text-3xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                eAi, sou um funcionário de Voz com Inteligência Artificial.
+                eAi, sou um funcionário de Voz com Inteligência Artificial!
               </h3>
               <p className={`text-lg mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
@@ -142,27 +140,17 @@ export default function MeuSistemaDisplay({
               <div className={`p-4 rounded-xl
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
-                {/* ✅ CORREÇÃO: QR Code maior e melhor */}
-  <div className="w-48 h-48 flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
-  </div>
-) : qrCodeUrl ? (
-  <img
-    src={qrCodeUrl}
-    alt="QR Code eAi"
-    className="w-48 h-48 object-contain"
-    onError={(e) => {
-      console.error('Erro ao carregar QR Code');
-      if (!e.currentTarget.src.includes('api.qrserver.com')) {
-        e.currentTarget.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
-      }
-    }}
-  />
-) : (
-  <div className="w-48 h-48 flex items-center justify-center text-gray-400">
-    QR Code indisponível
-  </div>
-)}
+                {qrCodeUrl ? (
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code eAi"
+                    className="w-48 h-48 object-contain"
+                  />
+                ) : (
+                  <div className="w-48 h-48 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+                  </div>
+                )}
               </div>
               <p className={`text-sm text-center mt-2
                 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}
@@ -172,13 +160,12 @@ export default function MeuSistemaDisplay({
             </div>
           </div>
 
-          {/* Layout Mobile: Vertical - ✅ JÁ ESTAVA CENTRALIZADO */}
+          {/* Layout Mobile: Vertical */}
           <div className="md:hidden flex flex-col items-center text-center gap-6">
             {/* Logo */}
             <div className={`w-32 h-32 rounded-2xl flex items-center justify-center p-4
               ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
             `}>
-              {/* ✅ CORREÇÃO: Usar imagem da pasta public */}
               <img
                 src="/logo-circle.png"
                 alt="Logo eAi"
@@ -195,7 +182,7 @@ export default function MeuSistemaDisplay({
               <h3 className={`text-2xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                eAi, sou um funcionário de Voz com Inteligência Artificial.
+                eAi, sou um funcionário de Voz com Inteligência Artificial!
               </h3>
               <p className={`text-base mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
@@ -214,27 +201,17 @@ export default function MeuSistemaDisplay({
               <div className={`p-3 rounded-xl inline-block
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
-                {/* ✅ CORREÇÃO: QR Code maior e melhor */}
-  <div className="w-40 h-40 flex items-center justify-center">
-    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
-  </div>
-) : qrCodeUrl ? (
-  <img
-    src={qrCodeUrl}
-    alt="QR Code eAi"
-    className="w-40 h-40 object-contain"
-    onError={(e) => {
-      console.error('Erro ao carregar QR Code mobile');
-      if (!e.currentTarget.src.includes('api.qrserver.com')) {
-        e.currentTarget.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl)}`;
-      }
-    }}
-  />
-) : (
-  <div className="w-40 h-40 flex items-center justify-center text-gray-400 text-sm">
-    QR Code indisponível
-  </div>
-)}
+                {qrCodeUrl ? (
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code eAi"
+                    className="w-40 h-40 object-contain"
+                  />
+                ) : (
+                  <div className="w-40 h-40 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+                  </div>
+                )}
               </div>
               <p className={`text-sm mt-2
                 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}

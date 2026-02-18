@@ -143,7 +143,6 @@ export default function MeuSistemaDisplay({
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
                 {/* ✅ CORREÇÃO: QR Code maior e melhor */}
-{loading ? (
   <div className="w-48 h-48 flex items-center justify-center">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
   </div>
@@ -216,7 +215,6 @@ export default function MeuSistemaDisplay({
                 ${theme === 'dark' ? 'bg-white' : 'bg-gray-100'}
               `}>
                 {/* ✅ CORREÇÃO: QR Code maior e melhor */}
-{loading ? (
   <div className="w-40 h-40 flex items-center justify-center">
     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
   </div>

@@ -47,6 +47,7 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [transcript, setTranscript] = useState('');
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   // ✅ MUDANÇA 2: ADICIONAR STATES
   const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
@@ -740,6 +741,7 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   // START ASSISTANT
   // ========================================
   async function handleStart() {
+    setSessionId(null); // ← Resetar sessão
     console.log('🚀 Iniciando assistente de voz (Google Speech WebSocket)...');
     
     unlockAudio();
@@ -1789,11 +1791,20 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       formData.append('audio', textBlob);
       formData.append('companyId', companyId);
       formData.append('directQuestion', message);
+      if (sessionId) {
+        formData.append('sessionId', sessionId);
+      }
 
       const response = await fetch('/api/voice/process', {
         method: 'POST',
         body: formData,
       });
+
+      const newSessionId = response.headers.get('X-Session-Id');
+      if (newSessionId && !sessionId) {
+        setSessionId(newSessionId);
+        console.log('💬 Session ID recebido:', newSessionId);
+      }
 
       if (!response.ok) {
         throw new Error(`Erro: ${response.status}`);
@@ -1948,6 +1959,20 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
       formData.append('audio', textBlob, 'question.txt');
       formData.append('companyId', companyId);
       formData.append('directQuestion', questionText);
+      if (sessionId) {
+        formData.append('sessionId', sessionId);
+      }
+
+      const response = await fetch('/api/voice/process', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const newSessionId = response.headers.get('X-Session-Id');
+      if (newSessionId && !sessionId) {
+        setSessionId(newSessionId);
+        console.log('💬 Session ID recebido:', newSessionId);
+      }
 
       console.log('📤 Enviando para API...');
       

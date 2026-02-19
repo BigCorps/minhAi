@@ -1,7 +1,3 @@
-
-Page · TSX
-Copiar
-
 // app/dashboard/functions/page.tsx
 'use client';
 
@@ -69,7 +65,7 @@ const statusOptions = [
 // ── Shared pill classes ────────────────────────────────────────────────────────
 const pillCommon =
   'inline-flex items-center justify-center gap-1.5 ' +
-  'px-3 py-1.5 rounded-full text-sm font-medium border ' +
+  'px-3 py-1.5 rounded-full text-xs font-medium border ' +
   'transition-all duration-150 whitespace-nowrap';
 
 // Inactive: legível em light E dark
@@ -105,7 +101,7 @@ function CategoryPillSelector({
       onClick={onSelectAll}
       className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
     >
-      Todas as Categorias
+      Todas as Funções
     </button>
   );
 

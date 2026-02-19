@@ -86,7 +86,7 @@ export default function NossaMarcaDisplay({
   const getMapEmbedUrl = () => {
     if (!isAddress || !businessAddress) return '';
   
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY; // ← ESTA LINHA
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY; // ← ESTA LINHA
   
     return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(businessAddress)}`;
   };

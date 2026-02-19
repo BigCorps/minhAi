@@ -1,3 +1,7 @@
+
+Page · TSX
+Copiar
+
 // app/dashboard/functions/page.tsx
 'use client';
 
@@ -42,7 +46,6 @@ interface CompanyFunctionSetting {
   last_used_at?: string;
 }
 
-// "Outros" removido dos botões visíveis conforme solicitado
 const categories = [ 
   { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
   { key: 'configuration', name: 'Localização', color: '#800080' },
@@ -102,7 +105,7 @@ function CategoryPillSelector({
       onClick={onSelectAll}
       className={`${pillCommon} ${isAllSelected ? pillActiveNeutral : pillInactive}`}
     >
-      Todas as Funções
+      Todas as Categorias
     </button>
   );
 
@@ -343,28 +346,27 @@ function FunctionsPageContent() {
     'dark:bg-slate-800 dark:text-white dark:border-white/10 dark:placeholder-gray-500 ' +
     'focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
-  const renderCards = (
-    <>
-      {filteredFunctions.map(fn => {
-        if (!fn || !fn.function_key) return null;
-        const enabled = isFunctionEnabled(fn.function_key);
-        const stats = getFunctionStats(fn.function_key);
-        const isUpdating = updating === fn.function_key;
-        return (
-          <FunctionCard
-            key={fn.id}
-            function={fn}
-            isEnabled={enabled}
-            stats={stats}
-            onToggle={() => toggleFunction(fn.function_key, enabled)}
-            onEdit={() => handleEdit(fn)}
-            isUpdating={isUpdating}
-            theme={theme}
-          />
-        );
-      })}
-    </>
-  );
+  function renderCardList(mode: 'grid' | 'list') {
+    return filteredFunctions.map(fn => {
+      if (!fn || !fn.function_key) return null;
+      const enabled = isFunctionEnabled(fn.function_key);
+      const stats = getFunctionStats(fn.function_key);
+      const isUpdating = updating === fn.function_key;
+      return (
+        <FunctionCard
+          key={fn.id}
+          function={fn}
+          isEnabled={enabled}
+          stats={stats}
+          onToggle={() => toggleFunction(fn.function_key, enabled)}
+          onEdit={() => handleEdit(fn)}
+          isUpdating={isUpdating}
+          theme={theme}
+          viewMode={mode}
+        />
+      );
+    });
+  }
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -549,17 +551,17 @@ function FunctionsPageContent() {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: sempre lista */}
-                  <div className="sm:hidden space-y-4">{renderCards}</div>
+                  {/* Mobile: sempre lista compacta */}
+                  <div className="sm:hidden space-y-2">{renderCardList('list')}</div>
 
                   {/* Desktop: grid ou lista */}
                   <div className="hidden sm:block">
                     <div className={
                       viewMode === 'grid'
                         ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6'
-                        : 'space-y-4'
+                        : 'space-y-2'
                     }>
-                      {renderCards}
+                      {renderCardList(viewMode)}
                     </div>
                   </div>
                 </>

@@ -53,6 +53,10 @@ export default function NossaMarcaDisplay({
     }
   }, [qrContent]);
 
+useEffect(() => {
+  return () => window.speechSynthesis.cancel();
+}, []);
+  
   // Auto-close timer
   useEffect(() => {
     const interval = setInterval(() => {

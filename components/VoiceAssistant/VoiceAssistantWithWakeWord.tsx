@@ -61,8 +61,6 @@ export function VoiceAssistantWithWakeWord({
   const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
   const [companyGreeting, setCompanyGreeting] = useState<string>('');
   const [meuSistemaModalOpen, setMeuSistemaModalOpen] = useState(false);
-  const [nossaMarcaModalData, setNossaMarcaModalData] = useState<any>(null); // ← ADICIONAR
-
 const [nossaMarcaData, setNossaMarcaData] = useState<{
   companyName: string;
   logoUrl?: string;
@@ -710,6 +708,8 @@ function getActiveFunctionContext(): string | null {
     // 5. Fechar modais
     setQrCodeData(null);
     setPixConfirmationData(null);
+    setMeuSistemaModalOpen(false);
+    setNossaMarcaData(null);
     
     // 6. Limpar flags
     processingQuestion.current = false;
@@ -1410,7 +1410,7 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
               if (modal.type === 'MeuSistemaDisplay') {
                 setMeuSistemaModalOpen(true);
               } else if (modal.type === 'NossaMarcaDisplay') { // ← ADICIONAR
-                setNossaMarcaModalData(modal.data);
+                setNossaMarcaData(modal.data);
               }
             },
           });
@@ -2689,7 +2689,21 @@ const getStatusColor = () => {
      {nossaMarcaData && (
        <NossaMarcaDisplay
          data={nossaMarcaData}
-         onClose={() => setNossaMarcaData(null)}
+         onClose={() => {
+           if (currentAudioRef.current) {
+             currentAudioRef.current.pause();
+             currentAudioRef.current.currentTime = 0;
+             currentAudioRef.current = null;
+           }
+           setIsPlayingAudio(false);
+           setNossaMarcaData(null);
+           setTimeout(async () => {
+             if (isActiveRef.current) {
+               shouldProcessAudio.current = true;
+               await startGoogleSpeech();
+             }
+           }, 500);
+         }}
          theme={theme}
        />
      )}

@@ -549,7 +549,13 @@ function FunctionsPageContent() {
                   <div className="hidden sm:block">
                     <div className={
                       viewMode === 'grid'
-                        ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6'
+                        ? `grid gap-6 ${
+                            filteredFunctions.length === 1
+                              ? 'grid-cols-1'
+                              : filteredFunctions.length === 2
+                              ? 'grid-cols-2'
+                              : 'md:grid-cols-2 lg:grid-cols-3'
+                          }`
                         : 'space-y-2'
                     }>
                       {renderCardList(viewMode)}

@@ -2677,21 +2677,22 @@ const getStatusColor = () => {
   </div>
 )}
 
-    {/* Modal Meu Sistema */}
-    {meuSistemaModalOpen && (
-      <MeuSistemaDisplay
-        onClose={() => setMeuSistemaModalOpen(false)}
-        theme={theme}
-      />
-    )}
+     {/* Modal Meu Sistema */}
+     {meuSistemaModalOpen && (
+       <MeuSistemaDisplay
+         onClose={() => setMeuSistemaModalOpen(false)}
+         theme={theme}
+       />
+     )}
 
-    {/* ✅ ADICIONAR ESTE BLOCO (se não existir): */}
-    {nossaMarcaData && (
-      <NossaMarcaDisplay
-        data={nossaMarcaData}
-        onClose={() => setNossaMarcaData(null)}
-        theme={theme}
-      />
-    )}
-  </div>
-);
+     {/* ✅ ADICIONAR ESTE BLOCO (se não existir): */}
+     {nossaMarcaData && (
+       <NossaMarcaDisplay
+         data={nossaMarcaData}
+         onClose={() => setNossaMarcaData(null)}
+         theme={theme}
+       />
+     )}
+   </div>
+  );
+}

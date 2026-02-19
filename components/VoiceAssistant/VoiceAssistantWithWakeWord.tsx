@@ -43,6 +43,18 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+const [nossaMarcaData, setNossaMarcaData] = useState<{
+  companyName: string;
+  logoUrl?: string;
+  brandDescription?: string;
+  businessHours?: string;
+  businessAddress?: string;
+  qrContent?: string;
+  isAddress?: boolean;
+  autoCloseDuration?: number;
+} | null>(null);
+  
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState('');
@@ -1470,7 +1482,7 @@ async function handleNossaMarcaCommand() {
     
     // Verificar se tem configuração
     if (!company.brand_description && !company.business_hours && !company.business_address) {
-      await playText('As informações da marca ainda não foram configuradas. Por favor, configure no painel administrativo.');
+      await playText('As informações da marca ainda não foram configuradas.');
       return;
     }
     
@@ -1491,52 +1503,46 @@ async function handleNossaMarcaCommand() {
         : `https://${company.business_address}`;
     }
     
-    // Se tem endereço/site, mostrar QR Code
-    if (qrContent) {
-      setQrCodeData({
-        type: 'website',
-        qrCodeUrl: qrContent,
-        qrContent: qrContent,
-        displayText: company.business_address || '',
-        companyName: company.name,
-      });
-    }
+    // ✅ ABRIR MODAL PRIMEIRO
+    setNossaMarcaData({
+      companyName: company.name,
+      logoUrl: company.logo_url,
+      brandDescription: company.brand_description,
+      businessHours: company.business_hours,
+      businessAddress: company.business_address,
+      qrContent: qrContent,
+      isAddress: isAddress,
+      autoCloseDuration: 20000, // 20 segundos
+    });
     
-    // Montar texto para falar
-    let speechText = '';
-    
-    if (company.brand_description) {
-      speechText += company.brand_description;
-    }
+    // ✅ TEXTO CURTO PARA TTS (máximo 200 caracteres)
+    let speechText = 'Aqui estão as informações da nossa marca.';
     
     if (company.business_hours) {
-      if (speechText) speechText += '. ';
-      speechText += `Nosso horário de funcionamento é: ${company.business_hours}`;
+      speechText = `Nosso horário: ${company.business_hours}.`;
     }
     
     if (company.business_address) {
-      if (speechText) speechText += '. ';
       if (isAddress) {
-        speechText += `Estamos localizados em: ${company.business_address}. Escaneie o QR Code para abrir no Google Maps.`;
+        speechText += ' Veja a localização no QR Code.';
       } else {
-        speechText += `Visite nosso site: ${company.business_address}. Escaneie o QR Code para acessar.`;
+        speechText += ' Acesse nosso site pelo QR Code.';
       }
     }
     
-    if (!speechText) {
-      speechText = 'Informações sobre a marca não disponíveis.';
-    }
-    
-    await playText(speechText);
+    // ✅ FALAR SEM AWAIT (não bloquear)
+    playText(speechText).catch(err => {
+      console.error('Erro ao falar:', err);
+    });
     
     await saveInteractionToHistory(
       "Me fale sobre a marca",
-      speechText
+      `Informações da marca exibidas: ${company.brand_description || ''}`
     );
     
   } catch (error) {
     console.error('🏢 [NOSSA MARCA] ERRO:', error);
-    await playText('Desculpe, ocorreu um erro ao buscar as informações.');
+    await playText('Desculpe, ocorreu um erro.');
   } finally {
     setIsProcessing(false);
   }

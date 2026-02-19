@@ -387,6 +387,77 @@ const FaqForm = () => (
   </div>
 );
 
+const NossaMarcaForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    {/* Descrição da Marca */}
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Descrição da Marca
+      </label>
+      <textarea
+        rows={4}
+        placeholder="Ex: Somos uma empresa inovadora que transforma o atendimento com inteligência artificial..."
+        value={settings.brand_description || ''}
+        onChange={e => onChange('brand_description', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+        maxLength={500}
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        {(settings.brand_description || '').length}/500 caracteres
+      </p>
+    </div>
+
+    {/* Horário de Funcionamento */}
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Horário de Funcionamento
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Seg-Sex: 8h às 18h | Sáb: 9h às 13h"
+        value={settings.business_hours || ''}
+        onChange={e => onChange('business_hours', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+        maxLength={200}
+      />
+    </div>
+
+    {/* Endereço ou Site */}
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Endereço ou Site
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Rua Exemplo, 123 - São Paulo, SP ou www.seusite.com.br"
+        value={settings.business_address || ''}
+        onChange={e => onChange('business_address', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+        maxLength={300}
+      />
+      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-xs text-blue-800 dark:text-blue-200">
+          💡 <strong>Dica:</strong> Se for endereço físico, o QR Code abrirá no Google Maps. 
+          Se for URL, abrirá o site com preview.
+        </p>
+      </div>
+    </div>
+
+    {/* Preview */}
+    {settings.business_address && (
+      <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-xs text-green-800 dark:text-green-200">
+          <strong>Preview:</strong>{' '}
+          {settings.business_address.startsWith('http') || settings.business_address.includes('www.')
+            ? `Site: ${settings.business_address}`
+            : `📍 Localização: ${settings.business_address}`
+          }
+        </p>
+      </div>
+    )}
+  </div>
+);
+
 // ===== MAPEAMENTO: function_key → componente =====
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_whatsapp': WhatsappForm,
@@ -402,6 +473,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'chatgpt': ChatGptForm,
   'orcamento': OrcamentoForm,  // ← ADICIONAR
   'faq': FaqForm,
+  'nossa_marca': NossaMarcaForm,
 };
 
 // ===== INTERFACE =====
@@ -432,7 +504,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, pix_key, pix_key_type, system_prompt, orcamento_prompt')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, pix_key, pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address')
         .eq('id', companyId)
         .single();
 

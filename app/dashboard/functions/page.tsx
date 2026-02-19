@@ -65,7 +65,7 @@ const statusOptions = [
 // ── Shared pill classes ────────────────────────────────────────────────────────
 const pillCommon =
   'inline-flex items-center justify-center gap-1.5 ' +
-  'px-3 py-1.5 rounded-full text-base sm:text-xs font-medium border ' +
+  'px-3 py-1.5 rounded-full text-xs sm:text-base font-medium border ' +
   'transition-all duration-150 whitespace-nowrap';
 
 // Inactive: legível em light E dark
@@ -123,9 +123,11 @@ function CategoryPillSelector({
     );
   });
 
+  if (isMobile) {
+    const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
+    const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
     return (
       <div className="flex flex-col gap-2 w-full">
-        {/* Linha 1: grid 3 colunas — Todas as Categorias | Contato | Vídeos */}
         <div className="grid grid-cols-3 gap-2">
           {allBtn}
           {firstRowCats}
@@ -137,7 +139,6 @@ function CategoryPillSelector({
     );
   }
 
-  // Desktop: flex-wrap centralizado, quebra em múltiplas linhas conforme a tela
   return (
     <div className="flex flex-wrap justify-center gap-2">
       {allBtn}

@@ -146,38 +146,39 @@ export default function NossaMarcaDisplay({
           {/* ========================================
               LAYOUT DESKTOP: Grid 2 colunas
               ======================================== */}
-          <div className="hidden md:grid md:grid-cols-[1fr_400px] gap-8">
+          {/* Ajustado: A coluna esquerda fixa em 360px e o mapa preenche todo o restante (1fr) */}
+          <div className="hidden md:grid md:grid-cols-[360px_1fr] gap-6">
             
             {/* COLUNA ESQUERDA */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               
               {/* Logo + QR Code (lado a lado) */}
-              <div className="flex items-start gap-6">
+              <div className="flex items-start gap-4">
                 {/* Logo */}
                 {logoUrl && (
-                  <div className={`flex-shrink-0 w-32 h-32 rounded-2xl flex items-center justify-center p-3
+                  <div className={`flex-shrink-0 w-32 h-32 rounded-xl flex items-center justify-center p-3
                     ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
                   `}>
                     <img
                       src={logoUrl}
                       alt={`Logo ${companyName}`}
-                      className="w-full h-full object-contain"
+                      className="max-w-full max-h-full object-contain"
                     />
                   </div>
                 )}
                 
                 {/* QR Code */}
                 {qrContent && (
-                  <div className="flex-shrink-0 p-3 rounded-xl bg-white shadow-lg">
+                  <div className="flex-shrink-0 w-32 h-32 p-3 rounded-xl bg-white shadow-lg flex items-center justify-center">
                     {qrCodeUrl ? (
                       <img
                         src={qrCodeUrl}
                         alt="QR Code"
-                        className="w-32 h-32 object-contain"
+                        className="max-w-full max-h-full object-contain"
                       />
                     ) : (
-                      <div className="w-32 h-32 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600" />
                       </div>
                     )}
                   </div>
@@ -187,7 +188,7 @@ export default function NossaMarcaDisplay({
               {/* Descrição */}
               {brandDescription && (
                 <div>
-                  <p className={`text-lg leading-relaxed
+                  <p className={`text-sm leading-relaxed whitespace-normal break-words
                     ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}
                   `}>
                     {brandDescription}
@@ -197,11 +198,11 @@ export default function NossaMarcaDisplay({
               
               {/* Horário */}
               {businessHours && (
-                <div className={`flex items-center gap-3 px-4 py-3 rounded-lg
+                <div className={`flex items-start gap-3 px-4 py-3 rounded-lg
                   ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
                 `}>
-                  <Clock className={`w-5 h-5 flex-shrink-0 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                  <span className={`text-base font-medium
+                  <Clock className={`w-5 h-5 flex-shrink-0 mt-0.5 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+                  <span className={`text-sm font-medium whitespace-normal break-words flex-1
                     ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}
                   `}>
                     {businessHours}
@@ -215,7 +216,7 @@ export default function NossaMarcaDisplay({
                   ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
                 `}>
                   <MapPin className={`w-5 h-5 flex-shrink-0 mt-0.5 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                  <span className={`text-base font-medium text-left flex-1
+                  <span className={`text-sm font-medium text-left flex-1 whitespace-normal break-words
                     ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}
                   `}>
                     {businessAddress}
@@ -223,12 +224,12 @@ export default function NossaMarcaDisplay({
                 </div>
               )}
               
-              {/* Botão de Copiar/Abrir */}
+              {/* Botões - Ajustados para menores */}
               {businessAddress && (
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <button
                     onClick={handleCopy}
-                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all inline-flex items-center justify-center gap-2
+                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all inline-flex items-center justify-center gap-2
                       ${theme === 'dark'
                         ? 'bg-slate-700 hover:bg-slate-600 text-white'
                         : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
@@ -237,23 +238,23 @@ export default function NossaMarcaDisplay({
                   >
                     {copied ? (
                       <>
-                        <Check className="w-5 h-5" />
+                        <Check className="w-4 h-4" />
                         <span>Copiado!</span>
                       </>
                     ) : (
                       <>
-                        <Copy className="w-5 h-5" />
-                        <span>Copiar {isAddress ? 'Endereço' : 'Site'}</span>
+                        <Copy className="w-4 h-4" />
+                        <span className="truncate">Copiar {isAddress ? 'Endereço' : 'Site'}</span>
                       </>
                     )}
                   </button>
                   
                   <button
                     onClick={handleOpen}
-                    className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold transition-all inline-flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-sm font-semibold transition-all inline-flex items-center justify-center gap-2"
                   >
-                    <ExternalLink className="w-5 h-5" />
-                    <span>Abrir {isAddress ? 'no Maps' : 'Site'}</span>
+                    <ExternalLink className="w-4 h-4" />
+                    <span className="truncate">Abrir {isAddress ? 'no Maps' : 'Site'}</span>
                   </button>
                 </div>
               )}
@@ -261,30 +262,30 @@ export default function NossaMarcaDisplay({
 
             {/* COLUNA DIREITA: Mapa ou Screenshot */}
             {(isAddress || businessAddress) && (
-              <div className={`rounded-xl overflow-hidden border
+              <div className={`rounded-xl overflow-hidden border h-full
                 ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}
               `}>
                 {isAddress ? (
-                  // ✅ ENDEREÇO FÍSICO = Mapa
+                  // ✅ ENDEREÇO FÍSICO = Mapa (altura min ajustada para 400px focando no aspecto paisagem)
                   getMapEmbedUrl() ? (
                     <iframe
                       src={getMapEmbedUrl()}
                       width="100%"
                       height="100%"
-                      style={{ border: 0, minHeight: '500px' }}
+                      style={{ border: 0, minHeight: '400px' }}
                       allowFullScreen
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
                       title="Mapa da localização"
                     />
                   ) : (
-                    <div className="w-full h-[500px] flex items-center justify-center bg-slate-700/50">
+                    <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-700/50">
                       <p className="text-white/50">Mapa não disponível</p>
                     </div>
                   )
                 ) : (
                   // ✅ URL = Screenshot do Site
-                  <div className="relative w-full h-full min-h-[500px] bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center p-4">
+                  <div className="relative w-full h-full min-h-[400px] bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center p-4">
                     <img
                       src={getScreenshotUrl()}
                       alt="Preview do site"
@@ -315,7 +316,7 @@ export default function NossaMarcaDisplay({
           </div>
 
           {/* ========================================
-              LAYOUT MOBILE: Vertical
+              LAYOUT MOBILE: Vertical (Mantido intacto)
               ======================================== */}
           <div className="md:hidden flex flex-col items-center text-center gap-6">
             {/* Logo + QR Code lado a lado */}
@@ -337,18 +338,18 @@ export default function NossaMarcaDisplay({
 
             {/* Descrição */}
             {brandDescription && (
-              <p className={`text-base leading-relaxed ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}`}>
+              <p className={`text-base leading-relaxed break-words ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}`}>
                 {brandDescription}
               </p>
             )}
             
             {/* Horário */}
             {businessHours && (
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg w-full
+              <div className={`flex items-start gap-2 px-4 py-2 rounded-lg w-full
                 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
               `}>
-                <Clock className={`w-5 h-5 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                <span className={`text-sm font-medium ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>
+                <Clock className={`w-5 h-5 mt-0.5 flex-shrink-0 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+                <span className={`text-sm font-medium break-words text-left ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>
                   {businessHours}
                 </span>
               </div>
@@ -360,7 +361,7 @@ export default function NossaMarcaDisplay({
                 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
               `}>
                 <MapPin className={`w-5 h-5 flex-shrink-0 mt-0.5 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                <span className={`text-sm font-medium text-left ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>
+                <span className={`text-sm font-medium text-left break-words ${theme === 'dark' ? 'text-white/80' : 'text-gray-700'}`}>
                   {businessAddress}
                 </span>
               </div>

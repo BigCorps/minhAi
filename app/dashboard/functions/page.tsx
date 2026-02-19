@@ -338,23 +338,60 @@ function FunctionsPageContent() {
     'focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
   function renderCardList(mode: 'grid' | 'list') {
-    return filteredFunctions.map(fn => {
-      if (!fn || !fn.function_key) return null;
-      const enabled = isFunctionEnabled(fn.function_key);
-      const stats = getFunctionStats(fn.function_key);
-      const isUpdating = updating === fn.function_key;
+    if (mode === 'list') {
+      return filteredFunctions.map(fn => {
+        if (!fn || !fn.function_key) return null;
+        const enabled = isFunctionEnabled(fn.function_key);
+        const stats = getFunctionStats(fn.function_key);
+        return (
+          <FunctionCard
+            key={fn.id}
+            function={fn}
+            isEnabled={enabled}
+            stats={stats}
+            onToggle={() => toggleFunction(fn.function_key, enabled)}
+            onEdit={() => handleEdit(fn)}
+            isUpdating={updating === fn.function_key}
+            theme={theme}
+            viewMode={mode}
+          />
+        );
+      });
+    }
+
+    // Grid mode: chunk into rows of 3
+    const rows: AssistantFunction[][] = [];
+    for (let i = 0; i < filteredFunctions.length; i += 3) {
+      rows.push(filteredFunctions.slice(i, i + 3));
+    }
+
+    return rows.map((row, rowIdx) => {
+      const colClass =
+        row.length === 1 ? 'grid-cols-1' :
+        row.length === 2 ? 'grid-cols-2' :
+        'grid-cols-3';
+
       return (
-        <FunctionCard
-          key={fn.id}
-          function={fn}
-          isEnabled={enabled}
-          stats={stats}
-          onToggle={() => toggleFunction(fn.function_key, enabled)}
-          onEdit={() => handleEdit(fn)}
-          isUpdating={isUpdating}
-          theme={theme}
-          viewMode={mode}
-        />
+        <div key={rowIdx} className={`grid gap-6 ${colClass}`}>
+          {row.map(fn => {
+            if (!fn || !fn.function_key) return null;
+            const enabled = isFunctionEnabled(fn.function_key);
+            const stats = getFunctionStats(fn.function_key);
+            return (
+              <FunctionCard
+                key={fn.id}
+                function={fn}
+                isEnabled={enabled}
+                stats={stats}
+                onToggle={() => toggleFunction(fn.function_key, enabled)}
+                onEdit={() => handleEdit(fn)}
+                isUpdating={updating === fn.function_key}
+                theme={theme}
+                viewMode="grid"
+              />
+            );
+          })}
+        </div>
       );
     });
   }
@@ -547,17 +584,7 @@ function FunctionsPageContent() {
 
                   {/* Desktop: grid ou lista */}
                   <div className="hidden sm:block">
-                    <div className={
-                      viewMode === 'grid'
-                        ? `grid gap-6 ${
-                            filteredFunctions.length === 1
-                              ? 'grid-cols-1'
-                              : filteredFunctions.length === 2
-                              ? 'grid-cols-2'
-                              : 'md:grid-cols-2 lg:grid-cols-3'
-                          }`
-                        : 'space-y-2'
-                    }>
+                    <div className={viewMode === 'list' ? 'space-y-2' : 'flex flex-col gap-6'}>
                       {renderCardList(viewMode)}
                     </div>
                   </div>

@@ -1460,6 +1460,7 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
   // ========================================
   // COMMAND HANDLERS
   // ========================================
+
 async function handleNossaMarcaCommand() {
   try {
     setIsProcessing(true);
@@ -1476,13 +1477,13 @@ async function handleNossaMarcaCommand() {
     
     if (error || !company) {
       console.error('Erro ao buscar empresa:', error);
-      await playText('Desculpe, não consegui acessar as informações da marca.');
+      await playText('Desculpe, não consegui acessar as informações.');
       return;
     }
     
     // Verificar se tem configuração
     if (!company.brand_description && !company.business_hours && !company.business_address) {
-      await playText('As informações da marca ainda não foram configuradas.');
+      await playText('As informações ainda não foram configuradas.');
       return;
     }
     
@@ -1494,16 +1495,14 @@ async function handleNossaMarcaCommand() {
     // Gerar link do QR Code
     let qrContent = '';
     if (isAddress) {
-      // É endereço → Google Maps
       qrContent = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.business_address)}`;
     } else if (company.business_address) {
-      // É URL → usar direto
       qrContent = company.business_address.startsWith('http') 
         ? company.business_address 
         : `https://${company.business_address}`;
     }
     
-    // ✅ ABRIR MODAL PRIMEIRO
+    // ✅ 1. ABRIR MODAL PRIMEIRO (não espera)
     setNossaMarcaData({
       companyName: company.name,
       logoUrl: company.logo_url,
@@ -1512,37 +1511,63 @@ async function handleNossaMarcaCommand() {
       businessAddress: company.business_address,
       qrContent: qrContent,
       isAddress: isAddress,
-      autoCloseDuration: 20000, // 20 segundos
+      autoCloseDuration: 20000,
     });
     
-    // ✅ TEXTO CURTO PARA TTS (máximo 200 caracteres)
-    let speechText = 'Aqui estão as informações da nossa marca.';
+    // ✅ 2. MONTAR TEXTO PARA FALAR (com limite de 200 caracteres para segurança do TTS)
+    let speechText = '';
     
-    if (company.business_hours) {
-      speechText = `Nosso horário: ${company.business_hours}.`;
+    // Prioridade 1: Descrição da marca (se existir)
+    if (company.brand_description) {
+      // Limitar a 150 caracteres para deixar espaço para horário/endereço
+      speechText = company.brand_description.length > 150 
+        ? company.brand_description.substring(0, 147) + '...'
+        : company.brand_description;
     }
     
-    if (company.business_address) {
-      if (isAddress) {
-        speechText += ' Veja a localização no QR Code.';
-      } else {
-        speechText += ' Acesse nosso site pelo QR Code.';
+    // Prioridade 2: Horário de funcionamento
+    if (company.business_hours) {
+      const horaTexto = `. Horário: ${company.business_hours}`;
+      if ((speechText + horaTexto).length <= 200) {
+        speechText += horaTexto;
       }
     }
     
-    // ✅ FALAR SEM AWAIT (não bloquear)
+    // Prioridade 3: Endereço (só menciona se ainda couber)
+    if (company.business_address && (speechText.length < 180)) {
+      if (isAddress) {
+        speechText += '. Veja a localização no QR Code.';
+      } else {
+        speechText += '. Acesse nosso site pelo QR Code.';
+      }
+    }
+    
+    // Fallback se não tiver nada
+    if (!speechText) {
+      speechText = 'Aqui estão nossas informações.';
+    }
+    
+    // ✅ GARANTIR QUE NÃO ULTRAPASSE 200 CARACTERES (limite seguro para TTS)
+    if (speechText.length > 200) {
+      speechText = speechText.substring(0, 197) + '...';
+    }
+    
+    console.log(`🔊 Texto TTS (${speechText.length} chars):`, speechText);
+    
+    // ✅ 3. FALAR EM PARALELO (sem await, não bloqueia)
     playText(speechText).catch(err => {
       console.error('Erro ao falar:', err);
     });
     
+    // ✅ 4. SALVAR HISTÓRICO
     await saveInteractionToHistory(
-      "Me fale sobre a marca",
-      `Informações da marca exibidas: ${company.brand_description || ''}`
+      "Informações da marca",
+      speechText
     );
     
   } catch (error) {
     console.error('🏢 [NOSSA MARCA] ERRO:', error);
-    await playText('Desculpe, ocorreu um erro.');
+    playText('Erro ao buscar dados.').catch(() => {});
   } finally {
     setIsProcessing(false);
   }

@@ -45,7 +45,7 @@ interface CompanyFunctionSetting {
 // "Outros" removido dos botões visíveis conforme solicitado
 const categories = [ 
   { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
-  { key: 'configuration', name: 'Localização’,  color: '#800080' },
+  { key: 'configuration', name: 'Localização', color: '#800080' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
   { key: 'video',         name: 'Vídeos',       color: '#A52A2A' },
   { key: 'payment',       name: 'Pagamento',    color: '#F44336' },

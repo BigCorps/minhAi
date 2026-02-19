@@ -36,14 +36,17 @@ interface FunctionCardProps {
 }
 
 const CATEGORY_NAMES: { [key: string]: string } = {
-  'knowledge': 'Aprendizado',
-  'configuration': 'Configuração',
+  'knowledge': 'Consultas',
+  'configuration': 'Localização',
   'contact': 'Contato',
   'payment': 'Pagamento',
   'schedule': 'Agendamento',
   'information': 'Informação',
   'ai_assistant': 'Conhecimento',
-  'other': 'Outros',
+  'video': 'Vídeos',
+  'biometry': 'Biometria',
+  'products': 'Vendas',
+  'images': 'Imagens',
 };
 
 const CONFIGURABLE_FUNCTIONS = [
@@ -60,7 +63,6 @@ const CONFIGURABLE_FUNCTIONS = [
   'chatgpt',
   'orcamento',
   'faq'
-  'nossa_marca',
 ];
 
 // ✅ NOVO: Funções que NÃO têm toggle (sempre visíveis)

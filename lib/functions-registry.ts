@@ -498,7 +498,6 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   },
   
   // MEU SISTEMA
-
   meu_sistema: {
     functionKey: 'meu_sistema',
     functionName: 'Meu Sistema',
@@ -542,14 +541,11 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
       try {
         console.log('🧊 [MEU SISTEMA] Abrindo informações');
         
-        // Falar sobre o sistema
-        await playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades. eai.app.br');
-        
-        // Abrir modal especial (se setActiveModal estiver disponível)
-    if (setActiveModal) {
-      setActiveModal({
-        type: 'MeuSistemaDisplay',
-        data: {
+        // 1. ABRIR O MODAL PRIMEIRO (já exibe na tela imediatamente)
+        if (setActiveModal) {
+          setActiveModal({
+            type: 'MeuSistemaDisplay',
+            data: {
               logoUrl: '/public/logo-circle.png',
               websiteUrl: 'https://eai.app.br',
               qrCodeUrl: '', // Será gerado no componente
@@ -561,19 +557,17 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
           });
         }
         
-    // 2. Falar DEPOIS (sem await - não bloqueia)
-    playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades. eai.app.br').catch(err => {
-      console.error('Erro ao falar:', err);
-    });
-    
-    return true;
-    
-  } catch (error) {
-    console.error('🤖 [MEU SISTEMA] ERRO:', error);
-    await playText('Desculpe, não consegui exibir as informações do sistema.');
-    return false;
-  }
-},
+        // 2. FALAR A FRASE (Uma única vez. O await garante que o handler só conclua quando terminar de falar)
+        await playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais sobre como meu sistema funciona e suas funcionalidades. e a i.a p p.br');
+        
+        return true;
+        
+      } catch (error) {
+        console.error('🤖 [MEU SISTEMA] ERRO:', error);
+        await playText('Desculpe, não consegui exibir as informações do sistema.');
+        return false;
+      }
+    },
   },
 
   // ========================================

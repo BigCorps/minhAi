@@ -1,10 +1,10 @@
 // app/dashboard/assistentes/create/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Globe, Lock } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Globe, Lock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 export default function NovaEmpresaPage() {
@@ -12,9 +12,96 @@ export default function NovaEmpresaPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(true);
+  
+  // 🆕 Estados para validação de slug
+  const [slugValue, setSlugValue] = useState('');
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 🆕 Verificar disponibilidade do slug
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || slug.length < 3) {
+      setSlugStatus('idle');
+      setSlugError(null);
+      return;
+    }
+
+    setSlugStatus('checking');
+    setSlugError(null);
+
+    try {
+      const supabase = createClient();
+      
+      // Verificar se slug já existe
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, slug')
+        .eq('slug', slug)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = not found (ok)
+        console.error('Erro ao verificar slug:', error);
+        setSlugStatus('idle');
+        setSlugError('Erro ao verificar disponibilidade');
+        return;
+      }
+
+      if (data) {
+        // Slug já existe
+        setSlugStatus('taken');
+        setSlugError('Este slug já está em uso. Escolha outro.');
+      } else {
+        // Slug disponível
+        setSlugStatus('available');
+        setSlugError(null);
+      }
+    } catch (err) {
+      console.error('Erro na verificação:', err);
+      setSlugStatus('idle');
+      setSlugError('Erro ao verificar disponibilidade');
+    }
+  };
+
+  // 🆕 Debounce para não fazer request a cada letra
+  useEffect(() => {
+    if (!isPublic) {
+      setSlugStatus('idle');
+      setSlugError(null);
+      return;
+    }
+
+    if (checkTimeoutRef.current) {
+      clearTimeout(checkTimeoutRef.current);
+    }
+
+    if (slugValue.length < 3) {
+      setSlugStatus('idle');
+      setSlugError(slugValue.length > 0 ? 'Slug deve ter no mínimo 3 caracteres' : null);
+      return;
+    }
+
+    // Aguardar 500ms após parar de digitar
+    checkTimeoutRef.current = setTimeout(() => {
+      checkSlugAvailability(slugValue);
+    }, 500);
+
+    return () => {
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
+    };
+  }, [slugValue, isPublic]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    
+    // 🆕 Validação final do slug antes de submeter
+    if (isPublic && slugStatus !== 'available') {
+      setError('Por favor, escolha um slug disponível antes de continuar.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
 
@@ -43,7 +130,7 @@ export default function NovaEmpresaPage() {
       const result = await response.json();
       const newCompanyId = result.company?.id;
 
-      // ✅ NOVO: Inicializar funções padrão
+      // Inicializar funções padrão
       if (newCompanyId) {
         console.log('🔧 Inicializando funções padrão para empresa:', newCompanyId);
         
@@ -54,7 +141,6 @@ export default function NovaEmpresaPage() {
 
         if (funcError) {
           console.error('⚠️ Erro ao inicializar funções:', funcError);
-          // Não é crítico, continua mesmo se falhar
         } else {
           console.log('✅ Funções padrão inicializadas com sucesso');
         }
@@ -69,13 +155,31 @@ export default function NovaEmpresaPage() {
   }
 
   function generateSlug(name: string) {
-    return name
+    const generated = name
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+    
+    return generated;
   }
+
+  // 🆕 Ícone do status do slug
+  const renderSlugStatusIcon = () => {
+    if (!isPublic) return null;
+
+    switch (slugStatus) {
+      case 'checking':
+        return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'available':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'taken':
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -121,8 +225,10 @@ export default function NovaEmpresaPage() {
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                     onChange={(e) => {
                       if (isPublic) {
+                        const generated = generateSlug(e.target.value);
+                        setSlugValue(generated);
                         const slugInput = document.getElementById('slug') as HTMLInputElement;
-                        if (slugInput) slugInput.value = generateSlug(e.target.value);
+                        if (slugInput) slugInput.value = generated;
                       }
                     }}
                   />
@@ -133,14 +239,49 @@ export default function NovaEmpresaPage() {
                     <label htmlFor="slug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Slug (URL Pública) *
                     </label>
-                    <input
-                      type="text"
-                      id="slug"
-                      name="slug"
-                      required={isPublic}
-                      placeholder="suporte-eai"
-                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="slug"
+                        name="slug"
+                        required={isPublic}
+                        placeholder="suporte-eai"
+                        value={slugValue}
+                        onChange={(e) => setSlugValue(e.target.value)}
+                        className={`w-full px-4 py-2.5 pr-12 bg-white dark:bg-slate-900 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition ${
+                          slugStatus === 'available' 
+                            ? 'border-green-500 dark:border-green-500' 
+                            : slugStatus === 'taken' 
+                            ? 'border-red-500 dark:border-red-500' 
+                            : 'border-gray-300 dark:border-white/10'
+                        }`}
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        {renderSlugStatusIcon()}
+                      </div>
+                    </div>
+                    
+                    {/* 🆕 Feedback de validação */}
+                    {slugStatus === 'available' && slugValue && (
+                      <div className="mt-2 flex items-center text-sm text-green-600 dark:text-green-400">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">eai.app.br/ia/{slugValue}</span>
+                      </div>
+                    )}
+                    
+                    {slugError && (
+                      <div className="mt-2 flex items-start text-sm text-red-600 dark:text-red-400">
+                        <AlertCircle className="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" />
+                        <span>{slugError}</span>
+                      </div>
+                    )}
+                    
+                    {slugStatus === 'checking' && slugValue && (
+                      <div className="mt-2 flex items-center text-sm text-blue-600 dark:text-blue-400">
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        Verificando disponibilidade...
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -235,8 +376,12 @@ export default function NovaEmpresaPage() {
             <div className="mt-8 flex items-center gap-4">
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-50 font-bold shadow-lg shadow-blue-500/20"
+                disabled={loading || (isPublic && slugStatus !== 'available')}
+                className={`flex-1 flex items-center justify-center px-6 py-3 rounded-xl transition font-bold shadow-lg ${
+                  loading || (isPublic && slugStatus !== 'available')
+                    ? 'bg-gray-400 cursor-not-allowed text-white/70'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20'
+                }`}
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -252,6 +397,20 @@ export default function NovaEmpresaPage() {
                 Cancelar
               </Link>
             </div>
+            
+            {/* 🆕 Aviso se slug não está disponível */}
+            {isPublic && slugStatus !== 'available' && slugValue.length >= 3 && (
+              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    {slugStatus === 'taken' 
+                      ? 'Este slug já está em uso. Escolha outro nome para continuar.' 
+                      : 'Aguarde a verificação do slug para poder criar o assistente.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </form>
         </div>
       </div>

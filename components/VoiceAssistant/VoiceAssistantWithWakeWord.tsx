@@ -13,6 +13,7 @@ import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { FUNCTIONS_REGISTRY, getFunctionByKey } from '@/lib/functions-registry';
 import MeuSistemaDisplay from '@/components/assistant/MeuSistemaDisplay';
+import NossaMarcaDisplay from '@/components/assistant/NossaMarcaDisplay'; // ← ADICIONAR
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -59,6 +60,7 @@ export function VoiceAssistantWithWakeWord({
   const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
   const [companyGreeting, setCompanyGreeting] = useState<string>('');
   const [meuSistemaModalOpen, setMeuSistemaModalOpen] = useState(false);
+  const [nossaMarcaModalData, setNossaMarcaModalData] = useState<any>(null); // ← ADICIONAR
 
   // ✅ PASSO 1: Novo state para guardar configs das funções
   const [functionSettings, setFunctionSettings] = useState<Record<string, {
@@ -1393,6 +1395,8 @@ case 'meu_sistema':
             setActiveModal: (modal: any) => {
               if (modal.type === 'MeuSistemaDisplay') {
                 setMeuSistemaModalOpen(true);
+              } else if (modal.type === 'NossaMarcaDisplay') { // ← ADICIONAR
+                setNossaMarcaModalData(modal.data);
               }
             },
           });
@@ -2011,6 +2015,8 @@ if (activeFunction) {
         setActiveModal: (modal: any) => {
           if (modal.type === 'MeuSistemaDisplay') {
             setMeuSistemaModalOpen(true);
+          } else if (modal.type === 'NossaMarcaDisplay') { // ← ADICIONAR
+            setNossaMarcaModalData(modal.data);
           }
         },
       });

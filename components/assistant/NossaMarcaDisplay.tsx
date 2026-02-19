@@ -27,6 +27,12 @@ export default function NossaMarcaDisplay({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(20);
   const [copied, setCopied] = useState(false);
+
+  // ✅ Handler específico para fechar manualmente e parar a voz
+  const handleManualClose = () => {
+    window.speechSynthesis.cancel(); // 👈 Para a fala imediatamente
+    onClose();
+  };
   
   const {
     companyName,
@@ -52,6 +58,7 @@ export default function NossaMarcaDisplay({
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
+          window.speechSynthesis.cancel(); // 👈 Adicione isso
           onClose();
           return 0;
         }
@@ -116,29 +123,29 @@ export default function NossaMarcaDisplay({
             {companyName}
           </h2>
           
-          <div className="flex items-center gap-3">
-            <div className={`px-3 py-1 rounded-full text-sm font-medium
-              ${theme === 'dark' 
-                ? 'bg-green-900/30 text-green-300' 
-                : 'bg-green-100 text-green-700'
-              }
-            `}>
-              {timeLeft}s
-            </div>
-            
-            <button
-              onClick={onClose}
-              className={`p-2 rounded-lg transition-colors
-                ${theme === 'dark'
-                  ? 'hover:bg-white/10 text-white/70 hover:text-white'
-                  : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
-                }
-              `}
-              aria-label="Fechar"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+<div className="flex items-center gap-3">
+  <div className={`px-3 py-1 rounded-full text-sm font-medium
+    ${theme === 'dark' 
+      ? 'bg-green-900/30 text-green-300' 
+      : 'bg-green-100 text-green-700'
+    }
+  `}>
+    {timeLeft}s
+  </div>
+  
+  <button
+    onClick={handleManualClose} // 👈 Alterado aqui para parar a voz antes de fechar
+    className={`p-2 rounded-lg transition-colors
+      ${theme === 'dark'
+        ? 'hover:bg-white/10 text-white/70 hover:text-white'
+        : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+      }
+    `}
+    aria-label="Fechar"
+  >
+    <X className="w-5 h-5" />
+  </button>
+</div>
         </div>
 
         {/* Conteúdo */}

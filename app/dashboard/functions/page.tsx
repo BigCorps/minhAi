@@ -42,15 +42,15 @@ interface CompanyFunctionSetting {
   last_used_at?: string;
 }
 
-const categories = [ 
+const categories = [
+  { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
+  { key: 'contact',       name: 'Contato',      color: '#10B981' },
+  { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
+  { key: 'information',   name: 'Informação',   color: '#00FFF7' },
+  { key: 'video',         name: 'Vídeos',       color: '#A52A2A' },
   { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
   { key: 'configuration', name: 'Localização', color: '#800080' },
-  { key: 'contact',       name: 'Contato',      color: '#10B981' },
-  { key: 'video',         name: 'Vídeos',       color: '#A52A2A' },
-  { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
   { key: 'schedule',      name: 'Agendamento',  color: '#FFC0CB' },
-  { key: 'information',   name: 'Informação',   color: '#00FFF7' },
-  { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
   { key: 'biometry',      name: 'Biometria',    color: '#808000' },
   { key: 'products',      name: 'Vendas',       color: '#FF00FF' },
   { key: 'images',        name: 'Imagens',      color: '#808080' },
@@ -65,7 +65,7 @@ const statusOptions = [
 // ── Shared pill classes ────────────────────────────────────────────────────────
 const pillCommon =
   'inline-flex items-center justify-center gap-1.5 ' +
-  'px-3 py-1.5 rounded-full text-xs font-medium border ' +
+  'px-3 py-1.5 rounded-full text-base font-medium border ' +
   'transition-all duration-150 whitespace-nowrap';
 
 // Inactive: legível em light E dark

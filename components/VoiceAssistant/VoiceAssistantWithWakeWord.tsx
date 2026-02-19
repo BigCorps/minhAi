@@ -2143,7 +2143,7 @@ if (activeFunction) {
           if (modal.type === 'MeuSistemaDisplay') {
             setMeuSistemaModalOpen(true);
           } else if (modal.type === 'NossaMarcaDisplay') { // ← ADICIONAR
-            setNossaMarcaModalData(modal.data);
+            setNossaMarcaData(modal.data);
           }
         },
       });

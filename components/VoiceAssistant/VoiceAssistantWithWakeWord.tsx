@@ -2680,7 +2680,21 @@ const getStatusColor = () => {
      {/* Modal Meu Sistema */}
      {meuSistemaModalOpen && (
        <MeuSistemaDisplay
-         onClose={() => setMeuSistemaModalOpen(false)}
+         onClose={() => {
+           if (currentAudioRef.current) {
+             currentAudioRef.current.pause();
+             currentAudioRef.current.currentTime = 0;
+             currentAudioRef.current = null;
+           }
+           setIsPlayingAudio(false);
+           setMeuSistemaModalOpen(false);
+           setTimeout(async () => {
+             if (isActiveRef.current) {
+               shouldProcessAudio.current = true;
+               await startGoogleSpeech();
+             }
+           }, 500);
+         }}
          theme={theme}
        />
      )}

@@ -18,6 +18,12 @@ export default function MeuSistemaDisplay({
   const [timeLeft, setTimeLeft] = useState(20);
   const websiteUrl = 'https://eai.app.br';
 
+  // ✅ Handler para fechar e interromper a voz
+const handleManualClose = () => {
+  window.speechSynthesis.cancel(); 
+  onClose();
+};
+
   // ✅ SOLUÇÃO SIMPLES: Gerar QR Code direto via API (sem Edge Function)
   useEffect(() => {
     const size = 400;
@@ -26,19 +32,20 @@ export default function MeuSistemaDisplay({
   }, []);
 
   // Auto-close após 20 segundos com contador
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          onClose();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+useEffect(() => {
+  const interval = setInterval(() => {
+    setTimeLeft((prev) => {
+      if (prev <= 1) {
+        window.speechSynthesis.cancel(); // 👈 Adicione esta linha
+        onClose();
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
 
-    return () => clearInterval(interval);
-  }, []);
+  return () => clearInterval(interval);
+}, [onClose]); // Adicione onClose aqui por boa prática
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -74,7 +81,7 @@ export default function MeuSistemaDisplay({
             
             {/* Botão Fechar */}
             <button
-              onClick={onClose}
+              onClick={handleManualClose} // 👈 Mude de {onClose} para {handleManualClose}
               className={`p-2 rounded-lg transition-colors
                 ${theme === 'dark'
                   ? 'hover:bg-white/10 text-white/70 hover:text-white'

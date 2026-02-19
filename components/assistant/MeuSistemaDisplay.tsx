@@ -31,6 +31,10 @@ const handleManualClose = () => {
     setQrCodeUrl(qrUrl);
   }, []);
 
+useEffect(() => {
+  return () => window.speechSynthesis.cancel();
+}, []);
+  
   // Auto-close após 20 segundos com contador
 useEffect(() => {
   const interval = setInterval(() => {

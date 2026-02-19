@@ -64,6 +64,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'chatgpt',
   'orcamento',
   'faq'
+  'nossa_marca'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

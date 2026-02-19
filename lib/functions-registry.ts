@@ -343,7 +343,161 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     isPremium: false,
   },
 
-  // ADICIONAR esta entrada no FUNCTIONS_REGISTRY:
+
+  // ========================================
+  // NOSSA MARCA
+  // ========================================
+  nossa_marca: {
+    functionKey: 'nossa_marca',
+    functionName: 'Nossa Marca',
+    category: 'information',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'nossa marca',
+      'sobre a empresa',
+      'quem somos',
+      'onde fica',
+      'endereço',
+      'endereco',
+      'horário de funcionamento',
+      'horario de funcionamento',
+      'horário de atendimento',
+      'horario de atendimento',
+      'quando funciona',
+      'localização',
+      'localizacao',
+      'onde vocês ficam',
+      'onde voces ficam',
+      'informações da empresa',
+      'informacoes da empresa',
+      'sobre nós',
+      'sobre nos',
+    ],
+    
+    examplePhrases: [
+      'Conte-me sobre a empresa',
+      'Qual o horário de funcionamento?',
+      'Onde vocês ficam?',
+      'Me fale sobre sua marca',
+    ],
+    
+    requiresInput: false,
+    description: 'Apresenta informações sobre a marca, horário de funcionamento e localização da empresa',
+    shortDescription: 'Sobre nossa marca',
+    icon: '🏢',
+    color: '#10B981',
+    saveToHistory: false,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+    
+    // Handler customizado
+    handler: async ({ 
+      companyId,
+      playText, 
+      setActiveModal,
+      sessionId,
+    }) => {
+      try {
+        console.log('🏢 [NOSSA MARCA] Buscando informações');
+        
+        // Buscar dados da empresa
+        const supabase = createClient();
+        
+        const { data: company, error } = await supabase
+          .from('companies')
+          .select('name, logo_url, brand_description, business_hours, business_address')
+          .eq('id', companyId)
+          .single();
+        
+        if (error || !company) {
+          console.error('Erro ao buscar empresa:', error);
+          await playText('Desculpe, não consegui acessar as informações da marca.');
+          return false;
+        }
+        
+        // Verificar se tem configuração
+        if (!company.brand_description && !company.business_hours && !company.business_address) {
+          await playText('As informações da marca ainda não foram configuradas. Por favor, configure no painel administrativo.');
+          return false;
+        }
+        
+        // Detectar se é endereço físico ou URL
+        const isAddress = company.business_address && 
+          !company.business_address.startsWith('http') && 
+          !company.business_address.includes('www.');
+        
+        // Gerar link do QR Code
+        let qrContent = '';
+        if (isAddress) {
+          // É endereço → Google Maps
+          qrContent = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.business_address)}`;
+        } else if (company.business_address) {
+          // É URL → usar direto
+          qrContent = company.business_address.startsWith('http') 
+            ? company.business_address 
+            : `https://${company.business_address}`;
+        }
+        
+        // Montar texto para falar
+        let speechText = '';
+        
+        if (company.brand_description) {
+          speechText += company.brand_description;
+        }
+        
+        if (company.business_hours) {
+          if (speechText) speechText += '. ';
+          speechText += `Nosso horário de funcionamento é: ${company.business_hours}`;
+        }
+        
+        if (company.business_address) {
+          if (speechText) speechText += '. ';
+          if (isAddress) {
+            speechText += `Estamos localizados em: ${company.business_address}. Escaneie o QR Code para abrir no Google Maps.`;
+          } else {
+            speechText += `Visite nosso site: ${company.business_address}. Escaneie o QR Code para acessar.`;
+          }
+        }
+        
+        if (!speechText) {
+          speechText = 'Informações sobre a marca não disponíveis.';
+        }
+        
+        // Abrir modal PRIMEIRO
+        if (setActiveModal) {
+          setActiveModal({
+            type: 'NossaMarcaDisplay',
+            data: {
+              companyName: company.name,
+              logoUrl: company.logo_url,
+              brandDescription: company.brand_description,
+              businessHours: company.business_hours,
+              businessAddress: company.business_address,
+              qrContent: qrContent,
+              isAddress: isAddress,
+              autoCloseDuration: 20000, // 20 segundos
+            }
+          });
+        }
+        
+        // Falar DEPOIS (sem await - paralelo)
+        playText(speechText).catch(err => {
+          console.error('Erro ao falar:', err);
+        });
+        
+        return true;
+        
+      } catch (error) {
+        console.error('🏢 [NOSSA MARCA] ERRO:', error);
+        await playText('Desculpe, ocorreu um erro ao buscar as informações.');
+        return false;
+      }
+    },
+  },
+  
+  // MEU SISTEMA
 
   meu_sistema: {
     functionKey: 'meu_sistema',

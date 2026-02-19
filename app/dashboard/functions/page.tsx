@@ -52,18 +52,18 @@ interface Company {
 const categories = [
   { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
-  { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
+  { key: 'payment',       name: 'Financeiro',    color: '#F44336' },
   { key: 'information',   name: 'Informação',   color: '#00FFF7' },
-  { key: 'video',         name: 'Vídeos',       color: '#A52A2A' },
+  { key: 'video',         name: 'Multimídia',   color: '#A52A2A' },
   { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
   { key: 'configuration', name: 'Localização',  color: '#800080' },
   { key: 'schedule',      name: 'Agendamento',  color: '#FFC0CB' },
   { key: 'biometry',      name: 'Biometria',    color: '#808000' },
-  { key: 'products',      name: 'Vendas',       color: '#FF00FF' },
+  { key: 'products',      name: 'Comercial',    color: '#FF00FF' },
   { key: 'images',        name: 'Arquivos',     color: '#000080' },
   { key: 'utylities',     name: 'Utilitários',  color: '#FFA500' },
+  { key: 'codes',         name: 'Câmera',       color: '#808080' },
   { key: 'services',      name: 'Serviços',     color: '#D2691E' },
-  { key: 'codes',         name: 'Códigos',      color: '#808080' },
 ];
 
 const statusOptions = [

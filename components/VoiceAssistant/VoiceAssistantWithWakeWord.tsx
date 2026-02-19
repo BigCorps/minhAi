@@ -43,17 +43,6 @@ export function VoiceAssistantWithWakeWord({
   // ========================================
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-
-const [nossaMarcaData, setNossaMarcaData] = useState<{
-  companyName: string;
-  logoUrl?: string;
-  brandDescription?: string;
-  businessHours?: string;
-  businessAddress?: string;
-  qrContent?: string;
-  isAddress?: boolean;
-  autoCloseDuration?: number;
-} | null>(null);
   
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -73,6 +62,17 @@ const [nossaMarcaData, setNossaMarcaData] = useState<{
   const [companyGreeting, setCompanyGreeting] = useState<string>('');
   const [meuSistemaModalOpen, setMeuSistemaModalOpen] = useState(false);
   const [nossaMarcaModalData, setNossaMarcaModalData] = useState<any>(null); // ← ADICIONAR
+
+const [nossaMarcaData, setNossaMarcaData] = useState<{
+  companyName: string;
+  logoUrl?: string;
+  brandDescription?: string;
+  businessHours?: string;
+  businessAddress?: string;
+  qrContent?: string;
+  isAddress?: boolean;
+  autoCloseDuration?: number;
+} | null>(null);
 
   // ✅ PASSO 1: Novo state para guardar configs das funções
   const [functionSettings, setFunctionSettings] = useState<Record<string, {
@@ -2677,13 +2677,21 @@ const getStatusColor = () => {
   </div>
 )}
 
-{/* Modal Meu Sistema */}
-{meuSistemaModalOpen && (
-  <MeuSistemaDisplay
-    onClose={() => setMeuSistemaModalOpen(false)}
-    theme={theme}
-  />
-)}
-    </div>
-  );
-}
+    {/* Modal Meu Sistema */}
+    {meuSistemaModalOpen && (
+      <MeuSistemaDisplay
+        onClose={() => setMeuSistemaModalOpen(false)}
+        theme={theme}
+      />
+    )}
+
+    {/* ✅ ADICIONAR ESTE BLOCO (se não existir): */}
+    {nossaMarcaData && (
+      <NossaMarcaDisplay
+        data={nossaMarcaData}
+        onClose={() => setNossaMarcaData(null)}
+        theme={theme}
+      />
+    )}
+  </div>
+);

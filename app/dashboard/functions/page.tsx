@@ -43,20 +43,20 @@ interface CompanyFunctionSetting {
 }
 
 const categories = [
-  { key: 'ai_assistant', name: 'Conhecimento', color: '#0000ff' },
-  { key: 'contact', name: 'Contato', color: '#10B981' },
-  { key: 'payment', name: 'Pagamento', color: '#F44336' },
-  { key: 'information', name: 'Informação', color: '#00FFF7' },
-  { key: 'video', name: 'Vídeos', color: '#A52A2A' },
-  { key: 'knowledge', name: 'Consultas', color: '#FFFF00' },
-  { key: 'configuration', name: 'Localização', color: '#800080' },
-  { key: 'schedule', name: 'Agendamento', color: '#FFC0CB' },
-  { key: 'biometry', name: 'Biometria', color: '#808000' },
-  { key: 'products', name: 'Vendas', color: '#FF00FF' },
-  { key: 'images', name: 'Arquivos', color: '#000080' },
-  { key: 'utylities', name: 'Utilitários', color: '#FFA500' },
-  { key: 'services', name: 'Serviços', color: '#D2691E' },
-  { key: 'codes', name: 'Códigos', color: '#808080' },
+  { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
+  { key: 'contact',       name: 'Contato',      color: '#10B981' },
+  { key: 'payment',       name: 'Pagamento',    color: '#F44336' },
+  { key: 'information',   name: 'Informação',   color: '#00FFF7' },
+  { key: 'video',         name: 'Vídeos',       color: '#A52A2A' },
+  { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
+  { key: 'configuration', name: 'Localização',  color: '#800080' },
+  { key: 'schedule',      name: 'Agendamento',  color: '#FFC0CB' },
+  { key: 'biometry',      name: 'Biometria',    color: '#808000' },
+  { key: 'products',      name: 'Vendas',       color: '#FF00FF' },
+  { key: 'images',        name: 'Arquivos',     color: '#000080' },
+  { key: 'utylities',     name: 'Utilitários',  color: '#FFA500' },
+  { key: 'services',      name: 'Serviços',     color: '#D2691E' },
+  { key: 'codes',         name: 'Códigos',      color: '#808080' },
 ];
 
 const statusOptions = [
@@ -340,7 +340,7 @@ function FunctionsPageContent() {
     'dark:bg-slate-800 dark:text-white dark:border-white/10 dark:placeholder-gray-500 ' +
     'focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
-  function renderCardList(mode: 'grid' | 'list') {
+  function renderCardList(mode: 'grid' | 'list', forceSingleColumn = false) {
     if (mode === 'list') {
       return filteredFunctions.map(fn => {
         if (!fn || !fn.function_key) return null;
@@ -369,10 +369,11 @@ function FunctionsPageContent() {
     }
 
     return rows.map((row, rowIdx) => {
-      const colClass =
-        row.length === 1 ? 'grid-cols-1' :
-        row.length === 2 ? 'grid-cols-2' :
-        'grid-cols-3';
+      const colClass = forceSingleColumn
+        ? 'grid-cols-1'
+        : row.length === 1 ? 'grid-cols-1'
+        : row.length === 2 ? 'grid-cols-2'
+        : 'grid-cols-3';
 
       return (
         <div key={rowIdx} className={`grid gap-6 ${colClass}`}>
@@ -582,8 +583,8 @@ function FunctionsPageContent() {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: sempre lista compacta */}
-                  <div className="sm:hidden space-y-2">{renderCardList('grid')}</div>
+                  {/* Mobile: sempre um card por linha */}
+                  <div className="sm:hidden space-y-2">{renderCardList('grid', true)}</div>
 
                   {/* Desktop: grid ou lista */}
                   <div className="hidden sm:block">

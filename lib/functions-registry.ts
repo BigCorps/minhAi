@@ -344,7 +344,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   },
 
 
-  // ========================================
+   // ========================================
   // NOSSA MARCA
   // ========================================
   nossa_marca: {
@@ -431,7 +431,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         // Gerar link do QR Code
         let qrContent = '';
         if (isAddress) {
-          // É endereço → Google Maps
+          // É endereço → Google Maps (Corrigido o uso de template string e url)
           qrContent = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.business_address)}`;
         } else if (company.business_address) {
           // É URL → usar direto
@@ -465,7 +465,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
           speechText = 'Informações sobre a marca não disponíveis.';
         }
         
-        // Abrir modal PRIMEIRO
+        // 1. ABRIR O MODAL PRIMEIRO (já exibe na tela imediatamente)
         if (setActiveModal) {
           setActiveModal({
             type: 'NossaMarcaDisplay',
@@ -482,10 +482,8 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
           });
         }
         
-        // Falar DEPOIS (sem await - paralelo)
-        playText(speechText).catch(err => {
-          console.error('Erro ao falar:', err);
-        });
+        // 2. FALAR A FRASE (Com await para segurar o status de 'executando' até a voz terminar)
+        await playText(speechText);
         
         return true;
         

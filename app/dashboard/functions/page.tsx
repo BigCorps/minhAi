@@ -42,6 +42,13 @@ interface CompanyFunctionSetting {
   last_used_at?: string;
 }
 
+interface Company {
+  id: string;
+  name: string;
+  wake_word?: string;
+  created_at?: string;
+}
+
 const categories = [
   { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
@@ -71,18 +78,15 @@ const pillCommon =
   'px-3 py-1.5 rounded-full text-xs sm:text-base font-medium border ' +
   'transition-all duration-150 whitespace-nowrap';
 
-// Inactive: legível em light E dark
 const pillInactive =
   'bg-transparent ' +
   'text-gray-700 border-gray-300 hover:border-gray-500 hover:text-gray-900 ' +
   'dark:text-gray-300 dark:border-white/20 dark:hover:border-white/40 dark:hover:text-white';
 
-// Active neutral (Todas / Status)
 const pillActiveNeutral =
   'bg-gray-800 text-white border-gray-800 shadow-sm ' +
   'dark:bg-white dark:text-gray-900 dark:border-white';
 
-// Active colored (categorias com cor própria)
 const pillActiveColored = 'text-white shadow-sm border-transparent';
 
 // ─── CategoryPillSelector ──────────────────────────────────────────────────────
@@ -185,6 +189,8 @@ function FunctionsPageContent() {
   const searchParams = useSearchParams();
   const companyIdFromUrl = searchParams.get('companyId');
 
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [settings, setSettings] = useState<CompanyFunctionSetting[]>([]);
   const [loading, setLoading] = useState(false);
@@ -202,6 +208,26 @@ function FunctionsPageContent() {
   const [editingFunction, setEditingFunction] = useState<AssistantFunction | null>(null);
 
   const supabase = createClient();
+
+  // Carrega lista de empresas para exibir quando nenhum assistente está selecionado
+  useEffect(() => {
+    async function loadCompanies() {
+      try {
+        setLoadingCompanies(true);
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name, wake_word, created_at')
+          .order('created_at', { ascending: true });
+        if (error) console.error('Erro ao buscar empresas:', error);
+        setCompanies(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar empresas:', error);
+      } finally {
+        setLoadingCompanies(false);
+      }
+    }
+    loadCompanies();
+  }, []);
 
   useEffect(() => {
     const urlId = companyIdFromUrl || undefined;
@@ -333,7 +359,6 @@ function FunctionsPageContent() {
     return matchesCategory && matchesSearch && matchesStatus;
   });
 
-  // Shared search input classes
   const searchInputClass =
     'w-full pl-10 pr-4 py-2 rounded-lg border ' +
     'bg-white text-gray-900 border-gray-300 placeholder-gray-400 ' +
@@ -407,7 +432,7 @@ function FunctionsPageContent() {
 
           {/* ── Header ── */}
           <div className="mb-4 sm:mb-8">
-            {/* Desktop: flex row — título à esquerda, seletor à direita */}
+            {/* Desktop */}
             <div className="hidden sm:flex items-start justify-between gap-4 mb-6">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -417,14 +442,16 @@ function FunctionsPageContent() {
                   Ative ou desative as funções que seu assistente pode executar
                 </p>
               </div>
-              <FunctionSelector
-                onCompanySelect={handleCompanySelect}
-                selectedCompanyId={companyId}
-                theme={theme}
-              />
+              {companyId && (
+                <FunctionSelector
+                  onCompanySelect={handleCompanySelect}
+                  selectedCompanyId={companyId}
+                  theme={theme}
+                />
+              )}
             </div>
 
-            {/* Mobile: título + seletor full-width empilhados */}
+            {/* Mobile */}
             <div className="sm:hidden flex flex-col gap-3 mb-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -434,26 +461,71 @@ function FunctionsPageContent() {
                   Ative ou desative as funções que seu assistente pode executar
                 </p>
               </div>
-              {/* Seletor ocupa toda a largura disponível */}
-              <div className="w-full">
-                <FunctionSelector
-                  onCompanySelect={handleCompanySelect}
-                  selectedCompanyId={companyId}
-                  theme={theme}
-                />
-              </div>
+              {companyId && (
+                <div className="w-full">
+                  <FunctionSelector
+                    onCompanySelect={handleCompanySelect}
+                    selectedCompanyId={companyId}
+                    theme={theme}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ── Empty states ── */}
-          {!companyId && !loading && (
-            <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
-              <p className="text-gray-600 dark:text-gray-400">
-                Selecione um assistente acima para gerenciar suas funções
-              </p>
-            </div>
+          {/* ── Sem assistente selecionado: grade de empresas ── */}
+          {!companyId && (
+            <>
+              {loadingCompanies ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+                </div>
+              ) : companies.length === 0 ? (
+                <div className="text-center py-12 bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Nenhum assistente cadastrado.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {companies.map(company => (
+                    <button
+                      key={company.id}
+                      onClick={() => handleCompanySelect(company.id)}
+                      className="text-left rounded-xl shadow-md p-6 hover:shadow-xl transition group bg-white/80 dark:bg-white/5 border border-transparent dark:border-white/10 hover:border-blue-500/30 dark:hover:border-blue-500/30 backdrop-blur-sm"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold mb-2 text-gray-900 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400 transition-colors">
+                            {company.name}
+                          </h3>
+                          {company.wake_word && (
+                            <p className="text-sm text-gray-500 dark:text-white/40">
+                              Palavra: {company.wake_word}
+                            </p>
+                          )}
+                        </div>
+                        <svg className="w-6 h-6 text-gray-400 group-hover:text-blue-600 dark:text-white/40 dark:group-hover:text-blue-400 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                      <div className="pt-4 border-t border-gray-100 dark:border-white/10">
+                        <div className="flex items-center text-sm text-gray-600 dark:text-white/60">
+                          <svg className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Gerenciar Funções
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
+          {/* ── Com assistente selecionado ── */}
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
@@ -470,11 +542,8 @@ function FunctionsPageContent() {
 
           {!loading && companyId && functions.length > 0 && (
             <>
-              {/* ════════════════════════════════════
-                  FILTER BAR — MOBILE  (< sm)
-                  ════════════════════════════════════ */}
+              {/* FILTER BAR — MOBILE */}
               <div className="sm:hidden mb-6 flex flex-col gap-3 bg-white dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
-                {/* Busca ocupa toda a largura */}
                 <div className="relative w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
@@ -485,15 +554,11 @@ function FunctionsPageContent() {
                     className={searchInputClass}
                   />
                 </div>
-
-                {/* Status — 3 colunas */}
                 <StatusPillSelector
                   filterStatus={filterStatus}
                   onSetStatus={setFilterStatus}
                   isMobile
                 />
-
-                {/* Categorias — layout mobile específico */}
                 <CategoryPillSelector
                   selectedCategories={selectedCategories}
                   onToggleCategory={handleToggleCategory}
@@ -503,11 +568,8 @@ function FunctionsPageContent() {
                 />
               </div>
 
-              {/* ════════════════════════════════════
-                  FILTER BAR — DESKTOP  (≥ sm)
-                  ════════════════════════════════════ */}
+              {/* FILTER BAR — DESKTOP */}
               <div className="hidden sm:flex flex-col gap-3 mb-6 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
-                {/* Linha 1: busca à esquerda | status + view toggle à direita */}
                 <div className="flex items-center gap-3">
                   <div className="relative flex-grow min-w-[160px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -519,52 +581,46 @@ function FunctionsPageContent() {
                       className={searchInputClass}
                     />
                   </div>
-
-                  {/* Status pills + view toggle agrupados à direita */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <StatusPillSelector
                       filterStatus={filterStatus}
                       onSetStatus={setFilterStatus}
                       isMobile={false}
                     />
-
-                  {/* View mode toggle */}
-                  <div className="flex items-center border border-gray-300 dark:border-white/10 rounded-lg p-1 dark:bg-slate-800">
-                    <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'grid'
-                          ? 'bg-blue-500 text-white'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
-                      }`}
-                      aria-label="Visualização em grade"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'list'
-                          ? 'bg-blue-500 text-white'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
-                      }`}
-                      aria-label="Visualização em lista"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-                        <line x1="8" y1="18" x2="21" y2="18"/>
-                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
-                        <line x1="3" y1="18" x2="3.01" y2="18"/>
-                      </svg>
-                    </button>
+                    <div className="flex items-center border border-gray-300 dark:border-white/10 rounded-lg p-1 dark:bg-slate-800">
+                      <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          viewMode === 'grid'
+                            ? 'bg-blue-500 text-white'
+                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
+                        }`}
+                        aria-label="Visualização em grade"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          viewMode === 'list'
+                            ? 'bg-blue-500 text-white'
+                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
+                        }`}
+                        aria-label="Visualização em lista"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                          <line x1="8" y1="18" x2="21" y2="18"/>
+                          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+                          <line x1="3" y1="18" x2="3.01" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                  </div>{/* end status+toggle group */}
-                </div>{/* end row 1 */}
-
-                {/* Linha 2: categorias — centralizadas, quebra automaticamente conforme a largura */}
+                </div>
                 <CategoryPillSelector
                   selectedCategories={selectedCategories}
                   onToggleCategory={handleToggleCategory}

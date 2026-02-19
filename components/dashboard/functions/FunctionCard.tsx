@@ -60,6 +60,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'chatgpt',
   'orcamento',
   'faq'
+  'nossa_marca',
 ];
 
 // ✅ NOVO: Funções que NÃO têm toggle (sempre visíveis)

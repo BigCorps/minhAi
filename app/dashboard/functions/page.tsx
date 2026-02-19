@@ -65,7 +65,7 @@ const statusOptions = [
 // ── Shared pill classes ────────────────────────────────────────────────────────
 const pillCommon =
   'inline-flex items-center justify-center gap-1.5 ' +
-  'px-3 py-1.5 rounded-full text-base font-medium border ' +
+  'px-3 py-1.5 rounded-full text-base sm:text-xs font-medium border ' +
   'transition-all duration-150 whitespace-nowrap';
 
 // Inactive: legível em light E dark
@@ -122,12 +122,6 @@ function CategoryPillSelector({
       </button>
     );
   });
-
-  if (isMobile) {
-    // Linha 1: [Todas] [Contato]  — 2 cols
-    // Linhas 2+: restante — 3 cols
-    const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
-    const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
 
     return (
       <div className="flex flex-col gap-2 w-full">
@@ -548,7 +542,7 @@ function FunctionsPageContent() {
               ) : (
                 <>
                   {/* Mobile: sempre lista compacta */}
-                  <div className="sm:hidden space-y-2">{renderCardList('list')}</div>
+                  <div className="sm:hidden space-y-2">{renderCardList('grid')}</div>
 
                   {/* Desktop: grid ou lista */}
                   <div className="hidden sm:block">

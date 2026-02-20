@@ -1,6 +1,3 @@
-// ============================================
-// EnderecoDisplay.tsx - VERSÃO OTIMIZADA
-// ============================================
 // ARQUIVO: components/assistant/EnderecoDisplay.tsx
 
 'use client';
@@ -26,7 +23,7 @@ export default function EnderecoDisplay({
   theme = 'dark'
 }: EnderecoDisplayProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(15);
   const [copied, setCopied] = useState(false);
   
   const {
@@ -86,7 +83,7 @@ export default function EnderecoDisplay({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       {/* Card - ✅ MENOR NO MOBILE */}
       <div
-        className={`relative w-full max-w-4xl rounded-2xl shadow-2xl transition-colors overflow-hidden animate-in zoom-in duration-300
+        className={`relative w-full max-w-2xl rounded-2xl shadow-2xl transition-colors overflow-hidden animate-in zoom-in duration-300
           ${theme === 'dark' 
             ? 'bg-slate-800 border border-white/10' 
             : 'bg-white border border-gray-200'
@@ -148,8 +145,8 @@ export default function EnderecoDisplay({
             <iframe
               src={getMapEmbedUrl()}
               width="100%"
-              height="250" // ✅ MOBILE: 250px (antes era 400px)
-              className="md:h-[400px]" // ✅ DESKTOP: 400px
+              height="200"
+              className="md:h-[260px]"
               style={{ border: 0 }}
               allowFullScreen
               loading="lazy"
@@ -168,12 +165,7 @@ export default function EnderecoDisplay({
               <div className={`p-3 md:p-4 rounded-xl
                 ${theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'}
               `}>
-                <p className={`text-xs md:text-sm font-medium mb-1
-                  ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}
-                `}>
-                  Endereço:
-                </p>
-                <p className={`text-sm md:text-lg font-semibold
+                <p className={`text-sm md:text-base font-semibold truncate
                   ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
                 `}>
                   {address}
@@ -216,15 +208,7 @@ export default function EnderecoDisplay({
                 </button>
               </div>
 
-              {/* Dica - ✅ TEXTO MENOR NO MOBILE */}
-              <div className={`p-2 md:p-3 rounded-lg text-xs md:text-sm
-                ${theme === 'dark' 
-                  ? 'bg-blue-900/20 text-blue-300 border border-blue-800' 
-                  : 'bg-blue-50 text-blue-700 border border-blue-200'
-                }
-              `}>
-                💡 <strong>Dica:</strong> Escaneie o QR Code para abrir diretamente no seu celular
-              </div>
+
             </div>
 
             {/* Coluna Direita: QR Code - ✅ MENOR NO MOBILE */}
@@ -234,19 +218,15 @@ export default function EnderecoDisplay({
                   <img
                     src={qrCodeUrl}
                     alt="QR Code"
-                    className="w-28 h-28 md:w-40 md:h-40 object-contain" // ✅ MOBILE: 112px, DESKTOP: 160px
+                    className="w-24 h-24 md:w-28 md:h-28 object-contain"
                   />
                 ) : (
-                  <div className="w-28 h-28 md:w-40 md:h-40 flex items-center justify-center">
+                  <div className="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-indigo-600" />
                   </div>
                 )}
               </div>
-              <p className={`text-xs md:text-xs text-center font-medium
-                ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}
-              `}>
-                Abrir no celular
-              </p>
+
             </div>
           </div>
         </div>
@@ -258,7 +238,7 @@ export default function EnderecoDisplay({
           <div
             className="h-full bg-blue-600 transition-all duration-1000 ease-linear"
             style={{
-              width: `${(timeLeft / 30) * 100}%`
+              width: `${(timeLeft / 15) * 100}%`
             }}
           />
         </div>

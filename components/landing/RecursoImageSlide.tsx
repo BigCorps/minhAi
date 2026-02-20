@@ -134,7 +134,7 @@ export default function RecursoImageSlide({
           <img
             src={imageSrc}
             alt={imageAlt}
-            className="w-full max-w-[320px] sm:max-w-[400px] md:max-w-full object-contain drop-shadow-2xl"
+            className="w-full max-w-[320px] sm:max-w-[400px] md:max-w-full object-contain drop-shadow-2xl transition-transform duration-300 ease-out hover:scale-105 cursor-pointer"
             style={{ maxHeight: '55vh' }}
           />
         </div>

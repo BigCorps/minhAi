@@ -5,7 +5,7 @@ import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
 import RecursoImageSlide from '@/components/landing/RecursoImageSlide';
 import RecursoCardsSlide from '@/components/landing/RecursoCardsSlide';
-import FuncaoSlide from '@/components/landing/FuncaoSlide';
+import FuncaoCardsSlide from '@/components/landing/FuncaoCardsSlide';
 import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';
 
@@ -113,59 +113,134 @@ const RECURSO_IMAGE_SLIDES = [
 const TOTAL_RECURSO_SLIDES = RECURSO_IMAGE_SLIDES.length; // 4
 
 // ============================================================
-// REGISTRY DE FUNÇÕES
+// FUNÇÕES - 4 páginas de cards (4 + 3 + 4 + 3 = 14 categorias)
 // ============================================================
-const FUNCOES = [
+const FUNCAO_PAGES = [
+  // Página 1 — 4 cards
   {
-    id: 'funcao-perguntas-gerais',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-      </svg>
-    ),
-    title: 'Perguntas Gerais',
-    subtitle: 'IA Avançada',
-    description: 'Seu assistente responde a qualquer pergunta utilizando inteligência artificial avançada, fornecendo informações precisas e contextuais sobre seus produtos e serviços.',
-    color: 'blue' as const,
+    id: 'funcao-page-1',
+    cards: [
+      {
+        title: 'Contatos',
+        icon: '📲',
+        color: 'blue' as const,
+        description:
+          'Conecte seus clientes aos seus canais em segundos. Gere QR Codes personalizados para Redes Sociais, Telefones e Site. Facilite o acesso ao WhatsApp, Instagram, ligações diretas e páginas institucionais, aumentando conversão e engajamento.',
+      },
+      {
+        title: 'Financeiro',
+        icon: '💳',
+        color: 'green' as const,
+        description:
+          'Cobranças rápidas, seguras e automatizadas. Gere Pix dinâmico, Link de Pagamento e aceite Débito NFC e Crédito NFC diretamente pelo assistente. Simplifique o processo de cobrança e aumente a taxa de pagamento imediato.',
+      },
+      {
+        title: 'Multimídia',
+        icon: '🎬',
+        color: 'blue' as const,
+        description:
+          'Experiência interativa e envolvente. Toque Vídeos, Tutoriais, Publicidades, Playlists, Modo Sequência e Música sob comando. Ideal para totens, recepções, lojas, academias e ambientes corporativos.',
+      },
+      {
+        title: 'Informação',
+        icon: '📡',
+        color: 'green' as const,
+        description:
+          'Informações atualizadas em tempo real. Apresente dados sobre seu Sistema, sua Marca, Notícias, Feriados Nacionais e Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
+      },
+    ],
   },
+  // Página 2 — 3 cards
   {
-    id: 'funcao-faq',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-      </svg>
-    ),
-    title: 'Perguntas Frequentes',
-    subtitle: 'FAQ Inteligente',
-    description: 'Treine seu assistente com as perguntas mais comuns da sua empresa. Respostas consistentes, rápidas e sem custo de IA para as dúvidas mais frequentes.',
-    color: 'green' as const,
+    id: 'funcao-page-2',
+    cards: [
+      {
+        title: 'Consultas',
+        icon: '🔍',
+        color: 'blue' as const,
+        description:
+          'Verificações rápidas e confiáveis. Consulte Dados de CNPJ, CPF, Placa de Veículo, Leilões, Restrições de CPF e CNPJ. Ferramenta ideal para empresas que precisam validar informações antes de fechar negócios.',
+      },
+      {
+        title: 'Localização',
+        icon: '🗺️',
+        color: 'green' as const,
+        description:
+          'Geolocalização inteligente e precisa. Ver Endereço, Buscar CEP, Traçar Rota, verificar Trânsito em tempo real e Consultar DDD. Facilite deslocamentos e atendimento logístico.',
+      },
+      {
+        title: 'Agendamento',
+        icon: '📅',
+        color: 'blue' as const,
+        description:
+          'Organização automatizada e eficiente. Marcar Evento, Ver Agenda, Confirmar Presença, Reagendar compromissos e até Enviar ou Ler E-mails. Reduza faltas e melhore a gestão do tempo.',
+      },
+    ],
   },
+  // Página 3 — 4 cards
   {
-    id: 'funcao-pix',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
-      </svg>
-    ),
-    title: 'Geração de PIX',
-    subtitle: 'Pagamentos Instantâneos',
-    description: 'Facilite cobranças com geração automática de códigos PIX. Seu assistente cria QR Codes na hora para seus clientes pagarem de forma rápida e segura.',
-    color: 'blue' as const,
+    id: 'funcao-page-3',
+    cards: [
+      {
+        title: 'Conhecimento',
+        icon: '🧠',
+        color: 'green' as const,
+        description:
+          'Inteligência avançada ao seu alcance. Utilize ChatGPT, gere Orçamentos, Perguntas e Respostas inteligentes, Traduza Texto, Transcreva Áudio e consulte a Previsão do Tempo. Um verdadeiro centro de inteligência operacional.',
+      },
+      {
+        title: 'Utilitários',
+        icon: '⚙️',
+        color: 'blue' as const,
+        description:
+          'Ferramentas práticas para o dia a dia. Controle Aparelhos Smart, Crie Lembretes, use Cronômetro, Temporizador e Relógio Mundial. Recursos simples que aumentam produtividade e organização.',
+      },
+      {
+        title: 'Identificação',
+        icon: '🪪',
+        color: 'green' as const,
+        description:
+          'Controle e segurança automatizados. Reconhecimento Facial, Registro de Ponto, Fila de Atendimento, Geração de Senha e Cadastro de Cliente. Ideal para empresas que precisam organizar fluxo e validar acessos.',
+      },
+      {
+        title: 'Arquivos',
+        icon: '🗂️',
+        color: 'blue' as const,
+        description:
+          'Edição e conversão de documentos com IA. Remover Fundo, Duplicar Imagem, Editar Imagem e Converter Arquivos automaticamente. Agilidade para marketing, administrativo e operacional.',
+      },
+    ],
   },
+  // Página 4 — 3 cards
   {
-    id: 'funcao-redes-sociais',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
-      </svg>
-    ),
-    title: 'QR Codes para Redes Sociais',
-    subtitle: 'WhatsApp & Instagram',
-    description: 'Conecte seus clientes às suas redes sociais instantaneamente. O assistente gera QR Codes para WhatsApp e Instagram na hora.',
-    color: 'green' as const,
+    id: 'funcao-page-4',
+    cards: [
+      {
+        title: 'Serviços',
+        icon: '🛎️',
+        color: 'green' as const,
+        description:
+          'Soluções operacionais completas. Imprimir documentos, exibir Tabela de Preços, Cardápio (Menu), Emitir Recibo e Chamar Suporte via WhatsApp. Facilite o atendimento presencial e digital.',
+      },
+      {
+        title: 'Comercial',
+        icon: '🛒',
+        color: 'blue' as const,
+        description:
+          'Aumente suas vendas com inteligência. Recomendar Produto, Cadastrar Produto, exibir Avaliações, operar Totem de Vendas, Responder Pesquisa e Consultar Estoque. Transforme o assistente em um vendedor digital ativo 24h.',
+      },
+      {
+        title: 'Câmera',
+        icon: '📷',
+        color: 'green' as const,
+        description:
+          'Leitura e validação instantânea. Ler QR Code, Ler Código de Barras, Enviar Arquivo, Gerar QR Code, Validar Cupom e Verificar Acesso. Ideal para controle de entradas, promoções e operações rápidas.',
+      },
+    ],
   },
 ];
+
+const TOTAL_FUNCAO_PAGES = FUNCAO_PAGES.length;
 
 // ============================================================
 // IDs DE TODAS AS SEÇÕES
@@ -173,7 +248,7 @@ const FUNCOES = [
 const ALL_SECTION_IDS = [
   'inicio',
   ...RECURSO_IMAGE_SLIDES.map((r) => r.id),
-  ...FUNCOES.map((f) => f.id),
+  ...FUNCAO_PAGES.map((f) => f.id),
   'precos',
   'contato',
 ];
@@ -224,7 +299,7 @@ export default function LandingPage() {
   const scrollToSection = useCallback((id: string) => {
     const targetId =
       id === 'funcoes'
-        ? FUNCOES[0].id
+        ? FUNCAO_PAGES[0].id
         : id === 'recursos'
         ? RECURSO_IMAGE_SLIDES[0].id
         : id;
@@ -342,22 +417,18 @@ export default function LandingPage() {
           />
         </section>
 
-        {/* FUNÇÕES */}
-        {FUNCOES.map((funcao, index) => (
+        {/* FUNÇÕES — 4 páginas de cards */}
+        {FUNCAO_PAGES.map((page, index) => (
           <section
-            key={funcao.id}
-            id={funcao.id}
+            key={page.id}
+            id={page.id}
             className="w-screen h-screen flex-shrink-0 snap-start snap-always"
           >
-            <FuncaoSlide
+            <FuncaoCardsSlide
               theme={theme}
-              icon={funcao.icon}
-              title={funcao.title}
-              subtitle={funcao.subtitle}
-              description={funcao.description}
-              color={funcao.color}
+              cards={page.cards}
               currentIndex={index}
-              totalCount={FUNCOES.length}
+              totalCount={TOTAL_FUNCAO_PAGES}
             />
           </section>
         ))}

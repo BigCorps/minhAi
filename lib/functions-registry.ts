@@ -81,6 +81,126 @@ export interface FunctionDefinition {
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
   // ========================================
+  // ENDEREÇO (MAPA)
+  // ========================================
+  endereco: {
+    functionKey: 'endereco',
+    functionName: 'Endereço',
+    category: 'information',
+    responseType: 'voice+modal',
+    
+    voiceTriggers: [
+      'endereço',
+      'endereco',
+      'onde fica',
+      'onde vocês ficam',
+      'onde voces ficam',
+      'localização',
+      'localizacao',
+      'como chegar',
+      'onde estão',
+      'onde estao',
+      'local',
+      'lugar',
+      'mapa',
+      'google maps',
+      'mostrar mapa',
+      'abrir mapa',
+    ],
+    
+    examplePhrases: [
+      'Onde vocês ficam?',
+      'Qual o endereço?',
+      'Como chegar aí?',
+      'Me mostra no mapa',
+    ],
+    
+    requiresInput: false,
+    description: 'Exibe o endereço no mapa grande e interativo',
+    shortDescription: 'Mostrar endereço no mapa',
+    icon: '📍',
+    color: '#EF4444',
+    saveToHistory: false,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+    
+    // Handler customizado
+    handler: async ({ 
+      companyId,
+      playText, 
+      setActiveModal,
+      sessionId,
+    }) => {
+      try {
+        console.log('📍 [ENDEREÇO] Buscando localização');
+        
+        // Buscar endereço da empresa
+        const supabase = createClient();
+        
+        const { data: company, error } = await supabase
+          .from('companies')
+          .select('name, business_address')
+          .eq('id', companyId)
+          .single();
+        
+        if (error || !company) {
+          console.error('Erro ao buscar empresa:', error);
+          await playText('Desculpe, não consegui acessar o endereço.');
+          return false;
+        }
+        
+        // Verificar se tem endereço configurado
+        if (!company.business_address) {
+          await playText('O endereço ainda não foi configurado. Por favor, configure no painel administrativo.');
+          return false;
+        }
+        
+        // Verificar se é endereço físico (não URL)
+        const isAddress = !company.business_address.startsWith('http') && 
+                         !company.business_address.includes('www.');
+        
+        if (!isAddress) {
+          await playText('Esta empresa não possui um endereço físico configurado, apenas um site.');
+          return false;
+        }
+        
+        // Gerar link do Google Maps
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.business_address)}`;
+        
+        // Gerar QR Code
+        const qrContent = mapsUrl;
+        
+        // Abrir modal
+        if (setActiveModal) {
+          setActiveModal({
+            type: 'EnderecoDisplay',
+            data: {
+              companyName: company.name,
+              address: company.business_address,
+              mapsUrl: mapsUrl,
+              qrContent: qrContent,
+              autoCloseDuration: 30000, // 30 segundos (mais tempo para ver mapa)
+            }
+          });
+        }
+        
+        // Falar (sem await - paralelo)
+        playText(`Estamos localizados em: ${company.business_address}. Você pode copiar o link ou escanear o QR Code para abrir no Google Maps.`).catch(err => {
+          console.error('Erro ao falar:', err);
+        });
+        
+        return true;
+        
+      } catch (error) {
+        console.error('📍 [ENDEREÇO] ERRO:', error);
+        await playText('Desculpe, ocorreu um erro ao buscar o endereço.');
+        return false;
+      }
+    },
+  },
+
+  // ========================================
   // NOSSO SITE
   // ========================================
   qrcode_website: {

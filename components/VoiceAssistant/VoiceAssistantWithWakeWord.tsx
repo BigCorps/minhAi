@@ -14,7 +14,8 @@ import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { FUNCTIONS_REGISTRY, getFunctionByKey } from '@/lib/functions-registry';
 import MeuSistemaDisplay from '@/components/assistant/MeuSistemaDisplay';
-import NossaMarcaDisplay from '@/components/assistant/NossaMarcaDisplay'; // ← ADICIONAR
+import NossaMarcaDisplay from '@/components/assistant/NossaMarcaDisplay';
+import EnderecoDisplay from '@/components/assistant/EnderecoDisplay';
 
 interface VoiceAssistantWithWakeWordProps {
   companyId: string;
@@ -62,6 +63,7 @@ export function VoiceAssistantWithWakeWord({
   const [companyWakeWord, setCompanyWakeWord] = useState<string>('');
   const [companyGreeting, setCompanyGreeting] = useState<string>('');
   const [meuSistemaModalOpen, setMeuSistemaModalOpen] = useState(false);
+  const [enderecoModalData, setEnderecoModalData] = useState<any>(null);
 const [nossaMarcaData, setNossaMarcaData] = useState<{
   companyName: string;
   logoUrl?: string;
@@ -1528,8 +1530,10 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
             setActiveModal: (modal: any) => {
               if (modal.type === 'MeuSistemaDisplay') {
                 setMeuSistemaModalOpen(true);
-              } else if (modal.type === 'NossaMarcaDisplay') { // ← ADICIONAR
+              } else if (modal.type === 'NossaMarcaDisplay') {
                 setNossaMarcaData(modal.data);
+              } else if (modal.type === 'EnderecoDisplay') {
+                setEnderecoModalData(modal.data);
               }
             },
           });
@@ -2261,8 +2265,10 @@ if (activeFunction) {
         setActiveModal: (modal: any) => {
           if (modal.type === 'MeuSistemaDisplay') {
             setMeuSistemaModalOpen(true);
-          } else if (modal.type === 'NossaMarcaDisplay') { // ← ADICIONAR
+          } else if (modal.type === 'NossaMarcaDisplay') {
             setNossaMarcaData(modal.data);
+          } else if (modal.type === 'EnderecoDisplay') {
+            setEnderecoModalData(modal.data);
           }
         },
       });
@@ -2847,7 +2853,7 @@ const getStatusColor = () => {
        />
      )}
 
-     {/* ✅ ADICIONAR ESTE BLOCO (se não existir): */}
+     {/* Modal Nossa Marca */}
      {nossaMarcaData && (
        <NossaMarcaDisplay
          data={nossaMarcaData}
@@ -2859,6 +2865,29 @@ const getStatusColor = () => {
            }
            setIsPlayingAudio(false);
            setNossaMarcaData(null);
+           setTimeout(async () => {
+             if (isActiveRef.current) {
+               shouldProcessAudio.current = true;
+               await startGoogleSpeech();
+             }
+           }, 500);
+         }}
+         theme={theme}
+       />
+     )}
+
+     {/* Modal Endereço */}
+     {enderecoModalData && (
+       <EnderecoDisplay
+         data={enderecoModalData}
+         onClose={() => {
+           if (currentAudioRef.current) {
+             currentAudioRef.current.pause();
+             currentAudioRef.current.currentTime = 0;
+             currentAudioRef.current = null;
+           }
+           setIsPlayingAudio(false);
+           setEnderecoModalData(null);
            setTimeout(async () => {
              if (isActiveRef.current) {
                shouldProcessAudio.current = true;

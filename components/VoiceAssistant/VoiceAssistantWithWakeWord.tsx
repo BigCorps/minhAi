@@ -1106,7 +1106,43 @@ async function registerFunctionUsage(functionKey: string, creditsConsumed: numbe
   case 'nossa_marca':
     await handleNossaMarcaCommand();
     break;
-            
+
+  case 'endereco': {
+    const supabase = createClient();
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name, business_address')
+      .eq('id', companyId)
+      .single();
+
+    if (!company || !company.business_address) {
+      await playText('O endereço ainda não foi configurado. Por favor, configure no painel administrativo.');
+      break;
+    }
+
+    const isAddress = !company.business_address.startsWith('http') &&
+                      !company.business_address.includes('www.');
+
+    if (!isAddress) {
+      await playText('Esta empresa não possui um endereço físico configurado, apenas um site.');
+      break;
+    }
+
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.business_address)}`;
+
+    setEnderecoModalData({
+      companyName: company.name,
+      address: company.business_address,
+      mapsUrl: mapsUrl,
+      qrContent: mapsUrl,
+    });
+
+    playText(`Estamos localizados em: ${company.business_address}. Você pode copiar o link ou escanear o QR Code para abrir no Google Maps.`).catch(err => {
+      console.error('Erro ao falar:', err);
+    });
+    break;
+  }
+
         // Fallback
         default:
           console.log('⚠️ Função não mapeada:', functionKey);

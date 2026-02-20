@@ -132,7 +132,7 @@ const TOTAL_RECURSO_SLIDES = RECURSO_IMAGE_SLIDES.length; // 4
 // FUNÇÕES - 4 páginas de cards (4 + 3 + 4 + 3 = 14 categorias)
 // ============================================================
 const FUNCAO_PAGES = [
-  // Página 1 — 4 cards
+  // Página 1 — 3 cards
   {
     id: 'funcao-page-1',
     cards: [
@@ -141,59 +141,59 @@ const FUNCAO_PAGES = [
         icon: <QrCode />,
         color: 'blue' as const,
         description:
-          'Conecte seus clientes aos seus canais em segundos. Gere QR Codes personalizados para Redes Sociais, Telefones e Site. Facilite o acesso ao WhatsApp, Instagram, ligações diretas e páginas institucionais, aumentando conversão e engajamento.',
+          'Conecte seus clientes aos seus canais em segundos. Exibe QR Codes personalizados para Redes Sociais, Telefones e Site. Facilite o acesso ao WhatsApp, Instagram, ligações diretas e outras redes sociais, aumentando conversão e engajamento.',
       },
       {
         title: 'Financeiro',
         icon: <CreditCard />,
         color: 'green' as const,
         description:
-          'Cobranças rápidas, seguras e automatizadas. Gere Pix dinâmico, Link de Pagamento e aceite Débito NFC e Crédito NFC diretamente pelo assistente. Simplifique o processo de cobrança e aumente a taxa de pagamento imediato.',
+          'Cobranças rápidas, seguras e automatizadas. Geração de Pix, Débito e Crédito via NFC e Link de Pagamento diretamente pelo assistente com confirmação automática. Simplifique o processo de cobrança e aumente a taxa de pagamento imediato.',
       },
       {
         title: 'Multimídia',
         icon: <Play />,
         color: 'blue' as const,
         description:
-          'Experiência interativa e envolvente. Toque Vídeos, Tutoriais, Publicidades, Playlists, Modo Sequência e Música sob comando. Ideal para totens, recepções, lojas, academias e ambientes corporativos.',
+          'Experiência interativa e envolvente. Vídeos, Tutoriais, Publicidades, Playlists, Modo Sequência e Música sob comando. Ideal para totens, recepções, lojas, academias e ambientes corporativos.',
       },
+    ],
+  },
+  // Página 2 — 4 cards
+  {
+    id: 'funcao-page-2',
+    cards: [
       {
         title: 'Informação',
         icon: <Radio />,
         color: 'green' as const,
         description:
-          'Informações atualizadas em tempo real. Apresente dados sobre seu Sistema, sua Marca, Notícias, Feriados Nacionais e Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
+          'Informações atualizadas em tempo real. Apresenta dados sobre o Sistema eAi, sua Marca, Notícias, Feriados Nacionais e tambêm Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
       },
-    ],
-  },
-  // Página 2 — 3 cards
-  {
-    id: 'funcao-page-2',
-    cards: [
       {
         title: 'Consultas',
         icon: <Search />,
         color: 'blue' as const,
         description:
-          'Verificações rápidas e confiáveis. Consulte Dados de CNPJ, CPF, Placa de Veículo, Leilões, Restrições de CPF e CNPJ. Ferramenta ideal para empresas que precisam validar informações antes de fechar negócios.',
+          'Verificações rápidas e confiáveis. Consulta a Dados de CNPJ, CPF, Placa de Veículo, Leilões, Restrições de CPF e CNPJ. Ferramenta ideal para empresas que precisam validar informações antes de fechar negócios.',
       },
       {
         title: 'Localização',
         icon: <MapPin />,
         color: 'green' as const,
         description:
-          'Geolocalização inteligente e precisa. Ver Endereço, Buscar CEP, Traçar Rota, verificar Trânsito em tempo real e Consultar DDD. Facilite deslocamentos e atendimento logístico.',
+          'Geolocalização inteligente e precisa. Mostra o Endereço, Busca CEPs, Traça Rota, verifica Trânsito em tempo real e Consulta DDD. Facilite deslocamentos e atendimento logístico.',
       },
       {
         title: 'Agendamento',
         icon: <CalendarDays />,
         color: 'blue' as const,
         description:
-          'Organização automatizada e eficiente. Marcar Evento, Ver Agenda, Confirmar Presença, Reagendar compromissos e até Enviar ou Ler E-mails. Reduza faltas e melhore a gestão do tempo.',
+          'Organização automatizada e eficiente. Marcação de Eventos, Consultas, Mostra Agenda e Calendário, Confirma Presença, Reagenda compromissos e até Envia e lê E-mails. Reduza faltas e melhore a gestão do tempo.',
       },
     ],
   },
-  // Página 3 — 4 cards
+  // Página 3 — 3 cards
   {
     id: 'funcao-page-3',
     cards: [
@@ -202,14 +202,14 @@ const FUNCAO_PAGES = [
         icon: <Brain />,
         color: 'green' as const,
         description:
-          'Inteligência avançada ao seu alcance. Utilize ChatGPT, gere Orçamentos, Perguntas e Respostas inteligentes, Traduza Texto, Transcreva Áudio e consulte a Previsão do Tempo. Um verdadeiro centro de inteligência operacional.',
+          'Inteligência avançada ao seu alcance. Responde perguntas gerais, gera Orçamentos, Perguntas e Respostas inteligentes, Tradução, Transcrição de Áudio e consulta a Previsão do Tempo. Um verdadeiro centro de inteligência operacional.',
       },
       {
         title: 'Utilitários',
         icon: <Wrench />,
         color: 'blue' as const,
         description:
-          'Ferramentas práticas para o dia a dia. Controle Aparelhos Smart, Crie Lembretes, use Cronômetro, Temporizador e Relógio Mundial. Recursos simples que aumentam produtividade e organização.',
+          'Ferramentas práticas para o dia a dia. Controla Aparelhos Smart, Cria Lembretes, Cronômetro, Temporizador e Relógio Mundial. Recursos simples que aumentam produtividade e organização.',
       },
       {
         title: 'Identificação',
@@ -218,39 +218,39 @@ const FUNCAO_PAGES = [
         description:
           'Controle e segurança automatizados. Reconhecimento Facial, Registro de Ponto, Fila de Atendimento, Geração de Senha e Cadastro de Cliente. Ideal para empresas que precisam organizar fluxo e validar acessos.',
       },
+    ],
+  },
+  // Página 4 — 4 cards
+  {
+    id: 'funcao-page-4',
+    cards: [
       {
         title: 'Arquivos',
         icon: <FolderOpen />,
         color: 'blue' as const,
         description:
-          'Edição e conversão de documentos com IA. Remover Fundo, Duplicar Imagem, Editar Imagem e Converter Arquivos automaticamente. Agilidade para marketing, administrativo e operacional.',
+          'Edição e conversão de documentos com IA. Remover Fundo, Duplicar Imagem, Editar Imagem e Converção de Arquivos automaticamente. Agilidade para marketing, administrativo e operacional.',
       },
-    ],
-  },
-  // Página 4 — 3 cards
-  {
-    id: 'funcao-page-4',
-    cards: [
       {
         title: 'Serviços',
         icon: <ConciergeBell />,
         color: 'green' as const,
         description:
-          'Soluções operacionais completas. Imprimir documentos, exibir Tabela de Preços, Cardápio (Menu), Emitir Recibo e Chamar Suporte via WhatsApp. Facilite o atendimento presencial e digital.',
+          'Soluções operacionais completas. Auxilia os clientes a Imprimir documentos, exibe Tabela de Preços, Cardápio (Menu), Emite Recibos e Chamado ao Suporte agilizado. Facilite o atendimento presencial e digital.',
       },
       {
         title: 'Comercial',
         icon: <ShoppingCart />,
         color: 'blue' as const,
         description:
-          'Aumente suas vendas com inteligência. Recomendar Produto, Cadastrar Produto, exibir Avaliações, operar Totem de Vendas, Responder Pesquisa e Consultar Estoque. Transforme o assistente em um vendedor digital ativo 24h.',
+          'Aumente suas vendas com inteligência. Recomenda e Cadastra Produtos, gera Avaliações, com modo Totem de Vendas, Resposta de Pesquisas e Consulta ao Estoque. Transforme o assistente em um vendedor digital ativo 24h.',
       },
       {
         title: 'Câmera',
         icon: <Camera />,
         color: 'green' as const,
         description:
-          'Leitura e validação instantânea. Ler QR Code, Ler Código de Barras, Enviar Arquivo, Gerar QR Code, Validar Cupom e Verificar Acesso. Ideal para controle de entradas, promoções e operações rápidas.',
+          'Leitura e validação instantânea. Leitura de QR Codes e Código de Barras, Envia Arquivos, Validação de Cupom e Verificação de Acesso. Ideal para controle de entradas, promoções e operações rápidas.',
       },
     ],
   },

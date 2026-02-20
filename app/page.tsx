@@ -6,6 +6,22 @@ import InicioSection from '@/components/landing/InicioSection';
 import RecursoImageSlide from '@/components/landing/RecursoImageSlide';
 import RecursoCardsSlide from '@/components/landing/RecursoCardsSlide';
 import FuncaoCardsSlide from '@/components/landing/FuncaoCardsSlide';
+import {
+  QrCode,
+  CreditCard,
+  Play,
+  Radio,
+  Search,
+  MapPin,
+  CalendarDays,
+  Brain,
+  Wrench,
+  BadgeCheck,
+  FolderOpen,
+  ConciergeBell,
+  ShoppingCart,
+  Camera,
+} from 'lucide-react';
 import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';
 
@@ -122,28 +138,28 @@ const FUNCAO_PAGES = [
     cards: [
       {
         title: 'Contatos',
-        icon: '📲',
+        icon: <QrCode />,
         color: 'blue' as const,
         description:
           'Conecte seus clientes aos seus canais em segundos. Gere QR Codes personalizados para Redes Sociais, Telefones e Site. Facilite o acesso ao WhatsApp, Instagram, ligações diretas e páginas institucionais, aumentando conversão e engajamento.',
       },
       {
         title: 'Financeiro',
-        icon: '💳',
+        icon: <CreditCard />,
         color: 'green' as const,
         description:
           'Cobranças rápidas, seguras e automatizadas. Gere Pix dinâmico, Link de Pagamento e aceite Débito NFC e Crédito NFC diretamente pelo assistente. Simplifique o processo de cobrança e aumente a taxa de pagamento imediato.',
       },
       {
         title: 'Multimídia',
-        icon: '🎬',
+        icon: <Play />,
         color: 'blue' as const,
         description:
           'Experiência interativa e envolvente. Toque Vídeos, Tutoriais, Publicidades, Playlists, Modo Sequência e Música sob comando. Ideal para totens, recepções, lojas, academias e ambientes corporativos.',
       },
       {
         title: 'Informação',
-        icon: '📡',
+        icon: <Radio />,
         color: 'green' as const,
         description:
           'Informações atualizadas em tempo real. Apresente dados sobre seu Sistema, sua Marca, Notícias, Feriados Nacionais e Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
@@ -156,21 +172,21 @@ const FUNCAO_PAGES = [
     cards: [
       {
         title: 'Consultas',
-        icon: '🔍',
+        icon: <Search />,
         color: 'blue' as const,
         description:
           'Verificações rápidas e confiáveis. Consulte Dados de CNPJ, CPF, Placa de Veículo, Leilões, Restrições de CPF e CNPJ. Ferramenta ideal para empresas que precisam validar informações antes de fechar negócios.',
       },
       {
         title: 'Localização',
-        icon: '🗺️',
+        icon: <MapPin />,
         color: 'green' as const,
         description:
           'Geolocalização inteligente e precisa. Ver Endereço, Buscar CEP, Traçar Rota, verificar Trânsito em tempo real e Consultar DDD. Facilite deslocamentos e atendimento logístico.',
       },
       {
         title: 'Agendamento',
-        icon: '📅',
+        icon: <CalendarDays />,
         color: 'blue' as const,
         description:
           'Organização automatizada e eficiente. Marcar Evento, Ver Agenda, Confirmar Presença, Reagendar compromissos e até Enviar ou Ler E-mails. Reduza faltas e melhore a gestão do tempo.',
@@ -183,28 +199,28 @@ const FUNCAO_PAGES = [
     cards: [
       {
         title: 'Conhecimento',
-        icon: '🧠',
+        icon: <Brain />,
         color: 'green' as const,
         description:
           'Inteligência avançada ao seu alcance. Utilize ChatGPT, gere Orçamentos, Perguntas e Respostas inteligentes, Traduza Texto, Transcreva Áudio e consulte a Previsão do Tempo. Um verdadeiro centro de inteligência operacional.',
       },
       {
         title: 'Utilitários',
-        icon: '⚙️',
+        icon: <Wrench />,
         color: 'blue' as const,
         description:
           'Ferramentas práticas para o dia a dia. Controle Aparelhos Smart, Crie Lembretes, use Cronômetro, Temporizador e Relógio Mundial. Recursos simples que aumentam produtividade e organização.',
       },
       {
         title: 'Identificação',
-        icon: '🪪',
+        icon: <BadgeCheck />,
         color: 'green' as const,
         description:
           'Controle e segurança automatizados. Reconhecimento Facial, Registro de Ponto, Fila de Atendimento, Geração de Senha e Cadastro de Cliente. Ideal para empresas que precisam organizar fluxo e validar acessos.',
       },
       {
         title: 'Arquivos',
-        icon: '🗂️',
+        icon: <FolderOpen />,
         color: 'blue' as const,
         description:
           'Edição e conversão de documentos com IA. Remover Fundo, Duplicar Imagem, Editar Imagem e Converter Arquivos automaticamente. Agilidade para marketing, administrativo e operacional.',
@@ -217,21 +233,21 @@ const FUNCAO_PAGES = [
     cards: [
       {
         title: 'Serviços',
-        icon: '🛎️',
+        icon: <ConciergeBell />,
         color: 'green' as const,
         description:
           'Soluções operacionais completas. Imprimir documentos, exibir Tabela de Preços, Cardápio (Menu), Emitir Recibo e Chamar Suporte via WhatsApp. Facilite o atendimento presencial e digital.',
       },
       {
         title: 'Comercial',
-        icon: '🛒',
+        icon: <ShoppingCart />,
         color: 'blue' as const,
         description:
           'Aumente suas vendas com inteligência. Recomendar Produto, Cadastrar Produto, exibir Avaliações, operar Totem de Vendas, Responder Pesquisa e Consultar Estoque. Transforme o assistente em um vendedor digital ativo 24h.',
       },
       {
         title: 'Câmera',
-        icon: '📷',
+        icon: <Camera />,
         color: 'green' as const,
         description:
           'Leitura e validação instantânea. Ler QR Code, Ler Código de Barras, Enviar Arquivo, Gerar QR Code, Validar Cupom e Verificar Acesso. Ideal para controle de entradas, promoções e operações rápidas.',

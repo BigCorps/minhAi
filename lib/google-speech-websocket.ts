@@ -9,7 +9,6 @@ export interface GoogleSpeechConfig {
   onReady?: () => void;
   onStatusChange?: (status: 'idle' | 'recording' | 'processing') => void;
   onVolumeChange?: (rms: number) => void; // ✅ NOVO: expõe nível de ruído ao componente pai
-  speechContexts?: Array<{ phrases: string[]; boost: number }>; // hints dinâmicos das funções ativas
   languageCode?: string;
   sampleRate?: number;
 
@@ -48,7 +47,6 @@ export class GoogleSpeechWebSocket {
       sampleRate: config.sampleRate || 16000,
       volumeThreshold: config.volumeThreshold ?? 0.015,
       silenceThreshold: config.silenceThreshold ?? 120,
-      speechContexts: config.speechContexts ?? [],
     };
 
     // ✅ Fixar os thresholds na instância (imutáveis após construção, como antes)
@@ -74,7 +72,6 @@ export class GoogleSpeechWebSocket {
             config: {
               languageCode: this.config.languageCode,
               sampleRate: this.config.sampleRate,
-              speechContexts: this.config.speechContexts,
             }
           }));
         };

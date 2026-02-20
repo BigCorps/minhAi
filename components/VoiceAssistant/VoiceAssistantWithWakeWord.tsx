@@ -120,6 +120,8 @@ const [qrCodeData, setQrCodeData] = useState<{
   const isMobile = useIsMobile();
   const [noiseWarning, setNoiseWarning] = useState(false);
   const noiseWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [repromptWarning, setRepromptWarning] = useState(false);
+  const repromptWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * Recebe o RMS do microfone a cada chunk de áudio (~256ms).
@@ -876,6 +878,13 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
       } else {
         // Chamou + fragmento muito curto → pedir para completar (sem crédito)
         console.log(`⚠️ Comando rejeitado — muito curto: "${command}" (${commandWords.length} palavra(s) válida(s), mínimo: ${MIN_COMMAND_WORDS})`);
+        // Exibir aviso visual por 5s
+        setRepromptWarning(true);
+        if (repromptWarningTimerRef.current) clearTimeout(repromptWarningTimerRef.current);
+        repromptWarningTimerRef.current = setTimeout(() => {
+          setRepromptWarning(false);
+          repromptWarningTimerRef.current = null;
+        }, 5000);
         playText('Pode completar sua pergunta?').finally(() => {
           processingQuestion.current = false;
           setTimeout(async () => {
@@ -2669,15 +2678,23 @@ const getStatusColor = () => {
           )}
         </div>
 
-        {/* ✅ AVISO DE RUÍDO AMBIENTE */}
+        {/* AVISOS DE VOZ */}
         {noiseWarning && (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+          <div className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
             theme === 'dark'
-              ? 'bg-orange-500/20 border border-orange-500/40 text-orange-300'
-              : 'bg-orange-50 border border-orange-200 text-orange-700'
+              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+              : 'bg-blue-50 border border-blue-200 text-blue-700'
           }`}>
-            <span>🔊</span>
-            <span>Ambiente ruidoso — fale mais perto do microfone</span>
+            Ambiente ruidoso — fale mais perto do microfone
+          </div>
+        )}
+        {repromptWarning && (
+          <div className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+            theme === 'dark'
+              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+              : 'bg-blue-50 border border-blue-200 text-blue-700'
+          }`}>
+            Não consegui entender — pode repetir a pergunta?
           </div>
         )}
 
@@ -2764,15 +2781,23 @@ const getStatusColor = () => {
               </div>
             )}
 
-            {/* ✅ AVISO DE RUÍDO AMBIENTE */}
+            {/* AVISOS DE VOZ */}
             {noiseWarning && (
-              <div className={`w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${
+              <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium ${
                 theme === 'dark'
-                  ? 'bg-orange-500/20 border border-orange-500/40 text-orange-300'
-                  : 'bg-orange-50 border border-orange-200 text-orange-700'
+                  ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+                  : 'bg-blue-50 border border-blue-200 text-blue-700'
               }`}>
-                <span>🔊</span>
-                <span>Ambiente ruidoso — fale mais perto do microfone</span>
+                Ambiente ruidoso — fale mais perto do microfone
+              </div>
+            )}
+            {repromptWarning && (
+              <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium ${
+                theme === 'dark'
+                  ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+                  : 'bg-blue-50 border border-blue-200 text-blue-700'
+              }`}>
+                Não consegui entender — pode repetir a pergunta?
               </div>
             )}
 

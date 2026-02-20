@@ -3,18 +3,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
-import RecursoSlide from '@/components/landing/RecursosSection';
+import RecursoImageSlide from '@/components/landing/RecursoImageSlide';
+import RecursoCardsSlide from '@/components/landing/RecursoCardsSlide';
 import FuncaoSlide from '@/components/landing/FuncaoSlide';
 import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';
 
 // ============================================================
-// REGISTRY DE RECURSOS
-// Cada recurso vira uma tela no scroll horizontal.
+// RECURSOS - 4 páginas:
+// 1) Dispositivos (imagem + texto)
+// 2) API/Conexões (imagem + texto)
+// 3) Vantagens (imagem + texto)
+// 4) Cards de recursos (4 cards)
 // ============================================================
-const RECURSOS = [
+const RECURSO_CARDS = [
   {
-    id: 'recurso-custo-baixo',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -27,7 +30,6 @@ const RECURSOS = [
     color: 'green' as const,
   },
   {
-    id: 'recurso-customizavel',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -40,7 +42,6 @@ const RECURSOS = [
     color: 'blue' as const,
   },
   {
-    id: 'recurso-rapido',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -53,7 +54,6 @@ const RECURSOS = [
     color: 'green' as const,
   },
   {
-    id: 'recurso-24h',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -67,10 +67,53 @@ const RECURSOS = [
   },
 ];
 
+// Slides de recursos com imagem (páginas 1, 2, 3)
+const RECURSO_IMAGE_SLIDES = [
+  {
+    id: 'recurso-dispositivos',
+    label: 'Compatibilidade',
+    title: 'Roda em Qualquer Dispositivo',
+    description:
+      'Celulares, computadores, notebooks, TVs, totens, PDVs — qualquer aparelho com um navegador web e uma tela já é suficiente para rodar o seu funcionário IA. Sem instalações, sem hardware especial, sem limites de plataforma.',
+    imageSrc: '/dispositivos.png',
+    imageAlt: 'Dispositivos compatíveis com o eAi',
+    color: 'blue' as const,
+  },
+  {
+    id: 'recurso-api',
+    label: 'Integrações',
+    title: 'Conexões e Serviços Profissionais',
+    description:
+      'Utilizamos as melhores plataformas do mercado — Google, Meta, AWS, OpenAI, Pix, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
+    imageSrc: '/api.png',
+    imageAlt: 'Integrações e APIs do eAi',
+    color: 'green' as const,
+  },
+  {
+    id: 'recurso-vantagens',
+    label: 'Vantagens',
+    title: 'Maior Eficiência Operacional',
+    description:
+      'O assistente automatiza tarefas repetitivas e responde imediatamente às solicitações, liberando a equipe para atividades estratégicas. Com tecnologia de ponta em constante evolução, não há interrupções nem gargalos no atendimento — acelerando processos internos, aumentando a produtividade e auxiliando funcionários ou clientes com a maior efetividade.',
+    imageSrc: '/vantagens.png',
+    imageAlt: 'Vantagens do eAi',
+    color: 'blue' as const,
+  },
+  {
+    id: 'recurso-cards',
+    label: null, // cards slide, no label needed here
+    title: null,
+    description: null,
+    imageSrc: null,
+    imageAlt: null,
+    color: 'blue' as const,
+  },
+];
+
+const TOTAL_RECURSO_SLIDES = RECURSO_IMAGE_SLIDES.length; // 4
+
 // ============================================================
 // REGISTRY DE FUNÇÕES
-// Para adicionar novas funções, basta adicionar um objeto aqui.
-// Cada função vira automaticamente uma tela no scroll horizontal.
 // ============================================================
 const FUNCOES = [
   {
@@ -122,28 +165,21 @@ const FUNCOES = [
     description: 'Conecte seus clientes às suas redes sociais instantaneamente. O assistente gera QR Codes para WhatsApp e Instagram na hora.',
     color: 'green' as const,
   },
-  // ============================================================
-  // PARA ADICIONAR NOVAS FUNÇÕES: copie o bloco acima e preencha.
-  // A nova função aparece automaticamente como tela no scroll.
-  // Alterne color entre 'blue' e 'green'.
-  // ============================================================
 ];
 
 // ============================================================
-// IDs DE TODAS AS SEÇÕES (gerado dinamicamente)
+// IDs DE TODAS AS SEÇÕES
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
-  ...RECURSOS.map((r) => r.id),
+  ...RECURSO_IMAGE_SLIDES.map((r) => r.id),
   ...FUNCOES.map((f) => f.id),
   'precos',
   'contato',
 ];
 
-// Seções do header (5 itens fixos)
 const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
 
-// Mapeia ID da seção → qual nav item destacar no header
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
   if (sectionId.startsWith('recurso-')) return 'recursos';
@@ -160,20 +196,16 @@ export default function LandingPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const isScrollingRef = useRef(false);
 
-  // Qual nav item está ativo (agrupa funções sob "funcoes")
   const activeNavItem = getSectionNavGroup(activeSectionId);
 
-  // Detecta preferência de tema
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: light)');
     if (mq.matches) setTheme('light');
   }, []);
 
-  // IntersectionObserver
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -184,16 +216,18 @@ export default function LandingPage() {
       },
       { root: container, threshold: 0.5 }
     );
-
     const sections = container.querySelectorAll('section[id]');
     sections.forEach((s) => observer.observe(s));
     return () => sections.forEach((s) => observer.unobserve(s));
   }, []);
 
-  // Scroll para seção por ID
   const scrollToSection = useCallback((id: string) => {
-    // Se o header clica em "funcoes", vai para a primeira função
-    const targetId = id === 'funcoes' ? FUNCOES[0].id : id === 'recursos' ? RECURSOS[0].id : id;
+    const targetId =
+      id === 'funcoes'
+        ? FUNCOES[0].id
+        : id === 'recursos'
+        ? RECURSO_IMAGE_SLIDES[0].id
+        : id;
     const section = document.getElementById(targetId);
     if (section && scrollContainerRef.current) {
       isScrollingRef.current = true;
@@ -202,7 +236,6 @@ export default function LandingPage() {
     }
   }, []);
 
-  // Navegar próxima/anterior (usa ALL_SECTION_IDS que inclui cada função)
   const navigateNext = useCallback(() => {
     const i = ALL_SECTION_IDS.indexOf(activeSectionId);
     if (i < ALL_SECTION_IDS.length - 1) scrollToSection(ALL_SECTION_IDS[i + 1]);
@@ -213,13 +246,11 @@ export default function LandingPage() {
     if (i > 0) scrollToSection(ALL_SECTION_IDS[i - 1]);
   }, [activeSectionId, scrollToSection]);
 
-  // Scroll vertical → horizontal
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
     let wheelTimeout: NodeJS.Timeout;
     let canScroll = true;
-
     const handleWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
       e.preventDefault();
@@ -230,12 +261,10 @@ export default function LandingPage() {
       else navigatePrev();
       wheelTimeout = setTimeout(() => { canScroll = true; }, 1000);
     };
-
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => { container.removeEventListener('wheel', handleWheel); clearTimeout(wheelTimeout); };
   }, [navigateNext, navigatePrev]);
 
-  // Teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') { e.preventDefault(); navigateNext(); }
@@ -251,12 +280,14 @@ export default function LandingPage() {
   const canGoLeft = currentAllIndex > 0;
   const canGoRight = currentAllIndex < ALL_SECTION_IDS.length - 1;
 
+  // Compute which recurso slide index we're on
+  const activeRecursoIndex = RECURSO_IMAGE_SLIDES.findIndex((r) => r.id === activeSectionId);
+
   return (
     <div className={`relative h-screen w-screen overflow-hidden transition-colors duration-500 ${
       isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
     }`}>
 
-      {/* Header (usa activeNavItem que agrupa funções) */}
       <Header
         activeSection={activeNavItem}
         onNavigate={scrollToSection}
@@ -264,7 +295,6 @@ export default function LandingPage() {
         onToggleTheme={toggleTheme}
       />
 
-      {/* Container Horizontal */}
       <main
         ref={scrollContainerRef}
         className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
@@ -277,28 +307,42 @@ export default function LandingPage() {
           <InicioSection theme={theme} />
         </section>
 
-        {/* RECURSOS (cada um é uma tela cheia) */}
-        {RECURSOS.map((recurso, index) => (
+        {/* RECURSOS - Páginas 1, 2, 3: imagem + texto */}
+        {RECURSO_IMAGE_SLIDES.slice(0, 3).map((slide, index) => (
           <section
-            key={recurso.id}
-            id={recurso.id}
+            key={slide.id}
+            id={slide.id}
             className="w-screen h-screen flex-shrink-0 snap-start snap-always"
           >
-            <RecursoSlide
+            <RecursoImageSlide
               theme={theme}
-              icon={recurso.icon}
-              title={recurso.title}
-              highlight={recurso.highlight}
-              highlightLabel={recurso.highlightLabel}
-              description={recurso.description}
-              color={recurso.color}
+              label={slide.label!}
+              title={slide.title!}
+              description={slide.description!}
+              imageSrc={slide.imageSrc!}
+              imageAlt={slide.imageAlt!}
+              color={slide.color}
               currentIndex={index}
-              totalCount={RECURSOS.length}
+              totalCount={TOTAL_RECURSO_SLIDES}
+              nextHint={index < TOTAL_RECURSO_SLIDES - 2 ? 'Role para ver mais →' : 'Role para ver nossos recursos →'}
             />
           </section>
         ))}
 
-        {/* FUNÇÕES (cada uma é uma tela cheia) */}
+        {/* RECURSOS - Página 4: 4 cards */}
+        <section
+          id="recurso-cards"
+          className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+        >
+          <RecursoCardsSlide
+            theme={theme}
+            recursos={RECURSO_CARDS}
+            currentIndex={3}
+            totalCount={TOTAL_RECURSO_SLIDES}
+          />
+        </section>
+
+        {/* FUNÇÕES */}
         {FUNCOES.map((funcao, index) => (
           <section
             key={funcao.id}
@@ -359,7 +403,7 @@ export default function LandingPage() {
         </svg>
       </button>
 
-      {/* INDICADOR DE PROGRESSO (5 pontos, funções agrupadas) */}
+      {/* INDICADOR DE PROGRESSO */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
         {NAV_SECTIONS.map((navId) => {
           const isActive = activeNavItem === navId;

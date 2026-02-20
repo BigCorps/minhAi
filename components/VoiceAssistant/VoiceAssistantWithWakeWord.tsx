@@ -2678,25 +2678,20 @@ const getStatusColor = () => {
           )}
         </div>
 
-        {/* AVISOS DE VOZ */}
-        {noiseWarning && (
-          <div className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-            theme === 'dark'
-              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-              : 'bg-blue-50 border border-blue-200 text-blue-700'
-          }`}>
-            Ambiente ruidoso — fale mais perto do microfone
-          </div>
-        )}
-        {repromptWarning && (
-          <div className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-            theme === 'dark'
-              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-              : 'bg-blue-50 border border-blue-200 text-blue-700'
-          }`}>
-            Não consegui entender — pode repetir a pergunta?
-          </div>
-        )}
+        {/* AVISO DE VOZ — um de cada vez, reprompt tem prioridade */}
+        <div className="min-h-[2.5rem] flex items-center justify-center w-full max-w-sm px-4">
+          {(repromptWarning || noiseWarning) && (
+            <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
+              theme === 'dark'
+                ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+                : 'bg-blue-50 border border-blue-200 text-blue-700'
+            }`}>
+              {repromptWarning
+                ? 'Não consegui entender — pode repetir a pergunta?'
+                : 'Ambiente ruidoso — fale mais perto do microfone'}
+            </div>
+          )}
+        </div>
 
         {showStartButton && permissionGranted && (
           <button
@@ -2781,26 +2776,6 @@ const getStatusColor = () => {
               </div>
             )}
 
-            {/* AVISOS DE VOZ */}
-            {noiseWarning && (
-              <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium ${
-                theme === 'dark'
-                  ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-                  : 'bg-blue-50 border border-blue-200 text-blue-700'
-              }`}>
-                Ambiente ruidoso — fale mais perto do microfone
-              </div>
-            )}
-            {repromptWarning && (
-              <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium ${
-                theme === 'dark'
-                  ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-                  : 'bg-blue-50 border border-blue-200 text-blue-700'
-              }`}>
-                Não consegui entender — pode repetir a pergunta?
-              </div>
-            )}
-
             {showStartButton && permissionGranted && (
               <button
                 onClick={handleStart}
@@ -2811,13 +2786,27 @@ const getStatusColor = () => {
             )}
             
             {!showStartButton && (
-              <div className="w-full mt-auto">
+              <div className="w-full mt-auto flex flex-col gap-2">
                 <TextInputChat
                   onSendMessage={handleTextMessage}
                   isProcessing={isProcessing || isPlayingAudio}
                   theme={theme}
                   disabled={false}
                 />
+                {/* AVISO DE VOZ — abaixo da caixa, um de cada vez, reprompt tem prioridade */}
+                <div className="min-h-[2rem]">
+                  {(repromptWarning || noiseWarning) && (
+                    <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
+                      theme === 'dark'
+                        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+                        : 'bg-blue-50 border border-blue-200 text-blue-700'
+                    }`}>
+                      {repromptWarning
+                        ? 'Não consegui entender — pode repetir a pergunta?'
+                        : 'Ambiente ruidoso — fale mais perto do microfone'}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

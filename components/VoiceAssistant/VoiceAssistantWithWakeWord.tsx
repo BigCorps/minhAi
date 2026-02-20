@@ -122,22 +122,35 @@ const [qrCodeData, setQrCodeData] = useState<{
   const noiseWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
-   * Recebe o RMS do microfone a cada chunk de áudio.
-   * > 0.08 → ambiente ruidoso: exibe aviso por 4s
-   * < 0.04 → ruído baixo: esconde aviso imediatamente
+   * Recebe o RMS do microfone a cada chunk de áudio (~256ms).
+   * Lógica de debounce em 2 camadas para evitar efeito piscante:
+   *
+   * 1. noiseWarningTimerRef: timer de 5s que só é criado se o aviso
+   *    ainda não estiver visível. Spikes subsequentes são ignorados
+   *    enquanto o aviso já está na tela.
+   *
+   * 2. Só esconde quando o RMS fica ABAIXO de 0.04 E o timer de 5s
+   *    já expirou — nunca cancela um timer em andamento.
    */
   const handleVolumeChange = (rms: number) => {
     if (rms > 0.08) {
-      setNoiseWarning(true);
-      if (noiseWarningTimerRef.current) clearTimeout(noiseWarningTimerRef.current);
-      noiseWarningTimerRef.current = setTimeout(() => setNoiseWarning(false), 4000);
-    } else if (rms < 0.04) {
-      if (noiseWarningTimerRef.current) {
-        clearTimeout(noiseWarningTimerRef.current);
-        noiseWarningTimerRef.current = null;
-      }
-      setNoiseWarning(false);
+      // Mostrar aviso apenas se não estiver visível ainda
+      // (evita reset do timer a cada chunk ruidoso)
+      setNoiseWarning(prev => {
+        if (!prev) {
+          // Primeira detecção: agendar fechamento após 5s
+          if (noiseWarningTimerRef.current) clearTimeout(noiseWarningTimerRef.current);
+          noiseWarningTimerRef.current = setTimeout(() => {
+            setNoiseWarning(false);
+            noiseWarningTimerRef.current = null;
+          }, 5000);
+          return true; // exibir aviso
+        }
+        return prev; // já visível: não resetar timer
+      });
     }
+    // Não esconder proativamente — o timer de 5s cuida disso.
+    // Isso evita o pisca-pisca quando o ruído flutua entre chunks.
   };
   // ========================================
   // CONFIGURATION

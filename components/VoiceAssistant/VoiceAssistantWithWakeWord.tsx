@@ -110,9 +110,6 @@ const [qrCodeData, setQrCodeData] = useState<{
   const audioUnlocked = useRef<boolean>(false);
   const wakeWordDetectorRef = useRef<WakeWordDetector | null>(null);
   const processingQuestion = useRef<boolean>(false);
-  // Cache dos speechContexts dinâmicos — populado no fetch de funções,
-  // consumido a cada startGoogleSpeech() sem queries extras
-  const speechContextsRef = useRef<Array<{ phrases: string[]; boost: number }>>([]);
   const conversationIdRef = useRef<string | null>(null);
   
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
@@ -280,7 +277,6 @@ const [qrCodeData, setQrCodeData] = useState<{
             function_key,
             save_to_history,
             credits_per_use,
-            voice_triggers,
             company_function_settings!inner(
               is_enabled,
               custom_credits_per_use
@@ -316,31 +312,17 @@ const [qrCodeData, setQrCodeData] = useState<{
 
         // Monta mapa com custom_credits_per_use da empresa tendo prioridade
         const settings: Record<string, any> = {};
-        const dynamicContexts: Array<{ phrases: string[]; boost: number }> = [];
-
         data.forEach(f => {
           const companySetting = f.company_function_settings?.[0];
-          const isEnabled = companySetting?.is_enabled ?? true;
-
-          // Montar speechContexts apenas para funções habilitadas com voice_triggers
-          if (isEnabled && f.voice_triggers && Array.isArray(f.voice_triggers) && f.voice_triggers.length > 0) {
-            dynamicContexts.push({
-              phrases: f.voice_triggers as string[],
-              boost: 18.0, // Alto — esses são os gatilhos exatos da empresa
-            });
-          }
-
           settings[f.function_key] = {
             saveToHistory: f.save_to_history,
             creditsPerUse: companySetting?.custom_credits_per_use ?? f.credits_per_use,
-            isEnabled,
+            isEnabled: companySetting?.is_enabled ?? true,
           };
         });
 
-        speechContextsRef.current = dynamicContexts;
         setFunctionSettings(settings);
         console.log('✅ Function settings carregados:', settings);
-        console.log(`🎯 speechContexts dinâmicos: ${dynamicContexts.length} contexto(s) de ${data.length} função(ões)`);
 
       } catch (error) {
         console.error('❌ Erro ao carregar function settings:', error);
@@ -545,8 +527,6 @@ googleSpeechRef.current = new GoogleSpeechWebSocket({
         onVolumeChange: handleVolumeChange,
         // ✅ NOVO: injeta thresholds adaptativos por dispositivo
         ...vadConfig,
-        // ✅ hints dinâmicos das funções ativas — atualizados a cada fetch
-        speechContexts: speechContextsRef.current,
       });
       
       await googleSpeechRef.current.connect();

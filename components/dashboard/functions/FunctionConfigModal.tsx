@@ -117,22 +117,7 @@ const EnderecoForm = ({ settings, onChange }: any) => (
         </p>
       </div>
     )}
-
-    {/* Funcionalidades */}
-    <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800">
-      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-        O que a função "Endereço" oferece:
-      </p>
-      <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
-        <li>✓ Mapa grande do Google Maps (400px)</li>
-        <li>✓ Endereço completo exibido</li>
-        <li>✓ Botão para copiar link do Maps</li>
-        <li>✓ Botão para abrir direto no Maps</li>
-        <li>✓ QR Code para escanear no celular</li>
-        <li>✓ Auto-close após 30 segundos</li>
-      </ul>
-    </div>
-
+ 
     {/* Contador de caracteres */}
     {settings.business_address && (
       <p className="text-xs text-gray-500 dark:text-gray-400 text-right">

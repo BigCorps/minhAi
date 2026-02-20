@@ -797,26 +797,45 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
   
   const lowerText = text.toLowerCase().trim();
-  console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`); // ✅ CORRIGIDO
+  console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
   
   // 1. DETECTAR WAKE WORD PRIMEIRO
   const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
   
-  // 2. Se NÃO detectou wake word, só processamos se for um comando de PARAR 
-  // e o assistente estiver falando no momento (interrupção).
+  // 2. Se NÃO detectou wake word, só processamos se for comando de PARAR
   if (!wakeWordResult?.detected) {
     if ((isPlayingAudio || isSpeaking || isProcessing) && detectStopCommand(lowerText)) {
       console.log('🛑 Interrupção por comando de parada');
       stopEverything();
       return;
     }
-    
-    // Se não é wake word nem interrupção, ignoramos completamente
     return;
   }
   
-  // Se chegou aqui, a wake word foi detectada!
-  console.log(`✅ Wake word detectada: "${wakeWordResult.keyword}"`); // ✅ CORRIGIDO
+  // ================================================================
+  // PRÉ-VALIDAÇÃO — sem consumo de crédito
+  //
+  // GATE 1: Confiança da wake word
+  // Fuzzy matches com confidence < 0.75 são frequentemente falsos
+  // positivos causados por ruído ou pronúncia muito distorcida.
+  // Pedimos que o usuário repita — sem processar, sem gastar crédito.
+  //
+  // Escala de confiança do WakeWordDetector:
+  //   1.00 → match exato
+  //   0.95 → variação fonética conhecida
+  //   0.75–0.94 → fuzzy razoável (aceitar)
+  //   < 0.75 → fuzzy incerto (rejeitar silenciosamente)
+  // ================================================================
+  const WAKE_WORD_MIN_CONFIDENCE = 0.75;
+
+  if (wakeWordResult.confidence < WAKE_WORD_MIN_CONFIDENCE) {
+    console.log(`⚠️ Wake word rejeitada — confiança baixa: ${(wakeWordResult.confidence * 100).toFixed(0)}% (mínimo: ${WAKE_WORD_MIN_CONFIDENCE * 100}%)`);
+    // Não processa, não fala, não gasta crédito.
+    // O usuário naturalmente tentará novamente.
+    return;
+  }
+
+  console.log(`✅ Wake word aceita: "${wakeWordResult.keyword}" (confiança: ${(wakeWordResult.confidence * 100).toFixed(0)}%)`);
   
   // 3. Se estava falando, para para ouvir o novo comando
   if (isPlayingAudio || isSpeaking) {
@@ -826,23 +845,53 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (processingQuestion.current || isProcessing) return;
   if (!isFinal) return; // Aguarda frase completa
   
-  // 4. Extrair e processar o comando
+  // ================================================================
+  // GATE 2: Comando mínimo válido
+  // Após extrair a wake word, verificamos se sobrou conteúdo
+  // suficiente para ser processado. Palavras com <= 2 caracteres
+  // (artigos, preposições, interjeições) são filtradas.
+  //
+  // Exemplos que passam:   "qual o horário" → ["qual", "horário"] ✅
+  // Exemplos que rejeitam: "eai" → [] ❌  |  "oi sim" → ["sim"] ❌
+  //
+  // Neste caso pedimos que complete a pergunta — sem gastar crédito.
+  // ================================================================
   const command = extractCommand(lowerText, wakeWordResult);
-  
+  const commandWords = command.split(' ').filter((w: string) => w.length > 2);
+  const MIN_COMMAND_WORDS = 2;
+
   if (!audioUnlocked.current) unlockAudio();
-  
+
   if (!processingQuestion.current) {
     processingQuestion.current = true;
-    
-    if (!command) {
-      // Apenas chamou o nome, responder saudação
-      const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
-      playText(greeting).finally(() => {
-        processingQuestion.current = false;
-      });
-    } else {
-      processWakeWordQuestion(command);
+
+    if (!command || commandWords.length < MIN_COMMAND_WORDS) {
+      if (!command) {
+        // Só chamou o nome → saudação (comportamento original, sem crédito)
+        console.log('👋 Apenas wake word, respondendo com saudação');
+        const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
+        playText(greeting).finally(() => {
+          processingQuestion.current = false;
+        });
+      } else {
+        // Chamou + fragmento muito curto → pedir para completar (sem crédito)
+        console.log(`⚠️ Comando rejeitado — muito curto: "${command}" (${commandWords.length} palavra(s) válida(s), mínimo: ${MIN_COMMAND_WORDS})`);
+        playText('Pode completar sua pergunta?').finally(() => {
+          processingQuestion.current = false;
+          setTimeout(async () => {
+            if (isActiveRef.current) {
+              shouldProcessAudio.current = true;
+              await startGoogleSpeech();
+            }
+          }, 300);
+        });
+      }
+      return;
     }
+
+    // ✅ Wake word com confiança ≥ 0.75 e comando com ≥ 2 palavras válidas
+    // → processar normalmente e consumir crédito
+    processWakeWordQuestion(command);
   }
 }
   // ========================================

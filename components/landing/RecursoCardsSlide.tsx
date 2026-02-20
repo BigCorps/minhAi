@@ -86,7 +86,7 @@ export default function RecursoCardsSlide({
             style={{ fontFamily: "'Nunito', sans-serif" }}
             className={`text-xl sm:text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
-            Nossos Recursos
+            e não para por aí...
           </h2>
         </div>
 
@@ -97,7 +97,7 @@ export default function RecursoCardsSlide({
             return (
               <div
                 key={i}
-                className={`flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-colors ${s.cardBg} ${s.border}`}
+                className={`flex items-center gap-4 p-4 md:p-5 rounded-2xl border transition-all duration-300 ease-out hover:scale-[1.03] cursor-default ${s.cardBg} ${s.border}`}
               >
                 {/* Icon */}
                 <div className={`flex-shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${s.iconBg}`}>

@@ -583,6 +583,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'chatgpt': ChatGptForm,
   'orcamento': OrcamentoForm,  // ← ADICIONAR
   'faq': FaqForm,
+  'endereco': EnderecoForm, 
   'nossa_marca': NossaMarcaForm,
 };
 

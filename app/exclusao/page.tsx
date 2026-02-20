@@ -357,7 +357,7 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
 
         {/* Footer Buttons */}
         <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/privacy">
+          <Link href="/aviso">
             <button className={`w-full sm:w-auto px-6 py-3 rounded-lg border transition-all font-medium ${
               theme === 'dark'
                 ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'

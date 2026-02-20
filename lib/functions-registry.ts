@@ -212,18 +212,17 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     voiceTriggers: [
       'site',
       'website',
-      'nosso site',
+      'seu site',
       'página',
       'pagina',
-      'endereço',
-      'endereco',
       'url',
     ],
     
     examplePhrases: [
       'Qual o site?',
       'Me passa o site',
-      'Qual o endereço do site?',
+      'Qual o do site?',
+      'Qual o do website?',
       'Mostre o site',
     ],
     

@@ -63,6 +63,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'pix_generate',
   'chatgpt',
   'orcamento',
+  'endereco',
   'faq',
   'nossa_marca'
 ];

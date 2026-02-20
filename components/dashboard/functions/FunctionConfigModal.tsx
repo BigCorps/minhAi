@@ -32,6 +32,116 @@ const WhatsappForm = ({ settings, onChange }: any) => (
   </div>
 );
 
+const EnderecoForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    {/* Informação */}
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+      <p className="text-sm text-blue-900 dark:text-blue-100">
+        <strong>Configuração do Endereço:</strong> Configure o endereço físico da sua empresa. 
+        Ele será exibido em um mapa interativo grande.
+      </p>
+    </div>
+
+    {/* Endereço Físico */}
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Endereço Completo
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Av. Paulista, 1000 - Bela Vista, São Paulo - SP, 01310-100"
+        value={settings.business_address || ''}
+        onChange={e => onChange('business_address', e.target.value)}
+        className="w-full p-3 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+        maxLength={300}
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Digite o endereço completo: rua, número, bairro, cidade e estado. 
+        Quanto mais completo, melhor a precisão no mapa.
+      </p>
+    </div>
+
+    {/* Dicas */}
+    <div className="space-y-2">
+      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-xs text-green-800 dark:text-green-200">
+          ✅ <strong>Bom exemplo:</strong> Av. Paulista, 1000 - Bela Vista, São Paulo - SP, 01310-100
+        </p>
+      </div>
+      
+      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+        <p className="text-xs text-yellow-800 dark:text-yellow-200">
+          ⚠️ <strong>Evite:</strong> Endereços incompletos como apenas "Rua ABC" ou "São Paulo"
+        </p>
+      </div>
+    </div>
+
+    {/* Preview Endereço */}
+    {settings.business_address && (
+      <div>
+        <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
+          Preview do Endereço:
+        </label>
+        <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">📍</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                {settings.business_address}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Este endereço será exibido em um mapa grande do Google Maps
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Preview Google Maps Link */}
+    {settings.business_address && (
+      <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+        <p className="text-xs text-red-800 dark:text-red-200 mb-2">
+          <strong>Link do Google Maps:</strong>
+        </p>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.business_address)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-blue-600 dark:text-blue-400 underline break-all hover:text-blue-800 dark:hover:text-blue-300"
+        >
+          {`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.business_address)}`}
+        </a>
+        <p className="text-xs text-red-700 dark:text-red-300 mt-2">
+          Clique no link acima para testar se o endereço está correto no Google Maps
+        </p>
+      </div>
+    )}
+
+    {/* Funcionalidades */}
+    <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800">
+      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+        O que a função "Endereço" oferece:
+      </p>
+      <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+        <li>✓ Mapa grande do Google Maps (400px)</li>
+        <li>✓ Endereço completo exibido</li>
+        <li>✓ Botão para copiar link do Maps</li>
+        <li>✓ Botão para abrir direto no Maps</li>
+        <li>✓ QR Code para escanear no celular</li>
+        <li>✓ Auto-close após 30 segundos</li>
+      </ul>
+    </div>
+
+    {/* Contador de caracteres */}
+    {settings.business_address && (
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-right">
+        {settings.business_address.length}/300 caracteres
+      </p>
+    )}
+  </div>
+);
+
 const InstagramForm = ({ settings, onChange }: any) => (
   <div>
     <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">

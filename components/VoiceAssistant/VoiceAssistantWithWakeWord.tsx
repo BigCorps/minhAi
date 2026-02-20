@@ -9,6 +9,7 @@ import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import { createClient } from '@/lib/supabase-browser';
 import TextInputChat from './TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { FUNCTIONS_REGISTRY, getFunctionByKey } from '@/lib/functions-registry';
@@ -112,6 +113,32 @@ const [qrCodeData, setQrCodeData] = useState<{
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
   const shouldProcessAudio = useRef<boolean>(true);
   const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null); // ✅ ADICIONAR ESTA LINHA
+
+  // ========================================
+  // DETECÇÃO MOBILE/DESKTOP + AVISO DE RUÍDO
+  // ========================================
+  const isMobile = useIsMobile();
+  const [noiseWarning, setNoiseWarning] = useState(false);
+  const noiseWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Recebe o RMS do microfone a cada chunk de áudio.
+   * > 0.08 → ambiente ruidoso: exibe aviso por 4s
+   * < 0.04 → ruído baixo: esconde aviso imediatamente
+   */
+  const handleVolumeChange = (rms: number) => {
+    if (rms > 0.08) {
+      setNoiseWarning(true);
+      if (noiseWarningTimerRef.current) clearTimeout(noiseWarningTimerRef.current);
+      noiseWarningTimerRef.current = setTimeout(() => setNoiseWarning(false), 4000);
+    } else if (rms < 0.04) {
+      if (noiseWarningTimerRef.current) {
+        clearTimeout(noiseWarningTimerRef.current);
+        noiseWarningTimerRef.current = null;
+      }
+      setNoiseWarning(false);
+    }
+  };
   // ========================================
   // CONFIGURATION
   // ========================================
@@ -421,6 +448,23 @@ const [qrCodeData, setQrCodeData] = useState<{
   // ========================================
   async function startGoogleSpeech() {
     if (!isActiveRef.current || !shouldProcessAudio.current) return;
+
+    // ✅ VAD ADAPTATIVO: thresholds diferentes para mobile e desktop
+    //
+    // MOBILE  → volumeThreshold 0.030: microfones de celular têm AGC agressivo
+    //           e captam mais ruído; threshold maior evita falsos disparos.
+    //           silenceThreshold 60 chunks (~15s): sessões mobile são mais curtas,
+    //           resetar mais rápido evita "travamento" do VAD.
+    //
+    // DESKTOP → volumeThreshold 0.015: microfones externos/headsets têm sinal
+    //           mais limpo; threshold baixo captura falas suaves.
+    //           silenceThreshold 120 chunks (~30s): usuário desktop faz pausas
+    //           mais longas; tolerância maior mantém contexto.
+    const vadConfig = isMobile
+      ? { volumeThreshold: 0.030, silenceThreshold: 60 }
+      : { volumeThreshold: 0.015, silenceThreshold: 120 };
+
+    console.log(`🎛️ Google Speech [${isMobile ? 'MOBILE' : 'DESKTOP'}]`, vadConfig);
     
     try {
       if (googleSpeechRef.current) {
@@ -461,7 +505,11 @@ googleSpeechRef.current = new GoogleSpeechWebSocket({
         onStatusChange: (status) => {
           // O status 'recording' agora significa que voz real foi detectada localmente
           setIsListening(status === 'recording');
-        }
+        },
+        // ✅ NOVO: expõe volume ao componente para aviso de ruído
+        onVolumeChange: handleVolumeChange,
+        // ✅ NOVO: injeta thresholds adaptativos por dispositivo
+        ...vadConfig,
       });
       
       await googleSpeechRef.current.connect();
@@ -2559,6 +2607,18 @@ const getStatusColor = () => {
           )}
         </div>
 
+        {/* ✅ AVISO DE RUÍDO AMBIENTE */}
+        {noiseWarning && (
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+            theme === 'dark'
+              ? 'bg-orange-500/20 border border-orange-500/40 text-orange-300'
+              : 'bg-orange-50 border border-orange-200 text-orange-700'
+          }`}>
+            <span>🔊</span>
+            <span>Ambiente ruidoso — fale mais perto do microfone</span>
+          </div>
+        )}
+
         {showStartButton && permissionGranted && (
           <button
             onClick={handleStart}
@@ -2639,6 +2699,18 @@ const getStatusColor = () => {
                   : 'bg-red-50 border-red-200 text-red-700'
               }`}>
                 <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* ✅ AVISO DE RUÍDO AMBIENTE */}
+            {noiseWarning && (
+              <div className={`w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${
+                theme === 'dark'
+                  ? 'bg-orange-500/20 border border-orange-500/40 text-orange-300'
+                  : 'bg-orange-50 border border-orange-200 text-orange-700'
+              }`}>
+                <span>🔊</span>
+                <span>Ambiente ruidoso — fale mais perto do microfone</span>
               </div>
             )}
 

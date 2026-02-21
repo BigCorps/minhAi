@@ -3,6 +3,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom'
 import { X, Copy, ExternalLink, Check } from 'lucide-react';
 
 interface EnderecoDisplayProps {
@@ -79,8 +80,8 @@ export default function EnderecoDisplay({
     return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(address)}`;
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       {/* Card - ✅ MENOR NO MOBILE */}
       <div
         className={`relative w-full max-w-2xl rounded-2xl shadow-2xl transition-colors overflow-hidden animate-in zoom-in duration-300
@@ -243,6 +244,7 @@ export default function EnderecoDisplay({
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

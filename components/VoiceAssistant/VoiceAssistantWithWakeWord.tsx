@@ -17,7 +17,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { AvatarFace } from '@/components/AvatarFace';
 import FunctionCarousel from '@/components/assistant/FunctionCarousel';
-import TextInputChat from '@/components//TextInputChat';
+import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';

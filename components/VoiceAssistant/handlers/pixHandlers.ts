@@ -1,6 +1,6 @@
 // ============================================================
 // handlers/pixHandlers.ts
-// Caminho: components/assistant/VoiceAssistant/handlers/pixHandlers.ts
+// Caminho: components/VoiceAssistant/handlers/pixHandlers.ts
 // ============================================================
 
 import { createClient } from '@/lib/supabase-browser';
@@ -17,6 +17,7 @@ interface PixDeps {
 
 /**
  * Gera um PIX via Edge Function do Supabase.
+ * ⚠️ NÃO salva no histórico — apenas confirmação salva.
  */
 export async function handlePixCommand(
   amount: number,
@@ -45,11 +46,6 @@ export async function handlePixCommand(
 
     await playText(`PIX de ${amount.toFixed(2).replace('.', ',')} reais gerado. Aguardando confirmação.`);
 
-    await saveInteractionToHistory(
-      companyId,
-      `Gerar PIX de R$ ${amount.toFixed(2)}`,
-      `PIX no valor de R$ ${amount.toFixed(2)} gerado e aguardando confirmação.`
-    );
   } catch (error: any) {
     console.error('Erro PIX:', error);
     await playText('Desculpe, não consegui gerar o PIX.');
@@ -60,6 +56,7 @@ export async function handlePixCommand(
 
 /**
  * Confirma um PIX aberto via Edge Function do Supabase.
+ * ✅ Salva no histórico apenas após confirmação bem-sucedida.
  */
 export async function handleConfirmPix(
   pixConfirmationData: PixConfirmationData | null,
@@ -99,14 +96,12 @@ export async function handleConfirmPix(
 
     await playText('Pagamento confirmado com sucesso!');
 
-    const shouldSave = functionSettings['pix_confirm']?.saveToHistory ?? false;
-    if (shouldSave) {
-      await saveInteractionToHistory(
-        companyId,
-        'Confirmar pagamento PIX',
-        `Pagamento PIX de R$ ${pixConfirmationData.amount} confirmado com sucesso!`
-      );
-    }
+    // ✅ Sempre salva no histórico após confirmação bem-sucedida
+    await saveInteractionToHistory(
+      companyId,
+      `PIX de R$ ${pixConfirmationData.amount} confirmado`,
+      `Pagamento PIX de R$ ${pixConfirmationData.amount} confirmado com sucesso!`
+    );
 
     await registerFunctionUsage(
       companyId,
@@ -123,6 +118,7 @@ export async function handleConfirmPix(
 
 /**
  * Cancela um PIX aberto via Edge Function do Supabase.
+ * ⚠️ NÃO salva no histórico.
  */
 export async function handleCancelPix(
   pixConfirmationData: PixConfirmationData | null,

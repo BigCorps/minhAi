@@ -389,7 +389,7 @@ export function ConnectionManager() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                O agente responderá automaticamente de acordo com o prompt (1 crédito).
+                O agente responderá automaticamente de acordo com o prompt (1 crédito por resposta).
               </p>
             </div>
           </CardContent>
@@ -463,7 +463,7 @@ export function ConnectionManager() {
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground pt-1">
-                            Créditos por resposta — FB: {conn.credits_per_reply_facebook} · IG: {conn.credits_per_reply_instagram} · WA: {conn.credits_per_reply_whatsapp}
+                            Créditos por resposta — FaceBook: {conn.credits_per_reply_facebook} · Instagram: {conn.credits_per_reply_instagram} · Whatsapp: {conn.credits_per_reply_whatsapp}
                           </p>
                         </div>
 

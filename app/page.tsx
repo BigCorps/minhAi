@@ -100,7 +100,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações',
     title: 'Conexões e Serviços Profissionais',
     description:
-      'Utilizamos as melhores plataformas do mercado — Google, Meta, AWS, OpenAI, Pix, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
+      'Utilizamos as melhores plataformas do mercado — Google, Meta, AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento. Conecte tambem suas contas Whatsapp, Instagram e Facebook para o assistente responder por você automáticamente.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações e APIs do eAi',
     color: 'green' as const,

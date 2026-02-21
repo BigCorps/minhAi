@@ -1,14 +1,10 @@
 'use client';
 // ARQUIVO: app/dashboard/atendimentos/_components/ConnectionManager.tsx
-// Adaptado do Poupeja para o eAi (Next.js App Router)
-// Diferenças:
-// - Usa createClient de @/lib/supabase-browser (padrão eAi)
-// - Seletor de company (assistente) para vincular a conexão
-// - Toggle de agent_enabled por conexão
-// - state inclui company_id (user_uuid:company_uuid:random)
-// - Redirect URI aponta para /auth/callback/facebook
+// Usa apenas: button, card, select, switch (o que existe no /ui do eAi)
+// Toast via sonner (mesmo usado pelo toaster.tsx do eAi)
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -19,7 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import {
   Loader2,
   AlertCircle,
@@ -30,7 +25,6 @@ import {
   Phone,
   Share2,
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
 import { createClient } from '@/lib/supabase-browser';
 
 type Company = { id: string; name: string; slug: string };
@@ -52,7 +46,6 @@ type MetaConnection = {
 };
 
 export function ConnectionManager() {
-  const { toast } = useToast();
   const supabase = createClient();
 
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -174,7 +167,7 @@ export function ConnectionManager() {
   // -------------------------------------------------------------------
   const handleConnect = async () => {
     if (!selectedCompanyId) {
-      toast({ title: 'Selecione um assistente', description: 'Escolha qual assistente receberá esta conexão.', variant: 'destructive' });
+      toast.error('Selecione um assistente antes de conectar.');
       return;
     }
 
@@ -187,7 +180,7 @@ export function ConnectionManager() {
       const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID;
       if (!META_APP_ID) throw new Error('META_APP_ID não configurado');
 
-      // state = user_uuid:company_uuid:random (para identificação no callback)
+      // state = user_uuid:company_uuid:random
       const state = `${user.id}:${selectedCompanyId}:${crypto.randomUUID().substring(0, 8)}`;
       const redirectUri = `${window.location.origin}/auth/callback/facebook`;
 
@@ -210,23 +203,21 @@ export function ConnectionManager() {
         `&scope=${encodeURIComponent(scopes)}` +
         `&response_type=code`;
 
-      // Tentar popup primeiro, fallback para localStorage
       const result = await openOAuthWindow(oauthUrl);
 
       if (result.success) {
-        toast({
-          title: '✅ Conta Meta conectada!',
-          description: 'As conexões aparecerão em instantes.',
-          duration: 5000,
-        });
+        toast.success('Conta Meta conectada! As conexões aparecerão em instantes.');
         await fetchConnections();
         setTimeout(() => fetchConnections(), 1500);
         setTimeout(() => fetchConnections(), 4000);
       }
     } catch (err: any) {
-      const isCancellation = err.message.includes('cancelada') || err.message.includes('fechado') || err.message.includes('closed');
+      const isCancellation =
+        err.message.includes('cancelada') ||
+        err.message.includes('fechado') ||
+        err.message.includes('closed');
       if (!isCancellation) {
-        toast({ title: '❌ Erro', description: err.message, variant: 'destructive', duration: 7000 });
+        toast.error(err.message);
       }
     } finally {
       setIsConnecting(false);
@@ -234,7 +225,7 @@ export function ConnectionManager() {
   };
 
   // -------------------------------------------------------------------
-  // Abrir janela OAuth (popup com fallback para nova aba)
+  // Abrir janela OAuth (popup com fallback para nova aba + localStorage)
   // -------------------------------------------------------------------
   function openOAuthWindow(url: string): Promise<{ success: boolean }> {
     return new Promise((resolve, reject) => {
@@ -245,31 +236,27 @@ export function ConnectionManager() {
       const popup = window.open(url, 'MetaOAuth', `width=${width},height=${height},left=${left},top=${top}`);
 
       if (!popup || popup.closed) {
-        // Popup bloqueado → abrir em nova aba com localStorage
         localStorage.removeItem('meta_connection_result');
         window.open(url, '_blank');
 
-        // Polling do localStorage
         const lsInterval = setInterval(() => {
           const stored = localStorage.getItem('meta_connection_result');
           if (stored) {
             try {
               const data = JSON.parse(stored);
-              const age = Date.now() - (data.timestamp || 0);
-              if (age < 60_000) {
+              if (Date.now() - (data.timestamp || 0) < 60_000) {
                 localStorage.removeItem('meta_connection_result');
                 clearInterval(lsInterval);
-                data.success ? resolve({ success: true }) : reject(new Error(data.error || 'Erro desconhecido'));
+                data.success ? resolve({ success: true }) : reject(new Error(data.error || 'Erro'));
               }
             } catch { /* ignore */ }
           }
         }, 1000);
 
-        setTimeout(() => { clearInterval(lsInterval); reject(new Error('Tempo esgotado. Tente novamente.')); }, 120_000);
+        setTimeout(() => { clearInterval(lsInterval); reject(new Error('Tempo esgotado.')); }, 120_000);
         return;
       }
 
-      // Popup aberto com sucesso → escutar postMessage
       const messageHandler = (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
         if (event.data?.type === 'meta_connection_success') {
@@ -280,10 +267,8 @@ export function ConnectionManager() {
           reject(new Error(event.data.error || 'Erro na conexão'));
         }
       };
-
       window.addEventListener('message', messageHandler);
 
-      // Detectar fechamento manual
       const closedCheck = setInterval(() => {
         if (popup.closed) {
           clearInterval(closedCheck);
@@ -311,7 +296,7 @@ export function ConnectionManager() {
       .eq('id', connectionId);
 
     if (updateError) {
-      toast({ title: 'Erro', description: updateError.message, variant: 'destructive' });
+      toast.error(updateError.message);
       return;
     }
 
@@ -319,12 +304,7 @@ export function ConnectionManager() {
       prev.map((c) => (c.id === connectionId ? { ...c, agent_enabled: enabled } : c))
     );
 
-    toast({
-      title: enabled ? '🤖 Agente ativado' : '⏸️ Agente pausado',
-      description: enabled
-        ? 'O assistente responderá automaticamente.'
-        : 'O assistente não responderá até ser reativado.',
-    });
+    toast.success(enabled ? '🤖 Agente ativado' : '⏸️ Agente pausado');
   };
 
   // -------------------------------------------------------------------
@@ -339,19 +319,17 @@ export function ConnectionManager() {
       .eq('id', connectionId);
 
     if (deleteError) {
-      toast({ title: 'Erro', description: deleteError.message, variant: 'destructive' });
+      toast.error(deleteError.message);
       return;
     }
 
-    toast({ title: 'Conta desconectada', description: 'A conexão foi removida com sucesso.' });
+    toast.success('Conta desconectada com sucesso.');
     await fetchConnections();
   };
 
   // -------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------
-  const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
-
   return (
     <div className="space-y-6">
 
@@ -368,7 +346,7 @@ export function ConnectionManager() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label>Assistente</Label>
+            <p className="text-sm font-medium">Assistente</p>
             <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
               <SelectTrigger className="w-full max-w-xs">
                 <SelectValue placeholder="Selecione um assistente" />
@@ -379,11 +357,9 @@ export function ConnectionManager() {
                 ))}
               </SelectContent>
             </Select>
-            {selectedCompany && (
-              <p className="text-xs text-muted-foreground">
-                O agente deste assistente responderá automaticamente nas plataformas conectadas.
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              O agente deste assistente responderá automaticamente e consumirá seus créditos.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -418,11 +394,10 @@ export function ConnectionManager() {
                 Conecte sua conta do Facebook para ativar o agente no Instagram, WhatsApp e Messenger.
               </p>
               <Button onClick={handleConnect} size="lg" disabled={isConnecting || !selectedCompanyId}>
-                {isConnecting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Abrindo...</>
-                ) : (
-                  <><Facebook className="mr-2 h-5 w-5" /> Conectar Conta Meta</>
-                )}
+                {isConnecting
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Abrindo...</>
+                  : <><Facebook className="mr-2 h-5 w-5" /> Conectar Conta Meta</>
+                }
               </Button>
             </div>
           ) : (
@@ -432,7 +407,10 @@ export function ConnectionManager() {
                   {connections.length} {connections.length === 1 ? 'conexão ativa' : 'conexões ativas'}
                 </p>
                 <Button variant="outline" onClick={handleConnect} disabled={isConnecting || !selectedCompanyId}>
-                  {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Conectando...</> : <><Facebook className="mr-2 h-4 w-4" /> Conectar Nova Conta</>}
+                  {isConnecting
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Conectando...</>
+                    : <><Facebook className="mr-2 h-4 w-4" /> Conectar Nova Conta</>
+                  }
                 </Button>
               </div>
 
@@ -441,14 +419,11 @@ export function ConnectionManager() {
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                       <div className="flex-1 space-y-2">
-                        {/* Página */}
                         <div className="flex items-center gap-2">
                           <Facebook className="h-4 w-4 text-blue-600" />
                           <p className="font-bold">{conn.page_name}</p>
                           <CheckCircle className="h-4 w-4 text-green-500" />
                         </div>
-
-                        {/* Plataformas conectadas */}
                         {conn.instagram_username && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Instagram className="h-4 w-4 text-pink-600" />
@@ -461,18 +436,14 @@ export function ConnectionManager() {
                             <span>{conn.whatsapp_number}</span>
                           </div>
                         )}
-
-                        {/* Créditos por resposta */}
-                        <div className="text-xs text-muted-foreground pt-1">
-                          Créditos por resposta: FB {conn.credits_per_reply_facebook} · IG {conn.credits_per_reply_instagram} · WA {conn.credits_per_reply_whatsapp}
-                        </div>
+                        <p className="text-xs text-muted-foreground pt-1">
+                          Créditos por resposta — FB: {conn.credits_per_reply_facebook} · IG: {conn.credits_per_reply_instagram} · WA: {conn.credits_per_reply_whatsapp}
+                        </p>
                       </div>
 
-                      {/* Controles */}
                       <div className="flex flex-col gap-3 items-end">
-                        {/* Toggle do agente */}
                         <div className="flex items-center gap-2">
-                          <Label className="text-sm">Agente</Label>
+                          <span className="text-sm font-medium">Agente</span>
                           <Switch
                             checked={conn.agent_enabled}
                             onCheckedChange={(checked) => handleToggleAgent(conn.id, checked)}
@@ -481,13 +452,7 @@ export function ConnectionManager() {
                             {conn.agent_enabled ? 'Ativo' : 'Pausado'}
                           </span>
                         </div>
-
-                        {/* Desconectar */}
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDisconnect(conn.id)}
-                        >
+                        <Button variant="destructive" size="sm" onClick={() => handleDisconnect(conn.id)}>
                           <Trash2 className="mr-1 h-4 w-4" />
                           Remover
                         </Button>

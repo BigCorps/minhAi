@@ -1,27 +1,28 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { 
-  LayoutDashboard, 
-  Bot, 
-  Settings, 
-  Wallet, 
+import {
+  LayoutDashboard,
+  Bot,
+  Settings,
+  Wallet,
   MessageSquare,
   Menu,
   X,
-  HelpCircle
+  HelpCircle,
+  Share2, // ícone para Atendimentos (integrações Meta)
 } from 'lucide-react';
 
 const menuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/assistentes', label: 'Assistentes', icon: Bot },
-  { href: '/dashboard/functions', label: 'Funções', icon: Settings },
-  { href: '/dashboard/faqs', label: 'Perguntas/Respostas', icon: HelpCircle },
-  { href: '/dashboard/saldo', label: 'Recebimentos', icon: Wallet },
-  { href: '/dashboard/historico', label: 'Histórico', icon: MessageSquare },
+  { href: '/dashboard',              label: 'Dashboard',          icon: LayoutDashboard },
+  { href: '/dashboard/assistentes',  label: 'Assistentes',        icon: Bot },
+  { href: '/dashboard/functions',    label: 'Funções',            icon: Settings },
+  { href: '/dashboard/faqs',         label: 'Perguntas/Respostas',icon: HelpCircle },
+  { href: '/dashboard/atendimentos', label: 'Atendimentos Meta',  icon: Share2 }, // ← NOVO
+  { href: '/dashboard/saldo',        label: 'Recebimentos',       icon: Wallet },
+  { href: '/dashboard/historico',    label: 'Histórico',          icon: MessageSquare },
 ];
 
 export function Sidebar() {
@@ -30,12 +31,10 @@ export function Sidebar() {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
 
-  // Garantir que o componente está montado para evitar erros de hidratação
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Fallback seguro para o tema
   const theme = mounted ? (resolvedTheme || 'dark') : 'dark';
 
   return (
@@ -53,37 +52,38 @@ export function Sidebar() {
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      {/* Lógica do Menu Dropdown */}
+      {/* Menu Dropdown */}
       {isOpen && (
         <>
-          {/* Overlay para fechar ao clicar fora */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
-          />
-          
-          {/* Menu Dropdown - Janela Flutuante */}
-          <div className={`absolute left-0 top-full mt-2 w-64 rounded-lg shadow-xl border py-2 z-50 ${
-            theme === 'dark'
-              ? 'bg-slate-800 border-white/10'
-              : 'bg-white border-gray-200'
-          }`}>
-            <div className={`px-4 py-3 border-b mb-2 ${
-              theme === 'dark' ? 'border-white/10' : 'border-gray-100'
-            }`}>
-              <h3 className={`text-sm font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+
+          <div
+            className={`absolute left-0 top-full mt-2 w-64 rounded-lg shadow-xl border py-2 z-50 ${
+              theme === 'dark'
+                ? 'bg-slate-800 border-white/10'
+                : 'bg-white border-gray-200'
+            }`}
+          >
+            <div
+              className={`px-4 py-3 border-b mb-2 ${
+                theme === 'dark' ? 'border-white/10' : 'border-gray-100'
+              }`}
+            >
+              <h3
+                className={`text-sm font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
                 Menu Principal
               </h3>
             </div>
 
-            {/* Menu Items */}
             <nav className="flex flex-col">
               {menuItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
-                
+                const isActive = pathname === item.href ||
+                  (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
                 return (
                   <Link
                     key={item.href}

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useTheme } from 'next-themes';
+import { useSearchParams } from 'next/navigation';
 import { Mail, Calendar, RefreshCw, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 interface GoogleAccount {
@@ -23,9 +24,11 @@ interface Company {
   wake_word?: string;
 }
 
-export default function GoogleConnectPage() {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+function GoogleConnectPageContent() {
+  const searchParams = useSearchParams();
+  const companyIdFromUrl = searchParams.get('companyId');
+
+  const [company, setCompany] = useState<Company | null>(null);
   const [googleAccount, setGoogleAccount] = useState<GoogleAccount | null>(null);
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -36,28 +39,22 @@ export default function GoogleConnectPage() {
 
   const supabase = createClient();
 
-  // Carregar empresas
+  // Carregar empresa e conta Google
   useEffect(() => {
-    loadCompanies();
-  }, []);
-
-  // Carregar conta Google quando empresa selecionada
-  useEffect(() => {
-    if (selectedCompanyId) {
-      loadGoogleAccount(selectedCompanyId);
-    } else {
-      setGoogleAccount(null);
+    if (companyIdFromUrl) {
+      loadCompany(companyIdFromUrl);
+      loadGoogleAccount(companyIdFromUrl);
     }
-  }, [selectedCompanyId]);
+  }, [companyIdFromUrl]);
 
   // Escutar mensagens do popup OAuth
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.data.type === 'google-auth-success') {
         console.log('✅ Autorização bem-sucedida:', event.data);
-        if (selectedCompanyId) {
+        if (companyIdFromUrl) {
           setTimeout(() => {
-            loadGoogleAccount(selectedCompanyId, true);
+            loadGoogleAccount(companyIdFromUrl, true);
           }, 1000);
         }
         setConnecting(false);
@@ -73,7 +70,7 @@ export default function GoogleConnectPage() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [selectedCompanyId]);
+  }, [companyIdFromUrl]);
 
   // Limpar polling ao desmontar
   useEffect(() => {
@@ -84,22 +81,18 @@ export default function GoogleConnectPage() {
     };
   }, [pollingInterval]);
 
-  async function loadCompanies() {
+  async function loadCompany(companyId: string) {
     try {
       const { data, error } = await supabase
         .from('companies')
         .select('id, name, wake_word')
-        .order('name');
+        .eq('id', companyId)
+        .single();
 
       if (error) throw error;
-      setCompanies(data || []);
-
-      // Auto-selecionar primeira empresa se houver apenas uma
-      if (data && data.length === 1) {
-        setSelectedCompanyId(data[0].id);
-      }
+      setCompany(data);
     } catch (error) {
-      console.error('Erro ao carregar empresas:', error);
+      console.error('Erro ao carregar empresa:', error);
     }
   }
 
@@ -135,24 +128,22 @@ export default function GoogleConnectPage() {
   }
 
   async function handleConnect() {
-    if (!selectedCompanyId) {
-      alert('Selecione um assistente primeiro');
+    if (!companyIdFromUrl) {
+      alert('ID da empresa não fornecido');
       return;
     }
 
     try {
       setConnecting(true);
 
-      // Chamar Edge Function para gerar URL de autorização
       const { data, error } = await supabase.functions.invoke('google-auth-url', {
-        body: { company_id: selectedCompanyId },
+        body: { company_id: companyIdFromUrl },
       });
 
       if (error) throw error;
 
       const { auth_url } = data;
 
-      // Abrir popup de autorização
       const width = 600;
       const height = 700;
       const left = window.screen.width / 2 - width / 2;
@@ -164,34 +155,29 @@ export default function GoogleConnectPage() {
         `width=${width},height=${height},left=${left},top=${top}`
       );
 
-      // Iniciar polling para verificar se a conta foi conectada
       const interval = setInterval(async () => {
-        // Verificar se popup ainda está aberto
         if (popup?.closed) {
           clearInterval(interval);
           setConnecting(false);
           setPollingInterval(null);
-          // Verificar uma última vez se conectou
-          await loadGoogleAccount(selectedCompanyId, true);
+          await loadGoogleAccount(companyIdFromUrl, true);
         } else {
-          // Verificar se conectou (sem mostrar loading)
           const { data: accountData } = await supabase
             .from('google_accounts')
             .select('id')
-            .eq('company_id', selectedCompanyId)
+            .eq('company_id', companyIdFromUrl)
             .eq('is_active', true)
             .maybeSingle();
           
           if (accountData) {
-            // Conectou! Fechar popup e recarregar
             popup?.close();
             clearInterval(interval);
             setPollingInterval(null);
             setConnecting(false);
-            await loadGoogleAccount(selectedCompanyId, true);
+            await loadGoogleAccount(companyIdFromUrl, true);
           }
         }
-      }, 2000); // Verificar a cada 2 segundos
+      }, 2000);
 
       setPollingInterval(interval);
 
@@ -203,7 +189,7 @@ export default function GoogleConnectPage() {
   }
 
   async function handleDisconnect() {
-    if (!selectedCompanyId || !googleAccount) return;
+    if (!companyIdFromUrl || !googleAccount) return;
 
     const confirm = window.confirm(
       'Tem certeza que deseja desconectar esta conta Google? ' +
@@ -218,7 +204,7 @@ export default function GoogleConnectPage() {
       const { error } = await supabase
         .from('google_accounts')
         .update({ is_active: false })
-        .eq('company_id', selectedCompanyId);
+        .eq('company_id', companyIdFromUrl);
 
       if (error) throw error;
 
@@ -233,19 +219,19 @@ export default function GoogleConnectPage() {
   }
 
   async function handleRefreshToken() {
-    if (!selectedCompanyId) return;
+    if (!companyIdFromUrl) return;
 
     try {
       setRefreshing(true);
 
       const { data, error } = await supabase.functions.invoke('google-refresh-token', {
-        body: { company_id: selectedCompanyId },
+        body: { company_id: companyIdFromUrl },
       });
 
       if (error) throw error;
 
       alert('Token renovado com sucesso!');
-      loadGoogleAccount(selectedCompanyId, true);
+      loadGoogleAccount(companyIdFromUrl, true);
     } catch (error: any) {
       console.error('Erro ao renovar token:', error);
       alert(`Erro ao renovar token: ${error.message}`);
@@ -283,6 +269,23 @@ export default function GoogleConnectPage() {
     return `${hours}h ${minutes % 60}min`;
   }
 
+  // Se não tem company_id na URL
+  if (!companyIdFromUrl) {
+    return (
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-8">
+        <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center max-w-md">
+          <XCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Assistente não especificado
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Acesse esta página a partir do Calendário ou Emails para conectar uma conta Google.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">
@@ -294,38 +297,23 @@ export default function GoogleConnectPage() {
               Conexão com Google
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Conecte sua conta Google para enviar emails e gerenciar calendário
+              {company ? (
+                <>Gerenciar conexão Google para <span className="font-semibold">{company.name}</span></>
+              ) : (
+                'Conecte sua conta Google para enviar emails e gerenciar calendário'
+              )}
             </p>
           </div>
 
-          {/* Seletor de Assistente */}
-          <div className="mb-6 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              Selecione o Assistente
-            </label>
-            <select
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Selecione um assistente...</option>
-              {companies.map(company => (
-                <option key={company.id} value={company.id}>
-                  {company.name} {company.wake_word ? `(${company.wake_word})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Loading State */}
-          {loading && selectedCompanyId && (
+          {loading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           )}
 
           {/* Status da Conexão */}
-          {!loading && selectedCompanyId && (
+          {!loading && (
             <>
               {/* Não Conectado */}
               {!googleAccount && (
@@ -507,17 +495,20 @@ export default function GoogleConnectPage() {
               )}
             </>
           )}
-
-          {/* Sem assistente selecionado */}
-          {!selectedCompanyId && (
-            <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-8 text-center">
-              <p className="text-gray-600 dark:text-gray-400">
-                Selecione um assistente para gerenciar a conexão Google
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GoogleConnectPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    }>
+      <GoogleConnectPageContent />
+    </Suspense>
   );
 }

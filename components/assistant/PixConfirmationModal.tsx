@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom'
 import { Check, X, Copy, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
@@ -136,8 +137,8 @@ export default function PIXConfirmationModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className={`relative w-full max-w-[340px] rounded-2xl shadow-2xl overflow-hidden ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-white'
       }`}>
@@ -285,6 +286,7 @@ export default function PIXConfirmationModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

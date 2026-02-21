@@ -30,6 +30,7 @@ export default function GoogleConnectPage() {
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const { resolvedTheme } = useTheme();
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
 
@@ -55,19 +56,33 @@ export default function GoogleConnectPage() {
       if (event.data.type === 'google-auth-success') {
         console.log('✅ Autorização bem-sucedida:', event.data);
         if (selectedCompanyId) {
-          loadGoogleAccount(selectedCompanyId);
+          setTimeout(() => {
+            loadGoogleAccount(selectedCompanyId, true);
+          }, 1000);
         }
+        setConnecting(false);
       } else if (event.data.type === 'google-auth-error') {
         console.error('❌ Erro na autorização:', event.data.error);
         alert(`Erro ao conectar conta: ${event.data.error}`);
+        setConnecting(false);
       } else if (event.data.type === 'google-auth-cancelled') {
         console.log('⚠️ Autorização cancelada pelo usuário');
+        setConnecting(false);
       }
     }
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [selectedCompanyId]);
+
+  // Limpar polling ao desmontar
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   async function loadCompanies() {
     try {
@@ -88,9 +103,14 @@ export default function GoogleConnectPage() {
     }
   }
 
-  async function loadGoogleAccount(companyId: string) {
+  async function loadGoogleAccount(companyId: string, forceReload = false) {
     try {
-      setLoading(true);
+      if (forceReload) {
+        setLoading(true);
+      } else {
+        setLoading(true);
+      }
+      
       const { data, error } = await supabase
         .from('google_accounts')
         .select('*')
@@ -103,6 +123,10 @@ export default function GoogleConnectPage() {
       }
 
       setGoogleAccount(data);
+      
+      if (data && forceReload) {
+        console.log('✅ Conta Google carregada após conexão');
+      }
     } catch (error) {
       console.error('Erro ao carregar conta Google:', error);
     } finally {
@@ -134,15 +158,46 @@ export default function GoogleConnectPage() {
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
 
-      window.open(
+      const popup = window.open(
         auth_url,
         'Google Authorization',
         `width=${width},height=${height},left=${left},top=${top}`
       );
+
+      // Iniciar polling para verificar se a conta foi conectada
+      const interval = setInterval(async () => {
+        // Verificar se popup ainda está aberto
+        if (popup?.closed) {
+          clearInterval(interval);
+          setConnecting(false);
+          setPollingInterval(null);
+          // Verificar uma última vez se conectou
+          await loadGoogleAccount(selectedCompanyId, true);
+        } else {
+          // Verificar se conectou (sem mostrar loading)
+          const { data: accountData } = await supabase
+            .from('google_accounts')
+            .select('id')
+            .eq('company_id', selectedCompanyId)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (accountData) {
+            // Conectou! Fechar popup e recarregar
+            popup?.close();
+            clearInterval(interval);
+            setPollingInterval(null);
+            setConnecting(false);
+            await loadGoogleAccount(selectedCompanyId, true);
+          }
+        }
+      }, 2000); // Verificar a cada 2 segundos
+
+      setPollingInterval(interval);
+
     } catch (error: any) {
       console.error('Erro ao conectar:', error);
       alert(`Erro ao iniciar conexão: ${error.message}`);
-    } finally {
       setConnecting(false);
     }
   }
@@ -190,7 +245,7 @@ export default function GoogleConnectPage() {
       if (error) throw error;
 
       alert('Token renovado com sucesso!');
-      loadGoogleAccount(selectedCompanyId);
+      loadGoogleAccount(selectedCompanyId, true);
     } catch (error: any) {
       console.error('Erro ao renovar token:', error);
       alert(`Erro ao renovar token: ${error.message}`);
@@ -227,8 +282,6 @@ export default function GoogleConnectPage() {
     const hours = Math.floor(minutes / 60);
     return `${hours}h ${minutes % 60}min`;
   }
-
-  const selectedCompany = companies.find(c => c.id === selectedCompanyId);
 
   return (
     <div className="min-h-screen bg-transparent">

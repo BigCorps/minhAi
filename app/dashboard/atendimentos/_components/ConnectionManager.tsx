@@ -24,10 +24,14 @@ import {
   Phone,
   Share2,
   X,
+  Bot,
+  Save,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
-type Company = { id: string; name: string; slug: string };
+type Company = { id: string; name: string; system_prompt: string | null };
 
 type MetaConnection = {
   id: string;
@@ -39,6 +43,7 @@ type MetaConnection = {
   whatsapp_number_id: string | null;
   whatsapp_number: string | null;
   agent_enabled: boolean;
+  agent_prompt: string | null;
   credits_per_reply_facebook: number;
   credits_per_reply_instagram: number;
   credits_per_reply_whatsapp: number;
@@ -47,28 +52,122 @@ type MetaConnection = {
 
 type Notification = { id: number; message: string; type: 'success' | 'error' };
 
-// Componente inline de notificação (sem dependências externas)
+// ─── Notificações inline (sem dependências externas) ───────────────────────
 function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss: (id: number) => void }) {
   if (items.length === 0) return null;
   return (
     <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
       {items.map((n) => (
-        <div
-          key={n.id}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-xs ${
-            n.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}
-        >
+        <div key={n.id} className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-xs ${n.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           <span className="flex-1">{n.message}</span>
-          <button onClick={() => onDismiss(n.id)} className="opacity-70 hover:opacity-100">
-            <X className="h-4 w-4" />
-          </button>
+          <button onClick={() => onDismiss(n.id)} className="opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
         </div>
       ))}
     </div>
   );
 }
 
+// ─── Painel de configuração do agente ─────────────────────────────────────
+function AgentConfigPanel({
+  connection,
+  companySystemPrompt,
+  onSave,
+}: {
+  connection: MetaConnection;
+  companySystemPrompt: string | null;
+  onSave: (updates: Partial<MetaConnection>) => Promise<void>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  // agent_prompt: se null, usa o system_prompt da company (comportamento padrão)
+  const [useCustomPrompt, setUseCustomPrompt] = useState(!!connection.agent_prompt);
+  const [promptText, setPromptText] = useState(
+    connection.agent_prompt || companySystemPrompt || ''
+  );
+
+  async function handleSave() {
+    setIsSaving(true);
+    await onSave({
+      agent_prompt: useCustomPrompt ? promptText.trim() || null : null,
+    });
+    setIsSaving(false);
+  }
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition w-full"
+      >
+        <Bot className="h-4 w-4" />
+        <span>Configurar prompt do agente</span>
+        {isOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+      </button>
+
+      {isOpen && (
+        <div className="mt-3 space-y-3">
+          {/* Toggle: usar prompt personalizado ou o da company */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+            <div className="flex-1">
+              <p className="text-sm font-medium">Prompt personalizado para Meta</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {useCustomPrompt
+                  ? 'Usando prompt exclusivo para WhatsApp/Instagram/Messenger'
+                  : 'Usando o prompt configurado em Perguntas/Respostas do assistente'}
+              </p>
+            </div>
+            <Switch
+              checked={useCustomPrompt}
+              onCheckedChange={(v) => {
+                setUseCustomPrompt(v);
+                if (!v) setPromptText(companySystemPrompt || '');
+              }}
+            />
+          </div>
+
+          {/* Área do prompt */}
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">
+              {useCustomPrompt ? 'Prompt exclusivo para Meta' : 'Prompt atual do assistente (somente leitura)'}
+            </p>
+            <textarea
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              disabled={!useCustomPrompt}
+              rows={5}
+              placeholder="Ex: Você é um atendente da Loja X. Responda apenas sobre nossos produtos e horários de funcionamento..."
+              className={`w-full text-sm rounded-lg border p-3 resize-y leading-relaxed outline-none transition
+                bg-background text-foreground border-border
+                placeholder:text-muted-foreground
+                ${useCustomPrompt
+                  ? 'focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500'
+                  : 'opacity-60 cursor-not-allowed'
+                }`}
+            />
+            {!useCustomPrompt && (
+              <p className="text-xs text-muted-foreground">
+                Para editar, ative o prompt personalizado acima ou edite em{' '}
+                <a href="/dashboard/faqs" className="underline hover:text-foreground">Perguntas/Respostas</a>.
+              </p>
+            )}
+          </div>
+
+          {/* Botão salvar */}
+          {useCustomPrompt && (
+            <Button size="sm" onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
+              {isSaving
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</>
+                : <><Save className="mr-2 h-4 w-4" />Salvar prompt</>
+              }
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────
 export function ConnectionManager() {
   const supabase = createClient();
 
@@ -80,7 +179,6 @@ export function ConnectionManager() {
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const notifCounter = useRef(0);
-
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function notify(message: string, type: 'success' | 'error') {
@@ -93,16 +191,14 @@ export function ConnectionManager() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }
 
-  // -------------------------------------------------------------------
-  // Carregar companies do usuário
-  // -------------------------------------------------------------------
+  // Carregar companies com system_prompt
   useEffect(() => {
     async function loadCompanies() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase
         .from('companies')
-        .select('id, name, slug')
+        .select('id, name, system_prompt')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('name');
@@ -114,9 +210,9 @@ export function ConnectionManager() {
     loadCompanies();
   }, []);
 
-  // -------------------------------------------------------------------
+  const selectedCompany = companies.find((c) => c.id === selectedCompanyId) || null;
+
   // Buscar conexões
-  // -------------------------------------------------------------------
   const fetchConnections = useCallback(async (companyId?: string) => {
     const id = companyId || selectedCompanyId;
     if (!id) { setIsLoading(false); return []; }
@@ -138,34 +234,26 @@ export function ConnectionManager() {
     }
   }, [selectedCompanyId]);
 
-  useEffect(() => {
-    setIsLoading(true);
-    fetchConnections();
-  }, [selectedCompanyId, fetchConnections]);
+  useEffect(() => { setIsLoading(true); fetchConnections(); }, [selectedCompanyId, fetchConnections]);
 
   // Realtime
   useEffect(() => {
     if (!selectedCompanyId) return;
     const channel = supabase
       .channel('meta_connections_realtime')
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'meta_connections',
-        filter: `company_id=eq.${selectedCompanyId}`,
-      }, () => { fetchConnections(); stopPolling(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meta_connections', filter: `company_id=eq.${selectedCompanyId}` },
+        () => { fetchConnections(); stopPolling(); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [selectedCompanyId, fetchConnections]);
 
-  // Window focus
+  // Focus/visibility
   useEffect(() => {
     const onFocus = () => fetchConnections();
     const onVisibility = () => { if (!document.hidden) fetchConnections(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
+    return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); };
   }, [fetchConnections]);
 
   function startPolling() {
@@ -175,48 +263,29 @@ export function ConnectionManager() {
       if (found && found.length > 0) stopPolling();
     }, 5000);
   }
-
   function stopPolling() {
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
   }
-
   useEffect(() => {
     if (!isLoading && connections.length === 0) startPolling();
     else stopPolling();
     return stopPolling;
   }, [connections.length, isLoading]);
 
-  // -------------------------------------------------------------------
-  // OAuth Meta
-  // -------------------------------------------------------------------
+  // OAuth
   const handleConnect = async () => {
-    if (!selectedCompanyId) {
-      notify('Selecione um assistente antes de conectar.', 'error');
-      return;
-    }
+    if (!selectedCompanyId) { notify('Selecione um assistente antes de conectar.', 'error'); return; }
     setIsConnecting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
-
       const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID;
       if (!META_APP_ID) throw new Error('META_APP_ID não configurado');
 
       const state = `${user.id}:${selectedCompanyId}:${crypto.randomUUID().substring(0, 8)}`;
       const redirectUri = `${window.location.origin}/auth/callback/facebook`;
-      const scopes = [
-        'pages_show_list', 'pages_read_engagement', 'pages_manage_metadata',
-        'pages_messaging', 'instagram_basic', 'instagram_manage_messages',
-        'whatsapp_business_management', 'whatsapp_business_messaging',
-      ].join(',');
-
-      const oauthUrl =
-        `https://www.facebook.com/v19.0/dialog/oauth` +
-        `?client_id=${META_APP_ID}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&state=${encodeURIComponent(state)}` +
-        `&scope=${encodeURIComponent(scopes)}` +
-        `&response_type=code`;
+      const scopes = ['pages_show_list','pages_read_engagement','pages_manage_metadata','pages_messaging','instagram_basic','instagram_manage_messages','whatsapp_business_management','whatsapp_business_messaging'].join(',');
+      const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}&scope=${encodeURIComponent(scopes)}&response_type=code`;
 
       await openOAuthWindow(oauthUrl);
       notify('Conta Meta conectada! As conexões aparecerão em instantes.', 'success');
@@ -224,8 +293,7 @@ export function ConnectionManager() {
       setTimeout(() => fetchConnections(), 1500);
       setTimeout(() => fetchConnections(), 4000);
     } catch (err: any) {
-      const isCancellation =
-        err.message.includes('cancelada') || err.message.includes('fechado') || err.message.includes('closed');
+      const isCancellation = err.message.includes('cancelada') || err.message.includes('fechado') || err.message.includes('closed');
       if (!isCancellation) notify(err.message, 'error');
     } finally {
       setIsConnecting(false);
@@ -238,7 +306,6 @@ export function ConnectionManager() {
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
       const popup = window.open(url, 'MetaOAuth', `width=${width},height=${height},left=${left},top=${top}`);
-
       if (!popup || popup.closed) {
         localStorage.removeItem('meta_connection_result');
         window.open(url, '_blank');
@@ -247,63 +314,43 @@ export function ConnectionManager() {
           if (stored) {
             try {
               const data = JSON.parse(stored);
-              if (Date.now() - (data.timestamp || 0) < 60_000) {
-                localStorage.removeItem('meta_connection_result');
-                clearInterval(lsInterval);
-                data.success ? resolve() : reject(new Error(data.error || 'Erro'));
-              }
+              if (Date.now() - (data.timestamp || 0) < 60_000) { localStorage.removeItem('meta_connection_result'); clearInterval(lsInterval); data.success ? resolve() : reject(new Error(data.error || 'Erro')); }
             } catch { /* ignore */ }
           }
         }, 1000);
         setTimeout(() => { clearInterval(lsInterval); reject(new Error('Tempo esgotado.')); }, 120_000);
         return;
       }
-
       const messageHandler = (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
-        if (event.data?.type === 'meta_connection_success') {
-          window.removeEventListener('message', messageHandler);
-          resolve();
-        } else if (event.data?.type === 'meta_connection_error') {
-          window.removeEventListener('message', messageHandler);
-          reject(new Error(event.data.error || 'Erro na conexão'));
-        }
+        if (event.data?.type === 'meta_connection_success') { window.removeEventListener('message', messageHandler); resolve(); }
+        else if (event.data?.type === 'meta_connection_error') { window.removeEventListener('message', messageHandler); reject(new Error(event.data.error || 'Erro')); }
       };
       window.addEventListener('message', messageHandler);
-
       const closedCheck = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(closedCheck);
-          window.removeEventListener('message', messageHandler);
-          reject(new Error('Autenticação cancelada pelo usuário'));
-        }
+        if (popup.closed) { clearInterval(closedCheck); window.removeEventListener('message', messageHandler); reject(new Error('Autenticação cancelada pelo usuário')); }
       }, 500);
-
-      setTimeout(() => {
-        clearInterval(closedCheck);
-        window.removeEventListener('message', messageHandler);
-        if (!popup.closed) popup.close();
-        reject(new Error('Tempo esgotado. Tente novamente.'));
-      }, 120_000);
+      setTimeout(() => { clearInterval(closedCheck); window.removeEventListener('message', messageHandler); if (!popup.closed) popup.close(); reject(new Error('Tempo esgotado.')); }, 120_000);
     });
   }
 
-  // -------------------------------------------------------------------
-  // Toggle agente
-  // -------------------------------------------------------------------
+  // Toggle agent_enabled (ativar/desativar respostas automáticas)
   const handleToggleAgent = async (connectionId: string, enabled: boolean) => {
-    const { error: updateError } = await supabase
-      .from('meta_connections')
-      .update({ agent_enabled: enabled })
-      .eq('id', connectionId);
+    const { error: updateError } = await supabase.from('meta_connections').update({ agent_enabled: enabled }).eq('id', connectionId);
     if (updateError) { notify(updateError.message, 'error'); return; }
     setConnections((prev) => prev.map((c) => c.id === connectionId ? { ...c, agent_enabled: enabled } : c));
-    notify(enabled ? '🤖 Agente ativado' : '⏸️ Agente pausado', 'success');
+    notify(enabled ? '🤖 Respostas automáticas ativadas' : '⏸️ Respostas automáticas pausadas', 'success');
   };
 
-  // -------------------------------------------------------------------
+  // Salvar configurações do agente (prompt)
+  const handleSaveAgentConfig = async (connectionId: string, updates: Partial<MetaConnection>) => {
+    const { error: updateError } = await supabase.from('meta_connections').update(updates).eq('id', connectionId);
+    if (updateError) { notify(updateError.message, 'error'); return; }
+    setConnections((prev) => prev.map((c) => c.id === connectionId ? { ...c, ...updates } : c));
+    notify('✅ Configurações do agente salvas!', 'success');
+  };
+
   // Remover conexão
-  // -------------------------------------------------------------------
   const handleDisconnect = async (connectionId: string) => {
     if (!confirm('Tem certeza que deseja desconectar esta conta?')) return;
     const { error: deleteError } = await supabase.from('meta_connections').delete().eq('id', connectionId);
@@ -312,9 +359,6 @@ export function ConnectionManager() {
     await fetchConnections();
   };
 
-  // -------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------
   return (
     <>
       <Notifications items={notifications} onDismiss={dismissNotif} />
@@ -345,7 +389,7 @@ export function ConnectionManager() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                O agente responderá automaticamente de acordo com o prompt.
+                O agente responderá automaticamente de acordo com o prompt (1 crédito).
               </p>
             </div>
           </CardContent>
@@ -381,10 +425,7 @@ export function ConnectionManager() {
                   Conecte sua conta do Facebook para ativar o agente no Instagram, WhatsApp e Messenger.
                 </p>
                 <Button onClick={handleConnect} size="lg" disabled={isConnecting || !selectedCompanyId}>
-                  {isConnecting
-                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Abrindo...</>
-                    : <><Facebook className="mr-2 h-5 w-5" />Conectar Conta Meta</>
-                  }
+                  {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Abrindo...</> : <><Facebook className="mr-2 h-5 w-5" />Conectar Conta Meta</>}
                 </Button>
               </div>
             ) : (
@@ -394,16 +435,14 @@ export function ConnectionManager() {
                     {connections.length} {connections.length === 1 ? 'conexão ativa' : 'conexões ativas'}
                   </p>
                   <Button variant="outline" onClick={handleConnect} disabled={isConnecting || !selectedCompanyId}>
-                    {isConnecting
-                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Conectando...</>
-                      : <><Facebook className="mr-2 h-4 w-4" />Conectar Nova Conta</>
-                    }
+                    {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Conectando...</> : <><Facebook className="mr-2 h-4 w-4" />Conectar Nova Conta</>}
                   </Button>
                 </div>
 
                 {connections.map((conn) => (
                   <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
+                      {/* Cabeçalho da conexão */}
                       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2">
@@ -428,23 +467,33 @@ export function ConnectionManager() {
                           </p>
                         </div>
 
+                        {/* Controles direita */}
                         <div className="flex flex-col gap-3 items-end">
+                          {/* Toggle respostas automáticas */}
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">Agente</span>
+                            <span className="text-sm font-medium">Respostas automáticas</span>
                             <Switch
                               checked={conn.agent_enabled}
                               onCheckedChange={(checked) => handleToggleAgent(conn.id, checked)}
                             />
                             <span className={`text-xs font-medium ${conn.agent_enabled ? 'text-green-500' : 'text-gray-400'}`}>
-                              {conn.agent_enabled ? 'Ativo' : 'Pausado'}
+                              {conn.agent_enabled ? 'Ativas' : 'Pausadas'}
                             </span>
                           </div>
+
                           <Button variant="destructive" size="sm" onClick={() => handleDisconnect(conn.id)}>
                             <Trash2 className="mr-1 h-4 w-4" />
                             Remover
                           </Button>
                         </div>
                       </div>
+
+                      {/* Painel de configuração do prompt */}
+                      <AgentConfigPanel
+                        connection={conn}
+                        companySystemPrompt={selectedCompany?.system_prompt || null}
+                        onSave={(updates) => handleSaveAgentConfig(conn.id, updates)}
+                      />
                     </CardContent>
                   </Card>
                 ))}

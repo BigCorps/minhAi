@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useEffect, useRef } from 'react';
-import { WakeWordDetector } from '@/components/WakeWordDetector';
+import { WakeWordDetector } from '@/components/VoiceAssistant/WakeWordDetector';
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';
 
 const END_COMMANDS = [

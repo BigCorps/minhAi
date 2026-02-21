@@ -281,14 +281,20 @@ async executeFunction(
   private async callEdgeFunction(functionName: string, functionKey: string, value?: any) {
     const supabase = createClient();
     
-    const payload: any = {
-      company_id: this.companyId,
-    };
-    
-    // Adicionar valor específico conforme a função
-    if (value !== undefined) {
-      payload.value = value;
-    }
+const payload: any = {
+  company_id: this.companyId,
+};
+
+// Extrair qr_type para funções de QR Code
+// qrcode_telefone → qr_type: 'telefone'
+if (functionKey.startsWith('qrcode_')) {
+  payload.qr_type = functionKey.replace('qrcode_', '');
+}
+
+// Adicionar valor específico conforme a função
+if (value !== undefined) {
+  payload.value = value;
+}
     
     console.log(`📤 Chamando Edge Function: ${functionName}`, payload);
     

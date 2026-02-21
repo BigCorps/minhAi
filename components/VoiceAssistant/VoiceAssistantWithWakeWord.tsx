@@ -826,12 +826,15 @@ export function VoiceAssistantWithWakeWord({
           />
         </div>
 
-        <div className="text-center px-4 max-w-md">
-          <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'}`}>
-            {getStatusMessage()}
-          </p>
-          {error && <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
-        </div>
+        <div className="min-h-[2.5rem] flex items-center justify-center w-full max-w-sm px-4">
+  {(repromptWarning || noiseWarning) && (
+    <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
+      theme === 'dark'
+        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+        : 'bg-blue-50 border border-blue-200 text-blue-700'
+    }`}>
+      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente ruidoso — fale mais perto do microfone'}
+    </div>
 
         <div className="min-h-[2.5rem] flex items-center justify-center w-full max-w-sm px-4">
           {(repromptWarning || noiseWarning) && (

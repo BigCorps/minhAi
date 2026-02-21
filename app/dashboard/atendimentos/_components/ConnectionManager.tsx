@@ -302,12 +302,11 @@ export function ConnectionManager() {
 
   function openOAuthWindow(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      // ── CORREÇÃO: centraliza em relação ao viewport visível da janela atual.
-      //    screenX/screenY = posição da janela do browser na tela.
-      //    innerWidth/innerHeight = tamanho do viewport (sem barras do browser).
+      // ── CORREÇÃO: centraliza usando screen.availLeft/availWidth,
+      //    que respeita taskbars e funciona corretamente em multi-monitor.
       const width = 580, height = 680;
-      const left = Math.round(window.screenX + (window.innerWidth - width) / 2);
-      const top = Math.round(window.screenY + (window.innerHeight - height) / 2);
+      const left = Math.round((screen.availLeft ?? 0) + (screen.availWidth - width) / 2);
+      const top = Math.round((screen.availTop ?? 0) + (screen.availHeight - height) / 2);
 
       const popup = window.open(url, 'MetaOAuth', `width=${width},height=${height},left=${left},top=${top}`);
       if (!popup || popup.closed) {

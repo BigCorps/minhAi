@@ -345,7 +345,7 @@ export function ConnectionManager() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                O agente responderá automaticamente e consumirá seus créditos.
+                O agente responderá automaticamente de acordo com o prompt.
               </p>
             </div>
           </CardContent>

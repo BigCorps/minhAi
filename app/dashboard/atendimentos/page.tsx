@@ -14,7 +14,6 @@ export default function AtendimentosPage() {
         <h1 className="text-2xl font-bold">Atendimentos Meta</h1>
         <p className="text-muted-foreground mt-1">
           Conecte seus assistentes ao WhatsApp Business, Instagram e Facebook Messenger.
-          O agente responderá automaticamente de acordo com o prompt.
         </p>
       </div>
 

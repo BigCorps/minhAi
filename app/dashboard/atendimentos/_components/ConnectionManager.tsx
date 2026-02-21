@@ -590,7 +590,7 @@ export function ConnectionManager() {
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground pt-1">
-                            Créditos por resposta — Facebook: {conn.credits_per_reply_facebook} · Instagram: {conn.credits_per_reply_instagram} · WhatsApp: {conn.credits_per_reply_whatsapp}
+                            Configure suas contas do Facebook · Instagram · WhatsApp diretamente no Business Suite do Grupo Meta
                           </p>
                         </div>
 

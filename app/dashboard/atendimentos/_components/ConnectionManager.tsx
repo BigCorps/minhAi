@@ -304,9 +304,11 @@ export function ConnectionManager() {
     return new Promise((resolve, reject) => {
       // ── CORREÇÃO: centraliza usando screen.availLeft/availWidth,
       //    que respeita taskbars e funciona corretamente em multi-monitor.
+      //    Cast para any pois availLeft/availTop não estão no tipo Screen do TS.
+      const s = screen as any;
       const width = 580, height = 680;
-      const left = Math.round((screen.availLeft ?? 0) + (screen.availWidth - width) / 2);
-      const top = Math.round((screen.availTop ?? 0) + (screen.availHeight - height) / 2);
+      const left = Math.round((s.availLeft ?? 0) + (screen.availWidth - width) / 2);
+      const top = Math.round((s.availTop ?? 0) + (screen.availHeight - height) / 2);
 
       const popup = window.open(url, 'MetaOAuth', `width=${width},height=${height},left=${left},top=${top}`);
       if (!popup || popup.closed) {

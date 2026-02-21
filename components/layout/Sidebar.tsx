@@ -12,7 +12,9 @@ import {
   Menu,
   X,
   HelpCircle,
-  Share2, // ícone para Atendimentos (integrações Meta)
+  Share2,
+  Calendar,  // ← NOVO: Calendário
+  Mail,      // ← NOVO: Emails
 } from 'lucide-react';
 
 const menuItems = [
@@ -20,7 +22,9 @@ const menuItems = [
   { href: '/dashboard/assistentes',  label: 'Assistentes',        icon: Bot },
   { href: '/dashboard/functions',    label: 'Funções',            icon: Settings },
   { href: '/dashboard/faqs',         label: 'Perguntas/Respostas',icon: HelpCircle },
-  { href: '/dashboard/atendimentos', label: 'Atendimentos Meta',  icon: Share2 }, // ← NOVO
+  { href: '/dashboard/atendimentos', label: 'Atendimentos Meta',  icon: Share2 },
+  { href: '/dashboard/calendario',   label: 'Calendário',         icon: Calendar }, // ← NOVO
+  { href: '/dashboard/emails',       label: 'Emails',             icon: Mail },      // ← NOVO
   { href: '/dashboard/saldo',        label: 'Recebimentos',       icon: Wallet },
   { href: '/dashboard/historico',    label: 'Histórico',          icon: MessageSquare },
 ];

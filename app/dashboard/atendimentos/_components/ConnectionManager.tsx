@@ -302,11 +302,12 @@ export function ConnectionManager() {
 
   function openOAuthWindow(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      // ── CORREÇÃO: centraliza em relação à janela atual do navegador,
-      //    funcionando corretamente em setups multi-monitor e com barras de tarefas.
-      const width = 700, height = 860;
-      const left = window.screenLeft + Math.round((window.outerWidth - width) / 2);
-      const top = window.screenTop + Math.round((window.outerHeight - height) / 2);
+      // ── CORREÇÃO: centraliza em relação ao viewport visível da janela atual.
+      //    screenX/screenY = posição da janela do browser na tela.
+      //    innerWidth/innerHeight = tamanho do viewport (sem barras do browser).
+      const width = 580, height = 680;
+      const left = Math.round(window.screenX + (window.innerWidth - width) / 2);
+      const top = Math.round(window.screenY + (window.innerHeight - height) / 2);
 
       const popup = window.open(url, 'MetaOAuth', `width=${width},height=${height},left=${left},top=${top}`);
       if (!popup || popup.closed) {
@@ -466,7 +467,7 @@ export function ConnectionManager() {
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground pt-1">
-                            Créditos por resposta — Facebook: {conn.credits_per_reply_facebook} · Instagram: {conn.credits_per_reply_instagram} · Whatsapp: {conn.credits_per_reply_whatsapp}
+                            Créditos por resposta — FaceBook: {conn.credits_per_reply_facebook} · Instagram: {conn.credits_per_reply_instagram} · Whatsapp: {conn.credits_per_reply_whatsapp}
                           </p>
                         </div>
 

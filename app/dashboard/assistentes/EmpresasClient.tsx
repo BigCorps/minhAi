@@ -13,7 +13,9 @@ import {
   Lock,
   Globe,
   X,
-  Download
+  Download,
+  Mail,
+  MessageSquare,
 } from 'lucide-react';
 
 interface AssistentesClientProps {
@@ -61,7 +63,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
           </Link>
         </div>
 
-        {/* Lista de Assistentes - Largura Total */}
+        {/* Lista de Assistentes */}
         <div className="space-y-6">
           {companies.map((assistant) => (
             <div
@@ -110,67 +112,95 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                   </div>
                 </div>
 
-                {/* Ações */}
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Copiar Link (Apenas para Públicos) */}
-                  {assistant.is_public && (
-                    <button
-                      onClick={() => handleCopy(assistant.slug, assistant.id)}
+                {/* Ações — 2 linhas: 4 em cima, 3 embaixo */}
+                <div className="flex flex-col gap-2 items-end">
+                  {/* Linha 1: até 4 botões */}
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    {/* Copiar Link (apenas públicos) */}
+                    {assistant.is_public && (
+                      <button
+                        onClick={() => handleCopy(assistant.slug, assistant.id)}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                        bg-gray-100 text-gray-700 hover:bg-gray-200
+                        dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                      >
+                        {copiedId === assistant.id ? <Check className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
+                        Copiar Link
+                      </button>
+                    )}
+
+                    {/* QR Code (apenas públicos) */}
+                    {assistant.is_public && (
+                      <button
+                        onClick={() => setShowQrModal(assistant)}
+                        className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                        bg-gray-100 text-gray-700 hover:bg-gray-200
+                        dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                      >
+                        <QrCode className="w-4 h-4 mr-2" />
+                        QR Code
+                      </button>
+                    )}
+
+                    {/* Google Connect */}
+                    <Link
+                      href={`/dashboard/google-connect?companyId=${assistant.id}`}
+                      className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                      bg-red-50 text-red-600 hover:bg-red-100
+                      dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Google
+                    </Link>
+
+                    {/* Meta / Atendimentos */}
+                    <Link
+                      href={`/dashboard/atendimentos?companyId=${assistant.id}`}
+                      className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                      bg-blue-50 text-blue-600 hover:bg-blue-100
+                      dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 border border-blue-100 dark:border-blue-500/20"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Meta
+                    </Link>
+                  </div>
+
+                  {/* Linha 2: 3 botões fixos */}
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    {/* Funções */}
+                    <Link
+                      href={`/dashboard/functions?companyId=${assistant.id}`}
+                      className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                      bg-blue-50 text-blue-600 hover:bg-blue-100
+                      dark:bg-blue-600/10 dark:text-blue-400 dark:hover:bg-blue-600/20 border border-blue-100 dark:border-blue-500/20"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Funções
+                    </Link>
+
+                    {/* Configurar */}
+                    <Link
+                      href={`/dashboard/assistentes/${assistant.id}`}
                       className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
                       bg-gray-100 text-gray-700 hover:bg-gray-200
                       dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
                     >
-                      {copiedId === assistant.id ? <Check className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
-                      Copiar Link
-                    </button>
-                  )}
+                      <Settings className="w-4 h-4 mr-2" />
+                      Configurar
+                    </Link>
 
-                  {/* QR Code (Apenas para Públicos) */}
-                  {assistant.is_public && (
-                    <button
-                      onClick={() => setShowQrModal(assistant)}
-                      className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
-                      bg-gray-100 text-gray-700 hover:bg-gray-200
-                      dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
+                    {/* Abrir */}
+                    <a
+                      href={assistant.is_public ? `https://eai.app.br/ia/${assistant.slug}` : `https://eai.app.br/ia/private/${assistant.private_slug || assistant.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all
+                      bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"
                     >
-                      <QrCode className="w-4 h-4 mr-2" />
-                      QR Code
-                    </button>
-                  )}
-
-                  {/* Funções */}
-                  <Link
-                    href={`/dashboard/functions?companyId=${assistant.id}`}
-                    className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
-                    bg-blue-50 text-blue-600 hover:bg-blue-100
-                    dark:bg-blue-600/10 dark:text-blue-400 dark:hover:bg-blue-600/20 border border-blue-100 dark:border-blue-500/20"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Funções
-                  </Link>
-
-                  {/* Configurar */}
-                  <Link
-                    href={`/dashboard/assistentes/${assistant.id}`}
-                    className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
-                    bg-gray-100 text-gray-700 hover:bg-gray-200
-                    dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent dark:border-white/5"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configurar
-                  </Link>
-
-                  {/* Abrir */}
-                  <a
-                    href={assistant.is_public ? `https://eai.app.br/ia/${assistant.slug}` : `https://eai.app.br/ia/private/${assistant.private_slug || assistant.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all
-                    bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Abrir
-                  </a>
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Abrir
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

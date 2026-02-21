@@ -1,10 +1,9 @@
 'use client';
 // ARQUIVO: app/dashboard/atendimentos/_components/ConnectionManager.tsx
-// Usa apenas: button, card, select, switch (o que existe no /ui do eAi)
-// Toast via sonner (mesmo usado pelo toaster.tsx do eAi)
+// Dependências: apenas button, card, select, switch (existentes no /ui do eAi)
+// Sem sonner, sem use-toast, sem label — zero imports externos além do /ui
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -24,6 +23,7 @@ import {
   Trash2,
   Phone,
   Share2,
+  X,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
@@ -45,6 +45,30 @@ type MetaConnection = {
   created_at: string;
 };
 
+type Notification = { id: number; message: string; type: 'success' | 'error' };
+
+// Componente inline de notificação (sem dependências externas)
+function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss: (id: number) => void }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
+      {items.map((n) => (
+        <div
+          key={n.id}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-xs ${
+            n.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          }`}
+        >
+          <span className="flex-1">{n.message}</span>
+          <button onClick={() => onDismiss(n.id)} className="opacity-70 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ConnectionManager() {
   const supabase = createClient();
 
@@ -54,8 +78,20 @@ export function ConnectionManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const notifCounter = useRef(0);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function notify(message: string, type: 'success' | 'error') {
+    const id = ++notifCounter.current;
+    setNotifications((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setNotifications((prev) => prev.filter((n) => n.id !== id)), 4000);
+  }
+
+  function dismissNotif(id: number) {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }
 
   // -------------------------------------------------------------------
   // Carregar companies do usuário
@@ -64,14 +100,12 @@ export function ConnectionManager() {
     async function loadCompanies() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const { data } = await supabase
         .from('companies')
         .select('id, name, slug')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('name');
-
       if (data && data.length > 0) {
         setCompanies(data);
         setSelectedCompanyId(data[0].id);
@@ -81,21 +115,18 @@ export function ConnectionManager() {
   }, []);
 
   // -------------------------------------------------------------------
-  // Buscar conexões do assistente selecionado
+  // Buscar conexões
   // -------------------------------------------------------------------
   const fetchConnections = useCallback(async (companyId?: string) => {
     const id = companyId || selectedCompanyId;
     if (!id) { setIsLoading(false); return []; }
-
     setError(null);
-
     try {
       const { data, error: fetchError } = await supabase
         .from('meta_connections')
         .select('*')
         .eq('company_id', id)
         .order('created_at', { ascending: false });
-
       if (fetchError) throw fetchError;
       setConnections(data || []);
       return data || [];
@@ -115,21 +146,17 @@ export function ConnectionManager() {
   // Realtime
   useEffect(() => {
     if (!selectedCompanyId) return;
-
     const channel = supabase
       .channel('meta_connections_realtime')
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'meta_connections',
+        event: '*', schema: 'public', table: 'meta_connections',
         filter: `company_id=eq.${selectedCompanyId}`,
       }, () => { fetchConnections(); stopPolling(); })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [selectedCompanyId, fetchConnections]);
 
-  // Window focus → recarregar
+  // Window focus
   useEffect(() => {
     const onFocus = () => fetchConnections();
     const onVisibility = () => { if (!document.hidden) fetchConnections(); };
@@ -150,10 +177,7 @@ export function ConnectionManager() {
   }
 
   function stopPolling() {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
   }
 
   useEffect(() => {
@@ -163,16 +187,14 @@ export function ConnectionManager() {
   }, [connections.length, isLoading]);
 
   // -------------------------------------------------------------------
-  // Iniciar OAuth com Meta
+  // OAuth Meta
   // -------------------------------------------------------------------
   const handleConnect = async () => {
     if (!selectedCompanyId) {
-      toast.error('Selecione um assistente antes de conectar.');
+      notify('Selecione um assistente antes de conectar.', 'error');
       return;
     }
-
     setIsConnecting(true);
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
@@ -180,19 +202,12 @@ export function ConnectionManager() {
       const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID;
       if (!META_APP_ID) throw new Error('META_APP_ID não configurado');
 
-      // state = user_uuid:company_uuid:random
       const state = `${user.id}:${selectedCompanyId}:${crypto.randomUUID().substring(0, 8)}`;
       const redirectUri = `${window.location.origin}/auth/callback/facebook`;
-
       const scopes = [
-        'pages_show_list',
-        'pages_read_engagement',
-        'pages_manage_metadata',
-        'pages_messaging',
-        'instagram_basic',
-        'instagram_manage_messages',
-        'whatsapp_business_management',
-        'whatsapp_business_messaging',
+        'pages_show_list', 'pages_read_engagement', 'pages_manage_metadata',
+        'pages_messaging', 'instagram_basic', 'instagram_manage_messages',
+        'whatsapp_business_management', 'whatsapp_business_messaging',
       ].join(',');
 
       const oauthUrl =
@@ -203,42 +218,30 @@ export function ConnectionManager() {
         `&scope=${encodeURIComponent(scopes)}` +
         `&response_type=code`;
 
-      const result = await openOAuthWindow(oauthUrl);
-
-      if (result.success) {
-        toast.success('Conta Meta conectada! As conexões aparecerão em instantes.');
-        await fetchConnections();
-        setTimeout(() => fetchConnections(), 1500);
-        setTimeout(() => fetchConnections(), 4000);
-      }
+      await openOAuthWindow(oauthUrl);
+      notify('Conta Meta conectada! As conexões aparecerão em instantes.', 'success');
+      await fetchConnections();
+      setTimeout(() => fetchConnections(), 1500);
+      setTimeout(() => fetchConnections(), 4000);
     } catch (err: any) {
       const isCancellation =
-        err.message.includes('cancelada') ||
-        err.message.includes('fechado') ||
-        err.message.includes('closed');
-      if (!isCancellation) {
-        toast.error(err.message);
-      }
+        err.message.includes('cancelada') || err.message.includes('fechado') || err.message.includes('closed');
+      if (!isCancellation) notify(err.message, 'error');
     } finally {
       setIsConnecting(false);
     }
   };
 
-  // -------------------------------------------------------------------
-  // Abrir janela OAuth (popup com fallback para nova aba + localStorage)
-  // -------------------------------------------------------------------
-  function openOAuthWindow(url: string): Promise<{ success: boolean }> {
+  function openOAuthWindow(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const width = 600, height = 700;
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
-
       const popup = window.open(url, 'MetaOAuth', `width=${width},height=${height},left=${left},top=${top}`);
 
       if (!popup || popup.closed) {
         localStorage.removeItem('meta_connection_result');
         window.open(url, '_blank');
-
         const lsInterval = setInterval(() => {
           const stored = localStorage.getItem('meta_connection_result');
           if (stored) {
@@ -247,12 +250,11 @@ export function ConnectionManager() {
               if (Date.now() - (data.timestamp || 0) < 60_000) {
                 localStorage.removeItem('meta_connection_result');
                 clearInterval(lsInterval);
-                data.success ? resolve({ success: true }) : reject(new Error(data.error || 'Erro'));
+                data.success ? resolve() : reject(new Error(data.error || 'Erro'));
               }
             } catch { /* ignore */ }
           }
         }, 1000);
-
         setTimeout(() => { clearInterval(lsInterval); reject(new Error('Tempo esgotado.')); }, 120_000);
         return;
       }
@@ -261,7 +263,7 @@ export function ConnectionManager() {
         if (event.origin !== window.location.origin) return;
         if (event.data?.type === 'meta_connection_success') {
           window.removeEventListener('message', messageHandler);
-          resolve({ success: true });
+          resolve();
         } else if (event.data?.type === 'meta_connection_error') {
           window.removeEventListener('message', messageHandler);
           reject(new Error(event.data.error || 'Erro na conexão'));
@@ -287,24 +289,16 @@ export function ConnectionManager() {
   }
 
   // -------------------------------------------------------------------
-  // Toggle agent_enabled
+  // Toggle agente
   // -------------------------------------------------------------------
   const handleToggleAgent = async (connectionId: string, enabled: boolean) => {
     const { error: updateError } = await supabase
       .from('meta_connections')
       .update({ agent_enabled: enabled })
       .eq('id', connectionId);
-
-    if (updateError) {
-      toast.error(updateError.message);
-      return;
-    }
-
-    setConnections((prev) =>
-      prev.map((c) => (c.id === connectionId ? { ...c, agent_enabled: enabled } : c))
-    );
-
-    toast.success(enabled ? '🤖 Agente ativado' : '⏸️ Agente pausado');
+    if (updateError) { notify(updateError.message, 'error'); return; }
+    setConnections((prev) => prev.map((c) => c.id === connectionId ? { ...c, agent_enabled: enabled } : c));
+    notify(enabled ? '🤖 Agente ativado' : '⏸️ Agente pausado', 'success');
   };
 
   // -------------------------------------------------------------------
@@ -312,18 +306,9 @@ export function ConnectionManager() {
   // -------------------------------------------------------------------
   const handleDisconnect = async (connectionId: string) => {
     if (!confirm('Tem certeza que deseja desconectar esta conta?')) return;
-
-    const { error: deleteError } = await supabase
-      .from('meta_connections')
-      .delete()
-      .eq('id', connectionId);
-
-    if (deleteError) {
-      toast.error(deleteError.message);
-      return;
-    }
-
-    toast.success('Conta desconectada com sucesso.');
+    const { error: deleteError } = await supabase.from('meta_connections').delete().eq('id', connectionId);
+    if (deleteError) { notify(deleteError.message, 'error'); return; }
+    notify('Conta desconectada com sucesso.', 'success');
     await fetchConnections();
   };
 
@@ -331,140 +316,143 @@ export function ConnectionManager() {
   // Render
   // -------------------------------------------------------------------
   return (
-    <div className="space-y-6">
+    <>
+      <Notifications items={notifications} onDismiss={dismissNotif} />
 
-      {/* Seletor de assistente */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-blue-500" />
-            Atendimentos Meta
-          </CardTitle>
-          <CardDescription>
-            Conecte seu assistente ao WhatsApp Business, Instagram e Facebook Messenger
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Assistente</p>
-            <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-              <SelectTrigger className="w-full max-w-xs">
-                <SelectValue placeholder="Selecione um assistente" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              O agente deste assistente responderá automaticamente e consumirá seus créditos.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Conexões */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Facebook className="h-5 w-5 text-blue-600" />
-            Conexões Meta
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading && connections.length === 0 ? (
-            <div className="flex flex-col items-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-              <p className="text-sm text-muted-foreground">Carregando conexões...</p>
-            </div>
-          ) : error && connections.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-              <p className="text-sm text-red-500 mb-4">{error}</p>
-              <Button variant="outline" onClick={() => fetchConnections()}>Tentar Novamente</Button>
-            </div>
-          ) : connections.length === 0 ? (
-            <div className="text-center py-10">
-              <div className="bg-muted/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
-                <Facebook className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Nenhuma conta conectada</h3>
-              <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
-                Conecte sua conta do Facebook para ativar o agente no Instagram, WhatsApp e Messenger.
+      <div className="space-y-6">
+        {/* Seletor de assistente */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-blue-500" />
+              Atendimentos Meta
+            </CardTitle>
+            <CardDescription>
+              Conecte seu assistente ao WhatsApp Business, Instagram e Facebook Messenger
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Assistente</p>
+              <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                <SelectTrigger className="w-full max-w-xs">
+                  <SelectValue placeholder="Selecione um assistente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                O agente responderá automaticamente e consumirá seus créditos.
               </p>
-              <Button onClick={handleConnect} size="lg" disabled={isConnecting || !selectedCompanyId}>
-                {isConnecting
-                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Abrindo...</>
-                  : <><Facebook className="mr-2 h-5 w-5" /> Conectar Conta Meta</>
-                }
-              </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
-                  {connections.length} {connections.length === 1 ? 'conexão ativa' : 'conexões ativas'}
+          </CardContent>
+        </Card>
+
+        {/* Conexões */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Facebook className="h-5 w-5 text-blue-600" />
+              Conexões Meta
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading && connections.length === 0 ? (
+              <div className="flex flex-col items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                <p className="text-sm text-muted-foreground">Carregando conexões...</p>
+              </div>
+            ) : error && connections.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+                <p className="text-sm text-red-500 mb-4">{error}</p>
+                <Button variant="outline" onClick={() => fetchConnections()}>Tentar Novamente</Button>
+              </div>
+            ) : connections.length === 0 ? (
+              <div className="text-center py-10">
+                <div className="bg-muted/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
+                  <Facebook className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Nenhuma conta conectada</h3>
+                <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
+                  Conecte sua conta do Facebook para ativar o agente no Instagram, WhatsApp e Messenger.
                 </p>
-                <Button variant="outline" onClick={handleConnect} disabled={isConnecting || !selectedCompanyId}>
+                <Button onClick={handleConnect} size="lg" disabled={isConnecting || !selectedCompanyId}>
                   {isConnecting
-                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Conectando...</>
-                    : <><Facebook className="mr-2 h-4 w-4" /> Conectar Nova Conta</>
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Abrindo...</>
+                    : <><Facebook className="mr-2 h-5 w-5" />Conectar Conta Meta</>
                   }
                 </Button>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-muted-foreground">
+                    {connections.length} {connections.length === 1 ? 'conexão ativa' : 'conexões ativas'}
+                  </p>
+                  <Button variant="outline" onClick={handleConnect} disabled={isConnecting || !selectedCompanyId}>
+                    {isConnecting
+                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Conectando...</>
+                      : <><Facebook className="mr-2 h-4 w-4" />Conectar Nova Conta</>
+                    }
+                  </Button>
+                </div>
 
-              {connections.map((conn) => (
-                <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Facebook className="h-4 w-4 text-blue-600" />
-                          <p className="font-bold">{conn.page_name}</p>
-                          <CheckCircle className="h-4 w-4 text-green-500" />
+                {connections.map((conn) => (
+                  <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Facebook className="h-4 w-4 text-blue-600" />
+                            <p className="font-bold">{conn.page_name}</p>
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          </div>
+                          {conn.instagram_username && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Instagram className="h-4 w-4 text-pink-600" />
+                              <span>@{conn.instagram_username}</span>
+                            </div>
+                          )}
+                          {conn.whatsapp_number && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Phone className="h-4 w-4 text-green-600" />
+                              <span>{conn.whatsapp_number}</span>
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground pt-1">
+                            Créditos por resposta — FB: {conn.credits_per_reply_facebook} · IG: {conn.credits_per_reply_instagram} · WA: {conn.credits_per_reply_whatsapp}
+                          </p>
                         </div>
-                        {conn.instagram_username && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Instagram className="h-4 w-4 text-pink-600" />
-                            <span>@{conn.instagram_username}</span>
-                          </div>
-                        )}
-                        {conn.whatsapp_number && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-4 w-4 text-green-600" />
-                            <span>{conn.whatsapp_number}</span>
-                          </div>
-                        )}
-                        <p className="text-xs text-muted-foreground pt-1">
-                          Créditos por resposta — FB: {conn.credits_per_reply_facebook} · IG: {conn.credits_per_reply_instagram} · WA: {conn.credits_per_reply_whatsapp}
-                        </p>
-                      </div>
 
-                      <div className="flex flex-col gap-3 items-end">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Agente</span>
-                          <Switch
-                            checked={conn.agent_enabled}
-                            onCheckedChange={(checked) => handleToggleAgent(conn.id, checked)}
-                          />
-                          <span className={`text-xs font-medium ${conn.agent_enabled ? 'text-green-500' : 'text-gray-400'}`}>
-                            {conn.agent_enabled ? 'Ativo' : 'Pausado'}
-                          </span>
+                        <div className="flex flex-col gap-3 items-end">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Agente</span>
+                            <Switch
+                              checked={conn.agent_enabled}
+                              onCheckedChange={(checked) => handleToggleAgent(conn.id, checked)}
+                            />
+                            <span className={`text-xs font-medium ${conn.agent_enabled ? 'text-green-500' : 'text-gray-400'}`}>
+                              {conn.agent_enabled ? 'Ativo' : 'Pausado'}
+                            </span>
+                          </div>
+                          <Button variant="destructive" size="sm" onClick={() => handleDisconnect(conn.id)}>
+                            <Trash2 className="mr-1 h-4 w-4" />
+                            Remover
+                          </Button>
                         </div>
-                        <Button variant="destructive" size="sm" onClick={() => handleDisconnect(conn.id)}>
-                          <Trash2 className="mr-1 h-4 w-4" />
-                          Remover
-                        </Button>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

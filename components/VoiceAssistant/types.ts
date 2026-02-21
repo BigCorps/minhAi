@@ -1,4 +1,7 @@
-// components/VoiceAssistant/types.ts
+// ============================================================
+// types.ts
+// Caminho: components/assistant/VoiceAssistant/types.ts
+// ============================================================
 
 export interface VoiceAssistantProps {
   companyId: string;
@@ -7,10 +10,13 @@ export interface VoiceAssistantProps {
   greetingMessage: string;
   theme?: 'dark' | 'light';
   isMaximized?: boolean;
+  onAssistantStart?: () => void;
+  hideDisabledFunctions?: boolean;
+  autoScroll?: boolean;
 }
 
 export interface QRCodeData {
-  type: 'whatsapp' | 'instagram' | 'pix';
+  type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
   qrCodeUrl: string;
   qrContent: string;
   displayText: string;
@@ -18,36 +24,54 @@ export interface QRCodeData {
   companyName?: string;
 }
 
-export interface PIXConfirmationData {
+export interface PixConfirmationData {
   transactionId: string;
   amount: string;
   qrCodeUrl: string;
   pixCode: string;
 }
 
-export interface VoiceAssistantState {
-  isListening: boolean;
-  isProcessing: boolean;
-  isPlayingAudio: boolean;
-  error: string;
-  permissionGranted: boolean;
-  showStartButton: boolean;
-  qrCodeData: QRCodeData | null;
-  pixConfirmationData: PIXConfirmationData | null;
+export interface NossaMarcaData {
+  companyName: string;
+  logoUrl?: string;
+  brandDescription?: string;
+  businessHours?: string;
+  businessAddress?: string;
+  qrContent?: string;
+  isAddress?: boolean;
+  autoCloseDuration?: number;
 }
 
-export interface AudioRefs {
-  current: HTMLAudioElement | null;
-  feedback: HTMLAudioElement | null;
+export interface EnderecoData {
+  companyName: string;
+  address: string;
+  mapsUrl: string;
+  qrContent: string;
 }
 
-export interface SpeechRecognitionRefs {
-  recognition: any;
-  wakeWordDetector: any;
-  processingQuestion: boolean;
-  consecutiveRestarts: number;
-  lastRestartTime: number;
-  lastRestartAttempt: number;
-  audioUnlocked: boolean;
-  isActive: boolean;
+export interface FunctionSettings {
+  saveToHistory: boolean;
+  creditsPerUse: number;
+  isEnabled: boolean;
+}
+
+export interface ActiveFunctionContext {
+  functionKey: string;
+  activatedAt: number;
+  expiresIn: number;
+}
+
+// ── Estado unificado de modal (alimenta o ActionModals.tsx) ──
+// Para abrir qualquer modal, use:
+// setActiveModal({ type: 'NomeDoComponenteDisplay', data: { ... } })
+export interface ActiveModal {
+  type: string;
+  data: any;
+}
+
+export interface PIXConfirmationData {
+  transactionId: string;
+  amount: string;
+  qrCodeUrl: string;
+  pixCode: string;
 }

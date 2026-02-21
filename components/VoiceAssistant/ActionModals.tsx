@@ -1,0 +1,75 @@
+// ============================================================
+// ActionModals.tsx  ← ARQUIVO NOVO (não existia antes)
+// Caminho: components/assistant/VoiceAssistant/ActionModals.tsx
+//
+// Substitui os ~300 linhas de condicionais de modal que estavam
+// no VoiceAssistantWithWakeWord.tsx. Para adicionar uma nova
+// função com modal, basta: importar o componente + adicionar
+// UMA linha no MODAL_COMPONENTS abaixo.
+// ============================================================
+
+import React from 'react';
+import MeuSistemaDisplay from '@/components/assistant/MeuSistemaDisplay';
+import NossaMarcaDisplay from '@/components/assistant/NossaMarcaDisplay';
+import EnderecoDisplay from '@/components/assistant/EnderecoDisplay';
+import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
+// ⬇️ Importe aqui cada novo componente Display criado para novas funções
+// import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
+
+// ── Mapa de Componentes ───────────────────────────────────────
+// Para adicionar nova função com modal: inclua UMA linha aqui.
+// A chave (string) deve ser EXATAMENTE o valor passado em:
+//   setActiveModal({ type: 'ESSA_CHAVE_AQUI', data: {...} })
+// E deve coincidir com o campo ui_component no SQL do Supabase.
+const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  'MeuSistemaDisplay': MeuSistemaDisplay,
+  'NossaMarcaDisplay': NossaMarcaDisplay,
+  'EnderecoDisplay': EnderecoDisplay,
+  'QRCodeDisplay': QRCodeDisplay,
+  'PIXConfirmationModal': PIXConfirmationModal,
+  // ⬇️ Novas funções — adicione aqui
+  // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
+};
+
+// ── Props ─────────────────────────────────────────────────────
+interface ActionModalsProps {
+  activeModal: {
+    type: string;
+    data: any;
+  } | null;
+  onClose: () => void;
+  theme: 'dark' | 'light';
+  // Handlers de PIX (passados diretamente pois têm lógica própria)
+  onConfirmPix?: (data: any) => void;
+  onCancelPix?: () => void;
+}
+
+// ── Componente ────────────────────────────────────────────────
+export function ActionModals({
+  activeModal,
+  onClose,
+  theme,
+  onConfirmPix,
+  onCancelPix,
+}: ActionModalsProps) {
+  if (!activeModal) return null;
+
+  const Component = MODAL_COMPONENTS[activeModal.type];
+
+  if (!Component) {
+    console.warn(`⚠️ ActionModals: componente não encontrado para tipo "${activeModal.type}". Verifique se foi registrado no MODAL_COMPONENTS.`);
+    return null;
+  }
+
+  return (
+    <Component
+      data={activeModal.data}
+      onClose={onClose}
+      theme={theme}
+      // PIX handlers — só usados pelo PIXConfirmationModal
+      onConfirmPix={onConfirmPix}
+      onCancelPix={onCancelPix}
+    />
+  );
+}

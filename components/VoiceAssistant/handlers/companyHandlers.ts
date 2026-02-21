@@ -1,0 +1,172 @@
+// ============================================================
+// handlers/companyHandlers.ts
+// Caminho: components/assistant/VoiceAssistant/handlers/companyHandlers.ts
+//
+// CORREÇÃO: deps passaram a usar setActiveModal (state unificado)
+// ao invés de setNossaMarcaData / setEnderecoModalData separados.
+// ============================================================
+
+import { createClient } from '@/lib/supabase-browser';
+import { ActiveModal, NossaMarcaData, EnderecoData } from '../types';
+import { saveInteractionToHistory } from './functionUsage';
+
+// ── Deps compartilhados ───────────────────────────────────────
+interface CompanyHandlerDeps {
+  companyId: string;
+  setIsProcessing: (v: boolean) => void;
+  setActiveModal: (modal: ActiveModal | null) => void;
+  playText: (text: string) => Promise<void>;
+}
+
+// ──────────────────────────────────────────────────────────────
+// handleNossaMarcaCommand
+// Busca e exibe informações de marca da empresa.
+// ──────────────────────────────────────────────────────────────
+export async function handleNossaMarcaCommand({
+  companyId,
+  setIsProcessing,
+  setActiveModal,
+  playText,
+}: CompanyHandlerDeps): Promise<void> {
+  try {
+    setIsProcessing(true);
+
+    const supabase = createClient();
+    const { data: company, error } = await supabase
+      .from('companies')
+      .select('name, logo_url, brand_description, business_hours, business_address')
+      .eq('id', companyId)
+      .single();
+
+    if (error || !company) {
+      await playText('Desculpe, não consegui acessar as informações.');
+      return;
+    }
+
+    if (!company.brand_description && !company.business_hours && !company.business_address) {
+      await playText('As informações ainda não foram configuradas.');
+      return;
+    }
+
+    const isAddress =
+      company.business_address &&
+      !company.business_address.startsWith('http') &&
+      !company.business_address.includes('www.');
+
+    let qrContent = '';
+    if (isAddress) {
+      qrContent = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.business_address)}`;
+    } else if (company.business_address) {
+      qrContent = company.business_address.startsWith('http')
+        ? company.business_address
+        : `https://${company.business_address}`;
+    }
+
+    const modalData: NossaMarcaData = {
+      companyName: company.name,
+      logoUrl: company.logo_url,
+      brandDescription: company.brand_description,
+      businessHours: company.business_hours,
+      businessAddress: company.business_address,
+      qrContent,
+      isAddress,
+      autoCloseDuration: 20000,
+    };
+
+    // ✅ Usa setActiveModal (state unificado do ActionModals)
+    setActiveModal({ type: 'NossaMarcaDisplay', data: modalData });
+
+    // Montar texto TTS (limite seguro: 200 chars)
+    let speechText = '';
+
+    if (company.brand_description) {
+      speechText =
+        company.brand_description.length > 150
+          ? company.brand_description.substring(0, 147) + '...'
+          : company.brand_description;
+    }
+
+    if (company.business_hours) {
+      const horaTexto = `. Horário: ${company.business_hours}`;
+      if ((speechText + horaTexto).length <= 200) speechText += horaTexto;
+    }
+
+    if (company.business_address && speechText.length < 180) {
+      speechText += isAddress
+        ? '. Veja a localização no QR Code.'
+        : '. Acesse nosso site pelo QR Code.';
+    }
+
+    if (!speechText) speechText = 'Aqui estão nossas informações.';
+    if (speechText.length > 200) speechText = speechText.substring(0, 197) + '...';
+
+    console.log(`🔊 TTS (${speechText.length} chars):`, speechText);
+
+    // Fala em paralelo com o modal
+    playText(speechText).catch(err => console.error('Erro ao falar:', err));
+
+    await saveInteractionToHistory(companyId, 'Informações da marca', speechText);
+  } catch (error) {
+    console.error('🏢 [NOSSA MARCA] ERRO:', error);
+    playText('Erro ao buscar dados.').catch(() => {});
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// handleEnderecoCommand
+// Busca e exibe o endereço físico com link para Google Maps.
+// ──────────────────────────────────────────────────────────────
+export async function handleEnderecoCommand({
+  companyId,
+  setIsProcessing,
+  setActiveModal,
+  playText,
+}: CompanyHandlerDeps): Promise<void> {
+  try {
+    setIsProcessing(true);
+
+    const supabase = createClient();
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name, business_address')
+      .eq('id', companyId)
+      .single();
+
+    if (!company || !company.business_address) {
+      await playText('O endereço ainda não foi configurado. Por favor, configure no painel administrativo.');
+      return;
+    }
+
+    const isAddress =
+      !company.business_address.startsWith('http') &&
+      !company.business_address.includes('www.');
+
+    if (!isAddress) {
+      await playText('Esta empresa não possui um endereço físico configurado, apenas um site.');
+      return;
+    }
+
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(company.business_address)}`;
+
+    const modalData: EnderecoData = {
+      companyName: company.name,
+      address: company.business_address,
+      mapsUrl,
+      qrContent: mapsUrl,
+    };
+
+    // ✅ Usa setActiveModal (state unificado do ActionModals)
+    setActiveModal({ type: 'EnderecoDisplay', data: modalData });
+
+    playText(
+      `Estamos localizados em: ${company.business_address}. Você pode copiar o link ou escanear o QR Code para abrir no Google Maps.`
+    ).catch(err => console.error('Erro ao falar:', err));
+  } catch (error) {
+    console.error('Erro endereço:', error);
+    await playText('Erro ao buscar endereço.');
+  } finally {
+    setIsProcessing(false);
+  }
+}

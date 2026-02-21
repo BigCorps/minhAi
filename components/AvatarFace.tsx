@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
-import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
+import PixConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
 interface AvatarFaceProps {
   isListening: boolean;
@@ -248,7 +248,7 @@ export function AvatarFace({
       )}
       {pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
-          <PIXConfirmationModal transactionId={pixConfirmationData.transactionId} amount={pixConfirmationData.amount} qrCodeUrl={pixConfirmationData.qrCodeUrl} pixCode={pixConfirmationData.pixCode} onConfirm={onConfirmPix || (async () => {})} onCancel={onCancelPix || (async () => {})} theme={theme} />
+          <PixConfirmationModal transactionId={pixConfirmationData.transactionId} amount={pixConfirmationData.amount} qrCodeUrl={pixConfirmationData.qrCodeUrl} pixCode={pixConfirmationData.pixCode} onConfirm={onConfirmPix || (async () => {})} onCancel={onCancelPix || (async () => {})} theme={theme} />
         </div>
       )}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

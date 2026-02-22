@@ -488,7 +488,7 @@ function AgentConfigPanel({
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────
-export function ConnectionManager() {
+export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: string) => void } = {}) {
   const supabase = createClient();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
@@ -513,7 +513,7 @@ export function ConnectionManager() {
       if (!user) return;
       const { data } = await supabase.from('companies').select('id, name, system_prompt')
         .eq('user_id', user.id).eq('is_active', true).order('name');
-      if (data && data.length > 0) { setCompanies(data); setSelectedCompanyId(data[0].id); }
+      if (data && data.length > 0) { setCompanies(data); setSelectedCompanyId(data[0].id); onCompanyChange?.(data[0].id); }
     }
     loadCompanies();
   }, []);
@@ -644,10 +644,19 @@ export function ConnectionManager() {
 
         {/* Seletor de assistente */}
         <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-blue-500" />
+              Atendimentos Meta
+            </CardTitle>
+            <CardDescription>
+              Conecte seu assistente ao WhatsApp Business, Instagram e Facebook Messenger
+            </CardDescription>
+          </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm font-medium">Assistente</p>
-              <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+              <Select value={selectedCompanyId} onValueChange={(v) => { setSelectedCompanyId(v); onCompanyChange?.(v); }}>
                 <SelectTrigger className="w-full max-w-xs">
                   <SelectValue placeholder="Selecione um assistente" />
                 </SelectTrigger>

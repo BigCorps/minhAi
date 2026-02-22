@@ -491,7 +491,7 @@ export function QuickActionsPanel({ selectedCompanyId }: { selectedCompanyId: st
                 {conversations.map((conv) => (
                   <ConversationRow
                     key={`${conv.conversation_id}-${conv.page_id}`}
-                    conv={conv} connection={selectedConn!}
+                    conv={conv} Última Mensagem: connection={selectedConn!}
                     onAction={(c, conn) => setActiveConv({ conv: c, conn })}
                   />
                 ))}

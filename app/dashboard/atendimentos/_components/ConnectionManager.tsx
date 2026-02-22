@@ -572,7 +572,18 @@ export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: 
       if (!META_APP_ID) throw new Error('META_APP_ID não configurado');
       const state = `${user.id}:${selectedCompanyId}:${crypto.randomUUID().substring(0, 8)}`;
       const redirectUri = `${window.location.origin}/auth/callback/facebook`;
-      const scopes = ['pages_show_list','pages_read_engagement','pages_manage_metadata','pages_messaging','instagram_basic','instagram_manage_messages','whatsapp_business_management','whatsapp_business_messaging'].join(',');
+      const scopes = [
+  'pages_show_list',
+  'pages_read_engagement',
+  'pages_manage_metadata',
+  'pages_messaging',
+  'pages_manage_posts',            // ← novo: responder comentários FB
+  'instagram_basic',
+  'instagram_manage_messages',
+  'instagram_manage_comments',     // ← novo: responder comentários IG
+  'whatsapp_business_management',
+  'whatsapp_business_messaging',
+].join(',');
       const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}&scope=${encodeURIComponent(scopes)}&response_type=code`;
       await openOAuthWindow(oauthUrl);
       notify('Conta Meta conectada! As conexões aparecerão em instantes.', 'success');

@@ -135,7 +135,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
         .eq('conversation_id', conv.conversation_id)
         .eq('page_id', conv.page_id);
       if (error) throw error;
-      onDone(newPaused ? '⏸️ Bot pausado' : '▶️ Bot retomado');
+      onDone(newPaused ? '⏸️ Assistente pausado' : '▶️ Assistente retomado');
     } catch (e: any) { onDone('❌ ' + e.message); }
     finally { setLoading(false); }
   }
@@ -253,8 +253,8 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {conv.is_paused
-                    ? 'O bot não está respondendo. Clique para retomar o atendimento automático.'
-                    : 'O bot está respondendo automaticamente. Pause para atender manualmente.'}
+                    ? 'O assistente não está respondendo. Clique para retomar o atendimento automático.'
+                    : 'O assistente está respondendo automaticamente. Pause para atender manualmente.'}
                 </p>
               </div>
               <Button onClick={handleTogglePause} disabled={loading}
@@ -301,7 +301,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                   <span className="font-medium text-gray-900 dark:text-white">{displayName}</span>.
                   {fnDef.credits > 0
                     ? <span className="text-yellow-600 dark:text-yellow-400 font-medium ml-1">{fnDef.credits} crédito(s)</span>
-                    : <span className="text-green-600 dark:text-green-400 font-medium ml-1">grátis</span>}
+                    : <span className="text-green-600 dark:text-green-400 font-medium ml-1">1 crédito apenas na confirmação</span>}
                 </p>
               </div>
 
@@ -341,7 +341,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                 className="w-full">
                 {loading
                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  : <><Zap className="mr-2 h-4 w-4" />Executar {fnDef.label}</>}
+                  : <><Zap className="mr-2 h-4 w-4" />Função {fnDef.label}</>}
               </Button>
             </div>
           )}

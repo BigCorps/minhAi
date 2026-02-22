@@ -68,6 +68,7 @@ function PlatformBadge({ platform }: { platform: string }) {
 }
 
 // ─── Linha de conversa ────────────────────────────────────────────────────
+// ─── Linha de conversa ────────────────────────────────────────────────────
 function ConversationRow({ conv, connection, onAction }: {
   conv: Conversation; connection: Connection;
   onAction: (conv: Conversation, conn: Connection) => void;
@@ -91,11 +92,16 @@ function ConversationRow({ conv, connection, onAction }: {
             <User className="h-3 w-3 text-gray-400 shrink-0" />
             <p className="text-sm font-medium truncate text-gray-900 dark:text-white">{displayName}</p>
           </div>
+          
+          {/* AQUI ESTÁ A CORREÇÃO ↓ */}
           {conv.last_message_text && (
             <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 max-w-[200px]">
+              <span className="font-medium mr-1 text-gray-500 dark:text-gray-400">Última Mensagem:</span>
               {conv.last_message_text}
             </p>
           )}
+          {/* AQUI TERMINA A CORREÇÃO ↑ */}
+
           <div className="flex items-center gap-2 mt-0.5">
             <PlatformBadge platform={conv.platform} />
             <span className="text-xs text-gray-500 dark:text-gray-400">{relTime}</span>
@@ -491,7 +497,7 @@ export function QuickActionsPanel({ selectedCompanyId }: { selectedCompanyId: st
                 {conversations.map((conv) => (
                   <ConversationRow
                     key={`${conv.conversation_id}-${conv.page_id}`}
-                    conv={conv} Última Mensagem: connection={selectedConn!}
+                    conv={conv} connection={selectedConn!}
                     onAction={(c, conn) => setActiveConv({ conv: c, conn })}
                   />
                 ))}

@@ -10,7 +10,7 @@ import {
   Loader2, AlertCircle, Instagram, Facebook, CheckCircle, Trash2,
   Phone, Share2, X, Bot, Save, ChevronDown, ChevronUp,
   MessageSquare, CreditCard, Zap, Building2, MapPin, Calculator,
-  AtSign, Globe, Mail, Smartphone,
+  AtSign, Globe, Mail, Smartphone, MessageCircle, Hash,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
@@ -38,6 +38,12 @@ type MetaConnection = {
   nossa_marca_enabled: boolean;
   endereco_enabled: boolean;
   orcamento_enabled: boolean;
+  // Comentários
+  comments_enabled: boolean;
+  comments_mode: 'all' | 'keyword';
+  comments_keywords: string | null;
+  comments_reply_text: string | null;
+  comments_dm_text: string | null;
   // Créditos
   credits_per_reply_facebook: number;
   credits_per_reply_instagram: number;
@@ -238,6 +244,179 @@ function GreetingConfig({
       <Button size="sm" onClick={handleSave} disabled={saving}>
         {saving ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Salvando...</> : <><Save className="mr-2 h-3 w-3" />Salvar saudação</>}
       </Button>
+    </div>
+  );
+}
+
+// ─── Painel de comentários ────────────────────────────────────────────────
+function CommentsPanel({
+  connection, onSave,
+}: {
+  connection: MetaConnection;
+  onSave: (updates: Partial<MetaConnection>) => Promise<void>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [enabled, setEnabled] = useState(connection.comments_enabled ?? false);
+  const [mode, setMode] = useState<'all' | 'keyword'>(connection.comments_mode ?? 'all');
+  const [keywords, setKeywords] = useState(connection.comments_keywords ?? '');
+  const [replyText, setReplyText] = useState(connection.comments_reply_text ?? '');
+  const [dmText, setDmText] = useState(connection.comments_dm_text ?? '');
+
+  async function handleSave() {
+    setSaving(true);
+    await onSave({
+      comments_enabled:    enabled,
+      comments_mode:       mode,
+      comments_keywords:   mode === 'keyword' ? keywords.trim() || null : null,
+      comments_reply_text: replyText.trim() || null,
+      comments_dm_text:    dmText.trim() || null,
+    });
+    setSaving(false);
+  }
+
+  return (
+    <div className="mt-2 border-t border-border pt-3">
+      <button onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition w-full">
+        <MessageCircle className="h-4 w-4" />
+        <span>Resposta automática a comentários</span>
+        {enabled && <span className="ml-1 text-xs bg-green-500/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-full">Ativo</span>}
+        {isOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+      </button>
+
+      {isOpen && (
+        <div className="mt-3 space-y-4">
+
+          {/* Toggle principal */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border">
+            <div>
+              <p className="text-sm font-medium">Ativar para Facebook e Instagram</p>
+              <p className="text-xs text-muted-foreground">Reply público + DM automático ao detectar comentário</p>
+            </div>
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+
+          {enabled && (
+            <>
+              {/* Modo */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Quando responder</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setMode('all')}
+                    className={`p-3 rounded-lg border text-sm text-left transition
+                      ${mode === 'all' ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'border-border bg-muted/20 text-muted-foreground hover:text-foreground'}`}>
+                    <p className="font-medium">Todos os comentários</p>
+                    <p className="text-xs mt-0.5 opacity-70">Responde qualquer comentário novo</p>
+                  </button>
+                  <button onClick={() => setMode('keyword')}
+                    className={`p-3 rounded-lg border text-sm text-left transition
+                      ${mode === 'keyword' ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'border-border bg-muted/20 text-muted-foreground hover:text-foreground'}`}>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Hash className="h-3.5 w-3.5" />
+                      Palavra-chave
+                    </div>
+                    <p className="text-xs mt-0.5 opacity-70">Só com as palavras definidas</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Palavras-chave */}
+              {mode === 'keyword' && (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">Palavras-chave</p>
+                  <input
+                    type="text"
+                    value={keywords}
+                    onChange={(e) => setKeywords(e.target.value)}
+                    placeholder="preço, quero, interesse, desconto"
+                    className="w-full text-sm rounded-lg border p-2 outline-none
+                      bg-background text-foreground border-border placeholder:text-muted-foreground
+                      focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-muted-foreground">Separe por vírgula. Sem distinção de maiúsculas.</p>
+                </div>
+              )}
+
+              {/* Reply público */}
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">Reply no comentário (público)</p>
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  rows={3}
+                  placeholder="Ex: Olá! Enviamos mais detalhes no seu Direct 📩"
+                  className="w-full text-sm rounded-lg border p-2 resize-none outline-none
+                    bg-background text-foreground border-border placeholder:text-muted-foreground
+                    focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                />
+                <p className="text-xs text-muted-foreground">Resposta pública visível a todos. Deixe vazio para não responder no comentário.</p>
+              </div>
+
+              {/* DM automático */}
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">Mensagem no Direct (privado)</p>
+                <textarea
+                  value={dmText}
+                  onChange={(e) => setDmText(e.target.value)}
+                  rows={4}
+                  placeholder="Ex: Olá! Vi seu comentário. Aqui estão mais detalhes sobre nosso produto..."
+                  className="w-full text-sm rounded-lg border p-2 resize-none outline-none
+                    bg-background text-foreground border-border placeholder:text-muted-foreground
+                    focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mensagem inicial enviada no Direct. Após isso, o cliente pode responder e o bot continuará normalmente com as funções configuradas.
+                </p>
+              </div>
+
+              {/* Preview */}
+              {(replyText || dmText) && (
+                <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview do fluxo</p>
+                  <div className="flex items-start gap-2 text-xs">
+                    <span className="text-lg">💬</span>
+                    <div>
+                      <p className="text-muted-foreground">Cliente comenta no post</p>
+                      {mode === 'keyword' && keywords && (
+                        <p className="text-yellow-600 dark:text-yellow-400 mt-0.5">↳ Somente se contiver: {keywords}</p>
+                      )}
+                    </div>
+                  </div>
+                  {replyText && (
+                    <div className="flex items-start gap-2 text-xs">
+                      <span className="text-lg">↩️</span>
+                      <div>
+                        <p className="text-muted-foreground">Reply público:</p>
+                        <p className="text-foreground mt-0.5 italic">"{replyText.substring(0, 80)}{replyText.length > 80 ? '...' : ''}"</p>
+                      </div>
+                    </div>
+                  )}
+                  {dmText && (
+                    <div className="flex items-start gap-2 text-xs">
+                      <span className="text-lg">📨</span>
+                      <div>
+                        <p className="text-muted-foreground">DM automático:</p>
+                        <p className="text-foreground mt-0.5 italic">"{dmText.substring(0, 80)}{dmText.length > 80 ? '...' : ''}"</p>
+                      </div>
+                    </div>
+                  )}
+                  {dmText && (
+                    <div className="flex items-start gap-2 text-xs">
+                      <span className="text-lg">🤖</span>
+                      <p className="text-muted-foreground">Se o cliente responder o DM, o bot continua com as funções ativas.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          <Button size="sm" onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+            {saving ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Salvando...</> : <><Save className="mr-2 h-3 w-3" />Salvar configurações</>}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -577,6 +756,7 @@ export function ConnectionManager() {
                       </div>
 
                       <FunctionsPanel connection={conn} onSave={(u) => handleSaveConnection(conn.id, u)} />
+                      <CommentsPanel connection={conn} onSave={(u) => handleSaveConnection(conn.id, u)} />
                       <AgentConfigPanel
                         connection={conn}
                         companySystemPrompt={selectedCompany?.system_prompt || null}

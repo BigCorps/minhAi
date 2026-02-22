@@ -575,6 +575,7 @@ export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: 
       const scopes = [
   'pages_show_list',
   'pages_read_engagement',
+  'pages_manage_engagement',
   'pages_manage_metadata',
   'pages_messaging',
   'pages_manage_posts',            // ← novo: responder comentários FB

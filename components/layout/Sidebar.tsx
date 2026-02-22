@@ -18,15 +18,14 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { href: '/dashboard',              label: 'Dashboard',          icon: LayoutDashboard },
-  { href: '/dashboard/assistentes',  label: 'Assistentes',        icon: Bot },
-  { href: '/dashboard/functions',    label: 'Funções',            icon: Settings },
-  { href: '/dashboard/faqs',         label: 'Perguntas/Respostas',icon: HelpCircle },
-  { href: '/dashboard/calendario',   label: 'Calendário',         icon: Calendar }, // ← NOVO
-  { href: '/dashboard/emails',       label: 'Emails',             icon: Mail },      // ← NOVO
-  { href: '/dashboard/atendimentos', label: 'Atendimentos Meta',  icon: Share2 },
-  { href: '/dashboard/saldo',        label: 'Recebimentos',       icon: Wallet },
-  { href: '/dashboard/historico',    label: 'Histórico',          icon: MessageSquare },
+  { href: '/dashboard',              label: 'Dashboard',                        icon: LayoutDashboard },
+  { href: '/dashboard/assistentes',  label: 'Assistentes',                      icon: Bot },
+  { href: '/dashboard/functions',    label: 'Funções',                          icon: Settings },
+  { href: '/dashboard/faqs',         label: 'Perguntas | Respostas',            icon: HelpCircle },
+  { href: '/dashboard/agenda',       label: 'Agenda Google | Gmail',            icon: Calendar }, // ← NOVO
+  { href: '/dashboard/atendimentos', label: 'Whatsapp | Instagram | Facebook',  icon: Share2 },
+  { href: '/dashboard/saldo',        label: 'Recebimentos',                     icon: Wallet },
+  { href: '/dashboard/historico',    label: 'Histórico',                        icon: MessageSquare },
 ];
 
 export function Sidebar() {

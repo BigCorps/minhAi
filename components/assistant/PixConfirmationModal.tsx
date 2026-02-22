@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, X, Copy, AlertCircle, Mic } from 'lucide-react';
+import { Check, X, Copy, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface PIXConfirmationModalProps {
@@ -130,7 +130,7 @@ export default function PIXConfirmationModal({
 
       {/* Card wrapper — desktop: max-w-3xl horizontal | mobile: max-w-sm vertical */}
       <div
-        className={`relative w-full rounded-3xl shadow-2xl overflow-hidden border ${bg} ${border}
+        className={`relative w-full rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
           max-w-sm md:max-w-3xl
           animate-in zoom-in-95 duration-300`}
       >
@@ -140,8 +140,8 @@ export default function PIXConfirmationModal({
         <div className="hidden md:flex">
           {/* Left — QR Code */}
           <div className={`flex-shrink-0 flex items-center justify-center p-8 border-r ${border}`}>
-            <div className="relative w-64 h-64 bg-white rounded-2xl p-4 shadow-inner overflow-hidden">
-              <img src={qrCodeUrl} alt="QR Code PIX" className="w-full h-full object-contain rounded-xl" />
+            <div className="relative w-64 h-64 bg-white rounded-xl p-4 shadow-sm overflow-hidden">
+              <img src={qrCodeUrl} alt="QR Code PIX" className="w-full h-full object-contain rounded-lg" />
               {copied && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-500/95 rounded-2xl animate-in fade-in zoom-in duration-200">
                   <Check className="w-12 h-12 text-white" />
@@ -155,10 +155,10 @@ export default function PIXConfirmationModal({
           <div className={`flex-1 flex flex-col divide-y ${divider}`}>
             {/* Header — Valor */}
             <div className={`px-8 py-6 ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
-              <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${textMuted}`}>
+              <p className={`text-xs font-medium uppercase tracking-widest mb-1 ${textMuted}`}>
                 Valor a Pagar
               </p>
-              <p className={`text-5xl font-extrabold tracking-tight ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+              <p className={`text-5xl font-bold tracking-tight ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                 R$&nbsp;{amount}
               </p>
             </div>
@@ -220,16 +220,16 @@ export default function PIXConfirmationModal({
         <div className="md:hidden flex flex-col">
           {/* Valor */}
           <div className={`px-6 pt-6 pb-4 ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
-            <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${textMuted}`}>Valor a Pagar</p>
-            <p className={`text-4xl font-extrabold tracking-tight ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+            <p className={`text-xs font-medium uppercase tracking-widest mb-1 ${textMuted}`}>Valor a Pagar</p>
+            <p className={`text-4xl font-bold tracking-tight ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
               R$&nbsp;{amount}
             </p>
           </div>
 
           {/* QR Code */}
           <div className={`flex justify-center items-center py-6 px-8 border-b ${border}`}>
-            <div className="relative w-56 h-56 bg-white rounded-2xl p-3 shadow-inner overflow-hidden">
-              <img src={qrCodeUrl} alt="QR Code PIX" className="w-full h-full object-contain rounded-xl" />
+            <div className="relative w-56 h-56 bg-white rounded-xl p-3 shadow-sm overflow-hidden">
+              <img src={qrCodeUrl} alt="QR Code PIX" className="w-full h-full object-contain rounded-lg" />
               {copied && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-500/95 rounded-2xl animate-in fade-in zoom-in duration-200">
                   <Check className="w-10 h-10 text-white" />
@@ -308,11 +308,11 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className={`text-xs font-semibold uppercase tracking-wider flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+      <span className={`text-xs font-medium uppercase tracking-wider flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
         {label}
       </span>
       <span
-        className={`text-sm font-medium truncate ${
+        className={`text-sm truncate ${
           highlight
             ? isDark ? 'text-amber-400' : 'text-amber-600'
             : isDark ? 'text-gray-200' : 'text-gray-700'
@@ -343,8 +343,8 @@ function VoiceButton({
 }) {
   const base =
     color === 'green'
-      ? 'bg-green-600 hover:bg-green-500 active:bg-green-700 shadow-green-900/40'
-      : 'bg-red-600 hover:bg-red-500 active:bg-red-700 shadow-red-900/40';
+      ? 'bg-green-600 hover:bg-green-500 active:bg-green-700'
+      : 'bg-red-600 hover:bg-red-500 active:bg-red-700';
 
   return (
     <button
@@ -353,8 +353,8 @@ function VoiceButton({
       className={`
         flex items-center justify-center gap-3
         ${fullWidth ? 'w-full' : 'flex-1'}
-        px-5 py-4 rounded-2xl text-white font-bold text-sm
-        transition-all duration-150 shadow-lg
+        px-5 py-4 rounded-lg text-white
+        transition-all duration-150
         disabled:opacity-50 disabled:cursor-not-allowed
         ${base}
       `}
@@ -365,11 +365,8 @@ function VoiceButton({
         icon
       )}
       <div className="flex flex-col items-start leading-tight">
-        <span className="flex items-center gap-1.5 text-white/70 text-[10px] font-semibold uppercase tracking-widest">
-          <Mic className="w-3 h-3" />
-          ou clique
-        </span>
-        <span className="text-sm font-bold">{label}</span>
+        <span className="text-sm font-semibold">{label}</span>
+        <span className="text-white/60 text-[10px]">ou clique</span>
       </div>
     </button>
   );

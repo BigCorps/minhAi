@@ -644,15 +644,6 @@ export function ConnectionManager() {
 
         {/* Seletor de assistente */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5 text-blue-500" />
-              Atendimentos Meta
-            </CardTitle>
-            <CardDescription>
-              Conecte seu assistente ao WhatsApp Business, Instagram e Facebook Messenger
-            </CardDescription>
-          </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm font-medium">Assistente</p>

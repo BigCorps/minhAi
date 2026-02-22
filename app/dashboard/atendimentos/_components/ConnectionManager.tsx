@@ -590,7 +590,7 @@ export function ConnectionManager() {
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground pt-1">
-                            Configure suas contas do Facebook · Instagram · WhatsApp diretamente no Business Suite do Grupo Meta
+                            Configure e acompanhe as conversas das contas do Facebook · Instagram · WhatsApp diretamente no Business Suite do Grupo Meta
                           </p>
                         </div>
 

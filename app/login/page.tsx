@@ -189,7 +189,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 transition-colors duration-500 ${
+    <div className={`min-h-screen flex items-center justify-center px-4 py-6 transition-colors duration-500 ${
       theme === 'dark' 
         ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
         : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
@@ -215,18 +215,18 @@ export default function LoginPage() {
       </button>
 
       <div className="max-w-md w-full">
-        <div className={`rounded-2xl shadow-xl p-8 transition-colors ${
+        <div className={`rounded-2xl shadow-xl p-5 sm:p-8 transition-colors ${
           theme === 'dark' 
             ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10' 
             : 'bg-white'
         }`}>
-          <div className="text-center mb-8">
+          <div className="text-center mb-4 sm:mb-8">
             <Image 
               src="/logo.png" 
               alt="eAi" 
               width={190} 
               height={98}
-              className="mx-auto mb-4 rounded-xl"
+              className="mx-auto mb-2 sm:mb-4 rounded-xl"
             />
             <h1 className={`text-2xl font-bold mb-2 transition-colors ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -254,8 +254,8 @@ export default function LoginPage() {
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           ) : mode === 'login' && biometricUserEmail ? (
-            <div className="mb-6 space-y-4">
-              <div className={`text-center p-4 rounded-2xl border ${
+            <div className="mb-3 sm:mb-6 space-y-3 sm:space-y-4">
+              <div className={`text-center p-3 sm:p-4 rounded-2xl border ${
                 theme === 'dark' 
                   ? 'bg-slate-700/50 border-white/10' 
                   : 'bg-blue-50 border-blue-100'
@@ -267,7 +267,7 @@ export default function LoginPage() {
               <button
                 onClick={handleBiometricLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -288,7 +288,7 @@ export default function LoginPage() {
                 Entrar com outra conta
               </button>
 
-              <div className="relative my-6">
+              <div className="relative my-3 sm:my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className={`w-full border-t ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}></div>
                 </div>
@@ -299,7 +299,7 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          <form onSubmit={handleEmailAuth} className="space-y-4">
+          <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
             {mode === 'signup' && (
               <div>
                 <label htmlFor="name" className={`block text-sm font-medium mb-2 transition-colors ${
@@ -313,7 +313,7 @@ export default function LoginPage() {
                   name="name"
                   required={mode === 'signup'}
                   placeholder="Seu nome"
-                  className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  className={`w-full px-4 py-2.5 sm:py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
                     theme === 'dark'
                       ? 'bg-slate-700/50 border border-white/10 text-white placeholder-white/40'
                       : 'bg-white border border-gray-300 text-gray-900'
@@ -334,7 +334,7 @@ export default function LoginPage() {
                 name="email"
                 required
                 placeholder="seu@email.com"
-                className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                className={`w-full px-4 py-2.5 sm:py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
                   theme === 'dark'
                     ? 'bg-slate-700/50 border border-white/10 text-white placeholder-white/40'
                     : 'bg-white border border-gray-300 text-gray-900'
@@ -356,7 +356,7 @@ export default function LoginPage() {
                   required
                   placeholder="••••••••"
                   minLength={6}
-                  className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  className={`w-full px-4 py-2.5 sm:py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
                     theme === 'dark'
                       ? 'bg-slate-700/50 border border-white/10 text-white placeholder-white/40'
                       : 'bg-white border border-gray-300 text-gray-900'
@@ -375,13 +375,13 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-6 py-3 bg-[#b0cb1f] text-white rounded-lg hover:bg-[#8ca214] transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="w-full px-6 py-2.5 sm:py-3 bg-[#b0cb1f] text-white rounded-lg hover:bg-[#8ca214] transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar Conta'}
             </button>
           </form>
 
-          <div className="relative my-6">
+          <div className="relative my-3 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className={`w-full border-t transition-colors ${
                 theme === 'dark' ? 'border-white/10' : 'border-gray-300'
@@ -398,7 +398,7 @@ export default function LoginPage() {
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className={`w-full px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 ${
+              className={`w-full px-6 py-2.5 sm:py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 ${
                 theme === 'dark'
                   ? 'bg-slate-700/50 border border-white/10 hover:bg-slate-700/70'
                   : 'border border-gray-300 hover:bg-gray-50'
@@ -418,7 +418,7 @@ export default function LoginPage() {
             <button
               onClick={handleFacebookLogin}
               disabled={loading}
-              className={`w-full px-6 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 ${
+              className={`w-full px-6 py-2.5 sm:py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 ${
                 theme === 'dark'
                   ? 'bg-slate-700/50 border border-white/10 hover:bg-slate-700/70'
                   : 'border border-gray-300 hover:bg-gray-50'
@@ -433,7 +433,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="mt-4 text-center">
+          <div className="mt-3 sm:mt-4 text-center">
             <button
               onClick={() => {
                 setMode(mode === 'login' ? 'signup' : 'login');
@@ -452,7 +452,7 @@ export default function LoginPage() {
           </div>
 
           {/* Links de Termos e Privacidade */}
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
               <Link 
                 href="/termos"

@@ -8,34 +8,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Loader2, X, Zap, PauseCircle, PlayCircle, Send,
   MessageSquare, Phone, Instagram, Facebook, RefreshCw,
-  ChevronDown, ChevronUp, Bot, CreditCard, MapPin,
-  Building2, AtSign, Calculator, AlertCircle,
+  ChevronDown, ChevronUp, CreditCard, MapPin, Building2,
+  AlertCircle, User,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────
-type Company   = { id: string; name: string };
 type Connection = {
-  id: string; company_id: string; page_name: string; platform: string;
+  id: string; company_id: string; page_name: string;
   meta_page_id: string; instagram_account_id: string | null;
-  whatsapp_number_id: string | null; whatsapp_number: string | null;
+  whatsapp_number_id: string | null;
   encrypted_page_access_token: string;
 };
 type Conversation = {
   conversation_id: string; page_id: string; platform: string;
-  is_paused: boolean; ai_enabled: boolean;
-  last_ai_response_at: string | null; updated_at: string;
+  is_paused: boolean; sender_name: string | null; updated_at: string;
 };
 type Notification = { id: number; message: string; type: 'success' | 'error' };
 
-// ─── Funções forçáveis ────────────────────────────────────────────────────
 const FORCE_FUNCTIONS = [
-  { key: 'endereco',    label: 'Endereço',       icon: MapPin,        credits: 1, hasInput: false },
-  { key: 'nossa_marca', label: 'Nossa Marca',    icon: Building2,     credits: 1, hasInput: false },
-  { key: 'contacts',   label: 'Contatos',        icon: AtSign,        credits: 1, hasInput: false },
-  { key: 'meu_sistema', label: 'Meu Sistema',   icon: Bot,           credits: 0, hasInput: false },
-  { key: 'pix',        label: 'Gerar PIX',       icon: CreditCard,    credits: 0, hasInput: true,  placeholder: 'Valor em reais (ex: 150)' },
-  { key: 'orcamento',  label: 'Orçamento',       icon: Calculator,    credits: 2, hasInput: true,  placeholder: 'Descreva o que o cliente quer' },
+  { key: 'pix',        label: 'Gerar PIX',   icon: CreditCard, credits: 0, hasInput: true,  placeholder: 'Valor em reais (ex: 150)' },
+  { key: 'nossa_marca', label: 'Nossa Marca', icon: Building2,  credits: 1, hasInput: false },
+  { key: 'endereco',   label: 'Endereço',     icon: MapPin,     credits: 1, hasInput: false },
 ];
 
 // ─── Notificações ─────────────────────────────────────────────────────────
@@ -48,7 +42,9 @@ function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss:
         <div key={n.id} className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-xs
           ${n.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           <span className="flex-1">{n.message}</span>
-          <button onClick={() => onDismiss(n.id)} className="opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
+          <button onClick={() => onDismiss(n.id)} className="opacity-70 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       ))}
     </div>
@@ -58,11 +54,11 @@ function Notifications({ items, onDismiss }: { items: Notification[]; onDismiss:
 // ─── Badge de plataforma ──────────────────────────────────────────────────
 function PlatformBadge({ platform }: { platform: string }) {
   const map: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    facebook:  { icon: <Facebook  className="h-3 w-3" />, label: 'Facebook',  color: 'text-blue-600  bg-blue-600/10'  },
-    instagram: { icon: <Instagram className="h-3 w-3" />, label: 'Instagram', color: 'text-pink-600  bg-pink-600/10'  },
+    facebook:  { icon: <Facebook  className="h-3 w-3" />, label: 'Facebook',  color: 'text-blue-600 bg-blue-600/10'   },
+    instagram: { icon: <Instagram className="h-3 w-3" />, label: 'Instagram', color: 'text-pink-600 bg-pink-600/10'   },
     whatsapp:  { icon: <Phone     className="h-3 w-3" />, label: 'WhatsApp',  color: 'text-green-600 bg-green-600/10' },
   };
-  const p = map[platform] ?? { icon: <MessageSquare className="h-3 w-3" />, label: platform, color: 'text-muted-foreground bg-muted' };
+  const p = map[platform] ?? { icon: <MessageSquare className="h-3 w-3" />, label: platform, color: 'text-gray-500 bg-gray-100 dark:bg-white/10' };
   return (
     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${p.color}`}>
       {p.icon}{p.label}
@@ -71,38 +67,39 @@ function PlatformBadge({ platform }: { platform: string }) {
 }
 
 // ─── Linha de conversa ────────────────────────────────────────────────────
-function ConversationRow({
-  conv, connection, onAction,
-}: {
-  conv: Conversation;
-  connection: Connection;
+function ConversationRow({ conv, connection, onAction }: {
+  conv: Conversation; connection: Connection;
   onAction: (conv: Conversation, conn: Connection) => void;
 }) {
-  const relTime = conv.updated_at
-    ? (() => {
-        const diff = Date.now() - new Date(conv.updated_at).getTime();
-        if (diff < 60_000)    return 'agora';
-        if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}min atrás`;
-        if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h atrás`;
-        return `${Math.floor(diff / 86_400_000)}d atrás`;
-      })()
-    : '';
+  const diff  = Date.now() - new Date(conv.updated_at).getTime();
+  const relTime = diff < 60_000 ? 'agora'
+    : diff < 3_600_000  ? `${Math.floor(diff / 60_000)}min atrás`
+    : diff < 86_400_000 ? `${Math.floor(diff / 3_600_000)}h atrás`
+    : `${Math.floor(diff / 86_400_000)}d atrás`;
+
+  const displayName = conv.sender_name || conv.conversation_id;
 
   return (
-    <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/20 border border-border hover:bg-muted/30 transition">
+    <div className="flex items-center justify-between gap-3 p-3 rounded-lg
+      bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10
+      hover:bg-gray-50 dark:hover:bg-slate-700 transition">
       <div className="flex items-center gap-3 min-w-0">
         <div className={`w-2 h-2 rounded-full shrink-0 ${conv.is_paused ? 'bg-yellow-500' : 'bg-green-500'}`} />
         <div className="min-w-0">
-          <p className="text-sm font-mono truncate text-foreground">{conv.conversation_id}</p>
+          <div className="flex items-center gap-1.5">
+            <User className="h-3 w-3 text-gray-400 shrink-0" />
+            <p className="text-sm font-medium truncate text-gray-900 dark:text-white">{displayName}</p>
+          </div>
           <div className="flex items-center gap-2 mt-0.5">
             <PlatformBadge platform={conv.platform} />
-            <span className="text-xs text-muted-foreground">{relTime}</span>
-            {conv.is_paused && <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Pausado</span>}
+            <span className="text-xs text-gray-500 dark:text-gray-400">{relTime}</span>
+            {conv.is_paused && (
+              <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">Pausado</span>
+            )}
           </div>
         </div>
       </div>
-      <Button size="sm" variant="outline" onClick={() => onAction(conv, connection)}
-        className="shrink-0 text-xs">
+      <Button size="sm" variant="outline" onClick={() => onAction(conv, connection)} className="shrink-0 text-xs">
         <Zap className="h-3 w-3 mr-1" />Ações
       </Button>
     </div>
@@ -110,27 +107,19 @@ function ConversationRow({
 }
 
 // ─── Modal de ações ───────────────────────────────────────────────────────
-function ActionsModal({
-  conv, connection, onClose, onDone,
-}: {
-  conv: Conversation;
-  connection: Connection;
-  onClose: () => void;
-  onDone: (message: string) => void;
+function ActionsModal({ conv, connection, onClose, onDone }: {
+  conv: Conversation; connection: Connection;
+  onClose: () => void; onDone: (msg: string) => void;
 }) {
   const supabase = createClient();
-  const [tab, setTab] = useState<'pause' | 'message' | 'function'>('pause');
-  const [loading, setLoading] = useState(false);
-
-  // Mensagem manual
+  const [tab, setTab]           = useState<'pause' | 'message' | 'function'>('pause');
+  const [loading, setLoading]   = useState(false);
   const [manualText, setManualText] = useState('');
-
-  // Forçar função
   const [selectedFn, setSelectedFn] = useState(FORCE_FUNCTIONS[0].key);
-  const [fnInput, setFnInput] = useState('');
+  const [fnInput, setFnInput]   = useState('');
   const fnDef = FORCE_FUNCTIONS.find((f) => f.key === selectedFn)!;
+  const displayName = conv.sender_name || conv.conversation_id;
 
-  // ── Pausar / Retomar ─────────────────────────────────────────────────
   async function handleTogglePause() {
     setLoading(true);
     try {
@@ -140,81 +129,94 @@ function ActionsModal({
         .eq('conversation_id', conv.conversation_id)
         .eq('page_id', conv.page_id);
       if (error) throw error;
-      onDone(newPaused ? '⏸️ Bot pausado para esta conversa' : '▶️ Bot retomado');
-    } catch (err: any) {
-      onDone('❌ ' + err.message);
-    } finally { setLoading(false); }
+      onDone(newPaused ? '⏸️ Bot pausado' : '▶️ Bot retomado');
+    } catch (e: any) { onDone('❌ ' + e.message); }
+    finally { setLoading(false); }
   }
 
-  // ── Enviar mensagem manual ───────────────────────────────────────────
   async function handleSendMessage() {
     if (!manualText.trim()) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('meta-send-message', {
-        body: {
-          recipient_id:       conv.conversation_id,
-          message:            manualText.trim(),
-          page_access_token:  connection.encrypted_page_access_token,
-          platform:           conv.platform,
-        },
-      });
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/meta-send-message`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+          body: JSON.stringify({
+            recipient_id: conv.conversation_id,
+            message: manualText.trim(),
+            page_access_token: connection.encrypted_page_access_token,
+            platform: conv.platform,
+          }),
+        }
+      );
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Erro ao enviar');
       onDone('✅ Mensagem enviada');
-    } catch (err: any) {
-      onDone('❌ ' + err.message);
-    } finally { setLoading(false); }
+    } catch (e: any) { onDone('❌ ' + e.message); }
+    finally { setLoading(false); }
   }
 
-  // ── Forçar função ────────────────────────────────────────────────────
   async function handleForceFunction() {
     setLoading(true);
     try {
-      // Monta mensagem artificial que vai acionar a função no webhook
       const msgMap: Record<string, string> = {
-        endereco:    'endereço',
-        nossa_marca: 'sobre a empresa',
-        contacts:    'whatsapp',
-        meu_sistema: 'sobre o sistema eai',
         pix:         `gerar pix de ${fnInput || '0'} reais`,
-        orcamento:   fnInput || 'quero um orçamento',
+        nossa_marca: 'sobre a empresa',
+        endereco:    'endereço',
       };
-      const fakeMessage = msgMap[selectedFn];
-
-      const { error } = await supabase.functions.invoke('meta-force-function', {
-        body: {
-          conversation_id:    conv.conversation_id,
-          page_id:            conv.page_id,
-          platform:           conv.platform,
-          message:            fakeMessage,
-          page_access_token:  connection.encrypted_page_access_token,
-          company_id:         connection.company_id,
-        },
-      });
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/meta-force-function`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+          body: JSON.stringify({
+            conversation_id: conv.conversation_id,
+            page_id:         conv.page_id,
+            platform:        conv.platform,
+            message:         msgMap[selectedFn],
+            page_access_token: connection.encrypted_page_access_token,
+            company_id:      connection.company_id,
+          }),
+        }
+      );
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Erro');
       onDone(`✅ Função "${fnDef.label}" executada`);
-    } catch (err: any) {
-      onDone('❌ ' + err.message);
-    } finally { setLoading(false); }
+    } catch (e: any) { onDone('❌ ' + e.message); }
+    finally { setLoading(false); }
   }
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-background rounded-xl shadow-2xl w-full max-w-md border border-border" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md border border-gray-200 dark:border-white/10 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10">
           <div>
-            <p className="font-semibold text-sm">Ações rápidas</p>
+            <p className="font-semibold text-sm text-gray-900 dark:text-white">Ações rápidas</p>
             <div className="flex items-center gap-2 mt-0.5">
               <PlatformBadge platform={conv.platform} />
-              <p className="text-xs font-mono text-muted-foreground truncate max-w-[200px]">{conv.conversation_id}</p>
+              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <User className="h-3 w-3" />{displayName}
+              </span>
             </div>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-500 dark:text-gray-400"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-border">
+        <div className="flex border-b border-gray-200 dark:border-white/10">
           {[
             { key: 'pause',    label: 'Pausar/Retomar', icon: PauseCircle },
             { key: 'message',  label: 'Mensagem',       icon: Send        },
@@ -222,68 +224,78 @@ function ActionsModal({
           ].map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key as any)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition border-b-2
-                ${tab === key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+                ${tab === key
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}>
               <Icon className="h-3.5 w-3.5" />{label}
             </button>
           ))}
         </div>
 
         {/* Conteúdo */}
-        <div className="p-4 space-y-4">
+        <div className="p-5 space-y-4">
 
-          {/* ── Tab: Pausar/Retomar ── */}
+          {/* ── Pausar/Retomar ── */}
           {tab === 'pause' && (
             <div className="space-y-3">
-              <div className={`p-3 rounded-lg border ${conv.is_paused ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
-                <p className="text-sm font-medium">
+              <div className={`p-3 rounded-lg border ${conv.is_paused
+                ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'}`}>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {conv.is_paused ? '⏸️ Bot pausado nesta conversa' : '🤖 Bot ativo nesta conversa'}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {conv.is_paused
                     ? 'O bot não está respondendo. Clique para retomar o atendimento automático.'
                     : 'O bot está respondendo automaticamente. Pause para atender manualmente.'}
                 </p>
               </div>
-              <Button onClick={handleTogglePause} disabled={loading} className="w-full"
-                variant={conv.is_paused ? 'default' : 'outline'}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
-                  conv.is_paused ? <><PlayCircle className="mr-2 h-4 w-4" />Retomar bot</> :
-                    <><PauseCircle className="mr-2 h-4 w-4" />Pausar bot</>}
+              <Button onClick={handleTogglePause} disabled={loading}
+                variant={conv.is_paused ? 'default' : 'outline'} className="w-full">
+                {loading
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : conv.is_paused
+                    ? <><PlayCircle  className="mr-2 h-4 w-4" />Retomar bot</>
+                    : <><PauseCircle className="mr-2 h-4 w-4" />Pausar bot</>}
               </Button>
             </div>
           )}
 
-          {/* ── Tab: Mensagem manual ── */}
+          {/* ── Mensagem manual ── */}
           {tab === 'message' && (
             <div className="space-y-3">
-              <div className="p-3 rounded-lg bg-muted/20 border border-border">
-                <p className="text-xs text-muted-foreground">
-                  Mensagem enviada diretamente como a página — não passa pelo bot e não consome créditos.
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-800 dark:text-blue-200">
+                  Mensagem enviada diretamente como a página, sem passar pelo bot e sem consumir créditos.
                 </p>
               </div>
               <textarea
-                value={manualText}
-                onChange={(e) => setManualText(e.target.value)}
-                rows={4}
-                placeholder="Digite a mensagem para enviar ao cliente..."
+                value={manualText} onChange={(e) => setManualText(e.target.value)} rows={4}
+                placeholder={`Digite a mensagem para ${displayName}...`}
                 className="w-full text-sm rounded-lg border p-3 resize-none outline-none
-                  bg-background text-foreground border-border placeholder:text-muted-foreground
+                  bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                  border-gray-300 dark:border-white/10 placeholder:text-gray-400
                   focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
               />
               <Button onClick={handleSendMessage} disabled={loading || !manualText.trim()} className="w-full">
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" />Enviar mensagem</>}
+                {loading
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <><Send className="mr-2 h-4 w-4" />Enviar mensagem</>}
               </Button>
             </div>
           )}
 
-          {/* ── Tab: Forçar função ── */}
+          {/* ── Forçar função ── */}
           {tab === 'function' && (
             <div className="space-y-3">
-              <div className="p-3 rounded-lg bg-muted/20 border border-border">
-                <p className="text-xs text-muted-foreground">
-                  Executa uma função e envia o resultado diretamente para o cliente.
-                  {fnDef.credits > 0 && <span className="text-yellow-500 font-medium"> · {fnDef.credits} crédito(s)</span>}
-                  {fnDef.credits === 0 && <span className="text-green-500 font-medium"> · grátis</span>}
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Executa uma função e envia o resultado para{' '}
+                  <span className="font-medium text-gray-900 dark:text-white">{displayName}</span>.
+                  {fnDef.credits > 0
+                    ? <span className="text-yellow-600 dark:text-yellow-400 font-medium ml-1">{fnDef.credits} crédito(s)</span>
+                    : <span className="text-green-600 dark:text-green-400 font-medium ml-1">grátis</span>}
                 </p>
               </div>
 
@@ -292,9 +304,13 @@ function ActionsModal({
                 {FORCE_FUNCTIONS.map((fn) => {
                   const Icon = fn.icon;
                   return (
-                    <button key={fn.key} onClick={() => { setSelectedFn(fn.key); setFnInput(''); }}
-                      className={`p-2.5 rounded-lg border text-xs font-medium transition flex flex-col items-center gap-1.5
-                        ${selectedFn === fn.key ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-muted/20 text-muted-foreground hover:text-foreground'}`}>
+                    <button key={fn.key}
+                      onClick={() => { setSelectedFn(fn.key); setFnInput(''); }}
+                      className={`p-3 rounded-lg border text-xs font-medium transition flex flex-col items-center gap-2
+                        ${selectedFn === fn.key
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                        }`}>
                       <Icon className="h-4 w-4" />
                       {fn.label}
                     </button>
@@ -302,22 +318,24 @@ function ActionsModal({
                 })}
               </div>
 
-              {/* Input adicional (PIX e Orçamento) */}
               {fnDef.hasInput && (
                 <input
-                  type={fnDef.key === 'pix' ? 'number' : 'text'}
-                  value={fnInput}
-                  onChange={(e) => setFnInput(e.target.value)}
+                  type="number" value={fnInput} onChange={(e) => setFnInput(e.target.value)}
                   placeholder={fnDef.placeholder}
                   className="w-full text-sm rounded-lg border p-2.5 outline-none
-                    bg-background text-foreground border-border placeholder:text-muted-foreground
+                    bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                    border-gray-300 dark:border-white/10 placeholder:text-gray-400
                     focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
                 />
               )}
 
-              <Button onClick={handleForceFunction} disabled={loading || (fnDef.hasInput && !fnInput.trim())} className="w-full">
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
-                  <><Zap className="mr-2 h-4 w-4" />Executar {fnDef.label}</>}
+              <Button
+                onClick={handleForceFunction}
+                disabled={loading || (fnDef.hasInput && !fnInput.trim())}
+                className="w-full">
+                {loading
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <><Zap className="mr-2 h-4 w-4" />Executar {fnDef.label}</>}
               </Button>
             </div>
           )}
@@ -328,17 +346,15 @@ function ActionsModal({
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────
-export function QuickActionsPanel() {
+export function QuickActionsPanel({ selectedCompanyId }: { selectedCompanyId: string }) {
   const supabase = createClient();
-  const [companies, setCompanies]         = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [connections, setConnections]     = useState<Connection[]>([]);
+  const [connections, setConnections]       = useState<Connection[]>([]);
   const [selectedConnId, setSelectedConnId] = useState('');
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoading, setIsLoading]         = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activeConv, setActiveConv]       = useState<{ conv: Conversation; conn: Connection } | null>(null);
-  const [isOpen, setIsOpen]               = useState(false);
+  const [conversations, setConversations]   = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading]           = useState(false);
+  const [notifications, setNotifications]   = useState<Notification[]>([]);
+  const [activeConv, setActiveConv]         = useState<{ conv: Conversation; conn: Connection } | null>(null);
+  const [isOpen, setIsOpen]                 = useState(false);
 
   function notify(message: string, type: 'success' | 'error' = 'success') {
     const id = ++notifId;
@@ -346,58 +362,31 @@ export function QuickActionsPanel() {
     setTimeout(() => setNotifications((p) => p.filter((n) => n.id !== id)), 4000);
   }
 
-  // Carregar empresas
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from('companies').select('id, name')
-        .eq('user_id', user.id).eq('is_active', true).order('name');
-      if (data?.length) { setCompanies(data); setSelectedCompanyId(data[0].id); }
-    }
-    load();
-  }, []);
-
-  // Carregar conexões quando troca de empresa
   useEffect(() => {
     if (!selectedCompanyId) return;
     async function load() {
       const { data } = await supabase.from('meta_connections')
-        .select('id, company_id, page_name, meta_page_id, instagram_account_id, whatsapp_number_id, whatsapp_number, encrypted_page_access_token')
+        .select('id, company_id, page_name, meta_page_id, instagram_account_id, whatsapp_number_id, encrypted_page_access_token')
         .eq('company_id', selectedCompanyId).eq('agent_enabled', true);
-      if (data?.length) {
-        // Adicionar campo platform derivado
-        const withPlatform = data.map((c) => ({
-          ...c,
-          platform: c.whatsapp_number_id ? 'whatsapp' : c.instagram_account_id ? 'instagram' : 'facebook',
-        }));
-        setConnections(withPlatform as Connection[]);
-        setSelectedConnId(withPlatform[0].id);
-      } else {
-        setConnections([]);
-        setSelectedConnId('');
-      }
+      if (data?.length) { setConnections(data as Connection[]); setSelectedConnId(data[0].id); }
+      else { setConnections([]); setSelectedConnId(''); }
     }
     load();
   }, [selectedCompanyId]);
 
-  // Carregar conversas quando troca de conexão
   const loadConversations = useCallback(async () => {
     const conn = connections.find((c) => c.id === selectedConnId);
     if (!conn) return;
     setIsLoading(true);
     try {
-      // Determinar page_id correto por plataforma
       const pageIds = [conn.meta_page_id, conn.instagram_account_id, conn.whatsapp_number_id].filter(Boolean);
       const { data } = await supabase.from('conversation_ai_control')
-        .select('conversation_id, page_id, platform, is_paused, ai_enabled, last_ai_response_at, updated_at')
+        .select('conversation_id, page_id, platform, is_paused, sender_name, updated_at')
         .in('page_id', pageIds)
         .order('updated_at', { ascending: false })
         .limit(20);
       setConversations(data || []);
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   }, [selectedConnId, connections]);
 
   useEffect(() => { if (selectedConnId && isOpen) loadConversations(); }, [selectedConnId, isOpen]);
@@ -405,8 +394,7 @@ export function QuickActionsPanel() {
   const selectedConn = connections.find((c) => c.id === selectedConnId);
 
   function handleActionDone(message: string) {
-    const type = message.startsWith('❌') ? 'error' : 'success';
-    notify(message, type);
+    notify(message, message.startsWith('❌') ? 'error' : 'success');
     setActiveConv(null);
     loadConversations();
   }
@@ -417,87 +405,76 @@ export function QuickActionsPanel() {
 
       {activeConv && (
         <ActionsModal
-          conv={activeConv.conv}
-          connection={activeConv.conn}
-          onClose={() => setActiveConv(null)}
-          onDone={handleActionDone}
+          conv={activeConv.conv} connection={activeConv.conn}
+          onClose={() => setActiveConv(null)} onDone={handleActionDone}
         />
       )}
 
-      <Card>
-        <CardHeader>
-          <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full text-left">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Zap className="h-5 w-5 text-yellow-500" />
-                Ações Rápidas
-              </CardTitle>
-              <CardDescription className="mt-1">
-                Pause o bot, envie mensagens manuais ou force funções em conversas ativas
-              </CardDescription>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden">
+        {/* Header clicável */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition"
+        >
+          <div>
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-yellow-500" />
+              <span className="font-semibold text-gray-900 dark:text-white">Ações Rápidas</span>
             </div>
-            {isOpen ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
-          </button>
-        </CardHeader>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Pause o bot, envie mensagens manuais ou force funções em conversas ativas
+            </p>
+          </div>
+          {isOpen
+            ? <ChevronUp   className="h-5 w-5 text-gray-400 shrink-0" />
+            : <ChevronDown className="h-5 w-5 text-gray-400 shrink-0" />}
+        </button>
 
         {isOpen && (
-          <CardContent className="space-y-4 pt-0">
+          <div className="px-5 pb-5 space-y-4 border-t border-gray-200 dark:border-white/10 pt-4">
 
-            {/* Filtros */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Seletor de conexão + refresh */}
+            <div className="flex gap-3 items-end">
               <div className="flex-1">
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Assistente</p>
-                <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Conexão</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Conexão</p>
                 <Select value={selectedConnId} onValueChange={setSelectedConnId} disabled={!connections.length}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione" />
+                  <SelectTrigger className="w-full dark:bg-slate-800 dark:border-white/10">
+                    <SelectValue placeholder={connections.length ? 'Selecione' : 'Nenhuma conexão ativa'} />
                   </SelectTrigger>
                   <SelectContent>
                     {connections.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.page_name} · {c.platform}
-                      </SelectItem>
+                      <SelectItem key={c.id} value={c.id}>{c.page_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
-                <Button variant="outline" size="icon" onClick={loadConversations} disabled={isLoading}
-                  className="shrink-0 h-10 w-10">
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
+              <button
+                onClick={loadConversations} disabled={isLoading}
+                className="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition text-gray-600 dark:text-gray-400 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
 
-            {/* Lista de conversas */}
+            {/* Estado */}
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
               </div>
             ) : !selectedConnId || !connections.length ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Nenhuma conexão ativa encontrada.</p>
+              <div className="text-center py-8">
+                <AlertCircle className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma conexão ativa encontrada.</p>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Nenhuma conversa recente nesta conexão.</p>
-                <p className="text-xs mt-1">As conversas aparecem após a primeira interação do cliente.</p>
+              <div className="text-center py-8">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma conversa recente nesta conexão.</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">As conversas aparecem após a primeira interação do cliente.</p>
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {conversations.length} conversa{conversations.length !== 1 ? 's' : ''} recente{conversations.length !== 1 ? 's' : ''}
                   {conversations.some((c) => c.is_paused) && (
                     <span className="ml-2 text-yellow-600 dark:text-yellow-400 font-medium">
@@ -508,16 +485,15 @@ export function QuickActionsPanel() {
                 {conversations.map((conv) => (
                   <ConversationRow
                     key={`${conv.conversation_id}-${conv.page_id}`}
-                    conv={conv}
-                    connection={selectedConn!}
+                    conv={conv} connection={selectedConn!}
                     onAction={(c, conn) => setActiveConv({ conv: c, conn })}
                   />
                 ))}
               </div>
             )}
-          </CardContent>
+          </div>
         )}
-      </Card>
+      </div>
     </>
   );
 }

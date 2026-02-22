@@ -121,9 +121,6 @@ function FunctionsPanel({
       {isOpen && (
         <div className="mt-3 space-y-2">
 
-          {/* ── Conhecimento ── */}
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1">Conhecimento</p>
-
           <FunctionToggle
             icon={<MessageSquare className="h-4 w-4 text-blue-500" />}
             label="Perguntas Frequentes (FAQ)"
@@ -165,19 +162,6 @@ function FunctionsPanel({
           />
 
           <FunctionToggle
-            icon={<Bot className="h-4 w-4 text-orange-400" />}
-            label="Meu Sistema (eAi)"
-            description="Informa sobre o eAi automaticamente"
-            credits="grátis"
-            checked={true}
-            onChange={() => {}}
-            always
-          />
-
-          {/* ── IA ── */}
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2">Inteligência Artificial</p>
-
-          <FunctionToggle
             icon={<Calculator className="h-4 w-4 text-blue-600" />}
             label="Criar Orçamento"
             description="Gera orçamentos com IA (requer prompt configurado)"
@@ -186,9 +170,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('orcamento_enabled', v)}
             disabled={saving === 'orcamento_enabled'}
           />
-
-          {/* ── Financeiro ── */}
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2">Financeiro</p>
 
           <FunctionToggle
             icon={<CreditCard className="h-4 w-4 text-green-500" />}
@@ -199,9 +180,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('pix_enabled', v)}
             disabled={saving === 'pix_enabled'}
           />
-
-          {/* ── Fallback ── */}
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-2">Fallback</p>
 
           <FunctionToggle
             icon={<Bot className="h-4 w-4 text-purple-500" />}
@@ -241,8 +219,8 @@ function GreetingConfig({
   }
 
   return (
-    <div className="ml-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 space-y-2">
-      <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+    <div className="ml-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30 space-y-2">
+      <p className="text-xs font-medium text-green-600 dark:text-green-400">
         ⚠️ Modo só-funções ativo — o bot só responde quando uma função for acionada.
       </p>
       <p className="text-xs text-muted-foreground">
@@ -255,7 +233,7 @@ function GreetingConfig({
         placeholder="Ex: Olá! Posso te ajudar com orçamentos, endereço ou PIX. O que precisa?"
         className="w-full text-sm rounded-lg border p-2 resize-none outline-none
           bg-background text-foreground border-border placeholder:text-muted-foreground
-          focus:ring-2 focus:ring-yellow-500/30 focus:border-yellow-500"
+          focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
       />
       <Button size="sm" onClick={handleSave} disabled={saving}>
         {saving ? <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Salvando...</> : <><Save className="mr-2 h-3 w-3" />Salvar saudação</>}
@@ -581,7 +559,7 @@ export function ConnectionManager() {
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground pt-1">
-                            Créditos por resposta — Facebook: {conn.credits_per_reply_facebook} · Instagram: {conn.credits_per_reply_instagram} · WhatsApp: {conn.credits_per_reply_whatsapp}
+                            Configure e acompanhe as conversas das contas do Facebook · Instagram · WhatsApp diretamente no Business Suite do Grupo Meta
                           </p>
                         </div>
                         <div className="flex flex-col gap-3 items-end">

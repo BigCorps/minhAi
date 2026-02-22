@@ -293,7 +293,7 @@ function AgentConfigPanel({
           />
           {!useCustom && (
             <p className="text-xs text-muted-foreground">
-              Para editar, ative o prompt personalizado acima ou edite em{' '}
+              Para editar, ative o prompt personalizado acima ou edite na função Perguntas Gerais.
               <a href="/dashboard/faqs" className="underline hover:text-foreground">Perguntas/Respostas</a>.
             </p>
           )}

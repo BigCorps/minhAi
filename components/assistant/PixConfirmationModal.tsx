@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom'
-import { Check, X, Copy, AlertCircle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Check, X, Copy, AlertCircle, Mic } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface PIXConfirmationModalProps {
@@ -10,6 +10,7 @@ interface PIXConfirmationModalProps {
   amount: string;
   qrCodeUrl: string;
   pixCode: string;
+  companyName?: string;
   onConfirm: () => Promise<void>;
   onCancel: () => Promise<void>;
   theme?: 'dark' | 'light';
@@ -20,6 +21,7 @@ export default function PIXConfirmationModal({
   amount,
   qrCodeUrl,
   pixCode,
+  companyName = '',
   onConfirm,
   onCancel,
   theme = 'dark',
@@ -27,15 +29,14 @@ export default function PIXConfirmationModal({
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [toast, setToast] = useState<{message: string, type: 'error' | 'warning' | 'success'} | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
   const supabase = createClient();
 
-  // Auto-hide toast após 3 segundos
+  const isDark = theme === 'dark';
+
   useEffect(() => {
     if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 3000);
+      const timer = setTimeout(() => setToast(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [toast]);
@@ -47,53 +48,30 @@ export default function PIXConfirmationModal({
   const handleConfirm = async () => {
     setIsConfirming(true);
     try {
-      console.log('✅ Confirmando PIX:', transactionId);
-      
-      // ✅ Chamar Edge Function
       const response = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: { transaction_id: transactionId }
+        body: { transaction_id: transactionId },
       });
-      
-      console.log('📥 Resposta completa:', response);
-      
-      // ✅ Tratar resposta com status 400 (PIX não pago)
+
       if (response.error) {
-        console.error('❌ Erro na resposta:', response.error);
-        
-        // Tentar extrair dados do erro
         const errorData = response.error.context?.body;
-        
         if (errorData && !errorData.success) {
-          // Erro esperado: PIX não foi pago
-          console.log('⏳ PIX não pago:', errorData);
           showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
-          return; // Não fecha o modal
+          return;
         }
-        
-        // Erro inesperado
         showToast('❌ Erro ao verificar pagamento', 'error');
         return;
       }
-      
-      // ✅ Sucesso
+
       const data = response.data;
-      
       if (!data.success) {
-        console.log('⏳ PIX não pago:', data);
         showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
-        return; // Não fecha o modal
+        return;
       }
-      
-      console.log('✅ PIX confirmado:', data);
+
       showToast(`✅ Pagamento confirmado! Saldo: R$ ${data.new_balance.toFixed(2)}`, 'success');
-      
-      // Aguardar 1 segundo para mostrar mensagem de sucesso
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Chamar callback do pai (fecha modal)
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await onConfirm();
-    } catch (error: any) {
-      console.error('💥 Erro ao confirmar:', error);
+    } catch {
       showToast('❌ Erro ao confirmar pagamento', 'error');
     } finally {
       setIsConfirming(false);
@@ -103,24 +81,13 @@ export default function PIXConfirmationModal({
   const handleCancel = async () => {
     setIsCancelling(true);
     try {
-      console.log('❌ Cancelando PIX:', transactionId);
-      
-      // ✅ Chamar Edge Function com o nome correto do parâmetro
       const { data, error } = await supabase.functions.invoke('cancelar-pix-assistente', {
-        body: { transaction_id: transactionId } // ← Nome correto!
+        body: { transaction_id: transactionId },
       });
-      
-      if (error) {
-        console.error('❌ Erro ao cancelar:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       console.log('✅ PIX cancelado:', data);
-      
-      // Chamar callback do pai (fecha modal)
       await onCancel();
     } catch (error: any) {
-      console.error('Erro ao cancelar:', error);
       alert('❌ Erro ao cancelar PIX: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsCancelling(false);
@@ -132,161 +99,278 @@ export default function PIXConfirmationModal({
       await navigator.clipboard.writeText(pixCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Erro ao copiar:', err);
+    } catch {
+      console.error('Erro ao copiar');
     }
   };
 
+  /* ─── color tokens ─── */
+  const bg = isDark ? 'bg-slate-900' : 'bg-white';
+  const border = isDark ? 'border-slate-700' : 'border-gray-200';
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
+  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const divider = isDark ? 'divide-slate-700' : 'divide-gray-200';
+  const codeBg = isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200';
+
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className={`relative w-full max-w-[340px] rounded-2xl shadow-2xl overflow-hidden ${
-        theme === 'dark' ? 'bg-slate-900' : 'bg-white'
-      }`}>
-        
-        {/* Toast de notificação */}
-        {toast && (
-          <div className={`absolute top-4 left-4 right-4 z-10 p-3 rounded-lg shadow-lg animate-in slide-in-from-top duration-300 ${
-            toast.type === 'success' ? 'bg-green-500' :
-            toast.type === 'error' ? 'bg-red-500' :
-            'bg-yellow-500'
-          }`}>
-            <div className="flex items-center gap-2 text-white">
-              {toast.type === 'warning' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-              {toast.type === 'success' && <Check className="w-5 h-5 flex-shrink-0" />}
-              {toast.type === 'error' && <X className="w-5 h-5 flex-shrink-0" />}
-              <p className="text-sm font-medium flex-1">{toast.message}</p>
-            </div>
-          </div>
-        )}
-        
-        {/* Container Quadrado */}
-        <div className={`relative w-full aspect-square ${
-          theme === 'dark' ? 'bg-slate-900' : 'bg-white'
-        }`}>
-          
-          {/* QR Code */}
-          <div className="absolute inset-0 pt-4 pb-36 px-6">
-            <div className="w-full h-full bg-white rounded-xl p-3 shadow-sm">
-              <img
-                src={qrCodeUrl}
-                alt="QR Code PIX"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            
-            {copied && (
-              <div className="absolute inset-0 flex items-center justify-center bg-green-500/95 animate-in fade-in zoom-in duration-200">
-                <div className="flex flex-col items-center gap-1 text-white">
-                  <Check className="w-10 h-10" />
-                  <span className="font-bold">Copiado!</span>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3
+            ${toast.type === 'success' ? 'bg-green-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-amber-400'}
+            animate-in slide-in-from-top duration-300`}
+        >
+          {toast.type === 'warning' && <AlertCircle className="w-5 h-5 text-white flex-shrink-0" />}
+          {toast.type === 'success' && <Check className="w-5 h-5 text-white flex-shrink-0" />}
+          {toast.type === 'error' && <X className="w-5 h-5 text-white flex-shrink-0" />}
+          <p className="text-white font-semibold text-sm whitespace-nowrap">{toast.message}</p>
+        </div>
+      )}
+
+      {/* Card wrapper — desktop: max-w-3xl horizontal | mobile: max-w-sm vertical */}
+      <div
+        className={`relative w-full rounded-3xl shadow-2xl overflow-hidden border ${bg} ${border}
+          max-w-sm md:max-w-3xl
+          animate-in zoom-in-95 duration-300`}
+      >
+        {/* ═══════════════════════════════════════════════════
+            DESKTOP LAYOUT — horizontal (md and above)
+        ═══════════════════════════════════════════════════ */}
+        <div className="hidden md:flex">
+          {/* Left — QR Code */}
+          <div className={`flex-shrink-0 flex items-center justify-center p-8 border-r ${border}`}>
+            <div className="relative w-64 h-64 bg-white rounded-2xl p-4 shadow-inner overflow-hidden">
+              <img src={qrCodeUrl} alt="QR Code PIX" className="w-full h-full object-contain rounded-xl" />
+              {copied && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-500/95 rounded-2xl animate-in fade-in zoom-in duration-200">
+                  <Check className="w-12 h-12 text-white" />
+                  <span className="text-white font-bold mt-1">Copiado!</span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Barra de Info + Botões */}
-          <div className={`absolute bottom-0 left-0 right-0 backdrop-blur-sm border-t ${
-            theme === 'dark' 
-              ? 'bg-slate-900/95 border-slate-700' 
-              : 'bg-white/95 border-gray-200'
-          }`}>
-            
-            {/* Linha 1: Valor + Botões Confirmar/Cancelar */}
-            <div className={`flex items-center justify-between gap-2 px-3 py-2 border-b ${
-              theme === 'dark'
-                ? 'border-slate-700 bg-blue-900/20'
-                : 'border-gray-200 bg-blue-50'
-            }`}>
-              <div className="flex-1">
-                <p className={`text-xl font-bold leading-tight ${
-                  theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-                }`}>
-                  R$ {amount}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-1.5">
-                {/* Botão Confirmar */}
-                <button
-                  onClick={handleConfirm}
-                  disabled={isConfirming || isCancelling}
-                  className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded transition flex items-center justify-center"
-                  title="Confirmar Pagamento"
-                >
-                  {isConfirming ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Check className="w-5 h-5" />
-                  )}
-                </button>
-
-                {/* Botão Cancelar */}
-                <button
-                  onClick={handleCancel}
-                  disabled={isConfirming || isCancelling}
-                  className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded transition flex items-center justify-center"
-                  title="Cancelar PIX"
-                >
-                  {isCancelling ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <X className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Linha 2: Nome Empresa + Banco */}
-            <div className={`px-3 py-1.5 border-b ${
-              theme === 'dark' ? 'border-slate-700' : 'border-gray-200'
-            }`}>
-              <p className={`text-[10px] leading-tight ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
+          {/* Right — Info + Buttons */}
+          <div className={`flex-1 flex flex-col divide-y ${divider}`}>
+            {/* Header — Valor */}
+            <div className={`px-8 py-6 ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${textMuted}`}>
+                Valor a Pagar
               </p>
-              <p className="text-[9px] text-gray-500 leading-tight">
-                Banco Inter
+              <p className={`text-5xl font-extrabold tracking-tight ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                R$&nbsp;{amount}
               </p>
             </div>
 
-            {/* Linha 3: Código PIX + Botão Copiar */}
-            <div className="flex items-center gap-2 px-3 py-2">
-              <div 
-                className={`flex-1 text-left py-1.5 px-2 rounded cursor-pointer transition ${
-                  theme === 'dark'
-                    ? 'bg-slate-800 hover:bg-slate-700'
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
+            {/* Info block */}
+            <div className="px-8 py-5 space-y-1.5">
+              <InfoRow label="Empresa" value="Intermediações de Pagamentos BigCorps" isDark={isDark} />
+              {companyName && <InfoRow label="Para" value={companyName} isDark={isDark} />}
+              <InfoRow label="Banco" value="Banco Inter" isDark={isDark} />
+              <InfoRow label="Validade" value="Válido por 30 minutos" isDark={isDark} highlight />
+            </div>
+
+            {/* PIX Code */}
+            <div className="px-8 py-4 flex items-center gap-3">
+              <div
+                className={`flex-1 px-3 py-2 rounded-xl cursor-pointer transition font-mono text-xs truncate ${codeBg} ${textPrimary}`}
                 onClick={handleCopy}
+                title="Clique para copiar"
               >
-                <p className={`text-[10px] font-mono truncate ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {pixCode.substring(0, 35)}...
-                </p>
+                {pixCode.substring(0, 40)}…
               </div>
-
               <button
                 onClick={handleCopy}
-                className={`flex-shrink-0 p-2 rounded transition ${
-                  copied
-                    ? 'bg-green-500 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                className={`flex-shrink-0 p-2.5 rounded-xl transition ${
+                  copied ? 'bg-green-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
-                title={copied ? 'Copiado!' : 'Copiar Código PIX'}
               >
-                {copied ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
+
+            {/* Buttons */}
+            <div className="px-8 py-6 flex gap-4">
+              {/* Confirm */}
+              <VoiceButton
+                onClick={handleConfirm}
+                disabled={isConfirming || isCancelling}
+                loading={isConfirming}
+                color="green"
+                label="Diga CONFIRMAR PIX"
+                icon={<Check className="w-6 h-6" />}
+              />
+              {/* Cancel */}
+              <VoiceButton
+                onClick={handleCancel}
+                disabled={isConfirming || isCancelling}
+                loading={isCancelling}
+                color="red"
+                label="Diga CANCELAR PIX"
+                icon={<X className="w-6 h-6" />}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════
+            MOBILE LAYOUT — vertical (below md)
+        ═══════════════════════════════════════════════════ */}
+        <div className="md:hidden flex flex-col">
+          {/* Valor */}
+          <div className={`px-6 pt-6 pb-4 ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
+            <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${textMuted}`}>Valor a Pagar</p>
+            <p className={`text-4xl font-extrabold tracking-tight ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+              R$&nbsp;{amount}
+            </p>
+          </div>
+
+          {/* QR Code */}
+          <div className={`flex justify-center items-center py-6 px-8 border-b ${border}`}>
+            <div className="relative w-56 h-56 bg-white rounded-2xl p-3 shadow-inner overflow-hidden">
+              <img src={qrCodeUrl} alt="QR Code PIX" className="w-full h-full object-contain rounded-xl" />
+              {copied && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-500/95 rounded-2xl animate-in fade-in zoom-in duration-200">
+                  <Check className="w-10 h-10 text-white" />
+                  <span className="text-white font-bold mt-1 text-sm">Copiado!</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className={`px-6 py-4 space-y-1.5 border-b ${border}`}>
+            <InfoRow label="Empresa" value="Intermediações de Pagamentos BigCorps" isDark={isDark} />
+            {companyName && <InfoRow label="Para" value={companyName} isDark={isDark} />}
+            <InfoRow label="Banco" value="Banco Inter" isDark={isDark} />
+            <InfoRow label="Validade" value="Válido por 30 minutos" isDark={isDark} highlight />
+          </div>
+
+          {/* PIX Code */}
+          <div className={`px-6 py-3 flex items-center gap-3 border-b ${border}`}>
+            <div
+              className={`flex-1 px-3 py-2 rounded-xl cursor-pointer transition font-mono text-xs truncate ${codeBg} ${textPrimary}`}
+              onClick={handleCopy}
+            >
+              {pixCode.substring(0, 30)}…
+            </div>
+            <button
+              onClick={handleCopy}
+              className={`flex-shrink-0 p-2.5 rounded-xl transition ${
+                copied ? 'bg-green-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {/* Buttons */}
+          <div className="px-6 py-5 flex flex-col gap-3">
+            <VoiceButton
+              onClick={handleConfirm}
+              disabled={isConfirming || isCancelling}
+              loading={isConfirming}
+              color="green"
+              label="Diga CONFIRMAR PIX"
+              icon={<Check className="w-5 h-5" />}
+              fullWidth
+            />
+            <VoiceButton
+              onClick={handleCancel}
+              disabled={isConfirming || isCancelling}
+              loading={isCancelling}
+              color="red"
+              label="Diga CANCELAR PIX"
+              icon={<X className="w-5 h-5" />}
+              fullWidth
+            />
           </div>
         </div>
       </div>
     </div>,
     document.body
+  );
+}
+
+/* ─── Sub-components ──────────────────────────────────── */
+
+function InfoRow({
+  label,
+  value,
+  isDark,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  isDark: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className={`text-xs font-semibold uppercase tracking-wider flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        {label}
+      </span>
+      <span
+        className={`text-sm font-medium truncate ${
+          highlight
+            ? isDark ? 'text-amber-400' : 'text-amber-600'
+            : isDark ? 'text-gray-200' : 'text-gray-700'
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function VoiceButton({
+  onClick,
+  disabled,
+  loading,
+  color,
+  label,
+  icon,
+  fullWidth = false,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  loading: boolean;
+  color: 'green' | 'red';
+  label: string;
+  icon: React.ReactNode;
+  fullWidth?: boolean;
+}) {
+  const base =
+    color === 'green'
+      ? 'bg-green-600 hover:bg-green-500 active:bg-green-700 shadow-green-900/40'
+      : 'bg-red-600 hover:bg-red-500 active:bg-red-700 shadow-red-900/40';
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`
+        flex items-center justify-center gap-3
+        ${fullWidth ? 'w-full' : 'flex-1'}
+        px-5 py-4 rounded-2xl text-white font-bold text-sm
+        transition-all duration-150 shadow-lg
+        disabled:opacity-50 disabled:cursor-not-allowed
+        ${base}
+      `}
+    >
+      {loading ? (
+        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      ) : (
+        icon
+      )}
+      <div className="flex flex-col items-start leading-tight">
+        <span className="flex items-center gap-1.5 text-white/70 text-[10px] font-semibold uppercase tracking-widest">
+          <Mic className="w-3 h-3" />
+          ou clique
+        </span>
+        <span className="text-sm font-bold">{label}</span>
+      </div>
+    </button>
   );
 }

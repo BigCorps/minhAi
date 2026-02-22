@@ -23,7 +23,7 @@ const menuItems = [
   { href: '/dashboard/functions',    label: 'Funções',                          icon: Settings },
   { href: '/dashboard/faqs',         label: 'Perguntas | Respostas',            icon: HelpCircle },
   { href: '/dashboard/agenda',       label: 'Agenda Google | Gmail',            icon: Calendar }, // ← NOVO
-  { href: '/dashboard/atendimentos', label: 'Whatsapp | Instagram | Facebook',  icon: Share2 },
+  { href: '/dashboard/atendimentos', label: 'Whats | Insta | Face',             icon: Share2 },
   { href: '/dashboard/saldo',        label: 'Recebimentos',                     icon: Wallet },
   { href: '/dashboard/historico',    label: 'Histórico',                        icon: MessageSquare },
 ];

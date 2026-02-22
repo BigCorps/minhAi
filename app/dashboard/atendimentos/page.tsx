@@ -1,6 +1,6 @@
 // ARQUIVO: app/dashboard/atendimentos/page.tsx
-
 import { ConnectionManager } from './_components/ConnectionManager';
+import { QuickActionsPanel } from './_components/QuickActionsPanel';
 
 export const metadata = {
   title: 'Atendimentos Meta | eAi',
@@ -16,8 +16,10 @@ export default function AtendimentosPage() {
           Configure seus assistentes ao WhatsApp, Instagram e Facebook.
         </p>
       </div>
-
-      <ConnectionManager />
+      <div className="space-y-6">
+        <ConnectionManager />
+        <QuickActionsPanel />
+      </div>
     </div>
   );
 }

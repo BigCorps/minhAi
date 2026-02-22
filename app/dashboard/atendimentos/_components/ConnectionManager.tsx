@@ -647,15 +647,11 @@ export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: 
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Share2 className="h-5 w-5 text-blue-500" />
-              Atendimentos Meta
+              Selecione seu Assistente
             </CardTitle>
-            <CardDescription>
-              Conecte seu assistente ao WhatsApp Business, Instagram e Facebook Messenger
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Assistente</p>
               <Select value={selectedCompanyId} onValueChange={(v) => { setSelectedCompanyId(v); onCompanyChange?.(v); }}>
                 <SelectTrigger className="w-full max-w-xs">
                   <SelectValue placeholder="Selecione um assistente" />

@@ -221,7 +221,7 @@ function GreetingConfig({
   return (
     <div className="ml-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30 space-y-2">
       <p className="text-xs font-medium text-green-600 dark:text-green-400">
-        ⚠️ Modo só-funções ativo — o bot só responde quando uma função for acionada.
+        Modo só com funções ativo — o bot só responde quando uma função for acionada, sem utilizar o ChatGPT.
       </p>
       <p className="text-xs text-muted-foreground">
         Mensagem de saudação enviada na primeira interação do cliente:

@@ -157,11 +157,11 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                     <Link
                       href={`/dashboard/atendimentos?companyId=${assistant.id}`}
                       className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
-                      bg-blue-50 text-blue-600 hover:bg-blue-100
-                      dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 border border-blue-100 dark:border-blue-500/20"
+                      bg-green-50 text-green-600 hover:bg-green-100
+                      dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 border border-green-100 dark:border-green-500/20"
                     >
                       <MessageSquare className="w-4 h-4 mr-2" />
-                      Meta
+                      Whatsapp/Instagram/Facebook
                     </Link>
                   </div>
 

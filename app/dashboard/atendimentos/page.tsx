@@ -1,13 +1,25 @@
+'use client';
 // ARQUIVO: app/dashboard/atendimentos/page.tsx
+import { useState, useEffect } from 'react';
 import { ConnectionManager } from './_components/ConnectionManager';
 import { QuickActionsPanel } from './_components/QuickActionsPanel';
-
-export const metadata = {
-  title: 'Atendimentos Meta | eAi',
-  description: 'Gerencie suas conexões com WhatsApp, Instagram e Facebook',
-};
+import { createClient } from '@/lib/supabase-browser';
 
 export default function AtendimentosPage() {
+  const supabase = createClient();
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('companies')
+        .select('id').eq('user_id', user.id).eq('is_active', true).order('name').limit(1);
+      if (data?.[0]) setSelectedCompanyId(data[0].id);
+    }
+    load();
+  }, []);
+
   return (
     <div className="container max-w-3xl mx-auto py-8 px-4">
       <div className="mb-8">
@@ -17,8 +29,8 @@ export default function AtendimentosPage() {
         </p>
       </div>
       <div className="space-y-6">
-        <ConnectionManager />
-        <QuickActionsPanel />
+        <ConnectionManager onCompanyChange={setSelectedCompanyId} />
+        <QuickActionsPanel selectedCompanyId={selectedCompanyId} />
       </div>
     </div>
   );

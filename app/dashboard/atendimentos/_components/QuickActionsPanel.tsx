@@ -22,7 +22,8 @@ type Connection = {
 };
 type Conversation = {
   conversation_id: string; page_id: string; platform: string;
-  is_paused: boolean; sender_name: string | null; updated_at: string;
+  is_paused: boolean; sender_name: string | null;
+  last_message_text: string | null; updated_at: string;
 };
 type Notification = { id: number; message: string; type: 'success' | 'error' };
 
@@ -90,6 +91,11 @@ function ConversationRow({ conv, connection, onAction }: {
             <User className="h-3 w-3 text-gray-400 shrink-0" />
             <p className="text-sm font-medium truncate text-gray-900 dark:text-white">{displayName}</p>
           </div>
+          {conv.last_message_text && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 max-w-[200px]">
+              {conv.last_message_text}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-0.5">
             <PlatformBadge platform={conv.platform} />
             <span className="text-xs text-gray-500 dark:text-gray-400">{relTime}</span>
@@ -243,7 +249,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
                 : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'}`}>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {conv.is_paused ? '⏸️ Bot pausado nesta conversa' : 'Assistente ativo nesta conversa'}
+                  {conv.is_paused ? 'Assistente pausado nesta conversa' : 'Assistente ativo nesta conversa'}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {conv.is_paused
@@ -256,8 +262,8 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                 {loading
                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   : conv.is_paused
-                    ? <><PlayCircle  className="mr-2 h-4 w-4" />Retomar bot</>
-                    : <><PauseCircle className="mr-2 h-4 w-4" />Pausar bot</>}
+                    ? <><PlayCircle  className="mr-2 h-4 w-4" />Retomar assistente</>
+                    : <><PauseCircle className="mr-2 h-4 w-4" />Pausar assistente</>}
               </Button>
             </div>
           )}
@@ -267,7 +273,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
             <div className="space-y-3">
               <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-xs text-blue-800 dark:text-blue-200">
-                  Mensagem enviada diretamente como a página, sem passar pelo bot e sem consumir créditos.
+                  Mensagem enviada diretamente como a página, sem passar pelo assistente e sem consumir créditos.
                 </p>
               </div>
               <textarea
@@ -295,7 +301,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                   <span className="font-medium text-gray-900 dark:text-white">{displayName}</span>.
                   {fnDef.credits > 0
                     ? <span className="text-yellow-600 dark:text-yellow-400 font-medium ml-1">{fnDef.credits} crédito(s)</span>
-                    : <span className="text-green-600 dark:text-green-400 font-medium ml-1">1 crédito na Confirmação</span>}
+                    : <span className="text-green-600 dark:text-green-400 font-medium ml-1">grátis</span>}
                 </p>
               </div>
 
@@ -381,7 +387,7 @@ export function QuickActionsPanel({ selectedCompanyId }: { selectedCompanyId: st
     try {
       const pageIds = [conn.meta_page_id, conn.instagram_account_id, conn.whatsapp_number_id].filter(Boolean);
       const { data } = await supabase.from('conversation_ai_control')
-        .select('conversation_id, page_id, platform, is_paused, sender_name, updated_at')
+        .select('conversation_id, page_id, platform, is_paused, sender_name, last_message_text, updated_at')
         .in('page_id', pageIds)
         .order('updated_at', { ascending: false })
         .limit(20);
@@ -422,7 +428,7 @@ export function QuickActionsPanel({ selectedCompanyId }: { selectedCompanyId: st
               <span className="font-semibold text-gray-900 dark:text-white">Ações Rápidas</span>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Pause o bot, envie mensagens manuais ou force funções em conversas ativas
+              Pause o assistente, envie mensagens manuais ou force funções em conversas ativas
             </p>
           </div>
           {isOpen

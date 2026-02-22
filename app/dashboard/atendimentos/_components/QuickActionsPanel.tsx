@@ -243,7 +243,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
                 : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'}`}>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {conv.is_paused ? '⏸️ Bot pausado nesta conversa' : '🤖 Bot ativo nesta conversa'}
+                  {conv.is_paused ? '⏸️ Bot pausado nesta conversa' : 'Assistente ativo nesta conversa'}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {conv.is_paused
@@ -295,7 +295,7 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
                   <span className="font-medium text-gray-900 dark:text-white">{displayName}</span>.
                   {fnDef.credits > 0
                     ? <span className="text-yellow-600 dark:text-yellow-400 font-medium ml-1">{fnDef.credits} crédito(s)</span>
-                    : <span className="text-green-600 dark:text-green-400 font-medium ml-1">grátis</span>}
+                    : <span className="text-green-600 dark:text-green-400 font-medium ml-1">1 crédito na Confirmação</span>}
                 </p>
               </div>
 

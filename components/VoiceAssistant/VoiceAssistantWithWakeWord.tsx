@@ -947,7 +947,7 @@ export function VoiceAssistantWithWakeWord({
                         ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
                         : 'bg-blue-50 border border-blue-200 text-blue-700'
                     }`}>
-                      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente com ruídos — fale mais perto do microfone'}
+                      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Estou ouvindo... fale mais perto do microfone'}
                     </div>
                   )}
                 </div>

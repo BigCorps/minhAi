@@ -198,7 +198,7 @@ export default function PIXConfirmationModal({
                 disabled={isConfirming || isCancelling}
                 loading={isConfirming}
                 color="green"
-                label="Diga CONFIRMAR PIX"
+                label="CONFIRMAR PIX"
                 icon={<Check className="w-6 h-6" />}
               />
               {/* Cancel */}
@@ -207,7 +207,7 @@ export default function PIXConfirmationModal({
                 disabled={isConfirming || isCancelling}
                 loading={isCancelling}
                 color="red"
-                label="Diga CANCELAR PIX"
+                label="CANCELAR PIX"
                 icon={<X className="w-6 h-6" />}
               />
             </div>
@@ -272,7 +272,7 @@ export default function PIXConfirmationModal({
               disabled={isConfirming || isCancelling}
               loading={isConfirming}
               color="green"
-              label="Diga CONFIRMAR PIX"
+              label="CONFIRMAR PIX"
               icon={<Check className="w-5 h-5" />}
               fullWidth
             />
@@ -281,7 +281,7 @@ export default function PIXConfirmationModal({
               disabled={isConfirming || isCancelling}
               loading={isCancelling}
               color="red"
-              label="Diga CANCELAR PIX"
+              label="CANCELAR PIX"
               icon={<X className="w-5 h-5" />}
               fullWidth
             />
@@ -364,9 +364,10 @@ function VoiceButton({
       ) : (
         icon
       )}
-      <div className="flex flex-col items-start leading-tight">
+      <div className="flex flex-col items-center leading-tight text-center">
+        <span className="text-white/80 text-xs">Diga:</span>
         <span className="text-sm font-semibold">{label}</span>
-        <span className="text-white/60 text-[10px]">ou clique</span>
+        <span className="text-white/50 text-[10px]">ou clique aqui</span>
       </div>
     </button>
   );

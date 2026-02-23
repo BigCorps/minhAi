@@ -102,7 +102,24 @@ video_instrucoes: {
     'demonstracao',
   ],
   
+  examplePhrases: [  // ✅ FALTAVA
+    'Mostrar vídeo de instruções',
+    'Como funciona o produto?',
+    'Tutorial do serviço',
+    'Quero ver uma demonstração',
+  ],
+  
   requiresInput: false,
+  
+  description: 'Exibe um vídeo tutorial ou explicativo sobre o produto/serviço da empresa',  // ✅ FALTAVA
+  shortDescription: 'Tutorial em vídeo',  // ✅ FALTAVA (opcional mas bom ter)
+  icon: '🎓',  // ✅ FALTAVA (opcional mas bom ter)
+  color: '#8B5CF6',  // ✅ FALTAVA (opcional mas bom ter)
+  
+  saveToHistory: true,  // ✅ FALTAVA
+  creditsPerUse: 2,  // ✅ FALTAVA
+  requiresPayment: false,  // ✅ FALTAVA
+  isPremium: false,  // ✅ FALTAVA
   
   handler: async ({ playText, setActiveModal, companyId, functionSettings }) => {
     try {
@@ -133,13 +150,15 @@ video_instrucoes: {
       // Abrir modal do vídeo
       await playText('Abrindo vídeo de instruções.');
       
-      setActiveModal({
-        type: 'VideoInstrucoesDisplay',
-        data: {
-          companyId,
-          videoUrl: company.video_instrucoes_url,
-        },
-      });
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'VideoInstrucoesDisplay',
+          data: {
+            companyId,
+            videoUrl: company.video_instrucoes_url,
+          },
+        });
+      }
       
       return true;
       
@@ -149,7 +168,7 @@ video_instrucoes: {
       return false;
     }
   },
-},  
+},
 
   // ========================================
   // ENDEREÇO (MAPA)

@@ -18,7 +18,7 @@ const ReactPlayer = dynamic(() => import('react-player'), {
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
     </div>
   ),
-}) as unknown as typeof ReactPlayerType;
+});
 
 interface VideoInstrucoesDisplayProps {
   data: {
@@ -145,6 +145,7 @@ export default function VideoInstrucoesDisplay({
 
         {/* Player de Vídeo */}
         <div className="relative aspect-video bg-black">
+          {/* @ts-ignore - ReactPlayer com dynamic import tem problemas de tipagem */}
           <ReactPlayer
             ref={playerRef}
             url={data.videoUrl}

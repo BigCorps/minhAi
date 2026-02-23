@@ -1,6 +1,6 @@
 // ========================================
 // ARQUIVO: components/assistant/VideoInstrucoesDisplay.tsx
-// Versão 4 - Reescrita para compatibilidade total com Next.js 16 + Turbopack
+// Versão 5 - FINAL com tipagem correta para Next.js 16 + Turbopack
 // ========================================
 
 'use client';
@@ -8,8 +8,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { X, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import type ReactPlayerType from 'react-player';
 
-// ✅ Import correto do react-player (sem /lazy)
+// ✅ Tipagem correta para dynamic import
 const ReactPlayer = dynamic(() => import('react-player'), {
   ssr: false,
   loading: () => (
@@ -17,7 +18,7 @@ const ReactPlayer = dynamic(() => import('react-player'), {
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
     </div>
   ),
-});
+}) as unknown as typeof ReactPlayerType;
 
 interface VideoInstrucoesDisplayProps {
   data: {
@@ -33,19 +34,19 @@ export default function VideoInstrucoesDisplay({
   onClose,
   theme = 'dark',
 }: VideoInstrucoesDisplayProps) {
-  const AUTO_CLOSE_SECONDS = 120; // 2 minutos como fallback
+  const AUTO_CLOSE_SECONDS = 120;
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE_SECONDS);
   const [useAutoClose, setUseAutoClose] = useState(true);
   
   // Estados do player
-  const [playing, setPlaying] = useState(true); // ✅ Auto-play
+  const [playing, setPlaying] = useState(true);
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
   const [played, setPlayed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<ReactPlayerType>(null);
 
   // ── Regra 3: cleanup ao desmontar ───────────────────
   useEffect(() => {
@@ -155,12 +156,12 @@ export default function VideoInstrucoesDisplay({
               console.log('🎬 Vídeo pronto - iniciando reprodução automática');
               setIsReady(true);
             }}
-            onProgress={(state: any) => {
+            onProgress={(state) => {
               if (state && typeof state.played === 'number') {
                 setPlayed(state.played);
               }
             }}
-            onDuration={(dur: number) => setDuration(dur)}
+            onDuration={(dur) => setDuration(dur)}
             onEnded={handleVideoEnd}
             controls={false}
           />

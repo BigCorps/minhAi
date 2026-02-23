@@ -360,8 +360,8 @@ const PixForm = ({ settings, onChange }: any) => {
         <input
           type="text"
           placeholder="Sua chave PIX (CPF, e-mail, telefone ou chave aleatória)"
-          value={settings.receiving_pix_key || ''} {/* ✅ CORRIGIDO */}
-          onChange={e => onChange('receiving_pix_key', e.target.value)} {/* ✅ CORRIGIDO */}
+          value={settings.receiving_pix_key || ''}
+          onChange={e => onChange('receiving_pix_key', e.target.value)}
           disabled={isLocked}
           className={`w-full p-2 border rounded-md
             dark:bg-slate-800 dark:border-white/10
@@ -371,7 +371,7 @@ const PixForm = ({ settings, onChange }: any) => {
         />
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {isLocked
-            ? '✅ Chave PIX configurada! Esta chave será usada para receber pagamentos dos clientes via QR Code gerado pelo assistente.'
+            ? 'Chave PIX configurada! Esta chave será usada para receber pagamentos dos clientes via QR Code gerado pelo assistente.'
             : 'Esta chave será usada para identificar sua conta ao receber pagamentos via PIX dos clientes.'}
         </p>
       </div>
@@ -727,4 +727,3 @@ export default function FunctionConfigModal({
     </div>
   );
 }
-

@@ -20,7 +20,7 @@ interface PixTransaction {
   confirmed_at?: string;
   cancelled_at?: string;
   transferred_at?: string;
-  destination_pix_key: string;
+  destination_withdrawal_pix_key: string;
   notes?: string;
   company_id: string;
 }
@@ -174,7 +174,7 @@ export default function SaldoPage() {
   async function handleWithdraw() {
     setMessage(null);
     
-    const pixKey = userProfile?.pix_key;
+    const pixKey = userProfile?.withdrawal_pix_key;
     
     if (!pixKey) {
       setMessage({ type: 'error', text: 'Você precisa configurar sua chave Pix no Perfil antes de solicitar um saque.' });
@@ -280,7 +280,7 @@ export default function SaldoPage() {
 
   const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.005 : 0;
   const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
-  const pixKey = userProfile?.pix_key;
+  const pixKey = userProfile?.withdrawal_pix_key;
 
   // Contar por status
   const statusCounts = {
@@ -467,7 +467,7 @@ export default function SaldoPage() {
                               {getStatusBadge(tx.status)}
                             </td>
                             <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs">
-                              {tx.notes || formatPixKey(tx.destination_pix_key)}
+                              {tx.notes || formatPixKey(tx.destination_withdrawal_pix_key)}
                             </td>
                           </tr>
                         ))}

@@ -163,15 +163,6 @@ export default function VideoInstrucoesDisplay({
             onDuration={(dur: number) => setDuration(dur)}
             onEnded={handleVideoEnd}
             controls={false}
-            config={{
-              youtube: {
-                playerVars: {
-                  autoplay: 1,
-                  modestbranding: 1,
-                  rel: 0,
-                }
-              }
-            }}
           />
 
           {/* Overlay de loading */}

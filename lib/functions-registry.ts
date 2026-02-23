@@ -84,7 +84,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
 video_instrucoes: {
   functionKey: 'video_instrucoes',
-  name: 'Vídeo de Instruções',
+  functionName: 'Vídeo de Instruções',
   category: 'video',
   responseType: 'modal',
   

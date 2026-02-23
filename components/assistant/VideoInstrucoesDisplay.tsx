@@ -1,25 +1,37 @@
-// SUBSTITUIR TODA A SEÇÃO DO COMPONENTE VIDEOINSTRUCOESDISPLAY
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { X, Play, Pause, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-// Import do ReactPlayer com loading detalhado
-const ReactPlayerDynamic = dynamic(() => import('react-player'), {
+// ✅ SUPER DEBUG VERSION
+console.log('🔷 VideoInstrucoesDisplay.tsx carregado');
+
+const ReactPlayerDynamic = dynamic(() => {
+  console.log('🔷 Dynamic import iniciado');
+  return import('react-player').then(mod => {
+    console.log('🔷 react-player importado com sucesso:', mod);
+    return mod;
+  });
+}, {
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-black rounded-lg">
-      <div className="text-center text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
-        <p>Carregando player...</p>
+  loading: () => {
+    console.log('🔷 Loading component renderizado');
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-black rounded-lg">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
+          <p>Carregando player...</p>
+        </div>
       </div>
-    </div>
-  ),
+    );
+  },
 });
 
-const ReactPlayer = (props: any) => <ReactPlayerDynamic {...props} />;
+const ReactPlayer = (props: any) => {
+  console.log('🔷 ReactPlayer wrapper chamado com props:', { url: props.url, playing: props.playing });
+  return <ReactPlayerDynamic {...props} />;
+};
 
 interface VideoInstrucoesDisplayProps {
   data: {
@@ -35,6 +47,8 @@ export default function VideoInstrucoesDisplay({
   onClose,
   theme = 'dark',
 }: VideoInstrucoesDisplayProps) {
+  console.log('🎬 VideoInstrucoesDisplay renderizado com data:', data);
+  
   const AUTO_CLOSE_SECONDS = 120;
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE_SECONDS);
   const [useAutoClose, setUseAutoClose] = useState(true);
@@ -46,20 +60,38 @@ export default function VideoInstrucoesDisplay({
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadAttempts, setLoadAttempts] = useState(0);
   
   const playerRef = useRef<any>(null);
 
-  // ✅ Log para debug
   useEffect(() => {
     console.log('🎬 VideoInstrucoesDisplay montado');
     console.log('URL do vídeo:', data.videoUrl);
+    console.log('Theme:', theme);
+    
+    // Teste de ambiente
+    console.log('Window disponível:', typeof window !== 'undefined');
+    console.log('Document disponível:', typeof document !== 'undefined');
+    
     return () => {
       console.log('🎬 VideoInstrucoesDisplay desmontado');
       window.speechSynthesis.cancel();
     };
-  }, [data.videoUrl]);
+  }, [data.videoUrl, theme]);
 
-  // Timer de fallback
+  // Log de mudanças de estado
+  useEffect(() => {
+    console.log('📊 Estado atual:', {
+      isReady,
+      playing,
+      error,
+      duration,
+      played: played.toFixed(2),
+      timeLeft,
+      loadAttempts,
+    });
+  }, [isReady, playing, error, duration, played, timeLeft, loadAttempts]);
+
   useEffect(() => {
     if (isReady) {
       setUseAutoClose(false);
@@ -93,10 +125,18 @@ export default function VideoInstrucoesDisplay({
     onClose();
   };
 
-  const handlePlayPause = () => setPlaying(!playing);
-  const handleMuteToggle = () => setMuted(!muted);
+  const handlePlayPause = () => {
+    console.log('▶️ Play/Pause toggleado:', !playing);
+    setPlaying(!playing);
+  };
+  
+  const handleMuteToggle = () => {
+    console.log('🔇 Mute toggleado:', !muted);
+    setMuted(!muted);
+  };
   
   const handleSeek = (value: number) => {
+    console.log('⏩ Seek para:', value);
     if (playerRef.current) {
       playerRef.current.seekTo(value);
     }
@@ -108,16 +148,52 @@ export default function VideoInstrucoesDisplay({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ✅ Handlers com logs
   const handleReady = () => {
-    console.log('✅ Player pronto!');
+    console.log('✅✅✅ Player PRONTO! ✅✅✅');
+    console.log('Player ref:', playerRef.current);
     setIsReady(true);
     setError(null);
+    setLoadAttempts(prev => prev + 1);
   };
 
   const handleError = (err: any) => {
-    console.error('❌ Erro no player:', err);
+    console.error('❌❌❌ ERRO no player:', err);
+    console.error('Tipo do erro:', typeof err);
+    console.error('Erro stringificado:', JSON.stringify(err, null, 2));
     setError('Não foi possível carregar o vídeo. Verifique se a URL é válida.');
+    setLoadAttempts(prev => prev + 1);
+  };
+
+  const handleBuffer = () => {
+    console.log('⏳ Player bufferizando...');
+  };
+
+  const handleBufferEnd = () => {
+    console.log('✅ Buffer finalizado');
+  };
+
+  const handlePlay = () => {
+    console.log('▶️ Vídeo começou a tocar');
+  };
+
+  const handlePause = () => {
+    console.log('⏸️ Vídeo pausado');
+  };
+
+  const handleProgress = (state: any) => {
+    if (state && typeof state.played === 'number') {
+      // Log apenas a cada 10% para não poluir
+      const progressPercent = Math.floor(state.played * 100);
+      if (progressPercent % 10 === 0 && progressPercent !== Math.floor(played * 100)) {
+        console.log(`📊 Progresso: ${progressPercent}%`);
+      }
+      setPlayed(state.played);
+    }
+  };
+
+  const handleDuration = (dur: number) => {
+    console.log('⏱️ Duração detectada:', dur, 'segundos');
+    setDuration(dur);
   };
 
   return (
@@ -132,7 +208,7 @@ export default function VideoInstrucoesDisplay({
             <div className="flex items-center space-x-3">
               <div className="px-3 py-1 bg-purple-500/20 backdrop-blur-xl rounded-full border border-purple-500/30">
                 <span className="text-white text-sm font-medium">
-                  Vídeo
+                  Vídeo {loadAttempts > 0 && `(tentativa ${loadAttempts})`}
                 </span>
               </div>
               {isReady && duration > 0 && (
@@ -140,16 +216,14 @@ export default function VideoInstrucoesDisplay({
                   {formatTime(played * duration)} / {formatTime(duration)}
                 </span>
               )}
+              {!isReady && !error && (
+                <span className="text-white/60 text-sm">
+                  Carregando... {timeLeft}s
+                </span>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">
-              {isReady ? (
-                <span className="text-white/60 text-sm">
-                  Fecha ao terminar
-                </span>
-              ) : (
-                <span className="text-white/60 text-sm">{timeLeft}s</span>
-              )}
               <button
                 onClick={handleManualClose}
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 transition-all"
@@ -163,13 +237,13 @@ export default function VideoInstrucoesDisplay({
         {/* Player */}
         <div className="relative aspect-video bg-black">
           {error ? (
-            // Erro
             <div className="absolute inset-0 flex items-center justify-center bg-black">
-              <div className="text-center text-white p-8">
+              <div className="text-center text-white p-8 max-w-lg">
                 <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
                 <h3 className="text-lg font-bold mb-2">Erro ao Carregar Vídeo</h3>
                 <p className="text-sm text-gray-300 mb-4">{error}</p>
-                <p className="text-xs text-gray-400">URL: {data.videoUrl}</p>
+                <p className="text-xs text-gray-400 mb-2">URL: {data.videoUrl}</p>
+                <p className="text-xs text-gray-500">Tentativas: {loadAttempts}</p>
                 <button
                   onClick={handleManualClose}
                   className="mt-4 px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700"
@@ -189,24 +263,37 @@ export default function VideoInstrucoesDisplay({
                 width="100%"
                 height="100%"
                 onReady={handleReady}
-                onProgress={(state: any) => {
-                  if (state && typeof state.played === 'number') {
-                    setPlayed(state.played);
-                  }
-                }}
-                onDuration={(dur: number) => setDuration(dur)}
+                onProgress={handleProgress}
+                onDuration={handleDuration}
                 onEnded={handleVideoEnd}
                 onError={handleError}
+                onBuffer={handleBuffer}
+                onBufferEnd={handleBufferEnd}
+                onPlay={handlePlay}
+                onPause={handlePause}
                 controls={false}
+                config={{
+                  youtube: {
+                    playerVars: {
+                      autoplay: 1,
+                      modestbranding: 1,
+                    }
+                  },
+                  vimeo: {
+                    playerOptions: {
+                      autoplay: true,
+                    }
+                  }
+                }}
               />
 
-              {/* Loading overlay */}
               {!isReady && !error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                   <div className="text-white text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4" />
                     <p className="text-lg mb-2">Carregando vídeo...</p>
                     <p className="text-sm text-gray-400">Aguarde {timeLeft}s</p>
+                    <p className="text-xs text-gray-500 mt-2">Tentativas: {loadAttempts}</p>
                   </div>
                 </div>
               )}
@@ -265,8 +352,10 @@ export default function VideoInstrucoesDisplay({
                   step={0.01}
                   value={volume}
                   onChange={(e) => {
-                    setVolume(parseFloat(e.target.value));
-                    if (parseFloat(e.target.value) > 0) setMuted(false);
+                    const newVolume = parseFloat(e.target.value);
+                    console.log('🔊 Volume mudou para:', newVolume);
+                    setVolume(newVolume);
+                    if (newVolume > 0) setMuted(false);
                   }}
                   className="w-24 h-1 bg-gray-600 rounded-lg"
                 />

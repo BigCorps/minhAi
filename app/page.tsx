@@ -90,7 +90,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Compatibilidade',
     title: 'Roda em Qualquer Dispositivo',
     description:
-      'Celulares, computadores, notebooks, TVs, totens, PDVs — qualquer aparelho com um navegador web e uma tela já é suficiente para rodar o seu funcionário IA. Sem instalações, sem hardware especial, sem limites de plataforma.',
+      'Celulares, computadores, notebooks, TVs, totens, PDVs — qualquer aparelho com um navegador web e uma tela já é suficiente para rodar o seu funcionário IA. Sem instalações, sem hardware especial, sem limites de plataforma. Conecte tambem suas contas Whatsapp, Instagram e Facebook para o assistente responder por você automaticamente.',
     imageSrc: '/dispositivos.png',
     imageAlt: 'Dispositivos compatíveis com o eAi',
     color: 'blue' as const,
@@ -100,7 +100,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações',
     title: 'Conexões e Serviços Profissionais',
     description:
-      'Utilizamos as melhores plataformas do mercado — Google, Meta, AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento. Conecte tambem suas contas Whatsapp, Instagram e Facebook para o assistente responder por você automáticamente.',
+      'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações e APIs do eAi',
     color: 'green' as const,

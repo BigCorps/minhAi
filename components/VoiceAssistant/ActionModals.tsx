@@ -14,6 +14,7 @@ import NossaMarcaDisplay from '@/components/assistant/NossaMarcaDisplay';
 import EnderecoDisplay from '@/components/assistant/EnderecoDisplay';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
+import VideoInstrucoesDisplay from '@/components/assistant/VideoInstrucoesDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -28,6 +29,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'EnderecoDisplay': EnderecoDisplay,
   'QRCodeDisplay': QRCodeDisplay,
   'PIXConfirmationModal': PIXConfirmationModal,
+  'VideoInstrucoesDisplay': VideoInstrucoesDisplay,
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

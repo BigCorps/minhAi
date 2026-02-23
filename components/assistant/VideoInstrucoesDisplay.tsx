@@ -9,7 +9,8 @@ import { X, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Importação dinâmica do ReactPlayer
-const ReactPlayer = dynamic(() => import('react-player/lazy'), {
+// ✅ CORREÇÃO: Import direto funciona melhor com Turbopack (Next.js 16)
+const ReactPlayer = dynamic(() => import('react-player'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-black rounded-lg">

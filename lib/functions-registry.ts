@@ -25,7 +25,7 @@ export interface FunctionDefinition {
   // Identificação
   functionKey: string;
   functionName: string;
-  category: 'contact' | 'payment' | 'information' | 'ai_assistant' | 'productivity' | 'custom';
+  category: 'contact' | 'payment' | 'information' | 'ai_assistant' | 'video' | 'productivity' | 'custom';
   
   // Tipo de resposta
   responseType: ResponseType;
@@ -86,6 +86,7 @@ video_instrucoes: {
   functionKey: 'video_instrucoes',
   name: 'Vídeo de Instruções',
   category: 'video',
+  responseType: 'modal',
   
   voiceTriggers: [
     'instruções',

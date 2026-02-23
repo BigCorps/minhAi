@@ -46,7 +46,8 @@ export default function VideoInstrucoesDisplay({
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   
-  const playerRef = useRef<typeof ReactPlayerType>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const playerRef = useRef<any>(null);
 
   // ── Regra 3: cleanup ao desmontar ───────────────────
   useEffect(() => {

@@ -65,7 +65,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'orcamento',
   'endereco',
   'faq',
-  'nossa_marca'
+  'nossa_marca',
+  'video_instrucoes'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

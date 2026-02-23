@@ -9,7 +9,6 @@ import { Search } from 'lucide-react';
 import FunctionSelector from '@/components/dashboard/functions/FunctionSelector';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
-import VideoInstrucoesConfigModal from '@/components/dashboard/functions/VideoInstrucoesConfigModal';
 
 interface AssistantFunction {
   id: string;

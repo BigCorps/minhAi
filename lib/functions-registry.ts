@@ -80,6 +80,76 @@ export interface FunctionDefinition {
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
+// VIDEO-INSTRUÇÕES
+
+video_instrucoes: {
+  functionKey: 'video_instrucoes',
+  name: 'Vídeo de Instruções',
+  category: 'video',
+  
+  voiceTriggers: [
+    'instruções',
+    'instrucoes',
+    'tutorial',
+    'como usar',
+    'como funciona',
+    'vídeo explicativo',
+    'video explicativo',
+    'mostrar vídeo',
+    'mostrar video',
+    'demonstração',
+    'demonstracao',
+  ],
+  
+  requiresInput: false,
+  
+  handler: async ({ playText, setActiveModal, companyId, functionSettings }) => {
+    try {
+      console.log('🎓 Executando: Vídeo de Instruções');
+      
+      // Buscar URL do vídeo configurado
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
+      
+      const { data: company, error } = await supabase
+        .from('companies')
+        .select('video_instrucoes_url')
+        .eq('id', companyId)
+        .single();
+      
+      if (error) {
+        console.error('Erro ao buscar vídeo:', error);
+        await playText('Desculpe, não consegui acessar o vídeo de instruções.');
+        return false;
+      }
+      
+      // Verificar se tem vídeo configurado
+      if (!company.video_instrucoes_url) {
+        await playText('Ainda não temos um vídeo de instruções configurado. Entre em contato com o suporte.');
+        return false;
+      }
+      
+      // Abrir modal do vídeo
+      await playText('Abrindo vídeo de instruções.');
+      
+      setActiveModal({
+        type: 'VideoInstrucoesDisplay',
+        data: {
+          companyId,
+          videoUrl: company.video_instrucoes_url,
+        },
+      });
+      
+      return true;
+      
+    } catch (error) {
+      console.error('Erro na função video_instrucoes:', error);
+      await playText('Ocorreu um erro ao tentar abrir o vídeo.');
+      return false;
+    }
+  },
+},  
+
   // ========================================
   // ENDEREÇO (MAPA)
   // ========================================

@@ -155,7 +155,7 @@ export default function VideoInstrucoesDisplay({
               console.log('🎬 Vídeo pronto - iniciando reprodução automática');
               setIsReady(true);
             }}
-            onProgress={({ played }) => setPlayed(played)}
+            onProgress={(state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => setPlayed(state.played)}
             onDuration={setDuration}
             onEnded={handleVideoEnd} // ✅ Fecha quando terminar
             controls={false} // Usamos controles customizados

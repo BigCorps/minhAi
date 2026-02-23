@@ -46,7 +46,7 @@ export default function VideoInstrucoesDisplay({
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   
-  const playerRef = useRef<ReactPlayerType>(null);
+  const playerRef = useRef<typeof ReactPlayerType>(null);
 
   // ── Regra 3: cleanup ao desmontar ───────────────────
   useEffect(() => {

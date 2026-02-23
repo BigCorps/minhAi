@@ -334,7 +334,7 @@ const TelefoneForm = ({ settings, onChange }: any) => (
 );
 
 const PixForm = ({ settings, onChange }: any) => {
-  const [isLocked] = useState(!!settings.withdrawal_pix_key);
+  const [isLocked] = useState(!!settings.receiving_pix_key);
 
   return (
     <div className="space-y-4">
@@ -360,8 +360,8 @@ const PixForm = ({ settings, onChange }: any) => {
         <input
           type="text"
           placeholder="Sua chave PIX (CPF, e-mail, telefone ou chave aleatória)"
-          value={settings.withdrawal_pix_key || ''}
-          onChange={e => onChange('withdrawal_pix_key', e.target.value)}
+          value={settings.receiving_pix_key || ''} {/* ✅ CORRIGIDO */}
+          onChange={e => onChange('receiving_pix_key', e.target.value)} {/* ✅ CORRIGIDO */}
           disabled={isLocked}
           className={`w-full p-2 border rounded-md
             dark:bg-slate-800 dark:border-white/10
@@ -371,8 +371,8 @@ const PixForm = ({ settings, onChange }: any) => {
         />
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {isLocked
-            ? 'Esta chave já foi configurada. Entre em contato com o suporte para alterar.'
-            : 'Esta chave será usada para identificar sua conta ao receber pagamentos via PIX.'}
+            ? '✅ Chave PIX configurada! Esta chave será usada para receber pagamentos dos clientes via QR Code gerado pelo assistente.'
+            : 'Esta chave será usada para identificar sua conta ao receber pagamentos via PIX dos clientes.'}
         </p>
       </div>
     </div>
@@ -603,7 +603,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, withdrawal_pix_key, withdrawal_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address')
         .eq('id', companyId)
         .single();
 
@@ -727,3 +727,4 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+

@@ -333,6 +333,101 @@ const TelefoneForm = ({ settings, onChange }: any) => (
   </div>
 );
 
+const VideoInstrucoesForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center space-x-2">
+        <span>🎓</span>
+        <span>Vídeo Tutorial</span>
+      </h4>
+      <p className="text-sm text-blue-800 dark:text-blue-200">
+        Configure um vídeo explicativo sobre seu produto ou serviço. 
+        Os clientes poderão assistir dizendo frases como:
+      </p>
+      <ul className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1">
+        <li>• "Mostrar vídeo de instruções"</li>
+        <li>• "Como funciona o produto?"</li>
+        <li>• "Tutorial do serviço"</li>
+      </ul>
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        URL do Vídeo
+      </label>
+      <input
+        type="url"
+        placeholder="https://www.youtube.com/watch?v=..."
+        value={settings.video_instrucoes_url || ''}
+        onChange={e => {
+          onChange('video_instrucoes_url', e.target.value);
+        }}
+        className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        Suporta: YouTube, Vimeo, links diretos de vídeo (.mp4, .webm)
+      </p>
+    </div>
+
+    {/* Preview */}
+    {settings.video_instrucoes_url && !isInvalidUrl(settings.video_instrucoes_url) && (
+      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-sm text-green-800 dark:text-green-200 flex items-center space-x-2">
+          <span>✓</span>
+          <span>
+            <strong>Vídeo configurado!</strong> Os clientes poderão assistir por comando de voz.
+          </span>
+        </p>
+        {settings.video_instrucoes_url.includes('youtube.com') && (
+          <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+            YouTube detectado - reprodução otimizada
+          </p>
+        )}
+        {settings.video_instrucoes_url.includes('vimeo.com') && (
+          <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+            Vimeo detectado - reprodução otimizada
+          </p>
+        )}
+      </div>
+    )}
+
+    {/* Error */}
+    {settings.video_instrucoes_url && isInvalidUrl(settings.video_instrucoes_url) && (
+      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+        <p className="text-sm text-red-800 dark:text-red-200 flex items-center space-x-2">
+          <span>⚠️</span>
+          <span>URL inválida. Use um link completo começando com https://</span>
+        </p>
+      </div>
+    )}
+
+    {/* Dicas */}
+    <div className="space-y-2">
+      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-xs text-green-800 dark:text-green-200">
+          ✅ <strong>Bom exemplo:</strong> https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        </p>
+      </div>
+      
+      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+        <p className="text-xs text-yellow-800 dark:text-yellow-200">
+          ⚠️ <strong>Evite:</strong> URLs encurtadas (bit.ly) ou links privados
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+// Função auxiliar para validar URL
+function isInvalidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 const PixForm = ({ settings, onChange }: any) => {
   const [isLocked] = useState(!!settings.receiving_pix_key);
 
@@ -573,6 +668,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'faq': FaqForm,
   'endereco': EnderecoForm, 
   'nossa_marca': NossaMarcaForm,
+  'video_instrucoes': VideoInstrucoesForm,
 };
 
 // ===== INTERFACE =====
@@ -603,7 +699,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url')
         .eq('id', companyId)
         .single();
 

@@ -117,7 +117,9 @@ const EnderecoForm = ({ settings, onChange }: any) => (
         </p>
       </div>
     )}
- 
+
+ 
+
     {/* Contador de caracteres */}
     {settings.business_address && (
       <p className="text-xs text-gray-500 dark:text-gray-400 text-right">
@@ -126,6 +128,7 @@ const EnderecoForm = ({ settings, onChange }: any) => (
     )}
   </div>
 );
+
 
 const InstagramForm = ({ settings, onChange }: any) => (
   <div>
@@ -331,7 +334,7 @@ const TelefoneForm = ({ settings, onChange }: any) => (
 );
 
 const PixForm = ({ settings, onChange }: any) => {
-  const [isLocked] = useState(!!settings.pix_key);
+  const [isLocked] = useState(!!settings.withdrawal_pix_key);
 
   return (
     <div className="space-y-4">
@@ -357,8 +360,8 @@ const PixForm = ({ settings, onChange }: any) => {
         <input
           type="text"
           placeholder="Sua chave PIX (CPF, e-mail, telefone ou chave aleatória)"
-          value={settings.pix_key || ''}
-          onChange={e => onChange('pix_key', e.target.value)}
+          value={settings.withdrawal_pix_key || ''}
+          onChange={e => onChange('withdrawal_pix_key', e.target.value)}
           disabled={isLocked}
           className={`w-full p-2 border rounded-md
             dark:bg-slate-800 dark:border-white/10
@@ -600,7 +603,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, pix_key, pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, withdrawal_pix_key, withdrawal_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address')
         .eq('id', companyId)
         .single();
 

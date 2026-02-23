@@ -1,6 +1,6 @@
 // ========================================
 // ARQUIVO: components/assistant/VideoInstrucoesDisplay.tsx
-// Versão 5 - FINAL com tipagem correta para Next.js 16 + Turbopack
+// Versão DEFINITIVA - Com wrapper para evitar problemas de tipagem
 // ========================================
 
 'use client';
@@ -8,10 +8,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { X, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import type ReactPlayerType from 'react-player';
 
-// ✅ Tipagem correta para dynamic import
-const ReactPlayer = dynamic(() => import('react-player'), {
+// ✅ Import sem tipagem - deixa o TypeScript inferir
+const ReactPlayerDynamic = dynamic(() => import('react-player'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-black rounded-lg">
@@ -19,6 +18,9 @@ const ReactPlayer = dynamic(() => import('react-player'), {
     </div>
   ),
 });
+
+// ✅ Wrapper que aceita any nas props
+const ReactPlayer = (props: any) => <ReactPlayerDynamic {...props} />;
 
 interface VideoInstrucoesDisplayProps {
   data: {
@@ -145,7 +147,6 @@ export default function VideoInstrucoesDisplay({
 
         {/* Player de Vídeo */}
         <div className="relative aspect-video bg-black">
-          {/* @ts-ignore - ReactPlayer com dynamic import tem problemas de tipagem */}
           <ReactPlayer
             ref={playerRef}
             url={data.videoUrl}
@@ -158,12 +159,12 @@ export default function VideoInstrucoesDisplay({
               console.log('🎬 Vídeo pronto - iniciando reprodução automática');
               setIsReady(true);
             }}
-            onProgress={(state) => {
+            onProgress={(state: any) => {
               if (state && typeof state.played === 'number') {
                 setPlayed(state.played);
               }
             }}
-            onDuration={(dur) => setDuration(dur)}
+            onDuration={(dur: number) => setDuration(dur)}
             onEnded={handleVideoEnd}
             controls={false}
           />

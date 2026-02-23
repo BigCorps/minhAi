@@ -1,15 +1,15 @@
 // ========================================
 // ARQUIVO: components/assistant/VideoInstrucoesDisplay.tsx
+// Versão 4 - Reescrita para compatibilidade total com Next.js 16 + Turbopack
 // ========================================
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { X, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-// Importação dinâmica do ReactPlayer
-// ✅ CORREÇÃO: Import direto funciona melhor com Turbopack (Next.js 16)
+// ✅ Import correto do react-player (sem /lazy)
 const ReactPlayer = dynamic(() => import('react-player'), {
   ssr: false,
   loading: () => (
@@ -33,38 +33,37 @@ export default function VideoInstrucoesDisplay({
   onClose,
   theme = 'dark',
 }: VideoInstrucoesDisplayProps) {
-  const AUTO_CLOSE_SECONDS = 120; // 2 minutos como fallback (se vídeo não carregar)
+  const AUTO_CLOSE_SECONDS = 120; // 2 minutos como fallback
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE_SECONDS);
-  const [useAutoClose, setUseAutoClose] = useState(true); // Controla se usa timer ou não
+  const [useAutoClose, setUseAutoClose] = useState(true);
   
   // Estados do player
-  const [playing, setPlaying] = useState(true); // ✅ Começa tocando automaticamente
+  const [playing, setPlaying] = useState(true); // ✅ Auto-play
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
   const [played, setPlayed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  
+  const playerRef = useRef<any>(null);
 
   // ── Regra 3: cleanup ao desmontar ───────────────────
   useEffect(() => {
     return () => window.speechSynthesis.cancel();
   }, []);
 
-  // ── Regra 1: auto-close chamando onClose() ───────────
-  // ✅ ATUALIZADO: Timer só funciona se vídeo não carregar (fallback)
+  // ── Regra 1: auto-close (timer de fallback) ───────────
   useEffect(() => {
-    // Se vídeo está pronto, não usa timer (fecha quando vídeo terminar)
     if (isReady) {
       setUseAutoClose(false);
       return;
     }
 
-    // Se vídeo não carregar em 2min, fecha por segurança
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1 && useAutoClose) {
           window.speechSynthesis.cancel();
-          onClose(); // ← obrigatório
+          onClose();
           return 0;
         }
         return prev - 1;
@@ -73,15 +72,15 @@ export default function VideoInstrucoesDisplay({
     return () => clearInterval(interval);
   }, [onClose, useAutoClose, isReady]);
 
-  // ── Regra 2: fechar manual para o áudio ─────────────
-  const handleManualClose = () => {
-    window.speechSynthesis.cancel();
-    onClose(); // ← obrigatório
-  };
-
-  // ✅ NOVO: Fechar modal quando vídeo terminar
+  // ✅ Fechar modal quando vídeo terminar
   const handleVideoEnd = () => {
     console.log('🎬 Vídeo terminou - fechando modal automaticamente');
+    window.speechSynthesis.cancel();
+    onClose();
+  };
+
+  // ── Regra 2: fechar manual para o áudio ─────────────
+  const handleManualClose = () => {
     window.speechSynthesis.cancel();
     onClose();
   };
@@ -91,8 +90,9 @@ export default function VideoInstrucoesDisplay({
   const handleMuteToggle = () => setMuted(!muted);
   
   const handleSeek = (value: number) => {
-    setPlayed(value);
-    // O seek real será feito no onSeekChange do ReactPlayer
+    if (playerRef.current) {
+      playerRef.current.seekTo(value);
+    }
   };
 
   const formatTime = (seconds: number): string => {
@@ -116,7 +116,7 @@ export default function VideoInstrucoesDisplay({
                   🎓 Tutorial
                 </span>
               </div>
-              {isReady && (
+              {isReady && duration > 0 && (
                 <span className="text-white/60 text-sm">
                   {formatTime(played * duration)} / {formatTime(duration)}
                 </span>
@@ -124,7 +124,6 @@ export default function VideoInstrucoesDisplay({
             </div>
 
             <div className="flex items-center space-x-2">
-              {/* ✅ Mostra tempo restante do vídeo se estiver pronto, senão mostra timer de fallback */}
               {isReady ? (
                 <span className="text-white/60 text-sm">
                   Fecha ao terminar
@@ -145,6 +144,7 @@ export default function VideoInstrucoesDisplay({
         {/* Player de Vídeo */}
         <div className="relative aspect-video bg-black">
           <ReactPlayer
+            ref={playerRef}
             url={data.videoUrl}
             playing={playing}
             volume={volume}
@@ -155,17 +155,20 @@ export default function VideoInstrucoesDisplay({
               console.log('🎬 Vídeo pronto - iniciando reprodução automática');
               setIsReady(true);
             }}
-            onProgress={(state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => setPlayed(state.played)}
-            onDuration={setDuration}
-            onEnded={handleVideoEnd} // ✅ Fecha quando terminar
-            controls={false} // Usamos controles customizados
+            onProgress={(state: any) => {
+              if (state && typeof state.played === 'number') {
+                setPlayed(state.played);
+              }
+            }}
+            onDuration={(dur: number) => setDuration(dur)}
+            onEnded={handleVideoEnd}
+            controls={false}
             config={{
               youtube: {
                 playerVars: {
+                  autoplay: 1,
                   modestbranding: 1,
                   rel: 0,
-                  showinfo: 0,
-                  autoplay: 1, // ✅ Auto-play no YouTube
                 }
               }
             }}
@@ -192,7 +195,7 @@ export default function VideoInstrucoesDisplay({
               <input
                 type="range"
                 min={0}
-                max={1}
+                max={0.999999}
                 step={0.001}
                 value={played}
                 onChange={(e) => handleSeek(parseFloat(e.target.value))}
@@ -278,7 +281,6 @@ export default function VideoInstrucoesDisplay({
         )}
 
         {/* Barra de progresso do auto-close */}
-        {/* ✅ Mostra progresso do vídeo quando estiver pronto, senão mostra timer */}
         <div className={`h-1 ${
           theme === 'dark' ? 'bg-slate-700' : 'bg-gray-300'
         }`}>
@@ -286,8 +288,8 @@ export default function VideoInstrucoesDisplay({
             className="h-full bg-purple-500 transition-all duration-300 ease-linear"
             style={{ 
               width: isReady 
-                ? `${played * 100}%` // Progresso do vídeo
-                : `${(timeLeft / AUTO_CLOSE_SECONDS) * 100}%` // Timer de fallback
+                ? `${played * 100}%`
+                : `${(timeLeft / AUTO_CLOSE_SECONDS) * 100}%`
             }}
           />
         </div>

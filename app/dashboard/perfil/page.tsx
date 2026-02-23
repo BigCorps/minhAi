@@ -56,8 +56,8 @@ export default function PerfilPage() {
           
           if (profileData) {
             setProfile(profileData);
-            setPixKey(profileData.pix_key || '');
-            setPixKeyType(profileData.pix_key_type || 'cpf');
+            setPixKey(profileData.withdrawal_pix_key || '');
+            setPixKeyType(profileData.withdrawal_pix_key_type || 'cpf');
           }
 
           // Load authenticators
@@ -101,14 +101,14 @@ export default function PerfilPage() {
         .from('user_profiles')
         .upsert({
           user_id: user.id,
-          pix_key: pixKey,
-          pix_key_type: pixKeyType,
+          withdrawal_pix_key: pixKey,
+          withdrawal_pix_key_type: pixKeyType,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
 
       if (pixError) throw pixError;
       
-      setProfile({ ...profile, pix_key: pixKey, pix_key_type: pixKeyType });
+      setProfile({ ...profile, withdrawal_pix_key: pixKey, withdrawal_pix_key_type: pixKeyType });
       setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
@@ -250,7 +250,7 @@ async function registerBiometry() {
   }
 
   const isGoogleUser = user?.app_metadata?.provider === 'google';
-  const hasPixKey = !!profile?.pix_key;
+  const hasPixKey = !!profile?.withdrawal_pix_key;
 
   return (
     <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
@@ -408,7 +408,7 @@ async function registerBiometry() {
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-500/30">
-              Esta chave Pix será utilizada para receber os pagamentos enviados pelos seus assistentes virtuais.
+              Esta chave Pix será utilizada para SACAR o saldo consolidado de todos os recebimentos dos seus assistentes.
             </p>
 
             <form onSubmit={handleUpdateProfile} className="space-y-6">

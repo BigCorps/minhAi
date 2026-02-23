@@ -165,14 +165,12 @@ export default function VideoInstrucoesDisplay({
             <div className="flex items-center space-x-3">
               <div className="px-3 py-1 bg-purple-500/20 backdrop-blur-xl rounded-full border border-purple-500/30">
                 <span className="text-white text-sm font-medium">
-                  Vídeo de Intruções
+                  Vídeo de Instruções
                 </span>
               </div>
-              {videoEnded && (
-                <span className="text-green-400 text-sm font-medium">
-                  ✓ Finalizado
-                </span>
-              )}
+              <span className="text-white/60 text-sm">
+                {videoEnded ? 'Vídeo finalizado' : 'Fecha ao terminar'}
+              </span>
             </div>
 
             <button

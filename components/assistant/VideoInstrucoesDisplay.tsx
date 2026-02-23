@@ -1,37 +1,20 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { X, Play, Pause, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-// ✅ SUPER DEBUG VERSION
-console.log('🔷 VideoInstrucoesDisplay.tsx carregado');
-
-const ReactPlayerDynamic = dynamic(() => {
-  console.log('🔷 Dynamic import iniciado');
-  return import('react-player').then(mod => {
-    console.log('🔷 react-player importado com sucesso:', mod);
-    return mod;
-  });
-}, {
+const ReactPlayer = dynamic(() => import('react-player'), {
   ssr: false,
-  loading: () => {
-    console.log('🔷 Loading component renderizado');
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-black rounded-lg">
-        <div className="text-center text-white">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
-          <p>Carregando player...</p>
-        </div>
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-black">
+      <div className="text-white text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
+        <p>Carregando player...</p>
       </div>
-    );
-  },
+    </div>
+  ),
 });
-
-const ReactPlayer = (props: any) => {
-  console.log('🔷 ReactPlayer wrapper chamado com props:', { url: props.url, playing: props.playing });
-  return <ReactPlayerDynamic {...props} />;
-};
 
 interface VideoInstrucoesDisplayProps {
   data: {
@@ -47,11 +30,8 @@ export default function VideoInstrucoesDisplay({
   onClose,
   theme = 'dark',
 }: VideoInstrucoesDisplayProps) {
-  console.log('🎬 VideoInstrucoesDisplay renderizado com data:', data);
-  
   const AUTO_CLOSE_SECONDS = 120;
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE_SECONDS);
-  const [useAutoClose, setUseAutoClose] = useState(true);
   
   const [playing, setPlaying] = useState(true);
   const [volume, setVolume] = useState(0.8);
@@ -60,49 +40,26 @@ export default function VideoInstrucoesDisplay({
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadAttempts, setLoadAttempts] = useState(0);
   
   const playerRef = useRef<any>(null);
 
+  // Cleanup
   useEffect(() => {
-    console.log('🎬 VideoInstrucoesDisplay montado');
-    console.log('URL do vídeo:', data.videoUrl);
-    console.log('Theme:', theme);
-    
-    // Teste de ambiente
-    console.log('Window disponível:', typeof window !== 'undefined');
-    console.log('Document disponível:', typeof document !== 'undefined');
-    
+    console.log('🎬 Montado - URL:', data.videoUrl);
     return () => {
-      console.log('🎬 VideoInstrucoesDisplay desmontado');
+      console.log('🎬 Desmontado');
       window.speechSynthesis.cancel();
     };
-  }, [data.videoUrl, theme]);
+  }, [data.videoUrl]);
 
-  // Log de mudanças de estado
+  // Timer
   useEffect(() => {
-    console.log('📊 Estado atual:', {
-      isReady,
-      playing,
-      error,
-      duration,
-      played: played.toFixed(2),
-      timeLeft,
-      loadAttempts,
-    });
-  }, [isReady, playing, error, duration, played, timeLeft, loadAttempts]);
-
-  useEffect(() => {
-    if (isReady) {
-      setUseAutoClose(false);
-      console.log('✅ Vídeo pronto - timer desativado');
-      return;
-    }
+    if (isReady) return;
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1 && useAutoClose) {
-          console.log('⏰ Timer expirado - fechando');
+        if (prev <= 1) {
+          console.log('⏰ Timeout');
           window.speechSynthesis.cancel();
           onClose();
           return 0;
@@ -110,95 +67,66 @@ export default function VideoInstrucoesDisplay({
         return prev - 1;
       });
     }, 1000);
+    
     return () => clearInterval(interval);
-  }, [onClose, useAutoClose, isReady]);
+  }, [isReady, onClose]);
 
-  const handleVideoEnd = () => {
-    console.log('🏁 Vídeo terminou');
-    window.speechSynthesis.cancel();
-    onClose();
-  };
+  // Handlers com useCallback para evitar re-renders
+  const handleReady = useCallback(() => {
+    console.log('✅ Player pronto!');
+    setIsReady(true);
+    setError(null);
+  }, []);
 
-  const handleManualClose = () => {
-    console.log('❌ Fechamento manual');
-    window.speechSynthesis.cancel();
-    onClose();
-  };
+  const handleError = useCallback((err: any) => {
+    console.error('❌ Erro:', err);
+    setError('Não foi possível carregar o vídeo');
+  }, []);
 
-  const handlePlayPause = () => {
-    console.log('▶️ Play/Pause toggleado:', !playing);
-    setPlaying(!playing);
-  };
-  
-  const handleMuteToggle = () => {
-    console.log('🔇 Mute toggleado:', !muted);
-    setMuted(!muted);
-  };
-  
-  const handleSeek = (value: number) => {
-    console.log('⏩ Seek para:', value);
-    if (playerRef.current) {
-      playerRef.current.seekTo(value);
+  const handleProgress = useCallback((state: any) => {
+    if (state?.played) {
+      setPlayed(state.played);
     }
-  };
+  }, []);
 
-  const formatTime = (seconds: number): string => {
+  const handleDuration = useCallback((dur: number) => {
+    console.log('⏱️ Duração:', dur);
+    setDuration(dur);
+  }, []);
+
+  const handleEnded = useCallback(() => {
+    console.log('🏁 Fim');
+    window.speechSynthesis.cancel();
+    onClose();
+  }, [onClose]);
+
+  const handleClose = useCallback(() => {
+    console.log('❌ Fechar');
+    window.speechSynthesis.cancel();
+    onClose();
+  }, [onClose]);
+
+  const handlePlayPause = useCallback(() => {
+    setPlaying(p => !p);
+  }, []);
+
+  const handleMuteToggle = useCallback(() => {
+    setMuted(m => !m);
+  }, []);
+
+  const handleSeek = useCallback((value: number) => {
+    playerRef.current?.seekTo(value);
+  }, []);
+
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleReady = () => {
-    console.log('✅✅✅ Player PRONTO! ✅✅✅');
-    console.log('Player ref:', playerRef.current);
-    setIsReady(true);
-    setError(null);
-    setLoadAttempts(prev => prev + 1);
-  };
-
-  const handleError = (err: any) => {
-    console.error('❌❌❌ ERRO no player:', err);
-    console.error('Tipo do erro:', typeof err);
-    console.error('Erro stringificado:', JSON.stringify(err, null, 2));
-    setError('Não foi possível carregar o vídeo. Verifique se a URL é válida.');
-    setLoadAttempts(prev => prev + 1);
-  };
-
-  const handleBuffer = () => {
-    console.log('⏳ Player bufferizando...');
-  };
-
-  const handleBufferEnd = () => {
-    console.log('✅ Buffer finalizado');
-  };
-
-  const handlePlay = () => {
-    console.log('▶️ Vídeo começou a tocar');
-  };
-
-  const handlePause = () => {
-    console.log('⏸️ Vídeo pausado');
-  };
-
-  const handleProgress = (state: any) => {
-    if (state && typeof state.played === 'number') {
-      // Log apenas a cada 10% para não poluir
-      const progressPercent = Math.floor(state.played * 100);
-      if (progressPercent % 10 === 0 && progressPercent !== Math.floor(played * 100)) {
-        console.log(`📊 Progresso: ${progressPercent}%`);
-      }
-      setPlayed(state.played);
-    }
-  };
-
-  const handleDuration = (dur: number) => {
-    console.log('⏱️ Duração detectada:', dur, 'segundos');
-    setDuration(dur);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className={`relative w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+      <div className={`relative w-full max-w-4xl rounded-2xl overflow-hidden ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-white'
       }`}>
         
@@ -206,9 +134,9 @@ export default function VideoInstrucoesDisplay({
         <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="px-3 py-1 bg-purple-500/20 backdrop-blur-xl rounded-full border border-purple-500/30">
+              <div className="px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/30">
                 <span className="text-white text-sm font-medium">
-                  Vídeo {loadAttempts > 0 && `(tentativa ${loadAttempts})`}
+                  Vídeo
                 </span>
               </div>
               {isReady && duration > 0 && (
@@ -216,37 +144,28 @@ export default function VideoInstrucoesDisplay({
                   {formatTime(played * duration)} / {formatTime(duration)}
                 </span>
               )}
-              {!isReady && !error && (
-                <span className="text-white/60 text-sm">
-                  Carregando... {timeLeft}s
-                </span>
-              )}
             </div>
 
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleManualClose}
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 transition-all"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
-            </div>
+            <button
+              onClick={handleClose}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
           </div>
         </div>
 
         {/* Player */}
         <div className="relative aspect-video bg-black">
           {error ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-black">
-              <div className="text-center text-white p-8 max-w-lg">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-white p-8">
                 <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
-                <h3 className="text-lg font-bold mb-2">Erro ao Carregar Vídeo</h3>
-                <p className="text-sm text-gray-300 mb-4">{error}</p>
-                <p className="text-xs text-gray-400 mb-2">URL: {data.videoUrl}</p>
-                <p className="text-xs text-gray-500">Tentativas: {loadAttempts}</p>
+                <h3 className="text-lg font-bold mb-2">Erro ao Carregar</h3>
+                <p className="text-sm mb-4">{error}</p>
                 <button
-                  onClick={handleManualClose}
-                  className="mt-4 px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700"
+                  onClick={handleClose}
+                  className="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700"
                 >
                   Fechar
                 </button>
@@ -265,35 +184,17 @@ export default function VideoInstrucoesDisplay({
                 onReady={handleReady}
                 onProgress={handleProgress}
                 onDuration={handleDuration}
-                onEnded={handleVideoEnd}
+                onEnded={handleEnded}
                 onError={handleError}
-                onBuffer={handleBuffer}
-                onBufferEnd={handleBufferEnd}
-                onPlay={handlePlay}
-                onPause={handlePause}
                 controls={false}
-                config={{
-                  youtube: {
-                    playerVars: {
-                      autoplay: 1,
-                      modestbranding: 1,
-                    }
-                  },
-                  vimeo: {
-                    playerOptions: {
-                      autoplay: true,
-                    }
-                  }
-                }}
               />
 
-              {!isReady && !error && (
+              {!isReady && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                   <div className="text-white text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4" />
-                    <p className="text-lg mb-2">Carregando vídeo...</p>
-                    <p className="text-sm text-gray-400">Aguarde {timeLeft}s</p>
-                    <p className="text-xs text-gray-500 mt-2">Tentativas: {loadAttempts}</p>
+                    <p className="text-lg">Carregando vídeo...</p>
+                    <p className="text-sm text-gray-400 mt-2">{timeLeft}s</p>
                   </div>
                 </div>
               )}
@@ -303,9 +204,8 @@ export default function VideoInstrucoesDisplay({
 
         {/* Controles */}
         {isReady && !error && (
-          <div className={`p-4 ${
-            theme === 'dark' ? 'bg-slate-800' : 'bg-gray-100'
-          }`}>
+          <div className={`p-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-gray-100'}`}>
+            {/* Progress bar */}
             <div className="mb-4">
               <input
                 type="range"
@@ -314,13 +214,14 @@ export default function VideoInstrucoesDisplay({
                 step={0.001}
                 value={played}
                 onChange={(e) => handleSeek(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-gray-600 rounded-lg cursor-pointer"
                 style={{
                   background: `linear-gradient(to right, #8B5CF6 ${played * 100}%, #4B5563 ${played * 100}%)`
                 }}
               />
             </div>
 
+            {/* Controls */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <button
@@ -338,7 +239,7 @@ export default function VideoInstrucoesDisplay({
                   onClick={handleMuteToggle}
                   className="p-2 rounded-lg hover:bg-white/10"
                 >
-                  {muted || volume === 0 ? (
+                  {muted ? (
                     <VolumeX className="w-5 h-5 text-white" />
                   ) : (
                     <Volume2 className="w-5 h-5 text-white" />
@@ -352,10 +253,8 @@ export default function VideoInstrucoesDisplay({
                   step={0.01}
                   value={volume}
                   onChange={(e) => {
-                    const newVolume = parseFloat(e.target.value);
-                    console.log('🔊 Volume mudou para:', newVolume);
-                    setVolume(newVolume);
-                    if (newVolume > 0) setMuted(false);
+                    setVolume(parseFloat(e.target.value));
+                    if (parseFloat(e.target.value) > 0) setMuted(false);
                   }}
                   className="w-24 h-1 bg-gray-600 rounded-lg"
                 />
@@ -368,14 +267,14 @@ export default function VideoInstrucoesDisplay({
           </div>
         )}
 
-        {/* Progress bar */}
+        {/* Progress indicator */}
         <div className="h-1 bg-slate-700">
           <div
-            className="h-full bg-purple-500 transition-all duration-300"
+            className="h-full bg-purple-500 transition-all"
             style={{ 
               width: isReady 
                 ? `${played * 100}%`
-                : `${(timeLeft / AUTO_CLOSE_SECONDS) * 100}%`
+                : `${((AUTO_CLOSE_SECONDS - timeLeft) / AUTO_CLOSE_SECONDS) * 100}%`
             }}
           />
         </div>

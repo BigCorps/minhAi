@@ -445,6 +445,12 @@ export function VoiceAssistantWithWakeWord({
           await handleEnderecoCommand({ companyId, setIsProcessing, setActiveModal, playText });
           break;
 
+        case 'video_instrucoes':
+          await handleVideoInstrucoesCommand({ 
+            companyId, setIsProcessing, setActiveModal, playText 
+          });
+          break;
+
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

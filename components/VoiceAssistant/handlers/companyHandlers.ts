@@ -114,6 +114,59 @@ export async function handleNossaMarcaCommand({
   }
 }
 
+export async function handleVideoInstrucoesCommand({
+  companyId,
+  setIsProcessing,
+  setActiveModal,
+  playText,
+}: CompanyHandlerDeps): Promise<void> {
+  try {
+    console.log('🎬 Executando: Vídeo de Instruções (via carrossel)');
+    setIsProcessing(true);
+    
+    // Buscar URL do vídeo configurado
+    const supabase = createClient();
+    
+    const { data: company, error } = await supabase
+      .from('companies')
+      .select('video_instrucoes_url')
+      .eq('id', companyId)
+      .single();
+    
+    if (error) {
+      console.error('Erro ao buscar vídeo:', error);
+      await playText('Desculpe, não consegui acessar o vídeo de instruções.');
+      return;
+    }
+    
+    // Verificar se tem vídeo configurado
+    if (!company || !company.video_instrucoes_url) {
+      await playText('Ainda não temos um vídeo de instruções configurado. Entre em contato com o suporte.');
+      return;
+    }
+    
+    // Abrir modal do vídeo
+    setActiveModal({
+      type: 'VideoInstrucoesDisplay',
+      data: {
+        companyId,
+        videoUrl: company.video_instrucoes_url,
+      },
+    });
+    
+    // Falar em paralelo
+    playText('Abrindo vídeo de instruções.').catch(err => {
+      console.error('Erro ao falar:', err);
+    });
+    
+  } catch (error) {
+    console.error('🎬 [VÍDEO INSTRUÇÕES] ERRO:', error);
+    await playText('Ocorreu um erro ao tentar abrir o vídeo.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 // handleEnderecoCommand
 // Busca e exibe o endereço físico com link para Google Maps.

@@ -1,25 +1,24 @@
-// ========================================
-// ARQUIVO: components/assistant/VideoInstrucoesDisplay.tsx
-// Versão DEFINITIVA - Com wrapper para evitar problemas de tipagem
-// ========================================
+// SUBSTITUIR TODA A SEÇÃO DO COMPONENTE VIDEOINSTRUCOESDISPLAY
 
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { X, Play, Pause, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-// ✅ Import sem tipagem - deixa o TypeScript inferir
+// Import do ReactPlayer com loading detalhado
 const ReactPlayerDynamic = dynamic(() => import('react-player'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-black rounded-lg">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
+      <div className="text-center text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
+        <p>Carregando player...</p>
+      </div>
     </div>
   ),
 });
 
-// ✅ Wrapper que aceita any nas props
 const ReactPlayer = (props: any) => <ReactPlayerDynamic {...props} />;
 
 interface VideoInstrucoesDisplayProps {
@@ -40,32 +39,38 @@ export default function VideoInstrucoesDisplay({
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE_SECONDS);
   const [useAutoClose, setUseAutoClose] = useState(true);
   
-  // Estados do player
   const [playing, setPlaying] = useState(true);
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
   const [played, setPlayed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
 
-  // ── Regra 3: cleanup ao desmontar ───────────────────
+  // ✅ Log para debug
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
-  }, []);
+    console.log('🎬 VideoInstrucoesDisplay montado');
+    console.log('URL do vídeo:', data.videoUrl);
+    return () => {
+      console.log('🎬 VideoInstrucoesDisplay desmontado');
+      window.speechSynthesis.cancel();
+    };
+  }, [data.videoUrl]);
 
-  // ── Regra 1: auto-close (timer de fallback) ───────────
+  // Timer de fallback
   useEffect(() => {
     if (isReady) {
       setUseAutoClose(false);
+      console.log('✅ Vídeo pronto - timer desativado');
       return;
     }
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1 && useAutoClose) {
+          console.log('⏰ Timer expirado - fechando');
           window.speechSynthesis.cancel();
           onClose();
           return 0;
@@ -76,20 +81,18 @@ export default function VideoInstrucoesDisplay({
     return () => clearInterval(interval);
   }, [onClose, useAutoClose, isReady]);
 
-  // ✅ Fechar modal quando vídeo terminar
   const handleVideoEnd = () => {
-    console.log('🎬 Vídeo terminou - fechando modal automaticamente');
+    console.log('🏁 Vídeo terminou');
     window.speechSynthesis.cancel();
     onClose();
   };
 
-  // ── Regra 2: fechar manual para o áudio ─────────────
   const handleManualClose = () => {
+    console.log('❌ Fechamento manual');
     window.speechSynthesis.cancel();
     onClose();
   };
 
-  // Handlers do player
   const handlePlayPause = () => setPlaying(!playing);
   const handleMuteToggle = () => setMuted(!muted);
   
@@ -105,6 +108,18 @@ export default function VideoInstrucoesDisplay({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // ✅ Handlers com logs
+  const handleReady = () => {
+    console.log('✅ Player pronto!');
+    setIsReady(true);
+    setError(null);
+  };
+
+  const handleError = (err: any) => {
+    console.error('❌ Erro no player:', err);
+    setError('Não foi possível carregar o vídeo. Verifique se a URL é válida.');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className={`relative w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden ${
@@ -117,7 +132,7 @@ export default function VideoInstrucoesDisplay({
             <div className="flex items-center space-x-3">
               <div className="px-3 py-1 bg-purple-500/20 backdrop-blur-xl rounded-full border border-purple-500/30">
                 <span className="text-white text-sm font-medium">
-                  🎓 Tutorial
+                  Vídeo
                 </span>
               </div>
               {isReady && duration > 0 && (
@@ -145,47 +160,65 @@ export default function VideoInstrucoesDisplay({
           </div>
         </div>
 
-        {/* Player de Vídeo */}
+        {/* Player */}
         <div className="relative aspect-video bg-black">
-          <ReactPlayer
-            ref={playerRef}
-            url={data.videoUrl}
-            playing={playing}
-            volume={volume}
-            muted={muted}
-            width="100%"
-            height="100%"
-            onReady={() => {
-              console.log('🎬 Vídeo pronto - iniciando reprodução automática');
-              setIsReady(true);
-            }}
-            onProgress={(state: any) => {
-              if (state && typeof state.played === 'number') {
-                setPlayed(state.played);
-              }
-            }}
-            onDuration={(dur: number) => setDuration(dur)}
-            onEnded={handleVideoEnd}
-            controls={false}
-          />
-
-          {/* Overlay de loading */}
-          {!isReady && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <div className="text-white text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4" />
-                <p className="text-lg">Carregando vídeo...</p>
+          {error ? (
+            // Erro
+            <div className="absolute inset-0 flex items-center justify-center bg-black">
+              <div className="text-center text-white p-8">
+                <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+                <h3 className="text-lg font-bold mb-2">Erro ao Carregar Vídeo</h3>
+                <p className="text-sm text-gray-300 mb-4">{error}</p>
+                <p className="text-xs text-gray-400">URL: {data.videoUrl}</p>
+                <button
+                  onClick={handleManualClose}
+                  className="mt-4 px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
+          ) : (
+            <>
+              <ReactPlayer
+                ref={playerRef}
+                url={data.videoUrl}
+                playing={playing}
+                volume={volume}
+                muted={muted}
+                width="100%"
+                height="100%"
+                onReady={handleReady}
+                onProgress={(state: any) => {
+                  if (state && typeof state.played === 'number') {
+                    setPlayed(state.played);
+                  }
+                }}
+                onDuration={(dur: number) => setDuration(dur)}
+                onEnded={handleVideoEnd}
+                onError={handleError}
+                controls={false}
+              />
+
+              {/* Loading overlay */}
+              {!isReady && !error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  <div className="text-white text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4" />
+                    <p className="text-lg mb-2">Carregando vídeo...</p>
+                    <p className="text-sm text-gray-400">Aguarde {timeLeft}s</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Controles customizados */}
-        {isReady && (
+        {/* Controles */}
+        {isReady && !error && (
           <div className={`p-4 ${
             theme === 'dark' ? 'bg-slate-800' : 'bg-gray-100'
           }`}>
-            {/* Barra de progresso */}
             <div className="mb-4">
               <input
                 type="range"
@@ -194,29 +227,18 @@ export default function VideoInstrucoesDisplay({
                 step={0.001}
                 value={played}
                 onChange={(e) => handleSeek(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none 
-                  [&::-webkit-slider-thumb]:w-4 
-                  [&::-webkit-slider-thumb]:h-4 
-                  [&::-webkit-slider-thumb]:rounded-full 
-                  [&::-webkit-slider-thumb]:bg-purple-500"
+                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                 style={{
                   background: `linear-gradient(to right, #8B5CF6 ${played * 100}%, #4B5563 ${played * 100}%)`
                 }}
               />
             </div>
 
-            {/* Botões de controle */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                {/* Play/Pause */}
                 <button
                   onClick={handlePlayPause}
-                  className={`p-3 rounded-full transition-all ${
-                    theme === 'dark'
-                      ? 'bg-purple-600 hover:bg-purple-700'
-                      : 'bg-purple-500 hover:bg-purple-600'
-                  }`}
+                  className="p-3 rounded-full bg-purple-600 hover:bg-purple-700"
                 >
                   {playing ? (
                     <Pause className="w-6 h-6 text-white" fill="white" />
@@ -225,27 +247,17 @@ export default function VideoInstrucoesDisplay({
                   )}
                 </button>
 
-                {/* Volume */}
                 <button
                   onClick={handleMuteToggle}
-                  className={`p-2 rounded-lg transition-all ${
-                    theme === 'dark'
-                      ? 'hover:bg-white/10'
-                      : 'hover:bg-gray-200'
-                  }`}
+                  className="p-2 rounded-lg hover:bg-white/10"
                 >
                   {muted || volume === 0 ? (
-                    <VolumeX className={`w-5 h-5 ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
-                    }`} />
+                    <VolumeX className="w-5 h-5 text-white" />
                   ) : (
-                    <Volume2 className={`w-5 h-5 ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
-                    }`} />
+                    <Volume2 className="w-5 h-5 text-white" />
                   )}
                 </button>
 
-                {/* Slider de volume */}
                 <input
                   type="range"
                   min={0}
@@ -256,31 +268,21 @@ export default function VideoInstrucoesDisplay({
                     setVolume(parseFloat(e.target.value));
                     if (parseFloat(e.target.value) > 0) setMuted(false);
                   }}
-                  className="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer
-                    [&::-webkit-slider-thumb]:appearance-none 
-                    [&::-webkit-slider-thumb]:w-3 
-                    [&::-webkit-slider-thumb]:h-3 
-                    [&::-webkit-slider-thumb]:rounded-full 
-                    [&::-webkit-slider-thumb]:bg-white"
+                  className="w-24 h-1 bg-gray-600 rounded-lg"
                 />
               </div>
 
-              {/* Tempo */}
-              <div className={`text-sm font-mono ${
-                theme === 'dark' ? 'text-white/60' : 'text-gray-600'
-              }`}>
+              <div className="text-sm font-mono text-white/60">
                 {formatTime(played * duration)} / {formatTime(duration)}
               </div>
             </div>
           </div>
         )}
 
-        {/* Barra de progresso do auto-close */}
-        <div className={`h-1 ${
-          theme === 'dark' ? 'bg-slate-700' : 'bg-gray-300'
-        }`}>
+        {/* Progress bar */}
+        <div className="h-1 bg-slate-700">
           <div
-            className="h-full bg-purple-500 transition-all duration-300 ease-linear"
+            className="h-full bg-purple-500 transition-all duration-300"
             style={{ 
               width: isReady 
                 ? `${played * 100}%`

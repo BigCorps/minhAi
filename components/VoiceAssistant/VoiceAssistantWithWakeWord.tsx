@@ -55,7 +55,7 @@ import {
 } from './handlers/functionUsage';
 import { handleQRCodeCommand } from './handlers/qrcodeHandlers';
 import { handlePixCommand, handleConfirmPix, handleCancelPix } from './handlers/pixHandlers';
-import { handleNossaMarcaCommand, handleEnderecoCommand, handleVideoInstrucoesCommand } from './handlers/companyHandlers';
+import { handleNossaMarcaCommand, handleEnderecoCommand, handleVideoInstrucoesCommand, handleSequenciaVideosCommand } from './handlers/companyHandlers';
 import { detectVoiceCommand } from './handlers/voiceCommandDetector';
 
 export function VoiceAssistantWithWakeWord({

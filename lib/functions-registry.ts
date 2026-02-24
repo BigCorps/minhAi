@@ -281,6 +281,7 @@ handler: async ({
     await playText('Desculpe, não consegui abrir a agenda.');
     return false;
   }
+ },
 },
   
 // ENVIAR-EMAIL

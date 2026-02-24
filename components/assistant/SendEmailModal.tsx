@@ -8,16 +8,19 @@ import { createClient } from '@/lib/supabase-browser';
 type EmailStep = 'destinatario' | 'assunto' | 'corpo' | 'confirmacao';
 
 interface SendEmailModalProps {
-  companyId: string;
+  data: {
+    companyId: string;
+  };
   onClose: () => void;
   theme?: 'dark' | 'light';
 }
 
 export default function SendEmailModal({
-  companyId,
+  data,
   onClose,
   theme = 'dark',
 }: SendEmailModalProps) {
+  const { companyId } = data;
   const [step, setStep] = useState<EmailStep>('destinatario');
   const [destinatario, setDestinatario] = useState('');
   const [assunto, setAssunto] = useState('');

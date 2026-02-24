@@ -80,6 +80,45 @@ export interface FunctionDefinition {
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
+// ENVIAR-EMAIL
+enviar_email: {
+  functionKey: 'enviar_email',
+  functionName: 'Enviar Email',
+  category: 'productivity',
+  responseType: 'voice',
+  
+  voiceTriggers: [
+    'email',
+    'enviar email',
+    'mandar email',
+    'envie um email',
+    'mande um email',
+    'envie email',
+    'enviar e-mail',
+    'mandar e-mail',
+  ],
+  
+  examplePhrases: [
+    'Enviar email para João',
+    'Mandar email para cliente',
+    'Envie um email',
+  ],
+  
+  edgeFunction: 'enviar-email-google',
+  
+  requiresInput: true,
+  
+  description: 'Envia emails através da conta Google conectada usando Gmail API',
+  shortDescription: 'Enviar email',
+  icon: '📧',
+  color: '#4285F4',
+  
+  saveToHistory: true,
+  creditsPerUse: 3,
+  requiresPayment: false,
+  isPremium: true,
+},
+  
 // VIDEO-INSTRUÇÕES
 
 video_instrucoes: {

@@ -54,6 +54,9 @@ export default function ViewAgendaModal({
   const supabase = createClient();
   const isDark = theme === 'dark';
 
+  // Detectar mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   useEffect(() => {
     loadEvents();
   }, [companyId]);
@@ -163,10 +166,10 @@ export default function ViewAgendaModal({
       {/* Modal Principal */}
       <div
         className={`relative w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
-          animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto`}
+          animate-in zoom-in-95 duration-300 max-h-[92vh] flex flex-col`}
       >
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
+        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
@@ -190,8 +193,8 @@ export default function ViewAgendaModal({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content com scroll */}
+        <div className="flex-1 overflow-y-auto p-6">
           
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -261,7 +264,7 @@ export default function ViewAgendaModal({
               </div>
 
               {/* FullCalendar */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-white/10">
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-white/10 overflow-hidden">
                 <FullCalendar
                   ref={calendarRef}
                   plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
@@ -269,11 +272,33 @@ export default function ViewAgendaModal({
                   headerToolbar={false}
                   events={events}
                   locale={ptBrLocale}
-                  height="auto"
+                  height={
+                    isMobile 
+                      ? 350
+                      : currentView === 'month' ? 500 : currentView === 'week' ? 450 : 400
+                  }
+                  contentHeight={
+                    isMobile 
+                      ? 300
+                      : currentView === 'month' ? 450 : currentView === 'week' ? 400 : 350
+                  }
                   allDayText="Dia inteiro"
                   eventClick={handleEventClick}
                   datesSet={(dateInfo) => {
                     setCurrentTitle(dateInfo.view.title);
+                  }}
+                  dayMaxEvents={3}
+                  nowIndicator={true}
+                  scrollTime="08:00:00"
+                  slotMinTime="06:00:00"
+                  slotMaxTime="22:00:00"
+                  allDaySlot={true}
+                  slotDuration="00:30:00"
+                  eventTimeFormat={{
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    meridiem: false,
+                    hour12: false,
                   }}
                 />
               </div>

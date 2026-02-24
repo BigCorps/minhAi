@@ -80,6 +80,187 @@ export interface FunctionDefinition {
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
+// ========================================
+// MARCAR EVENTO NO CALENDÁRIO
+// ========================================
+agendar_compromisso: {
+  functionKey: 'agendar_compromisso',
+  functionName: 'Marcar Evento',
+  category: 'productivity',
+  responseType: 'modal',
+  
+  voiceTriggers: [
+    'agendar',
+    'marcar compromisso',
+    'marcar evento',
+    'criar evento',
+    'agendar reunião',
+    'marcar reunião',
+    'agendar compromisso',
+    'novo evento',
+    'nova reunião',
+    'marcar horário',
+    'agendar horário',
+  ],
+  
+  examplePhrases: [
+    'Agendar reunião para amanhã',
+    'Marcar compromisso na próxima semana',
+    'Criar evento no calendário',
+  ],
+  
+  edgeFunction: 'criar-evento-calendario',
+  
+  requiresInput: true,
+  
+  description: 'Cria eventos no Google Calendar através de comando de voz',
+  shortDescription: 'Marcar evento',
+  icon: '📅',
+  color: '#10B981',
+  
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: true,
+  
+  handler: async ({ 
+    transcript,
+    playText, 
+    setActiveModal, 
+    companyId 
+  }) => {
+    try {
+      console.log('📅 [MARCAR EVENTO] Abrindo modal');
+      
+      // Detectar período mencionado (mês/semana/dia)
+      let initialView: 'month' | 'week' | 'day' = 'month';
+      const lowerTranscript = transcript.toLowerCase();
+      
+      if (lowerTranscript.includes('semana') || lowerTranscript.includes('próxima semana')) {
+        initialView = 'week';
+      } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('amanhã') || lowerTranscript.includes('dia')) {
+        initialView = 'day';
+      }
+      
+      // Abrir modal
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'CreateEventModal',
+          data: { 
+            companyId,
+            initialView,
+            transcript // Passar transcrição para análise
+          }
+        });
+      }
+      
+      // Falar
+      await playText('Certo! Vou abrir o calendário para você marcar o evento. Selecione a data e horário desejados.');
+      
+      return true;
+      
+    } catch (error) {
+      console.error('📅 [MARCAR EVENTO] ERRO:', error);
+      await playText('Desculpe, não consegui abrir o calendário.');
+      return false;
+    }
+  },
+},
+
+// ========================================
+// VER AGENDA
+// ========================================
+ver_agenda: {
+  functionKey: 'ver_agenda',
+  functionName: 'Ver Agenda',
+  category: 'productivity',
+  responseType: 'modal',
+  
+  voiceTriggers: [
+    'ver agenda',
+    'mostrar agenda',
+    'minha agenda',
+    'compromissos',
+    'ver calendário',
+    'mostrar calendário',
+    'ver eventos',
+    'mostrar eventos',
+    'o que tenho agendado',
+    'o que está marcado',
+  ],
+  
+  examplePhrases: [
+    'Ver minha agenda de hoje',
+    'Mostrar compromissos da semana',
+    'O que tenho agendado?',
+  ],
+  
+  edgeFunction: 'listar-eventos-google',
+  
+  requiresInput: false,
+  
+  description: 'Visualiza eventos do Google Calendar',
+  shortDescription: 'Ver agenda',
+  icon: '📆',
+  color: '#3B82F6',
+  
+  saveToHistory: false,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: true,
+  
+  handler: async ({ 
+    transcript,
+    playText, 
+    setActiveModal, 
+    companyId 
+  }) => {
+    try {
+      console.log('📆 [VER AGENDA] Abrindo modal');
+      
+      // Detectar período mencionado
+      let initialView: 'month' | 'week' | 'day' = 'month';
+      const lowerTranscript = transcript.toLowerCase();
+      
+      if (lowerTranscript.includes('semana') || lowerTranscript.includes('próxima semana') || lowerTranscript.includes('esta semana')) {
+        initialView = 'week';
+      } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('dia')) {
+        initialView = 'day';
+      }
+      
+      // Abrir modal
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ViewAgendaModal',
+          data: { 
+            companyId,
+            initialView
+          }
+        });
+      }
+      
+      // Falar
+      let message = 'Abrindo sua agenda';
+      if (initialView === 'week') {
+        message += ' da semana.';
+      } else if (initialView === 'day') {
+        message += ' de hoje.';
+      } else {
+        message += ' do mês.';
+      }
+      
+      await playText(message);
+      
+      return true;
+      
+    } catch (error) {
+      console.error('📆 [VER AGENDA] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a agenda.');
+      return false;
+    }
+  },
+},
+  
 // ENVIAR-EMAIL
 enviar_email: {
   functionKey: 'enviar_email',

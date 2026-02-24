@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { X, Mail, Calendar, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
+import { InfinitePayConfigForm } from './InfinitePayConfigModal';
 
 // ===== FORMULÁRIOS =====
 
@@ -1154,6 +1155,9 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'agendar_compromisso': GoogleCalendarForm,
   'ver_agenda': GoogleCalendarForm, 
   'sequencia_videos': SequenciaVideosForm,
+  'link_pagamento': InfinitePayConfigForm,
+  'nfc_debito':     InfinitePayConfigForm,
+  'nfc_credito':    InfinitePayConfigForm,
 };
 
 // ===== INTERFACE =====

@@ -224,7 +224,7 @@ export default function FunctionCarousel({
         
         @media (max-width: 768px) {
           .animate-scroll-infinite {
-            animation: scroll-infinite 12s linear infinite;
+            animation: scroll-infinite 15.6s linear infinite;
           }
         }
 

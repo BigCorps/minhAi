@@ -459,6 +459,63 @@ export function VoiceAssistantWithWakeWord({
           playText('Certo! Vou ajudar você a enviar um email. Para qual endereço de email deseja enviar?').catch(() => {});
           break;
 
+case 'agendar_compromisso':
+  {
+    // Detectar período mencionado
+    let initialView: 'month' | 'week' | 'day' = 'month';
+    const lowerTranscript = transcript.toLowerCase();
+    
+    if (lowerTranscript.includes('semana') || lowerTranscript.includes('próxima semana')) {
+      initialView = 'week';
+    } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('amanhã') || lowerTranscript.includes('dia')) {
+      initialView = 'day';
+    }
+    
+    setActiveModal({ 
+      type: 'CreateEventModal', 
+      data: { 
+        companyId,
+        initialView,
+        transcript 
+      } 
+    });
+    playText('Certo! Vou abrir o calendário para você marcar o evento. Selecione a data e horário desejados.').catch(() => {});
+  }
+  break;
+
+case 'ver_agenda':
+  {
+    // Detectar período mencionado
+    let initialView: 'month' | 'week' | 'day' = 'month';
+    const lowerTranscript = transcript.toLowerCase();
+    
+    if (lowerTranscript.includes('semana') || lowerTranscript.includes('esta semana') || lowerTranscript.includes('próxima semana')) {
+      initialView = 'week';
+    } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('dia')) {
+      initialView = 'day';
+    }
+    
+    setActiveModal({ 
+      type: 'ViewAgendaModal', 
+      data: { 
+        companyId,
+        initialView
+      } 
+    });
+    
+    let message = 'Abrindo sua agenda';
+    if (initialView === 'week') {
+      message += ' da semana.';
+    } else if (initialView === 'day') {
+      message += ' de hoje.';
+    } else {
+      message += ' do mês.';
+    }
+    
+    playText(message).catch(() => {});
+  }
+  break;
+
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

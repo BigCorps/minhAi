@@ -80,6 +80,133 @@ export interface FunctionDefinition {
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
+  link_pagamento: {
+    functionKey: 'link_pagamento',
+    name: 'Link de Pagamento',
+    category: 'payment',
+    voiceTriggers: [
+      'link de pagamento',
+      'gerar link',
+      'cobrar por link',
+      'link pagamento',
+      'cobrar no link',
+    ],
+    requiresInput: true,
+    handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+      const amount = extractAmount(transcript ?? '');
+
+      if (!amount) {
+        await playText('Por favor, informe o valor para gerar o link de pagamento.');
+        return false;
+      }
+
+      // Tenta extrair telefone da própria fala (opcional)
+      const telefone = extractTelefone(transcript ?? '');
+
+      await playText(
+        `Gerando link de pagamento de ${amount.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })}...`
+      );
+
+      setActiveModal({
+        type: 'InfinitePayDisplay',
+        data: {
+          companyId,
+          tipo: 'LINK_PAGAMENTO',
+          amount_cents: Math.round(amount * 100),
+          telefone, // undefined se não encontrou — o display vai pedir
+        },
+      });
+
+      return true;
+    },
+  },
+
+  nfc_debito: {
+    functionKey: 'nfc_debito',
+    name: 'NFC Débito',
+    category: 'payment',
+    voiceTriggers: [
+      'nfc débito',
+      'débito',
+      'aproximação débito',
+      'tap débito',
+      'pagar débito',
+      'cobrar débito',
+    ],
+    requiresInput: true,
+    handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+      const amount = extractAmount(transcript ?? '');
+
+      if (!amount) {
+        await playText('Por favor, informe o valor para o pagamento no débito.');
+        return false;
+      }
+
+      await playText(
+        `Preparando pagamento de ${amount.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })} no débito...`
+      );
+
+      setActiveModal({
+        type: 'InfinitePayDisplay',
+        data: {
+          companyId,
+          tipo: 'NFC',
+          nfc_payment_method: 'debit',
+          amount_cents: Math.round(amount * 100),
+        },
+      });
+
+      return true;
+    },
+  },
+
+  nfc_credito: {
+    functionKey: 'nfc_credito',
+    name: 'NFC Crédito',
+    category: 'payment',
+    voiceTriggers: [
+      'nfc crédito',
+      'crédito',
+      'aproximação crédito',
+      'tap crédito',
+      'pagar crédito',
+      'cobrar crédito',
+    ],
+    requiresInput: true,
+    handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+      const amount = extractAmount(transcript ?? '');
+
+      if (!amount) {
+        await playText('Por favor, informe o valor para o pagamento no crédito.');
+        return false;
+      }
+
+      await playText(
+        `Preparando pagamento de ${amount.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })} no crédito...`
+      );
+
+      setActiveModal({
+        type: 'InfinitePayDisplay',
+        data: {
+          companyId,
+          tipo: 'NFC',
+          nfc_payment_method: 'credit',
+          amount_cents: Math.round(amount * 100),
+        },
+      });
+
+      return true;
+    },
+  },
 
 sequencia_videos: {
   functionKey: 'sequencia_videos',
@@ -1293,6 +1420,22 @@ export function detectFunctionFromTranscript(transcript: string): {
     confidence,
     extractedValue,
   };
+}
+
+function extractAmount(transcript: string): number | null {
+  // Aceita "50", "50 reais", "50,00", "R$ 50", "R$50.00"
+  const match = transcript.match(/R?\$?\s*(\d+(?:[.,]\d{1,2})?)/i);
+  if (!match) return null;
+  const value = parseFloat(match[1].replace(',', '.'));
+  return isNaN(value) || value <= 0 ? null : value;
+}
+
+function extractTelefone(transcript: string): string | undefined {
+  // Tenta capturar sequências de dígitos que pareçam telefone (10-11 dígitos)
+  const digits = transcript.replace(/\D/g, '');
+  // Remove o valor monetário do início e pega o restante
+  const match = digits.match(/(\d{10,11})$/);
+  return match ? match[1] : undefined;
 }
 
 function extractNumberFromText(text: string): number | null {

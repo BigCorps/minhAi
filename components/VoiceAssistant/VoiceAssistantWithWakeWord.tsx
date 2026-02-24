@@ -494,9 +494,9 @@ case 'InfinitePayDisplay':
       data={activeModal.data}
       onClose={handleCloseModal}
          theme={theme}
-       />
-     );
-
+       });
+  playText('Abrindo Infinitepay').catch(() => {});
+  break;
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

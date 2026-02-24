@@ -127,20 +127,6 @@ export const InfinitePayConfigForm = ({
           </p>
         </div>
       )}
-
-      {/* ── Créditos ────────────────────────────────────────────────── */}
-      <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-white/10">
-        <div className="flex items-center gap-2 mb-2">
-          <CreditCard className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-          <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-            Consumo de Créditos
-          </h5>
-        </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
-          <strong>2 créditos</strong> são cobrados somente após o usuário confirmar que
-          o pagamento foi recebido. Cobranças não confirmadas <strong>não</strong> consomem créditos.
-        </p>
-      </div>
     </div>
   );
 };

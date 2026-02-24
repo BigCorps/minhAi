@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 
 // ===== FORMULÁRIOS =====
 
-const EmailForm = ({ settings, onChange, companyId }: any) => {
+const GoogleEmailForm = ({ settings, onChange, companyId }: any) => {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -808,7 +808,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'endereco': EnderecoForm, 
   'nossa_marca': NossaMarcaForm,
   'video_instrucoes': VideoInstrucoesForm,
-  'enviar_email': EmailForm,
+  'enviar_email': GoogleEmailForm,
 };
 
 // ===== INTERFACE =====
@@ -963,5 +963,6 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 

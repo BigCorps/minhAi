@@ -18,6 +18,7 @@ import VideoInstrucoesDisplay from '@/components/assistant/VideoInstrucoesDispla
 import SendEmailModal from '@/components/assistant/SendEmailModal';
 import CreateEventModal from '@/components/assistant/CreateEventModal';
 import ViewAgendaModal from '@/components/assistant/ViewAgendaModal';
+import SequenciaVideosDisplay from '@/components/assistant/SequenciaVideosDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -36,6 +37,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'SendEmailModal': SendEmailModal,
   'CreateEventModal': CreateEventModal,
   'ViewAgendaModal': ViewAgendaModal, 
+  'SequenciaVideosDisplay': SequenciaVideosDisplay, 
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

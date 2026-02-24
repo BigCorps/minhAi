@@ -494,26 +494,13 @@ case 'link_pagamento':
 
 
 case 'nfc_credito':
-  // ✅ Abre modal de visualizar agenda
-  setActiveModal({ 
-    type: 'InfinitePayDisplay', 
-    data: { 
-      companyId,
-    } 
-  });
-  playText('Cobrança no Crédito Infinite Pay').catch(() => {});
+  playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir para gerar uma cobrança no crédito e o valor.').catch(() => {});
   break;
 
 case 'nfc_debito':
-  // ✅ Abre modal de visualizar agenda
-  setActiveModal({ 
-    type: 'InfinitePayDisplay', 
-    data: { 
-      companyId,
-    } 
-  });
-  playText('Cobrança no Débito Infinite Pay').catch(() => {});
+  playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir para gerar uma cobrança no débito e o valor.').catch(() => {});
   break;
+
 
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:

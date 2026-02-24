@@ -33,7 +33,7 @@ export default function SequenciaVideosDisplay({
 
   // Cleanup
   useEffect(() => {
-    console.log('🎬 Sequência montada -', data.videos.length, 'vídeos');
+    console.log('Sequência montada -', data.videos.length, 'vídeos');
     return () => {
       window.speechSynthesis.cancel();
     };
@@ -41,7 +41,7 @@ export default function SequenciaVideosDisplay({
 
   // Log mudança de vídeo
   useEffect(() => {
-    console.log(`📹 Vídeo ${currentIndex + 1}/${data.videos.length}:`, currentVideo.title);
+    console.log(`Vídeo ${currentIndex + 1}/${data.videos.length}:`, currentVideo.title);
     setVideoEnded(false);
   }, [currentIndex, currentVideo.title, data.videos.length]);
 
@@ -55,7 +55,7 @@ export default function SequenciaVideosDisplay({
         try {
           const data = JSON.parse(event.data);
           if (data.event === 'infoDelivery' && data.info?.playerState === 0) {
-            console.log('🏁 YouTube vídeo terminou');
+            console.log('YouTube vídeo terminou');
             handleVideoEnd();
           }
         } catch (e) {
@@ -68,7 +68,7 @@ export default function SequenciaVideosDisplay({
         try {
           const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
           if (data.event === 'finish' || data.event === 'ended') {
-            console.log('🏁 Vimeo vídeo terminou');
+            console.log('Vimeo vídeo terminou');
             handleVideoEnd();
           }
         } catch (e) {
@@ -205,7 +205,7 @@ export default function SequenciaVideosDisplay({
             <div className="flex items-center space-x-3">
               <div className="px-3 py-1 bg-purple-500/20 backdrop-blur-xl rounded-full border border-purple-500/30">
                 <span className="text-white text-sm font-medium">
-                  🎬 Vídeo {currentIndex + 1} de {data.videos.length}
+                  Vídeo {currentIndex + 1} de {data.videos.length}
                 </span>
               </div>
               <span className="text-white/80 text-sm font-medium max-w-md truncate">

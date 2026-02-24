@@ -70,6 +70,9 @@ const CONFIGURABLE_FUNCTIONS = [
   'agendar_compromisso',
   'ver_agenda',
   'enviar_email',
+  'link_pagamento',
+  'nfc_credito',
+  'nfc_debito',
   'sequencia_videos'
 ];
 

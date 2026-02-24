@@ -488,15 +488,40 @@ case 'ver_agenda':
   playText('Abrindo sua agenda.').catch(() => {});
   break;
 
-case 'InfinitePayDisplay':
-     return (
-     <InfinitePayDisplay
-      data={activeModal.data}
-      onClose={handleCloseModal}
-         theme={theme}
-       });
-  playText('Abrindo Infinitepay').catch(() => {});
+case 'link_pagamento':
+  // ✅ Abre modal de visualizar agenda
+  setActiveModal({ 
+    type: 'InfinitePayDisplay', 
+    data: { 
+      companyId,
+    } 
+  });
+  playText('Abrindo Link de Pagamento Infinite Pay').catch(() => {});
   break;
+
+
+case 'nfc_credito':
+  // ✅ Abre modal de visualizar agenda
+  setActiveModal({ 
+    type: 'InfinitePayDisplay', 
+    data: { 
+      companyId,
+    } 
+  });
+  playText('Cobrança no Crédito Infinite Pay').catch(() => {});
+  break;
+
+case 'nfc_debito':
+  // ✅ Abre modal de visualizar agenda
+  setActiveModal({ 
+    type: 'InfinitePayDisplay', 
+    data: { 
+      companyId,
+    } 
+  });
+  playText('Cobrança no Débito Infinite Pay').catch(() => {});
+  break;
+
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

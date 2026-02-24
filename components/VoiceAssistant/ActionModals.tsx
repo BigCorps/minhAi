@@ -19,6 +19,7 @@ import SendEmailModal from '@/components/assistant/SendEmailModal';
 import CreateEventModal from '@/components/assistant/CreateEventModal';
 import ViewAgendaModal from '@/components/assistant/ViewAgendaModal';
 import SequenciaVideosDisplay from '@/components/assistant/SequenciaVideosDisplay';
+import InfinitePayDisplay from '@/components/assistant/InfinitePayDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -38,6 +39,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'CreateEventModal': CreateEventModal,
   'ViewAgendaModal': ViewAgendaModal, 
   'SequenciaVideosDisplay': SequenciaVideosDisplay, 
+  'InfinitePayDisplay': InfinitePayDisplay, 
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

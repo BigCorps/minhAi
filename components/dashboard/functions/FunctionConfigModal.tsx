@@ -8,14 +8,15 @@ import { useRouter } from 'next/navigation';
 
 // ===== FORMULÁRIOS =====
 
-const GoogleEmailForm = ({ settings, onChange, companyId }: any) => {
+const GoogleEmailForm = ({ companyId }: any) => {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
-  const router = useRouter();
 
   useEffect(() => {
-    checkGoogleConnection();
+    if (companyId) {
+      checkGoogleConnection();
+    }
   }, [companyId]);
 
   async function checkGoogleConnection() {
@@ -33,6 +34,7 @@ const GoogleEmailForm = ({ settings, onChange, companyId }: any) => {
       }
 
       setGoogleAccount(data);
+      console.log('✅ Conta Google encontrada:', data); // Debug
     } catch (error) {
       console.error('Erro ao verificar conta Google:', error);
     } finally {
@@ -41,7 +43,13 @@ const GoogleEmailForm = ({ settings, onChange, companyId }: any) => {
   }
 
   function handleGoToAgenda() {
-    // Redirecionar para página Agenda com company_id
+    if (!companyId) {
+      console.error('❌ companyId não está definido');
+      alert('Erro: ID da empresa não encontrado');
+      return;
+    }
+    
+    console.log('🔗 Navegando para /dashboard/agenda com companyId:', companyId);
     window.location.href = `/dashboard/agenda?companyId=${companyId}`;
   }
 
@@ -68,6 +76,13 @@ const GoogleEmailForm = ({ settings, onChange, companyId }: any) => {
           <li>✓ Confirme ou edite antes de enviar</li>
         </ul>
       </div>
+
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="p-2 bg-gray-100 dark:bg-slate-800 rounded text-xs font-mono">
+          CompanyId: {companyId || 'undefined'} | Conta: {googleAccount?.google_email || 'não encontrada'}
+        </div>
+      )}
 
       {/* Status da conexão Google */}
       {googleAccount ? (
@@ -963,6 +978,7 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 
 

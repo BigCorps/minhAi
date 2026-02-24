@@ -31,6 +31,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'QRCodeDisplay': QRCodeDisplay,
   'PIXConfirmationModal': PIXConfirmationModal,
   'VideoInstrucoesDisplay': VideoInstrucoesDisplay,
+  'SendEmailModal': SendEmailModal,
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

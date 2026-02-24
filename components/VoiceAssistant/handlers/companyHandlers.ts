@@ -167,6 +167,61 @@ export async function handleVideoInstrucoesCommand({
   }
 }
 
+export async function handleSequenciaVideosCommand({
+  companyId,
+  setIsProcessing,
+  setActiveModal,
+  playText,
+}: CompanyHandlerDeps): Promise<void> {
+  try {
+    console.log('🎬 Executando: Sequência de Vídeos (via carrossel)');
+    setIsProcessing(true);
+    
+    // Buscar vídeos configurados
+    const supabase = createClient();
+    
+    const { data: company, error } = await supabase
+      .from('companies')
+      .select('sequencia_videos_urls')
+      .eq('id', companyId)
+      .single();
+    
+    if (error) {
+      console.error('Erro ao buscar sequência:', error);
+      await playText('Desculpe, não consegui acessar a sequência de vídeos.');
+      return;
+    }
+    
+    // Verificar se tem vídeos configurados
+    const videos = company?.sequencia_videos_urls || [];
+    
+    if (!Array.isArray(videos) || videos.length === 0) {
+      await playText('Ainda não temos vídeos configurados na sequência. Entre em contato com o suporte.');
+      return;
+    }
+    
+    // Abrir modal da sequência
+    setActiveModal({
+      type: 'SequenciaVideosDisplay',
+      data: {
+        companyId,
+        videos,
+      },
+    });
+    
+    // Falar em paralelo
+    playText(`Abrindo sequência com ${videos.length} vídeos.`).catch(err => {
+      console.error('Erro ao falar:', err);
+    });
+    
+  } catch (error) {
+    console.error('🎬 [SEQUÊNCIA VÍDEOS] ERRO:', error);
+    await playText('Ocorreu um erro ao tentar abrir a sequência de vídeos.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 // handleEnderecoCommand
 // Busca e exibe o endereço físico com link para Google Maps.

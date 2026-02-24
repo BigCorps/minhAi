@@ -45,9 +45,6 @@ const SequenciaVideosForm = ({ settings, onChange }: any) => {
     <div className="space-y-4">
       {/* Info */}
       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-          🎬 Sequência de Vídeos
-        </h4>
         <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
           Configure a ordem dos vídeos que serão reproduzidos em sequência.
         </p>
@@ -1315,6 +1312,7 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 
 

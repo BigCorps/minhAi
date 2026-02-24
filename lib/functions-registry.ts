@@ -80,6 +80,96 @@ export interface FunctionDefinition {
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
+
+sequencia_videos: {
+  functionKey: 'sequencia_videos',
+  functionName: 'Sequência de Vídeos',
+  category: 'video',
+  responseType: 'modal',
+  
+  voiceTriggers: [
+    'sequência de vídeos',
+    'sequencia de videos',
+    'playlist',
+    'série de vídeos',
+    'serie de videos',
+    'vídeos em sequência',
+    'videos em sequencia',
+    'tutorial completo',
+    'aulas',
+    'curso',
+  ],
+  
+  examplePhrases: [
+    'Mostrar sequência de vídeos',
+    'Quero ver os vídeos',
+    'Playlist de tutoriais',
+    'Série completa',
+  ],
+  
+  requiresInput: false,
+  
+  description: 'Reproduz uma sequência de vídeos em ordem com navegação por voz. Quando um vídeo termina, avança automaticamente para o próximo.',
+  shortDescription: 'Playlist de vídeos com navegação',
+  icon: '🎬',
+  color: '#8B5CF6',
+  
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🎬 Executando: Sequência de Vídeos');
+      
+      // Buscar URLs configuradas
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
+      
+      const { data: company, error } = await supabase
+        .from('companies')
+        .select('sequencia_videos_urls')
+        .eq('id', companyId)
+        .single();
+      
+      if (error) {
+        console.error('Erro ao buscar sequência:', error);
+        await playText('Desculpe, não consegui acessar a sequência de vídeos.');
+        return false;
+      }
+      
+      // Verificar se tem vídeos configurados
+      const videos = company.sequencia_videos_urls || [];
+      
+      if (!Array.isArray(videos) || videos.length === 0) {
+        await playText('Ainda não temos vídeos configurados na sequência. Entre em contato com o suporte.');
+        return false;
+      }
+      
+      // Abrir modal da sequência
+      await playText(`Abrindo sequência com ${videos.length} vídeos.`);
+      
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'SequenciaVideosDisplay',
+          data: {
+            companyId,
+            videos,
+          },
+        });
+      }
+      
+      return true;
+      
+    } catch (error) {
+      console.error('Erro na função sequencia_videos:', error);
+      await playText('Ocorreu um erro ao tentar abrir a sequência de vídeos.');
+      return false;
+    }
+  },
+},
+  
 // ========================================
 // MARCAR EVENTO NO CALENDÁRIO
 // ========================================

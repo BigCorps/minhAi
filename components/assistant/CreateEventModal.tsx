@@ -44,6 +44,9 @@ export default function CreateEventModal({
   const supabase = createClient();
   const isDark = theme === 'dark';
 
+  // Detectar mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000);
@@ -154,11 +157,11 @@ export default function CreateEventModal({
 
       {/* Modal */}
       <div
-        className={`relative w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
-          animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto`}
+        className={`relative w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
+          animate-in zoom-in-95 duration-300 max-h-[92vh] flex flex-col`}
       >
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-green-950/40' : 'bg-green-50'}`}>
+        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-green-950/40' : 'bg-green-50'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
@@ -185,7 +188,7 @@ export default function CreateEventModal({
         </div>
 
         {/* Progress Bar */}
-        <div className="h-1 bg-gray-200 dark:bg-slate-800">
+        <div className="h-1 bg-gray-200 dark:bg-slate-800 flex-shrink-0">
           <div
             className="h-full bg-green-600 transition-all duration-300"
             style={{
@@ -197,14 +200,14 @@ export default function CreateEventModal({
           />
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content com scroll */}
+        <div className="flex-1 overflow-y-auto p-6">
           
           {/* STEP 1: Selecionar Data */}
           {step === 'select_date' && (
             <div className="space-y-4">
               {/* Controles do Calendário */}
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleNav('prev')}
@@ -265,19 +268,35 @@ export default function CreateEventModal({
               </div>
 
               {/* FullCalendar */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-white/10">
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-white/10 overflow-hidden">
                 <FullCalendar
                   ref={calendarRef}
                   plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                   initialView={getViewString()}
                   headerToolbar={false}
                   locale={ptBrLocale}
-                  height="auto"
+                  height={
+                    isMobile 
+                      ? 350
+                      : currentView === 'month' ? 500 : currentView === 'week' ? 450 : 400
+                  }
+                  contentHeight={
+                    isMobile 
+                      ? 300
+                      : currentView === 'month' ? 450 : currentView === 'week' ? 400 : 350
+                  }
                   dateClick={handleDateClick}
                   selectable={true}
                   datesSet={(dateInfo) => {
                     setCurrentTitle(dateInfo.view.title);
                   }}
+                  dayMaxEvents={3}
+                  nowIndicator={true}
+                  scrollTime="08:00:00"
+                  slotMinTime="06:00:00"
+                  slotMaxTime="22:00:00"
+                  allDaySlot={true}
+                  slotDuration="00:30:00"
                 />
               </div>
             </div>

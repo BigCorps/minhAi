@@ -85,17 +85,18 @@ enviar_email: {
   functionKey: 'enviar_email',
   functionName: 'Enviar Email',
   category: 'productivity',
-  responseType: 'voice',
+  responseType: 'modal',
   
   voiceTriggers: [
-    'email',
     'enviar email',
     'mandar email',
     'envie um email',
     'mande um email',
-    'envie email',
     'enviar e-mail',
     'mandar e-mail',
+    'enviar mensagem',
+    'mandar mensagem',
+    'escrever email',
   ],
   
   examplePhrases: [
@@ -117,6 +118,35 @@ enviar_email: {
   creditsPerUse: 3,
   requiresPayment: false,
   isPremium: true,
+  
+  // Handler customizado
+  handler: async ({ 
+    playText, 
+    setActiveModal, 
+    companyId 
+  }) => {
+    try {
+      console.log('📧 [ENVIAR EMAIL] Abrindo modal');
+      
+      // Abrir modal
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'SendEmailModal',
+          data: { companyId }
+        });
+      }
+      
+      // Falar
+      await playText('Certo! Vou ajudar você a enviar um email. Para qual endereço de email deseja enviar?');
+      
+      return true;
+      
+    } catch (error) {
+      console.error('📧 [ENVIAR EMAIL] ERRO:', error);
+      await playText('Desculpe, não consegui abrir o envio de email.');
+      return false;
+    }
+  },
 },
   
 // VIDEO-INSTRUÇÕES
@@ -381,7 +411,6 @@ video_instrucoes: {
     responseType: 'voice+modal',
     
     voiceTriggers: [
-      'email',
       'nosso email',
       'endereço de email',
       'e-mail',

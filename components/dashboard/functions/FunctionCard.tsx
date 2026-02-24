@@ -66,7 +66,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'endereco',
   'faq',
   'nossa_marca',
-  'video_instrucoes'
+  'video_instrucoes',
+  'enviar_email'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

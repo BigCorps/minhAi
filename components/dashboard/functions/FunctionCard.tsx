@@ -67,7 +67,10 @@ const CONFIGURABLE_FUNCTIONS = [
   'faq',
   'nossa_marca',
   'video_instrucoes',
+  'agendar_compromisso',
+  'ver_agenda',
   'enviar_email'
+  
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

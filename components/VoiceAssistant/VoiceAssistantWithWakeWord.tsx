@@ -460,60 +460,28 @@ export function VoiceAssistantWithWakeWord({
           break;
 
 case 'agendar_compromisso':
-  {
-    // Detectar período mencionado
-    let initialView: 'month' | 'week' | 'day' = 'month';
-    const lowerTranscript = transcript.toLowerCase();
-    
-    if (lowerTranscript.includes('semana') || lowerTranscript.includes('próxima semana')) {
-      initialView = 'week';
-    } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('amanhã') || lowerTranscript.includes('dia')) {
-      initialView = 'day';
-    }
-    
-    setActiveModal({ 
-      type: 'CreateEventModal', 
-      data: { 
-        companyId,
-        initialView,
-        transcript 
-      } 
-    });
-    playText('Certo! Vou abrir o calendário para você marcar o evento. Selecione a data e horário desejados.').catch(() => {});
-  }
+  // ✅ Abre modal de criar evento no calendário
+  setActiveModal({ 
+    type: 'CreateEventModal', 
+    data: { 
+      companyId,
+      initialView: 'month',
+      transcript: '' // Vazio quando vem do botão
+    } 
+  });
+  playText('Certo! Vou abrir o calendário para você marcar o evento. Selecione a data e horário desejados.').catch(() => {});
   break;
 
 case 'ver_agenda':
-  {
-    // Detectar período mencionado
-    let initialView: 'month' | 'week' | 'day' = 'month';
-    const lowerTranscript = transcript.toLowerCase();
-    
-    if (lowerTranscript.includes('semana') || lowerTranscript.includes('esta semana') || lowerTranscript.includes('próxima semana')) {
-      initialView = 'week';
-    } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('dia')) {
-      initialView = 'day';
-    }
-    
-    setActiveModal({ 
-      type: 'ViewAgendaModal', 
-      data: { 
-        companyId,
-        initialView
-      } 
-    });
-    
-    let message = 'Abrindo sua agenda';
-    if (initialView === 'week') {
-      message += ' da semana.';
-    } else if (initialView === 'day') {
-      message += ' de hoje.';
-    } else {
-      message += ' do mês.';
-    }
-    
-    playText(message).catch(() => {});
-  }
+  // ✅ Abre modal de visualizar agenda
+  setActiveModal({ 
+    type: 'ViewAgendaModal', 
+    data: { 
+      companyId,
+      initialView: 'month'
+    } 
+  });
+  playText('Abrindo sua agenda.').catch(() => {});
   break;
 
         // ────────────────────────────────────────────────────

@@ -450,6 +450,10 @@ export function VoiceAssistantWithWakeWord({
             companyId, setIsProcessing, setActiveModal, playText });
           break;
 
+        case 'sequencia_videos':
+          await handleSequenciaVideosCommand({ companyId, setIsProcessing, setActiveModal, playText });
+          break;  
+
         case 'enviar_email':
           // ✅ Abre modal de envio de email
           setActiveModal({ 

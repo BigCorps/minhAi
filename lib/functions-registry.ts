@@ -119,9 +119,9 @@ agendar_compromisso: {
   color: '#10B981',
   
   saveToHistory: true,
-  creditsPerUse: 2,
+  creditsPerUse: 1,
   requiresPayment: false,
-  isPremium: true,
+  isPremium: false,
   
   handler: async ({ 
     transcript,
@@ -204,7 +204,7 @@ ver_agenda: {
   icon: '📆',
   color: '#3B82F6',
   
-  saveToHistory: false,
+  saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: true,
@@ -296,9 +296,9 @@ enviar_email: {
   color: '#4285F4',
   
   saveToHistory: true,
-  creditsPerUse: 3,
+  creditsPerUse: 1,
   requiresPayment: false,
-  isPremium: true,
+  isPremium: false,
   
   // Handler customizado
   handler: async ({ 
@@ -367,7 +367,7 @@ video_instrucoes: {
   color: '#8B5CF6',  // ✅ FALTAVA (opcional mas bom ter)
   
   saveToHistory: true,  // ✅ FALTAVA
-  creditsPerUse: 2,  // ✅ FALTAVA
+  creditsPerUse: 1,  // ✅ FALTAVA
   requiresPayment: false,  // ✅ FALTAVA
   isPremium: false,  // ✅ FALTAVA
   

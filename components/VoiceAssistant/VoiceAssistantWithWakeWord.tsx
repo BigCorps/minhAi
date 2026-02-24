@@ -489,7 +489,7 @@ case 'ver_agenda':
   break;
 
 case 'link_pagamento':
-  playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor e o número do celular do pagador com DDD.').catch(() => {});
+  playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
   break;
 
 

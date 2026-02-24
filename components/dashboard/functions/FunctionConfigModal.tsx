@@ -1188,7 +1188,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle')
         .eq('id', companyId)
         .single();
 
@@ -1277,6 +1277,7 @@ export default function FunctionConfigModal({
                 settings={settings} 
                 onChange={handleSettingChange}
                 companyId={companyId}
+                functionKey={functionData?.function_key}
               />
             ) : (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">

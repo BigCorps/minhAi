@@ -80,10 +80,12 @@ export interface FunctionDefinition {
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
-  link_pagamento: {
+link_pagamento: {
     functionKey: 'link_pagamento',
     functionName: 'Link de Pagamento',
     category: 'payment',
+    responseType: 'voice+modal',
+
     voiceTriggers: [
       'link de pagamento',
       'gerar link',
@@ -91,7 +93,28 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
       'link pagamento',
       'cobrar no link',
     ],
+
+    examplePhrases: [
+      'Gerar link de pagamento de 50 reais',
+      'Cobrar por link',
+      'Quero gerar um link de R$ 100',
+      'Link de pagamento de 200 reais',
+    ],
+
     requiresInput: true,
+    inputType: 'number',
+    inputPrompt: 'Qual o valor para o link de pagamento?',
+
+    description: 'Gera um link de pagamento para cobrar clientes remotamente via InfinitePay.',
+    shortDescription: 'Gerar link de cobrança',
+    icon: '🔗',
+    color: '#10B981',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
     handler: async ({ playText, setActiveModal, companyId, transcript }) => {
       const amount = extractAmount(transcript ?? '');
 
@@ -100,7 +123,6 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         return false;
       }
 
-      // Tenta extrair telefone da própria fala (opcional)
       const telefone = extractTelefone(transcript ?? '');
 
       await playText(
@@ -110,13 +132,13 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         })}...`
       );
 
-      setActiveModal({
+      setActiveModal?.({
         type: 'InfinitePayDisplay',
         data: {
           companyId,
           tipo: 'LINK_PAGAMENTO',
           amount_cents: Math.round(amount * 100),
-          telefone, // undefined se não encontrou — o display vai pedir
+          telefone,
         },
       });
 
@@ -128,6 +150,8 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     functionKey: 'nfc_debito',
     functionName: 'NFC Débito',
     category: 'payment',
+    responseType: 'voice+modal',
+
     voiceTriggers: [
       'nfc débito',
       'débito',
@@ -136,7 +160,28 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
       'pagar débito',
       'cobrar débito',
     ],
+
+    examplePhrases: [
+      'Cobrar 50 reais no débito',
+      'Pagar no débito',
+      'NFC débito de R$ 100',
+      'Aproximação débito de 200 reais',
+    ],
+
     requiresInput: true,
+    inputType: 'number',
+    inputPrompt: 'Qual o valor para o pagamento no débito?',
+
+    description: 'Processa pagamento por aproximação (NFC) na modalidade débito via InfinitePay.',
+    shortDescription: 'Pagamento NFC débito',
+    icon: '💳',
+    color: '#3B82F6',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
     handler: async ({ playText, setActiveModal, companyId, transcript }) => {
       const amount = extractAmount(transcript ?? '');
 
@@ -152,7 +197,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         })} no débito...`
       );
 
-      setActiveModal({
+      setActiveModal?.({
         type: 'InfinitePayDisplay',
         data: {
           companyId,
@@ -170,6 +215,8 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     functionKey: 'nfc_credito',
     functionName: 'NFC Crédito',
     category: 'payment',
+    responseType: 'voice+modal',
+
     voiceTriggers: [
       'nfc crédito',
       'crédito',
@@ -178,7 +225,28 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
       'pagar crédito',
       'cobrar crédito',
     ],
+
+    examplePhrases: [
+      'Cobrar 50 reais no crédito',
+      'Pagar no crédito',
+      'NFC crédito de R$ 100',
+      'Aproximação crédito de 200 reais',
+    ],
+
     requiresInput: true,
+    inputType: 'number',
+    inputPrompt: 'Qual o valor para o pagamento no crédito?',
+
+    description: 'Processa pagamento por aproximação (NFC) na modalidade crédito via InfinitePay.',
+    shortDescription: 'Pagamento NFC crédito',
+    icon: '💳',
+    color: '#8B5CF6',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
     handler: async ({ playText, setActiveModal, companyId, transcript }) => {
       const amount = extractAmount(transcript ?? '');
 
@@ -194,7 +262,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
         })} no crédito...`
       );
 
-      setActiveModal({
+      setActiveModal?.({
         type: 'InfinitePayDisplay',
         data: {
           companyId,

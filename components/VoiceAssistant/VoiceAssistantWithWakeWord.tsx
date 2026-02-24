@@ -488,6 +488,15 @@ case 'ver_agenda':
   playText('Abrindo sua agenda.').catch(() => {});
   break;
 
+case 'InfinitePayDisplay':
+     return (
+     <InfinitePayDisplay
+      data={activeModal.data}
+      onClose={handleCloseModal}
+         theme={theme}
+       />
+     );
+
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

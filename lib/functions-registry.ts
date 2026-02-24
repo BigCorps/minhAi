@@ -82,7 +82,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
   link_pagamento: {
     functionKey: 'link_pagamento',
-    name: 'Link de Pagamento',
+    functionName: 'Link de Pagamento',
     category: 'payment',
     voiceTriggers: [
       'link de pagamento',
@@ -126,7 +126,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
   nfc_debito: {
     functionKey: 'nfc_debito',
-    name: 'NFC Débito',
+    functionName: 'NFC Débito',
     category: 'payment',
     voiceTriggers: [
       'nfc débito',
@@ -168,7 +168,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
   nfc_credito: {
     functionKey: 'nfc_credito',
-    name: 'NFC Crédito',
+    functionName: 'NFC Crédito',
     category: 'payment',
     voiceTriggers: [
       'nfc crédito',

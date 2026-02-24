@@ -15,6 +15,7 @@ import EnderecoDisplay from '@/components/assistant/EnderecoDisplay';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 import VideoInstrucoesDisplay from '@/components/assistant/VideoInstrucoesDisplay';
+import SendEmailModal from '@/components/assistant/SendEmailModal';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 

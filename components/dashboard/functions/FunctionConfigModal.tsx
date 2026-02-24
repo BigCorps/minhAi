@@ -2,11 +2,160 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Mail, Calendar, Settings, AlertCircle, Check } from 'lucide-react';
+import { X, Mail, Calendar, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 
 // ===== FORMULÁRIOS =====
+
+const SequenciaVideosForm = ({ settings, onChange }: any) => {
+  const videos = settings.sequencia_videos_urls || [];
+
+  const handleAddVideo = () => {
+    const newVideos = [...videos, { title: '', url: '' }];
+    onChange('sequencia_videos_urls', newVideos);
+  };
+
+  const handleRemoveVideo = (index: number) => {
+    const newVideos = videos.filter((_: any, i: number) => i !== index);
+    onChange('sequencia_videos_urls', newVideos);
+  };
+
+  const handleUpdateVideo = (index: number, field: 'title' | 'url', value: string) => {
+    const newVideos = [...videos];
+    newVideos[index][field] = value;
+    onChange('sequencia_videos_urls', newVideos);
+  };
+
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const newVideos = [...videos];
+    [newVideos[index - 1], newVideos[index]] = [newVideos[index], newVideos[index - 1]];
+    onChange('sequencia_videos_urls', newVideos);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index === videos.length - 1) return;
+    const newVideos = [...videos];
+    [newVideos[index], newVideos[index + 1]] = [newVideos[index + 1], newVideos[index]];
+    onChange('sequencia_videos_urls', newVideos);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Info */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          🎬 Sequência de Vídeos
+        </h4>
+        <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
+          Configure a ordem dos vídeos que serão reproduzidos em sequência.
+        </p>
+        <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+          <li>• Os vídeos tocam em ordem automática</li>
+          <li>• Navegação: "próximo", "anterior"</li>
+          <li>• Suporta YouTube, Vimeo, MP4</li>
+        </ul>
+      </div>
+
+      {/* Lista de Vídeos */}
+      {videos.length === 0 ? (
+        <div className="text-center py-8 bg-gray-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">
+            Nenhum vídeo adicionado
+          </p>
+          <button
+            onClick={handleAddVideo}
+            type="button"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+          >
+            + Adicionar Primeiro Vídeo
+          </button>
+        </div>
+      ) : (
+        videos.map((video: any, index: number) => (
+          <div
+            key={index}
+            className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10"
+          >
+            <div className="flex items-start gap-2">
+              {/* Número e Controles */}
+              <div className="flex flex-col items-center space-y-1 pt-2">
+                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                  {index + 1}
+                </span>
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => handleMoveUp(index)}
+                    disabled={index === 0}
+                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 text-xs"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveDown(index)}
+                    disabled={index === videos.length - 1}
+                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 text-xs"
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
+
+              {/* Inputs */}
+              <div className="flex-1 space-y-2">
+                <input
+                  type="text"
+                  placeholder="Título do vídeo"
+                  value={video.title}
+                  onChange={e => handleUpdateVideo(index, 'title', e.target.value)}
+                  className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
+                />
+                <input
+                  type="url"
+                  placeholder="URL (YouTube, Vimeo ou MP4)"
+                  value={video.url}
+                  onChange={e => handleUpdateVideo(index, 'url', e.target.value)}
+                  className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Remover */}
+              <button
+                type="button"
+                onClick={() => handleRemoveVideo(index)}
+                className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+
+      {/* Botão Adicionar Mais */}
+      {videos.length > 0 && (
+        <button
+          type="button"
+          onClick={handleAddVideo}
+          className="w-full p-3 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-all flex items-center justify-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 text-sm"
+        >
+          <Plus size={18} />
+          <span>Adicionar Outro Vídeo</span>
+        </button>
+      )}
+
+      {/* Dicas */}
+      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          💡 <strong>Dica:</strong> Use as setas ▲▼ para reordenar. Quando um vídeo termina, avança automaticamente.
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const GoogleCalendarForm = ({ companyId }: any) => {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
@@ -1006,7 +1155,8 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'video_instrucoes': VideoInstrucoesForm,
   'enviar_email': GoogleEmailForm,
   'agendar_compromisso': GoogleCalendarForm,
-  'ver_agenda': GoogleCalendarForm,  
+  'ver_agenda': GoogleCalendarForm, 
+  'sequencia_videos': SequenciaVideosForm,
 };
 
 // ===== INTERFACE =====
@@ -1037,7 +1187,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls')
         .eq('id', companyId)
         .single();
 
@@ -1165,6 +1315,7 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 
 

@@ -489,14 +489,11 @@ case 'ver_agenda':
   break;
 
 case 'link_pagamento':
-  // ✅ Abre modal de visualizar agenda
-  setActiveModal({ 
-    type: 'InfinitePayDisplay', 
     data: { 
       companyId,
     } 
   });
-  playText('Abrindo Link de Pagamento Infinite Pay').catch(() => {});
+  playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor e o número do celular do pagador com DDD.').catch(() => {});
   break;
 
 

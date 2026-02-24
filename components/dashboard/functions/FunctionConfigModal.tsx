@@ -185,7 +185,6 @@ const GoogleCalendarForm = ({ companyId }: any) => {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 };
@@ -1166,6 +1165,7 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 
 

@@ -209,56 +209,78 @@ ver_agenda: {
   requiresPayment: false,
   isPremium: true,
   
-  handler: async ({ 
-    transcript,
-    playText, 
-    setActiveModal, 
-    companyId 
-  }) => {
-    try {
-      console.log('📆 [VER AGENDA] Abrindo modal');
-      
-      // Detectar período mencionado
-      let initialView: 'month' | 'week' | 'day' = 'month';
-      const lowerTranscript = transcript.toLowerCase();
-      
-      if (lowerTranscript.includes('semana') || lowerTranscript.includes('próxima semana') || lowerTranscript.includes('esta semana')) {
-        initialView = 'week';
-      } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('dia')) {
-        initialView = 'day';
-      }
-      
-      // Abrir modal
-      if (setActiveModal) {
-        setActiveModal({
-          type: 'ViewAgendaModal',
-          data: { 
-            companyId,
-            initialView
-          }
-        });
-      }
-      
-      // Falar
-      let message = 'Abrindo sua agenda';
-      if (initialView === 'week') {
-        message += ' da semana.';
-      } else if (initialView === 'day') {
-        message += ' de hoje.';
-      } else {
-        message += ' do mês.';
-      }
-      
-      await playText(message);
-      
-      return true;
-      
-    } catch (error) {
-      console.error('📆 [VER AGENDA] ERRO:', error);
-      await playText('Desculpe, não consegui abrir a agenda.');
-      return false;
+handler: async ({ 
+  transcript,
+  playText, 
+  setActiveModal, 
+  companyId 
+}) => {
+  try {
+    console.log('📆 [VER AGENDA] Abrindo modal');
+    
+    // Detectar período mencionado
+    let initialView: 'month' | 'week' | 'day' = 'month';
+    const lowerTranscript = transcript.toLowerCase();
+    
+    if (lowerTranscript.includes('semana') || lowerTranscript.includes('esta semana') || lowerTranscript.includes('próxima semana')) {
+      initialView = 'week';
+    } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('dia')) {
+      initialView = 'day';
     }
-  },
+    
+    // Abrir modal
+    if (setActiveModal) {
+      setActiveModal({
+        type: 'ViewAgendaModal',
+        data: { 
+          companyId,
+          initialView
+        }
+      });
+    }
+    
+    // Falar
+    let message = 'Abrindo sua agenda';
+    if (initialView === 'week') {
+      message += ' da semana.';
+    } else if (initialView === 'day') {
+      message += ' de hoje.';
+    } else {
+      message += ' do mês.';
+    }
+    
+    await playText(message);
+    
+    // ✅ ADICIONAR SALVAR HISTÓRICO
+    try {
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
+      
+      const periodo = initialView === 'week' ? 'semana' : initialView === 'day' ? 'dia' : 'mês';
+      
+      await supabase
+        .from('interaction_history')
+        .insert({
+          company_id: companyId,
+          user_input: transcript || 'Ver agenda',
+          assistant_response: `Agenda visualizada: ${periodo}`,
+          interaction_type: 'calendar_viewed',
+          metadata: {
+            view_type: initialView,
+            function_used: 'ver_agenda',
+          },
+        });
+    } catch (historyError) {
+      console.error('Erro ao salvar histórico:', historyError);
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('📆 [VER AGENDA] ERRO:', error);
+    await playText('Desculpe, não consegui abrir a agenda.');
+    return false;
+  }
 },
   
 // ENVIAR-EMAIL

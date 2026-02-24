@@ -2,8 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Mail, Calendar, Settings, AlertCircle, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { useRouter } from 'next/navigation';
 
 // ===== FORMULÁRIOS =====
 
@@ -962,4 +963,5 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 

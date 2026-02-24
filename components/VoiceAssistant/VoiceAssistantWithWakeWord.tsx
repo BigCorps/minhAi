@@ -489,10 +489,6 @@ case 'ver_agenda':
   break;
 
 case 'link_pagamento':
-    data: { 
-      companyId,
-    } 
-  });
   playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor e o número do celular do pagador com DDD.').catch(() => {});
   break;
 

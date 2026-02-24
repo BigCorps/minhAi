@@ -450,6 +450,15 @@ export function VoiceAssistantWithWakeWord({
             companyId, setIsProcessing, setActiveModal, playText });
           break;
 
+        case 'enviar_email':
+          // ✅ Abre modal de envio de email
+          setActiveModal({ 
+            type: 'SendEmailModal', 
+            data: { companyId } 
+          });
+          playText('Certo! Vou ajudar você a enviar um email. Para qual endereço de email deseja enviar?').catch(() => {});
+          break;
+
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

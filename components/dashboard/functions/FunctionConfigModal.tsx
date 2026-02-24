@@ -939,7 +939,11 @@ export default function FunctionConfigModal({
         ) : (
           <div className="space-y-4 mb-6">
             {hasForm ? (
-              <FormComponent settings={settings} onChange={handleSettingChange} />
+              <FormComponent 
+                settings={settings} 
+                onChange={handleSettingChange}
+                companyId={companyId}
+              />
             ) : (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 Esta função não possui configurações editáveis.
@@ -978,6 +982,7 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 
 

@@ -4,44 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Search, RefreshCw, Zap, Trash2, ChevronDown } from 'lucide-react';
 
-// Mapa de ícones e labels por function_key
-const FUNCTION_LABELS: Record<string, { label: string; icon: string; color: string }> = {
-  // QR Codes
-  qrcode_whatsapp:  { label: 'WhatsApp',        icon: '📱', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  qrcode_instagram: { label: 'Instagram',        icon: '📸', color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300' },
-  qrcode_website:   { label: 'Site',             icon: '🌐', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  qrcode_facebook:  { label: 'Facebook',         icon: '👍', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  qrcode_email:     { label: 'Email',            icon: '📧', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
-  qrcode_linkedin:  { label: 'LinkedIn',         icon: '💼', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  qrcode_tiktok:    { label: 'TikTok',           icon: '🎵', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
-  qrcode_twitter:   { label: 'Twitter/X',        icon: '🐦', color: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
-  qrcode_telefone:  { label: 'Telefone',         icon: '📞', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  // PIX
-  pix_generate:     { label: 'PIX Gerado',       icon: '💳', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  pix_confirm:      { label: 'PIX Confirmado',   icon: '✅', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  // Informações
-  nossa_marca:      { label: 'Nossa Marca',      icon: '🏢', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  endereco:         { label: 'Endereço',         icon: '📍', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
-  meu_sistema:      { label: 'Meu Sistema',      icon: '🤖', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
-  // Produtividade
-  ver_agenda:           { label: 'Ver Agenda',       icon: '📆', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  agendar_compromisso:  { label: 'Marcar Evento',    icon: '📅', color: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' },
-  enviar_email:         { label: 'Enviar Email',     icon: '📤', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  // Vídeo
-  video_instrucoes:  { label: 'Vídeo Instruções',  icon: '🎓', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
-  sequencia_videos:  { label: 'Sequência Vídeos',  icon: '🎬', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' },
-  // IA
-  orcamento:         { label: 'Orçamento IA',      icon: '💰', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  chatgpt:           { label: 'ChatGPT',           icon: '🧠', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  faq:               { label: 'FAQ',               icon: '❓', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
-};
-
-function getFunctionInfo(functionKey: string) {
-  return FUNCTION_LABELS[functionKey] ?? {
-    label: functionKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    icon: '⚡',
-    color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-  };
+interface AssistantFunction {
+  function_key: string;
+  function_name: string;
+  short_description: string | null;
+  description: string;
 }
 
 interface LogEntry {
@@ -56,6 +23,7 @@ interface LogEntry {
 
 export default function HistoricoPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [functions, setFunctions] = useState<Record<string, AssistantFunction>>({});
   const [companies, setCompanies] = useState<any[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,7 +78,6 @@ export default function HistoricoPage() {
         .eq('user_id', user.id);
 
       let userCompanyIds: string[] = [];
-
       if (adminData && adminData.length > 0) {
         userCompanyIds = adminData.map(a => a.company_id);
       } else {
@@ -135,7 +102,19 @@ export default function HistoricoPage() {
       if (companiesError) throw new Error('Não foi possível carregar as empresas');
       setCompanies(companiesData || []);
 
-      // 3. Buscar logs de assistant_function_logs
+      // 3. Carregar todas as funções da tabela assistant_functions (fonte da verdade)
+      //    Novas funções aparecem automaticamente sem alterar este código.
+      const { data: functionsData } = await supabase
+        .from('assistant_functions')
+        .select('function_key, function_name, short_description, description');
+
+      const functionsMap: Record<string, AssistantFunction> = {};
+      (functionsData || []).forEach(f => {
+        functionsMap[f.function_key] = f;
+      });
+      setFunctions(functionsMap);
+
+      // 4. Buscar logs de assistant_function_logs
       let query = supabase
         .from('assistant_function_logs')
         .select('id, company_id, function_key, credits_consumed, executed_at, metadata')
@@ -150,7 +129,7 @@ export default function HistoricoPage() {
       const { data: logsData, error: logsError } = await query;
       if (logsError) throw new Error('Erro ao carregar histórico: ' + logsError.message);
 
-      // 4. Enriquecer com nome da empresa
+      // 5. Enriquecer com nome da empresa
       const enriched: LogEntry[] = (logsData || []).map(log => ({
         ...log,
         companyName: companiesData?.find(c => c.id === log.company_id)?.name ?? '—',
@@ -176,15 +155,32 @@ export default function HistoricoPage() {
     }
   }
 
+  // O que o usuário perguntou/solicitou
+  function getUserMessage(log: LogEntry): string {
+    if (log.metadata?.transcript) return log.metadata.transcript;
+    if (log.metadata?.user_input) return log.metadata.user_input;
+    const func = functions[log.function_key];
+    return func?.function_name ?? log.function_key;
+  }
+
+  // O que o assistente respondeu/executou
+  function getAssistantMessage(log: LogEntry): string {
+    if (log.metadata?.assistant_response) return log.metadata.assistant_response;
+    if (log.metadata?.response) return log.metadata.response;
+    const func = functions[log.function_key];
+    return func?.short_description ?? func?.description ?? 'Função executada com sucesso.';
+  }
+
   const filteredLogs = logs.filter(log => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
-    const info = getFunctionInfo(log.function_key);
+    const func = functions[log.function_key];
     return (
       log.function_key.toLowerCase().includes(search) ||
-      info.label.toLowerCase().includes(search) ||
+      (func?.function_name ?? '').toLowerCase().includes(search) ||
       log.companyName.toLowerCase().includes(search) ||
-      JSON.stringify(log.metadata || {}).toLowerCase().includes(search)
+      getUserMessage(log).toLowerCase().includes(search) ||
+      getAssistantMessage(log).toLowerCase().includes(search)
     );
   });
 
@@ -195,10 +191,10 @@ export default function HistoricoPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold transition-colors text-gray-900 dark:text-white">
-            Histórico de Interações
+            Histórico de Conversas
           </h1>
           <p className="mt-2 transition-colors text-gray-600 dark:text-white/60">
-            Todas as funções executadas pelos assistentes.
+            Visualize e gerencie as interações dos usuários com seus assistentes.
           </p>
         </div>
 
@@ -232,7 +228,7 @@ export default function HistoricoPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por função, assistente..."
+                  placeholder="Buscar por função, assistente, pergunta..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
@@ -299,62 +295,75 @@ export default function HistoricoPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filteredLogs.map(log => {
-              const info = getFunctionInfo(log.function_key);
+              const func = functions[log.function_key];
+              const userMsg = getUserMessage(log);
+              const assistantMsg = getAssistantMessage(log);
+
               return (
                 <div
                   key={log.id}
-                  className="rounded-xl shadow-sm border transition-all
+                  className="rounded-xl shadow-sm overflow-hidden border transition-all
                   bg-white/80 border-gray-200 hover:border-blue-300
                   dark:bg-white/5 dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
                 >
-                  <div className="p-4 flex items-center gap-4">
+                  <div className="p-4 sm:p-6">
 
-                    {/* Ícone */}
-                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0 text-xl">
-                      {info.icon}
-                    </div>
-
-                    {/* Info principal */}
-                    <div className="flex-1 min-w-0">
+                    {/* Cabeçalho */}
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${info.color}`}>
-                          {info.label}
-                        </span>
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                           {log.companyName}
                         </span>
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300">
+                          {func?.function_name ?? log.function_key}
+                        </span>
                         {log.credits_consumed > 0 && (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                             {log.credits_consumed} crédito{log.credits_consumed !== 1 ? 's' : ''}
                           </span>
                         )}
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(log.executed_at).toLocaleString('pt-BR')}
+                        </span>
                       </div>
-
-                      {/* Metadata relevante */}
-                      {log.metadata && Object.keys(log.metadata).length > 0 && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                          {Object.entries(log.metadata)
-                            .filter(([k]) => !['function_used', 'interaction_type'].includes(k))
-                            .map(([k, v]) => `${k}: ${v}`)
-                            .join(' · ')}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Data/hora */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        {new Date(log.executed_at).toLocaleString('pt-BR')}
-                      </span>
                       <button
                         onClick={() => handleDelete(log.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                        className="p-2 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
                         title="Excluir registro"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                    </div>
+
+                    {/* Par pergunta / resposta — mesmo visual de antes */}
+                    <div className="space-y-4">
+
+                      {/* Usuário */}
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
+                          <p className="text-sm text-gray-900 dark:text-gray-200">{userMsg}</p>
+                        </div>
+                      </div>
+
+                      {/* Assistente */}
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
+                          <p className="text-sm text-gray-900 dark:text-gray-200">{assistantMsg}</p>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>

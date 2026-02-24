@@ -69,8 +69,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'video_instrucoes',
   'agendar_compromisso',
   'ver_agenda',
-  'enviar_email'
-  
+  'enviar_email',
+  'sequencia_videos'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

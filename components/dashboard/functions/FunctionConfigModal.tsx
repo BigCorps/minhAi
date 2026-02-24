@@ -8,6 +8,188 @@ import { useRouter } from 'next/navigation';
 
 // ===== FORMULÁRIOS =====
 
+const GoogleCalendarForm = ({ companyId }: any) => {
+  const [googleAccount, setGoogleAccount] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (companyId) {
+      checkGoogleConnection();
+    }
+  }, [companyId]);
+
+  async function checkGoogleConnection() {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('google_accounts')
+        .select('id, google_email, is_active, scopes')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      // Verificar se tem permissão de calendário
+      const hasCalendarScope = data?.scopes?.some((scope: string) => 
+        scope.includes('calendar')
+      );
+
+      if (data && hasCalendarScope) {
+        setGoogleAccount(data);
+      } else {
+        setGoogleAccount(null);
+      }
+
+      console.log('✅ Conta Google encontrada:', data);
+    } catch (error) {
+      console.error('Erro ao verificar conta Google:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleGoToAgenda() {
+    if (!companyId) {
+      console.error('❌ companyId não está definido');
+      alert('Erro: ID da empresa não encontrado');
+      return;
+    }
+    
+    console.log('🔗 Navegando para /dashboard/agenda com companyId:', companyId);
+    window.location.href = `/dashboard/agenda?companyId=${companyId}`;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Informação sobre a função */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
+          <Calendar className="w-5 h-5" />
+          Como funciona o Calendário
+        </h4>
+        <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+          <li>✓ Diga: <strong>"Marcar evento"</strong> para criar compromissos</li>
+          <li>✓ Diga: <strong>"Ver agenda"</strong> para visualizar eventos</li>
+          <li>✓ Escolha o período: mês, semana ou dia</li>
+          <li>✓ Sincronização automática com Google Calendar</li>
+        </ul>
+      </div>
+
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="p-2 bg-gray-100 dark:bg-slate-800 rounded text-xs font-mono">
+          CompanyId: {companyId || 'undefined'} | Conta: {googleAccount?.google_email || 'não encontrada'}
+        </div>
+      )}
+
+      {/* Status da conexão Google */}
+      {googleAccount ? (
+        // ✅ CONECTADO
+        <div className="space-y-3">
+          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">
+                  ✅ Conta Google Conectada
+                </p>
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  Email: <span className="font-mono">{googleAccount.google_email}</span>
+                </p>
+                <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+                  Esta conta será usada para gerenciar eventos no calendário.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGoToAgenda}
+            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <Calendar className="w-4 h-4" />
+            Gerenciar Conexão Google
+          </button>
+
+          <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+            <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">
+              Comandos de Voz
+            </h5>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Marcar Evento:
+                </p>
+                <ul className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                  <li>• "Agendar reunião"</li>
+                  <li>• "Marcar compromisso"</li>
+                  <li>• "Criar evento"</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Ver Agenda:
+                </p>
+                <ul className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                  <li>• "Ver minha agenda"</li>
+                  <li>• "Mostrar calendário"</li>
+                  <li>• "Meus compromissos"</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // ❌ NÃO CONECTADO
+        <div className="space-y-4">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
+                  Conta Google não conectada
+                </p>
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  Para usar as funções de calendário, você precisa conectar uma conta Google com permissão de acesso ao Google Calendar.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGoToAgenda}
+            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Conectar Conta Google
+          </button>
+
+          <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Você será redirecionado para a seção <strong>Agenda</strong> onde poderá conectar sua conta Google e autorizar o acesso ao calendário.
+            </p>
+          </div>
+        </div>
+      )}
+      </div>
+    </div>
+  );
+};
+
 const GoogleEmailForm = ({ companyId }: any) => {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -824,6 +1006,8 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'nossa_marca': NossaMarcaForm,
   'video_instrucoes': VideoInstrucoesForm,
   'enviar_email': GoogleEmailForm,
+  'agendar_compromisso': GoogleCalendarForm,
+  'ver_agenda': GoogleCalendarForm,  
 };
 
 // ===== INTERFACE =====
@@ -982,6 +1166,7 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 
 

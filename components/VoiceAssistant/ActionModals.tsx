@@ -16,6 +16,8 @@ import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 import VideoInstrucoesDisplay from '@/components/assistant/VideoInstrucoesDisplay';
 import SendEmailModal from '@/components/assistant/SendEmailModal';
+import CreateEventModal from '@/components/assistant/CreateEventModal';
+import ViewAgendaModal from '@/components/assistant/ViewAgendaModal';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -32,6 +34,8 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'PIXConfirmationModal': PIXConfirmationModal,
   'VideoInstrucoesDisplay': VideoInstrucoesDisplay,
   'SendEmailModal': SendEmailModal,
+  'CreateEventModal': CreateEventModal,
+  'ViewAgendaModal': ViewAgendaModal, 
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

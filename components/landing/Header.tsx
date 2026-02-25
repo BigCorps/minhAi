@@ -129,39 +129,22 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
         </div>
 
         {/* LAYOUT MOBILE */}
-        <div className="flex md:hidden items-center h-16 relative">
-          {/* BOTÕES FIXOS À ESQUERDA */}
-          <div className="flex items-center gap-2 mr-3">
-            <Link
-              href="/login"
-              className="px-3 py-1.5 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition-all duration-300 font-semibold text-xs whitespace-nowrap"
-            >
-              Entrar
-            </Link>
-
-            <button
-              onClick={onToggleTheme}
-              className={`p-1.5 rounded-lg border transition-all duration-300 ${
-                isDark
-                  ? 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10'
-                  : 'bg-black/5 border-black/5 text-gray-500 hover:text-gray-900 hover:bg-black/10'
-              }`}
-              aria-label="Alternar tema"
-            >
-              {isDark ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
+        <div className="flex md:hidden items-center justify-between h-16">
+          {/* LOGO À ESQUERDA */}
+          <div className="flex-shrink-0">
+            <button onClick={() => handleNavigate('inicio')} className="focus:outline-none">
+              <Image
+                src="/logo.png"
+                alt="eAi"
+                width={150}
+                height={68}
+                className="h-9 w-auto"
+              />
             </button>
           </div>
 
           {/* NAVEGAÇÃO HORIZONTAL NO CENTRO */}
-          <div className="flex-1 flex items-center justify-center overflow-hidden">
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center overflow-hidden">
             <div className="flex items-center gap-3">
               {/* Seção Anterior (translúcida) */}
               {prevItem && (
@@ -179,10 +162,8 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
               {currentItem && (
                 <button
                   onClick={() => handleNavigate(currentItem.id)}
-                  className={`relative px-3 py-1.5 text-sm font-bold rounded-lg transition-all duration-300 ${
-                    isDark
-                      ? 'text-blue-400 bg-blue-500/10'
-                      : 'text-blue-600 bg-blue-50'
+                  className={`relative px-2 py-1 text-sm font-bold transition-all duration-300 ${
+                    isDark ? 'text-blue-400' : 'text-blue-600'
                   }`}
                 >
                   {currentItem.label}
@@ -206,6 +187,36 @@ export default function Header({ activeSection, onNavigate, theme, onToggleTheme
                 </button>
               )}
             </div>
+          </div>
+
+          {/* BOTÕES À DIREITA */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleTheme}
+              className={`p-1.5 rounded-lg border transition-all duration-300 ${
+                isDark
+                  ? 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10'
+                  : 'bg-black/5 border-black/5 text-gray-500 hover:text-gray-900 hover:bg-black/10'
+              }`}
+              aria-label="Alternar tema"
+            >
+              {isDark ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+
+            <Link
+              href="/login"
+              className="px-3 py-1.5 bg-primary-green text-white rounded-lg hover:bg-primary-green-dark transition-all duration-300 font-semibold text-xs whitespace-nowrap"
+            >
+              Entrar
+            </Link>
           </div>
         </div>
       </div>

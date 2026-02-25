@@ -180,16 +180,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!currentSession) {
-      const { data: newSession } = await supabase
-        .from('assistant_sessions')
-        .insert({ company_id: companyId, messages: [] })
-        .select()
-        .single();
-      
-      currentSession = newSession;
-      console.log('✨ Nova sessão criada:', currentSession.id);
-    }
+if (!currentSession) {
+  const { data: newSession, error: sessionError } = await supabase
+    .from('assistant_sessions')
+    .insert({ company_id: companyId, messages: [] })
+    .select()
+    .single();
+  
+  if (sessionError || !newSession) {
+    console.error('❌ Erro ao criar sessão:', sessionError);
+    // ✅ Sessão em memória como fallback — não bloqueia o fluxo
+    currentSession = { id: randomUUID(), messages: [] };
+    console.log('⚠️ Usando sessão temporária (sem persistência)');
+  } else {
+    currentSession = newSession;
+    console.log('✨ Nova sessão criada:', currentSession.id);
+  }
+}
 
     const userMessage = directQuestion || '';
 
@@ -286,14 +293,18 @@ Pergunta: ${userMessage}`;
       conversationHistory = conversationHistory.slice(-MAX_MESSAGES);
     }
 
-    await supabase
-      .from('assistant_sessions')
-      .update({
-        messages: conversationHistory,
-        last_activity_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      })
-      .eq('id', currentSession.id);
+try {
+  await supabase
+    .from('assistant_sessions')
+    .update({
+      messages: conversationHistory,
+      last_activity_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+    .eq('id', currentSession.id);
+} catch (sessionUpdateError) {
+  console.warn('⚠️ Erro ao atualizar sessão (não crítico):', sessionUpdateError);
+}
 
     console.log(`💾 Sessão atualizada: ${conversationHistory.length} mensagens`);
 

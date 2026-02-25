@@ -123,7 +123,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             } mx-auto`}
           >
             Personalize seus assistentes e transforme a experiência dos seus clientes com um 
-            funcionário de voz inteligente que trabalha 24 horas por dia. E o melhor, você paga 
+            funcionário de voz e texto que trabalha 24 horas por dia. E o melhor, você paga 
             apenas quando ele trabalha. Configure do seu jeito para responder perguntas, executar 
             funções, gerar cobranças, agendar consultas, recomendar vídeos, produtos e muito mais.
           </p>

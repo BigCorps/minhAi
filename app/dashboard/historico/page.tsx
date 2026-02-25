@@ -23,6 +23,15 @@ interface LogEntry {
   realAssistantMessage?: string;
 }
 
+// Funções que mostram conversa real (buscam da tabela messages)
+const DIALOGUE_FUNCTIONS = ['chatgpt', 'orcamento', 'faq'];
+
+// Funções Meta que também têm conteúdo de mensagem real
+const META_FUNCTIONS = ['meta_reply', 'meta_comment'];
+
+// Todas as funções que precisam de conteúdo real
+const RICH_FUNCTIONS = [...DIALOGUE_FUNCTIONS, ...META_FUNCTIONS];
+
 export default function HistoricoPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [functions, setFunctions] = useState<Record<string, AssistantFunction>>({});
@@ -36,8 +45,6 @@ export default function HistoricoPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const supabase = createClient();
-
-  const DIALOGUE_FUNCTIONS = ['chatgpt', 'orcamento', 'faq'];
 
   useEffect(() => {
     if (dropdownOpen && buttonRef.current) {
@@ -83,10 +90,10 @@ export default function HistoricoPage() {
 
       let userCompanyIds: string[] = [];
       if (adminData && adminData.length > 0) {
-        userCompanyIds = adminData.map(a => a.company_id);
+        userCompanyIds = adminData.map((a: any) => a.company_id);
       } else {
         const { data: allCompanies } = await supabase.from('companies').select('id');
-        if (allCompanies) userCompanyIds = allCompanies.map(c => c.id);
+        if (allCompanies) userCompanyIds = allCompanies.map((c: any) => c.id);
       }
 
       if (userCompanyIds.length === 0) {
@@ -112,7 +119,7 @@ export default function HistoricoPage() {
         .select('function_key, function_name, short_description, description');
 
       const functionsMap: Record<string, AssistantFunction> = {};
-      (functionsData || []).forEach(f => {
+      (functionsData || []).forEach((f: any) => {
         functionsMap[f.function_key] = f;
       });
       setFunctions(functionsMap);
@@ -132,126 +139,126 @@ export default function HistoricoPage() {
       const { data: logsData, error: logsError } = await query;
       if (logsError) throw new Error('Erro ao carregar histórico: ' + logsError.message);
 
-      let enriched: LogEntry[] = (logsData || []).map(log => ({
+      let enriched: LogEntry[] = (logsData || []).map((log: any) => ({
         ...log,
-        companyName: companiesData?.find(c => c.id === log.company_id)?.name ?? '—',
+        companyName: companiesData?.find((c: any) => c.id === log.company_id)?.name ?? '—',
       }));
 
-      console.log('🔍 INÍCIO DO DEBUG');
-      console.log('Total de logs:', enriched.length);
-      
-      // ABORDAGEM ALTERNATIVA: Buscar conversas por timestamp
-      const dialogueLogs = enriched.filter(log => DIALOGUE_FUNCTIONS.includes(log.function_key));
-      console.log('Logs de diálogo (chatgpt, orcamento, faq):', dialogueLogs.length);
+      // 5. Enriquecer logs que precisam de conteúdo real
+      //    Estratégia: um único query de messages cobrindo o período dos logs,
+      //    depois cruza por conversation_id (quando disponível no metadata)
+      //    ou por timestamp ±5s (fallback).
 
-      if (dialogueLogs.length > 0) {
-        // Para cada log de diálogo, buscar conversas próximas no tempo
-        for (const log of dialogueLogs) {
-          console.log('\n📝 Processando log:', {
-            function_key: log.function_key,
-            executed_at: log.executed_at,
-            metadata: log.metadata
-          });
+      const richLogs = enriched.filter(log => RICH_FUNCTIONS.includes(log.function_key));
 
-          // Tentar 1: Usar conversation_id do metadata se existir
-          let conversationId = log.metadata?.conversation_id;
-          console.log('  conversation_id do metadata:', conversationId);
+      if (richLogs.length > 0) {
+        // Calcular janela de tempo dos logs (mais 10s de margem)
+        const timestamps = richLogs.map(l => new Date(l.executed_at).getTime());
+        const minTs = new Date(Math.min(...timestamps) - 10000).toISOString();
+        const maxTs = new Date(Math.max(...timestamps) + 10000).toISOString();
 
-          if (!conversationId) {
-            // Tentar 2: Buscar conversa por timestamp próximo (±30 segundos)
-            const logTime = new Date(log.executed_at);
-            const timeBefore = new Date(logTime.getTime() - 30000); // 30 seg antes
-            const timeAfter = new Date(logTime.getTime() + 30000);  // 30 seg depois
+        // Buscar todas as mensagens do período em um único query
+        const { data: allMessages } = await supabase
+          .from('messages')
+          .select('id, conversation_id, role, content, created_at')
+          .gte('created_at', minTs)
+          .lte('created_at', maxTs)
+          .in('role', ['user', 'assistant'])
+          .order('created_at', { ascending: true });
 
-            console.log('  Buscando conversa por timestamp:', {
-              logTime: logTime.toISOString(),
-              timeBefore: timeBefore.toISOString(),
-              timeAfter: timeAfter.toISOString()
-            });
-
-            const { data: nearConversations } = await supabase
-              .from('conversations')
-              .select('id, started_at')
-              .eq('company_id', log.company_id)
-              .gt('started_at', timeBefore.toISOString())
-              .lt('started_at', timeAfter.toISOString())
-              .gt('total_messages', 0)
-              .order('started_at', { ascending: false })
-              .limit(1);
-
-            console.log('  Conversas encontradas:', nearConversations?.length);
-            
-            if (nearConversations && nearConversations.length > 0) {
-              conversationId = nearConversations[0].id;
-              console.log('  ✅ Conversa encontrada por timestamp:', conversationId);
-            }
+        if (allMessages && allMessages.length > 0) {
+          // Agrupar mensagens por conversation_id para acesso rápido
+          const msgsByConv: Record<string, Array<{ role: string; content: string; created_at: string }>> = {};
+          for (const msg of allMessages) {
+            if (!msg.conversation_id) continue;
+            if (!msgsByConv[msg.conversation_id]) msgsByConv[msg.conversation_id] = [];
+            msgsByConv[msg.conversation_id].push(msg);
           }
 
-          if (conversationId) {
-            // Buscar mensagens dessa conversa
-            console.log('  Buscando mensagens da conversa:', conversationId);
-            
-            const { data: messages, error: msgError } = await supabase
-              .from('messages')
-              .select('*')
-              .eq('conversation_id', conversationId)
-              .order('created_at', { ascending: true });
+          // Indexar mensagens por timestamp (ms) para busca por proximidade
+          // Cada entrada: { ts, conversation_id, role, content }
+          const msgsByTime = allMessages.map((m: any) => ({
+            ts: new Date(m.created_at).getTime(),
+            conversation_id: m.conversation_id,
+            role: m.role,
+            content: m.content,
+          }));
 
-            console.log('  Mensagens encontradas:', messages?.length);
-            console.log('  Erro ao buscar mensagens:', msgError);
+          for (const log of richLogs) {
+            const logTs = new Date(log.executed_at).getTime();
 
-            if (messages && messages.length > 0) {
-              console.log('  Primeira mensagem:', messages[0]);
-              console.log('  Última mensagem:', messages[messages.length - 1]);
-
-              // Buscar o último par user->assistant
-              let userMsg = '';
-              let assistantMsg = '';
-
-              for (let i = messages.length - 1; i > 0; i--) {
-                const msg1 = messages[i - 1];
-                const msg2 = messages[i];
-
-                if (msg1.role === 'user' && msg2.role === 'assistant') {
-                  userMsg = msg1.content;
-                  assistantMsg = msg2.content;
-                  console.log('  ✅ Par encontrado no índice:', i - 1, i);
-                  break;
-                }
-              }
-
-              if (!userMsg && messages.length >= 2) {
-                // Fallback: pegar as duas últimas mensagens de qualquer tipo
-                const lastTwo = messages.slice(-2);
-                if (lastTwo[0].role === 'user') userMsg = lastTwo[0].content;
-                if (lastTwo[1].role === 'assistant') assistantMsg = lastTwo[1].content;
-                console.log('  ⚠️ Usando fallback - últimas 2 mensagens');
-              }
-
-              console.log('  User message length:', userMsg.length);
-              console.log('  Assistant message length:', assistantMsg.length);
-
-              // Atualizar o log com mensagens reais
+            // Caminho 1: metadata já tem user_input/assistant_response (logs novos após fix)
+            if (log.metadata?.user_input || log.metadata?.assistant_response) {
               const logIndex = enriched.findIndex(l => l.id === log.id);
               if (logIndex !== -1) {
                 enriched[logIndex] = {
                   ...enriched[logIndex],
-                  realUserMessage: userMsg,
-                  realAssistantMessage: assistantMsg,
+                  realUserMessage: log.metadata.user_input || '',
+                  realAssistantMessage: log.metadata.assistant_response || '',
                 };
-                console.log('  ✅ Log atualizado com mensagens reais');
               }
-            } else {
-              console.log('  ❌ Nenhuma mensagem encontrada');
+              continue;
             }
-          } else {
-            console.log('  ❌ Nenhum conversation_id disponível');
+
+            // Caminho 2: Meta functions — ler direto do metadata da plataforma
+            if (META_FUNCTIONS.includes(log.function_key) && log.metadata) {
+              const metaUser = log.metadata.from_message || log.metadata.comment_text || log.metadata.message || '';
+              const metaAssistant = log.metadata.reply_text || log.metadata.response || '';
+              if (metaUser || metaAssistant) {
+                const logIndex = enriched.findIndex(l => l.id === log.id);
+                if (logIndex !== -1) {
+                  enriched[logIndex] = {
+                    ...enriched[logIndex],
+                    realUserMessage: metaUser,
+                    realAssistantMessage: metaAssistant,
+                  };
+                }
+                continue;
+              }
+            }
+
+            // Caminho 3: Cruzar por timestamp ±5s → pegar conversation_id → último par user/assistant
+            const WINDOW_MS = 5000;
+            const nearMsg = msgsByTime.find(m => Math.abs(m.ts - logTs) <= WINDOW_MS);
+
+            if (nearMsg?.conversation_id) {
+              const convMsgs = msgsByConv[nearMsg.conversation_id] || [];
+
+              // Pegar o último par user → assistant em sequência
+              let userMsg = '';
+              let assistantMsg = '';
+
+              for (let i = convMsgs.length - 1; i > 0; i--) {
+                const prev = convMsgs[i - 1];
+                const curr = convMsgs[i];
+                if (prev.role === 'user' && curr.role === 'assistant') {
+                  userMsg = prev.content;
+                  assistantMsg = curr.content;
+                  break;
+                }
+              }
+
+              // Fallback: últimas duas mensagens de qualquer ordem
+              if (!userMsg && convMsgs.length >= 2) {
+                const last2 = convMsgs.slice(-2);
+                if (last2[0].role === 'user') userMsg = last2[0].content;
+                if (last2[1].role === 'assistant') assistantMsg = last2[1].content;
+              }
+
+              if (userMsg || assistantMsg) {
+                const logIndex = enriched.findIndex(l => l.id === log.id);
+                if (logIndex !== -1) {
+                  enriched[logIndex] = {
+                    ...enriched[logIndex],
+                    realUserMessage: userMsg,
+                    realAssistantMessage: assistantMsg,
+                  };
+                }
+              }
+            }
           }
         }
       }
-
-      console.log('\n🏁 FIM DO DEBUG');
-      console.log('Logs finais com realUserMessage:', enriched.filter(l => l.realUserMessage).length);
 
       setLogs(enriched);
     } catch (err: any) {
@@ -273,27 +280,30 @@ export default function HistoricoPage() {
     }
   }
 
-  function shouldShowRealDialogue(log: LogEntry): boolean {
-    return DIALOGUE_FUNCTIONS.includes(log.function_key) && 
-           (!!log.realUserMessage || !!log.realAssistantMessage);
+  // Verifica se o log tem conteúdo real de diálogo para exibir
+  function hasRealDialogue(log: LogEntry): boolean {
+    return !!(log.realUserMessage || log.realAssistantMessage);
   }
 
+  // Mensagem do usuário: real se disponível, senão genérica
   function getUserMessage(log: LogEntry): string {
-    if (shouldShowRealDialogue(log) && log.realUserMessage) {
-      return log.realUserMessage;
-    }
+    if (log.realUserMessage) return log.realUserMessage;
+    // Fallback para metadados diretos de qualquer função
     if (log.metadata?.transcript) return log.metadata.transcript;
     if (log.metadata?.user_input) return log.metadata.user_input;
+    if (log.metadata?.from_message) return log.metadata.from_message;
+    if (log.metadata?.comment_text) return log.metadata.comment_text;
+    // Genérico: apenas informa qual função foi usada
     const func = functions[log.function_key];
-    return func?.function_name ?? log.function_key;
+    return `Função "${func?.function_name ?? log.function_key}" executada`;
   }
 
+  // Resposta do assistente: real se disponível, senão descrição da função
   function getAssistantMessage(log: LogEntry): string {
-    if (shouldShowRealDialogue(log) && log.realAssistantMessage) {
-      return log.realAssistantMessage;
-    }
+    if (log.realAssistantMessage) return log.realAssistantMessage;
     if (log.metadata?.assistant_response) return log.metadata.assistant_response;
     if (log.metadata?.response) return log.metadata.response;
+    if (log.metadata?.reply_text) return log.metadata.reply_text;
     const func = functions[log.function_key];
     return func?.short_description ?? func?.description ?? 'Função executada com sucesso.';
   }
@@ -341,69 +351,67 @@ export default function HistoricoPage() {
           </div>
         )}
 
-<div className="rounded-xl shadow-sm p-6 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
-  {/* Container principal flex: no desktop os 3 itens ficarão lado a lado, alinhados por baixo */}
-  <div className="flex flex-col md:flex-row md:items-end gap-4">
-    
-    {/* 1. Busca (Ocupa o espaço restante com flex-1) */}
-    <div className="flex-1 relative">
-      <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
-        Buscar
-      </label>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Buscar por função, assistente, pergunta..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-          bg-white/50 border-gray-300 text-gray-900
-          dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
-        />
-      </div>
-    </div>
+        <div className="rounded-xl shadow-sm p-6 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-end gap-4">
 
-    {/* 2. Filtro */}
-    <div className="w-full md:w-64">
-      <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
-        Filtrar por Assistente
-      </label>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-        bg-white/50 border-gray-300 text-gray-900
-        dark:bg-white/5 dark:border-white/10 dark:text-white
-        flex items-center justify-between text-left"
-      >
-        <span className="truncate">
-          {selectedCompany === 'all'
-            ? 'Todos os assistentes'
-            : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
-        </span>
-        <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-      </button>
-    </div>
+            {/* 1. Busca */}
+            <div className="flex-1 relative">
+              <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
+                Buscar
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por função, assistente, pergunta..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                  bg-white/50 border-gray-300 text-gray-900
+                  dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
+                />
+              </div>
+            </div>
 
-    {/* 3. Botão Atualizar */}
-    <div className="w-full md:w-auto">
-      {/* O padding (py-2 px-4) e arredondamento (rounded-lg) foram igualados aos campos ao lado */}
-      <button
-        onClick={loadData}
-        disabled={loading}
-        className="w-full md:w-auto flex items-center justify-center space-x-2 px-4 py-2 rounded-lg border border-transparent transition-colors disabled:opacity-50
-        bg-gray-100 text-gray-700 hover:bg-gray-200
-        dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
-      >
-        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        <span>Atualizar</span>
-      </button>
-    </div>
+            {/* 2. Filtro por assistente */}
+            <div className="w-full md:w-64">
+              <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
+                Filtrar por Assistente
+              </label>
+              <button
+                ref={buttonRef}
+                type="button"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                bg-white/50 border-gray-300 text-gray-900
+                dark:bg-white/5 dark:border-white/10 dark:text-white
+                flex items-center justify-between text-left"
+              >
+                <span className="truncate">
+                  {selectedCompany === 'all'
+                    ? 'Todos os assistentes'
+                    : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
+                </span>
+                <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
 
-  </div>
-</div>
+            {/* 3. Botão Atualizar */}
+            <div className="w-full md:w-auto">
+              <button
+                onClick={loadData}
+                disabled={loading}
+                className="w-full md:w-auto flex items-center justify-center space-x-2 px-4 py-2 rounded-lg border border-transparent transition-colors disabled:opacity-50
+                bg-gray-100 text-gray-700 hover:bg-gray-200
+                dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
 
         {loading ? (
           <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
@@ -428,7 +436,8 @@ export default function HistoricoPage() {
               const func = functions[log.function_key];
               const userMsg = getUserMessage(log);
               const assistantMsg = getAssistantMessage(log);
-              const isRealDialogue = shouldShowRealDialogue(log);
+              const isDialogue = hasRealDialogue(log);
+              const isGeneric = !isDialogue && !RICH_FUNCTIONS.includes(log.function_key);
 
               return (
                 <div
@@ -438,6 +447,7 @@ export default function HistoricoPage() {
                   dark:bg-white/5 dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
                 >
                   <div className="p-4 sm:p-6">
+                    {/* Cabeçalho */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
@@ -446,9 +456,14 @@ export default function HistoricoPage() {
                         <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300">
                           {func?.function_name ?? log.function_key}
                         </span>
-                        {isRealDialogue && (
+                        {isDialogue && (
                           <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                            💬 Diálogo Real
+                            💬 Conversa real
+                          </span>
+                        )}
+                        {isGeneric && (
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                            ⚡ Ação executada
                           </span>
                         )}
                         {log.credits_consumed > 0 && (
@@ -469,22 +484,29 @@ export default function HistoricoPage() {
                       </button>
                     </div>
 
-                    <div className="space-y-4">
+                    {/* Conteúdo */}
+                    <div className="space-y-3">
+                      {/* Mensagem do usuário */}
                       <div className="flex items-start space-x-3">
                         <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
                           <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </div>
                         <div className="flex-1 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
-                          <p className="text-sm text-gray-900 dark:text-gray-200 whitespace-pre-wrap">{userMsg}</p>
+                          <p className={`text-sm whitespace-pre-wrap ${isGeneric ? 'text-gray-400 dark:text-gray-500 italic' : 'text-gray-900 dark:text-gray-200'}`}>
+                            {userMsg}
+                          </p>
                         </div>
                       </div>
 
+                      {/* Resposta do assistente */}
                       <div className="flex items-start space-x-3">
                         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                           <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="flex-1 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
-                          <p className="text-sm text-gray-900 dark:text-gray-200 whitespace-pre-wrap">{assistantMsg}</p>
+                          <p className={`text-sm whitespace-pre-wrap ${isGeneric ? 'text-gray-400 dark:text-gray-500 italic' : 'text-gray-900 dark:text-gray-200'}`}>
+                            {assistantMsg}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -496,6 +518,7 @@ export default function HistoricoPage() {
         )}
       </div>
 
+      {/* Dropdown de filtro (portal fixo) */}
       {dropdownOpen && (
         <div
           ref={dropdownRef}

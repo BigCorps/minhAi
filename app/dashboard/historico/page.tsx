@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { Search, RefreshCw, Zap, Trash2, ChevronDown } from 'lucide-react';
+import { Search, RefreshCw, Zap, Trash2, ChevronDown, User, MessageSquare } from 'lucide-react';
 
 interface AssistantFunction {
   function_key: string;
@@ -19,6 +19,9 @@ interface LogEntry {
   executed_at: string;
   metadata: any;
   companyName: string;
+  // Campos adicionais para funções com diálogo real
+  realUserMessage?: string;
+  realAssistantMessage?: string;
 }
 
 export default function HistoricoPage() {
@@ -34,6 +37,9 @@ export default function HistoricoPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const supabase = createClient();
+
+  // Funções que devem mostrar o diálogo real da tabela messages
+  const DIALOGUE_FUNCTIONS = ['chatgpt', 'orcamento', 'faq'];
 
   useEffect(() => {
     if (dropdownOpen && buttonRef.current) {
@@ -102,8 +108,7 @@ export default function HistoricoPage() {
       if (companiesError) throw new Error('Não foi possível carregar as empresas');
       setCompanies(companiesData || []);
 
-      // 3. Carregar todas as funções da tabela assistant_functions (fonte da verdade)
-      //    Novas funções aparecem automaticamente sem alterar este código.
+      // 3. Carregar todas as funções da tabela assistant_functions
       const { data: functionsData } = await supabase
         .from('assistant_functions')
         .select('function_key, function_name, short_description, description');
@@ -129,11 +134,106 @@ export default function HistoricoPage() {
       const { data: logsData, error: logsError } = await query;
       if (logsError) throw new Error('Erro ao carregar histórico: ' + logsError.message);
 
-      // 5. Enriquecer com nome da empresa
-      const enriched: LogEntry[] = (logsData || []).map(log => ({
+      // 5. Enriquecer logs com nome da empresa
+      let enriched: LogEntry[] = (logsData || []).map(log => ({
         ...log,
         companyName: companiesData?.find(c => c.id === log.company_id)?.name ?? '—',
       }));
+
+      // 6. Para funções específicas (chatgpt, orcamento, faq), buscar mensagens reais
+      const dialogueLogs = enriched.filter(log => DIALOGUE_FUNCTIONS.includes(log.function_key));
+      
+      if (dialogueLogs.length > 0) {
+        // Extrair conversation_ids únicos dos metadados
+        const conversationIds = dialogueLogs
+          .map(log => log.metadata?.conversation_id)
+          .filter(id => id != null);
+
+        if (conversationIds.length > 0) {
+          // Buscar mensagens reais em lotes
+          const BATCH_SIZE = 20;
+          let allMessages: any[] = [];
+
+          for (let i = 0; i < conversationIds.length; i += BATCH_SIZE) {
+            const batch = conversationIds.slice(i, i + BATCH_SIZE);
+            const { data: batchMessages } = await supabase
+              .from('messages')
+              .select('*')
+              .in('conversation_id', batch)
+              .order('created_at', { ascending: true });
+
+            if (batchMessages) {
+              allMessages = allMessages.concat(batchMessages);
+            }
+          }
+
+          // Agrupar mensagens por conversation_id
+          const messagesByConv: Record<string, any[]> = {};
+          allMessages.forEach(msg => {
+            if (!messagesByConv[msg.conversation_id]) {
+              messagesByConv[msg.conversation_id] = [];
+            }
+            messagesByConv[msg.conversation_id].push(msg);
+          });
+
+          // Encontrar os pares user/assistant para cada log
+          enriched = enriched.map(log => {
+            if (!DIALOGUE_FUNCTIONS.includes(log.function_key)) {
+              return log;
+            }
+
+            const convId = log.metadata?.conversation_id;
+            if (!convId || !messagesByConv[convId]) {
+              return log;
+            }
+
+            const convMessages = messagesByConv[convId];
+            
+            // Encontrar o par de mensagens mais próximo ao executed_at do log
+            // Procurar pela última mensagem do assistente antes do executed_at
+            let userMsg = '';
+            let assistantMsg = '';
+
+            for (let i = 0; i < convMessages.length - 1; i++) {
+              const msg1 = convMessages[i];
+              const msg2 = convMessages[i + 1];
+
+              // Se encontramos um par user->assistant
+              if (msg1.role === 'user' && msg2.role === 'assistant') {
+                const msgTime = new Date(msg2.created_at).getTime();
+                const logTime = new Date(log.executed_at).getTime();
+                
+                // Se a mensagem do assistente é próxima ao log (dentro de 5 segundos)
+                if (Math.abs(msgTime - logTime) < 5000) {
+                  userMsg = msg1.content;
+                  assistantMsg = msg2.content;
+                  break;
+                }
+              }
+            }
+
+            // Se não encontramos par próximo, pegar o último par da conversa
+            if (!userMsg && !assistantMsg) {
+              for (let i = convMessages.length - 1; i > 0; i--) {
+                const msg1 = convMessages[i - 1];
+                const msg2 = convMessages[i];
+                
+                if (msg1.role === 'user' && msg2.role === 'assistant') {
+                  userMsg = msg1.content;
+                  assistantMsg = msg2.content;
+                  break;
+                }
+              }
+            }
+
+            return {
+              ...log,
+              realUserMessage: userMsg,
+              realAssistantMessage: assistantMsg,
+            };
+          });
+        }
+      }
 
       setLogs(enriched);
     } catch (err: any) {
@@ -155,8 +255,20 @@ export default function HistoricoPage() {
     }
   }
 
+  // Decidir se deve mostrar diálogo real ou mensagens padrão
+  function shouldShowRealDialogue(log: LogEntry): boolean {
+    return DIALOGUE_FUNCTIONS.includes(log.function_key) && 
+           (!!log.realUserMessage || !!log.realAssistantMessage);
+  }
+
   // O que o usuário perguntou/solicitou
   function getUserMessage(log: LogEntry): string {
+    // Se deve mostrar diálogo real e temos a mensagem
+    if (shouldShowRealDialogue(log) && log.realUserMessage) {
+      return log.realUserMessage;
+    }
+    
+    // Senão, usar metadata ou nome da função
     if (log.metadata?.transcript) return log.metadata.transcript;
     if (log.metadata?.user_input) return log.metadata.user_input;
     const func = functions[log.function_key];
@@ -165,6 +277,12 @@ export default function HistoricoPage() {
 
   // O que o assistente respondeu/executou
   function getAssistantMessage(log: LogEntry): string {
+    // Se deve mostrar diálogo real e temos a mensagem
+    if (shouldShowRealDialogue(log) && log.realAssistantMessage) {
+      return log.realAssistantMessage;
+    }
+    
+    // Senão, usar metadata ou descrição da função
     if (log.metadata?.assistant_response) return log.metadata.assistant_response;
     if (log.metadata?.response) return log.metadata.response;
     const func = functions[log.function_key];
@@ -262,7 +380,6 @@ export default function HistoricoPage() {
           </div>
 
           <div className="mt-4 flex items-center justify-between text-sm transition-colors text-gray-600 dark:text-gray-400">
-            <span>{filteredLogs.length} {filteredLogs.length === 1 ? 'interação' : 'interações'}</span>
             <button
               onClick={loadData}
               disabled={loading}
@@ -300,6 +417,7 @@ export default function HistoricoPage() {
               const func = functions[log.function_key];
               const userMsg = getUserMessage(log);
               const assistantMsg = getAssistantMessage(log);
+              const isRealDialogue = shouldShowRealDialogue(log);
 
               return (
                 <div
@@ -319,6 +437,11 @@ export default function HistoricoPage() {
                         <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300">
                           {func?.function_name ?? log.function_key}
                         </span>
+                        {isRealDialogue && (
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            💬 Diálogo Real
+                          </span>
+                        )}
                         {log.credits_consumed > 0 && (
                           <span className="px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                             {log.credits_consumed} crédito{log.credits_consumed !== 1 ? 's' : ''}
@@ -337,30 +460,26 @@ export default function HistoricoPage() {
                       </button>
                     </div>
 
-                    {/* Par pergunta / resposta — mesmo visual de antes */}
+                    {/* Par pergunta / resposta */}
                     <div className="space-y-4">
 
                       {/* Usuário */}
                       <div className="flex items-start space-x-3">
                         <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
-                          <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
+                          <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </div>
                         <div className="flex-1 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
-                          <p className="text-sm text-gray-900 dark:text-gray-200">{userMsg}</p>
+                          <p className="text-sm text-gray-900 dark:text-gray-200 whitespace-pre-wrap">{userMsg}</p>
                         </div>
                       </div>
 
                       {/* Assistente */}
                       <div className="flex items-start space-x-3">
                         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                          </svg>
+                          <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="flex-1 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
-                          <p className="text-sm text-gray-900 dark:text-gray-200">{assistantMsg}</p>
+                          <p className="text-sm text-gray-900 dark:text-gray-200 whitespace-pre-wrap">{assistantMsg}</p>
                         </div>
                       </div>
 

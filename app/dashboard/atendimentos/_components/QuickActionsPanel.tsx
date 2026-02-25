@@ -9,7 +9,7 @@ import {
   Loader2, X, Zap, PauseCircle, PlayCircle, Send,
   MessageSquare, Phone, Instagram, Facebook, RefreshCw,
   ChevronDown, ChevronUp, CreditCard, MapPin, Building2,
-  AlertCircle, User,
+  AlertCircle, User, Pencil, Check,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
@@ -23,6 +23,7 @@ type Connection = {
 type Conversation = {
   conversation_id: string; page_id: string; platform: string;
   is_paused: boolean; sender_name: string | null;
+  custom_name: string | null;
   last_message_text: string | null; updated_at: string;
 };
 type Notification = { id: number; message: string; type: 'success' | 'error' };
@@ -32,6 +33,11 @@ const FORCE_FUNCTIONS = [
   { key: 'nossa_marca', label: 'Nossa Marca', icon: Building2,  credits: 1, hasInput: false },
   { key: 'endereco',   label: 'Endereço',     icon: MapPin,     credits: 1, hasInput: false },
 ];
+
+// ─── Helper: nome de exibição ─────────────────────────────────────────────
+function getDisplayName(conv: Conversation): string {
+  return conv.custom_name || conv.sender_name || conv.conversation_id;
+}
 
 // ─── Notificações ─────────────────────────────────────────────────────────
 let notifId = 0;
@@ -68,7 +74,6 @@ function PlatformBadge({ platform }: { platform: string }) {
 }
 
 // ─── Linha de conversa ────────────────────────────────────────────────────
-// ─── Linha de conversa ────────────────────────────────────────────────────
 function ConversationRow({ conv, connection, onAction }: {
   conv: Conversation; connection: Connection;
   onAction: (conv: Conversation, conn: Connection) => void;
@@ -79,7 +84,7 @@ function ConversationRow({ conv, connection, onAction }: {
     : diff < 86_400_000 ? `${Math.floor(diff / 3_600_000)}h atrás`
     : `${Math.floor(diff / 86_400_000)}d atrás`;
 
-  const displayName = conv.sender_name || conv.conversation_id;
+  const displayName = getDisplayName(conv);
 
   return (
     <div className="flex items-center justify-between gap-3 p-3 rounded-lg
@@ -91,16 +96,19 @@ function ConversationRow({ conv, connection, onAction }: {
           <div className="flex items-center gap-1.5">
             <User className="h-3 w-3 text-gray-400 shrink-0" />
             <p className="text-sm font-medium truncate text-gray-900 dark:text-white">{displayName}</p>
+            {conv.custom_name && (
+              <span title="Nome personalizado" className="text-xs text-blue-500 shrink-0">
+                <Pencil className="h-3 w-3" />
+              </span>
+            )}
           </div>
-          
-          {/* AQUI ESTÁ A CORREÇÃO ↓ */}
+
           {conv.last_message_text && (
             <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 max-w-[200px]">
               <span className="font-medium mr-1 text-gray-500 dark:text-gray-400">Última Mensagem:</span>
               {conv.last_message_text}
             </p>
           )}
-          {/* AQUI TERMINA A CORREÇÃO ↑ */}
 
           <div className="flex items-center gap-2 mt-0.5">
             <PlatformBadge platform={conv.platform} />
@@ -124,13 +132,18 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
   onClose: () => void; onDone: (msg: string) => void;
 }) {
   const supabase = createClient();
-  const [tab, setTab]           = useState<'pause' | 'message' | 'function'>('pause');
-  const [loading, setLoading]   = useState(false);
+  const [tab, setTab]               = useState<'pause' | 'message' | 'function' | 'name'>('pause');
+  const [loading, setLoading]       = useState(false);
   const [manualText, setManualText] = useState('');
   const [selectedFn, setSelectedFn] = useState(FORCE_FUNCTIONS[0].key);
-  const [fnInput, setFnInput]   = useState('');
+  const [fnInput, setFnInput]       = useState('');
+
+  // ── Nome personalizado ──
+  const [customName, setCustomName] = useState(conv.custom_name ?? '');
+  const [nameSaved, setNameSaved]   = useState(false);
+
   const fnDef = FORCE_FUNCTIONS.find((f) => f.key === selectedFn)!;
-  const displayName = conv.sender_name || conv.conversation_id;
+  const displayName = getDisplayName(conv);
 
   async function handleTogglePause() {
     setLoading(true);
@@ -202,6 +215,25 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
     finally { setLoading(false); }
   }
 
+  // ── Salvar nome personalizado ──────────────────────────────────────────
+  async function handleSaveName() {
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('conversation_ai_control')
+        .update({
+          custom_name: customName.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('conversation_id', conv.conversation_id)
+        .eq('page_id', conv.page_id);
+      if (error) throw error;
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 2000);
+      onDone('✅ Nome salvo com sucesso');
+    } catch (e: any) { onDone('❌ ' + e.message); }
+    finally { setLoading(false); }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -228,14 +260,15 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-white/10">
+        <div className="flex border-b border-gray-200 dark:border-white/10 overflow-x-auto">
           {[
-            { key: 'pause',    label: 'Pausar/Retomar', icon: PauseCircle },
-            { key: 'message',  label: 'Mensagem',       icon: Send        },
-            { key: 'function', label: 'Função',         icon: Zap         },
+            { key: 'pause',    label: 'Pausar',    icon: PauseCircle },
+            { key: 'message',  label: 'Mensagem',  icon: Send        },
+            { key: 'function', label: 'Função',    icon: Zap         },
+            { key: 'name',     label: 'Nome',      icon: Pencil      },
           ].map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key as any)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition border-b-2
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition border-b-2 whitespace-nowrap
                 ${tab === key
                   ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -351,6 +384,71 @@ function ActionsModal({ conv, connection, onClose, onDone }: {
               </Button>
             </div>
           )}
+
+          {/* ── Nome personalizado ── */}
+          {tab === 'name' && (
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+                <p className="text-xs text-purple-800 dark:text-purple-200">
+                  Defina um nome personalizado para identificar esta conversa. Ele substitui o nome detectado automaticamente.
+                </p>
+              </div>
+
+              {/* Nome automático detectado */}
+              {(conv.sender_name || conv.conversation_id) && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10">
+                  <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Nome detectado automaticamente:</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                      {conv.sender_name || conv.conversation_id}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Nome personalizado
+                </label>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="Ex: João da Padaria, Maria VIP..."
+                  maxLength={100}
+                  className="w-full text-sm rounded-lg border p-2.5 outline-none
+                    bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                    border-gray-300 dark:border-white/10 placeholder:text-gray-400
+                    focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
+                />
+                <p className="text-xs text-gray-400 text-right">{customName.length}/100</p>
+              </div>
+
+              {/* Botão salvar */}
+              <Button
+                onClick={handleSaveName}
+                disabled={loading}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {loading
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : nameSaved
+                    ? <><Check className="mr-2 h-4 w-4" />Salvo!</>
+                    : <><Pencil className="mr-2 h-4 w-4" />Salvar nome</>}
+              </Button>
+
+              {/* Limpar nome */}
+              {conv.custom_name && (
+                <button
+                  onClick={() => setCustomName('')}
+                  className="w-full text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition text-center py-1"
+                >
+                  Remover nome personalizado
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -393,7 +491,7 @@ export function QuickActionsPanel({ selectedCompanyId }: { selectedCompanyId: st
     try {
       const pageIds = [conn.meta_page_id, conn.instagram_account_id, conn.whatsapp_number_id].filter(Boolean);
       const { data } = await supabase.from('conversation_ai_control')
-        .select('conversation_id, page_id, platform, is_paused, sender_name, last_message_text, updated_at')
+        .select('conversation_id, page_id, platform, is_paused, sender_name, custom_name, last_message_text, updated_at')
         .in('page_id', pageIds)
         .order('updated_at', { ascending: false })
         .limit(20);

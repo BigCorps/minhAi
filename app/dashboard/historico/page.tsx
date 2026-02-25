@@ -2,21 +2,28 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import Link from 'next/link';
-import { Search, RefreshCw, MessageSquare, Trash2, ChevronRight, ChevronDown, User } from 'lucide-react';
+import { Search, RefreshCw, Zap, Trash2, ChevronDown } from 'lucide-react';
 
-interface MessagePair {
+interface AssistantFunction {
+  function_key: string;
+  function_name: string;
+  short_description: string | null;
+  description: string;
+}
+
+interface LogEntry {
   id: string;
-  userMessage: string;
-  assistantMessage: string;
-  conversationId: string;
+  company_id: string;
+  function_key: string;
+  credits_consumed: number;
+  executed_at: string;
+  metadata: any;
   companyName: string;
-  companySlug: string;
-  timestamp: string;
 }
 
 export default function HistoricoPage() {
-  const [messagePairs, setMessagePairs] = useState<MessagePair[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [functions, setFunctions] = useState<Record<string, AssistantFunction>>({});
   const [companies, setCompanies] = useState<any[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,23 +35,23 @@ export default function HistoricoPage() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const supabase = createClient();
 
-  // Calcular posição do dropdown
   useEffect(() => {
     if (dropdownOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
         top: rect.bottom + window.scrollY,
         left: rect.left + window.scrollX,
-        width: rect.width
+        width: rect.width,
       });
     }
   }, [dropdownOpen]);
 
-  // Fechar dropdown ao clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
-          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(event.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
@@ -59,42 +66,33 @@ export default function HistoricoPage() {
   async function loadData() {
     setLoading(true);
     setError(null);
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('Usuário não autenticado');
-      }
+      if (!user) throw new Error('Usuário não autenticado');
 
-      // 1. Buscar empresas onde o usuário é admin
+      // 1. Buscar empresas do usuário
       const { data: adminData } = await supabase
         .from('company_admins')
         .select('company_id')
         .eq('user_id', user.id);
 
       let userCompanyIds: string[] = [];
-
       if (adminData && adminData.length > 0) {
         userCompanyIds = adminData.map(a => a.company_id);
       } else {
-        const { data: allCompanies } = await supabase
-          .from('companies')
-          .select('id');
-        
-        if (allCompanies && allCompanies.length > 0) {
-          userCompanyIds = allCompanies.map(c => c.id);
-        }
+        const { data: allCompanies } = await supabase.from('companies').select('id');
+        if (allCompanies) userCompanyIds = allCompanies.map(c => c.id);
       }
 
       if (userCompanyIds.length === 0) {
         setCompanies([]);
-        setMessagePairs([]);
+        setLogs([]);
         setLoading(false);
         return;
       }
 
-      // 2. Carregar detalhes das empresas
+      // 2. Carregar empresas para o filtro
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, slug')
@@ -104,95 +102,40 @@ export default function HistoricoPage() {
       if (companiesError) throw new Error('Não foi possível carregar as empresas');
       setCompanies(companiesData || []);
 
-      // 3. CORREÇÃO: Buscar conversas que REALMENTE possuem mensagens
-      //    Filtramos por total_messages > 0 e aumentamos o limite
+      // 3. Carregar todas as funções da tabela assistant_functions (fonte da verdade)
+      //    Novas funções aparecem automaticamente sem alterar este código.
+      const { data: functionsData } = await supabase
+        .from('assistant_functions')
+        .select('function_key, function_name, short_description, description');
+
+      const functionsMap: Record<string, AssistantFunction> = {};
+      (functionsData || []).forEach(f => {
+        functionsMap[f.function_key] = f;
+      });
+      setFunctions(functionsMap);
+
+      // 4. Buscar logs de assistant_function_logs
       let query = supabase
-        .from('conversations')
-        .select('id, company_id, started_at')
+        .from('assistant_function_logs')
+        .select('id, company_id, function_key, credits_consumed, executed_at, metadata')
         .in('company_id', userCompanyIds)
-        .gt('total_messages', 0) // <-- NOVO: apenas conversas com mensagens
-        .order('started_at', { ascending: false })
-        .limit(100); // <-- AUMENTADO: de 50 para 100
+        .order('executed_at', { ascending: false })
+        .limit(200);
 
       if (selectedCompany !== 'all') {
         query = query.eq('company_id', selectedCompany);
       }
 
-      const { data: conversations, error: convError } = await query;
+      const { data: logsData, error: logsError } = await query;
+      if (logsError) throw new Error('Erro ao carregar histórico: ' + logsError.message);
 
-      if (convError) throw new Error('Erro ao carregar conversas: ' + convError.message);
+      // 5. Enriquecer com nome da empresa
+      const enriched: LogEntry[] = (logsData || []).map(log => ({
+        ...log,
+        companyName: companiesData?.find(c => c.id === log.company_id)?.name ?? '—',
+      }));
 
-      if (!conversations || conversations.length === 0) {
-        setMessagePairs([]);
-        setLoading(false);
-        return;
-      }
-
-      const conversationIds = conversations.map(c => c.id);
-
-      // 4. CORREÇÃO: Buscar mensagens em lotes para evitar limites de URL
-      //    O Supabase/PostgREST tem limites no tamanho da URL com .in()
-      const BATCH_SIZE = 20;
-      let allMessages: any[] = [];
-
-      for (let i = 0; i < conversationIds.length; i += BATCH_SIZE) {
-        const batch = conversationIds.slice(i, i + BATCH_SIZE);
-        const { data: batchMessages, error: msgError } = await supabase
-          .from('messages')
-          .select('*')
-          .in('conversation_id', batch)
-          .order('created_at', { ascending: true });
-
-        if (msgError) throw new Error('Erro ao carregar mensagens: ' + msgError.message);
-        if (batchMessages) {
-          allMessages = allMessages.concat(batchMessages);
-        }
-      }
-
-      // 5. Agrupar mensagens em pares (User -> Assistant)
-      const pairs: MessagePair[] = [];
-      const messagesByConv: Record<string, any[]> = {};
-      allMessages.forEach(msg => {
-        if (!messagesByConv[msg.conversation_id]) {
-          messagesByConv[msg.conversation_id] = [];
-        }
-        messagesByConv[msg.conversation_id].push(msg);
-      });
-
-      // Ordenar mensagens de cada conversa por created_at
-      Object.values(messagesByConv).forEach(msgs => {
-        msgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      });
-
-      conversations.forEach(conv => {
-        const company = companiesData?.find(c => c.id === conv.company_id);
-        if (!company) return;
-
-        const convMessages = messagesByConv[conv.id] || [];
-        
-        for (let i = 0; i < convMessages.length - 1; i++) {
-          const msg1 = convMessages[i];
-          const msg2 = convMessages[i + 1];
-
-          if (msg1.role === 'user' && msg2.role === 'assistant') {
-            pairs.push({
-              id: `${msg1.id}|${msg2.id}`,
-              userMessage: msg1.content,
-              assistantMessage: msg2.content,
-              conversationId: conv.id,
-              companyName: company.name,
-              companySlug: company.slug,
-              timestamp: msg1.created_at,
-            });
-            i++; 
-          }
-        }
-      });
-
-      // CORREÇÃO: Ordenar pares por timestamp decrescente
-      pairs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-      setMessagePairs(pairs);
+      setLogs(enriched);
     } catch (err: any) {
       console.error('Erro ao carregar dados:', err);
       setError(err.message || 'Erro ao carregar dados');
@@ -201,39 +144,52 @@ export default function HistoricoPage() {
     }
   }
 
-  async function handleDelete(pair: MessagePair) {
-    if (!confirm('Tem certeza que deseja excluir esta interação?')) {
-      return;
-    }
-
+  async function handleDelete(id: string) {
+    if (!confirm('Tem certeza que deseja excluir este registro?')) return;
     try {
-      const ids = pair.id.split('|');
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .in('id', ids);
-
+      const { error } = await supabase.from('assistant_function_logs').delete().eq('id', id);
       if (error) throw error;
-      setMessagePairs(prev => prev.filter(p => p.id !== pair.id));
-    } catch (error: any) {
-      alert('Erro ao excluir interação: ' + error.message);
+      setLogs(prev => prev.filter(l => l.id !== id));
+    } catch (err: any) {
+      alert('Erro ao excluir: ' + err.message);
     }
   }
 
-  const filteredPairs = messagePairs.filter((pair) => {
+  // O que o usuário perguntou/solicitou
+  function getUserMessage(log: LogEntry): string {
+    if (log.metadata?.transcript) return log.metadata.transcript;
+    if (log.metadata?.user_input) return log.metadata.user_input;
+    const func = functions[log.function_key];
+    return func?.function_name ?? log.function_key;
+  }
+
+  // O que o assistente respondeu/executou
+  function getAssistantMessage(log: LogEntry): string {
+    if (log.metadata?.assistant_response) return log.metadata.assistant_response;
+    if (log.metadata?.response) return log.metadata.response;
+    const func = functions[log.function_key];
+    return func?.short_description ?? func?.description ?? 'Função executada com sucesso.';
+  }
+
+  const filteredLogs = logs.filter(log => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
+    const func = functions[log.function_key];
     return (
-      pair.userMessage.toLowerCase().includes(search) ||
-      pair.assistantMessage.toLowerCase().includes(search) ||
-      pair.companyName.toLowerCase().includes(search)
+      log.function_key.toLowerCase().includes(search) ||
+      (func?.function_name ?? '').toLowerCase().includes(search) ||
+      log.companyName.toLowerCase().includes(search) ||
+      getUserMessage(log).toLowerCase().includes(search) ||
+      getAssistantMessage(log).toLowerCase().includes(search)
     );
   });
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">         
+
+        {/* Header */}
+        <div className="mb-8">
           <h1 className="text-3xl font-bold transition-colors text-gray-900 dark:text-white">
             Histórico de Conversas
           </h1>
@@ -242,6 +198,7 @@ export default function HistoricoPage() {
           </p>
         </div>
 
+        {/* Erro */}
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg p-6 mb-6">
             <div className="flex items-start space-x-3">
@@ -251,10 +208,7 @@ export default function HistoricoPage() {
               <div>
                 <h3 className="text-red-900 dark:text-red-200 font-semibold mb-1">Erro ao carregar histórico</h3>
                 <p className="text-red-800 dark:text-red-300 text-sm mb-3">{error}</p>
-                <button
-                  onClick={loadData}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
-                >
+                <button onClick={loadData} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
                   Tentar Novamente
                 </button>
               </div>
@@ -262,22 +216,23 @@ export default function HistoricoPage() {
           </div>
         )}
 
+        {/* Filtros */}
         <div className="rounded-xl shadow-sm p-6 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
             <div className="flex-1 relative">
-              <label htmlFor="search" className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
                 Buscar
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  id="search"
-                  placeholder="Buscar por pergunta, resposta ou assistente..."
+                  placeholder="Buscar por função, assistente, pergunta..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors 
-                  bg-white/50 border-gray-300 text-gray-900 
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                  bg-white/50 border-gray-300 text-gray-900
                   dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
                 />
               </div>
@@ -287,31 +242,27 @@ export default function HistoricoPage() {
               <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
                 Filtrar por Assistente
               </label>
-              <div className="relative">
-                <button
-                  ref={buttonRef}
-                  type="button"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                  bg-white/50 border-gray-300 text-gray-900
-                  dark:bg-white/5 dark:border-white/10 dark:text-white
-                  flex items-center justify-between text-left"
-                >
-                  <span className="truncate">
-                    {selectedCompany === 'all'
-                      ? 'Todos os assistentes'
-                      : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-              </div>
+              <button
+                ref={buttonRef}
+                type="button"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                bg-white/50 border-gray-300 text-gray-900
+                dark:bg-white/5 dark:border-white/10 dark:text-white
+                flex items-center justify-between text-left"
+              >
+                <span className="truncate">
+                  {selectedCompany === 'all'
+                    ? 'Todos os assistentes'
+                    : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
+                </span>
+                <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
             </div>
           </div>
 
           <div className="mt-4 flex items-center justify-between text-sm transition-colors text-gray-600 dark:text-gray-400">
-            <span>
-              {filteredPairs.length} {filteredPairs.length === 1 ? 'interação' : 'interações'}
-            </span>
+            <span>{filteredLogs.length} {filteredLogs.length === 1 ? 'interação' : 'interações'}</span>
             <button
               onClick={loadData}
               disabled={loading}
@@ -325,89 +276,109 @@ export default function HistoricoPage() {
           </div>
         </div>
 
+        {/* Lista */}
         {loading ? (
           <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="transition-colors text-gray-600 dark:text-gray-400">Carregando histórico...</p>
           </div>
-        ) : filteredPairs.length === 0 && !error ? (
+        ) : filteredLogs.length === 0 && !error ? (
           <div className="rounded-xl shadow-sm p-12 text-center transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gray-100 dark:bg-white/10">
-              <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+              <Zap className="w-8 h-8 text-gray-400 dark:text-gray-500" />
             </div>
             <h2 className="text-xl font-bold mb-2 transition-colors text-gray-900 dark:text-white">
-              Nenhuma conversa encontrada
+              Nenhuma interação encontrada
             </h2>
             <p className="transition-colors text-gray-600 dark:text-gray-400">
-              Ainda não há interações registradas para os critérios selecionados.
+              Ainda não há funções executadas para os critérios selecionados.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredPairs.map((pair) => (
-              <div
-                key={pair.id}
-                className="rounded-xl shadow-sm overflow-hidden border transition-all
-                bg-white/80 border-gray-200 hover:border-blue-300
-                dark:bg-white/5 dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
-              >
-                <div className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                        {pair.companyName}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {new Date(pair.timestamp).toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(pair)}
-                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Excluir interação"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+            {filteredLogs.map(log => {
+              const func = functions[log.function_key];
+              const userMsg = getUserMessage(log);
+              const assistantMsg = getAssistantMessage(log);
 
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              return (
+                <div
+                  key={log.id}
+                  className="rounded-xl shadow-sm overflow-hidden border transition-all
+                  bg-white/80 border-gray-200 hover:border-blue-300
+                  dark:bg-white/5 dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
+                >
+                  <div className="p-4 sm:p-6">
+
+                    {/* Cabeçalho */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {log.companyName}
+                        </span>
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300">
+                          {func?.function_name ?? log.function_key}
+                        </span>
+                        {log.credits_consumed > 0 && (
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                            {log.credits_consumed} crédito{log.credits_consumed !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(log.executed_at).toLocaleString('pt-BR')}
+                        </span>
                       </div>
-                      <div className="flex-1 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
-                        <p className="text-sm text-gray-900 dark:text-gray-200">{pair.userMessage}</p>
-                      </div>
+                      <button
+                        onClick={() => handleDelete(log.id)}
+                        className="p-2 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                        title="Excluir registro"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
 
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                        <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    {/* Par pergunta / resposta — mesmo visual de antes */}
+                    <div className="space-y-4">
+
+                      {/* Usuário */}
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
+                          <p className="text-sm text-gray-900 dark:text-gray-200">{userMsg}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
-                        <p className="text-sm text-gray-900 dark:text-gray-200">{pair.assistantMessage}</p>
+
+                      {/* Assistente */}
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100/50 dark:border-blue-500/10">
+                          <p className="text-sm text-gray-900 dark:text-gray-200">{assistantMsg}</p>
+                        </div>
                       </div>
+
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* ✅ DROPDOWN COM POSITION FIXED (sempre por cima) */}
+      {/* Dropdown */}
       {dropdownOpen && (
         <div
           ref={dropdownRef}
-          className="fixed z-[99999] rounded-lg border shadow-lg overflow-hidden
-            bg-white border-gray-200
-            dark:bg-gray-800 dark:border-white/10"
-          style={{
-            top: `${dropdownPosition.top}px`,
-            left: `${dropdownPosition.left}px`,
-            width: `${dropdownPosition.width}px`
-          }}
+          className="fixed z-[99999] rounded-lg border shadow-lg overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10"
+          style={{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, width: `${dropdownPosition.width}px` }}
         >
           <div className="max-h-60 overflow-y-auto">
             <button
@@ -416,12 +387,11 @@ export default function HistoricoPage() {
               className={`w-full px-4 py-2.5 text-left text-sm transition-colors
                 ${selectedCompany === 'all'
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                  : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
-                }`}
+                  : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
             >
               Todos os assistentes
             </button>
-            {companies.map((company) => (
+            {companies.map(company => (
               <button
                 key={company.id}
                 type="button"
@@ -429,8 +399,7 @@ export default function HistoricoPage() {
                 className={`w-full px-4 py-2.5 text-left text-sm transition-colors
                   ${selectedCompany === company.id
                     ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                    : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'
-                  }`}
+                    : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
               >
                 {company.name}
               </button>

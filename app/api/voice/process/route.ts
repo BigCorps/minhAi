@@ -244,9 +244,6 @@ if (matchingFAQ) {
     } else {
       // Usar OpenAI (GPT-4o-mini)
       console.log('🤖 Usando OpenAI GPT-4o-mini');
-      
-      // ✅ CORREÇÃO: Verificar se deve usar prompt de orçamento
-      const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
 
       const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
         ? company.orcamento_prompt  // ← Usa prompt de orçamento puro

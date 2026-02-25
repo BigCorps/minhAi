@@ -156,13 +156,12 @@ export async function POST(request: NextRequest) {
       throw new Error('Company not found');
     }
 
-    // ✅ NOVO: Gerenciar sessão de contexto
+    // Gerenciar sessão de contexto
     const sessionId = formData.get('sessionId') as string | null;
     let currentSession: any = null;
     let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
     if (sessionId) {
-      // Buscar sessão existente
       const { data: session } = await supabase
         .from('assistant_sessions')
         .select('*')
@@ -180,13 +179,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (!currentSession) {
-      // Criar nova sessão
       const { data: newSession } = await supabase
         .from('assistant_sessions')
-        .insert({
-          company_id: companyId,
-          messages: [],
-        })
+        .insert({ company_id: companyId, messages: [] })
         .select()
         .single();
       
@@ -214,18 +209,23 @@ export async function POST(request: NextRequest) {
 
     console.log(`👂 "${userMessage}"`);
 
-    // FAQ Matching
-const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
-const matchingFAQ = useOrcamentoPrompt 
-  ? null 
-  : await findMatchingFAQ(supabase, companyId, userMessage);
+    // ✅ CORRIGIDO: useOrcamentoPrompt lido ANTES do findMatchingFAQ
+    // Quando for orçamento, pula o FAQ completamente e vai direto para o GPT
+    // com o prompt de orçamento configurado pela empresa.
+    const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
+    console.log('📋 useOrcamentoPrompt:', useOrcamentoPrompt);
 
-let responseText = '';
-let usedFAQ = false;
+    // ✅ CORRIGIDO: FAQ só roda quando NÃO for orçamento
+    const matchingFAQ = useOrcamentoPrompt
+      ? null
+      : await findMatchingFAQ(supabase, companyId, userMessage);
+    
+    let responseText = '';
+    let usedFAQ = false;
 
-if (matchingFAQ) {
-  responseText = matchingFAQ.answer;
-  usedFAQ = true;
+    if (matchingFAQ) {
+      responseText = matchingFAQ.answer;
+      usedFAQ = true;
       console.log('⚡ Usando FAQ');
       
       // Incrementar contador
@@ -235,7 +235,6 @@ if (matchingFAQ) {
         .eq('id', matchingFAQ.id)
         .then(() => console.log('📊 +1'));
 
-      // ✅ DESCONTAR CRÉDITOS FAQ
       await supabase.rpc('register_function_usage', {
         p_company_id: companyId,
         p_function_key: 'faq',
@@ -246,7 +245,7 @@ if (matchingFAQ) {
       console.log('🤖 Usando OpenAI GPT-4o-mini');
 
       const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
-        ? company.orcamento_prompt  // ← Usa prompt de orçamento puro
+        ? company.orcamento_prompt
         : `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
 
 Regras:
@@ -259,15 +258,13 @@ Pergunta: ${userMessage}`;
 
       console.log('📋 Usando prompt:', useOrcamentoPrompt ? 'ORÇAMENTO' : 'PADRÃO');
 
-      // ✅ ATUALIZADO: Passa conversationHistory para contexto
       responseText = await processWithGPT(userMessage, systemPrompt, conversationHistory);
       console.log(`🧠 Usando contexto de ${conversationHistory.length} mensagens`);
       
       console.log('✅ OpenAI respondeu');
 
-      // ✅ DESCONTAR CRÉDITOS CHATGPT ou ORÇAMENTO
       const functionKey = useOrcamentoPrompt ? 'orcamento' : 'chatgpt';
-      const creditsConsumed = useOrcamentoPrompt ? 2 : 2; // Ambos consomem 2
+      const creditsConsumed = 2;
       
       await supabase.rpc('register_function_usage', {
         p_company_id: companyId,
@@ -276,35 +273,32 @@ Pergunta: ${userMessage}`;
       });
     }
 
-    // ✅ ATUALIZAR histórico da sessão
+    // Atualizar histórico da sessão
     conversationHistory.push(
       { role: 'user', content: userMessage },
       { role: 'assistant', content: responseText }
     );
 
-    // Manter apenas as últimas 10 mensagens (5 turnos)
     const MAX_MESSAGES = 10;
     if (conversationHistory.length > MAX_MESSAGES) {
       conversationHistory = conversationHistory.slice(-MAX_MESSAGES);
     }
 
-    // Atualizar sessão no banco
     await supabase
       .from('assistant_sessions')
       .update({
         messages: conversationHistory,
         last_activity_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // +30min
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       })
       .eq('id', currentSession.id);
 
     console.log(`💾 Sessão atualizada: ${conversationHistory.length} mensagens`);
 
-    // ✅ NOVO: Retornar texto se solicitado
+    // Retornar texto se solicitado (orçamento usa este caminho)
     if (returnText) {
       console.log('📄 Retornando texto (sem áudio)');
       
-      // Salvar histórico
       let finalConversationId = conversationId || randomUUID();
       
       if (!conversationId || conversationId === 'new') {
@@ -324,7 +318,7 @@ Pergunta: ${userMessage}`;
 
       return NextResponse.json({
         response: responseText,
-        sessionId: currentSession.id, // ✅ NOVO
+        sessionId: currentSession.id,
         conversationId: finalConversationId,
         usedFAQ,
         processingTime: totalTime,
@@ -335,7 +329,7 @@ Pergunta: ${userMessage}`;
       });
     }
 
-    // TTS (comportamento padrão)
+    // TTS (comportamento padrão — perguntas gerais e FAQ)
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
       voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
@@ -345,7 +339,6 @@ Pergunta: ${userMessage}`;
     
     const audioData = new Uint8Array(audioBuffer);
 
-    // Salvar histórico
     let finalConversationId = conversationId || randomUUID();
     
     if (!conversationId || conversationId === 'new') {
@@ -367,7 +360,7 @@ Pergunta: ${userMessage}`;
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Conversation-Id': finalConversationId,
-        'X-Session-Id': currentSession.id, // ✅ NOVO
+        'X-Session-Id': currentSession.id,
         'X-Used-FAQ': String(usedFAQ),
         'X-Processing-Time': String(totalTime),
         'X-Transcription': encodeURIComponent(userMessage),

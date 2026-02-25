@@ -130,6 +130,8 @@ export async function POST(request: NextRequest) {
   
   try {
     const formData = await request.formData();
+      console.log('🔍 DEBUG returnText:', formData.get('returnText'));
+      console.log('🔍 DEBUG useOrcamentoPrompt:', formData.get('useOrcamentoPrompt'));
     const audioFile = formData.get('audio') as File;
     const companyId = formData.get('companyId') as string;
     const conversationId = formData.get('conversationId') as string | null;

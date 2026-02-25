@@ -215,14 +215,17 @@ export async function POST(request: NextRequest) {
     console.log(`👂 "${userMessage}"`);
 
     // FAQ Matching
-    const matchingFAQ = await findMatchingFAQ(supabase, companyId, userMessage);
-    
-    let responseText = '';
-    let usedFAQ = false;
+const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
+const matchingFAQ = useOrcamentoPrompt 
+  ? null 
+  : await findMatchingFAQ(supabase, companyId, userMessage);
 
-    if (matchingFAQ) {
-      responseText = matchingFAQ.answer;
-      usedFAQ = true;
+let responseText = '';
+let usedFAQ = false;
+
+if (matchingFAQ) {
+  responseText = matchingFAQ.answer;
+  usedFAQ = true;
       console.log('⚡ Usando FAQ');
       
       // Incrementar contador

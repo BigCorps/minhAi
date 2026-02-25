@@ -62,14 +62,11 @@ export class VoiceCommandProcessor {
   
   /**
    * Carrega configurações de funções do banco
-   * 
-   * ⚠️ NOTA: Só carrega funções NOVAS (não as legadas)
    */
   private async loadFunctionSettings() {
     try {
       const supabase = createClient();
       
-      // Buscar apenas funções que NÃO são legadas
       const legacyFunctions = [
         'qrcode_whatsapp',
         'qrcode_instagram',
@@ -121,8 +118,6 @@ export class VoiceCommandProcessor {
   
   /**
    * Processa um comando de voz (APENAS PARA NOVAS FUNÇÕES)
-   * 
-   * Retorna false se não encontrar nenhuma função nova
    */
   async processCommand(transcript: string): Promise<CommandProcessResult> {
     console.log('🔍 Processando comando (novas funções):', transcript);
@@ -154,12 +149,19 @@ export class VoiceCommandProcessor {
       };
     }
     
-    // 3. Verificar se precisa de input adicional
-    if (func.requiresInput && !detection.extractedValue) {
+    // 3. Verificar se precisa de input numérico extraído
+    // ✅ CORRIGIDO: só bloqueia se a função exige número extraído do transcript
+    // (ex: NFC, Link de Pagamento que precisam de valor em reais).
+    // Funções como 'orcamento' usam o transcript completo como pergunta — não bloqueiam aqui.
+    const needsExtractedNumber = func.requiresInput &&
+      func.inputType === 'number' &&
+      !detection.extractedValue;
+
+    if (needsExtractedNumber) {
       return {
         success: true,
         action: 'voice',
-        speechText: func.inputPrompt || `Por favor, forneça mais informações para ${func.functionName}`,
+        speechText: func.inputPrompt || `Por favor, informe o valor para ${func.functionName}.`,
         functionKey: func.functionKey,
       };
     }
@@ -171,51 +173,51 @@ export class VoiceCommandProcessor {
   /**
    * Executa uma função específica
    */
-async executeFunction(
-  func: FunctionDefinition,
-  extractedValue?: any
-): Promise<CommandProcessResult> {
-  try {
-    console.log(`⚡ [Processor] Executando função: ${func.functionKey}`);
-    
-    // ✅ NOVO: Verificar se tem handler customizado
-    if (func.handler) {
-      console.log(`🎯 [Processor] Função tem handler customizado, delegando...`);
+  async executeFunction(
+    func: FunctionDefinition,
+    extractedValue?: any
+  ): Promise<CommandProcessResult> {
+    try {
+      console.log(`⚡ [Processor] Executando função: ${func.functionKey}`);
       
-      // Retornar sem executar aqui - será executado no VoiceAssistant
+      // Verificar se tem handler customizado
+      if (func.handler) {
+        console.log(`🎯 [Processor] Função tem handler customizado, delegando...`);
+        
+        // Retornar sem executar aqui - será executado no VoiceAssistant
+        return {
+          success: true,
+          functionKey: func.functionKey,
+          action: 'voice',
+          speechText: '',
+          creditsConsumed: this.getFunctionCredits(func.functionKey),
+          saveToHistory: this.shouldSaveToHistory(func.functionKey),
+        };
+      }
+      
+      // Executar baseado no tipo de resposta (funções sem handler)
+      switch (func.responseType) {
+        case 'voice':
+          return await this.handleVoiceOnly(func, extractedValue);
+        
+        case 'voice+modal':
+          return await this.handleVoiceWithModal(func, extractedValue);
+        
+        default:
+          throw new Error(`Response type não suportado: ${func.responseType}`);
+      }
+      
+    } catch (error: any) {
+      console.error('❌ [Processor] Erro ao executar função:', error);
+      
       return {
-        success: true,
-        functionKey: func.functionKey,
+        success: false,
         action: 'voice',
-        speechText: '', // Vazio - handler vai gerar
-        creditsConsumed: this.getFunctionCredits(func.functionKey),
-        saveToHistory: this.shouldSaveToHistory(func.functionKey),
+        speechText: `Desculpe, ocorreu um erro ao executar ${func.functionName}.`,
+        error: error.message,
       };
     }
-    
-    // Executar baseado no tipo de resposta (funções sem handler)
-    switch (func.responseType) {
-      case 'voice':
-        return await this.handleVoiceOnly(func, extractedValue);
-      
-      case 'voice+modal':
-        return await this.handleVoiceWithModal(func, extractedValue);
-      
-      default:
-        throw new Error(`Response type não suportado: ${func.responseType}`);
-    }
-    
-  } catch (error: any) {
-    console.error('❌ [Processor] Erro ao executar função:', error);
-    
-    return {
-      success: false,
-      action: 'voice',
-      speechText: `Desculpe, ocorreu um erro ao executar ${func.functionName}.`,
-      error: error.message,
-    };
   }
-}
   
   /**
    * Handler para funções que só retornam voz
@@ -224,7 +226,6 @@ async executeFunction(
     func: FunctionDefinition,
     value?: any
   ): Promise<CommandProcessResult> {
-    // Se tem Edge Function, chamar ela
     if (func.edgeFunction) {
       const result = await this.callEdgeFunction(func.edgeFunction, func.functionKey, value);
       
@@ -238,7 +239,6 @@ async executeFunction(
       };
     }
     
-    // Senão, retornar texto padrão
     return {
       success: true,
       functionKey: func.functionKey,
@@ -260,7 +260,6 @@ async executeFunction(
       throw new Error('Edge function não configurada para função com modal');
     }
     
-    // Chamar Edge Function
     const result = await this.callEdgeFunction(func.edgeFunction, func.functionKey, value);
     
     return {
@@ -281,20 +280,17 @@ async executeFunction(
   private async callEdgeFunction(functionName: string, functionKey: string, value?: any) {
     const supabase = createClient();
     
-const payload: any = {
-  company_id: this.companyId,
-};
+    const payload: any = {
+      company_id: this.companyId,
+    };
 
-// Extrair qr_type para funções de QR Code
-// qrcode_telefone → qr_type: 'telefone'
-if (functionKey.startsWith('qrcode_')) {
-  payload.qr_type = functionKey.replace('qrcode_', '');
-}
+    if (functionKey.startsWith('qrcode_')) {
+      payload.qr_type = functionKey.replace('qrcode_', '');
+    }
 
-// Adicionar valor específico conforme a função
-if (value !== undefined) {
-  payload.value = value;
-}
+    if (value !== undefined) {
+      payload.value = value;
+    }
     
     console.log(`📤 Chamando Edge Function: ${functionName}`, payload);
     
@@ -318,8 +314,6 @@ if (value !== undefined) {
     if (this.functionSettings[functionKey] !== undefined) {
       return this.functionSettings[functionKey].isEnabled;
     }
-    
-    // Se não tem no cache, assumir habilitada
     return true;
   }
   
@@ -330,8 +324,6 @@ if (value !== undefined) {
     if (this.functionSettings[functionKey]) {
       return this.functionSettings[functionKey].creditsPerUse;
     }
-    
-    // Fallback para o registry
     const func = getFunctionByKey(functionKey);
     return func?.creditsPerUse || 0;
   }
@@ -343,8 +335,6 @@ if (value !== undefined) {
     if (this.functionSettings[functionKey]) {
       return this.functionSettings[functionKey].saveToHistory;
     }
-    
-    // Fallback para o registry
     const func = getFunctionByKey(functionKey);
     return func?.saveToHistory || false;
   }

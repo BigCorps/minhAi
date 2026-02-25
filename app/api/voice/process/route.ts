@@ -130,8 +130,6 @@ export async function POST(request: NextRequest) {
   
   try {
     const formData = await request.formData();
-      console.log('🔍 DEBUG returnText:', formData.get('returnText'));
-      console.log('🔍 DEBUG useOrcamentoPrompt:', formData.get('useOrcamentoPrompt'));
     const audioFile = formData.get('audio') as File;
     const companyId = formData.get('companyId') as string;
     const conversationId = formData.get('conversationId') as string | null;
@@ -180,23 +178,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-if (!currentSession) {
-  const { data: newSession, error: sessionError } = await supabase
-    .from('assistant_sessions')
-    .insert({ company_id: companyId, messages: [] })
-    .select()
-    .single();
-  
-  if (sessionError || !newSession) {
-    console.error('❌ Erro ao criar sessão:', sessionError);
-    // ✅ Sessão em memória como fallback — não bloqueia o fluxo
-    currentSession = { id: randomUUID(), messages: [] };
-    console.log('⚠️ Usando sessão temporária (sem persistência)');
-  } else {
-    currentSession = newSession;
-    console.log('✨ Nova sessão criada:', currentSession.id);
-  }
-}
+    if (!currentSession) {
+      const { data: newSession, error: sessionError } = await supabase
+        .from('assistant_sessions')
+        .insert({ company_id: companyId, messages: [] })
+        .select()
+        .single();
+
+      if (sessionError || !newSession) {
+        console.error('❌ Erro ao criar sessão:', sessionError);
+        // Sessão temporária em memória — não bloqueia o fluxo principal
+        currentSession = { id: randomUUID(), messages: [] };
+        console.log('⚠️ Usando sessão temporária (sem persistência)');
+      } else {
+        currentSession = newSession;
+        console.log('✨ Nova sessão criada:', currentSession.id);
+      }
+    }
 
     const userMessage = directQuestion || '';
 
@@ -244,10 +242,15 @@ if (!currentSession) {
         .eq('id', matchingFAQ.id)
         .then(() => console.log('📊 +1'));
 
-      await supabase.rpc('register_function_usage', {
-        p_company_id: companyId,
-        p_function_key: 'faq',
-        p_credits_consumed: 1
+      // ✅ Insert direto com metadata — alimenta o histórico de conversas
+      await supabase.from('assistant_function_logs').insert({
+        company_id: companyId,
+        function_key: 'faq',
+        credits_consumed: 1,
+        metadata: {
+          user_input: userMessage,
+          assistant_response: responseText,
+        },
       });
     } else {
       // Usar OpenAI (GPT-4o-mini)
@@ -274,11 +277,16 @@ Pergunta: ${userMessage}`;
 
       const functionKey = useOrcamentoPrompt ? 'orcamento' : 'chatgpt';
       const creditsConsumed = 2;
-      
-      await supabase.rpc('register_function_usage', {
-        p_company_id: companyId,
-        p_function_key: functionKey,
-        p_credits_consumed: creditsConsumed
+
+      // ✅ Insert direto com metadata — alimenta o histórico de conversas
+      await supabase.from('assistant_function_logs').insert({
+        company_id: companyId,
+        function_key: functionKey,
+        credits_consumed: creditsConsumed,
+        metadata: {
+          user_input: userMessage,
+          assistant_response: responseText,
+        },
       });
     }
 
@@ -293,20 +301,19 @@ Pergunta: ${userMessage}`;
       conversationHistory = conversationHistory.slice(-MAX_MESSAGES);
     }
 
-try {
-  await supabase
-    .from('assistant_sessions')
-    .update({
-      messages: conversationHistory,
-      last_activity_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    })
-    .eq('id', currentSession.id);
-} catch (sessionUpdateError) {
-  console.warn('⚠️ Erro ao atualizar sessão (não crítico):', sessionUpdateError);
-}
-
-    console.log(`💾 Sessão atualizada: ${conversationHistory.length} mensagens`);
+    try {
+      await supabase
+        .from('assistant_sessions')
+        .update({
+          messages: conversationHistory,
+          last_activity_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        })
+        .eq('id', currentSession.id);
+      console.log(`💾 Sessão atualizada: ${conversationHistory.length} mensagens`);
+    } catch (sessionUpdateError) {
+      console.warn('⚠️ Erro ao atualizar sessão (não crítico):', sessionUpdateError);
+    }
 
     // Retornar texto se solicitado (orçamento usa este caminho)
     if (returnText) {

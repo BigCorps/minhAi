@@ -86,13 +86,13 @@ link_pagamento: {
     category: 'payment',
     responseType: 'voice+modal',
 
-    voiceTriggers: [
-      'link de pagamento',
-      'gerar link',
-      'cobrar por link',
-      'link pagamento',
-      'cobrar no link',
-    ],
+voiceTriggers: [
+  'link de pagamento',
+  'gerar link de pagamento',
+  'cobrar por link',
+  'link pagamento',
+  'cobrar no link',
+],
 
     examplePhrases: [
       'Gerar link de pagamento de 50 reais',
@@ -152,14 +152,14 @@ link_pagamento: {
     category: 'payment',
     responseType: 'voice+modal',
 
-    voiceTriggers: [
-      'nfc débito',
-      'débito',
-      'aproximação débito',
-      'tap débito',
-      'pagar débito',
-      'cobrar débito',
-    ],
+voiceTriggers: [
+  'nfc débito',
+  'cobrar no débito',
+  'aproximação débito',
+  'tap débito',
+  'pagar no débito',
+  'cobrar débito',
+],
 
     examplePhrases: [
       'Cobrar 50 reais no débito',
@@ -217,14 +217,14 @@ link_pagamento: {
     category: 'payment',
     responseType: 'voice+modal',
 
-    voiceTriggers: [
-      'nfc crédito',
-      'crédito',
-      'aproximação crédito',
-      'tap crédito',
-      'pagar crédito',
-      'cobrar crédito',
-    ],
+voiceTriggers: [
+  'nfc crédito',
+  'cobrar no crédito',
+  'aproximação crédito',
+  'tap crédito',
+  'pagar no crédito',
+  'cobrar crédito',
+],
 
     examplePhrases: [
       'Cobrar 50 reais no crédito',
@@ -1006,15 +1006,13 @@ video_instrucoes: {
     
     voiceTriggers: [
       'twitter',
-      'x',
       'nosso twitter',
       'perfil twitter',
-      'nosso x',
     ],
     
     examplePhrases: [
       'Qual o Twitter?',
-      'Me passa o X',
+      'Me passa o Twitter',
       'Mostre o Twitter',
     ],
     
@@ -1461,11 +1459,15 @@ export function detectFunctionFromTranscript(transcript: string): {
   for (const func of Object.values(FUNCTIONS_REGISTRY)) {
     let score = 0;
     
-    for (const trigger of func.voiceTriggers) {
-      if (lowerTranscript.includes(trigger.toLowerCase())) {
-        score += 10;
-      }
-    }
+for (const trigger of func.voiceTriggers) {
+  const triggerLower = trigger.toLowerCase();
+  // Word boundary: evita match de "x" dentro de "10x15"
+  const regex = new RegExp(`(?<![a-záéíóúãõâêîôûç])${triggerLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-záéíóúãõâêîôûç])`, 'i');
+  if (regex.test(lowerTranscript)) {
+    // Triggers mais longos (mais específicos) valem mais
+    score += triggerLower.split(' ').length >= 2 ? 15 : 8;
+  }
+}
     
     if (func.requiresInput && func.inputType === 'number') {
       const numberMatch = extractNumberFromText(lowerTranscript);
@@ -1483,11 +1485,11 @@ export function detectFunctionFromTranscript(transcript: string): {
   
   const confidence = bestScore / 10;
   
-  return {
-    function: confidence >= 0.5 ? bestMatch : null,
-    confidence,
-    extractedValue,
-  };
+return {
+  function: confidence >= 1.0 ? bestMatch : null, // Exige ao menos 1 trigger multi-palavra
+  confidence,
+  extractedValue,
+};
 }
 
 function extractAmount(transcript: string): number | null {

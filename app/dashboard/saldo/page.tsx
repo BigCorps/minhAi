@@ -308,8 +308,6 @@ export default function SaldoPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Recebimentos</h1>
             <p className="text-gray-600 dark:text-gray-400">Gerencie seus recebimentos e solicite saque imediato</p>
-            {companyBalances.length > 1 && (
-            )}
           </div>
           <button
             onClick={loadBalanceData}

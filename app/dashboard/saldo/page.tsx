@@ -363,6 +363,7 @@ export default function SaldoPage() {
         </div>
 
         {/* Tabs e Conteúdo */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-100 dark:border-white/5 overflow-hidden">
 <div className="flex border-b border-gray-200 dark:border-white/10">
   <button
     onClick={() => setActiveTab('pix')}

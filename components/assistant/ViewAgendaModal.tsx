@@ -48,6 +48,7 @@ export default function ViewAgendaModal({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
+  const [calendarKey, setCalendarKey] = useState(0);
   
   const calendarRef = useRef<FullCalendar>(null);
   const supabase = createClient();
@@ -108,22 +109,55 @@ export default function ViewAgendaModal({
     }
   }
 
-  const handleNav = (action: 'prev' | 'next' | 'today') => {
+const handleNav = (action: 'prev' | 'next' | 'today') => {
+  if (currentView === 'day') {
+    // Navegação manual para visão diária
+    const newDate = new Date(currentDate);
+    
+    if (action === 'prev') {
+      newDate.setDate(newDate.getDate() - 1);
+    } else if (action === 'next') {
+      newDate.setDate(newDate.getDate() + 1);
+    } else if (action === 'today') {
+      newDate.setTime(new Date().getTime());
+    }
+    
+    setCurrentDate(newDate);
+    setCurrentTitle(newDate.toLocaleDateString('pt-BR', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    }));
+  } else {
+    // Navegação via FullCalendar API para mês e semana
     const calendarApi = calendarRef.current?.getApi();
     if (calendarApi) {
       calendarApi[action]();
       setCurrentDate(calendarApi.getDate());
-      setCurrentTitle(calendarApi.view.title);
+      updateTitle(calendarApi.view.title);
     }
+  }
+};
+
+  const updateTitle = (title: string) => {
+    setCurrentTitle(title);
   };
 
   const handleViewChange = (view: 'month' | 'week' | 'day') => {
     setCurrentView(view);
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      setCurrentDate(calendarApi.getDate());
-      setCurrentTitle(calendarApi.view.title);
-    }
+    
+    // Força recriação do calendário
+    setCalendarKey(prev => prev + 1);
+    
+    // Atualiza título manualmente baseado na view
+    setTimeout(() => {
+      const calendarApi = calendarRef.current?.getApi();
+      if (calendarApi) {
+        const newDate = calendarApi.getDate();
+        setCurrentDate(newDate);
+        updateTitle(calendarApi.view.title);
+      }
+    }, 50);
   };
 
   const handleEventClick = (info: any) => {
@@ -132,7 +166,7 @@ export default function ViewAgendaModal({
 
   const handleDateClick = (info: any) => {
     setCurrentDate(new Date(info.dateStr));
-    setCurrentView('day');
+    handleViewChange('day');
   };
 
   // Funções auxiliares para visão diária
@@ -170,6 +204,13 @@ export default function ViewAgendaModal({
   const border = isDark ? 'border-slate-700' : 'border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
+
+  // Definir view string para o FullCalendar
+  const getCalendarView = () => {
+    if (currentView === 'month') return 'dayGridMonth';
+    if (currentView === 'week') return 'dayGridWeek';
+    return 'dayGridMonth'; // fallback
+  };
 
   // Renderizar visão diária customizada
   const renderDayView = () => {
@@ -439,20 +480,21 @@ export default function ViewAgendaModal({
                       .fc-daygrid-event-harness {
                         margin-top: 1px !important;
                       }
-                      ${currentView === 'week' ? `
-                        .fc-timegrid-axis,
-                        .fc-timegrid-slot-label {
-                          display: none !important;
-                        }
-                        .fc-timegrid-slot {
-                          height: auto !important;
-                        }
-                      ` : ''}
+                      
+                      /* Ajustes para visão semanal */
+                      .fc-dayGridWeek-view .fc-col-header-cell {
+                        font-size: 0.7rem !important;
+                      }
+                      .fc-dayGridWeek-view .fc-daygrid-day-frame {
+                        min-height: 80px !important;
+                      }
                     `}</style>
                     <FullCalendar
+                      key={calendarKey}
                       ref={calendarRef}
                       plugins={[dayGridPlugin, interactionPlugin]}
-                      initialView={currentView === 'month' ? 'dayGridMonth' : 'dayGridWeek'}
+                      initialView={getCalendarView()}
+                      initialDate={currentDate}
                       headerToolbar={false}
                       events={events}
                       locale={ptBrLocale}
@@ -461,7 +503,7 @@ export default function ViewAgendaModal({
                       eventClick={handleEventClick}
                       dateClick={handleDateClick}
                       datesSet={(dateInfo) => {
-                        setCurrentTitle(dateInfo.view.title);
+                        updateTitle(dateInfo.view.title);
                         setCurrentDate(dateInfo.view.currentStart);
                       }}
                       dayMaxEvents={currentView === 'month' ? 2 : 5}
@@ -469,7 +511,7 @@ export default function ViewAgendaModal({
                       fixedWeekCount={false}
                       dayHeaderFormat={
                         currentView === 'week' 
-                          ? { weekday: 'short', day: 'numeric' }
+                          ? { weekday: 'short', day: 'numeric', month: 'numeric' }
                           : { weekday: 'short' }
                       }
                       eventTimeFormat={{

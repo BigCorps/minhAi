@@ -137,19 +137,6 @@ export default function FunctionCard({
 
         {/* Ações: badge sistema / toggle / config */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-          {isSystemFunction ? (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">
-              Padrão
-            </span>
-          ) : (
-            <Switch
-              checked={isEnabled}
-              onCheckedChange={onToggle}
-              disabled={isUpdating}
-              aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
-            />
-          )}
-
           {hasEditModal && onEdit && (
             <button
               onClick={(e) => {
@@ -164,6 +151,19 @@ export default function FunctionCard({
             >
               <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </button>
+          )}
+
+          {isSystemFunction ? (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">
+              Padrão
+            </span>
+          ) : (
+            <Switch
+              checked={isEnabled}
+              onCheckedChange={onToggle}
+              disabled={isUpdating}
+              aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
+            />
           )}
         </div>
 
@@ -219,21 +219,6 @@ export default function FunctionCard({
         </div>
 
         <div className="flex items-center gap-3">
-          {!isSystemFunction && (
-            <Switch
-              checked={isEnabled}
-              onCheckedChange={onToggle}
-              disabled={isUpdating}
-              aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
-            />
-          )}
-
-          {isSystemFunction && (
-            <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">
-              Padrão
-            </span>
-          )}
-
           {hasEditModal && onEdit && (
             <button
               onClick={(e) => {
@@ -249,7 +234,23 @@ export default function FunctionCard({
               <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
           )}
+
+          {!isSystemFunction && (
+            <Switch
+              checked={isEnabled}
+              onCheckedChange={onToggle}
+              disabled={isUpdating}
+              aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
+            />
+          )}
+
+          {isSystemFunction && (
+            <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">
+              Padrão
+            </span>
+          )}
         </div>
+
       </div>
 
       {isUpdating && (

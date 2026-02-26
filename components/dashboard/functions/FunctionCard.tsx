@@ -100,12 +100,18 @@ export default function FunctionCard({
   if (viewMode === 'list') {
     return (
       <div
+        onClick={() => {
+          if (hasEditModal && onEdit) onEdit();
+        }}
         className={`relative border rounded-xl px-4 py-2.5 transition-all duration-300 flex items-center gap-3 ${
+          hasEditModal && onEdit ? 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5' : ''
+        } ${
           isEnabled
             ? 'bg-white dark:bg-slate-900 shadow-sm border-gray-200 dark:border-white/10'
             : 'bg-gray-50 dark:bg-slate-900/50 border-gray-200 dark:border-white/10'
         }`}
       >
+
         {/* Bolinha de categoria */}
         <div
           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -161,9 +167,11 @@ export default function FunctionCard({
             <Switch
               checked={isEnabled}
               onCheckedChange={onToggle}
+              onClick={(e) => e.stopPropagation()} // ISSO IMPEDE O MODAL DE ABRIR
               disabled={isUpdating}
               aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
             />
+
           )}
         </div>
 
@@ -179,12 +187,18 @@ export default function FunctionCard({
   // ── MODO GRID: layout original ────────────────────────────────────────────
   return (
     <div
+      onClick={() => {
+        if (hasEditModal && onEdit) onEdit();
+      }}
       className={`relative border rounded-2xl p-4 transition-all duration-300 flex flex-col justify-between h-full ${
+        hasEditModal && onEdit ? 'cursor-pointer hover:shadow-md' : ''
+      } ${
         isEnabled
           ? 'bg-white dark:bg-slate-900 shadow-sm border-gray-200 dark:border-white/10'
           : 'bg-gray-50 dark:bg-slate-900/50 border-gray-200 dark:border-white/10'
       }`}
     >
+
       <div className="flex-grow">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -240,9 +254,11 @@ export default function FunctionCard({
             <Switch
               checked={isEnabled}
               onCheckedChange={onToggle}
+              onClick={(e) => e.stopPropagation()} // ISSO IMPEDE O MODAL DE ABRIR
               disabled={isUpdating}
               aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
             />
+
           )}
 
           {isSystemFunction && (

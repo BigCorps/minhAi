@@ -4,52 +4,145 @@ import { useState, useEffect } from 'react';
 import { ConnectionManager } from './_components/ConnectionManager';
 import { QuickActionsPanel } from './_components/QuickActionsPanel';
 import { createClient } from '@/lib/supabase-browser';
-import { HelpCircle, X, ExternalLink, Smartphone, Monitor, ChevronRight } from 'lucide-react';
+import { HelpCircle, X, ExternalLink, Smartphone, Monitor, ChevronRight, Share2, Zap } from 'lucide-react';
+
+interface Company {
+  id: string;
+  name: string;
+  wake_word?: string;
+}
 
 export default function AtendimentosPage() {
   const supabase = createClient();
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [showHelp, setShowHelp] = useState(false);
+  const [activeTab, setActiveTab] = useState<'connections' | 'actions'>('connections');
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from('companies')
-        .select('id').eq('user_id', user.id).eq('is_active', true).order('name').limit(1);
-      if (data?.[0]) setSelectedCompanyId(data[0].id);
+      const { data } = await supabase
+        .from('companies')
+        .select('id, name, wake_word')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name');
+      if (data && data.length > 0) {
+        setCompanies(data);
+        setSelectedCompanyId(data[0].id);
+      }
     }
     load();
   }, []);
 
   return (
-    <div className="container max-w-3xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Serviços Meta
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Configure seus assistentes ao WhatsApp, Instagram e Facebook.
-            </p>
+    <div className="min-h-screen bg-transparent">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto">
+
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  Serviços Meta
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Configure seus assistentes ao WhatsApp, Instagram e Facebook.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 mt-1">
+                {/* Seletor de Assistente */}
+                {companies.length > 0 && (
+                  <select
+                    value={selectedCompanyId}
+                    onChange={(e) => setSelectedCompanyId(e.target.value)}
+                    className="px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    <option value="">Selecione um assistente...</option>
+                    {companies.map(company => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}{company.wake_word ? ` (${company.wake_word})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  onClick={() => setShowHelp(true)}
+                  className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border border-gray-300 dark:border-white/10 rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-white/5"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Ajuda
+                </button>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => setShowHelp(true)}
-            className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0 mt-1 border border-gray-300 dark:border-white/10 rounded-md px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-white/5"
-          >
-            <HelpCircle className="w-4 h-4" />
-            Ajuda
-          </button>
+
+          {/* Sem assistente selecionado */}
+          {!selectedCompanyId && (
+            <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
+              <Share2 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Selecione um Assistente
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Escolha um assistente acima para gerenciar suas conexões Meta
+              </p>
+            </div>
+          )}
+
+          {/* Conteúdo Principal */}
+          {selectedCompanyId && (
+            <>
+              {/* Tabs */}
+              <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div className="flex border-b border-gray-200 dark:border-white/10">
+                  <button
+                    onClick={() => setActiveTab('connections')}
+                    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                      activeTab === 'connections'
+                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Conexões Meta
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('actions')}
+                    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                      activeTab === 'actions'
+                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Zap className="w-4 h-4" />
+                    Ações Rápidas
+                  </button>
+                </div>
+              </div>
+
+              {/* Conteúdo da aba */}
+              <div className="space-y-6">
+                {activeTab === 'connections' && (
+                  <ConnectionManager
+                    selectedCompanyId={selectedCompanyId}
+                    onCompanyChange={setSelectedCompanyId}
+                  />
+                )}
+                {activeTab === 'actions' && (
+                  <QuickActionsPanel selectedCompanyId={selectedCompanyId} />
+                )}
+              </div>
+            </>
+          )}
+
         </div>
       </div>
 
-      <div className="space-y-6">
-        <ConnectionManager onCompanyChange={setSelectedCompanyId} />
-        <QuickActionsPanel selectedCompanyId={selectedCompanyId} />
-      </div>
-
-      {/* Modal de Ajuda — mesmo padrão visual do FunctionConfigModal */}
+      {/* Modal de Ajuda */}
       {showHelp && (
         <div
           className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"

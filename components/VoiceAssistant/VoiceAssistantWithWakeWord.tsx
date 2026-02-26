@@ -460,7 +460,7 @@ export function VoiceAssistantWithWakeWord({
             type: 'SendEmailModal', 
             data: { companyId } 
           });
-          playText('Certo! Vou ajudar você a enviar um email. Para qual endereço de email deseja enviar?').catch(() => {});
+          playText('Certo! Quando acabar a contagem regressiva, basta dizer o conteúdo do email e quando acabar, basta falar FIM.').catch(() => {});
           break;
 
 case 'agendar_compromisso':

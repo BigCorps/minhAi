@@ -397,37 +397,157 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     requiresPayment: false,
     isPremium: false,
     
-    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
-      try {
-        console.log('📅 [MARCAR EVENTO] Abrindo modal');
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('📅 [MARCAR EVENTO] Processando comando');
+      
+      const transcriptText = transcript?.toLowerCase() || '';
+      
+      // Objeto para armazenar os dados extraídos
+      const extractedData: {
+        date?: Date;
+        time?: string;
+        name?: string;
+      } = {};
+      
+      // ==================== EXTRAIR DATA ====================
+      const today = new Date();
+      
+      if (transcriptText.includes('hoje')) {
+        extractedData.date = new Date(today);
+      } else if (transcriptText.includes('amanhã') || transcriptText.includes('amanha')) {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        extractedData.date = tomorrow;
+      } else {
+        // Detectar dias da semana
+        const diasSemana: Record<string, number> = {
+          'segunda': 1, 'segunda-feira': 1, 'segunda feira': 1,
+          'terça': 2, 'terca': 2, 'terça-feira': 2, 'terca-feira': 2,
+          'quarta': 3, 'quarta-feira': 3, 'quarta feira': 3,
+          'quinta': 4, 'quinta-feira': 4, 'quinta feira': 4,
+          'sexta': 5, 'sexta-feira': 5, 'sexta feira': 5,
+          'sábado': 6, 'sabado': 6,
+          'domingo': 0
+        };
         
-        let initialView: 'month' | 'week' | 'day' = 'month';
-        const lowerTranscript = transcript.toLowerCase();
-        
-        if (lowerTranscript.includes('semana') || lowerTranscript.includes('próxima semana')) {
-          initialView = 'week';
-        } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('amanhã') || lowerTranscript.includes('dia')) {
-          initialView = 'day';
+        for (const [dia, numero] of Object.entries(diasSemana)) {
+          if (transcriptText.includes(dia)) {
+            const targetDate = new Date(today);
+            const currentDay = today.getDay();
+            let daysToAdd = numero - currentDay;
+            if (daysToAdd <= 0) daysToAdd += 7;
+            targetDate.setDate(today.getDate() + daysToAdd);
+            extractedData.date = targetDate;
+            break;
+          }
         }
         
-        if (setActiveModal) {
-          setActiveModal({
-            type: 'CreateEventModal',
-            data: { companyId, initialView, transcript }
-          });
+        // Detectar data no formato "dia X"
+        const diaMatch = transcriptText.match(/dia (\d{1,2})/);
+        if (diaMatch) {
+          const dia = parseInt(diaMatch[1]);
+          const dataTemp = new Date(today.getFullYear(), today.getMonth(), dia);
+          if (dataTemp < today) {
+            dataTemp.setMonth(dataTemp.getMonth() + 1);
+          }
+          extractedData.date = dataTemp;
         }
         
-        await playText('Certo! Vou abrir o calendário para você marcar o evento. Selecione a data e horário desejados.');
+        // Detectar mês específico
+        const meses: Record<string, number> = {
+          'janeiro': 0, 'fevereiro': 1, 'março': 2, 'marco': 2,
+          'abril': 3, 'maio': 4, 'junho': 5,
+          'julho': 6, 'agosto': 7, 'setembro': 8,
+          'outubro': 9, 'novembro': 10, 'dezembro': 11
+        };
         
-        return true;
-        
-      } catch (error) {
-        console.error('📅 [MARCAR EVENTO] ERRO:', error);
-        await playText('Desculpe, não consegui abrir o calendário.');
-        return false;
+        for (const [mes, numero] of Object.entries(meses)) {
+          if (transcriptText.includes(mes)) {
+            if (extractedData.date) {
+              extractedData.date.setMonth(numero);
+            } else {
+              extractedData.date = new Date(today.getFullYear(), numero, 1);
+            }
+            break;
+          }
+        }
       }
-    },
+      
+      // ==================== EXTRAIR HORÁRIO ====================
+      const horaMatch = transcriptText.match(/(\d{1,2})[h:](\d{2})?/);
+      if (horaMatch) {
+        const hora = horaMatch[1].padStart(2, '0');
+        const minuto = horaMatch[2] ? horaMatch[2] : '00';
+        extractedData.time = `${hora}:${minuto}`;
+      } else {
+        if (transcriptText.includes('meio dia') || transcriptText.includes('meio-dia')) {
+          extractedData.time = '12:00';
+        } else if (transcriptText.includes('meia noite') || transcriptText.includes('meia-noite')) {
+          extractedData.time = '00:00';
+        }
+        
+        const horaTexto = transcriptText.match(/(\d{1,2})\s+(da\s+)?(manhã|manha|tarde|noite)/);
+        if (horaTexto) {
+          let hora = parseInt(horaTexto[1]);
+          const periodo = horaTexto[3];
+          
+          if (periodo.includes('tarde') && hora < 12) {
+            hora += 12;
+          } else if (periodo.includes('noite') && hora < 12) {
+            hora += 12;
+          }
+          
+          extractedData.time = `${hora.toString().padStart(2, '0')}:00`;
+        }
+      }
+      
+      // ==================== EXTRAIR NOME/TÍTULO ====================
+      const nomePatterns = [
+        /chamado\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
+        /chamada\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
+        /reunião\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
+        /reuniao\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
+        /com\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
+        /compromisso\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i
+      ];
+      
+      for (const pattern of nomePatterns) {
+        const match = transcriptText.match(pattern);
+        if (match && match[1]) {
+          extractedData.name = match[1].trim();
+          break;
+        }
+      }
+      
+      // ==================== DECIDIR QUAL MODAL ABRIR ====================
+      const hasAllRequiredData = extractedData.date && extractedData.time && extractedData.name;
+      
+      if (setActiveModal) {
+        setActiveModal({ 
+          type: 'CreateEventModal', 
+          data: { 
+            companyId,
+            prefilledData: extractedData
+          } 
+        });
+      }
+      
+      if (hasAllRequiredData) {
+        await playText('Verifique os dados e confirme para criar o evento.');
+      } else {
+        await playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.');
+      }
+      
+      return true;
+      
+    } catch (error) {
+      console.error('📅 [MARCAR EVENTO] ERRO:', error);
+      await playText('Desculpe, não consegui abrir o calendário.');
+      return false;
+    }
   },
+},
 
   ver_agenda: {
     functionKey: 'ver_agenda',
@@ -467,63 +587,61 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     requiresPayment: false,
     isPremium: true,
     
-    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
-      try {
-        console.log('📆 [VER AGENDA] Abrindo modal');
-        
-        let initialView: 'month' | 'week' | 'day' = 'month';
-        const lowerTranscript = transcript.toLowerCase();
-        
-        if (lowerTranscript.includes('semana') || lowerTranscript.includes('esta semana') || lowerTranscript.includes('próxima semana')) {
-          initialView = 'week';
-        } else if (lowerTranscript.includes('hoje') || lowerTranscript.includes('dia')) {
-          initialView = 'day';
-        }
-        
-        if (setActiveModal) {
-          setActiveModal({
-            type: 'ViewAgendaModal',
-            data: { companyId, initialView }
-          });
-        }
-        
-        let message = 'Abrindo sua agenda';
-        if (initialView === 'week') {
-          message += ' da semana.';
-        } else if (initialView === 'day') {
-          message += ' de hoje.';
-        } else {
-          message += ' do mês.';
-        }
-        
-        await playText(message);
-        
-        try {
-          const supabase = createClient();
-          const periodo = initialView === 'week' ? 'semana' : initialView === 'day' ? 'dia' : 'mês';
-          
-          await supabase
-            .from('interaction_history')
-            .insert({
-              company_id: companyId,
-              user_input: transcript || 'Ver agenda',
-              assistant_response: `Agenda visualizada: ${periodo}`,
-              interaction_type: 'calendar_viewed',
-              metadata: { view_type: initialView, function_used: 'ver_agenda' },
-            });
-        } catch (historyError) {
-          console.error('Erro ao salvar histórico:', historyError);
-        }
-        
-        return true;
-        
-      } catch (error) {
-        console.error('📆 [VER AGENDA] ERRO:', error);
-        await playText('Desculpe, não consegui abrir a agenda.');
-        return false;
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('📆 [VER AGENDA] Abrindo modal');
+      
+      let initialView: 'month' | 'week' | 'day' = 'month';
+      const lowerTranscript = transcript?.toLowerCase() || '';
+      
+      // Detectar menções a "dia" ou "hoje"
+      if (
+        lowerTranscript.includes('dia') || 
+        lowerTranscript.includes('hoje') ||
+        lowerTranscript.includes('diária') ||
+        lowerTranscript.includes('diario')
+      ) {
+        initialView = 'day';
       }
-    },
+      // Detectar menções a "semana"
+      else if (
+        lowerTranscript.includes('semana') ||
+        lowerTranscript.includes('semanal')
+      ) {
+        initialView = 'week';
+      }
+      // Detectar menções a "mês"
+      else if (
+        lowerTranscript.includes('mês') ||
+        lowerTranscript.includes('mes') ||
+        lowerTranscript.includes('mensal')
+      ) {
+        initialView = 'month';
+      }
+      
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ViewAgendaModal',
+          data: { companyId, initialView }
+        });
+      }
+      
+      const viewText = 
+        initialView === 'day' ? 'visualização diária' :
+        initialView === 'week' ? 'visualização semanal' :
+        'visualização mensal';
+      
+      await playText(`Abrindo o calendário em ${viewText}.`);
+      
+      return true;
+      
+    } catch (error) {
+      console.error('📆 [VER AGENDA] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a agenda.');
+      return false;
+    }
   },
+},
   
   enviar_email: {
     functionKey: 'enviar_email',

@@ -197,6 +197,30 @@ export async function detectVoiceCommand(
     return true;
   }
 
+// ── EMAIL: Confirmar envio ────────────────────────────────
+const confirmarEmailTriggers = [
+  'confirmar envio',
+  'confirmar email',
+  'enviar email',
+  'pode enviar',
+  'envia'
+];
+
+if (confirmarEmailTriggers.some(t => lowerTranscript.includes(t))) {
+  console.log('✅ Comando: Confirmar Email detectado!');
+  
+  const emailModal = document.querySelector('[data-modal-type="send-email"]');
+  
+  if (emailModal) {
+    window.dispatchEvent(new CustomEvent('confirmSendEmail'));
+    await playText('Enviando email...');
+    return true;
+  } else {
+    await playText('Não há nenhum email aguardando confirmação.');
+    return true;
+  }
+}
+
 // ── AGENDA/CALENDÁRIO: Confirmar evento ────────────────────
 const confirmarEventoTriggers = [
   'confirmar marcação',

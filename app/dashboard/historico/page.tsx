@@ -89,7 +89,7 @@ export default function HistoricoPage() {
   const dropdownContainerRef = useRef<HTMLDivElement>(null);
   const typeDropdownContainerRef = useRef<HTMLDivElement>(null);
 
-  function openDropdown(btnRef: React.RefObject<HTMLButtonElement>) {
+  function openDropdown(btnRef: React.RefObject<HTMLButtonElement | null>) {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
       setDropdownPos({ top: r.bottom + window.scrollY, left: r.right - Math.max(r.width, 180) + window.scrollX, width: Math.max(r.width, 180) });
@@ -98,7 +98,7 @@ export default function HistoricoPage() {
     setTypeDropdownOpen(false);
   }
 
-  function openTypeDropdown(btnRef: React.RefObject<HTMLButtonElement>) {
+  function openTypeDropdown(btnRef: React.RefObject<HTMLButtonElement | null>) {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
       setTypeDropdownPos({ top: r.bottom + window.scrollY, left: r.right - Math.max(r.width, 140) + window.scrollX, width: Math.max(r.width, 140) });

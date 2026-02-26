@@ -52,6 +52,7 @@ export default function HistoricoPage() {
   const [functions, setFunctions] = useState<Record<string, AssistantFunction>>({});
   const [companies, setCompanies] = useState<any[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
+  const [viewFilter, setViewFilter] = useState<'all' | 'conversations' | 'actions'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -324,6 +325,12 @@ export default function HistoricoPage() {
   }
 
   const filteredLogs = logs.filter(log => {
+    // Filtro por tipo: tudo / só conversas / só ações
+    const isDialogueLog = DIALOGUE_FUNCTIONS.includes(log.function_key) || META_FUNCTIONS.includes(log.function_key);
+    if (viewFilter === 'conversations' && !isDialogueLog) return false;
+    if (viewFilter === 'actions' && isDialogueLog) return false;
+
+    // Filtro por texto
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     const func = functions[log.function_key];
@@ -366,66 +373,108 @@ export default function HistoricoPage() {
           </div>
         )}
 
-        <div className="rounded-xl shadow-sm p-6 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
-          <div className="flex flex-col md:flex-row md:items-end gap-4">
+        <div className="rounded-xl shadow-sm px-4 py-4 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
 
-            {/* 1. Busca */}
-            <div className="flex-1 relative">
-              <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
-                Buscar
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar por função, assistente, pergunta..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
-                  bg-white/50 border-gray-300 text-gray-900
-                  dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
-                />
-              </div>
+          {/* ── Linha 1 (mobile): busca + botão atualizar ── */}
+          {/* ── Desktop: tudo em uma linha ───────────────── */}
+          <div className="flex items-center gap-2">
+
+            {/* Busca — ocupa o espaço restante */}
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                bg-white/50 border-gray-300 text-gray-900
+                dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder-gray-500"
+              />
             </div>
 
-            {/* 2. Filtro por assistente */}
-            <div className="w-full md:w-64">
-              <label className="block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-300">
-                Filtrar por Assistente
-              </label>
+            {/* Seletor Tipo — visível em todas as larguras, ocupa metade no mobile */}
+            <div className="hidden sm:block">
+              <select
+                value={viewFilter}
+                onChange={e => setViewFilter(e.target.value as 'all' | 'conversations' | 'actions')}
+                className="py-2 pl-3 pr-7 text-sm border rounded-lg transition-colors cursor-pointer appearance-none
+                bg-white/50 border-gray-300 text-gray-900
+                dark:bg-white/5 dark:border-white/10 dark:text-white"
+              >
+                <option value="all">Tudo</option>
+                <option value="conversations">Conversas</option>
+                <option value="actions">Funções</option>
+              </select>
+            </div>
+
+            {/* Seletor Assistente */}
+            <div className="hidden sm:block relative">
               <button
                 ref={buttonRef}
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                className="flex items-center gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors whitespace-nowrap
                 bg-white/50 border-gray-300 text-gray-900
-                dark:bg-white/5 dark:border-white/10 dark:text-white
-                flex items-center justify-between text-left"
+                dark:bg-white/5 dark:border-white/10 dark:text-white"
               >
-                <span className="truncate">
+                <span className="max-w-[120px] truncate">
                   {selectedCompany === 'all'
-                    ? 'Todos os assistentes'
+                    ? 'Assistente'
                     : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
                 </span>
-                <ChevronDown className={`w-4 h-4 ml-2 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
             </div>
 
-            {/* 3. Botão Atualizar */}
-            <div className="w-full md:w-auto">
-              <button
-                onClick={loadData}
-                disabled={loading}
-                className="w-full md:w-auto flex items-center justify-center space-x-2 px-4 py-2 rounded-lg border border-transparent transition-colors disabled:opacity-50
-                bg-gray-100 text-gray-700 hover:bg-gray-200
-                dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span>Atualizar</span>
-              </button>
-            </div>
+            {/* Botão Atualizar — ícone no mobile, ícone+texto no desktop */}
+            <button
+              onClick={loadData}
+              disabled={loading}
+              title="Atualizar"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-transparent transition-colors disabled:opacity-50 flex-shrink-0
+              bg-gray-100 text-gray-700 hover:bg-gray-200
+              dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">Atualizar</span>
+            </button>
 
           </div>
+
+          {/* ── Linha 2 (mobile): seletores lado a lado ── */}
+          <div className="flex gap-2 mt-2 sm:hidden">
+
+            <select
+              value={viewFilter}
+              onChange={e => setViewFilter(e.target.value as 'all' | 'conversations' | 'actions')}
+              className="flex-1 py-2 pl-3 pr-7 text-sm border rounded-lg transition-colors cursor-pointer appearance-none
+              bg-white/50 border-gray-300 text-gray-900
+              dark:bg-white/5 dark:border-white/10 dark:text-white"
+            >
+              <option value="all">Tudo</option>
+              <option value="conversations">Conversas</option>
+              <option value="actions">Funções</option>
+            </select>
+
+            <button
+              ref={buttonRef}
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex-1 flex items-center justify-between gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors
+              bg-white/50 border-gray-300 text-gray-900
+              dark:bg-white/5 dark:border-white/10 dark:text-white"
+            >
+              <span className="truncate">
+                {selectedCompany === 'all'
+                  ? 'Assistente'
+                  : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
+              </span>
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+          </div>
+
         </div>
 
         {loading ? (

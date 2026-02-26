@@ -73,7 +73,13 @@ const CONFIGURABLE_FUNCTIONS = [
   'link_pagamento',
   'nfc_credito',
   'nfc_debito',
-  'sequencia_videos'
+  'sequencia_videos',
+  'criar_lembrete',
+  'cronometro',
+  'temporizador',
+  'relogio_mundial',
+  'alarme'
+
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

@@ -1,22 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, X, Calendar as CalendarIcon, Clock, FileText, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, X, Calendar as CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import ptBrLocale from '@fullcalendar/core/locales/pt-br';
-
-type EventStep = 'select_date' | 'enter_details' | 'confirmation';
 
 interface CreateEventModalProps {
   data: {
     companyId: string;
-    initialView: 'month' | 'week' | 'day';
-    transcript?: string;
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
@@ -27,25 +18,17 @@ export default function CreateEventModal({
   onClose,
   theme = 'dark',
 }: CreateEventModalProps) {
-  const { companyId, initialView, transcript } = data;
+  const { companyId } = data;
   
-  const [step, setStep] = useState<EventStep>('select_date');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState('');
   const [eventTitle, setEventTitle] = useState('');
-  const [eventDescription, setEventDescription] = useState('');
   const [duration, setDuration] = useState('60'); // minutos
   const [isCreating, setIsCreating] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
-  const [currentView, setCurrentView] = useState(initialView);
-  const [currentTitle, setCurrentTitle] = useState('');
   
-  const calendarRef = useRef<FullCalendar>(null);
   const supabase = createClient();
   const isDark = theme === 'dark';
-
-  // Detectar mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   useEffect(() => {
     if (toast) {
@@ -56,11 +39,6 @@ export default function CreateEventModal({
 
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });
-  };
-
-  const handleDateClick = (info: any) => {
-    setSelectedDate(new Date(info.dateStr));
-    setStep('enter_details');
   };
 
   const handleCreateEvent = async () => {
@@ -85,7 +63,7 @@ export default function CreateEventModal({
         body: {
           company_id: companyId,
           summary: eventTitle,
-          description: eventDescription,
+          description: '',
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
         },
@@ -108,36 +86,22 @@ export default function CreateEventModal({
     }
   };
 
-  const handleNav = (action: 'prev' | 'next' | 'today') => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi[action]();
-      setCurrentTitle(calendarApi.view.title);
-    }
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = new Date(e.target.value + 'T00:00:00');
+    setSelectedDate(newDate);
   };
 
-  const handleViewChange = (view: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay') => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi.changeView(view);
-      setCurrentTitle(calendarApi.view.title);
-      
-      if (view === 'dayGridMonth') setCurrentView('month');
-      else if (view === 'timeGridWeek') setCurrentView('week');
-      else setCurrentView('day');
-    }
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const bg = isDark ? 'bg-slate-900' : 'bg-white';
   const border = isDark ? 'border-slate-700' : 'border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
-
-  const getViewString = () => {
-    if (currentView === 'month') return 'dayGridMonth';
-    if (currentView === 'week') return 'timeGridWeek';
-    return 'timeGridDay';
-  };
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -157,8 +121,8 @@ export default function CreateEventModal({
 
       {/* Modal */}
       <div
-        className={`relative w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
-          animate-in zoom-in-95 duration-300 max-h-[92vh] flex flex-col`}
+        className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
+          animate-in zoom-in-95 duration-300 flex flex-col`}
       >
         {/* Header */}
         <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-green-950/40' : 'bg-green-50'} flex-shrink-0`}>
@@ -172,9 +136,7 @@ export default function CreateEventModal({
                   Marcar Evento
                 </h2>
                 <p className={`text-sm ${textMuted}`}>
-                  {step === 'select_date' && 'Passo 1: Selecione a data'}
-                  {step === 'enter_details' && 'Passo 2: Detalhes do evento'}
-                  {step === 'confirmation' && 'Passo 3: Confirmação'}
+                  Preencha os dados do seu compromisso
                 </p>
               </div>
             </div>
@@ -187,286 +149,101 @@ export default function CreateEventModal({
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="h-1 bg-gray-200 dark:bg-slate-800 flex-shrink-0">
-          <div
-            className="h-full bg-green-600 transition-all duration-300"
-            style={{
-              width:
-                step === 'select_date' ? '33%' :
-                step === 'enter_details' ? '66%' :
-                '100%',
-            }}
-          />
-        </div>
-
-        {/* Content com scroll */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* Content SEM scroll */}
+        <div className="p-6 space-y-4">
           
-          {/* STEP 1: Selecionar Data */}
-          {step === 'select_date' && (
-            <div className="space-y-4">
-              {/* Controles do Calendário */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleNav('prev')}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleNav('today')}
-                    className="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"
-                  >
-                    Hoje
-                  </button>
-                  <button
-                    onClick={() => handleNav('next')}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
+          {/* Info sobre Ver Agenda */}
+          <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
+            <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center`}>
+              💡 Veja as datas disponíveis na função <strong>Ver Agenda</strong>
+            </p>
+          </div>
 
-                <div className="text-lg font-semibold capitalize">
-                  {currentTitle}
-                </div>
+          {/* Data Selecionada */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+              Data *
+            </label>
+            <input
+              type="date"
+              value={formatDateForInput(selectedDate)}
+              onChange={handleDateChange}
+              className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+            />
+            <p className={`text-xs ${textMuted} mt-1`}>
+              Data selecionada: {selectedDate.toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
+          </div>
 
-                <div className="flex gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
-                  <button
-                    onClick={() => handleViewChange('dayGridMonth')}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentView === 'month'
-                        ? 'bg-green-500 text-white'
-                        : 'hover:bg-gray-200 dark:hover:bg-white/10'
-                    }`}
-                  >
-                    Mês
-                  </button>
-                  <button
-                    onClick={() => handleViewChange('timeGridWeek')}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentView === 'week'
-                        ? 'bg-green-500 text-white'
-                        : 'hover:bg-gray-200 dark:hover:bg-white/10'
-                    }`}
-                  >
-                    Semana
-                  </button>
-                  <button
-                    onClick={() => handleViewChange('timeGridDay')}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentView === 'day'
-                        ? 'bg-green-500 text-white'
-                        : 'hover:bg-gray-200 dark:hover:bg-white/10'
-                    }`}
-                  >
-                    Dia
-                  </button>
-                </div>
-              </div>
+          {/* Horário */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+              Horário *
+            </label>
+            <input
+              type="time"
+              value={selectedTime}
+              onChange={(e) => setSelectedTime(e.target.value)}
+              className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+            />
+          </div>
 
-              {/* FullCalendar */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-white/10 overflow-hidden">
-                <FullCalendar
-                  ref={calendarRef}
-                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                  initialView={getViewString()}
-                  headerToolbar={false}
-                  locale={ptBrLocale}
-                  height={
-                    isMobile 
-                      ? 350
-                      : currentView === 'month' ? 500 : currentView === 'week' ? 450 : 400
-                  }
-                  contentHeight={
-                    isMobile 
-                      ? 300
-                      : currentView === 'month' ? 450 : currentView === 'week' ? 400 : 350
-                  }
-                  dateClick={handleDateClick}
-                  selectable={true}
-                  datesSet={(dateInfo) => {
-                    setCurrentTitle(dateInfo.view.title);
-                  }}
-                  dayMaxEvents={3}
-                  nowIndicator={true}
-                  scrollTime="08:00:00"
-                  slotMinTime="06:00:00"
-                  slotMaxTime="22:00:00"
-                  allDaySlot={true}
-                  slotDuration="00:30:00"
-                />
-              </div>
-            </div>
-          )}
+          {/* Duração */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+              Duração *
+            </label>
+            <select
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+            >
+              <option value="15">15 minutos</option>
+              <option value="30">30 minutos</option>
+              <option value="60">1 hora</option>
+              <option value="90">1h 30min</option>
+              <option value="120">2 horas</option>
+              <option value="180">3 horas</option>
+            </select>
+          </div>
 
-          {/* STEP 2: Detalhes do Evento */}
-          {step === 'enter_details' && (
-            <div className="space-y-4">
-              {/* Data Selecionada */}
-              <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
-                <p className={`text-xs ${textMuted}`}>Data selecionada:</p>
-                <p className={`text-sm font-medium ${textPrimary}`}>
-                  {selectedDate?.toLocaleDateString('pt-BR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </p>
-              </div>
+          {/* Nome */}
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+              Nome *
+            </label>
+            <input
+              type="text"
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              placeholder="Ex: Reunião com cliente"
+              className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
+            />
+          </div>
 
-              {/* Horário */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Horário *
-                </label>
-                <input
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                />
-              </div>
-
-              {/* Duração */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Duração
-                </label>
-                <select
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                >
-                  <option value="15">15 minutos</option>
-                  <option value="30">30 minutos</option>
-                  <option value="60">1 hora</option>
-                  <option value="90">1h 30min</option>
-                  <option value="120">2 horas</option>
-                  <option value="180">3 horas</option>
-                </select>
-              </div>
-
-              {/* Título */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Título do Evento *
-                </label>
-                <input
-                  type="text"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="Ex: Reunião com cliente"
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-                />
-              </div>
-
-              {/* Descrição */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Descrição (opcional)
-                </label>
-                <textarea
-                  value={eventDescription}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder="Detalhes do evento..."
-                  rows={3}
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none`}
-                />
-              </div>
-
-              {/* Botões */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setStep('select_date')}
-                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg font-medium transition"
-                >
-                  Voltar
-                </button>
-                <button
-                  onClick={() => setStep('confirmation')}
-                  disabled={!selectedTime || !eventTitle}
-                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  Revisar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Confirmação */}
-          {step === 'confirmation' && (
-            <div className="space-y-4">
-              <div className={`p-4 rounded-lg border ${border} space-y-3`}>
-                <div>
-                  <p className={`text-xs font-medium uppercase tracking-wider ${textMuted}`}>Data:</p>
-                  <p className={`text-sm font-semibold ${textPrimary}`}>
-                    {selectedDate?.toLocaleDateString('pt-BR', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </p>
-                </div>
-
-                <div className={`border-t ${border} pt-3`}>
-                  <p className={`text-xs font-medium uppercase tracking-wider ${textMuted}`}>Horário:</p>
-                  <p className={`text-sm font-semibold ${textPrimary}`}>
-                    {selectedTime} ({duration} minutos)
-                  </p>
-                </div>
-
-                <div className={`border-t ${border} pt-3`}>
-                  <p className={`text-xs font-medium uppercase tracking-wider ${textMuted}`}>Título:</p>
-                  <p className={`text-sm font-semibold ${textPrimary}`}>{eventTitle}</p>
-                </div>
-
-                {eventDescription && (
-                  <div className={`border-t ${border} pt-3`}>
-                    <p className={`text-xs font-medium uppercase tracking-wider ${textMuted}`}>Descrição:</p>
-                    <p className={`text-sm ${textPrimary}`}>{eventDescription}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className={`p-3 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
-                <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'}`}>
-                  ✅ Confirme para criar o evento no Google Calendar
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep('enter_details')}
-                  disabled={isCreating}
-                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg font-medium transition disabled:opacity-50"
-                >
-                  Voltar
-                </button>
-                <button
-                  onClick={handleCreateEvent}
-                  disabled={isCreating}
-                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Criando...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-5 h-5" />
-                      Confirmar
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Botão de Criar */}
+          <button
+            onClick={handleCreateEvent}
+            disabled={isCreating || !selectedTime || !eventTitle}
+            className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 mt-6"
+          >
+            {isCreating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Criando evento...
+              </>
+            ) : (
+              <>
+                <Check className="w-5 h-5" />
+                Criar Evento
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>,

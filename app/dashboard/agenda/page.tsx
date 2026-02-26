@@ -342,8 +342,6 @@ function AgendaPageContent() {
       </select>
     )}
   </div>
-
-</div>
             </div>
           </div>
 

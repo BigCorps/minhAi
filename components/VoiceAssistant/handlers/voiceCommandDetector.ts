@@ -265,7 +265,6 @@ const confirmarEmailTriggers = [
   'confirmar envio',
   'confirmar email',
   'confirma email',
-  'enviar email',
   'enviar agora',
   'pode enviar',
   'pode mandar',

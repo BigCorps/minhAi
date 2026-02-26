@@ -66,6 +66,21 @@ export default function SendEmailModal({
     }
   }, [toast]);
 
+  // Listener para confirmação por voz
+  useEffect(() => {
+    const handleVoiceConfirm = () => {
+      if (step === 'confirming' && !isSending && emailBody) {
+        handleSendEmail();
+      }
+    };
+
+    window.addEventListener('confirmSendEmail', handleVoiceConfirm);
+
+    return () => {
+      window.removeEventListener('confirmSendEmail', handleVoiceConfirm);
+    };
+  }, [step, isSending, emailBody]);
+
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });
   };
@@ -201,6 +216,7 @@ export default function SendEmailModal({
 
       {/* Modal */}
       <div
+        data-modal-type="send-email"
         className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
           animate-in zoom-in-95 duration-300 flex flex-col`}
       >

@@ -302,12 +302,12 @@ export default function SaldoPage() {
 
   return (
     <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Saldo e Saques</h1>
-            <p className="text-gray-600 dark:text-gray-400">Gerencie seus recebimentos e solicite transferências</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Recebimentos</h1>
+            <p className="text-gray-600 dark:text-gray-400">Gerencie seus recebimentos e solicite saque imediato</p>
             {companyBalances.length > 1 && (
               <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                 Saldo consolidado de {companyBalances.length} empresas

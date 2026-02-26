@@ -47,6 +47,21 @@ export default function CreateEventModal({
     }
   }, [toast]);
 
+  // Listener para confirmação por voz
+  useEffect(() => {
+    const handleVoiceConfirm = () => {
+      if (!isCreating && selectedTime && eventTitle) {
+        handleCreateEvent();
+      }
+    };
+
+    window.addEventListener('confirmCreateEvent', handleVoiceConfirm);
+
+    return () => {
+      window.removeEventListener('confirmCreateEvent', handleVoiceConfirm);
+    };
+  }, [isCreating, selectedTime, eventTitle]);
+
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });
   };
@@ -131,6 +146,7 @@ export default function CreateEventModal({
 
       {/* Modal */}
       <div
+        data-modal-type="create-event"
         className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
           animate-in zoom-in-95 duration-300 flex flex-col`}
       >

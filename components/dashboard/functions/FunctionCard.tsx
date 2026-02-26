@@ -127,14 +127,6 @@ export default function FunctionCard({
           {fn.short_description}
         </span>
 
-        {/* Créditos */}
-        {fn.consumes_credits && (
-          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-            <CreditCard className="w-3.5 h-3.5 text-blue-500" />
-            <span className="font-medium">{fn.credits_per_use}cr</span>
-          </div>
-        )}
-
         {/* Ações: badge sistema / toggle / config */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
           {hasEditModal && onEdit && (
@@ -152,6 +144,14 @@ export default function FunctionCard({
               <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </button>
           )}
+
+        {/* Créditos */}
+        {fn.consumes_credits && (
+          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+            <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+            <span className="font-medium">{fn.credits_per_use}©️</span>
+          </div>
+        )}
 
           {isSystemFunction ? (
             <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium">

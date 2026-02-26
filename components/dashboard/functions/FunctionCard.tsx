@@ -164,13 +164,15 @@ export default function FunctionCard({
               Padrão
             </span>
           ) : (
-            <Switch
-              checked={isEnabled}
-              onCheckedChange={onToggle}
-              onClick={(e) => e.stopPropagation()} // ISSO IMPEDE O MODAL DE ABRIR
-              disabled={isUpdating}
-              aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
-            />
+
+<div onClick={(e) => e.stopPropagation()}>
+  <Switch
+    checked={isEnabled}
+    onCheckedChange={onToggle}
+    disabled={isUpdating}
+    aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
+  />
+</div>
 
           )}
         </div>
@@ -251,13 +253,14 @@ export default function FunctionCard({
           )}
 
           {!isSystemFunction && (
-            <Switch
-              checked={isEnabled}
-              onCheckedChange={onToggle}
-              onClick={(e) => e.stopPropagation()} // ISSO IMPEDE O MODAL DE ABRIR
-              disabled={isUpdating}
-              aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
-            />
+<div onClick={(e) => e.stopPropagation()}>
+  <Switch
+    checked={isEnabled}
+    onCheckedChange={onToggle}
+    disabled={isUpdating}
+    aria-label={isEnabled ? 'Desativar função' : 'Ativar função'}
+  />
+</div>
 
           )}
 

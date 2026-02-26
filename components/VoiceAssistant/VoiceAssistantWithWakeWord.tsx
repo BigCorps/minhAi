@@ -464,209 +464,29 @@ export function VoiceAssistantWithWakeWord({
           break;
 
 case 'agendar_compromisso':
-  const transcriptText = commandResult.transcript?.toLowerCase() || '';
-  
-  // Objeto para armazenar os dados extraídos
-  const extractedData: {
-    date?: Date;
-    time?: string;
-    name?: string;
-  } = {};
-  
-  // ==================== EXTRAIR DATA ====================
-  // Detectar "hoje", "amanhã", dias da semana, ou data específica
-  const today = new Date();
-  
-  if (transcriptText.includes('hoje')) {
-    extractedData.date = new Date(today);
-  } else if (transcriptText.includes('amanhã') || transcriptText.includes('amanha')) {
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    extractedData.date = tomorrow;
-  } else {
-    // Detectar dias da semana
-    const diasSemana = {
-      'segunda': 1, 'segunda-feira': 1, 'segunda feira': 1,
-      'terça': 2, 'terca': 2, 'terça-feira': 2, 'terca-feira': 2,
-      'quarta': 3, 'quarta-feira': 3, 'quarta feira': 3,
-      'quinta': 4, 'quinta-feira': 4, 'quinta feira': 4,
-      'sexta': 5, 'sexta-feira': 5, 'sexta feira': 5,
-      'sábado': 6, 'sabado': 6,
-      'domingo': 0
-    };
-    
-    for (const [dia, numero] of Object.entries(diasSemana)) {
-      if (transcriptText.includes(dia)) {
-        const targetDate = new Date(today);
-        const currentDay = today.getDay();
-        let daysToAdd = numero - currentDay;
-        if (daysToAdd <= 0) daysToAdd += 7; // Próxima semana se já passou
-        targetDate.setDate(today.getDate() + daysToAdd);
-        extractedData.date = targetDate;
-        break;
-      }
-    }
-    
-    // Detectar data no formato "dia X" ou "X de [mês]"
-    const diaMatch = transcriptText.match(/dia (\d{1,2})/);
-    if (diaMatch) {
-      const dia = parseInt(diaMatch[1]);
-      const dataTemp = new Date(today.getFullYear(), today.getMonth(), dia);
-      // Se o dia já passou neste mês, assume o próximo mês
-      if (dataTemp < today) {
-        dataTemp.setMonth(dataTemp.getMonth() + 1);
-      }
-      extractedData.date = dataTemp;
-    }
-    
-    // Detectar mês específico
-    const meses = {
-      'janeiro': 0, 'fevereiro': 1, 'março': 2, 'marco': 2,
-      'abril': 3, 'maio': 4, 'junho': 5,
-      'julho': 6, 'agosto': 7, 'setembro': 8,
-      'outubro': 9, 'novembro': 10, 'dezembro': 11
-    };
-    
-    for (const [mes, numero] of Object.entries(meses)) {
-      if (transcriptText.includes(mes)) {
-        if (extractedData.date) {
-          extractedData.date.setMonth(numero);
-        } else {
-          extractedData.date = new Date(today.getFullYear(), numero, 1);
-        }
-        break;
-      }
-    }
-  }
-  
-  // ==================== EXTRAIR HORÁRIO ====================
-  // Detectar formatos: "15h", "15:30", "3 da tarde", "meio dia"
-  const horaMatch = transcriptText.match(/(\d{1,2})[h:](\d{2})?/);
-  if (horaMatch) {
-    const hora = horaMatch[1].padStart(2, '0');
-    const minuto = horaMatch[2] ? horaMatch[2] : '00';
-    extractedData.time = `${hora}:${minuto}`;
-  } else {
-    // Detectar horários por extenso
-    if (transcriptText.includes('meio dia') || transcriptText.includes('meio-dia')) {
-      extractedData.time = '12:00';
-    } else if (transcriptText.includes('meia noite') || transcriptText.includes('meia-noite')) {
-      extractedData.time = '00:00';
-    }
-    
-    // Detectar "manhã", "tarde", "noite"
-    const horaTexto = transcriptText.match(/(\d{1,2})\s+(da\s+)?(manhã|manha|tarde|noite)/);
-    if (horaTexto) {
-      let hora = parseInt(horaTexto[1]);
-      const periodo = horaTexto[3];
-      
-      if (periodo.includes('tarde') && hora < 12) {
-        hora += 12;
-      } else if (periodo.includes('noite') && hora < 12) {
-        hora += 12;
-      }
-      
-      extractedData.time = `${hora.toString().padStart(2, '0')}:00`;
-    }
-  }
-  
-  // ==================== EXTRAIR NOME/TÍTULO ====================
-  // Detectar padrões: "chamado [nome]", "com [nome]", "reunião [nome]"
-  const nomePatterns = [
-    /chamado\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
-    /chamada\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
-    /reunião\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
-    /reuniao\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
-    /com\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i,
-    /compromisso\s+(.+?)(?:\s+às|\s+as|\s+no|\s+na|\s+dia|$)/i
-  ];
-  
-  for (const pattern of nomePatterns) {
-    const match = transcriptText.match(pattern);
-    if (match && match[1]) {
-      extractedData.name = match[1].trim();
-      break;
-    }
-  }
-  
-  // ==================== DECIDIR QUAL MODAL ABRIR ====================
-  const hasAllRequiredData = extractedData.date && extractedData.time && extractedData.name;
-  
-  if (hasAllRequiredData) {
-    // ✅ Tem todas as informações - vai direto para confirmação
-    setActiveModal({ 
-      type: 'CreateEventModal', 
-      data: { 
-        companyId,
-        prefilledData: {
-          date: extractedData.date,
-          time: extractedData.time,
-          name: extractedData.name
-        }
-      } 
-    });
-    
-    playText('Verifique os dados e confirme para criar o evento.').catch(() => {});
-  } else {
-    // ⚠️ Falta informação - abre modal para preenchimento
-    setActiveModal({ 
-      type: 'CreateEventModal', 
-      data: { 
-        companyId,
-        prefilledData: extractedData // Passa o que foi detectado
-      } 
-    });
-    
-    playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.').catch(() => {});
-  }
+  // ✅ Abre modal de criar evento no calendário
+  // Quando vem do botão, não há transcript para extrair dados
+  setActiveModal({ 
+    type: 'CreateEventModal', 
+    data: { 
+      companyId,
+      prefilledData: {} // Vazio quando vem do botão
+    } 
+  });
+  playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.').catch(() => {});
   break;
 
 case 'ver_agenda':
-  // Detectar qual visualização o usuário pediu
-  let initialView: 'month' | 'week' | 'day' = 'month'; // padrão
-  const transcript = commandResult.transcript?.toLowerCase() || '';
-  
-  // Detectar menções a "dia" ou "hoje"
-  if (
-    transcript.includes('dia') || 
-    transcript.includes('hoje') ||
-    transcript.includes('diária') ||
-    transcript.includes('diario')
-  ) {
-    initialView = 'day';
-  }
-  // Detectar menções a "semana"
-  else if (
-    transcript.includes('semana') ||
-    transcript.includes('semanal')
-  ) {
-    initialView = 'week';
-  }
-  // Detectar menções a "mês" (opcional, já é o padrão)
-  else if (
-    transcript.includes('mês') ||
-    transcript.includes('mes') ||
-    transcript.includes('mensal')
-  ) {
-    initialView = 'month';
-  }
-  
-  // ✅ Abre modal de visualizar agenda com a view detectada
+  // ✅ Abre modal de visualizar agenda
+  // Quando vem do botão, abre padrão no mês
   setActiveModal({ 
     type: 'ViewAgendaModal', 
     data: { 
       companyId,
-      initialView
+      initialView: 'month' // padrão quando vem do botão
     } 
   });
-  
-  // Mensagem de feedback dinâmica
-  const viewText = 
-    initialView === 'day' ? 'visualização diária' :
-    initialView === 'week' ? 'visualização semanal' :
-    'visualização mensal';
-  
-  playText(`Abrindo o calendário em ${viewText}.`).catch(() => {});
+  playText('Abrindo o calendário.').catch(() => {});
   break;
 
 case 'link_pagamento':

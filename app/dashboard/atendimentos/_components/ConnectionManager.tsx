@@ -3,14 +3,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import {
   Loader2, AlertCircle, Instagram, Facebook, CheckCircle, Trash2,
-  Phone, Share2, X, Bot, Save, ChevronDown, ChevronUp,
+  Phone, X, Bot, Save, ChevronDown, ChevronUp,
   MessageSquare, CreditCard, Zap, Building2, MapPin, Calculator,
-  AtSign, Globe, Mail, Smartphone, MessageCircle, Hash,
+  AtSign, Mail, MessageCircle, Hash,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
@@ -28,23 +27,19 @@ type MetaConnection = {
   whatsapp_number: string | null;
   agent_enabled: boolean;
   agent_prompt: string | null;
-  // Modo prompt
   prompt_enabled: boolean;
   greeting_message: string | null;
-  // Funções
   faq_enabled: boolean;
   pix_enabled: boolean;
   contacts_enabled: boolean;
   nossa_marca_enabled: boolean;
   endereco_enabled: boolean;
   orcamento_enabled: boolean;
-  // Comentários
   comments_enabled: boolean;
   comments_mode: 'all' | 'keyword';
   comments_keywords: string | null;
   comments_reply_text: string | null;
   comments_dm_text: string | null;
-  // Créditos
   credits_per_reply_facebook: number;
   credits_per_reply_instagram: number;
   credits_per_reply_whatsapp: number;
@@ -126,7 +121,6 @@ function FunctionsPanel({
 
       {isOpen && (
         <div className="mt-3 space-y-2">
-
           <FunctionToggle
             icon={<MessageSquare className="h-4 w-4 text-blue-500" />}
             label="Perguntas Frequentes (FAQ)"
@@ -136,7 +130,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('faq_enabled', v)}
             disabled={saving === 'faq_enabled'}
           />
-
           <FunctionToggle
             icon={<Building2 className="h-4 w-4 text-cyan-500" />}
             label="Nossa Marca"
@@ -146,7 +139,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('nossa_marca_enabled', v)}
             disabled={saving === 'nossa_marca_enabled'}
           />
-
           <FunctionToggle
             icon={<MapPin className="h-4 w-4 text-purple-500" />}
             label="Endereço"
@@ -156,7 +148,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('endereco_enabled', v)}
             disabled={saving === 'endereco_enabled'}
           />
-
           <FunctionToggle
             icon={<AtSign className="h-4 w-4 text-green-500" />}
             label="Contatos (WhatsApp, Instagram, email...)"
@@ -166,7 +157,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('contacts_enabled', v)}
             disabled={saving === 'contacts_enabled'}
           />
-
           <FunctionToggle
             icon={<Calculator className="h-4 w-4 text-blue-600" />}
             label="Criar Orçamento"
@@ -176,7 +166,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('orcamento_enabled', v)}
             disabled={saving === 'orcamento_enabled'}
           />
-
           <FunctionToggle
             icon={<CreditCard className="h-4 w-4 text-green-500" />}
             label="PIX — Geração e Confirmação"
@@ -186,7 +175,6 @@ function FunctionsPanel({
             onChange={(v) => toggle('pix_enabled', v)}
             disabled={saving === 'pix_enabled'}
           />
-
           <FunctionToggle
             icon={<Bot className="h-4 w-4 text-purple-500" />}
             label="Respostas via IA (Prompt)"
@@ -196,19 +184,16 @@ function FunctionsPanel({
             onChange={(v) => toggle('prompt_enabled', v)}
             disabled={saving === 'prompt_enabled'}
           />
-
-          {/* Mensagem de saudação — só quando prompt desativado */}
           {!connection.prompt_enabled && (
             <GreetingConfig connection={connection} onSave={onSave} />
           )}
-
         </div>
       )}
     </div>
   );
 }
 
-// ─── Configuração de saudação (modo só-funções) ───────────────────────────
+// ─── Configuração de saudação ─────────────────────────────────────────────
 function GreetingConfig({
   connection, onSave,
 }: {
@@ -287,8 +272,6 @@ function CommentsPanel({
 
       {isOpen && (
         <div className="mt-3 space-y-4">
-
-          {/* Toggle principal */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border">
             <div>
               <p className="text-sm font-medium">Ativar para Facebook e Instagram</p>
@@ -299,7 +282,6 @@ function CommentsPanel({
 
           {enabled && (
             <>
-              {/* Modo */}
               <div className="space-y-2">
                 <p className="text-sm font-medium">Quando responder</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -321,7 +303,6 @@ function CommentsPanel({
                 </div>
               </div>
 
-              {/* Palavras-chave */}
               {mode === 'keyword' && (
                 <div className="space-y-1.5">
                   <p className="text-sm font-medium">Palavras-chave</p>
@@ -338,7 +319,6 @@ function CommentsPanel({
                 </div>
               )}
 
-              {/* Reply público */}
               <div className="space-y-1.5">
                 <p className="text-sm font-medium">Reply no comentário (público)</p>
                 <textarea
@@ -353,7 +333,6 @@ function CommentsPanel({
                 <p className="text-xs text-muted-foreground">Resposta pública visível a todos. Deixe vazio para não responder no comentário.</p>
               </div>
 
-              {/* DM automático */}
               <div className="space-y-1.5">
                 <p className="text-sm font-medium">Mensagem no Direct (privado)</p>
                 <textarea
@@ -370,7 +349,6 @@ function CommentsPanel({
                 </p>
               </div>
 
-              {/* Preview */}
               {(replyText || dmText) && (
                 <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview do fluxo</p>
@@ -472,7 +450,7 @@ function AgentConfigPanel({
           />
           {!useCustom && (
             <p className="text-xs text-muted-foreground">
-              Para editar, ative o prompt personalizado acima ou edite na função Perguntas Gerais.
+              Para editar, ative o prompt personalizado acima ou edite na{' '}
               <a href="/dashboard/faqs" className="underline hover:text-foreground">Perguntas/Respostas</a>.
             </p>
           )}
@@ -488,10 +466,15 @@ function AgentConfigPanel({
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────
-export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: string) => void } = {}) {
+export function ConnectionManager({
+  selectedCompanyId,
+  onCompanyChange,
+}: {
+  selectedCompanyId: string;
+  onCompanyChange?: (id: string) => void;
+}) {
   const supabase = createClient();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [connections, setConnections] = useState<MetaConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -507,13 +490,14 @@ export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: 
   }
   function dismissNotif(id: number) { setNotifications((prev) => prev.filter((n) => n.id !== id)); }
 
+  // Carrega companies para ter acesso ao system_prompt
   useEffect(() => {
     async function loadCompanies() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase.from('companies').select('id, name, system_prompt')
         .eq('user_id', user.id).eq('is_active', true).order('name');
-      if (data && data.length > 0) { setCompanies(data); setSelectedCompanyId(data[0].id); onCompanyChange?.(data[0].id); }
+      if (data) setCompanies(data);
     }
     loadCompanies();
   }, []);
@@ -573,18 +557,18 @@ export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: 
       const state = `${user.id}:${selectedCompanyId}:${crypto.randomUUID().substring(0, 8)}`;
       const redirectUri = `${window.location.origin}/auth/callback/facebook`;
       const scopes = [
-  'pages_show_list',
-  'pages_read_engagement',
-  'pages_manage_engagement',
-  'pages_manage_metadata',
-  'pages_messaging',
-  'pages_manage_posts',            // ← novo: responder comentários FB
-  'instagram_basic',
-  'instagram_manage_messages',
-  'instagram_manage_comments',     // ← novo: responder comentários IG
-  'whatsapp_business_management',
-  'whatsapp_business_messaging',
-].join(',');
+        'pages_show_list',
+        'pages_read_engagement',
+        'pages_manage_engagement',
+        'pages_manage_metadata',
+        'pages_messaging',
+        'pages_manage_posts',
+        'instagram_basic',
+        'instagram_manage_messages',
+        'instagram_manage_comments',
+        'whatsapp_business_management',
+        'whatsapp_business_messaging',
+      ].join(',');
       const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}&scope=${encodeURIComponent(scopes)}&response_type=code`;
       await openOAuthWindow(oauthUrl);
       notify('Conta Meta conectada! As conexões aparecerão em instantes.', 'success');
@@ -652,132 +636,108 @@ export function ConnectionManager({ onCompanyChange }: { onCompanyChange?: (id: 
   return (
     <>
       <Notifications items={notifications} onDismiss={dismissNotif} />
-      <div className="space-y-6">
 
-        {/* Seletor de assistente */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5 text-blue-500" />
-              Selecione seu Assistente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Select value={selectedCompanyId} onValueChange={(v) => { setSelectedCompanyId(v); onCompanyChange?.(v); }}>
-                <SelectTrigger className="w-full max-w-xs">
-                  <SelectValue placeholder="Selecione um assistente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Configure as funções que o agente pode executar em cada conexão.
-              </p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Facebook className="h-5 w-5 text-blue-600" />
+            Conexões Meta
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading && connections.length === 0 ? (
+            <div className="flex flex-col items-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+              <p className="text-sm text-muted-foreground">Carregando conexões...</p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Conexões */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Facebook className="h-5 w-5 text-blue-600" />
-              Conexões Meta
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading && connections.length === 0 ? (
-              <div className="flex flex-col items-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-                <p className="text-sm text-muted-foreground">Carregando conexões...</p>
+          ) : error && connections.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+              <p className="text-sm text-red-500 mb-4">{error}</p>
+              <Button variant="outline" onClick={() => fetchConnections()}>Tentar Novamente</Button>
+            </div>
+          ) : connections.length === 0 ? (
+            <div className="text-center py-10">
+              <div className="bg-muted/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
+                <Facebook className="h-10 w-10 text-primary" />
               </div>
-            ) : error && connections.length === 0 ? (
-              <div className="text-center py-8">
-                <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-                <p className="text-sm text-red-500 mb-4">{error}</p>
-                <Button variant="outline" onClick={() => fetchConnections()}>Tentar Novamente</Button>
-              </div>
-            ) : connections.length === 0 ? (
-              <div className="text-center py-10">
-                <div className="bg-muted/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
-                  <Facebook className="h-10 w-10 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Nenhuma conta conectada</h3>
-                <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
-                  Conecte sua conta do Facebook para ativar o agente no Instagram, WhatsApp e Messenger.
+              <h3 className="font-semibold text-lg mb-2">Nenhuma conta conectada</h3>
+              <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
+                Conecte sua conta do Facebook para ativar o agente no Instagram, WhatsApp e Messenger.
+              </p>
+              <Button onClick={handleConnect} size="lg" disabled={isConnecting || !selectedCompanyId}>
+                {isConnecting
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Abrindo...</>
+                  : <><Facebook className="mr-2 h-5 w-5" />Conectar Conta Meta</>}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {connections.length} {connections.length === 1 ? 'conexão ativa' : 'conexões ativas'}
                 </p>
-                <Button onClick={handleConnect} size="lg" disabled={isConnecting || !selectedCompanyId}>
-                  {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Abrindo...</> : <><Facebook className="mr-2 h-5 w-5" />Conectar Conta Meta</>}
+                <Button variant="outline" onClick={handleConnect} disabled={isConnecting || !selectedCompanyId} className="w-full sm:w-auto">
+                  {isConnecting
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Conectando...</>
+                    : <><Facebook className="mr-2 h-4 w-4" />Conectar Nova Conta</>}
                 </Button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
-                    {connections.length} {connections.length === 1 ? 'conexão ativa' : 'conexões ativas'}
-                  </p>
-                  <Button variant="outline" onClick={handleConnect} disabled={isConnecting || !selectedCompanyId}>
-                    {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Conectando...</> : <><Facebook className="mr-2 h-4 w-4" />Conectar Nova Conta</>}
-                  </Button>
-                </div>
 
-                {connections.map((conn) => (
-                  <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Facebook className="h-4 w-4 text-blue-600" />
-                            <p className="font-bold">{conn.page_name}</p>
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          </div>
-                          {conn.instagram_username && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Instagram className="h-4 w-4 text-pink-600" />
-                              <span>@{conn.instagram_username}</span>
-                            </div>
-                          )}
-                          {conn.whatsapp_number && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Phone className="h-4 w-4 text-green-600" />
-                              <span>{conn.whatsapp_number}</span>
-                            </div>
-                          )}
-                          <p className="text-xs text-muted-foreground pt-1">
-                            Configure e acompanhe as conversas das contas do Facebook · Instagram · WhatsApp diretamente no Business Suite do Grupo Meta
-                          </p>
+              {connections.map((conn) => (
+                <Card key={conn.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Facebook className="h-4 w-4 text-blue-600 shrink-0" />
+                          <p className="font-bold">{conn.page_name}</p>
+                          <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                         </div>
-                        <div className="flex flex-col gap-3 items-end">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">Respostas automáticas</span>
-                            <Switch checked={conn.agent_enabled} onCheckedChange={(v) => handleToggleAgent(conn.id, v)} />
-                            <span className={`text-xs font-medium ${conn.agent_enabled ? 'text-green-500' : 'text-gray-400'}`}>
-                              {conn.agent_enabled ? 'Ativas' : 'Pausadas'}
-                            </span>
+                        {conn.instagram_username && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Instagram className="h-4 w-4 text-pink-600 shrink-0" />
+                            <span>@{conn.instagram_username}</span>
                           </div>
-                          <Button variant="destructive" size="sm" onClick={() => handleDisconnect(conn.id)}>
-                            <Trash2 className="mr-1 h-4 w-4" />Remover
-                          </Button>
-                        </div>
+                        )}
+                        {conn.whatsapp_number && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Phone className="h-4 w-4 text-green-600 shrink-0" />
+                            <span>{conn.whatsapp_number}</span>
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground pt-1">
+                          Configure e acompanhe as conversas das contas do Facebook · Instagram · WhatsApp diretamente no Business Suite do Grupo Meta
+                        </p>
                       </div>
+                      <div className="flex flex-row sm:flex-col gap-3 items-center sm:items-end w-full sm:w-auto">
+                        <div className="flex items-center gap-2 flex-1 sm:flex-none">
+                          <span className="text-sm font-medium whitespace-nowrap">Respostas automáticas</span>
+                          <Switch checked={conn.agent_enabled} onCheckedChange={(v) => handleToggleAgent(conn.id, v)} />
+                          <span className={`text-xs font-medium ${conn.agent_enabled ? 'text-green-500' : 'text-gray-400'}`}>
+                            {conn.agent_enabled ? 'Ativas' : 'Pausadas'}
+                          </span>
+                        </div>
+                        <Button variant="destructive" size="sm" onClick={() => handleDisconnect(conn.id)} className="shrink-0">
+                          <Trash2 className="mr-1 h-4 w-4" />Remover
+                        </Button>
+                      </div>
+                    </div>
 
-                      <FunctionsPanel connection={conn} onSave={(u) => handleSaveConnection(conn.id, u)} />
-                      <CommentsPanel connection={conn} onSave={(u) => handleSaveConnection(conn.id, u)} />
-                      <AgentConfigPanel
-                        connection={conn}
-                        companySystemPrompt={selectedCompany?.system_prompt || null}
-                        onSave={(u) => handleSaveConnection(conn.id, u)}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    <FunctionsPanel connection={conn} onSave={(u) => handleSaveConnection(conn.id, u)} />
+                    <CommentsPanel connection={conn} onSave={(u) => handleSaveConnection(conn.id, u)} />
+                    <AgentConfigPanel
+                      connection={conn}
+                      companySystemPrompt={selectedCompany?.system_prompt || null}
+                      onSave={(u) => handleSaveConnection(conn.id, u)}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }

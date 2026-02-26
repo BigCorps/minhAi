@@ -165,7 +165,7 @@ export default function CreateEventModal({
           {/* Info sobre Ver Agenda */}
           <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
             <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center`}>
-              💡 Veja as datas disponíveis na função <strong>Ver Agenda</strong>
+              Veja as datas disponíveis na função <strong>Ver Agenda</strong>
             </p>
           </div>
 

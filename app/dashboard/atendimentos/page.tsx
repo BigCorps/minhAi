@@ -40,7 +40,7 @@ export default function AtendimentosPage() {
   return (
     <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-5xl mx-auto">
 
           {/* Header */}
           <div className="mb-8">
@@ -53,22 +53,7 @@ export default function AtendimentosPage() {
                   Configure seus assistentes ao WhatsApp, Instagram e Facebook.
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0 mt-1">
-                {/* Seletor de Assistente */}
-                {companies.length > 0 && (
-                  <select
-                    value={selectedCompanyId}
-                    onChange={(e) => setSelectedCompanyId(e.target.value)}
-                    className="px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  >
-                    <option value="">Selecione um assistente...</option>
-                    {companies.map(company => (
-                      <option key={company.id} value={company.id}>
-                        {company.name}{company.wake_word ? ` (${company.wake_word})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
+              <div className="flex flex-col items-end gap-2 shrink-0">
                 <button
                   onClick={() => setShowHelp(true)}
                   className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border border-gray-300 dark:border-white/10 rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-white/5"
@@ -76,6 +61,21 @@ export default function AtendimentosPage() {
                   <HelpCircle className="w-4 h-4" />
                   Ajuda
                 </button>
+                {/* Seletor de Assistente */}
+                {companies.length > 0 && (
+                  <select
+                    value={selectedCompanyId}
+                    onChange={(e) => setSelectedCompanyId(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    <option value="">Selecione um assistente...</option>
+                    {companies.map(company => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           </div>

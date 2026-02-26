@@ -210,7 +210,8 @@ export default function FunctionCard({
         <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           {fn.consumes_credits && (
             <>
-              <CreditCard className="w-4 h-4 text-blue-500" />
+              {/* Ícone trocado pelo emoji */}
+              <span className="text-base leading-none">©️</span>
               <span className="font-medium">
                 {fn.credits_per_use} crédito{fn.credits_per_use !== 1 ? 's' : ''}
               </span>

@@ -23,6 +23,21 @@ interface LogEntry {
   realAssistantMessage?: string;
 }
 
+// ─── Timezone ────────────────────────────────────────────────────────────────
+// O banco armazena UTC (correto). Sempre exibir convertido para Brasília.
+const BRT = 'America/Sao_Paulo';
+
+function formatBRT(dateStr: string): string {
+  return new Date(dateStr).toLocaleString('pt-BR', {
+    timeZone: BRT,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 // Funções que mostram conversa real (buscam da tabela messages)
 const DIALOGUE_FUNCTIONS = ['chatgpt', 'orcamento', 'faq'];
 
@@ -472,7 +487,7 @@ export default function HistoricoPage() {
                           </span>
                         )}
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(log.executed_at).toLocaleString('pt-BR')}
+                          {formatBRT(log.executed_at)}
                         </span>
                       </div>
                       <button

@@ -257,29 +257,21 @@ const handleViewChange = (view: 'month' | 'week' | 'day') => {
       </div>
     );
 
-    return (
-      <div className="h-full flex flex-col">
-        {/* Header da Data */}
-        <div className={`text-center py-3 border-b ${border} flex-shrink-0`}>
-          <p className={`text-sm ${textMuted} uppercase tracking-wide`}>
-            {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header da Data - REMOVIDO */}
+      
+      {/* Eventos de Dia Inteiro */}
+      {allDay.length > 0 && (
+        <div className={`px-4 py-3 border-b ${border} flex-shrink-0`}>
+          <p className={`text-xs font-medium uppercase tracking-wider ${textMuted} mb-2`}>
+            Dia Inteiro
           </p>
-          <p className={`text-2xl font-bold ${textPrimary} mt-1`}>
-            {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-          </p>
-        </div>
-
-        {/* Eventos de Dia Inteiro */}
-        {allDay.length > 0 && (
-          <div className={`px-4 py-2 border-b ${border} flex-shrink-0`}>
-            <p className={`text-xs font-medium uppercase tracking-wider ${textMuted} mb-2`}>
-              Dia Inteiro
-            </p>
-            <div className="space-y-1">
-              {allDay.map(event => <EventCard key={event.id} event={event} />)}
-            </div>
+          <div className="space-y-1">
+            {allDay.map(event => <EventCard key={event.id} event={event} />)}
           </div>
-        )}
+        </div>
+      )}
 
         {/* Grid de Períodos */}
         <div className="flex-1 grid grid-cols-3 gap-3 p-4 min-h-0">

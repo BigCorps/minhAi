@@ -197,30 +197,6 @@ export async function detectVoiceCommand(
     return true;
   }
 
-// ── EMAIL: Confirmar envio ────────────────────────────────
-const confirmarEmailTriggers = [
-  'confirmar envio',
-  'confirmar email',
-  'enviar email',
-  'pode enviar',
-  'envia'
-];
-
-if (confirmarEmailTriggers.some(t => lowerTranscript.includes(t))) {
-  console.log('✅ Comando: Confirmar Email detectado!');
-  
-  const emailModal = document.querySelector('[data-modal-type="send-email"]');
-  
-  if (emailModal) {
-    window.dispatchEvent(new CustomEvent('confirmSendEmail'));
-    await playText('Enviando email...');
-    return true;
-  } else {
-    await playText('Não há nenhum email aguardando confirmação.');
-    return true;
-  }
-}
-
 // ── AGENDA/CALENDÁRIO: Confirmar evento ────────────────────
 const confirmarEventoTriggers = [
   'confirmar marcação',
@@ -228,30 +204,114 @@ const confirmarEventoTriggers = [
   'confirmar evento',
   'confirmar compromisso',
   'confirmar reunião',
+  'confirma reunião',
+  'confirma evento',
+  'confirma marcação',
   'está correto',
   'tá correto',
+  'está certo',
+  'tá certo',
   'confirma',
+  'confirmar',
   'pode marcar',
-  'marcar esse'
+  'marcar esse',
+  'marque esse',
+  'agendar esse',
+  'agende',
+  'pode agendar',
+  'sim confirmar',
+  'sim pode marcar',
+  'correto pode marcar',
+  'ok marcar',
+  'ok confirmar'
 ];
 
 if (confirmarEventoTriggers.some(t => lowerTranscript.includes(t))) {
   console.log('✅ Comando: Confirmar Evento detectado!');
   
-  // Procurar modal aberto de CreateEvent
-  const createEventModal = document.querySelector('[data-modal-type="create-event"]');
+  // Procurar modal aberto de CreateEvent usando múltiplas formas
+  const createEventModal = 
+    document.querySelector('[data-modal-type="create-event"]') ||
+    document.querySelector('[data-modal="create-event"]') ||
+    // Fallback: procurar por classe ou estrutura do modal
+    Array.from(document.querySelectorAll('[class*="CreateEvent"]')).find(
+      el => el.getAttribute('role') === 'dialog' || el.classList.contains('modal')
+    );
   
   if (createEventModal) {
-    // Disparar evento customizado para o modal confirmar
-    window.dispatchEvent(new CustomEvent('confirmCreateEvent'));
-    await playText('Confirmado! Criando o evento...');
+    console.log('🎯 Modal de evento encontrado - disparando confirmação');
+    
+    // Disparar evento com mais detalhes para debug
+    const event = new CustomEvent('confirmCreateEvent', {
+      detail: { 
+        timestamp: Date.now(),
+        trigger: 'voice',
+        transcript: lowerTranscript 
+      }
+    });
+    window.dispatchEvent(event);
+    
+    await playText('Confirmado! Criando o evento no calendário...');
     return true;
   } else {
+    console.log('⚠️ Nenhum modal de evento aberto');
     await playText('Não há nenhum evento aguardando confirmação.');
     return true;
   }
 }
 
+// ── EMAIL: Confirmar envio ────────────────────────────────
+const confirmarEmailTriggers = [
+  'confirmar envio',
+  'confirmar email',
+  'confirma email',
+  'enviar email',
+  'enviar agora',
+  'pode enviar',
+  'pode mandar',
+  'envia',
+  'manda',
+  'enviar esse',
+  'mandar esse',
+  'sim enviar',
+  'sim pode enviar',
+  'ok enviar',
+  'ok mandar',
+  'confirma envio',
+  'confirmar esse email'
+];
+
+if (confirmarEmailTriggers.some(t => lowerTranscript.includes(t))) {
+  console.log('✅ Comando: Confirmar Email detectado!');
+  
+  // Procurar modal aberto de SendEmail
+  const emailModal = 
+    document.querySelector('[data-modal-type="send-email"]') ||
+    document.querySelector('[data-modal="send-email"]') ||
+    Array.from(document.querySelectorAll('[class*="SendEmail"]')).find(
+      el => el.getAttribute('role') === 'dialog' || el.classList.contains('modal')
+    );
+  
+  if (emailModal) {
+    console.log('🎯 Modal de email encontrado - disparando confirmação');
+    
+    const event = new CustomEvent('confirmSendEmail', {
+      detail: { 
+        timestamp: Date.now(),
+        trigger: 'voice',
+        transcript: lowerTranscript 
+      }
+    });
+    window.dispatchEvent(event);
+    
+    await playText('Enviando email...');
+    return true;
+  } else {
+    console.log('⚠️ Nenhum modal de email aberto');
+    await playText('Não há nenhum email aguardando confirmação.');
+    return true;
+  }
+}
   // ──────────────────────────────────────────────────────────
   // ✅ PARA ADICIONAR NOVA FUNÇÃO — modelo de bloco:
   //

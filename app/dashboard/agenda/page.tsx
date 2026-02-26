@@ -312,33 +312,38 @@ function AgendaPageContent() {
 
           {/* Header */}
           <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
-              <div className="flex-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 leading-tight break-words">
-                  Agenda Google | Gmail
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Gerencie calendário e emails integrados com Google
-                </p>
-              </div>
-              
-              {/* Seletor de Assistente */}
-{companies.length > 0 && (
-  <div className="w-64 flex justify-end">
-    <select
-      value={selectedCompanyId}
-      onChange={(e) => setSelectedCompanyId(e.target.value)}
-      className="w-40 px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    >
-      <option value="">Selecione...</option>
-      {companies.map(company => (
-        <option key={company.id} value={company.id}>
-          {company.name} {company.wake_word ? `(${company.wake_word})` : ''}
-        </option>
-      ))}
-    </select>
+<div className="flex items-start justify-between gap-4 mb-6">
+  
+  {/* Lado Esquerdo */}
+  <div className="flex-1">
+    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 whitespace-nowrap">
+      Agenda Google | Gmail
+    </h1>
+
+    <p className="text-gray-600 dark:text-gray-400">
+      Gerencie calendário e emails integrados com Google
+    </p>
   </div>
-)}
+
+  {/* Lado Direito */}
+  <div className="flex flex-col items-end shrink-0">
+    {companies.length > 0 && (
+      <select
+        value={selectedCompanyId}
+        onChange={(e) => setSelectedCompanyId(e.target.value)}
+        className="w-40 px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+      >
+        <option value="">Selecione...</option>
+        {companies.map(company => (
+          <option key={company.id} value={company.id}>
+            {company.name}
+          </option>
+        ))}
+      </select>
+    )}
+  </div>
+
+</div>
             </div>
           </div>
 

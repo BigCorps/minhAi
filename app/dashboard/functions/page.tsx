@@ -134,12 +134,12 @@ function CategoryPillSelector({
     const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
     const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
     return (
-      <div className="flex flex-col gap-2 w-full">
-        <div className="grid grid-cols-3 gap-2">
+      <div className="flex flex-col gap-1 w-full"> {/* Diminuído de gap-2 para 1.5 */}
+        <div className="grid grid-cols-3 gap-1.5"> {/* Diminuído de gap-2 para 1.5 */}
           {allBtn}
           {firstRowCats}
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5"> {/* Diminuído de gap-2 para 1.5 */}
           {restCats}
         </div>
       </div>
@@ -639,10 +639,28 @@ function FunctionsPageContent() {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: sempre um card por linha */}
-                  <div className="sm:hidden space-y-2">{renderCardList('grid', true)}</div>
+                  {/* Mobile: Espaçamento reduzido entre cards */}
+                  <div className="sm:hidden flex flex-col gap-3"> {/* Trocado space-y-2 por gap-3 para consistência */}
+                    {filteredFunctions.map(fn => {
+                      const enabled = isFunctionEnabled(fn.function_key);
+                      const stats = getFunctionStats(fn.function_key);
+                      return (
+                        <FunctionCard
+                          key={fn.id}
+                          function={fn}
+                          isEnabled={enabled}
+                          stats={stats}
+                          onToggle={() => toggleFunction(fn.function_key, enabled)}
+                          onEdit={() => handleEdit(fn)}
+                          isUpdating={updating === fn.function_key}
+                          theme={theme}
+                          viewMode="grid" // No mobile usamos o layout de card
+                        />
+                      );
+                    })}
+                  </div>
 
-                  {/* Desktop: grid ou lista */}
+                  {/* Desktop: Mantém o layout original de grid/lista */}
                   <div className="hidden sm:block">
                     <div className={viewMode === 'list' ? 'space-y-2' : 'flex flex-col gap-6'}>
                       {renderCardList(viewMode)}

@@ -312,7 +312,7 @@ function AgendaPageContent() {
 
           {/* Header */}
           <div className="mb-8">
-<div className="flex items-start justify-between gap-4 mb-6">
+<div className="flex items-end justify-between gap-4 mb-6">
   
   {/* Lado Esquerdo */}
   <div className="flex-1">

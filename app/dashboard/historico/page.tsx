@@ -55,11 +55,19 @@ export default function HistoricoPage() {
   const [viewFilter, setViewFilter] = useState<'all' | 'conversations' | 'actions'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [typeDropdownPosition, setTypeDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const typeDropdownRef = useRef<HTMLDivElement>(null);
+  const typeButtonRef = useRef<HTMLButtonElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -74,6 +82,17 @@ export default function HistoricoPage() {
   }, [dropdownOpen]);
 
   useEffect(() => {
+    if (typeDropdownOpen && typeButtonRef.current) {
+      const rect = typeButtonRef.current.getBoundingClientRect();
+      setTypeDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: Math.max(rect.width, 140),
+      });
+    }
+  }, [typeDropdownOpen]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
@@ -81,17 +100,32 @@ export default function HistoricoPage() {
       ) {
         setDropdownOpen(false);
       }
+      if (
+        typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node) &&
+        typeButtonRef.current && !typeButtonRef.current.contains(event.target as Node)
+      ) {
+        setTypeDropdownOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
-    loadData();
+    setPage(0);
+    setLogs([]);
+    loadData(0);
   }, [selectedCompany]);
 
-  async function loadData() {
-    setLoading(true);
+  const PAGE_SIZE = 20;
+
+  async function loadData(pageToLoad = 0) {
+    const isFirstPage = pageToLoad === 0;
+    if (isFirstPage) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     setError(null);
 
     try {
@@ -140,25 +174,34 @@ export default function HistoricoPage() {
       });
       setFunctions(functionsMap);
 
-      // 4. Buscar logs
+      // 4. Buscar logs paginados (20 por vez) com contagem total
+      const from = pageToLoad * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from('assistant_function_logs')
-        .select('id, company_id, function_key, credits_consumed, executed_at, metadata')
+        .select('id, company_id, function_key, credits_consumed, executed_at, metadata', { count: 'exact' })
         .in('company_id', userCompanyIds)
         .order('executed_at', { ascending: false })
-        .limit(200);
+        .range(from, to);
 
       if (selectedCompany !== 'all') {
         query = query.eq('company_id', selectedCompany);
       }
 
-      const { data: logsData, error: logsError } = await query;
+      const { data: logsData, error: logsError, count } = await query;
       if (logsError) throw new Error('Erro ao carregar histórico: ' + logsError.message);
 
-      let enriched: LogEntry[] = (logsData || []).map((log: any) => ({
+      const total = count ?? 0;
+      setTotalCount(total);
+      setHasMore(from + PAGE_SIZE < total);
+
+      const newBatch: LogEntry[] = (logsData || []).map((log: any) => ({
         ...log,
         companyName: companiesData?.find((c: any) => c.id === log.company_id)?.name ?? '—',
       }));
+
+      let enriched = newBatch;
 
       // 5. Enriquecer logs que precisam de conteúdo real
       //    Estratégia: um único query de messages cobrindo o período dos logs,
@@ -170,8 +213,8 @@ export default function HistoricoPage() {
       if (richLogs.length > 0) {
         // Calcular janela de tempo dos logs (mais 10s de margem)
         const timestamps = richLogs.map(l => new Date(l.executed_at).getTime());
-        const minTs = new Date(Math.min(...timestamps) - 10000).toISOString();
-        const maxTs = new Date(Math.max(...timestamps) + 10000).toISOString();
+        const minTs = new Date(Math.min(...timestamps) - 20000).toISOString();
+        const maxTs = new Date(Math.max(...timestamps) + 20000).toISOString();
 
         // Buscar todas as mensagens do período em um único query
         const { data: allMessages } = await supabase
@@ -234,7 +277,7 @@ export default function HistoricoPage() {
             }
 
             // Caminho 3: Cruzar por timestamp ±5s → pegar conversation_id → último par user/assistant
-            const WINDOW_MS = 5000;
+            const WINDOW_MS = 15000; // 15s — cobre latência do GPT no orçamento
             const nearMsg = msgsByTime.find(m => Math.abs(m.ts - logTs) <= WINDOW_MS);
 
             if (nearMsg?.conversation_id) {
@@ -276,13 +319,21 @@ export default function HistoricoPage() {
         }
       }
 
-      setLogs(enriched);
+      // Acumular: primeira página substitui, páginas seguintes somam
+      setLogs(prev => pageToLoad === 0 ? enriched : [...prev, ...enriched]);
     } catch (err: any) {
       console.error('❌ Erro ao carregar dados:', err);
       setError(err.message || 'Erro ao carregar dados');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
+  }
+
+  function loadMore() {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    loadData(nextPage);
   }
 
   async function handleDelete(id: string) {
@@ -353,6 +404,11 @@ export default function HistoricoPage() {
           </h1>
           <p className="mt-2 transition-colors text-gray-600 dark:text-white/60">
             Visualize e gerencie as interações dos usuários com seus assistentes.
+            {totalCount > 0 && (
+              <span className="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                · {totalCount} registros
+              </span>
+            )}
           </p>
         </div>
 
@@ -375,11 +431,12 @@ export default function HistoricoPage() {
 
         <div className="rounded-xl shadow-sm px-4 py-4 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
 
-          {/* ── Linha 1 (mobile): busca + botão atualizar ── */}
-          {/* ── Desktop: tudo em uma linha ───────────────── */}
+          {/* ── Desktop: tudo em uma linha ─── Mobile: busca+refresh / seletores ── */}
+
+          {/* Linha 1: busca + seletores desktop + refresh */}
           <div className="flex items-center gap-2">
 
-            {/* Busca — ocupa o espaço restante */}
+            {/* Busca */}
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
@@ -393,41 +450,39 @@ export default function HistoricoPage() {
               />
             </div>
 
-            {/* Seletor Tipo — visível em todas as larguras, ocupa metade no mobile */}
-            <div className="hidden sm:block">
-              <select
-                value={viewFilter}
-                onChange={e => setViewFilter(e.target.value as 'all' | 'conversations' | 'actions')}
-                className="py-2 pl-3 pr-7 text-sm border rounded-lg transition-colors cursor-pointer appearance-none
+            {/* Seletor Tipo — só desktop */}
+            <div className="hidden sm:block relative">
+              <button
+                ref={typeButtonRef}
+                type="button"
+                onClick={() => { setTypeDropdownOpen(v => !v); setDropdownOpen(false); }}
+                className="flex items-center gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors whitespace-nowrap
                 bg-white/50 border-gray-300 text-gray-900
                 dark:bg-white/5 dark:border-white/10 dark:text-white"
               >
-                <option value="all">Tudo</option>
-                <option value="conversations">Conversas</option>
-                <option value="actions">Funções</option>
-              </select>
+                <span>{viewFilter === 'all' ? 'Tudo' : viewFilter === 'conversations' ? 'Conversas' : 'Funções'}</span>
+                <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
             </div>
 
-            {/* Seletor Assistente */}
+            {/* Seletor Assistente — só desktop */}
             <div className="hidden sm:block relative">
               <button
                 ref={buttonRef}
                 type="button"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
+                onClick={() => { setDropdownOpen(v => !v); setTypeDropdownOpen(false); }}
                 className="flex items-center gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors whitespace-nowrap
                 bg-white/50 border-gray-300 text-gray-900
                 dark:bg-white/5 dark:border-white/10 dark:text-white"
               >
                 <span className="max-w-[120px] truncate">
-                  {selectedCompany === 'all'
-                    ? 'Assistente'
-                    : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
+                  {selectedCompany === 'all' ? 'Assistente' : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
                 </span>
                 <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
             </div>
 
-            {/* Botão Atualizar — ícone no mobile, ícone+texto no desktop */}
+            {/* Refresh */}
             <button
               onClick={loadData}
               disabled={loading}
@@ -442,33 +497,31 @@ export default function HistoricoPage() {
 
           </div>
 
-          {/* ── Linha 2 (mobile): seletores lado a lado ── */}
+          {/* Linha 2 (mobile): dois seletores lado a lado — idênticos visualmente */}
           <div className="flex gap-2 mt-2 sm:hidden">
 
-            <select
-              value={viewFilter}
-              onChange={e => setViewFilter(e.target.value as 'all' | 'conversations' | 'actions')}
-              className="flex-1 py-2 pl-3 pr-7 text-sm border rounded-lg transition-colors cursor-pointer appearance-none
+            <button
+              ref={typeButtonRef}
+              type="button"
+              onClick={() => { setTypeDropdownOpen(v => !v); setDropdownOpen(false); }}
+              className="flex-1 flex items-center justify-between gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors
               bg-white/50 border-gray-300 text-gray-900
               dark:bg-white/5 dark:border-white/10 dark:text-white"
             >
-              <option value="all">Tudo</option>
-              <option value="conversations">Conversas</option>
-              <option value="actions">Funções</option>
-            </select>
+              <span>{viewFilter === 'all' ? 'Tudo' : viewFilter === 'conversations' ? 'Conversas' : 'Funções'}</span>
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
 
             <button
               ref={buttonRef}
               type="button"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
+              onClick={() => { setDropdownOpen(v => !v); setTypeDropdownOpen(false); }}
               className="flex-1 flex items-center justify-between gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors
               bg-white/50 border-gray-300 text-gray-900
               dark:bg-white/5 dark:border-white/10 dark:text-white"
             >
               <span className="truncate">
-                {selectedCompany === 'all'
-                  ? 'Assistente'
-                  : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
+                {selectedCompany === 'all' ? 'Assistente' : companies.find(c => c.id === selectedCompany)?.name || 'Selecionar'}
               </span>
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -579,10 +632,71 @@ export default function HistoricoPage() {
               );
             })}
           </div>
+
+          {/* ── Botão Carregar Mais ── */}
+          {hasMore && !loading && (
+            <div className="flex flex-col items-center gap-2 pt-2 pb-4">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Mostrando {logs.length} de {totalCount} registros
+              </p>
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-colors
+                bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300
+                dark:bg-white/5 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/10
+                disabled:opacity-50"
+              >
+                {loadingMore ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Carregando...
+                  </>
+                ) : (
+                  <>
+                    Carregar mais
+                    <span className="text-gray-400 dark:text-gray-500">
+                      ({totalCount - logs.length} restantes)
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Sem mais registros */}
+          {!hasMore && logs.length > 0 && !loading && (
+            <p className="text-center text-xs text-gray-400 dark:text-gray-500 py-4">
+              Todos os {totalCount} registros carregados
+            </p>
+          )}
         )}
       </div>
 
-      {/* Dropdown de filtro (portal fixo) */}
+      {/* Dropdown: Tipo (Tudo / Conversas / Funções) */}
+      {typeDropdownOpen && (
+        <div
+          ref={typeDropdownRef}
+          className="fixed z-[99999] rounded-lg border shadow-lg overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10"
+          style={{ top: `${typeDropdownPosition.top}px`, left: `${typeDropdownPosition.left}px`, width: `${typeDropdownPosition.width}px` }}
+        >
+          {(['all', 'conversations', 'actions'] as const).map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { setViewFilter(opt); setTypeDropdownOpen(false); }}
+              className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                ${viewFilter === opt
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
+            >
+              {opt === 'all' ? 'Tudo' : opt === 'conversations' ? 'Conversas' : 'Funções'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Dropdown: Assistente */}
       {dropdownOpen && (
         <div
           ref={dropdownRef}

@@ -49,18 +49,38 @@ export default function CreateEventModal({
 
   // Listener para confirmação por voz
   useEffect(() => {
-    const handleVoiceConfirm = () => {
-      if (!isCreating && selectedTime && eventTitle) {
-        handleCreateEvent();
+    let isActive = true;
+
+    const handleVoiceConfirm = (event: any) => {
+      console.log('🎤 [CreateEvent] Evento de confirmação por voz recebido:', event.detail);
+
+      if (!isActive) {
+        console.log('⚠️ Componente não está ativo');
+        return;
       }
+
+      if (isCreating) {
+        console.log('⚠️ Já está enviando');
+        return;
+      }
+
+      if (!selectedTime || !eventTitle) {
+        console.log('⚠️ Dados incompletos:', { selectedTime, eventTitle });
+        showToast('Por favor, preencha todos os campos antes de confirmar', 'warning');
+        return;
+      }
+
+      console.log('✅ Confirmando criação do evento...');
+      handleCreateEvent();
     };
 
     window.addEventListener('confirmCreateEvent', handleVoiceConfirm);
 
     return () => {
+      isActive = false;
       window.removeEventListener('confirmCreateEvent', handleVoiceConfirm);
     };
-  }, [isCreating, selectedTime, eventTitle]);
+  }, [isCreating, selectedTime, eventTitle, selectedDate]);
 
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });
@@ -147,6 +167,8 @@ export default function CreateEventModal({
       {/* Modal */}
       <div
         data-modal-type="create-event"
+        data-modal="create-event"
+        role="dialog"
         className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
           animate-in zoom-in-95 duration-300 flex flex-col`}
       >

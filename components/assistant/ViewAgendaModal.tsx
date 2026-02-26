@@ -403,7 +403,7 @@ const handleViewChange = (view: 'month' | 'week' | 'day') => {
   onClick={() => handleNav('today')}
   className="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"
 >
-  {currentView === 'day' ? 'Hoje' : currentView === 'week' ? 'Esta Semana' : 'Este Mês'}
+  {currentView === 'day' ? 'Selecionar Dia' : currentView === 'week' ? 'Selecionar Semana' : 'Selecionar Mês'}
 </button>
                   <button
                     onClick={() => handleNav('next')}

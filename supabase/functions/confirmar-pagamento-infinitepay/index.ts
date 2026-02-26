@@ -1,8 +1,4 @@
 // supabase/functions/confirmar-pagamento-infinitepay/index.ts
-//
-// Chamada pelo InfinitePayDisplay após o usuário confirmar que o pagamento
-// foi realizado. Atualiza status da cobrança, cobra crédito e registra no histórico.
-//
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 

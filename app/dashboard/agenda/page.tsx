@@ -330,7 +330,7 @@ function AgendaPageContent() {
                     onChange={(e) => setSelectedCompanyId(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="">Selecione um assistente...</option>
+                    <option value="">Selecione...</option>
                     {companies.map(company => (
                       <option key={company.id} value={company.id}>
                         {company.name} {company.wake_word ? `(${company.wake_word})` : ''}

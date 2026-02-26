@@ -77,11 +77,35 @@ export default function HistoricoPage() {
 
   // ── Dropdowns ──
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [typeDropdownPos, setTypeDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
-  // refs para fechar ao clicar fora
+  // refs dos botões para calcular posição no clique — desktop e mobile separados
+  const dropdownBtnDesktopRef = useRef<HTMLButtonElement>(null);
+  const dropdownBtnMobileRef = useRef<HTMLButtonElement>(null);
+  const typeDropdownBtnDesktopRef = useRef<HTMLButtonElement>(null);
+  const typeDropdownBtnMobileRef = useRef<HTMLButtonElement>(null);
   const dropdownContainerRef = useRef<HTMLDivElement>(null);
   const typeDropdownContainerRef = useRef<HTMLDivElement>(null);
+
+  function openDropdown(btnRef: React.RefObject<HTMLButtonElement>) {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + window.scrollY, left: r.right - Math.max(r.width, 180) + window.scrollX, width: Math.max(r.width, 180) });
+    }
+    setDropdownOpen(v => !v);
+    setTypeDropdownOpen(false);
+  }
+
+  function openTypeDropdown(btnRef: React.RefObject<HTMLButtonElement>) {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setTypeDropdownPos({ top: r.bottom + window.scrollY, left: r.right - Math.max(r.width, 140) + window.scrollX, width: Math.max(r.width, 140) });
+    }
+    setTypeDropdownOpen(v => !v);
+    setDropdownOpen(false);
+  }
 
   const supabase = createClient();
 
@@ -94,16 +118,22 @@ export default function HistoricoPage() {
   // ── Fechar dropdowns ao clicar fora ──
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
-      if (dropdownContainerRef.current && !dropdownContainerRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      const isInsideDropdownBtn =
+        dropdownBtnDesktopRef.current?.contains(t) ||
+        dropdownBtnMobileRef.current?.contains(t);
+      const isInsideTypeBtn =
+        typeDropdownBtnDesktopRef.current?.contains(t) ||
+        typeDropdownBtnMobileRef.current?.contains(t);
+
+      if (dropdownOpen && !dropdownContainerRef.current?.contains(t) && !isInsideDropdownBtn)
         setDropdownOpen(false);
-      }
-      if (typeDropdownContainerRef.current && !typeDropdownContainerRef.current.contains(e.target as Node)) {
+      if (typeDropdownOpen && !typeDropdownContainerRef.current?.contains(t) && !isInsideTypeBtn)
         setTypeDropdownOpen(false);
-      }
     }
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
-  }, []);
+  }, [dropdownOpen, typeDropdownOpen]);
 
   // ── Inicialização única: empresas + funções ──
   useEffect(() => { initStaticData(); }, []);
@@ -413,7 +443,7 @@ export default function HistoricoPage() {
         )}
 
         {/* ── Barra de filtros ── */}
-        <div className="rounded-xl shadow-sm px-4 py-4 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm">
+        <div className="rounded-xl shadow-sm px-4 py-4 mb-6 transition-colors bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-sm overflow-visible">
 
           {/* Linha 1 — Desktop: tudo junto / Mobile: busca + refresh */}
           <div className="flex items-center gap-2">
@@ -440,8 +470,9 @@ export default function HistoricoPage() {
             {/* Tipo — desktop */}
             <div ref={typeDropdownContainerRef} className="hidden sm:block relative">
               <button
+                ref={typeDropdownBtnDesktopRef}
                 type="button"
-                onClick={() => { setTypeDropdownOpen(v => !v); setDropdownOpen(false); }}
+                onClick={() => openTypeDropdown(typeDropdownBtnDesktopRef)}
                 className="flex items-center gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors whitespace-nowrap
                 bg-white/50 border-gray-300 text-gray-900
                 dark:bg-white/5 dark:border-white/10 dark:text-white"
@@ -449,30 +480,14 @@ export default function HistoricoPage() {
                 {viewFilterLabel}
                 <ChevronDown className={`w-4 h-4 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-              {typeDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border shadow-lg overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10">
-                  {(['all', 'conversations', 'actions'] as const).map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => { setViewFilter(opt); setTypeDropdownOpen(false); }}
-                      className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                        ${viewFilter === opt
-                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
-                    >
-                      {opt === 'all' ? 'Tudo' : opt === 'conversations' ? 'Conversas' : 'Funções'}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Assistente — desktop */}
             <div ref={dropdownContainerRef} className="hidden sm:block relative">
               <button
+                ref={dropdownBtnDesktopRef}
                 type="button"
-                onClick={() => { setDropdownOpen(v => !v); setTypeDropdownOpen(false); }}
+                onClick={() => openDropdown(dropdownBtnDesktopRef)}
                 className="flex items-center gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors whitespace-nowrap
                 bg-white/50 border-gray-300 text-gray-900
                 dark:bg-white/5 dark:border-white/10 dark:text-white"
@@ -480,35 +495,6 @@ export default function HistoricoPage() {
                 <span className="max-w-[120px] truncate">{companyLabel}</span>
                 <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-              {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border shadow-lg overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10">
-                  <div className="max-h-60 overflow-y-auto">
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedCompany('all'); setDropdownOpen(false); }}
-                      className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                        ${selectedCompany === 'all'
-                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
-                    >
-                      Todos os assistentes
-                    </button>
-                    {companies.map(company => (
-                      <button
-                        key={company.id}
-                        type="button"
-                        onClick={() => { setSelectedCompany(company.id); setDropdownOpen(false); }}
-                        className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                          ${selectedCompany === company.id
-                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
-                      >
-                        {company.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Refresh */}
@@ -528,78 +514,29 @@ export default function HistoricoPage() {
           {/* Linha 2 — Mobile: seletores lado a lado */}
           <div className="flex gap-2 mt-2 sm:hidden">
             {/* Tipo — mobile */}
-            <div className="relative flex-1">
-              <button
-                type="button"
-                onClick={() => { setTypeDropdownOpen(v => !v); setDropdownOpen(false); }}
-                className="w-full flex items-center justify-between gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors
-                bg-white/50 border-gray-300 text-gray-900
-                dark:bg-white/5 dark:border-white/10 dark:text-white"
-              >
-                {viewFilterLabel}
-                <ChevronDown className={`w-4 h-4 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {typeDropdownOpen && (
-                <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[140px] rounded-lg border shadow-lg overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10">
-                  {(['all', 'conversations', 'actions'] as const).map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => { setViewFilter(opt); setTypeDropdownOpen(false); }}
-                      className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                        ${viewFilter === opt
-                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
-                    >
-                      {opt === 'all' ? 'Tudo' : opt === 'conversations' ? 'Conversas' : 'Funções'}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
+            <button
+              ref={typeDropdownBtnMobileRef}
+              type="button"
+              onClick={() => openTypeDropdown(typeDropdownBtnMobileRef)}
+              className="flex-1 flex items-center justify-between gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors
+              bg-white/50 border-gray-300 text-gray-900
+              dark:bg-white/5 dark:border-white/10 dark:text-white"
+            >
+              {viewFilterLabel}
+              <ChevronDown className={`w-4 h-4 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
             {/* Assistente — mobile */}
-            <div className="relative flex-1">
-              <button
-                type="button"
-                onClick={() => { setDropdownOpen(v => !v); setTypeDropdownOpen(false); }}
-                className="w-full flex items-center justify-between gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors
-                bg-white/50 border-gray-300 text-gray-900
-                dark:bg-white/5 dark:border-white/10 dark:text-white"
-              >
-                <span className="truncate">{companyLabel}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 w-full min-w-[180px] rounded-lg border shadow-lg overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10">
-                  <div className="max-h-60 overflow-y-auto">
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedCompany('all'); setDropdownOpen(false); }}
-                      className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                        ${selectedCompany === 'all'
-                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
-                    >
-                      Todos os assistentes
-                    </button>
-                    {companies.map(company => (
-                      <button
-                        key={company.id}
-                        type="button"
-                        onClick={() => { setSelectedCompany(company.id); setDropdownOpen(false); }}
-                        className={`w-full px-4 py-2.5 text-left text-sm transition-colors
-                          ${selectedCompany === company.id
-                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
-                      >
-                        {company.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <button
+              ref={dropdownBtnMobileRef}
+              type="button"
+              onClick={() => openDropdown(dropdownBtnMobileRef)}
+              className="flex-1 flex items-center justify-between gap-1 py-2 pl-3 pr-2 text-sm border rounded-lg transition-colors
+              bg-white/50 border-gray-300 text-gray-900
+              dark:bg-white/5 dark:border-white/10 dark:text-white"
+            >
+              <span className="truncate">{companyLabel}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
           </div>
         </div>
 
@@ -752,6 +689,63 @@ export default function HistoricoPage() {
           </>
         )}
       </div>
+
+      {/* ── Portais de dropdown — fixed para escapar de qualquer stacking context ── */}
+      {typeDropdownOpen && (
+        <div
+          ref={typeDropdownContainerRef}
+          style={{ position: 'fixed', top: typeDropdownPos.top, left: typeDropdownPos.left, width: typeDropdownPos.width, zIndex: 9999 }}
+          className="rounded-lg border shadow-xl overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10"
+        >
+          {(['all', 'conversations', 'actions'] as const).map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { setViewFilter(opt); setTypeDropdownOpen(false); }}
+              className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                ${viewFilter === opt
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
+            >
+              {opt === 'all' ? 'Tudo' : opt === 'conversations' ? 'Conversas' : 'Funções'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {dropdownOpen && (
+        <div
+          ref={dropdownContainerRef}
+          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+          className="rounded-lg border shadow-xl overflow-hidden bg-white border-gray-200 dark:bg-gray-800 dark:border-white/10"
+        >
+          <div className="max-h-60 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => { setSelectedCompany('all'); setDropdownOpen(false); }}
+              className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                ${selectedCompany === 'all'
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
+            >
+              Todos os assistentes
+            </button>
+            {companies.map(company => (
+              <button
+                key={company.id}
+                type="button"
+                onClick={() => { setSelectedCompany(company.id); setDropdownOpen(false); }}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors
+                  ${selectedCompany === company.id
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10'}`}
+              >
+                {company.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

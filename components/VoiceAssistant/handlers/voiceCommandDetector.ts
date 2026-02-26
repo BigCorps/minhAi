@@ -197,6 +197,37 @@ export async function detectVoiceCommand(
     return true;
   }
 
+// ── AGENDA/CALENDÁRIO: Confirmar evento ────────────────────
+const confirmarEventoTriggers = [
+  'confirmar marcação',
+  'confirmar agenda',
+  'confirmar evento',
+  'confirmar compromisso',
+  'confirmar reunião',
+  'está correto',
+  'tá correto',
+  'confirma',
+  'pode marcar',
+  'marcar esse'
+];
+
+if (confirmarEventoTriggers.some(t => lowerTranscript.includes(t))) {
+  console.log('✅ Comando: Confirmar Evento detectado!');
+  
+  // Procurar modal aberto de CreateEvent
+  const createEventModal = document.querySelector('[data-modal-type="create-event"]');
+  
+  if (createEventModal) {
+    // Disparar evento customizado para o modal confirmar
+    window.dispatchEvent(new CustomEvent('confirmCreateEvent'));
+    await playText('Confirmado! Criando o evento...');
+    return true;
+  } else {
+    await playText('Não há nenhum evento aguardando confirmação.');
+    return true;
+  }
+}
+
   // ──────────────────────────────────────────────────────────
   // ✅ PARA ADICIONAR NOVA FUNÇÃO — modelo de bloco:
   //

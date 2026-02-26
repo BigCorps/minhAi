@@ -464,35 +464,16 @@ export function VoiceAssistantWithWakeWord({
           break;
 
 case 'agendar_compromisso':
-  // ✅ Abre modal de criar evento no calendário
-  // Quando vem do botão, não há transcript para extrair dados
-  setActiveModal({ 
-    type: 'CreateEventModal', 
-    data: { 
-      companyId,
-      prefilledData: {} // Vazio quando vem do botão
-    } 
-  });
-  playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.').catch(() => {});
+  await playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.').catch(() => {});
   break;
 
 case 'ver_agenda':
-  // ✅ Abre modal de visualizar agenda
-  // Quando vem do botão, abre padrão no mês
-  setActiveModal({ 
-    type: 'ViewAgendaModal', 
-    data: { 
-      companyId,
-      initialView: 'month' // padrão quando vem do botão
-    } 
-  });
-  playText('Abrindo o calendário.').catch(() => {});
+  await playText('Abrindo o calendário.').catch(() => {});
   break;
 
 case 'link_pagamento':
   playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
   break;
-
 
 case 'nfc_credito':
   playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir para gerar uma cobrança no crédito e o valor.').catch(() => {});

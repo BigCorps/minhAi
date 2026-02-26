@@ -8,6 +8,11 @@ import { createClient } from '@/lib/supabase-browser';
 interface CreateEventModalProps {
   data: {
     companyId: string;
+    prefilledData?: {
+      date?: Date;
+      time?: string;
+      name?: string;
+    };
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
@@ -18,12 +23,17 @@ export default function CreateEventModal({
   onClose,
   theme = 'dark',
 }: CreateEventModalProps) {
-  const { companyId } = data;
+  const { companyId, prefilledData } = data;
   
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedTime, setSelectedTime] = useState('');
-  const [eventTitle, setEventTitle] = useState('');
-  const [duration, setDuration] = useState('60'); // minutos
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    prefilledData?.date || new Date()
+  );
+  const [selectedTime, setSelectedTime] = useState(
+    prefilledData?.time || ''
+  );
+  const [eventTitle, setEventTitle] = useState(
+    prefilledData?.name || ''
+  );
   const [isCreating, setIsCreating] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
   
@@ -55,9 +65,9 @@ export default function CreateEventModal({
       const startTime = new Date(selectedDate);
       startTime.setHours(parseInt(hours), parseInt(minutes), 0);
 
-      // Calcular data/hora de fim
+      // Calcular data/hora de fim (sempre 1 hora de duração)
       const endTime = new Date(startTime);
-      endTime.setMinutes(endTime.getMinutes() + parseInt(duration));
+      endTime.setMinutes(endTime.getMinutes() + 60);
 
       const { data: result, error } = await supabase.functions.invoke('criar-evento-calendario', {
         body: {
@@ -191,25 +201,9 @@ export default function CreateEventModal({
               onChange={(e) => setSelectedTime(e.target.value)}
               className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
             />
-          </div>
-
-          {/* Duração */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-              Duração *
-            </label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-green-500 focus:border-transparent`}
-            >
-              <option value="15">15 minutos</option>
-              <option value="30">30 minutos</option>
-              <option value="60">1 hora</option>
-              <option value="90">1h 30min</option>
-              <option value="120">2 horas</option>
-              <option value="180">3 horas</option>
-            </select>
+            <p className={`text-xs ${textMuted} mt-1`}>
+              Duração: 1 hora
+            </p>
           </div>
 
           {/* Nome */}

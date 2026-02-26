@@ -143,8 +143,34 @@ const handleNav = (action: 'prev' | 'next' | 'today') => {
     setCurrentTitle(title);
   };
 
-  const handleViewChange = (view: 'month' | 'week' | 'day') => {
-    setCurrentView(view);
+const handleViewChange = (view: 'month' | 'week' | 'day') => {
+  setCurrentView(view);
+  
+  // Define a data atual ao trocar de view
+  const today = new Date();
+  setCurrentDate(today);
+  
+  // Força recriação do calendário
+  setCalendarKey(prev => prev + 1);
+  
+  // Atualiza título manualmente baseado na view
+  setTimeout(() => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      // Garante que o calendário está na data atual
+      calendarApi.gotoDate(today);
+      setCurrentDate(calendarApi.getDate());
+      updateTitle(calendarApi.view.title);
+    } else if (view === 'day') {
+      // Para visão diária sem calendário
+      updateTitle(today.toLocaleDateString('pt-BR', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      }));
+    }
+  }, 50);
+};
     
     // Força recriação do calendário
     setCalendarKey(prev => prev + 1);
@@ -387,12 +413,12 @@ const handleNav = (action: 'prev' | 'next' | 'today') => {
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <button
-                    onClick={() => handleNav('today')}
-                    className="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"
-                  >
-                    Hoje
-                  </button>
+<button
+  onClick={() => handleNav('today')}
+  className="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"
+>
+  {currentView === 'day' ? 'Hoje' : currentView === 'week' ? 'Esta Semana' : 'Este Mês'}
+</button>
                   <button
                     onClick={() => handleNav('next')}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"

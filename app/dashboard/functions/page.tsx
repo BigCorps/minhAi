@@ -134,7 +134,7 @@ function CategoryPillSelector({
     const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
     const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
     return (
-      <div className="flex flex-col gap-0.7 w-full"> {/* Diminuído de gap-2 para 1.5 */}
+      <div className="flex flex-col gap-1 w-full"> {/* Diminuído de gap-2 para 1.5 */}
         <div className="grid grid-cols-3 gap-1"> {/* Diminuído de gap-2 para 1.5 */}
           {allBtn}
           {firstRowCats}

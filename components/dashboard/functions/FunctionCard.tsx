@@ -46,8 +46,9 @@ const CATEGORY_NAMES: { [key: string]: string } = {
   'ai_assistant': 'Conhecimento',
   'video': 'Vídeos',
   'biometry': 'Biometria',
-  'products': 'Vendas',
+  'products': 'Comercial',
   'images': 'Imagens',
+  'utylities': 'Utilitários',
 };
 
 const CONFIGURABLE_FUNCTIONS = [
@@ -73,13 +74,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'link_pagamento',
   'nfc_credito',
   'nfc_debito',
-  'sequencia_videos',
-  'criar_lembrete',
-  'cronometro',
-  'temporizador',
-  'relogio_mundial',
-  'alarme'
-
+  'sequencia_videos'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

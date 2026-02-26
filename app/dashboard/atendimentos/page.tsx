@@ -18,6 +18,7 @@ export default function AtendimentosPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [activeTab, setActiveTab] = useState<'connections' | 'actions'>('connections');
+  const [hasConnections, setHasConnections] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -37,10 +38,30 @@ export default function AtendimentosPage() {
     load();
   }, []);
 
+  // Verifica se há conexões Meta ativas para o assistente selecionado
+  useEffect(() => {
+    if (!selectedCompanyId) {
+      setHasConnections(false);
+      setActiveTab('connections');
+      return;
+    }
+    async function checkConnections() {
+      const { data } = await supabase
+        .from('meta_connections')
+        .select('id')
+        .eq('company_id', selectedCompanyId)
+        .limit(1);
+      const connected = !!(data && data.length > 0);
+      setHasConnections(connected);
+      if (!connected) setActiveTab('connections');
+    }
+    checkConnections();
+  }, [selectedCompanyId]);
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-5xl mx-auto">
 
           {/* Header */}
           <div className="mb-8">
@@ -96,43 +117,46 @@ export default function AtendimentosPage() {
           {/* Conteúdo Principal */}
           {selectedCompanyId && (
             <>
-              {/* Tabs */}
-              <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                <div className="flex border-b border-gray-200 dark:border-white/10">
-                  <button
-                    onClick={() => setActiveTab('connections')}
-                    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                      activeTab === 'connections'
-                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Conexões Meta
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('actions')}
-                    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                      activeTab === 'actions'
-                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <Zap className="w-4 h-4" />
-                    Ações Rápidas
-                  </button>
+              {/* Tabs — só aparecem quando há conexão ativa */}
+              {hasConnections && (
+                <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                  <div className="flex border-b border-gray-200 dark:border-white/10">
+                    <button
+                      onClick={() => setActiveTab('connections')}
+                      className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                        activeTab === 'connections'
+                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Conexões Meta
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('actions')}
+                      className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                        activeTab === 'actions'
+                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <Zap className="w-4 h-4" />
+                      Ações Rápidas
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Conteúdo da aba */}
               <div className="space-y-6">
-                {activeTab === 'connections' && (
+                {(!hasConnections || activeTab === 'connections') && (
                   <ConnectionManager
                     selectedCompanyId={selectedCompanyId}
                     onCompanyChange={setSelectedCompanyId}
+                    onConnectionsChange={setHasConnections}
                   />
                 )}
-                {activeTab === 'actions' && (
+                {hasConnections && activeTab === 'actions' && (
                   <QuickActionsPanel selectedCompanyId={selectedCompanyId} />
                 )}
               </div>

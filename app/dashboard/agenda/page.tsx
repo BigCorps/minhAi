@@ -314,7 +314,7 @@ function AgendaPageContent() {
           <div className="mb-8">
             <div className="flex items-end justify-between gap-4 mb-6">
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 leading-tight break-words">
                   Agenda Google | Gmail
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">

@@ -363,29 +363,28 @@ export default function SaldoPage() {
         </div>
 
         {/* Tabs e Conteúdo */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-100 dark:border-white/5 overflow-hidden">
-          <div className="flex border-b border-gray-100 dark:border-white/5">
-            <button
-              onClick={() => setActiveTab('pix')}
-              className={`flex-1 py-4 text-sm font-bold transition-colors ${
-                activeTab === 'pix' 
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-500/5' 
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Histórico de Transações
-            </button>
-            <button
-              onClick={() => setActiveTab('withdraw')}
-              className={`flex-1 py-4 text-sm font-bold transition-colors ${
-                activeTab === 'withdraw' 
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-500/5' 
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Solicitar Saque
-            </button>
-          </div>
+<div className="flex border-b border-gray-200 dark:border-white/10">
+  <button
+    onClick={() => setActiveTab('pix')}
+    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+      activeTab === 'pix'
+        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+    }`}
+  >
+    Histórico de Transações
+  </button>
+  <button
+    onClick={() => setActiveTab('withdraw')}
+    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+      activeTab === 'withdraw'
+        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+    }`}
+  >
+    Solicitar Saque
+  </button>
+</div>
 
           <div className="p-8">
             {activeTab === 'pix' ? (

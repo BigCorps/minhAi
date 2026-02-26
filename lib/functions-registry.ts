@@ -910,7 +910,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     functionName: 'Nosso Email',
     category: 'contact',
     responseType: 'voice+modal',
-    voiceTriggers: ['nosso email', 'endereço de email', 'e-mail', 'contato email'],
+    voiceTriggers: ['nosso email', 'endereço de email', 'qual o email', 'contato email'],
     examplePhrases: ['Qual o email?', 'Me passa o email', 'Mostre o email de contato'],
     edgeFunction: 'gerar-qrcode-contato',
     uiComponent: 'QRCodeDisplay',

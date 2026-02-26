@@ -29,6 +29,7 @@ export default function SendEmailModal({
   const [companyEmail, setCompanyEmail] = useState<string>('');
   
   const recognitionRef = useRef<any>(null);
+  const finalTranscriptRef = useRef<string>('');
   const supabase = createClient();
   const isDark = theme === 'dark';
 
@@ -43,6 +44,8 @@ export default function SendEmailModal({
       
       if (company?.business_email) {
         setCompanyEmail(company.business_email);
+      } else {
+        showToast('Email da empresa não configurado', 'error');
       }
     }
     fetchCompanyEmail();
@@ -50,13 +53,13 @@ export default function SendEmailModal({
 
   // Countdown inicial
   useEffect(() => {
-    if (countdown > 0) {
+    if (step === 'recording' && countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
-    } else {
+    } else if (countdown === 0 && step === 'recording' && !isRecording) {
       startRecording();
     }
-  }, [countdown]);
+  }, [countdown, step, isRecording]);
 
   // Toast
   useEffect(() => {
@@ -66,20 +69,58 @@ export default function SendEmailModal({
     }
   }, [toast]);
 
-  // Listener para confirmação por voz
+  // Listener de confirmação por voz
   useEffect(() => {
-    const handleVoiceConfirm = () => {
-      if (step === 'confirming' && !isSending && emailBody) {
-        handleSendEmail();
+    let isActive = true;
+    
+    const handleVoiceConfirm = (event: any) => {
+      console.log('🎤 [SendEmail] Evento de confirmação por voz recebido:', event.detail);
+      
+      if (!isActive) {
+        console.log('⚠️ Componente não está ativo');
+        return;
       }
+      
+      if (step !== 'confirming') {
+        console.log('⚠️ Não está na etapa de confirmação');
+        return;
+      }
+      
+      if (isSending) {
+        console.log('⚠️ Já está enviando');
+        return;
+      }
+      
+      if (!emailBody.trim()) {
+        console.log('⚠️ Email vazio');
+        showToast('O conteúdo do email está vazio', 'warning');
+        return;
+      }
+      
+      console.log('✅ Confirmando envio do email...');
+      handleSendEmail();
     };
-
+    
     window.addEventListener('confirmSendEmail', handleVoiceConfirm);
-
+    
     return () => {
+      isActive = false;
       window.removeEventListener('confirmSendEmail', handleVoiceConfirm);
     };
   }, [step, isSending, emailBody]);
+
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.log('Recognition já parado');
+        }
+      }
+    };
+  }, []);
 
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });
@@ -87,6 +128,8 @@ export default function SendEmailModal({
 
   // Iniciar gravação por voz
   const startRecording = () => {
+    console.log('🎤 Iniciando gravação de voz...');
+    
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       showToast('Seu navegador não suporta reconhecimento de voz', 'error');
       return;
@@ -98,8 +141,14 @@ export default function SendEmailModal({
     recognition.lang = 'pt-BR';
     recognition.continuous = true;
     recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
-    let finalTranscript = '';
+    finalTranscriptRef.current = '';
+
+    recognition.onstart = () => {
+      console.log('✅ Reconhecimento iniciado');
+      setIsRecording(true);
+    };
 
     recognition.onresult = (event: any) => {
       let interimTranscript = '';
@@ -108,10 +157,22 @@ export default function SendEmailModal({
         const transcript = event.results[i][0].transcript;
 
         if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' ';
+          console.log('📝 Final:', transcript);
+          finalTranscriptRef.current += transcript + ' ';
           
-          // Detectar palavra "FIM"
-          if (transcript.toLowerCase().includes('fim')) {
+          // ✅ CORREÇÃO: Detecção robusta da palavra "FIM"
+          const lowerTranscript = transcript.toLowerCase().trim();
+          const fimPatterns = [
+            /\bfim\b/i,           // palavra isolada
+            /fim$/i,              // no final
+            /^fim\b/i,            // no início
+            /\bfim\s*$/i,         // no final com espaços
+          ];
+          
+          const hasFim = fimPatterns.some(pattern => pattern.test(lowerTranscript));
+          
+          if (hasFim) {
+            console.log('🛑 Palavra "FIM" detectada - parando gravação');
             recognition.stop();
             return;
           }
@@ -120,46 +181,84 @@ export default function SendEmailModal({
         }
       }
 
-      setEmailBody(finalTranscript + interimTranscript);
+      // Atualizar display em tempo real
+      const fullText = finalTranscriptRef.current + interimTranscript;
+      setEmailBody(fullText);
     };
 
     recognition.onend = () => {
+      console.log('🛑 Reconhecimento finalizado');
       setIsRecording(false);
       
-      // Remover "fim" do final se existir
-      const cleanedBody = finalTranscript.replace(/\s*fim\s*$/i, '').trim();
-      setEmailBody(cleanedBody);
+      // ✅ CORREÇÃO: Limpar "fim" de todas as variações possíveis
+      let cleanedBody = finalTranscriptRef.current
+        .replace(/\s*fim\s*$/gi, '')      // fim no final
+        .replace(/^fim\s*/gi, '')         // fim no início
+        .replace(/\s+fim\s+/gi, ' ')      // fim no meio
+        .trim();
       
-      if (cleanedBody) {
+      setEmailBody(cleanedBody);
+      finalTranscriptRef.current = cleanedBody;
+      
+      if (cleanedBody.length > 0) {
+        console.log('✅ Conteúdo capturado:', cleanedBody.substring(0, 50) + '...');
         setStep('confirming');
       } else {
+        console.log('⚠️ Nenhum conteúdo detectado');
         showToast('Nenhum conteúdo foi detectado. Tente novamente.', 'warning');
         setTimeout(() => onClose(), 2000);
       }
     };
 
     recognition.onerror = (event: any) => {
-      console.error('Erro no reconhecimento:', event.error);
+      console.error('❌ Erro no reconhecimento:', event.error);
       setIsRecording(false);
-      showToast('Erro ao capturar áudio. Tente novamente.', 'error');
+      
+      let errorMessage = 'Erro ao capturar áudio';
+      
+      if (event.error === 'no-speech') {
+        errorMessage = 'Nenhuma fala detectada. Tente novamente.';
+      } else if (event.error === 'network') {
+        errorMessage = 'Erro de rede. Verifique sua conexão.';
+      } else if (event.error === 'not-allowed') {
+        errorMessage = 'Permissão do microfone negada.';
+      }
+      
+      showToast(errorMessage, 'error');
     };
 
-    recognition.start();
-    setIsRecording(true);
-    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (error) {
+      console.error('❌ Erro ao iniciar recognition:', error);
+      showToast('Erro ao iniciar gravação', 'error');
+    }
   };
 
   // Parar gravação manualmente
   const stopRecording = () => {
+    console.log('🛑 Parando gravação manualmente');
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.log('Recognition já parado');
+      }
     }
   };
 
   // Enviar email
   const handleSendEmail = async () => {
+    console.log('📧 Iniciando envio de email...');
+    
     if (!companyEmail) {
       showToast('Email da empresa não configurado', 'error');
+      return;
+    }
+
+    if (!emailBody.trim()) {
+      showToast('O conteúdo do email está vazio', 'warning');
       return;
     }
 
@@ -171,21 +270,26 @@ export default function SendEmailModal({
           company_id: companyId,
           to: companyEmail,
           subject: 'Envio de Email pelo Assistente eAi',
-          body: emailBody,
+          body: emailBody.trim(),
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro na função:', error);
+        throw error;
+      }
 
       if (!data.success) {
+        console.error('❌ Função retornou erro:', data);
         showToast(data.speech_text || 'Erro ao enviar email', 'error');
         return;
       }
 
+      console.log('✅ Email enviado com sucesso');
       showToast('✅ Email enviado com sucesso!', 'success');
       setTimeout(() => onClose(), 2000);
     } catch (error: any) {
-      console.error('Erro ao enviar email:', error);
+      console.error('❌ Erro ao enviar email:', error);
       showToast('Erro ao enviar email. Tente novamente.', 'error');
     } finally {
       setIsSending(false);
@@ -217,6 +321,8 @@ export default function SendEmailModal({
       {/* Modal */}
       <div
         data-modal-type="send-email"
+        data-modal="send-email"
+        role="dialog"
         className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
           animate-in zoom-in-95 duration-300 flex flex-col`}
       >
@@ -267,7 +373,7 @@ export default function SendEmailModal({
               ) : (
                 <>
                   <div className={`p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
-                    <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center`}>
+                    <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center font-medium`}>
                       🎤 <strong>Ditando o email...</strong> Diga <strong>"FIM"</strong> quando terminar
                     </p>
                   </div>
@@ -275,8 +381,11 @@ export default function SendEmailModal({
                   {/* Indicador de gravação */}
                   {isRecording && (
                     <div className="flex justify-center">
-                      <div className="flex items-center gap-3 px-6 py-3 bg-red-500 rounded-full animate-pulse">
-                        <div className="w-3 h-3 bg-white rounded-full animate-ping" />
+                      <div className="flex items-center gap-3 px-6 py-3 bg-red-500 rounded-full shadow-lg">
+                        <div className="relative">
+                          <div className="w-3 h-3 bg-white rounded-full animate-ping absolute" />
+                          <div className="w-3 h-3 bg-white rounded-full" />
+                        </div>
                         <Mic className="w-5 h-5 text-white" />
                         <span className="text-white font-semibold">GRAVANDO</span>
                       </div>
@@ -292,7 +401,7 @@ export default function SendEmailModal({
                       value={emailBody}
                       onChange={(e) => setEmailBody(e.target.value)}
                       placeholder="O conteúdo aparecerá aqui conforme você fala..."
-                      rows={8}
+                      rows={10}
                       className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none`}
                     />
                   </div>
@@ -300,8 +409,9 @@ export default function SendEmailModal({
                   <button
                     onClick={stopRecording}
                     disabled={!isRecording}
-                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
                   >
+                    <X className="w-5 h-5" />
                     Parar Gravação
                   </button>
                 </>
@@ -325,20 +435,28 @@ export default function SendEmailModal({
                 <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
                   Conteúdo capturado:
                 </label>
-                <div className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} max-h-60 overflow-y-auto`}>
-                  <p className={`text-sm whitespace-pre-wrap ${textPrimary}`}>{emailBody}</p>
-                </div>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  rows={10}
+                  className={`w-full px-4 py-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} ${textPrimary} border ${border} focus:ring-2 focus:ring-blue-500 resize-none`}
+                />
               </div>
 
               <div className={`p-3 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
                 <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'}`}>
-                  ✅ Confirme o envio ou edite o texto acima
+                  ✅ Confirme o envio ou edite o texto acima. Você pode dizer <strong>"CONFIRMAR ENVIO"</strong> ou <strong>"ENVIAR AGORA"</strong>
                 </p>
               </div>
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep('recording')}
+                  onClick={() => {
+                    setStep('recording');
+                    setCountdown(3);
+                    setEmailBody('');
+                    finalTranscriptRef.current = '';
+                  }}
                   disabled={isSending}
                   className="flex-1 px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition disabled:opacity-50"
                 >
@@ -346,7 +464,7 @@ export default function SendEmailModal({
                 </button>
                 <button
                   onClick={handleSendEmail}
-                  disabled={isSending || !emailBody}
+                  disabled={isSending || !emailBody.trim()}
                   className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
                 >
                   {isSending ? (

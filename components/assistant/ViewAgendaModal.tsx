@@ -170,6 +170,7 @@ const handleViewChange = (view: 'month' | 'week' | 'day') => {
       }));
     }
   }, 50);
+  };
 
   const handleEventClick = (info: any) => {
     setSelectedEvent(info.event);

@@ -469,9 +469,11 @@ function AgentConfigPanel({
 export function ConnectionManager({
   selectedCompanyId,
   onCompanyChange,
+  onConnectionsChange,
 }: {
   selectedCompanyId: string;
   onCompanyChange?: (id: string) => void;
+  onConnectionsChange?: (hasConnections: boolean) => void;
 }) {
   const supabase = createClient();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -513,6 +515,7 @@ export function ConnectionManager({
         .select('*').eq('company_id', id).order('created_at', { ascending: false });
       if (fetchError) throw fetchError;
       setConnections(data || []);
+      onConnectionsChange?.((data || []).length > 0);
       return data || [];
     } catch (err: any) { setError(err.message); return []; }
     finally { setIsLoading(false); }

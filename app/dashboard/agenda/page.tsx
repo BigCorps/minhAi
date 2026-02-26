@@ -314,8 +314,8 @@ function AgendaPageContent() {
           <div className="mb-8">
 <div className="flex items-end justify-between gap-4 mb-6">
   
-  {/* Lado Esquerdo */}
-  <div className="flex-1">
+  {/* Lado esquerdo */}
+  <div className="flex-1 min-w-0">
     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 whitespace-nowrap">
       Agenda Google | Gmail
     </h1>
@@ -325,8 +325,8 @@ function AgendaPageContent() {
     </p>
   </div>
 
-  {/* Lado Direito */}
-  <div className="flex flex-col items-end shrink-0">
+  {/* Lado direito */}
+  <div className="shrink-0 flex justify-end">
     {companies.length > 0 && (
       <select
         value={selectedCompanyId}

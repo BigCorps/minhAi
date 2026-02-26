@@ -170,21 +170,6 @@ const handleViewChange = (view: 'month' | 'week' | 'day') => {
       }));
     }
   }, 50);
-};
-    
-    // Força recriação do calendário
-    setCalendarKey(prev => prev + 1);
-    
-    // Atualiza título manualmente baseado na view
-    setTimeout(() => {
-      const calendarApi = calendarRef.current?.getApi();
-      if (calendarApi) {
-        const newDate = calendarApi.getDate();
-        setCurrentDate(newDate);
-        updateTitle(calendarApi.view.title);
-      }
-    }, 50);
-  };
 
   const handleEventClick = (info: any) => {
     setSelectedEvent(info.event);

@@ -79,7 +79,7 @@ export async function detectVoiceCommand(
     { triggers: ['instagram', 'insta', 'arroba', 'perfil'], key: 'qrcode_instagram' },
     { triggers: ['site', 'website', 'nosso site', 'página', 'pagina', 'url'], key: 'qrcode_website' },
     { triggers: ['facebook', 'face', 'fb'], key: 'qrcode_facebook' },
-    { triggers: ['email', 'e-mail'], key: 'qrcode_email' },
+    { triggers: ['qual o email', 'qual o e-mail'], key: 'qrcode_email' },
     { triggers: ['linkedin', 'linked in'], key: 'qrcode_linkedin' },
     { triggers: ['tiktok', 'tik tok'], key: 'qrcode_tiktok' },
     { triggers: ['twitter', 'nosso x'], key: 'qrcode_twitter' },

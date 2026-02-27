@@ -643,6 +643,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   },
 },
   
+  
   enviar_email: {
     functionKey: 'enviar_email',
     functionName: 'Enviar Email',
@@ -702,7 +703,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
       }
     },
   },
-  
+
   video_instrucoes: {
     functionKey: 'video_instrucoes',
     functionName: 'Vídeo de Instruções',

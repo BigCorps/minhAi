@@ -3,6 +3,7 @@
 // Caminho: components/assistant/VoiceAssistant/hooks/useWakeWordDetector.ts
 // ============================================================
 
+
 import { useEffect, useRef } from 'react';
 import { WakeWordDetector } from '@/components/VoiceAssistant/WakeWordDetector';
 import { generateWakeWordVariations } from '@/lib/wake-word-generator';

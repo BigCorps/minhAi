@@ -1,7 +1,3 @@
-/**
- * Cliente WebSocket para Google Speech-to-Text Streaming
- * VERSÃO V3 - VAD CONFIGURÁVEL POR DISPOSITIVO (mobile/desktop)
- */
 
 export interface GoogleSpeechConfig {
   onTranscript: (text: string, isFinal: boolean) => void;

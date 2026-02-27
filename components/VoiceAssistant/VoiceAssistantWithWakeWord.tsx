@@ -160,6 +160,14 @@ export function VoiceAssistantWithWakeWord({
   async function startGoogleSpeech() {
     if (!isActiveRef.current || !shouldProcessAudio.current) return;
 
+    // ✅ BLOQUEIO DE CONTEXTO: Se houver um modal de entrada de dados aberto,
+    // não iniciamos o listener global para evitar conflitos de áudio.
+    const isInputModalOpen = activeModal?.type === 'SendEmailModal' || activeModal?.type === 'CreateEventModal';
+    if (isInputModalOpen) {
+      console.log(`🚫 Bloqueio de Contexto: Modal ${activeModal?.type} aberto. Listener global suspenso.`);
+      return;
+    }
+
     const vadConfig = isMobile
       ? { volumeThreshold: 0.030, silenceThreshold: 60 }
       : { volumeThreshold: 0.015, silenceThreshold: 120 };
@@ -227,15 +235,25 @@ export function VoiceAssistantWithWakeWord({
   // ── Handler de fechamento unificado ───────────────────────
   // Usado pelo ActionModals.tsx ao fechar qualquer modal.
   const handleCloseModal = async () => {
+    console.log('🎯 Fechando modal e liberando contexto de voz');
+    
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.currentTime = 0;
       currentAudioRef.current = null;
     }
+    
     setIsPlayingAudio(false);
     setActiveModal(null);
+    
+    // Garantir que qualquer gravação residual seja parada
+    if (googleSpeechRef.current) {
+      await googleSpeechRef.current.stopRecording();
+    }
+
     setTimeout(async () => {
       if (isActiveRef.current) {
+        console.log('🔄 Reativando listener global...');
         shouldProcessAudio.current = true;
         await startGoogleSpeech();
       }
@@ -456,6 +474,7 @@ export function VoiceAssistantWithWakeWord({
 
         case 'enviar_email':
           // ✅ Abre modal de envio de email
+          await stopGoogleSpeech(); // Para o listener global
           setActiveModal({ 
             type: 'SendEmailModal', 
             data: { companyId } 
@@ -465,7 +484,7 @@ export function VoiceAssistantWithWakeWord({
 
 case 'agendar_compromisso':
   // ✅ Abre modal de criar evento no calendário
-  // Quando vem do botão, não há transcript para extrair dados
+  await stopGoogleSpeech(); // Para o listener global
   setActiveModal({ 
     type: 'CreateEventModal', 
     data: { 

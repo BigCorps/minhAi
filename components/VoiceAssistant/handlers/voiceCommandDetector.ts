@@ -30,22 +30,10 @@ interface DetectorDeps {
   sessionId: string | null;
   commandProcessor: VoiceCommandProcessor | null;
   pixStateRef: React.MutableRefObject<{ qrCodeData: any; pixConfirmationData: any } | null>;
-  // ✅ State unificado — alimenta o ActionModals.tsx
   setActiveModal: (modal: ActiveModal | null) => void;
   activeFunctionContextRef: React.MutableRefObject<any>;
 }
 
-// ──────────────────────────────────────────────────────────────
-// detectVoiceCommand
-//
-// Roteador central de comandos de voz e texto.
-// Retorna true se um comando foi detectado e tratado.
-//
-// PARA ADICIONAR NOVA FUNÇÃO:
-// 1. Crie o handler em companyHandlers.ts (ou novo arquivo)
-// 2. Adicione um bloco de triggers abaixo (antes do if commandProcessor)
-// 3. Adicione o case no handleFunctionClick() do componente principal
-// ──────────────────────────────────────────────────────────────
 export async function detectVoiceCommand(
   transcript: string,
   deps: DetectorDeps
@@ -66,14 +54,54 @@ export async function detectVoiceCommand(
 
   const correctedTranscript = correctTranscriptionErrors(transcript);
   const lowerTranscript = correctedTranscript.toLowerCase().trim();
-
-  if (correctedTranscript !== transcript) {
-    console.log('🔧 Corrigido:', correctedTranscript);
-  }
-
   const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
 
-  // ── QR Codes (todos os tipos) ─────────────────────────────
+  // 1. PRIMEIRO: Verificar se é um comando de ABERTURA de função (via Registry)
+  // Isso evita que comandos como "enviar email" caiam na confirmação antes do modal abrir.
+  if (commandProcessor) {
+    const result = await commandProcessor.processCommand(transcript);
+
+    if (result?.success) {
+      console.log('✅ Nova função detectada pelo registry:', result.functionKey);
+      const registryFunc = getFunctionByKey(result.functionKey || '');
+
+      if (registryFunc?.handler) {
+        const handlerSuccess = await registryFunc.handler({
+          transcript: lowerTranscript,
+          companyId,
+          functionSettings,
+          playText,
+          setIsProcessing,
+          sessionId,
+          setActiveModal,
+        });
+
+        if (handlerSuccess) {
+          activeFunctionContextRef.current = {
+            functionKey: registryFunc.functionKey,
+            activatedAt: Date.now(),
+            expiresIn: 5 * 60 * 1000,
+          };
+          return true;
+        }
+      } else {
+        if (result.speechText) await playText(result.speechText);
+        if (result.modalData && result.modalType) {
+          setActiveModal({
+            type: result.modalType,
+            data: result.modalData,
+          });
+        }
+      }
+
+      if (result.functionKey) {
+        await commandProcessor.registerUsage(result.functionKey);
+      }
+      return true;
+    }
+  }
+
+  // 2. SEGUNDO: Comandos Legados e QR Codes
   const qrcodeTypes: Array<{ triggers: string[]; key: string }> = [
     { triggers: ['whatsapp', 'whats', 'zap', 'número', 'contato'], key: 'qrcode_whatsapp' },
     { triggers: ['instagram', 'insta', 'arroba', 'perfil'], key: 'qrcode_instagram' },
@@ -88,15 +116,35 @@ export async function detectVoiceCommand(
 
   for (const { triggers, key } of qrcodeTypes) {
     if (triggers.some(t => lowerTranscript.includes(t))) {
-      console.log(`📱 Comando ${key} detectado!`);
       const isEnabled = await checkIfFunctionIsEnabled(companyId, key);
-      if (!isEnabled) {
-        await playText('A função está desativada no momento.');
-        return true;
-      }
+      if (!isEnabled) { await playText('A função está desativada no momento.'); return true; }
       const qrType = key.replace('qrcode_', '');
       await handleQRCodeCommand(qrType, { companyId, setIsProcessing, setQrCodeData, playText });
       await registerFunctionUsage(companyId, key, functionSettings[key]?.creditsPerUse ?? 0);
+      return true;
+    }
+  }
+
+  // 3. TERCEIRO: Comandos de CONFIRMAÇÃO (só rodam se nenhum comando de abertura foi detectado)
+  
+  // ── AGENDA: Confirmar evento
+  const confirmarEventoTriggers = ['confirmar marcação', 'confirmar agenda', 'confirmar evento', 'confirmar compromisso', 'confirmar reunião', 'confirma reunião', 'confirma evento', 'confirma marcação', 'está correto', 'tá correto', 'está certo', 'tá certo', 'confirma', 'confirmar', 'pode marcar', 'marcar esse', 'marque esse', 'agendar esse', 'agende', 'pode agendar', 'sim confirmar', 'sim pode marcar', 'correto pode marcar', 'ok marcar', 'ok confirmar'];
+  if (confirmarEventoTriggers.some(t => lowerTranscript.includes(t))) {
+    const createEventModal = document.querySelector('[data-modal-type="create-event"]') || document.querySelector('[data-modal="create-event"]');
+    if (createEventModal) {
+      window.dispatchEvent(new CustomEvent('confirmCreateEvent', { detail: { trigger: 'voice', transcript: lowerTranscript } }));
+      await playText('Confirmado! Criando o evento no calendário...');
+      return true;
+    }
+  }
+
+  // ── EMAIL: Confirmar envio
+  const confirmarEmailTriggers = ['confirmar envio', 'confirmar email', 'confirma email', 'enviar agora', 'pode enviar', 'pode mandar', 'envia', 'manda', 'enviar esse', 'mandar esse', 'sim enviar', 'sim pode enviar', 'ok enviar', 'ok mandar', 'confirma envio', 'confirmar esse email'];
+  if (confirmarEmailTriggers.some(t => lowerTranscript.includes(t))) {
+    const emailModal = document.querySelector('[data-modal-type="send-email"]') || document.querySelector('[data-modal="send-email"]');
+    if (emailModal) {
+      window.dispatchEvent(new CustomEvent('confirmSendEmail', { detail: { trigger: 'voice', transcript: lowerTranscript } }));
+      await playText('Enviando email...');
       return true;
     }
   }
@@ -197,120 +245,6 @@ export async function detectVoiceCommand(
     return true;
   }
 
-// ── AGENDA/CALENDÁRIO: Confirmar evento ────────────────────
-const confirmarEventoTriggers = [
-  'confirmar marcação',
-  'confirmar agenda',
-  'confirmar evento',
-  'confirmar compromisso',
-  'confirmar reunião',
-  'confirma reunião',
-  'confirma evento',
-  'confirma marcação',
-  'está correto',
-  'tá correto',
-  'está certo',
-  'tá certo',
-  'confirma',
-  'confirmar',
-  'pode marcar',
-  'marcar esse',
-  'marque esse',
-  'agendar esse',
-  'agende',
-  'pode agendar',
-  'sim confirmar',
-  'sim pode marcar',
-  'correto pode marcar',
-  'ok marcar',
-  'ok confirmar'
-];
-
-if (confirmarEventoTriggers.some(t => lowerTranscript.includes(t))) {
-  console.log('✅ Comando: Confirmar Evento detectado!');
-  
-  // Procurar modal aberto de CreateEvent usando múltiplas formas
-  const createEventModal = 
-    document.querySelector('[data-modal-type="create-event"]') ||
-    document.querySelector('[data-modal="create-event"]') ||
-    // Fallback: procurar por classe ou estrutura do modal
-    Array.from(document.querySelectorAll('[class*="CreateEvent"]')).find(
-      el => el.getAttribute('role') === 'dialog' || el.classList.contains('modal')
-    );
-  
-  if (createEventModal) {
-    console.log('🎯 Modal de evento encontrado - disparando confirmação');
-    
-    // Disparar evento com mais detalhes para debug
-    const event = new CustomEvent('confirmCreateEvent', {
-      detail: { 
-        timestamp: Date.now(),
-        trigger: 'voice',
-        transcript: lowerTranscript 
-      }
-    });
-    window.dispatchEvent(event);
-    
-    await playText('Confirmado! Criando o evento no calendário...');
-    return true;
-  } else {
-    console.log('⚠️ Nenhum modal de evento aberto');
-    await playText('Não há nenhum evento aguardando confirmação.');
-    return true;
-  }
-}
-
-// ── EMAIL: Confirmar envio ────────────────────────────────
-const confirmarEmailTriggers = [
-  'confirmar envio',
-  'confirmar email',
-  'confirma email',
-  'enviar agora',
-  'pode enviar',
-  'pode mandar',
-  'envia',
-  'manda',
-  'enviar esse',
-  'mandar esse',
-  'sim enviar',
-  'sim pode enviar',
-  'ok enviar',
-  'ok mandar',
-  'confirma envio',
-  'confirmar esse email'
-];
-
-if (confirmarEmailTriggers.some(t => lowerTranscript.includes(t))) {
-  console.log('✅ Comando: Confirmar Email detectado!');
-  
-  // Procurar modal aberto de SendEmail
-  const emailModal = 
-    document.querySelector('[data-modal-type="send-email"]') ||
-    document.querySelector('[data-modal="send-email"]') ||
-    Array.from(document.querySelectorAll('[class*="SendEmail"]')).find(
-      el => el.getAttribute('role') === 'dialog' || el.classList.contains('modal')
-    );
-  
-  if (emailModal) {
-    console.log('🎯 Modal de email encontrado - disparando confirmação');
-    
-    const event = new CustomEvent('confirmSendEmail', {
-      detail: { 
-        timestamp: Date.now(),
-        trigger: 'voice',
-        transcript: lowerTranscript 
-      }
-    });
-    window.dispatchEvent(event);
-    
-    await playText('Enviando email...');
-    return true;
-  } else {
-    console.log('⚠️ Nenhum modal de email aberto');
-    await playText('Não há nenhum email aguardando confirmação.');
-    return true;
-  }
-}
   // ──────────────────────────────────────────────────────────
   // ✅ PARA ADICIONAR NOVA FUNÇÃO — modelo de bloco:
   //

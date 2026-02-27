@@ -33,22 +33,34 @@ export default function SendEmailModal({
   const supabase = createClient();
   const isDark = theme === 'dark';
 
-  // Buscar email da empresa
+  // Buscar email da conta Google conectada
   useEffect(() => {
-    async function fetchCompanyEmail() {
-      const { data: company } = await supabase
-        .from('companies')
-        .select('business_email')
-        .eq('id', companyId)
-        .single();
+    async function fetchGoogleEmail() {
+      const { data: account, error } = await supabase
+        .from('google_accounts')
+        .select('google_email')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle();
       
-      if (company?.business_email) {
-        setCompanyEmail(company.business_email);
+      if (account?.google_email) {
+        setCompanyEmail(account.google_email);
       } else {
-        showToast('Email da empresa não configurado', 'error');
+        // Fallback para business_email se não houver conta Google
+        const { data: company } = await supabase
+          .from('companies')
+          .select('business_email')
+          .eq('id', companyId)
+          .single();
+          
+        if (company?.business_email) {
+          setCompanyEmail(company.business_email);
+        } else {
+          showToast('Email da empresa não configurado', 'error');
+        }
       }
     }
-    fetchCompanyEmail();
+    fetchGoogleEmail();
   }, [companyId]);
 
   // Countdown inicial

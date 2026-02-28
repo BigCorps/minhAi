@@ -503,7 +503,7 @@ for (const cmd of CONTROL_COMMANDS) {
             type: 'SendEmailModal', 
             data: { companyId } 
           });
-          playText('Certo! Quando acabar a contagem regressiva, basta dizer o conteúdo do email e quando acabar, basta falar FIM.').catch(() => {});
+          playText('Diga o conteúdo e quando acabar, diga FIM.').catch(() => {});
           break;
 
 case 'agendar_compromisso':

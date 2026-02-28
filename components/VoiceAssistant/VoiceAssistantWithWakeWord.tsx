@@ -319,8 +319,9 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   const lowerText = text.toLowerCase().trim();
 
   // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
+  // Basta modal aberto OU áudio tocando — não exige os dois
   if (isFinal && detectStopCommand(lowerText)) {
-    if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
+    if (activeModal !== null || isPlayingAudio || isSpeaking || isProcessing) {
       console.log('🛑 Stop command interceptado antes da wake word:', lowerText);
       stopEverything();
       return;
@@ -377,6 +378,11 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
       if (!command) {
         const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
         playText(greeting).finally(() => { processingQuestion.current = false; });
+      } else if (detectStopCommand(command)) {
+        // ✅ Comando de stop após wake word (ex: "gerente fechar") — fecha modal
+        console.log('🛑 Stop command após wake word:', command);
+        processingQuestion.current = false;
+        stopEverything();
       } else if (commandWords.length < MIN_COMMAND_WORDS) {
         console.log(`⚠️ Comando muito curto: "${command}"`);
         triggerRepromptWarning();

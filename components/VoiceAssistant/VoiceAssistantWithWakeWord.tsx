@@ -95,6 +95,7 @@ export function VoiceAssistantWithWakeWord({
   const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);
   const [lastTranscript, setLastTranscript] = useState<string>("");
   const [lastResponse, setLastResponse] = useState<string>("");
+  const [showConversationModal, setShowConversationModal] = useState(false);
 
   // ── Refs de controle ──────────────────────────────────────
   const isActiveRef = useRef(true);
@@ -310,6 +311,7 @@ export function VoiceAssistantWithWakeWord({
     setQrCodeData(null);
     setPixConfirmationData(null);
     setActiveModal(null); // ✅ fecha qualquer modal aberto
+    setShowConversationModal(false);
 
     processingQuestion.current = false;
     shouldProcessAudio.current = true;
@@ -1077,67 +1079,147 @@ case 'nfc_debito':
               </button>
             )}
 
-            {/* ── Área inferior fixa: TextInput + 3 cards de status ── */}
+            {/* ── Área inferior fixa: cards + TextInput ── */}
             {!showStartButton && (
               <div className="w-full mt-auto flex flex-col gap-2">
+
+                {/* Card aviso de ruído / reprompt (azul) — sempre reserva espaço */}
+                <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
+                  (repromptWarning || noiseWarning)
+                    ? theme === 'dark'
+                      ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                      : 'bg-blue-50 border-blue-200 text-blue-700'
+                    : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                }`}>
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 18.364a9 9 0 000-12.728M8.464 15.536a5 5 0 010-7.072" />
+                  </svg>
+                  <span className="truncate">
+                    {repromptWarning ? 'Não consegui entender — pode repetir?' : 'Estou ouvindo... fale mais perto do microfone'}
+                  </span>
+                </div>
+
+                {/* Card pergunta + resposta (verde) — clicável, abre modal */}
+                <div
+                  onClick={() => {
+                    if (lastTranscript || lastResponse) {
+                      setShowConversationModal(true);
+                      setTimeout(() => setShowConversationModal(false), 5000);
+                    }
+                  }}
+                  className={`w-full rounded-xl border transition-all duration-300 overflow-hidden ${
+                    (lastTranscript || lastResponse)
+                      ? theme === 'dark'
+                        ? 'bg-emerald-500/15 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/25'
+                        : 'bg-emerald-50 border-emerald-200 cursor-pointer hover:bg-emerald-100'
+                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                  }`}
+                >
+                  {/* Linha: pergunta */}
+                  {lastTranscript && (
+                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium ${
+                      theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
+                    }`}>
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                      <span className="truncate">{lastTranscript}</span>
+                    </div>
+                  )}
+                  {/* Divisor interno quando tem os dois */}
+                  {lastTranscript && lastResponse && (
+                    <div className={`mx-3 h-px ${theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-200/60'}`} />
+                  )}
+                  {/* Linha: resposta */}
+                  {lastResponse && (
+                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs ${
+                      theme === 'dark' ? 'text-emerald-400/80' : 'text-emerald-600/80'
+                    }`}>
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                      <span className="truncate">{lastResponse}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* TextInput por último */}
                 <TextInputChat
                   onSendMessage={handleTextMessage}
                   isProcessing={isProcessing || isPlayingAudio}
                   theme={theme}
                   disabled={false}
                 />
+              </div>
+            )}
 
-                {/* 3 cards fixos — sempre ocupam o mesmo espaço, evitando layout shift */}
-                <div className="flex flex-col gap-1.5">
-
-                  {/* Card 1: Aviso de ruído / reprompt (azul) */}
-                  <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
-                    (repromptWarning || noiseWarning)
-                      ? theme === 'dark'
-                        ? 'bg-blue-500/20 border-blue-500/40 text-blue-300 opacity-100'
-                        : 'bg-blue-50 border-blue-200 text-blue-700 opacity-100'
-                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+            {/* ── Modal de conversa completa ── */}
+            {showConversationModal && (
+              <div
+                className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+                style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(6px)' }}
+                onClick={() => setShowConversationModal(false)}
+              >
+                <div
+                  className={`relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${
+                    theme === 'dark' ? 'bg-slate-900 border border-emerald-500/30' : 'bg-white border border-emerald-200'
+                  }`}
+                  onClick={e => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className={`flex items-center justify-between px-5 py-3 border-b ${
+                    theme === 'dark' ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-emerald-100 bg-emerald-50'
                   }`}>
-                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 18.364a9 9 0 000-12.728M8.464 15.536a5 5 0 010-7.072" />
-                    </svg>
-                    <span className="truncate">
-                      {repromptWarning ? 'Não consegui entender — pode repetir?' : 'Estou ouvindo... fale mais perto do microfone'}
+                    <span className={`text-sm font-semibold ${theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      Última conversa
                     </span>
+                    <button
+                      onClick={() => setShowConversationModal(false)}
+                      className={`text-lg font-bold leading-none ${theme === 'dark' ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
+                    >✕</button>
                   </div>
-
-                  {/* Card 2: Última frase reconhecida (verde) */}
-                  <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
-                    lastTranscript
-                      ? theme === 'dark'
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 opacity-100'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 opacity-100'
-                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                  {/* Pergunta */}
+                  {lastTranscript && (
+                    <div className={`px-5 py-4 ${theme === 'dark' ? 'bg-emerald-500/5' : 'bg-white'}`}>
+                      <div className={`flex items-start gap-2 mb-1 text-xs font-semibold uppercase tracking-wider ${
+                        theme === 'dark' ? 'text-emerald-500/60' : 'text-emerald-600/60'
+                      }`}>
+                        <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                        Você disse
+                      </div>
+                      <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}`}>
+                        {lastTranscript}
+                      </p>
+                    </div>
+                  )}
+                  {/* Divisor */}
+                  {lastTranscript && lastResponse && (
+                    <div className={`mx-5 h-px ${theme === 'dark' ? 'bg-emerald-500/15' : 'bg-emerald-100'}`} />
+                  )}
+                  {/* Resposta */}
+                  {lastResponse && (
+                    <div className={`px-5 py-4 ${theme === 'dark' ? 'bg-emerald-500/5' : 'bg-white'}`}>
+                      <div className={`flex items-start gap-2 mb-1 text-xs font-semibold uppercase tracking-wider ${
+                        theme === 'dark' ? 'text-emerald-500/60' : 'text-emerald-600/60'
+                      }`}>
+                        <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        Resposta
+                      </div>
+                      <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-white/90' : 'text-gray-800'}`}>
+                        {lastResponse}
+                      </p>
+                    </div>
+                  )}
+                  {/* Footer countdown */}
+                  <div className={`px-5 py-2 text-center text-xs border-t ${
+                    theme === 'dark' ? 'border-emerald-500/20 text-white/25' : 'border-emerald-100 text-gray-400'
                   }`}>
-                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                    <span className="truncate">
-                      {lastTranscript ? `"${lastTranscript.length > 45 ? lastTranscript.slice(0, 45) + '…' : lastTranscript}"` : ''}
-                    </span>
+                    Fecha automaticamente em 5s
                   </div>
-
-                  {/* Card 3: Última resposta dada (roxo) */}
-                  <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
-                    lastResponse
-                      ? theme === 'dark'
-                        ? 'bg-purple-500/15 border-purple-500/30 text-purple-300 opacity-100'
-                        : 'bg-purple-50 border-purple-200 text-purple-700 opacity-100'
-                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
-                  }`}>
-                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    <span className="truncate">
-                      {lastResponse ? `${lastResponse.length > 45 ? lastResponse.slice(0, 45) + '…' : lastResponse}` : ''}
-                    </span>
-                  </div>
-
                 </div>
               </div>
             )}

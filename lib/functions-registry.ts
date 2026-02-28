@@ -25,7 +25,7 @@ export interface FunctionDefinition {
   // Identificação
   functionKey: string;
   functionName: string;
-  category: 'contact' | 'payment' | 'information' | 'ai_assistant' | 'video' | 'productivity' | 'custom';
+  category: 'contact' | 'payment' | 'information' | 'ai_assistant' | 'video' | 'productivity' | 'utilities' | 'custom';
   
   // Tipo de resposta
   responseType: ResponseType;
@@ -648,7 +648,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   criar_lembrete: {
     functionKey: 'criar_lembrete',
     functionName: 'Criar Lembrete',
-    category: 'utilities',
+    category: 'utylities',
     responseType: 'voice+modal',
 
     voiceTriggers: [
@@ -712,7 +712,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   cronometro: {
     functionKey: 'cronometro',
     functionName: 'Cronômetro',
-    category: 'utilities',
+    category: 'utylities',
     responseType: 'voice+modal',
 
     voiceTriggers: [
@@ -759,7 +759,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   temporizador: {
     functionKey: 'temporizador',
     functionName: 'Temporizador',
-    category: 'utilities',
+    category: 'utylities',
     responseType: 'voice+modal',
 
     voiceTriggers: [
@@ -820,7 +820,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   relogio_mundial: {
     functionKey: 'relogio_mundial',
     functionName: 'Relógio Mundial',
-    category: 'utilities',
+    category: 'utylities',
     responseType: 'voice+modal',
 
     voiceTriggers: [
@@ -868,7 +868,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   alarme: {
     functionKey: 'alarme',
     functionName: 'Alarme',
-    category: 'utilities',
+    category: 'utylities',
     responseType: 'voice+modal',
 
     voiceTriggers: [

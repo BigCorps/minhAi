@@ -74,13 +74,14 @@ export function ActionModals({
   theme,
   onConfirmPix,
   onCancelPix,
+  playText,
 }: ActionModalsProps) {
   if (!activeModal) return null;
 
   const Component = MODAL_COMPONENTS[activeModal.type];
 
   if (!Component) {
-    console.warn(`⚠️ ActionModals: componente não encontrado para tipo "${activeModal.type}". Verifique se foi registrado no MODAL_COMPONENTS.`);
+    console.warn(`⚠️ ActionModals: componente não encontrado para tipo "${activeModal.type}".`);
     return null;
   }
 
@@ -89,7 +90,7 @@ export function ActionModals({
       data={activeModal.data}
       onClose={onClose}
       theme={theme}
-      // PIX handlers — só usados pelo PIXConfirmationModal
+      playText={playText}
       onConfirmPix={onConfirmPix}
       onCancelPix={onCancelPix}
     />

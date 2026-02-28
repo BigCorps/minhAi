@@ -319,6 +319,22 @@ export function VoiceAssistantWithWakeWord({
     const lowerText = text.toLowerCase().trim();
     console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
 
+// Intercepta comandos de controle antes do filtro de wake word
+const CONTROL_COMMANDS = [
+  {
+    triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem', 'stop cronômetro'],
+    action: () => window.dispatchEvent(new Event('eai:cronometro:stop'))
+  },
+];
+for (const cmd of CONTROL_COMMANDS) {
+  if (cmd.triggers.some(t => lowerText.includes(t))) {
+    if (!isFinal) return;
+    console.log('🎛️ Comando de controle interceptado:', lowerText);
+    cmd.action();
+    return;
+  }
+}
+    
     const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
 
     if (!wakeWordResult?.detected) {

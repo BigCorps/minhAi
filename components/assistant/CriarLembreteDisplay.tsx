@@ -1,11 +1,10 @@
 'use client';
 
 // ============================================================
-// CriarLembreteDisplay.tsx — VERSÃO CORRIGIDA
-// - Sem emoji no título
-// - Se cliente já passou título + dateTime por voz:
-//   salva automaticamente e fecha em 3 segundos
-// - Modal de alarming (quando o watcher dispara): fecha em 10s
+// CriarLembreteDisplay.tsx
+// playText recebido via prop — usado quando o watcher dispara
+// o alarme em background (o handler normal já falou antes de abrir).
+// Nenhum speechSynthesis direto neste componente.
 // ============================================================
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -21,9 +20,10 @@ interface Props {
   data: LembreteData;
   onClose: () => void;
   theme: 'dark' | 'light';
+  playText?: (text: string) => Promise<void>;
 }
 
-export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
+export default function CriarLembreteDisplay({ data, onClose, theme, playText }: Props) {
   const isDark = theme === 'dark';
   const autoCloseRef = useRef<NodeJS.Timeout | null>(null);
   const [countdown, setCountdown] = useState(10);
@@ -36,7 +36,6 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
   const [formHora, setFormHora] = useState('');
 
   const handleClose = () => {
-    window.speechSynthesis.cancel();
     if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
     onClose();
   };
@@ -52,35 +51,25 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
       setFormHora(`${hh}:${mm}`);
       setFormData(target.toISOString().split('T')[0]);
 
-      // Salva imediatamente
       const lembretes = JSON.parse(localStorage.getItem('eai_lembretes') ?? '[]');
-      lembretes.push({
-        id: Date.now(),
-        titulo: data.titulo,
-        descricao: data.descricao ?? '',
-        dateTime: data.dateTime,
-      });
+      lembretes.push({ id: Date.now(), titulo: data.titulo, descricao: data.descricao ?? '', dateTime: data.dateTime });
       localStorage.setItem('eai_lembretes', JSON.stringify(lembretes));
       window.dispatchEvent(new Event('eai:lembrete:saved'));
 
       setSaved(true);
       setAutoSaved(true);
-
-      // Fecha em 3 segundos
       autoCloseRef.current = setTimeout(() => handleClose(), 3000);
     }
   }, []);
 
-  // ── Modo alarming (watcher reabriu o modal) ───────────────
+  // ── Modo alarming — usa playText do assistente ────────────
   useEffect(() => {
     if (!isRinging) return;
 
-    const msg = new SpeechSynthesisUtterance(
+    // Usa a voz Google TTS do assistente
+    playText?.(
       `Atenção! Lembrete: ${data.titulo ?? 'Evento sem título'}. ${data.descricao ?? ''}`
-    );
-    msg.lang = 'pt-BR';
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(msg);
+    ).catch(() => {});
 
     let count = 10;
     const tick = setInterval(() => {
@@ -95,17 +84,14 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
     return () => clearInterval(tick);
   }, [isRinging]);
 
-  // ── Cleanup ───────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
       if (autoCloseRef.current) clearTimeout(autoCloseRef.current);
     };
   }, []);
 
   const handleSave = () => {
     if (!formTitulo || !formHora) return;
-
     const now = new Date();
     const [hh, mm] = formHora.split(':').map(Number);
     const targetDate = formData
@@ -157,7 +143,7 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
     );
   }
 
-  // ── Render: auto-salvo (dados completos vindos por voz) ───
+  // ── Render: auto-salvo ────────────────────────────────────
   if (autoSaved) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -173,15 +159,12 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
             className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl font-bold z-10">✕</button>
 
           <div className="p-8 text-center">
-            <h3 className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {formTitulo}
-            </h3>
+            <h3 className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{formTitulo}</h3>
             <p className={`text-sm mb-4 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-              {formHora && `Às ${formHora}`}{formData && ` · ${new Date(formData + 'T00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`}
+              {formHora && `Às ${formHora}`}
+              {formData && ` · ${new Date(formData + 'T00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`}
             </p>
-            <p className={`text-xs ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-              Fechando automaticamente...
-            </p>
+            <p className={`text-xs ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Fechando automaticamente...</p>
           </div>
         </div>
       </div>
@@ -195,7 +178,6 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
       <div className={`relative w-full max-w-md rounded-3xl shadow-2xl overflow-hidden
         ${isDark ? 'bg-slate-900 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
-        {/* Cabeçalho sem emoji */}
         <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6">
           <h2 className="text-xl font-bold text-white">Criar Lembrete</h2>
           <p className="text-white/70 text-sm mt-1">Configure o lembrete e eu te aviso na hora certa</p>
@@ -221,7 +203,6 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
                   className={`w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-400
                     ${isDark ? 'bg-slate-800 border-white/10 text-white placeholder-white/30' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'}`} />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-white/70' : 'text-gray-600'}`}>Data (opcional)</label>
@@ -236,7 +217,6 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
                       ${isDark ? 'bg-slate-800 border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
                 </div>
               </div>
-
               <button onClick={handleSave} disabled={!formTitulo || !formHora}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold
                   disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition mt-2">

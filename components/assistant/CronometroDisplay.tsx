@@ -1,24 +1,14 @@
 'use client';
 
 // ============================================================
-// CronometroDisplay.tsx
-// Caminho: components/assistant/CronometroDisplay.tsx
-//
-// Comportamento:
-// - Inicia automaticamente ao abrir
-// - Só para quando o assistente detectar "finalizar cronômetro"
-//   (o VoiceCommandDetector chama onClose via stopEverything)
-// - Ao parar: pisca o tempo final por 15 segundos e fecha
-// - Fecha no X, em 15s após parar, ou por comando de voz
+// CronometroDisplay.tsx — VERSÃO CORRIGIDA
+// - Sem emoji no título
 // ============================================================
 
 import React, { useEffect, useRef, useState } from 'react';
 
 interface Props {
-  data: {
-    companyId: string;
-    autoStop?: boolean; // se true, para imediatamente (para testes)
-  };
+  data: { companyId: string };
   onClose: () => void;
   theme: 'dark' | 'light';
 }
@@ -29,7 +19,6 @@ function formatTime(ms: number): string {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   const centiseconds = Math.floor((ms % 1000) / 10);
-
   if (hours > 0) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
@@ -38,41 +27,28 @@ function formatTime(ms: number): string {
 
 export default function CronometroDisplay({ data, onClose, theme }: Props) {
   const isDark = theme === 'dark';
-
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(true);
   const [stopped, setStopped] = useState(false);
   const [countdown, setCountdown] = useState(15);
-  const [blinking, setBlinking] = useState(false);
 
   const startTimeRef = useRef<number>(Date.now());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const finalTimeRef = useRef(0);
 
-  // ── Tick do cronômetro ────────────────────────────────────
   useEffect(() => {
     if (!running) return;
-
-    intervalRef.current = setInterval(() => {
-      setElapsed(Date.now() - startTimeRef.current);
-    }, 50);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    intervalRef.current = setInterval(() => setElapsed(Date.now() - startTimeRef.current), 50);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running]);
 
-  // ── Expõe método de parar para o VoiceAssistant ───────────
-  // O assistente detecta "finalizar cronômetro" → chama handleStop
-  // via window event (escutamos aqui)
   useEffect(() => {
     const handleStopEvent = () => handleStop();
     window.addEventListener('eai:cronometro:stop', handleStopEvent);
     return () => window.removeEventListener('eai:cronometro:stop', handleStopEvent);
   }, [elapsed]);
 
-  // ── Cleanup ───────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -83,15 +59,11 @@ export default function CronometroDisplay({ data, onClose, theme }: Props) {
 
   const handleStop = () => {
     if (stopped) return;
-
     finalTimeRef.current = elapsed;
     setRunning(false);
     setStopped(true);
-    setBlinking(true);
-
     if (intervalRef.current) clearInterval(intervalRef.current);
 
-    // Fala o tempo
     const totalSeconds = Math.floor(finalTimeRef.current / 1000);
     const min = Math.floor(totalSeconds / 60);
     const sec = totalSeconds % 60;
@@ -104,7 +76,6 @@ export default function CronometroDisplay({ data, onClose, theme }: Props) {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(msg);
 
-    // Contagem regressiva de 15s
     let count = 15;
     countdownRef.current = setInterval(() => {
       count--;
@@ -131,9 +102,8 @@ export default function CronometroDisplay({ data, onClose, theme }: Props) {
       <div className={`relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden
         ${isDark ? 'bg-slate-900 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
-        {/* Cabeçalho */}
+        {/* Cabeçalho sem emoji */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-400 p-6 text-center">
-          <div className="text-4xl mb-1">⏱️</div>
           <h2 className="text-xl font-bold text-white">
             {stopped ? 'Cronômetro Finalizado' : 'Cronômetro'}
           </h2>
@@ -142,53 +112,37 @@ export default function CronometroDisplay({ data, onClose, theme }: Props) {
           )}
         </div>
 
-        {/* Botão X */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl font-bold z-10"
-        >✕</button>
+        <button onClick={handleClose}
+          className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl font-bold z-10">✕</button>
 
-        {/* Corpo */}
         <div className="p-8 text-center">
-
-          {/* Tempo */}
           <div className={`font-mono text-5xl font-bold mb-2 transition-all
-            ${blinking ? 'animate-pulse text-blue-400' : isDark ? 'text-white' : 'text-gray-900'}
-            ${stopped ? 'scale-110' : ''}`}
+            ${stopped ? 'animate-pulse text-blue-400 scale-110' : isDark ? 'text-white' : 'text-gray-900'}`}
             style={{ letterSpacing: '0.05em' }}>
             {displayTime}
           </div>
 
-          {/* Status */}
           {!stopped ? (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                Contando...
-              </span>
-            </div>
+            <>
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Contando...</span>
+              </div>
+              <button onClick={handleStop}
+                className="mt-6 w-full py-3 rounded-xl border-2 border-blue-500 text-blue-400 font-bold hover:bg-blue-500/10 transition">
+                Parar
+              </button>
+            </>
           ) : (
             <div className="mt-4 space-y-3">
               <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
                 Fechando em <span className="font-bold text-blue-400">{countdown}s</span>
               </p>
-              <button
-                onClick={handleClose}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-400 text-white font-bold hover:opacity-90 transition"
-              >
+              <button onClick={handleClose}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-400 text-white font-bold hover:opacity-90 transition">
                 Fechar
               </button>
             </div>
-          )}
-
-          {/* Botão parar manual */}
-          {!stopped && (
-            <button
-              onClick={handleStop}
-              className="mt-6 w-full py-3 rounded-xl border-2 border-blue-500 text-blue-400 font-bold hover:bg-blue-500/10 transition"
-            >
-              ⏹ Parar
-            </button>
           )}
         </div>
       </div>

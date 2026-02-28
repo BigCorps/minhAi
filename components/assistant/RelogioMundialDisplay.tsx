@@ -13,6 +13,7 @@ interface Props {
   data: { companyId: string };
   onClose: () => void;
   theme: 'dark' | 'light';
+  playText?: (text: string) => Promise<void>;
 }
 
 const CIDADES = [
@@ -38,7 +39,7 @@ function getLocalTime(timezone: string) {
   return { time, date, isDay: hour >= 6 && hour < 20 };
 }
 
-export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
+export default function RelogioMundialDisplay({ data, onClose, theme, playText }: Props) {
   const isDark = theme === 'dark';
   const [tick, setTick] = useState(0);
   const [countdown, setCountdown] = useState(20);
@@ -52,6 +53,9 @@ export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
   };
 
   useEffect(() => {
+    // Fala ao abrir usando a voz do assistente
+    playText?.('Aqui estão as principais horas ao redor do mundo.').catch(() => {});
+
     // Tick para atualizar os relógios a cada segundo
     intervalRef.current = setInterval(() => setTick(t => t + 1), 1000);
 
@@ -124,13 +128,6 @@ export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
           })}
         </div>
 
-        <div className="px-4 pb-4">
-          <button onClick={handleClose}
-            className={`w-full py-2.5 rounded-xl text-sm font-medium transition border
-              ${isDark ? 'border-white/10 text-white/50 hover:text-white/80' : 'border-gray-200 text-gray-400 hover:text-gray-600'}`}>
-            Fechar
-          </button>
-        </div>
       </div>
     </div>
   );

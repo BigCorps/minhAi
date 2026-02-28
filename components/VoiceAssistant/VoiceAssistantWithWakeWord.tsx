@@ -981,6 +981,7 @@ case 'nfc_debito':
           theme={theme}
           onConfirmPix={handleConfirmPixLocal}
           onCancelPix={handleCancelPixLocal}
+          playText={playText} 
         />
       </div>
     );
@@ -1097,6 +1098,7 @@ case 'nfc_debito':
         theme={theme}
         onConfirmPix={handleConfirmPixLocal}
         onCancelPix={handleCancelPixLocal}
+        playText={playText} 
       />
     </div>
   );

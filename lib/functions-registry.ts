@@ -643,6 +643,289 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
   },
 },
   
+// ── Entradas a adicionar no FUNCTIONS_REGISTRY ─────────────
+
+  criar_lembrete: {
+    functionKey: 'criar_lembrete',
+    functionName: 'Criar Lembrete',
+    category: 'utilities',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'criar lembrete',
+      'me lembra',
+      'me lembre',
+      'adicionar lembrete',
+      'novo lembrete',
+      'lembrar de',
+      'não me deixa esquecer',
+      'quero um lembrete',
+    ],
+
+    examplePhrases: [
+      'Me lembra de ligar para o João às 15h',
+      'Criar lembrete para reunião amanhã às 10h',
+      'Me lembre de tomar remédio às 8 da manhã',
+      'Lembrar de buscar o carro às 18h',
+    ],
+
+    requiresInput: true,
+    inputType: 'text',
+    inputPrompt: 'O que devo lembrar e quando?',
+
+    description: 'Cria um lembrete por voz. Quando o horário chegar, um modal avisa automaticamente.',
+    shortDescription: 'Lembrar de um evento',
+    icon: '🔔',
+    color: '#F59E0B',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
+    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+      try {
+        const { extractLembreteTitle, extractTargetTime } = await import('@/components/VoiceAssistant/utils/utilitiesUtils');
+        const titulo = extractLembreteTitle(transcript ?? '');
+        const timeData = extractTargetTime(transcript ?? '');
+
+        if (timeData) {
+          await playText(`Lembrete criado! Vou te avisar sobre "${titulo}" às ${timeData.label}.`);
+        } else {
+          await playText('Vou criar um lembrete. Preencha o horário no formulário.');
+        }
+
+        setActiveModal?.({
+          type: 'CriarLembreteDisplay',
+          data: { companyId, titulo, dateTime: timeData?.isoTime },
+        });
+
+        return true;
+      } catch (error) {
+        console.error('❌ [CRIAR LEMBRETE]', error);
+        await playText('Não consegui criar o lembrete.');
+        return false;
+      }
+    },
+  },
+
+  cronometro: {
+    functionKey: 'cronometro',
+    functionName: 'Cronômetro',
+    category: 'utilities',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'cronômetro',
+      'cronometro',
+      'iniciar cronômetro',
+      'começar cronômetro',
+      'iniciar contagem',
+      'começar contagem',
+      'ligar cronômetro',
+    ],
+
+    examplePhrases: [
+      'Iniciar cronômetro',
+      'Começar a contar o tempo',
+      'Liga o cronômetro',
+    ],
+
+    requiresInput: false,
+
+    description: 'Inicia um cronômetro. Para quando o usuário pedir para finalizar.',
+    shortDescription: 'Iniciar cronômetro',
+    icon: '⏱️',
+    color: '#3B82F6',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      try {
+        await playText('Cronômetro iniciado! Diga "finalizar cronômetro" quando quiser parar.');
+        setActiveModal?.({ type: 'CronometroDisplay', data: { companyId } });
+        return true;
+      } catch (error) {
+        console.error('❌ [CRONÔMETRO]', error);
+        await playText('Não consegui iniciar o cronômetro.');
+        return false;
+      }
+    },
+  },
+
+  temporizador: {
+    functionKey: 'temporizador',
+    functionName: 'Temporizador',
+    category: 'utilities',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'temporizador',
+      'timer',
+      'contagem regressiva',
+      'contar regressivo',
+      'criar temporizador',
+      'iniciar temporizador',
+      'colocar timer',
+    ],
+
+    examplePhrases: [
+      'Temporizador de 5 minutos',
+      'Criar timer de 30 segundos',
+      'Contagem regressiva de 10 minutos',
+    ],
+
+    requiresInput: true,
+    inputType: 'text',
+    inputPrompt: 'Qual o tempo para o temporizador?',
+
+    description: 'Cria um temporizador com tempo definido. Avisa por voz e modal quando terminar.',
+    shortDescription: 'Contar tempo regressivo',
+    icon: '⏲️',
+    color: '#10B981',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
+    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+      try {
+        const { extractDurationMs } = await import('@/components/VoiceAssistant/utils/utilitiesUtils');
+        const duration = extractDurationMs(transcript ?? '');
+
+        if (!duration) {
+          await playText('Por favor, informe o tempo. Por exemplo: temporizador de 5 minutos.');
+          return false;
+        }
+
+        await playText(`Temporizador de ${duration.label} iniciado!`);
+        setActiveModal?.({
+          type: 'TemporizadorDisplay',
+          data: { companyId, durationMs: duration.ms, label: duration.label },
+        });
+
+        return true;
+      } catch (error) {
+        console.error('❌ [TEMPORIZADOR]', error);
+        await playText('Não consegui iniciar o temporizador.');
+        return false;
+      }
+    },
+  },
+
+  relogio_mundial: {
+    functionKey: 'relogio_mundial',
+    functionName: 'Relógio Mundial',
+    category: 'utilities',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'relógio mundial',
+      'relogio mundial',
+      'horas no mundo',
+      'horário mundial',
+      'que horas são no mundo',
+      'horas internacionais',
+      'fuso horário',
+      'fusos horários',
+      'horário em outros países',
+    ],
+
+    examplePhrases: [
+      'Que horas são no mundo?',
+      'Mostrar relógio mundial',
+      'Horas internacionais',
+      'Ver fusos horários',
+    ],
+
+    requiresInput: false,
+
+    description: 'Exibe as horas atuais nas 8 principais cidades do mundo.',
+    shortDescription: 'Horas ao redor do mundo',
+    icon: '🌍',
+    color: '#6366F1',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
+    handler: async ({ setActiveModal, companyId }) => {
+      try {
+        setActiveModal?.({ type: 'RelogioMundialDisplay', data: { companyId } });
+        return true;
+      } catch (error) {
+        console.error('❌ [RELÓGIO MUNDIAL]', error);
+        return false;
+      }
+    },
+  },
+
+  alarme: {
+    functionKey: 'alarme',
+    functionName: 'Alarme',
+    category: 'utilities',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'alarme',
+      'criar alarme',
+      'definir alarme',
+      'colocar alarme',
+      'setar alarme',
+      'me acorda',
+      'acordar às',
+      'despertar',
+    ],
+
+    examplePhrases: [
+      'Criar alarme para as 7 da manhã',
+      'Me acorda às 6h30',
+      'Definir alarme para 8 horas',
+    ],
+
+    requiresInput: true,
+    inputType: 'text',
+    inputPrompt: 'Qual o horário do alarme?',
+
+    description: 'Cria um alarme para um horário específico. Avisa quando chegar a hora.',
+    shortDescription: 'Criar alarme por horário',
+    icon: '⏰',
+    color: '#EF4444',
+
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+
+    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+      try {
+        const { extractTargetTime } = await import('@/components/VoiceAssistant/utils/utilitiesUtils');
+        const timeData = extractTargetTime(transcript ?? '');
+
+        if (timeData) {
+          await playText(`Alarme criado para as ${timeData.label}!`);
+          setActiveModal?.({
+            type: 'AlarmeDisplay',
+            data: { companyId, targetTime: timeData.isoTime, label: `Alarme ${timeData.label}` },
+          });
+        } else {
+          await playText('Para criar um alarme, me diga o horário. Por exemplo: alarme para as 7 da manhã.');
+          setActiveModal?.({ type: 'AlarmeDisplay', data: { companyId } });
+        }
+
+        return true;
+      } catch (error) {
+        console.error('❌ [ALARME]', error);
+        await playText('Não consegui criar o alarme.');
+        return false;
+      }
+    },
+  },
   
   enviar_email: {
     functionKey: 'enviar_email',

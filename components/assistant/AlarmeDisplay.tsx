@@ -150,6 +150,8 @@ export default function AlarmeDisplay({ data, onClose, theme }: Props) {
       targetTime: target.toISOString(),
     });
     localStorage.setItem('eai_alarmes', JSON.stringify(alarmes));
+    // Acorda o watcher na mesma aba
+    window.dispatchEvent(new Event('eai:alarme:saved'));
   };
 
   // ── Render: TOCANDO ───────────────────────────────────────

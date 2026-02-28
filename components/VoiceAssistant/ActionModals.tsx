@@ -65,6 +65,7 @@ interface ActionModalsProps {
   // Handlers de PIX (passados diretamente pois têm lógica própria)
   onConfirmPix?: (data: any) => void;
   onCancelPix?: () => void;
+  playText?: (text: string) => Promise<void>;
 }
 
 // ── Componente ────────────────────────────────────────────────

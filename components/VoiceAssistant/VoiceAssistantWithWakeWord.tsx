@@ -313,29 +313,37 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ── Transcript handler ────────────────────────────────────
-  function handleGoogleTranscript(text: string, isFinal: boolean) {
-    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
+function handleGoogleTranscript(text: string, isFinal: boolean) {
+  if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
 
-    const lowerText = text.toLowerCase().trim();
-    console.log(`${isFinal ? '✅ Final' : '📝 Interim'}: "${lowerText}"`);
+  const lowerText = text.toLowerCase().trim();
 
-// Intercepta comandos de controle antes do filtro de wake word
-const CONTROL_COMMANDS = [
-  {
-    triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem', 'stop cronômetro'],
-    action: () => window.dispatchEvent(new Event('eai:cronometro:stop'))
-  },
-];
-for (const cmd of CONTROL_COMMANDS) {
-  if (cmd.triggers.some(t => lowerText.includes(t))) {
-    if (!isFinal) return;
-    console.log('🎛️ Comando de controle interceptado:', lowerText);
-    cmd.action();
-    return;
+  // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
+  if (isFinal && detectStopCommand(lowerText)) {
+    if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
+      console.log('🛑 Stop command interceptado antes da wake word:', lowerText);
+      stopEverything();
+      return;
+    }
   }
-}
-    
-    const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
+
+  // ✅ 2. INTERCEPTAR CONTROLES DE FUNÇÃO (cronômetro, etc.)
+  const CONTROL_COMMANDS = [
+    {
+      triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
+      action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
+    },
+  ];
+  for (const cmd of CONTROL_COMMANDS) {
+    if (cmd.triggers.some(t => lowerText.includes(t))) {
+      if (!isFinal) return;
+      cmd.action();
+      return;
+    }
+  }
+
+  // ✅ 3. SÓ AGORA verifica wake word
+  const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
 
     if (!wakeWordResult?.detected) {
       // ✅ Fecha modal aberto mesmo quando áudio já terminou

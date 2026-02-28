@@ -1,8 +1,9 @@
 'use client';
 
 // ============================================================
-// TemporizadorDisplay.tsx — VERSÃO CORRIGIDA
-// - Sem emoji no título
+// TemporizadorDisplay.tsx
+// playText é recebido via prop e usado para avisar que o tempo acabou.
+// Nenhum speechSynthesis direto neste componente.
 // ============================================================
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -11,6 +12,7 @@ interface Props {
   data: { companyId: string; durationMs: number; label?: string };
   onClose: () => void;
   theme: 'dark' | 'light';
+  playText?: (text: string) => Promise<void>;
 }
 
 function formatTime(ms: number): string {
@@ -24,7 +26,7 @@ function formatTime(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-export default function TemporizadorDisplay({ data, onClose, theme }: Props) {
+export default function TemporizadorDisplay({ data, onClose, theme, playText }: Props) {
   const isDark = theme === 'dark';
   const { durationMs = 300000, label = '' } = data;
 
@@ -55,7 +57,6 @@ export default function TemporizadorDisplay({ data, onClose, theme }: Props) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
-      window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -63,12 +64,11 @@ export default function TemporizadorDisplay({ data, onClose, theme }: Props) {
     setFinished(true);
     setRemaining(0);
 
-    const msg = new SpeechSynthesisUtterance(
-      label ? `Tempo esgotado! O temporizador de ${label} acabou.` : 'Tempo esgotado! O temporizador terminou.'
-    );
-    msg.lang = 'pt-BR';
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(msg);
+    // Usa a voz Google TTS do assistente via playText
+    const msg = label
+      ? `Tempo esgotado! O temporizador de ${label} acabou.`
+      : 'Tempo esgotado! O temporizador terminou.';
+    playText?.(msg).catch(() => {});
 
     let count = 15;
     countdownRef.current = setInterval(() => {
@@ -82,7 +82,6 @@ export default function TemporizadorDisplay({ data, onClose, theme }: Props) {
   };
 
   const handleClose = () => {
-    window.speechSynthesis.cancel();
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (countdownRef.current) clearInterval(countdownRef.current);
     onClose();
@@ -96,8 +95,9 @@ export default function TemporizadorDisplay({ data, onClose, theme }: Props) {
       <div className={`relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden
         ${isDark ? 'bg-slate-900 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
-        {/* Cabeçalho sem emoji */}
-        <div className={`p-6 text-center ${finished ? 'bg-gradient-to-r from-red-600 to-orange-500' : 'bg-gradient-to-r from-emerald-600 to-teal-500'}`}>
+        <div className={`p-6 text-center ${finished
+          ? 'bg-gradient-to-r from-red-600 to-orange-500'
+          : 'bg-gradient-to-r from-emerald-600 to-teal-500'}`}>
           <h2 className="text-xl font-bold text-white">
             {finished ? 'Tempo Esgotado' : `Temporizador${label ? `: ${label}` : ''}`}
           </h2>

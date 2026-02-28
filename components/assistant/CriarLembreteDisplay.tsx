@@ -102,6 +102,8 @@ export default function CriarLembreteDisplay({ data, onClose, theme }: Props) {
       dateTime: targetDate.toISOString(),
     });
     localStorage.setItem('eai_lembretes', JSON.stringify(lembretes));
+    // Acorda o watcher na mesma aba
+    window.dispatchEvent(new Event('eai:lembrete:saved'));
 
     setSaved(true);
 

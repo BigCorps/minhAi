@@ -23,6 +23,7 @@ import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './handlers/utilitiesHandlers';
+import { useLembreteWatcher } from './hooks/useLembreteWatcher';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -117,6 +118,12 @@ export function VoiceAssistantWithWakeWord({
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
   const { currentAudioRef, feedbackAudioRef, playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
+
+  useLembreteWatcher({
+    setActiveModal,
+    playText,
+    companyId,
+  });
 
   // ── Inicialização ─────────────────────────────────────────
   useEffect(() => {

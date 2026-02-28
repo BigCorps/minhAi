@@ -15,6 +15,7 @@ import { handlePixCommand, handleConfirmPix, handleCancelPix } from './pixHandle
 import { handleNossaMarcaCommand, handleEnderecoCommand } from './companyHandlers';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
+import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './utilitiesHandlers';
 
 // ── Interface de dependências ─────────────────────────────────
 // IMPORTANTE: setActiveModal é o único setter de modal necessário.
@@ -126,6 +127,74 @@ export async function detectVoiceCommand(
   }
 
   // 3. TERCEIRO: Comandos de CONFIRMAÇÃO (só rodam se nenhum comando de abertura foi detectado)
+
+  // ── Criar Lembrete ────────────────────────────────────────
+  const criarLembreteTriggers = ['criar lembrete', 'me lembra', 'me lembre', 'lembrar de', 'não me deixa esquecer', 'novo lembrete', 'quero um lembrete'];
+  if (criarLembreteTriggers.some(t => lowerTranscript.includes(t))) {
+    console.log('🔔 Comando Criar Lembrete detectado!');
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'criar_lembrete');
+    if (!isEnabled) { await playText('Função desativada.'); return true; }
+    await handleCriarLembrete({ companyId, setIsProcessing, setActiveModal, playText, transcript: correctedTranscript });
+    await registerFunctionUsage(companyId, 'criar_lembrete', functionSettings['criar_lembrete']?.creditsPerUse ?? 1);
+    return true;
+  }
+
+  // ── Finalizar Cronômetro (parar) ──────────────────────────
+  const finalizarCronometroTriggers = ['finalizar cronômetro', 'parar cronômetro', 'parar contagem', 'finalizar contagem', 'stop cronômetro'];
+  if (finalizarCronometroTriggers.some(t => lowerTranscript.includes(t))) {
+    console.log('⏱️ Finalizar cronômetro detectado!');
+    window.dispatchEvent(new Event('eai:cronometro:stop'));
+    return true;
+  }
+
+  // ── Cronômetro (iniciar) ──────────────────────────────────
+  const cronometroTriggers = ['iniciar cronômetro', 'começar cronômetro', 'comecar cronometro', 'ligar cronômetro', 'iniciar contagem', 'começar contagem'];
+  if (cronometroTriggers.some(t => lowerTranscript.includes(t))) {
+    console.log('⏱️ Comando Cronômetro detectado!');
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'cronometro');
+    if (!isEnabled) { await playText('Função desativada.'); return true; }
+    await handleCronometro({ companyId, setIsProcessing, setActiveModal, playText });
+    await registerFunctionUsage(companyId, 'cronometro', functionSettings['cronometro']?.creditsPerUse ?? 1);
+    return true;
+  }
+
+  // ── Temporizador ──────────────────────────────────────────
+  const temporizadorTriggers = ['temporizador', 'contagem regressiva', 'colocar timer'];
+  // 'timer' isolado pode dar falso positivo — exigimos contexto
+  const hasTimerContext = lowerTranscript.includes('timer') &&
+    (lowerTranscript.includes('minuto') || lowerTranscript.includes('segundo') || lowerTranscript.includes('hora'));
+  if (temporizadorTriggers.some(t => lowerTranscript.includes(t)) || hasTimerContext) {
+    console.log('⏲️ Comando Temporizador detectado!');
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'temporizador');
+    if (!isEnabled) { await playText('Função desativada.'); return true; }
+    await handleTemporizador({ companyId, setIsProcessing, setActiveModal, playText, transcript: correctedTranscript });
+    await registerFunctionUsage(companyId, 'temporizador', functionSettings['temporizador']?.creditsPerUse ?? 1);
+    return true;
+  }
+
+  // ── Relógio Mundial ────────────────────────────────────────
+  const relogioMundialTriggers = ['relógio mundial', 'relogio mundial', 'horas no mundo', 'horário mundial', 'horas internacionais', 'fuso horário', 'fusos horários', 'horário em outros países', 'que horas são no mundo'];
+  if (relogioMundialTriggers.some(t => lowerTranscript.includes(t))) {
+    console.log('🌍 Comando Relógio Mundial detectado!');
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'relogio_mundial');
+    if (!isEnabled) { await playText('Função desativada.'); return true; }
+    await handleRelogioMundial({ companyId, setIsProcessing, setActiveModal, playText });
+    await registerFunctionUsage(companyId, 'relogio_mundial', functionSettings['relogio_mundial']?.creditsPerUse ?? 1);
+    return true;
+  }
+
+  // ── Alarme ────────────────────────────────────────────────
+  const alarmeTriggers = ['criar alarme', 'definir alarme', 'colocar alarme', 'setar alarme', 'me acorda', 'acordar às', 'acordar as'];
+  // 'alarme' isolado pode ser ruído — exigimos trigger composto
+  if (alarmeTriggers.some(t => lowerTranscript.includes(t)) ||
+     (lowerTranscript.includes('alarme') && (lowerTranscript.includes('para as') || lowerTranscript.includes('às') || lowerTranscript.includes('as ')))) {
+    console.log('⏰ Comando Alarme detectado!');
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'alarme');
+    if (!isEnabled) { await playText('Função desativada.'); return true; }
+    await handleAlarme({ companyId, setIsProcessing, setActiveModal, playText, transcript: correctedTranscript });
+    await registerFunctionUsage(companyId, 'alarme', functionSettings['alarme']?.creditsPerUse ?? 1);
+    return true;
+  }
   
   // ── AGENDA: Confirmar evento
   const confirmarEventoTriggers = ['confirmar marcação', 'confirmar agenda', 'confirmar evento', 'confirmar compromisso', 'confirmar reunião', 'confirma reunião', 'confirma evento', 'confirma marcação', 'está correto', 'tá correto', 'está certo', 'tá certo', 'confirma', 'confirmar', 'pode marcar', 'marcar esse', 'marque esse', 'agendar esse', 'agende', 'pode agendar', 'sim confirmar', 'sim pode marcar', 'correto pode marcar', 'ok marcar', 'ok confirmar'];

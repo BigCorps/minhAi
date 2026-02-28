@@ -366,6 +366,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     
     voiceTriggers: [
       'agendar',
+      'ver agenda',
       'marcar compromisso',
       'marcar evento',
       'criar evento',

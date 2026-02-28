@@ -22,6 +22,7 @@ import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from '../handlers/utilitiesHandlers';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -508,10 +509,29 @@ case 'ver_agenda':
   playText('Abrindo o calendário.').catch(() => {});
   break;
 
+        case 'criar_lembrete':
+          await handleCriarLembrete({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
+
+        case 'cronometro':
+          await handleCronometro({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
+
+        case 'temporizador':
+          await playText('Qual o tempo do temporizador? Por exemplo: 5 minutos, 30 segundos.');
+          break;
+
+        case 'relogio_mundial':
+          await handleRelogioMundial({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
+
+        case 'alarme':
+          await handleAlarme({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
+          
 case 'link_pagamento':
   playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
   break;
-
 
 case 'nfc_credito':
   playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir para gerar uma cobrança no crédito e o valor.').catch(() => {});

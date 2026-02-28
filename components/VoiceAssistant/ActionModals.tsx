@@ -20,6 +20,11 @@ import CreateEventModal from '@/components/assistant/CreateEventModal';
 import ViewAgendaModal from '@/components/assistant/ViewAgendaModal';
 import SequenciaVideosDisplay from '@/components/assistant/SequenciaVideosDisplay';
 import InfinitePayDisplay from '@/components/assistant/InfinitePayDisplay';
+import CriarLembreteDisplay from '@/components/assistant/CriarLembreteDisplay';
+import CronometroDisplay from '@/components/assistant/CronometroDisplay';
+import TemporizadorDisplay from '@/components/assistant/TemporizadorDisplay';
+import RelogioMundialDisplay from '@/components/assistant/RelogioMundialDisplay';
+import AlarmeDisplay from '@/components/assistant/AlarmeDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -39,7 +44,12 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'CreateEventModal': CreateEventModal,
   'ViewAgendaModal': ViewAgendaModal, 
   'SequenciaVideosDisplay': SequenciaVideosDisplay, 
-  'InfinitePayDisplay': InfinitePayDisplay, 
+  'InfinitePayDisplay': InfinitePayDisplay,
+  'CriarLembreteDisplay': CriarLembreteDisplay,
+  'CronometroDisplay': CronometroDisplay,
+  'TemporizadorDisplay': TemporizadorDisplay,
+  'RelogioMundialDisplay': RelogioMundialDisplay,
+  'AlarmeDisplay': AlarmeDisplay,
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

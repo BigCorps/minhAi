@@ -22,7 +22,7 @@ import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from '../handlers/utilitiesHandlers';
+import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './handlers/utilitiesHandlers';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {

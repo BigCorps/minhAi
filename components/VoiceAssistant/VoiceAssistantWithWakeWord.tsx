@@ -375,15 +375,45 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
     if (!processingQuestion.current) {
       processingQuestion.current = true;
 
+      // Palavras curtas que devem ir direto para o processador mesmo com 1 palavra
+      const SINGLE_WORD_COMMANDS = [
+        // Confirmação
+        'confirmar', 'confirma', 'confirmado', 'sim', 'não', 'nao', 'ok', 'correto', 'certo', 'exato',
+        // Fechamento / parada
+        'fechar', 'fecha', 'cancelar', 'cancela', 'pare', 'para', 'parar',
+        'tchau', 'obrigado', 'sair', 'voltar', 'dispensado', 'encerrar', 'encerra',
+        // Ação / envio
+        'enviar', 'envia', 'envie', 'manda', 'mandar', 'mandou',
+        'salvar', 'salva', 'salve',
+        'criar', 'cria', 'crie',
+        'agendar', 'agenda', 'agende',
+        'marcar', 'marca', 'marque',
+        'apagar', 'apaga', 'deletar', 'deleta', 'excluir', 'exclui',
+        'editar', 'edita',
+        'atualizar', 'atualiza',
+        'próximo', 'proximo', 'anterior', 'avançar', 'avanca', 'voltar',
+        'abrir', 'abre',
+        'ligar', 'desligar',
+        'iniciar', 'inicia', 'começar', 'comecar', 'finalizar', 'finaliza',
+        'adicionar', 'adiciona',
+        'compartilhar', 'compartilha',
+        'copiar', 'copia',
+        'imprimir', 'imprime',
+      ];
+      const isSingleWordCommand = SINGLE_WORD_COMMANDS.includes(command.trim());
+
       if (!command) {
         const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
         playText(greeting).finally(() => { processingQuestion.current = false; });
       } else if (detectStopCommand(command)) {
-        // ✅ Comando de stop após wake word (ex: "gerente fechar") — fecha modal
+        // Stop após wake word (ex: "gerente fechar", "gerente para") — fecha tudo
         console.log('🛑 Stop command após wake word:', command);
         processingQuestion.current = false;
         stopEverything();
-      } else if (commandWords.length < MIN_COMMAND_WORDS) {
+      } else if (isSingleWordCommand || commandWords.length >= MIN_COMMAND_WORDS) {
+        // Palavra curta conhecida OU comando com palavras suficientes — processa normalmente
+        processWakeWordQuestion(command);
+      } else {
         console.log(`⚠️ Comando muito curto: "${command}"`);
         triggerRepromptWarning();
         playText('Pode completar sua pergunta?').finally(() => {
@@ -395,8 +425,6 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
             }
           }, 300);
         });
-      } else {
-        processWakeWordQuestion(command);
       }
     }
   }

@@ -93,6 +93,8 @@ export function VoiceAssistantWithWakeWord({
 
   // ── Sistema híbrido ───────────────────────────────────────
   const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);
+  const [lastTranscript, setLastTranscript] = useState<string>("");
+  const [lastResponse, setLastResponse] = useState<string>("");
 
   // ── Refs de controle ──────────────────────────────────────
   const isActiveRef = useRef(true);
@@ -116,8 +118,16 @@ export function VoiceAssistantWithWakeWord({
   const functionSettings = useFunctionSettings(companyId);
   const { noiseWarning, repromptWarning, handleVolumeChange, triggerRepromptWarning } = useNoiseWarning();
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
-  const { currentAudioRef, feedbackAudioRef, playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
+  const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
+
+  // Wrap de playText para capturar lastResponse automaticamente
+  const playText = (text: string) => {
+    if (text && text.trim()) {
+      setLastResponse(text.trim());
+    }
+    return _playText(text);
+  };
 
   useLembreteWatcher({
     setActiveModal,
@@ -319,9 +329,8 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   const lowerText = text.toLowerCase().trim();
 
   // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
-  // Basta modal aberto OU áudio tocando — não exige os dois
   if (isFinal && detectStopCommand(lowerText)) {
-    if (activeModal !== null || isPlayingAudio || isSpeaking || isProcessing) {
+    if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
       console.log('🛑 Stop command interceptado antes da wake word:', lowerText);
       stopEverything();
       return;
@@ -375,45 +384,10 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
     if (!processingQuestion.current) {
       processingQuestion.current = true;
 
-      // Palavras curtas que devem ir direto para o processador mesmo com 1 palavra
-      const SINGLE_WORD_COMMANDS = [
-        // Confirmação
-        'confirmar', 'confirma', 'confirmado', 'sim', 'não', 'nao', 'ok', 'correto', 'certo', 'exato',
-        // Fechamento / parada
-        'fechar', 'fecha', 'cancelar', 'cancela', 'pare', 'para', 'parar',
-        'tchau', 'obrigado', 'sair', 'voltar', 'dispensado', 'encerrar', 'encerra',
-        // Ação / envio
-        'enviar', 'envia', 'envie', 'manda', 'mandar', 'mandou',
-        'salvar', 'salva', 'salve',
-        'criar', 'cria', 'crie',
-        'agendar', 'agenda', 'agende',
-        'marcar', 'marca', 'marque',
-        'apagar', 'apaga', 'deletar', 'deleta', 'excluir', 'exclui',
-        'editar', 'edita',
-        'atualizar', 'atualiza',
-        'próximo', 'proximo', 'anterior', 'avançar', 'avanca', 'voltar',
-        'abrir', 'abre',
-        'ligar', 'desligar',
-        'iniciar', 'inicia', 'começar', 'comecar', 'finalizar', 'finaliza',
-        'adicionar', 'adiciona',
-        'compartilhar', 'compartilha',
-        'copiar', 'copia',
-        'imprimir', 'imprime',
-      ];
-      const isSingleWordCommand = SINGLE_WORD_COMMANDS.includes(command.trim());
-
       if (!command) {
         const greeting = companyGreeting || greetingMessage || 'Oi! Como posso ajudar?';
         playText(greeting).finally(() => { processingQuestion.current = false; });
-      } else if (detectStopCommand(command)) {
-        // Stop após wake word (ex: "gerente fechar", "gerente para") — fecha tudo
-        console.log('🛑 Stop command após wake word:', command);
-        processingQuestion.current = false;
-        stopEverything();
-      } else if (isSingleWordCommand || commandWords.length >= MIN_COMMAND_WORDS) {
-        // Palavra curta conhecida OU comando com palavras suficientes — processa normalmente
-        processWakeWordQuestion(command);
-      } else {
+      } else if (commandWords.length < MIN_COMMAND_WORDS) {
         console.log(`⚠️ Comando muito curto: "${command}"`);
         triggerRepromptWarning();
         playText('Pode completar sua pergunta?').finally(() => {
@@ -425,6 +399,8 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
             }
           }, 300);
         });
+      } else {
+        processWakeWordQuestion(command);
       }
     }
   }
@@ -662,6 +638,7 @@ case 'nfc_debito':
       return;
     }
 
+    setLastTranscript(clean);
     processQuestion(clean);
   }
 
@@ -867,6 +844,7 @@ case 'nfc_debito':
   // ── Text input handler ────────────────────────────────────
   const handleTextMessage = async (message: string) => {
     if (detectStopCommand(message)) { stopEverything(); return; }
+    if (message.trim()) setLastTranscript(message.trim());
 
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
@@ -1060,11 +1038,14 @@ case 'nfc_debito':
         </div>
 
         {/* Card direito: Status / Microfone */}
-        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors ${
+        {/* h-[384px] = mesma altura que o card esquerdo (h-96 = 384px) + padding p-8 */}
+        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors h-[448px] flex flex-col ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
-          <div className="flex flex-col items-center space-y-6">
-            <div className="relative flex items-center justify-center">
+          <div className="flex flex-col items-center flex-1 min-h-0">
+
+            {/* Ícone de microfone */}
+            <div className="relative flex items-center justify-center mt-2">
               <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
                 <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -1072,17 +1053,18 @@ case 'nfc_debito':
               </div>
             </div>
 
-            <div className="text-center w-full">
-              <p className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            {/* Status */}
+            <div className="text-center w-full mt-4">
+              <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 {getStatusMessage()}
               </p>
-              <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
+              <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
                 No modo voz, utilize a palavra de ativação
               </p>
             </div>
 
             {error && (
-              <div className={`w-full p-4 rounded-xl border-2 ${
+              <div className={`w-full mt-3 p-3 rounded-xl border-2 ${
                 theme === 'dark' ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-red-50 border-red-200 text-red-700'
               }`}>
                 <p className="text-sm">{error}</p>
@@ -1090,11 +1072,12 @@ case 'nfc_debito':
             )}
 
             {showStartButton && permissionGranted && (
-              <button onClick={handleStart} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
+              <button onClick={handleStart} className="mt-6 px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
                 Iniciar Assistente
               </button>
             )}
 
+            {/* ── Área inferior fixa: TextInput + 3 cards de status ── */}
             {!showStartButton && (
               <div className="w-full mt-auto flex flex-col gap-2">
                 <TextInputChat
@@ -1103,16 +1086,58 @@ case 'nfc_debito':
                   theme={theme}
                   disabled={false}
                 />
-                <div className="min-h-[2rem]">
-                  {(repromptWarning || noiseWarning) && (
-                    <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
-                      theme === 'dark'
-                        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-                        : 'bg-blue-50 border border-blue-200 text-blue-700'
-                    }`}>
-                      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Estou ouvindo... fale mais perto do microfone'}
-                    </div>
-                  )}
+
+                {/* 3 cards fixos — sempre ocupam o mesmo espaço, evitando layout shift */}
+                <div className="flex flex-col gap-1.5">
+
+                  {/* Card 1: Aviso de ruído / reprompt (azul) */}
+                  <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
+                    (repromptWarning || noiseWarning)
+                      ? theme === 'dark'
+                        ? 'bg-blue-500/20 border-blue-500/40 text-blue-300 opacity-100'
+                        : 'bg-blue-50 border-blue-200 text-blue-700 opacity-100'
+                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                  }`}>
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 18.364a9 9 0 000-12.728M8.464 15.536a5 5 0 010-7.072" />
+                    </svg>
+                    <span className="truncate">
+                      {repromptWarning ? 'Não consegui entender — pode repetir?' : 'Estou ouvindo... fale mais perto do microfone'}
+                    </span>
+                  </div>
+
+                  {/* Card 2: Última frase reconhecida (verde) */}
+                  <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
+                    lastTranscript
+                      ? theme === 'dark'
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 opacity-100'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 opacity-100'
+                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                  }`}>
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span className="truncate">
+                      {lastTranscript ? `"${lastTranscript.length > 45 ? lastTranscript.slice(0, 45) + '…' : lastTranscript}"` : ''}
+                    </span>
+                  </div>
+
+                  {/* Card 3: Última resposta dada (roxo) */}
+                  <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
+                    lastResponse
+                      ? theme === 'dark'
+                        ? 'bg-purple-500/15 border-purple-500/30 text-purple-300 opacity-100'
+                        : 'bg-purple-50 border-purple-200 text-purple-700 opacity-100'
+                      : 'opacity-0 pointer-events-none border-transparent bg-transparent'
+                  }`}>
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    <span className="truncate">
+                      {lastResponse ? `${lastResponse.length > 45 ? lastResponse.slice(0, 45) + '…' : lastResponse}` : ''}
+                    </span>
+                  </div>
+
                 </div>
               </div>
             )}

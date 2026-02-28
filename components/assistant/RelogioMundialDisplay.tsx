@@ -1,11 +1,10 @@
 'use client';
 
 // ============================================================
-// RelogioMundialDisplay.tsx — VERSÃO CORRIGIDA
-// - Layout deitado no desktop (4 colunas), em pé no mobile (2 colunas)
-// - Sem emoji no título
-// - Mantém emojis ☀️ 🌙 apenas nos cards
-// - Fecha automaticamente em 20 segundos
+// RelogioMundialDisplay.tsx
+// A fala "Essas são as principais horas..." é feita pelo
+// handler via playText ANTES de abrir o modal.
+// Este componente NÃO fala nada por conta própria.
 // ============================================================
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -47,20 +46,16 @@ export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleClose = () => {
-    window.speechSynthesis.cancel();
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (countdownRef.current) clearInterval(countdownRef.current);
     onClose();
   };
 
   useEffect(() => {
+    // Tick para atualizar os relógios a cada segundo
     intervalRef.current = setInterval(() => setTick(t => t + 1), 1000);
 
-    const msg = new SpeechSynthesisUtterance('Essas são as principais horas atuais ao redor do mundo.');
-    msg.lang = 'pt-BR';
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(msg);
-
+    // Auto-close em 20 segundos
     let count = 20;
     countdownRef.current = setInterval(() => {
       count--;
@@ -74,7 +69,6 @@ export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
-      window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -87,7 +81,7 @@ export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
         max-w-sm md:max-w-4xl
         ${isDark ? 'bg-slate-900 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
-        {/* Cabeçalho — título sem emoji */}
+        {/* Cabeçalho */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">Relógio Mundial</h2>
@@ -98,7 +92,8 @@ export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
               ${countdown <= 5 ? 'text-red-300 animate-pulse' : 'text-white/50'}`}>
               {countdown}s
             </span>
-            <button onClick={handleClose} className="text-white/70 hover:text-white text-2xl font-bold leading-none">✕</button>
+            <button onClick={handleClose}
+              className="text-white/70 hover:text-white text-2xl font-bold leading-none">✕</button>
           </div>
         </div>
 
@@ -112,17 +107,15 @@ export default function RelogioMundialDisplay({ data, onClose, theme }: Props) {
                   ${isDark
                     ? 'bg-slate-800/60 border-white/5 hover:border-indigo-500/30'
                     : 'bg-gray-50 border-gray-100 hover:border-indigo-200'}`}>
-
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">{emoji}</span>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-bold leading-tight truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{cidade}</p>
+                    <p className={`text-sm font-bold leading-tight truncate
+                      ${isDark ? 'text-white' : 'text-gray-900'}`}>{cidade}</p>
                     <p className={`text-xs truncate ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{pais}</p>
                   </div>
-                  {/* Apenas estes dois emojis são mantidos */}
                   <span className="text-base flex-shrink-0">{isDay ? '☀️' : '🌙'}</span>
                 </div>
-
                 <p className={`font-mono text-2xl font-bold tabular-nums
                   ${isDark ? 'text-indigo-300' : 'text-indigo-600'}`}>{time}</p>
                 <p className={`text-xs mt-0.5 capitalize ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{date}</p>

@@ -96,6 +96,8 @@ export function VoiceAssistantWithWakeWord({
   const [lastTranscript, setLastTranscript] = useState<string>("");
   const [lastResponse, setLastResponse] = useState<string>("");
   const [showConversationModal, setShowConversationModal] = useState(false);
+  const [showLastConversation, setShowLastConversation] = useState(false);
+  const conversationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ── Refs de controle ──────────────────────────────────────
   const isActiveRef = useRef(true);
@@ -135,6 +137,20 @@ export function VoiceAssistantWithWakeWord({
     playText,
     companyId,
   });
+
+  // ── Timer 30s para sumir card de conversa ─────────────────
+  useEffect(() => {
+    if (!lastTranscript && !lastResponse) return;
+    setShowLastConversation(true);
+    if (conversationTimerRef.current) clearTimeout(conversationTimerRef.current);
+    conversationTimerRef.current = setTimeout(() => {
+      setShowLastConversation(false);
+      conversationTimerRef.current = null;
+    }, 30000);
+    return () => {
+      if (conversationTimerRef.current) clearTimeout(conversationTimerRef.current);
+    };
+  }, [lastTranscript, lastResponse]);
 
   // ── Inicialização ─────────────────────────────────────────
   useEffect(() => {
@@ -741,6 +757,12 @@ case 'nfc_debito':
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionId) setSessionId(newSessionId);
 
+      // Capturar texto da resposta se o servidor enviar no header
+      const responseTextHeader = response.headers.get('X-Response-Text');
+      if (responseTextHeader) {
+        setLastResponse(decodeURIComponent(responseTextHeader));
+      }
+
       if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
       clearTimeout(feedbackTimeout);
@@ -883,6 +905,12 @@ case 'nfc_debito':
 
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionId) setSessionId(newSessionId);
+
+      // Capturar texto da resposta se o servidor enviar no header
+      const responseTextHeader = response.headers.get('X-Response-Text');
+      if (responseTextHeader) {
+        setLastResponse(decodeURIComponent(responseTextHeader));
+      }
 
       if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
@@ -1102,13 +1130,13 @@ case 'nfc_debito':
                 {/* Card pergunta + resposta (verde) — clicável, abre modal */}
                 <div
                   onClick={() => {
-                    if (lastTranscript || lastResponse) {
+                    if (showLastConversation && (lastTranscript || lastResponse)) {
                       setShowConversationModal(true);
                       setTimeout(() => setShowConversationModal(false), 5000);
                     }
                   }}
-                  className={`w-full rounded-xl border transition-all duration-300 overflow-hidden ${
-                    (lastTranscript || lastResponse)
+                  className={`w-full rounded-xl border transition-all duration-500 overflow-hidden ${
+                    showLastConversation
                       ? theme === 'dark'
                         ? 'bg-emerald-500/15 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/25'
                         : 'bg-emerald-50 border-emerald-200 cursor-pointer hover:bg-emerald-100'

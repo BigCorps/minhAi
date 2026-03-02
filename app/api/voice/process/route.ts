@@ -384,6 +384,7 @@ Pergunta: ${userMessage}`;
         'X-Used-FAQ': String(usedFAQ),
         'X-Processing-Time': String(totalTime),
         'X-Transcription': encodeURIComponent(userMessage),
+        'X-Response-Text': encodeURIComponent(responseText.slice(0, 300)),
       },
     });
   } catch (error: any) {

@@ -174,21 +174,24 @@ export default function SendEmailModal({
           
           // ✅ CORREÇÃO: Detecção robusta da palavra "FIM"
           const lowerTranscript = transcript.toLowerCase().trim();
-          const FIM_TRIGGERS = [
-  'fim', 'pronto', 'terminar', 'encerrar', 'concluir',
-  'acabou', 'pode enviar', 'é isso', 'é isso aí',
+const FIM_TRIGGERS = [
+  'terminou', 'fim', 'pronto', 'encerrar', 'concluir', 'acabou',
 ];
 
 // Divide em palavras para evitar falso positivo em "enfim", "afim", etc.
 const words = lowerTranscript
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+  .replace(/[.,!?;:]+/g, '')                        // ✅ NOVO: remove pontuação
   .split(/\s+/);
 
-// "fim" só é válido se for a última palavra isolada
 const lastWord = words[words.length - 1];
 const hasFim =
   lastWord === 'fim' ||
-  FIM_TRIGGERS.slice(1).some(t => lowerTranscript.endsWith(t));
+  FIM_TRIGGERS.slice(1).some(t =>
+    lowerTranscript
+      .replace(/[.,!?;:]+/g, '')   // ✅ remove pontuação antes do endsWith
+      .endsWith(t)
+  );
           
           if (hasFim) {
             console.log('🛑 Palavra "FIM" detectada - parando gravação');
@@ -406,7 +409,7 @@ cleanedBody = cleanedBody.trim();
                 <>
                   <div className={`p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
                     <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center font-medium`}>
-                      🎤 <strong>Ditando o email...</strong> Diga <strong>"FIM"</strong> quando terminar
+                      🎤 <strong>Ditando o email...</strong> Diga <strong>"CONCLUIR"</strong> quando terminar
                     </p>
                   </div>
 

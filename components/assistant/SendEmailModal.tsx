@@ -121,6 +121,63 @@ export default function SendEmailModal({
     };
   }, [step, isSending, emailBody]);
 
+  // Listener de voz para confirmação (etapa 'confirming')
+useEffect(() => {
+  if (step !== 'confirming') return;
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const confirmRecognition = new SpeechRecognition();
+
+  confirmRecognition.lang = 'pt-BR';
+  confirmRecognition.continuous = false;
+  confirmRecognition.interimResults = false;
+  confirmRecognition.maxAlternatives = 3;
+
+  const CONFIRM_TRIGGERS = [
+    'confirmar envio', 'confirmar email', 'confirma', 'enviar agora',
+    'pode enviar', 'pode mandar', 'envia', 'manda', 'sim', 'correto',
+    'enviar', 'confirmar',
+  ];
+
+  const CANCEL_TRIGGERS = [
+    'cancelar', 'cancela', 'regravar', 'não', 'fechar',
+  ];
+
+  confirmRecognition.onresult = (event: any) => {
+    const transcript = event.results[0][0].transcript.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // remove acentos
+      .replace(/[.,!?;:]+/g, '');                         // remove pontuação
+
+    console.log('🎤 [Confirmação] Ouviu:', transcript);
+
+    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('✅ Confirmação detectada por voz');
+      handleSendEmail();
+    } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('❌ Cancelamento detectado por voz');
+      onClose();
+    } else {
+      // Não entendeu — tenta ouvir de novo
+      confirmRecognition.start();
+    }
+  };
+
+  confirmRecognition.onerror = (event: any) => {
+    if (event.error === 'no-speech') {
+      // Silêncio — tenta de novo
+      confirmRecognition.start();
+    }
+  };
+
+  confirmRecognition.start();
+  console.log('👂 [Confirmação] Aguardando comando de confirmação...');
+
+  return () => {
+    try { confirmRecognition.stop(); } catch (e) {}
+  };
+}, [step]); // roda só quando entra em 'confirming'
+
   // Cleanup ao desmontar
   useEffect(() => {
     return () => {

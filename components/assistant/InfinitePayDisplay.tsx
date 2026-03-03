@@ -39,14 +39,6 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
   const handleConfirmarPagamentoRef = useRef<() => void>(() => {});
   const handleManualCloseRef = useRef<() => void>(() => {});
 
-  useEffect(() => {
-    handleConfirmarPagamentoRef.current = handleConfirmarPagamento;
-  }, [handleConfirmarPagamento]);
-
-  useEffect(() => {
-    handleManualCloseRef.current = handleManualClose;
-  }, [handleManualClose]);
-
   const isNFC = data.tipo === 'NFC';
   const isDebit = data.nfc_payment_method === 'debit';
   const tipoLabel = isNFC ? `NFC ${isDebit ? 'Débito' : 'Crédito'}` : 'Link de Pagamento';
@@ -180,6 +172,14 @@ useEffect(() => {
       setIsConfirming(false);
     }
   }, [cobrancaId, data.companyId, isConfirming, onClose]);
+
+  useEffect(() => {
+    handleManualCloseRef.current = handleManualClose;
+  }, [handleManualClose]);
+
+  useEffect(() => {
+    handleConfirmarPagamentoRef.current = handleConfirmarPagamento;
+  }, [handleConfirmarPagamento]);
 
   const content = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">

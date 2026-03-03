@@ -33,6 +33,19 @@ export default function SendEmailModal({
   const supabase = createClient();
   const isDark = theme === 'dark';
 
+  // Adicione estas refs junto das outras refs no topo do componente
+const handleSendEmailRef = useRef<() => void>(() => {});
+const onCloseRef = useRef<() => void>(() => {});
+
+// Mantém as refs atualizadas a cada render
+useEffect(() => {
+  handleSendEmailRef.current = handleSendEmail;
+}, [emailBody, companyEmail, isSending]); // dependências do handleSendEmail
+
+useEffect(() => {
+  onCloseRef.current = onClose;
+}, [onClose]);
+
   // Buscar email da conta Google conectada
   useEffect(() => {
     async function fetchGoogleEmail() {
@@ -153,10 +166,10 @@ useEffect(() => {
 
     if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
       console.log('✅ Confirmação detectada por voz');
-      handleSendEmail();
+      handleSendEmailRef.current();
     } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
       console.log('❌ Cancelamento detectado por voz');
-      onClose();
+      onCloseRef.current();
     } else {
       // Não entendeu — tenta ouvir de novo
       confirmRecognition.start();
@@ -232,7 +245,7 @@ useEffect(() => {
           // ✅ CORREÇÃO: Detecção robusta da palavra "FIM"
           const lowerTranscript = transcript.toLowerCase().trim();
 const FIM_TRIGGERS = [
-  'terminou', 'fim', 'pronto', 'encerrar', 'concluir', 'acabou',
+  'concluir', 'acabou', 'terminou', 'pronto',
 ];
 
 // Divide em palavras para evitar falso positivo em "enfim", "afim", etc.
@@ -243,11 +256,10 @@ const words = lowerTranscript
 
 const lastWord = words[words.length - 1];
 const hasFim =
-  lastWord === 'fim' ||
-  FIM_TRIGGERS.slice(1).some(t =>
-    lowerTranscript
-      .replace(/[.,!?;:]+/g, '')   // ✅ remove pontuação antes do endsWith
-      .endsWith(t)
+  lastWord === 'acabou' ||
+  lastWord === 'concluir' ||   // ✅ testa concluir como última palavra
+  FIM_TRIGGERS.some(t =>       // ✅ sem slice — testa todos
+    lowerTranscript.replace(/[.,!?;:]+/g, '').endsWith(t)
   );
           
           if (hasFim) {
@@ -514,6 +526,14 @@ cleanedBody = cleanedBody.trim();
           {/* STEP 2: Confirmation */}
           {step === 'confirming' && (
             <div className="space-y-4">
+              <div className="flex justify-center">
+  <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+    isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
+  }`}>
+    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+    Ouvindo... diga "CONFIRMAR ENVIO" ou "ENVIAR AGORA"
+  </div>
+</div>
               {/* Info do destinatário */}
               <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                 <p className={`text-xs ${textMuted}`}>Para:</p>

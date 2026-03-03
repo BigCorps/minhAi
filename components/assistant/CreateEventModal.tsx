@@ -16,12 +16,14 @@ interface CreateEventModalProps {
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
+  playText?: (text: string) => Promise<void>; // ✅ adicionar
 }
 
 export default function CreateEventModal({
   data,
   onClose,
   theme = 'dark',
+  playText,
 }: CreateEventModalProps) {
   const { companyId, prefilledData } = data;
   
@@ -298,6 +300,7 @@ if (nomeComContexto && !transcript.includes('mud') && !transcript.includes('conf
       }
 
       showToast('✅ Evento criado com sucesso!', 'success');
+      playText?.(`Evento criado com sucesso! ${eventTitle} agendado para ${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} às ${selectedTime}.`);
       setTimeout(() => onClose(), 2000);
     } catch (error: any) {
       console.error('Erro ao criar evento:', error);

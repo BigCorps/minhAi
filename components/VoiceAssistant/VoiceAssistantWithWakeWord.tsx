@@ -24,6 +24,7 @@ import { getFunctionByKey } from '@/lib/functions-registry';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './handlers/utilitiesHandlers';
 import { useLembreteWatcher } from './hooks/useLembreteWatcher';
+import TranscriptFeedbackCard from '@/components/VoiceAssistant/TranscriptFeedbackCard';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -81,6 +82,7 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [interimTranscript, setInterimTranscript] = useState<string>('');
 
   // ── States de PIX (mantidos separados pois têm lógica própria) ──
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
@@ -216,19 +218,21 @@ export function VoiceAssistantWithWakeWord({
       }
 
       googleSpeechRef.current = new GoogleSpeechWebSocket({
-        onTranscript: (text, isFinal) => {
-          if (text && text.trim().length > 0) {
-            if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
-            if (!isFinal) {
-              setIsListening(true);
-            } else {
-              listeningTimeoutRef.current = setTimeout(() => {
-                if (!isProcessing && !isPlayingAudio) setIsListening(false);
-              }, 1000);
-            }
-          }
-          handleGoogleTranscript(text, isFinal);
-        },
+onTranscript: (text, isFinal) => {
+  if (text && text.trim().length > 0) {
+    if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
+    if (!isFinal) {
+      setIsListening(true);
+      setInterimTranscript(text); // ✅ NOVO: atualiza interim em tempo real
+    } else {
+      setInterimTranscript(''); // ✅ NOVO: limpa interim quando finaliza
+      listeningTimeoutRef.current = setTimeout(() => {
+        if (!isProcessing && !isPlayingAudio) setIsListening(false);
+      }, 1000);
+    }
+  }
+  handleGoogleTranscript(text, isFinal);
+},
         onError: (err) => {
           console.error('❌ Erro Google Speech:', err);
           setIsListening(false);
@@ -1018,6 +1022,20 @@ case 'nfc_debito':
   )}
 </div>
 
+        {/* ✅ NOVO: Feedback de transcrição — modo maximizado */}
+        {!showStartButton && (
+          <div className="w-full max-w-sm px-4">
+            <TranscriptFeedbackCard
+              interimTranscript={interimTranscript}
+              lastTranscript={lastTranscript}
+              isListening={isListening}
+              isProcessing={isProcessing}
+              isPlayingAudio={isPlayingAudio}
+              theme={theme}
+            />
+          </div>
+        )}
+
         {showStartButton && permissionGranted && (
           <button onClick={handleStart} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
             Iniciar Assistente
@@ -1172,12 +1190,22 @@ case 'nfc_debito':
                 </div>
 
                 {/* TextInput por último */}
-                <TextInputChat
-                  onSendMessage={handleTextMessage}
-                  isProcessing={isProcessing || isPlayingAudio}
-                  theme={theme}
-                  disabled={false}
-                />
+<TranscriptFeedbackCard
+  interimTranscript={interimTranscript}
+  lastTranscript={lastTranscript}
+  isListening={isListening}
+  isProcessing={isProcessing}
+  isPlayingAudio={isPlayingAudio}
+  theme={theme}
+/>
+
+{/* TextInput por último */}
+<TextInputChat
+  onSendMessage={handleTextMessage}
+  isProcessing={isProcessing || isPlayingAudio}
+  theme={theme}
+  disabled={false}
+/>
               </div>
             )}
 

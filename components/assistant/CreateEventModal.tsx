@@ -177,6 +177,27 @@ voiceRecognition.onresult = (event: any) => {
     return;
   }
 
+  // Detecta nome com contexto: "com João", "reunião com João", "corte com Ana", etc.
+// O padrão captura TUDO depois de "com" como sendo "tipo de evento + nome" ou só "nome"
+const nomeComContexto = transcript.match(
+  /^(?:(.+?)\s+)?com\s+([a-záéíóúàâêôãõç][a-záéíóúàâêôãõç\s]{1,30})$/i
+);
+if (nomeComContexto && !transcript.includes('mud') && !transcript.includes('confirm') && !transcript.includes('cancel')) {
+  const tipoEvento = nomeComContexto[1]?.trim(); // ex: "reunião", "corte", "consulta"
+  const nomeCliente = nomeComContexto[2]?.trim(); // ex: "Miriam"
+
+  // Monta o título: "Reunião com Miriam" ou só "Miriam" se não tiver tipo
+  const titulo = tipoEvento
+    ? `${tipoEvento.charAt(0).toUpperCase() + tipoEvento.slice(1)} com ${nomeCliente.charAt(0).toUpperCase() + nomeCliente.slice(1)}`
+    : nomeCliente.charAt(0).toUpperCase() + nomeCliente.slice(1);
+
+  setEventTitle(titulo);
+  showToast(`Evento definido: ${titulo}`, 'success');
+  try { voiceRecognition.stop(); } catch (e) {}
+  setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
+  return;
+}
+
   // Detecta dia solto: "dia 10", "no dia 15"
   const diaSolto = transcript.match(/(?:dia|no dia)\s+(\d{1,2})/);
   if (diaSolto && !transcript.includes('mud') && !transcript.includes('alter')) {

@@ -26,8 +26,8 @@ export default function SendEmailModal({
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
-  const [companyEmail, setCompanyEmail] = useState<string>(''); // email padrão da empresa
-  const [recipientEmail, setRecipientEmail] = useState<string>(''); // ✅ destinatário atual (editável)
+  const [companyEmail, setCompanyEmail] = useState<string>('');
+  const [recipientEmail, setRecipientEmail] = useState<string>('');
   
   const recognitionRef = useRef<any>(null);
   const finalTranscriptRef = useRef<string>('');
@@ -57,7 +57,7 @@ export default function SendEmailModal({
       
       if (account?.google_email) {
         setCompanyEmail(account.google_email);
-        setRecipientEmail(account.google_email); // ✅ padrão = próprio email
+        setRecipientEmail(account.google_email);
       } else {
         const { data: company } = await supabase
           .from('companies')
@@ -67,7 +67,7 @@ export default function SendEmailModal({
           
         if (company?.business_email) {
           setCompanyEmail(company.business_email);
-          setRecipientEmail(company.business_email); // ✅ padrão = próprio email
+          setRecipientEmail(company.business_email);
         } else {
           showToast('Email da empresa não configurado', 'error');
         }
@@ -135,92 +135,106 @@ export default function SendEmailModal({
 
     const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'regravar', 'não', 'fechar'];
 
-confirmRecognition.onresult = (event: any) => {
-  const transcript = event.results[0][0].transcript.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
+    confirmRecognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase().trim()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[.,!?;:]+/g, '');
 
-  console.log('🎤 [Confirmação] Ouviu:', transcript);
+      console.log('🎤 [Confirmação] Ouviu:', transcript);
 
-  // ✅ Normaliza email falado para formato correto
-  const normalizeSpokenEmail = (text: string): string | null => {
-    let t = text.toLowerCase().trim();
-    t = t
-      .replace(/\s+arroba\s+/g, '@').replace(/\barroba\b/g, '@')
-      .replace(/\s+at\s+/g, '@')
-      .replace(/\s+ponto\s+/g, '.').replace(/\bponto\b/g, '.')
-      .replace(/\s+traco\s+/g, '-').replace(/\s+hifen\s+/g, '-')
-      .replace(/\s+underline\s+/g, '_').replace(/\s+sublinhado\s+/g, '_')
-      .replace(/\s*@\s*/g, '@').replace(/\s*\.\s*/g, '.').replace(/\s*-\s*/g, '-');
+      // ✅ Normaliza email falado para formato correto
+      const normalizeSpokenEmail = (text: string): string | null => {
+        let t = text.toLowerCase().trim();
+        t = t
+          .replace(/\s+arroba\s+/g, '@').replace(/\barroba\b/g, '@')
+          .replace(/\s+at\s+/g, '@')
+          .replace(/\s+ponto\s+/g, '.').replace(/\bponto\b/g, '.')
+          .replace(/\s+traco\s+/g, '-').replace(/\s+hifen\s+/g, '-')
+          .replace(/\s+underline\s+/g, '_').replace(/\s+sublinhado\s+/g, '_')
+          .replace(/\s*@\s*/g, '@').replace(/\s*\.\s*/g, '.').replace(/\s*-\s*/g, '-');
 
-    if (t.includes('@')) t = t.replace(/\s+/g, '');
-    else t = t.replace(/\s+/g, '');
+        if (t.includes('@')) t = t.replace(/\s+/g, '');
+        else t = t.replace(/\s+/g, '');
 
-    // Corrige domínios falados sem separador
-    const dominios: [RegExp, string][] = [
-      [/gmail\.?com$/i, 'gmail.com'],
-      [/hotmail\.?com$/i, 'hotmail.com'],
-      [/outlook\.?com$/i, 'outlook.com'],
-      [/yahoo\.?com$/i, 'yahoo.com'],
-      [/icloud\.?com$/i, 'icloud.com'],
-      [/live\.?com$/i, 'live.com'],
-      [/uol\.?com\.?br$/i, 'uol.com.br'],
-      [/bol\.?com\.?br$/i, 'bol.com.br'],
-      [/terra\.?com\.?br$/i, 'terra.com.br'],
-      [/\.?com\.?br$/i, '.com.br'],
-      [/\.?com$/i, '.com'],
-    ];
-    for (const [pattern, replacement] of dominios) {
-      if (pattern.test(t)) { t = t.replace(pattern, replacement); break; }
-    }
+        const dominios: [RegExp, string][] = [
+          [/gmail\.?com$/i, 'gmail.com'],
+          [/hotmail\.?com$/i, 'hotmail.com'],
+          [/outlook\.?com$/i, 'outlook.com'],
+          [/yahoo\.?com$/i, 'yahoo.com'],
+          [/icloud\.?com$/i, 'icloud.com'],
+          [/live\.?com$/i, 'live.com'],
+          [/uol\.?com\.?br$/i, 'uol.com.br'],
+          [/bol\.?com\.?br$/i, 'bol.com.br'],
+          [/terra\.?com\.?br$/i, 'terra.com.br'],
+          [/\.?com\.?br$/i, '.com.br'],
+          [/\.?com$/i, '.com'],
+        ];
+        for (const [pattern, replacement] of dominios) {
+          if (pattern.test(t)) { t = t.replace(pattern, replacement); break; }
+        }
 
-    const match = t.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
-    return match ? match[0] : null;
-  };
+        const match = t.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+        return match ? match[0] : null;
+      };
 
-  // ✅ Detecta intenção de mudar email
-  const emailChangeMatch = transcript.match(
-    /(?:mud[ae]r?|alter[ae]r?|troc[ae]r?|envi[ae]r?\s+para|destinatario|para\s+o\s+email|email\s+para)\s+(.+)/i
-  );
-  if (emailChangeMatch) {
-    const normalized = normalizeSpokenEmail(emailChangeMatch[1]);
-    if (normalized) {
-      setRecipientEmail(normalized);
-      showToast(`Destinatário atualizado: ${normalized}`, 'success');
-    } else {
-      showToast(`Não entendi o email. Edite manualmente no campo acima.`, 'warning');
-    }
-    try { confirmRecognition.stop(); } catch (e) {}
-    setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
-    return;
-  }
+      // ✅ Detecta intenção de mudar email
+      const emailChangeMatch = transcript.match(
+        /(?:mud[ae]r?|alter[ae]r?|troc[ae]r?|envi[ae]r?\s+para|destinatario|para\s+o\s+email|email\s+para)\s+(.+)/i
+      );
+      if (emailChangeMatch) {
+        const normalized = normalizeSpokenEmail(emailChangeMatch[1]);
+        if (normalized) {
+          setRecipientEmail(normalized);
+          showToast(`Destinatário atualizado: ${normalized}`, 'success');
+        } else {
+          showToast('Não entendi o email. Edite manualmente no campo acima.', 'warning');
+        }
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
+        return;
+      }
 
-  // ✅ Voltar para email padrão
-  if (transcript.includes('meu email') || transcript.includes('email padrao') || transcript.includes('voltar email')) {
-    setRecipientEmail(companyEmail);
-    showToast(`Destinatário restaurado: ${companyEmail}`, 'success');
-    try { confirmRecognition.stop(); } catch (e) {}
-    setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
-    return;
-  }
+      // ✅ Voltar para email padrão
+      if (transcript.includes('meu email') || transcript.includes('email padrao') || transcript.includes('voltar email')) {
+        setRecipientEmail(companyEmail);
+        showToast(`Destinatário restaurado: ${companyEmail}`, 'success');
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
+        return;
+      }
 
-  if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-    console.log('✅ Confirmação detectada por voz');
-    handleSendEmailRef.current();
-  } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
-    if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
-      setStep('recording');
-      setCountdown(5);
-      setEmailBody('');
-      finalTranscriptRef.current = '';
-    } else {
-      onCloseRef.current();
-    }
-  } else {
-    try { confirmRecognition.stop(); } catch (e) {}
-    setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 300);
-  }
-};
+      if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+        console.log('✅ Confirmação detectada por voz');
+        handleSendEmailRef.current();
+      } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+        if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
+          setStep('recording');
+          setCountdown(5);
+          setEmailBody('');
+          finalTranscriptRef.current = '';
+        } else {
+          onCloseRef.current();
+        }
+      } else {
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 300);
+      }
+    };
+
+    confirmRecognition.onerror = (event: any) => {
+      if (event.error === 'no-speech') {
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 300);
+      }
+    };
+
+    confirmRecognition.start();
+    console.log('👂 [Confirmação] Aguardando comando...');
+
+    return () => {
+      try { confirmRecognition.stop(); } catch (e) {}
+    };
+  }, [step, companyEmail]);
 
   // Cleanup ao desmontar
   useEffect(() => {
@@ -236,13 +250,10 @@ confirmRecognition.onresult = (event: any) => {
   };
 
   // ✅ Extrai email de um texto falado
-  // Ex: "enviar para joao arroba gmail ponto com" → "joao@gmail.com"
   const extractEmailFromSpeech = (text: string): string | null => {
-    // Formato normal já com @
     const directMatch = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
     if (directMatch) return directMatch[0];
 
-    // Formato falado: "joao arroba gmail ponto com"
     const spokenMatch = text.match(
       /([a-z0-9._%+-]+)\s+arroba\s+([a-z0-9.-]+)\s+ponto\s+([a-z]{2,})/i
     );
@@ -283,8 +294,6 @@ confirmRecognition.onresult = (event: any) => {
         if (event.results[i].isFinal) {
           console.log('📝 Final:', transcript);
 
-          // ✅ Detectar destinatário na fala durante gravação
-          // Ex: "enviar para joao@gmail.com" / "para joao arroba gmail ponto com"
           const lowerT = transcript.toLowerCase();
           const hasEmailContext = 
             lowerT.includes('enviar para') || 
@@ -298,14 +307,12 @@ confirmRecognition.onresult = (event: any) => {
             if (foundEmail) {
               setRecipientEmail(foundEmail);
               showToast(`Destinatário definido: ${foundEmail}`, 'success');
-              // Não adiciona essa linha ao corpo do email
               continue;
             }
           }
 
           finalTranscriptRef.current += transcript + ' ';
           
-          // Detecção de encerramento
           const lowerTranscript = transcript.toLowerCase().trim();
           const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto'];
           const words = lowerTranscript
@@ -396,7 +403,7 @@ confirmRecognition.onresult = (event: any) => {
       const { data, error } = await supabase.functions.invoke('enviar-email-google', {
         body: {
           company_id: companyId,
-          to: recipientEmail, // ✅ usa recipientEmail, não companyEmail
+          to: recipientEmail,
           subject: 'Envio de Email pelo Assistente eAi',
           body: emailBody.trim(),
         },
@@ -490,7 +497,7 @@ confirmRecognition.onresult = (event: any) => {
                     </p>
                   </div>
 
-                  {/* ✅ Destinatário atual durante gravação */}
+                  {/* Destinatário atual durante gravação */}
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                     <Mail className={`w-4 h-4 flex-shrink-0 ${textMuted}`} />
                     <span className={`text-xs ${textMuted}`}>Para:</span>
@@ -556,7 +563,7 @@ confirmRecognition.onresult = (event: any) => {
                 </div>
               </div>
 
-              {/* ✅ Destinatário editável */}
+              {/* Destinatário editável */}
               <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                 <div className="flex items-center justify-between mb-1">
                   <p className={`text-xs ${textMuted}`}>Para:</p>

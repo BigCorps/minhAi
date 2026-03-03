@@ -975,7 +975,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
           });
         }
         
-        await playText('Certo! Vou ajudar você a enviar um email. Para qual endereço de email deseja enviar?');
+        await playText('Após a contagem, diga o conteudo do email');
         
         return true;
         

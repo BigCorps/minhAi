@@ -21,7 +21,7 @@ export default function SendEmailModal({
   const { companyId } = data;
   
   const [step, setStep] = useState<'recording' | 'confirming'>('recording');
-  const [countdown, setCountdown] = useState(3);
+  const [countdown, setCountdown] = useState(5);
   const [isRecording, setIsRecording] = useState(false);
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -153,43 +153,48 @@ useEffect(() => {
     'enviar', 'confirmar',
   ];
 
-  const CANCEL_TRIGGERS = [
-    'cancelar', 'cancela', 'regravar', 'não', 'fechar',
-  ];
+const CANCEL_TRIGGERS = [
+  'cancelar', 'cancela', 'regravar', 'não', 'fechar',
+];
 
-  confirmRecognition.onresult = (event: any) => {
-    const transcript = event.results[0][0].transcript.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // remove acentos
-      .replace(/[.,!?;:]+/g, '');                         // remove pontuação
+confirmRecognition.onresult = (event: any) => {
+  const transcript = event.results[0][0].transcript.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.,!?;:]+/g, '');
 
-    console.log('🎤 [Confirmação] Ouviu:', transcript);
+  console.log('🎤 [Confirmação] Ouviu:', transcript);
 
-    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-      console.log('✅ Confirmação detectada por voz');
-      handleSendEmailRef.current();
-    } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
-      console.log('❌ Cancelamento detectado por voz');
-      onCloseRef.current();
-    } else {
-      // Não entendeu — tenta ouvir de novo
-      confirmRecognition.start();
-    }
-  };
-
-  confirmRecognition.onerror = (event: any) => {
-    if (event.error === 'no-speech') {
-      // Silêncio — tenta de novo
-      confirmRecognition.start();
-    }
-  };
-
-  confirmRecognition.start();
-  console.log('👂 [Confirmação] Aguardando comando de confirmação...');
-
-  return () => {
+  if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+    console.log('✅ Confirmação detectada por voz');
+    handleSendEmailRef.current();
+  } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+    console.log('❌ Cancelamento detectado por voz');
+    onCloseRef.current();
+  } else {
+    // Não entendeu — tenta ouvir de novo
     try { confirmRecognition.stop(); } catch (e) {}
-  };
-}, [step]); // roda só quando entra em 'confirming'
+    setTimeout(() => {
+      try { confirmRecognition.start(); } catch (e) {}
+    }, 300);
+  }
+};
+
+confirmRecognition.onerror = (event: any) => {
+  if (event.error === 'no-speech') {
+    try { confirmRecognition.stop(); } catch (e) {}
+    setTimeout(() => {
+      try { confirmRecognition.start(); } catch (e) {}
+    }, 300);
+  }
+};
+
+confirmRecognition.start();
+console.log('👂 [Confirmação] Aguardando comando de confirmação...');
+
+return () => {
+  try { confirmRecognition.stop(); } catch (e) {}
+};
+}, [step]);
 
   // Cleanup ao desmontar
   useEffect(() => {
@@ -565,7 +570,7 @@ cleanedBody = cleanedBody.trim();
                 <button
                   onClick={() => {
                     setStep('recording');
-                    setCountdown(3);
+                    setCountdown(5);
                     setEmailBody('');
                     finalTranscriptRef.current = '';
                   }}

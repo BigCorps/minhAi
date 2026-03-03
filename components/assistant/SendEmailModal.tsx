@@ -164,20 +164,27 @@ confirmRecognition.onresult = (event: any) => {
 
   console.log('🎤 [Confirmação] Ouviu:', transcript);
 
-  if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-    console.log('✅ Confirmação detectada por voz');
-    handleSendEmailRef.current();
-  } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+  console.log('✅ Confirmação detectada por voz');
+  handleSendEmailRef.current();
+} else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+  if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
+    console.log('🔄 Regravar detectado por voz');
+    setStep('recording');
+    setCountdown(5);
+    setEmailBody('');
+    finalTranscriptRef.current = '';
+  } else {
     console.log('❌ Cancelamento detectado por voz');
     onCloseRef.current();
-  } else {
-    // Não entendeu — tenta ouvir de novo
-    try { confirmRecognition.stop(); } catch (e) {}
-    setTimeout(() => {
-      try { confirmRecognition.start(); } catch (e) {}
-    }, 300);
   }
-};
+} else {
+  // Não entendeu — tenta ouvir de novo
+  try { confirmRecognition.stop(); } catch (e) {}
+  setTimeout(() => {
+    try { confirmRecognition.start(); } catch (e) {}
+  }, 300);
+}
 
 confirmRecognition.onerror = (event: any) => {
   if (event.error === 'no-speech') {

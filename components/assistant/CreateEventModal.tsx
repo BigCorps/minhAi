@@ -97,11 +97,11 @@ useEffect(() => {
   voiceRecognition.interimResults = false;
   voiceRecognition.maxAlternatives = 3;
 
-  const CONFIRM_TRIGGERS = [
-    'confirmar', 'confirma', 'pode marcar', 'marcar', 'agendar',
-    'criar evento', 'pode agendar', 'sim', 'correto', 'está certo',
-    'tá certo', 'ok', 'confirmar evento', 'confirmar agendamento',
-  ];
+const CONFIRM_TRIGGERS = [
+  'confirmar', 'confirma', 'confirme', 'pode marcar', 'marcar', 'agendar',
+  'criar evento', 'pode agendar', 'sim', 'correto', 'está certo',
+  'tá certo', 'ok', 'confirmar evento', 'confirmar agendamento',
+];
 
   const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'fechar', 'não', 'sair'];
 
@@ -109,35 +109,35 @@ useEffect(() => {
   // Ex: "muda o nome para João Silva"
   // Ex: "muda o horário para 14:30"
   // Ex: "muda a data para dia 15"
-  const CORRECTION_PATTERNS = [
-    {
-      pattern: /(?:muda|alterar?|corrigir?|trocar?)\s+(?:o\s+)?nome\s+(?:para|pra)\s+(.+)/i,
-      action: (match: RegExpMatchArray) => {
-        const novoNome = match[1].trim();
-        setEventTitle(novoNome);
-        showToast(`Nome atualizado: ${novoNome}`, 'success');
-      },
+const CORRECTION_PATTERNS = [
+  {
+    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+)?nome\s+(?:para|pra)\s+(.+)/i,
+    action: (match: RegExpMatchArray) => {
+      const novoNome = match[1].trim();
+      setEventTitle(novoNome);
+      showToast(`Nome atualizado: ${novoNome}`, 'success');
     },
-    {
-      pattern: /(?:muda|alterar?|corrigir?|trocar?)\s+(?:o\s+)?hor[aá]rio\s+(?:para|pra)\s+(\d{1,2})(?:[h:]\s*(\d{2})?)?/i,
-      action: (match: RegExpMatchArray) => {
-        const hora = match[1].padStart(2, '0');
-        const minuto = (match[2] || '00').padStart(2, '0');
-        setSelectedTime(`${hora}:${minuto}`);
-        showToast(`Horário atualizado: ${hora}:${minuto}`, 'success');
-      },
+  },
+  {
+    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+)?hor[aá]rio\s+(?:para|pra|às?|as)?\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?/i,
+    action: (match: RegExpMatchArray) => {
+      const hora = match[1].padStart(2, '0');
+      const minuto = (match[2] || '00').padStart(2, '0');
+      setSelectedTime(`${hora}:${minuto}`);
+      showToast(`Horário atualizado: ${hora}:${minuto}`, 'success');
     },
-    {
-      pattern: /(?:muda|alterar?|corrigir?|trocar?)\s+(?:a\s+)?data\s+(?:para|pra)\s+(?:dia\s+)?(\d{1,2})(?:\s+(?:de\s+)?(\w+))?/i,
-      action: (match: RegExpMatchArray) => {
-        const dia = parseInt(match[1]);
-        const novaData = new Date(selectedDate);
-        novaData.setDate(dia);
-        setSelectedDate(novaData);
-        showToast(`Data atualizada: dia ${dia}`, 'success');
-      },
+  },
+  {
+    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:a\s+)?data\s+(?:para|pra)\s+(?:dia\s+)?(\d{1,2})(?:\s+(?:de\s+)?(\w+))?/i,
+    action: (match: RegExpMatchArray) => {
+      const dia = parseInt(match[1]);
+      const novaData = new Date(selectedDate);
+      novaData.setDate(dia);
+      setSelectedDate(novaData);
+      showToast(`Data atualizada: dia ${dia}`, 'success');
     },
-  ];
+  },
+];
 
   voiceRecognition.onresult = (event: any) => {
     const transcript = event.results[0][0].transcript.toLowerCase().trim()

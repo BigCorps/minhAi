@@ -134,7 +134,7 @@ useEffect(() => {
     };
   }, [step, isSending, emailBody]);
 
-  // Listener de voz para confirmação (etapa 'confirming')
+// Listener de voz para confirmação (etapa 'confirming')
 useEffect(() => {
   if (step !== 'confirming') return;
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
@@ -153,55 +153,55 @@ useEffect(() => {
     'enviar', 'confirmar',
   ];
 
-const CANCEL_TRIGGERS = [
-  'cancelar', 'cancela', 'regravar', 'não', 'fechar',
-];
+  const CANCEL_TRIGGERS = [
+    'cancelar', 'cancela', 'regravar', 'não', 'fechar',
+  ];
 
-confirmRecognition.onresult = (event: any) => {
-  const transcript = event.results[0][0].transcript.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
+  confirmRecognition.onresult = (event: any) => {
+    const transcript = event.results[0][0].transcript.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,!?;:]+/g, '');
 
-  console.log('🎤 [Confirmação] Ouviu:', transcript);
+    console.log('🎤 [Confirmação] Ouviu:', transcript);
 
-if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-  console.log('✅ Confirmação detectada por voz');
-  handleSendEmailRef.current();
-} else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
-  if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
-    console.log('🔄 Regravar detectado por voz');
-    setStep('recording');
-    setCountdown(5);
-    setEmailBody('');
-    finalTranscriptRef.current = '';
-  } else {
-    console.log('❌ Cancelamento detectado por voz');
-    onCloseRef.current();
-  }
-} else {
-  // Não entendeu — tenta ouvir de novo
-  try { confirmRecognition.stop(); } catch (e) {}
-  setTimeout(() => {
-    try { confirmRecognition.start(); } catch (e) {}
-  }, 300);
-}
+    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('✅ Confirmação detectada por voz');
+      handleSendEmailRef.current();
+    } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+      if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
+        console.log('🔄 Regravar detectado por voz');
+        setStep('recording');
+        setCountdown(5);
+        setEmailBody('');
+        finalTranscriptRef.current = '';
+      } else {
+        console.log('❌ Cancelamento detectado por voz');
+        onCloseRef.current();
+      }
+    } else {
+      try { confirmRecognition.stop(); } catch (e) {}
+      setTimeout(() => {
+        try { confirmRecognition.start(); } catch (e) {}
+      }, 300);
+    }
+  }; // ✅ fecha onresult
 
-confirmRecognition.onerror = (event: any) => {
-  if (event.error === 'no-speech') {
+  confirmRecognition.onerror = (event: any) => {
+    if (event.error === 'no-speech') {
+      try { confirmRecognition.stop(); } catch (e) {}
+      setTimeout(() => {
+        try { confirmRecognition.start(); } catch (e) {}
+      }, 300);
+    }
+  }; // ✅ fecha onerror
+
+  confirmRecognition.start();
+  console.log('👂 [Confirmação] Aguardando comando de confirmação...');
+
+  return () => {
     try { confirmRecognition.stop(); } catch (e) {}
-    setTimeout(() => {
-      try { confirmRecognition.start(); } catch (e) {}
-    }, 300);
-  }
-};
-
-confirmRecognition.start();
-console.log('👂 [Confirmação] Aguardando comando de confirmação...');
-
-return () => {
-  try { confirmRecognition.stop(); } catch (e) {}
-};
-}, [step]);
+  };
+}, [step]); // ✅ fecha useEffect
 
   // Cleanup ao desmontar
   useEffect(() => {

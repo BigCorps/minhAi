@@ -111,6 +111,7 @@ const CONFIRM_TRIGGERS = [
   // Ex: "muda a data para dia 15"
 const CORRECTION_PATTERNS = [
   {
+    // "mudar o nome para X" / "mudar para X" (sem "nome" explícito trata como nome)
     pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+)?nome\s+(?:para|pra)\s+(.+)/i,
     action: (match: RegExpMatchArray) => {
       const novoNome = match[1].trim();
@@ -119,7 +120,8 @@ const CORRECTION_PATTERNS = [
     },
   },
   {
-    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+)?hor[aá]rio\s+(?:para|pra|às?|as)?\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?/i,
+    // "mudar o horario para 18" / "mude a hora para as 18h30"
+    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+|a\s+)?(?:horario|hora)\s+(?:para|pra|as|às)?\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?/i,
     action: (match: RegExpMatchArray) => {
       const hora = match[1].padStart(2, '0');
       const minuto = (match[2] || '00').padStart(2, '0');
@@ -128,7 +130,19 @@ const CORRECTION_PATTERNS = [
     },
   },
   {
-    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:a\s+)?data\s+(?:para|pra)\s+(?:dia\s+)?(\d{1,2})(?:\s+(?:de\s+)?(\w+))?/i,
+    // "mude o dia para o dia 5" / "mude para o dia 6" / "mude a data para dia 15"
+    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+|a\s+|para\s+)?(?:o\s+)?(?:data|dia)\s+(?:para|pra)?\s*(?:o\s+)?(?:dia\s+)?(\d{1,2})/i,
+    action: (match: RegExpMatchArray) => {
+      const dia = parseInt(match[1]);
+      const novaData = new Date(selectedDate);
+      novaData.setDate(dia);
+      setSelectedDate(novaData);
+      showToast(`Data atualizada: dia ${dia}`, 'success');
+    },
+  },
+  {
+    // "mude para o dia 6" — sem mencionar "data" ou "dia" explicitamente antes
+    pattern: /(?:mud[ae]r?|alter[ae]r?)\s+para\s+(?:o\s+)?dia\s+(\d{1,2})/i,
     action: (match: RegExpMatchArray) => {
       const dia = parseInt(match[1]);
       const novaData = new Date(selectedDate);
@@ -139,12 +153,42 @@ const CORRECTION_PATTERNS = [
   },
 ];
 
-  voiceRecognition.onresult = (event: any) => {
-    const transcript = event.results[0][0].transcript.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[.,!?;:]+/g, '');
+voiceRecognition.onresult = (event: any) => {
+  const transcript = event.results[0][0].transcript.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.,!?;:]+/g, '');
 
-    console.log('🎤 [Agendamento] Ouviu:', transcript);
+  console.log('🎤 [Agendamento] Ouviu:', transcript);
+
+  // ✅ NOVO: Detectar informações diretas na fala (nome, horário, data)
+  // Ex: cliente diz "João Silva" quando o nome está vazio
+  // Ex: "às 14 horas" quando horário está vazio
+  // Ex: "dia 10" quando nenhum contexto de correção
+
+  // Detecta horário solto: "às 14", "14h", "14:30", "as 14 horas"
+  const horarioSolto = transcript.match(/(?:as|as)\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?\s*(?:horas?)?/);
+  if (horarioSolto && !selectedTime && !transcript.includes('mud') && !transcript.includes('alter')) {
+    const hora = horarioSolto[1].padStart(2, '0');
+    const minuto = (horarioSolto[2] || '00').padStart(2, '0');
+    setSelectedTime(`${hora}:${minuto}`);
+    showToast(`Horário definido: ${hora}:${minuto}`, 'success');
+    try { voiceRecognition.stop(); } catch (e) {}
+    setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
+    return;
+  }
+
+  // Detecta dia solto: "dia 10", "no dia 15"
+  const diaSolto = transcript.match(/(?:dia|no dia)\s+(\d{1,2})/);
+  if (diaSolto && !transcript.includes('mud') && !transcript.includes('alter')) {
+    const dia = parseInt(diaSolto[1]);
+    const novaData = new Date(selectedDate);
+    novaData.setDate(dia);
+    setSelectedDate(novaData);
+    showToast(`Data definida: dia ${dia}`, 'success');
+    try { voiceRecognition.stop(); } catch (e) {}
+    setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
+    return;
+  }
 
     // 1. Verificar correções primeiro
     for (const { pattern, action } of CORRECTION_PATTERNS) {

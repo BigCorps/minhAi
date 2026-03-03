@@ -299,8 +299,8 @@ if (nomeComContexto && !transcript.includes('mud') && !transcript.includes('conf
         return;
       }
 
-      showToast('✅ Evento criado com ${eventTitle} para ${selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} às ${selectedTime}.`, 'success');
-      playText?.(`Evento criado!`);
+      showToast('✅ Evento agendado com sucesso!', 'success');
+      playText?.(`Evento agendado!`);
       setTimeout(() => onClose(), 2000);
     } catch (error: any) {
       console.error('Erro ao criar evento:', error);

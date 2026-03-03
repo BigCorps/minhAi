@@ -26,30 +26,29 @@ export default function SendEmailModal({
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
-  const [companyEmail, setCompanyEmail] = useState<string>('');
+  const [companyEmail, setCompanyEmail] = useState<string>(''); // email padrão da empresa
+  const [recipientEmail, setRecipientEmail] = useState<string>(''); // ✅ destinatário atual (editável)
   
   const recognitionRef = useRef<any>(null);
   const finalTranscriptRef = useRef<string>('');
   const supabase = createClient();
   const isDark = theme === 'dark';
 
-  // Adicione estas refs junto das outras refs no topo do componente
-const handleSendEmailRef = useRef<() => void>(() => {});
-const onCloseRef = useRef<() => void>(() => {});
+  const handleSendEmailRef = useRef<() => void>(() => {});
+  const onCloseRef = useRef<() => void>(() => {});
 
-// Mantém as refs atualizadas a cada render
-useEffect(() => {
-  handleSendEmailRef.current = handleSendEmail;
-}, [emailBody, companyEmail, isSending]); // dependências do handleSendEmail
+  useEffect(() => {
+    handleSendEmailRef.current = handleSendEmail;
+  }, [emailBody, recipientEmail, isSending]);
 
-useEffect(() => {
-  onCloseRef.current = onClose;
-}, [onClose]);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // Buscar email da conta Google conectada
   useEffect(() => {
     async function fetchGoogleEmail() {
-      const { data: account, error } = await supabase
+      const { data: account } = await supabase
         .from('google_accounts')
         .select('google_email')
         .eq('company_id', companyId)
@@ -58,8 +57,8 @@ useEffect(() => {
       
       if (account?.google_email) {
         setCompanyEmail(account.google_email);
+        setRecipientEmail(account.google_email); // ✅ padrão = próprio email
       } else {
-        // Fallback para business_email se não houver conta Google
         const { data: company } = await supabase
           .from('companies')
           .select('business_email')
@@ -68,6 +67,7 @@ useEffect(() => {
           
         if (company?.business_email) {
           setCompanyEmail(company.business_email);
+          setRecipientEmail(company.business_email); // ✅ padrão = próprio email
         } else {
           showToast('Email da empresa não configurado', 'error');
         }
@@ -94,130 +94,138 @@ useEffect(() => {
     }
   }, [toast]);
 
-  // Listener de confirmação por voz
+  // Listener de confirmação por voz (evento externo)
   useEffect(() => {
     let isActive = true;
     
     const handleVoiceConfirm = (event: any) => {
-      console.log('🎤 [SendEmail] Evento de confirmação por voz recebido:', event.detail);
-      
-      if (!isActive) {
-        console.log('⚠️ Componente não está ativo');
-        return;
-      }
-      
-      if (step !== 'confirming') {
-        console.log('⚠️ Não está na etapa de confirmação');
-        return;
-      }
-      
-      if (isSending) {
-        console.log('⚠️ Já está enviando');
-        return;
-      }
-      
+      if (!isActive || step !== 'confirming' || isSending) return;
       if (!emailBody.trim()) {
-        console.log('⚠️ Email vazio');
         showToast('O conteúdo do email está vazio', 'warning');
         return;
       }
-      
-      console.log('✅ Confirmando envio do email...');
       handleSendEmail();
     };
     
     window.addEventListener('confirmSendEmail', handleVoiceConfirm);
-    
     return () => {
       isActive = false;
       window.removeEventListener('confirmSendEmail', handleVoiceConfirm);
     };
   }, [step, isSending, emailBody]);
 
-// Listener de voz para confirmação (etapa 'confirming')
-useEffect(() => {
-  if (step !== 'confirming') return;
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+  // Recognition de voz na etapa de confirmação
+  useEffect(() => {
+    if (step !== 'confirming') return;
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
 
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  const confirmRecognition = new SpeechRecognition();
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const confirmRecognition = new SpeechRecognition();
 
-  confirmRecognition.lang = 'pt-BR';
-  confirmRecognition.continuous = false;
-  confirmRecognition.interimResults = false;
-  confirmRecognition.maxAlternatives = 3;
+    confirmRecognition.lang = 'pt-BR';
+    confirmRecognition.continuous = false;
+    confirmRecognition.interimResults = false;
+    confirmRecognition.maxAlternatives = 3;
 
-  const CONFIRM_TRIGGERS = [
-    'confirmar envio', 'confirmar email', 'confirma', 'enviar agora',
-    'pode enviar', 'pode mandar', 'envia', 'manda', 'sim', 'correto',
-    'enviar', 'confirmar',
-  ];
+    const CONFIRM_TRIGGERS = [
+      'confirmar envio', 'confirmar email', 'confirma', 'enviar agora',
+      'pode enviar', 'pode mandar', 'envia', 'manda', 'sim', 'correto',
+      'enviar', 'confirmar',
+    ];
 
-  const CANCEL_TRIGGERS = [
-    'cancelar', 'cancela', 'regravar', 'não', 'fechar',
-  ];
+    const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'regravar', 'não', 'fechar'];
 
-  confirmRecognition.onresult = (event: any) => {
-    const transcript = event.results[0][0].transcript.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[.,!?;:]+/g, '');
+    confirmRecognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase().trim()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[.,!?;:]+/g, '');
 
-    console.log('🎤 [Confirmação] Ouviu:', transcript);
+      console.log('🎤 [Confirmação] Ouviu:', transcript);
 
-    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-      console.log('✅ Confirmação detectada por voz');
-      handleSendEmailRef.current();
-    } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
-      if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
-        console.log('🔄 Regravar detectado por voz');
-        setStep('recording');
-        setCountdown(5);
-        setEmailBody('');
-        finalTranscriptRef.current = '';
-      } else {
-        console.log('❌ Cancelamento detectado por voz');
-        onCloseRef.current();
+      // ✅ Correção de destinatário por voz: "muda o email para joao@gmail.com"
+      // ou "envia para joao@gmail.com" / "destinatário joao@gmail.com"
+      const emailMatch = transcript.match(
+        /(?:mud[ae]r?|alter[ae]r?|envi[ae]r?\s+para|destinatario|para\s+o\s+email|email\s+para)\s+([a-z0-9._%+-]+(?:arroba|@)[a-z0-9.-]+\.[a-z]{2,})/i
+      );
+      if (emailMatch) {
+        // Normaliza "arroba" falado como "@"
+        const novoEmail = emailMatch[1].replace('arroba', '@').trim();
+        setRecipientEmail(novoEmail);
+        showToast(`Destinatário atualizado: ${novoEmail}`, 'success');
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
+        return;
       }
-    } else {
+
+      // ✅ Voltar para email padrão: "volta para o meu email" / "email padrão"
+      if (transcript.includes('meu email') || transcript.includes('email padrao') || transcript.includes('voltar email')) {
+        setRecipientEmail(companyEmail);
+        showToast(`Destinatário restaurado: ${companyEmail}`, 'success');
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
+        return;
+      }
+
+      if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+        console.log('✅ Confirmação detectada por voz');
+        handleSendEmailRef.current();
+      } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+        if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
+          setStep('recording');
+          setCountdown(5);
+          setEmailBody('');
+          finalTranscriptRef.current = '';
+        } else {
+          onCloseRef.current();
+        }
+      } else {
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 300);
+      }
+    };
+
+    confirmRecognition.onerror = (event: any) => {
+      if (event.error === 'no-speech') {
+        try { confirmRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 300);
+      }
+    };
+
+    confirmRecognition.start();
+    console.log('👂 [Confirmação] Aguardando comando...');
+
+    return () => {
       try { confirmRecognition.stop(); } catch (e) {}
-      setTimeout(() => {
-        try { confirmRecognition.start(); } catch (e) {}
-      }, 300);
-    }
-  }; // ✅ fecha onresult
-
-  confirmRecognition.onerror = (event: any) => {
-    if (event.error === 'no-speech') {
-      try { confirmRecognition.stop(); } catch (e) {}
-      setTimeout(() => {
-        try { confirmRecognition.start(); } catch (e) {}
-      }, 300);
-    }
-  }; // ✅ fecha onerror
-
-  confirmRecognition.start();
-  console.log('👂 [Confirmação] Aguardando comando de confirmação...');
-
-  return () => {
-    try { confirmRecognition.stop(); } catch (e) {}
-  };
-}, [step]); // ✅ fecha useEffect
+    };
+  }, [step, companyEmail]);
 
   // Cleanup ao desmontar
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          console.log('Recognition já parado');
-        }
+        try { recognitionRef.current.stop(); } catch (e) {}
       }
     };
   }, []);
 
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });
+  };
+
+  // ✅ Extrai email de um texto falado
+  // Ex: "enviar para joao arroba gmail ponto com" → "joao@gmail.com"
+  const extractEmailFromSpeech = (text: string): string | null => {
+    // Formato normal já com @
+    const directMatch = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+    if (directMatch) return directMatch[0];
+
+    // Formato falado: "joao arroba gmail ponto com"
+    const spokenMatch = text.match(
+      /([a-z0-9._%+-]+)\s+arroba\s+([a-z0-9.-]+)\s+ponto\s+([a-z]{2,})/i
+    );
+    if (spokenMatch) return `${spokenMatch[1]}@${spokenMatch[2]}.${spokenMatch[3]}`;
+
+    return null;
   };
 
   // Iniciar gravação por voz
@@ -240,7 +248,6 @@ useEffect(() => {
     finalTranscriptRef.current = '';
 
     recognition.onstart = () => {
-      console.log('✅ Reconhecimento iniciado');
       setIsRecording(true);
     };
 
@@ -252,30 +259,44 @@ useEffect(() => {
 
         if (event.results[i].isFinal) {
           console.log('📝 Final:', transcript);
+
+          // ✅ Detectar destinatário na fala durante gravação
+          // Ex: "enviar para joao@gmail.com" / "para joao arroba gmail ponto com"
+          const lowerT = transcript.toLowerCase();
+          const hasEmailContext = 
+            lowerT.includes('enviar para') || 
+            lowerT.includes('envia para') ||
+            lowerT.includes('manda para') ||
+            lowerT.includes('destinatario') ||
+            lowerT.includes('arroba');
+
+          if (hasEmailContext) {
+            const foundEmail = extractEmailFromSpeech(lowerT);
+            if (foundEmail) {
+              setRecipientEmail(foundEmail);
+              showToast(`Destinatário definido: ${foundEmail}`, 'success');
+              // Não adiciona essa linha ao corpo do email
+              continue;
+            }
+          }
+
           finalTranscriptRef.current += transcript + ' ';
           
-          // ✅ CORREÇÃO: Detecção robusta da palavra "FIM"
+          // Detecção de encerramento
           const lowerTranscript = transcript.toLowerCase().trim();
-const FIM_TRIGGERS = [
-  'concluir', 'acabou', 'terminou', 'pronto',
-];
-
-// Divide em palavras para evitar falso positivo em "enfim", "afim", etc.
-const words = lowerTranscript
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
-  .replace(/[.,!?;:]+/g, '')                        // ✅ NOVO: remove pontuação
-  .split(/\s+/);
-
-const lastWord = words[words.length - 1];
-const hasFim =
-  lastWord === 'acabou' ||
-  lastWord === 'concluir' ||   // ✅ testa concluir como última palavra
-  FIM_TRIGGERS.some(t =>       // ✅ sem slice — testa todos
-    lowerTranscript.replace(/[.,!?;:]+/g, '').endsWith(t)
-  );
+          const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto'];
+          const words = lowerTranscript
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[.,!?;:]+/g, '')
+            .split(/\s+/);
+          const lastWord = words[words.length - 1];
+          const hasFim =
+            lastWord === 'acabou' ||
+            lastWord === 'concluir' ||
+            FIM_TRIGGERS.some(t => lowerTranscript.replace(/[.,!?;:]+/g, '').endsWith(t));
           
           if (hasFim) {
-            console.log('🛑 Palavra "FIM" detectada - parando gravação');
+            console.log('🛑 Encerramento detectado');
             recognition.stop();
             return;
           }
@@ -284,62 +305,41 @@ const hasFim =
         }
       }
 
-      // Atualizar display em tempo real
       const fullText = finalTranscriptRef.current + interimTranscript;
       setEmailBody(fullText);
     };
 
     recognition.onend = () => {
-      console.log('🛑 Reconhecimento finalizado');
       setIsRecording(false);
       
-      // ✅ CORREÇÃO: Limpar "fim" de todas as variações possíveis
       const FIM_TRIGGERS_CLEAN = [
-  'fim', 'pronto', 'terminar', 'encerrar', 'concluir',
-  'acabou', 'pode enviar', 'é isso', 'é isso aí',
-];
+        'fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou',
+      ];
 
-let cleanedBody = finalTranscriptRef.current;
-
-// Remove apenas se o trigger estiver NO FINAL da frase
-for (const trigger of FIM_TRIGGERS_CLEAN) {
-  // Escapa caracteres especiais para usar no regex
-  const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  cleanedBody = cleanedBody.replace(
-    new RegExp(`\\s*${escaped}\\s*$`, 'gi'),
-    ''
-  );
-}
-
-cleanedBody = cleanedBody.trim();
+      let cleanedBody = finalTranscriptRef.current;
+      for (const trigger of FIM_TRIGGERS_CLEAN) {
+        const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        cleanedBody = cleanedBody.replace(new RegExp(`\\s*${escaped}\\s*$`, 'gi'), '');
+      }
+      cleanedBody = cleanedBody.trim();
       
       setEmailBody(cleanedBody);
       finalTranscriptRef.current = cleanedBody;
       
       if (cleanedBody.length > 0) {
-        console.log('✅ Conteúdo capturado:', cleanedBody.substring(0, 50) + '...');
         setStep('confirming');
       } else {
-        console.log('⚠️ Nenhum conteúdo detectado');
         showToast('Nenhum conteúdo foi detectado. Tente novamente.', 'warning');
         setTimeout(() => onClose(), 2000);
       }
     };
 
     recognition.onerror = (event: any) => {
-      console.error('❌ Erro no reconhecimento:', event.error);
       setIsRecording(false);
-      
       let errorMessage = 'Erro ao capturar áudio';
-      
-      if (event.error === 'no-speech') {
-        errorMessage = 'Nenhuma fala detectada. Tente novamente.';
-      } else if (event.error === 'network') {
-        errorMessage = 'Erro de rede. Verifique sua conexão.';
-      } else if (event.error === 'not-allowed') {
-        errorMessage = 'Permissão do microfone negada.';
-      }
-      
+      if (event.error === 'no-speech') errorMessage = 'Nenhuma fala detectada. Tente novamente.';
+      else if (event.error === 'network') errorMessage = 'Erro de rede. Verifique sua conexão.';
+      else if (event.error === 'not-allowed') errorMessage = 'Permissão do microfone negada.';
       showToast(errorMessage, 'error');
     };
 
@@ -347,32 +347,21 @@ cleanedBody = cleanedBody.trim();
       recognition.start();
       recognitionRef.current = recognition;
     } catch (error) {
-      console.error('❌ Erro ao iniciar recognition:', error);
       showToast('Erro ao iniciar gravação', 'error');
     }
   };
 
-  // Parar gravação manualmente
   const stopRecording = () => {
-    console.log('🛑 Parando gravação manualmente');
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        console.log('Recognition já parado');
-      }
+      try { recognitionRef.current.stop(); } catch (e) {}
     }
   };
 
-  // Enviar email
   const handleSendEmail = async () => {
-    console.log('📧 Iniciando envio de email...');
-    
-    if (!companyEmail) {
-      showToast('Email da empresa não configurado', 'error');
+    if (!recipientEmail) {
+      showToast('Email do destinatário não configurado', 'error');
       return;
     }
-
     if (!emailBody.trim()) {
       showToast('O conteúdo do email está vazio', 'warning');
       return;
@@ -384,35 +373,27 @@ cleanedBody = cleanedBody.trim();
       const { data, error } = await supabase.functions.invoke('enviar-email-google', {
         body: {
           company_id: companyId,
-          to: companyEmail,
+          to: recipientEmail, // ✅ usa recipientEmail, não companyEmail
           subject: 'Envio de Email pelo Assistente eAi',
           body: emailBody.trim(),
         },
       });
 
-      if (error) {
-        console.error('❌ Erro na função:', error);
-        throw error;
-      }
-
+      if (error) throw error;
       if (!data.success) {
-        console.error('❌ Função retornou erro:', data);
         showToast(data.speech_text || 'Erro ao enviar email', 'error');
         return;
       }
 
-      console.log('✅ Email enviado com sucesso');
       showToast('✅ Email enviado com sucesso!', 'success');
       setTimeout(() => onClose(), 2000);
     } catch (error: any) {
-      console.error('❌ Erro ao enviar email:', error);
       showToast('Erro ao enviar email. Tente novamente.', 'error');
     } finally {
       setIsSending(false);
     }
   };
 
-  // Color tokens
   const bg = isDark ? 'bg-slate-900' : 'bg-white';
   const border = isDark ? 'border-slate-700' : 'border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -422,11 +403,9 @@ cleanedBody = cleanedBody.trim();
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       {/* Toast */}
       {toast && (
-        <div
-          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3
             ${toast.type === 'success' ? 'bg-green-500' : toast.type === 'error' ? 'bg-red-500' : 'bg-amber-400'}
-            animate-in slide-in-from-top duration-300`}
-        >
+            animate-in slide-in-from-top duration-300`}>
           {toast.type === 'warning' && <AlertCircle className="w-5 h-5 text-white flex-shrink-0" />}
           {toast.type === 'success' && <Check className="w-5 h-5 text-white flex-shrink-0" />}
           {toast.type === 'error' && <X className="w-5 h-5 text-white flex-shrink-0" />}
@@ -450,18 +429,13 @@ cleanedBody = cleanedBody.trim();
                 <Mail className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className={`text-xl font-bold ${textPrimary}`}>
-                  Enviar Email
-                </h2>
+                <h2 className={`text-xl font-bold ${textPrimary}`}>Enviar Email</h2>
                 <p className={`text-sm ${textMuted}`}>
                   {step === 'recording' ? 'Gravando conteúdo...' : 'Confirme o envio'}
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition"
-            >
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -475,16 +449,12 @@ cleanedBody = cleanedBody.trim();
             <>
               {countdown > 0 ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="relative">
-                    <div className="w-32 h-32 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse">
-                      <div className="w-24 h-24 rounded-full bg-blue-500/40 flex items-center justify-center">
-                        <span className={`text-6xl font-bold ${textPrimary}`}>{countdown}</span>
-                      </div>
+                  <div className="w-32 h-32 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse">
+                    <div className="w-24 h-24 rounded-full bg-blue-500/40 flex items-center justify-center">
+                      <span className={`text-6xl font-bold ${textPrimary}`}>{countdown}</span>
                     </div>
                   </div>
-                  <p className={`text-lg font-medium ${textPrimary} mt-6`}>
-                    Prepare-se para falar...
-                  </p>
+                  <p className={`text-lg font-medium ${textPrimary} mt-6`}>Prepare-se para falar...</p>
                 </div>
               ) : (
                 <>
@@ -492,9 +462,28 @@ cleanedBody = cleanedBody.trim();
                     <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center font-medium`}>
                       🎤 <strong>Ditando o email...</strong> Diga <strong>"CONCLUIR"</strong> quando terminar
                     </p>
+                    <p className={`text-xs ${isDark ? 'text-blue-300/60' : 'text-blue-600/60'} text-center mt-1`}>
+                      Diga "enviar para fulano@email.com" para definir o destinatário
+                    </p>
                   </div>
 
-                  {/* Indicador de gravação */}
+                  {/* ✅ Destinatário atual durante gravação */}
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
+                    <Mail className={`w-4 h-4 flex-shrink-0 ${textMuted}`} />
+                    <span className={`text-xs ${textMuted}`}>Para:</span>
+                    <span className={`text-xs font-medium ${recipientEmail !== companyEmail ? 'text-blue-400' : textPrimary}`}>
+                      {recipientEmail || 'Carregando...'}
+                    </span>
+                    {recipientEmail !== companyEmail && (
+                      <button
+                        onClick={() => setRecipientEmail(companyEmail)}
+                        className="ml-auto text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        restaurar
+                      </button>
+                    )}
+                  </div>
+
                   {isRecording && (
                     <div className="flex justify-center">
                       <div className="flex items-center gap-3 px-6 py-3 bg-red-500 rounded-full shadow-lg">
@@ -508,16 +497,13 @@ cleanedBody = cleanedBody.trim();
                     </div>
                   )}
 
-                  {/* Preview do texto */}
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                      Conteúdo do email:
-                    </label>
+                    <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Conteúdo do email:</label>
                     <textarea
                       value={emailBody}
                       onChange={(e) => setEmailBody(e.target.value)}
                       placeholder="O conteúdo aparecerá aqui conforme você fala..."
-                      rows={10}
+                      rows={8}
                       className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none`}
                     />
                   </div>
@@ -539,48 +525,57 @@ cleanedBody = cleanedBody.trim();
           {step === 'confirming' && (
             <div className="space-y-4">
               <div className="flex justify-center">
-  <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-    isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
-  }`}>
-    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-    Ouvindo... diga "CONFIRMAR ENVIO" ou "ENVIAR AGORA"
-  </div>
-</div>
-              {/* Info do destinatário */}
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                  isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
+                }`}>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  Ouvindo... confirme ou diga "muda o email para..."
+                </div>
+              </div>
+
+              {/* ✅ Destinatário editável */}
               <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
-                <p className={`text-xs ${textMuted}`}>Para:</p>
-                <p className={`text-sm font-medium ${textPrimary}`}>{companyEmail}</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className={`text-xs ${textMuted}`}>Para:</p>
+                  {recipientEmail !== companyEmail && (
+                    <button
+                      onClick={() => setRecipientEmail(companyEmail)}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      restaurar email padrão
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg border ${border} ${isDark ? 'bg-slate-700 text-white' : 'bg-white text-gray-900'} text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                  placeholder="destinatario@email.com"
+                />
                 <p className={`text-xs ${textMuted} mt-2`}>Assunto:</p>
                 <p className={`text-sm font-medium ${textPrimary}`}>Envio de Email pelo Assistente eAi</p>
               </div>
 
-              {/* Conteúdo */}
               <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Conteúdo capturado:
-                </label>
+                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Conteúdo capturado:</label>
                 <textarea
                   value={emailBody}
                   onChange={(e) => setEmailBody(e.target.value)}
-                  rows={10}
+                  rows={8}
                   className={`w-full px-4 py-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} ${textPrimary} border ${border} focus:ring-2 focus:ring-blue-500 resize-none`}
                 />
               </div>
 
               <div className={`p-3 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
                 <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'}`}>
-                  ✅ Confirme o envio ou edite o texto acima. Você pode dizer <strong>"CONFIRMAR ENVIO"</strong> ou <strong>"ENVIAR AGORA"</strong>
+                  ✅ Confirme ou edite. Diga <strong>"CONFIRMAR ENVIO"</strong>, <strong>"REGRAVAR"</strong> ou <strong>"muda o email para fulano@email.com"</strong>
                 </p>
               </div>
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    setStep('recording');
-                    setCountdown(5);
-                    setEmailBody('');
-                    finalTranscriptRef.current = '';
-                  }}
+                  onClick={() => { setStep('recording'); setCountdown(5); setEmailBody(''); finalTranscriptRef.current = ''; }}
                   disabled={isSending}
                   className="flex-1 px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition disabled:opacity-50"
                 >
@@ -588,19 +583,13 @@ cleanedBody = cleanedBody.trim();
                 </button>
                 <button
                   onClick={handleSendEmail}
-                  disabled={isSending || !emailBody.trim()}
+                  disabled={isSending || !emailBody.trim() || !recipientEmail}
                   className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
                 >
                   {isSending ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Enviando...
-                    </>
+                    <><Loader2 className="w-5 h-5 animate-spin" />Enviando...</>
                   ) : (
-                    <>
-                      <Check className="w-5 h-5" />
-                      Confirmar Envio
-                    </>
+                    <><Check className="w-5 h-5" />Confirmar Envio</>
                   )}
                 </button>
               </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, X, Calendar as CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -36,6 +36,9 @@ export default function CreateEventModal({
   );
   const [isCreating, setIsCreating] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
+
+  const handleCreateEventRef = useRef<() => void>(() => {});
+  const onCloseRef = useRef<() => void>(() => {});
   
   const supabase = createClient();
   const isDark = theme === 'dark';
@@ -67,7 +70,7 @@ export default function CreateEventModal({
       if (!selectedTime || !eventTitle) {
         console.log('⚠️ Dados incompletos:', { selectedTime, eventTitle });
         showToast('Por favor, preencha todos os campos antes de confirmar', 'warning');
-        return;
+        ;
       }
 
       console.log('✅ Confirmando criação do evento...');
@@ -76,12 +79,120 @@ export default function CreateEventModal({
 
     window.addEventListener('confirmCreateEvent', handleVoiceConfirm);
 
-    return () => {
+     () => {
       isActive = false;
       window.removeEventListener('confirmCreateEvent', handleVoiceConfirm);
     };
   }, [isCreating, selectedTime, eventTitle, selectedDate]);
 
+// Recognition de voz ativo na tela de agendamento
+useEffect(() => {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) ;
+
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const voiceRecognition = new SpeechRecognition();
+
+  voiceRecognition.lang = 'pt-BR';
+  voiceRecognition.continuous = false;
+  voiceRecognition.interimResults = false;
+  voiceRecognition.maxAlternatives = 3;
+
+  const CONFIRM_TRIGGERS = [
+    'confirmar', 'confirma', 'pode marcar', 'marcar', 'agendar',
+    'criar evento', 'pode agendar', 'sim', 'correto', 'está certo',
+    'tá certo', 'ok', 'confirmar evento', 'confirmar agendamento',
+  ];
+
+  const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'fechar', 'não', 'sair'];
+
+  // Padrões para corrigir campos por voz
+  // Ex: "muda o nome para João Silva"
+  // Ex: "muda o horário para 14:30"
+  // Ex: "muda a data para dia 15"
+  const CORRECTION_PATTERNS = [
+    {
+      pattern: /(?:muda|alterar?|corrigir?|trocar?)\s+(?:o\s+)?nome\s+(?:para|pra)\s+(.+)/i,
+      action: (match: RegExpMatchArray) => {
+        const novoNome = match[1].trim();
+        setEventTitle(novoNome);
+        showToast(`Nome atualizado: ${novoNome}`, 'success');
+      },
+    },
+    {
+      pattern: /(?:muda|alterar?|corrigir?|trocar?)\s+(?:o\s+)?hor[aá]rio\s+(?:para|pra)\s+(\d{1,2})(?:[h:]\s*(\d{2})?)?/i,
+      action: (match: RegExpMatchArray) => {
+        const hora = match[1].padStart(2, '0');
+        const minuto = (match[2] || '00').padStart(2, '0');
+        setSelectedTime(`${hora}:${minuto}`);
+        showToast(`Horário atualizado: ${hora}:${minuto}`, 'success');
+      },
+    },
+    {
+      pattern: /(?:muda|alterar?|corrigir?|trocar?)\s+(?:a\s+)?data\s+(?:para|pra)\s+(?:dia\s+)?(\d{1,2})(?:\s+(?:de\s+)?(\w+))?/i,
+      action: (match: RegExpMatchArray) => {
+        const dia = parseInt(match[1]);
+        const novaData = new Date(selectedDate);
+        novaData.setDate(dia);
+        setSelectedDate(novaData);
+        showToast(`Data atualizada: dia ${dia}`, 'success');
+      },
+    },
+  ];
+
+  voiceRecognition.onresult = (event: any) => {
+    const transcript = event.results[0][0].transcript.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,!?;:]+/g, '');
+
+    console.log('🎤 [Agendamento] Ouviu:', transcript);
+
+    // 1. Verificar correções primeiro
+    for (const { pattern, action } of CORRECTION_PATTERNS) {
+      const match = transcript.match(pattern);
+      if (match) {
+        console.log('✏️ Correção detectada:', transcript);
+        action(match);
+        // Reinicia para ouvir próximo comando
+        try { voiceRecognition.stop(); } catch (e) {}
+        setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
+        ;
+      }
+    }
+
+    // 2. Confirmação
+    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('✅ Confirmação detectada por voz');
+      handleCreateEventRef.current();
+      ;
+    }
+
+    // 3. Cancelamento
+    if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('❌ Cancelamento detectado por voz');
+      onCloseRef.current();
+      ;
+    }
+
+    // 4. Não entendeu — tenta de novo
+    try { voiceRecognition.stop(); } catch (e) {}
+    setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
+  };
+
+  voiceRecognition.onerror = (event: any) => {
+    if (event.error === 'no-speech') {
+      try { voiceRecognition.stop(); } catch (e) {}
+      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
+    }
+  };
+
+  voiceRecognition.start();
+  console.log('👂 [Agendamento] Ouvindo comandos de voz...');
+
+  return () => {
+    try { voiceRecognition.stop(); } catch (e) {}
+  };
+}, [selectedDate]); // selectedDate como dep para o padrão de correção de data
+  
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });
   };
@@ -148,6 +259,14 @@ export default function CreateEventModal({
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
 
+  useEffect(() => {
+    handleCreateEventRef.current = handleCreateEvent;
+  }, [selectedDate, selectedTime, eventTitle, isCreating]);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       {/* Toast */}
@@ -199,6 +318,18 @@ export default function CreateEventModal({
 
         {/* Content SEM scroll */}
         <div className="p-6 space-y-4">
+
+{/* Indicador de escuta ativa */}
+<div className="flex justify-center">
+  <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+    isDark
+      ? 'bg-green-900/30 text-green-300 border border-green-700'
+      : 'bg-green-50 text-green-700 border border-green-200'
+  }`}>
+    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+    Ouvindo... confirme ou diga "muda o nome para..."
+  </div>
+</div>
           
           {/* Info sobre Ver Agenda */}
           <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>

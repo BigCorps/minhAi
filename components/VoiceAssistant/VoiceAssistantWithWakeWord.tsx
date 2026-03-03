@@ -539,7 +539,7 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
             type: 'SendEmailModal', 
             data: { companyId } 
           });
-          playText('Diga o conteúdo e quando acabar, diga FIM.').catch(() => {});
+          playText('Diga o conteúdo e quando acabar, diga CONCLUIR.').catch(() => {});
           break;
 
 case 'agendar_compromisso':

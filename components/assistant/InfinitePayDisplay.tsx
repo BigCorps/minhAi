@@ -1,7 +1,7 @@
 // components/assistant/InfinitePayDisplay.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Link, Smartphone, CreditCard, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -35,6 +35,17 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingMsg, setPendingMsg] = useState('');
   const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirmarPagamentoRef = useRef<() => void>(() => {});
+  const handleManualCloseRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    handleConfirmarPagamentoRef.current = handleConfirmarPagamento;
+  }, [handleConfirmarPagamento]);
+
+  useEffect(() => {
+    handleManualCloseRef.current = handleManualClose;
+  }, [handleManualClose]);
 
   const isNFC = data.tipo === 'NFC';
   const isDebit = data.nfc_payment_method === 'debit';
@@ -75,6 +86,63 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { gerarCobranca(); }, []);
+
+  // Recognition de voz na etapa de pagamento
+useEffect(() => {
+  if (stage !== 'awaiting_payment') return;
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const voiceRecognition = new SpeechRecognition();
+
+  voiceRecognition.lang = 'pt-BR';
+  voiceRecognition.continuous = false;
+  voiceRecognition.interimResults = false;
+  voiceRecognition.maxAlternatives = 3;
+
+  const CONFIRM_TRIGGERS = [
+    'confirmar pagamento', 'confirmar', 'confirma', 'pagamento recebido',
+    'pago', 'recebi', 'foi pago', 'cliente pagou', 'pagou',
+    'pode confirmar', 'confirme', 'sim',
+  ];
+
+  const CANCEL_TRIGGERS = [
+    'cancelar', 'cancela', 'fechar', 'não', 'sair', 'fecha',
+  ];
+
+  voiceRecognition.onresult = (event: any) => {
+    const transcript = event.results[0][0].transcript.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,!?;:]+/g, '');
+
+    console.log('🎤 [Pagamento] Ouviu:', transcript);
+
+    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('✅ Confirmação de pagamento por voz');
+      handleConfirmarPagamentoRef.current();
+    } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('❌ Fechar detectado por voz');
+      handleManualCloseRef.current();
+    } else {
+      try { voiceRecognition.stop(); } catch (e) {}
+      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
+    }
+  };
+
+  voiceRecognition.onerror = (event: any) => {
+    if (event.error === 'no-speech') {
+      try { voiceRecognition.stop(); } catch (e) {}
+      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
+    }
+  };
+
+  voiceRecognition.start();
+  console.log('👂 [Pagamento] Ouvindo comandos de pagamento...');
+
+  return () => {
+    try { voiceRecognition.stop(); } catch (e) {}
+  };
+}, [stage]);
 
   // fetch() direto para capturar o status HTTP real
   // HTTP 400 + pending:true → aviso amarelo inline, modal NÃO fecha
@@ -146,6 +214,15 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
 
           {stage === 'awaiting_payment' && (
             <div className="space-y-4">
+
+                  <div className="flex justify-center">
+      <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+        isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
+      }`}>
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+        Ouvindo... diga "CONFIRMAR PAGAMENTO" ou "FECHAR"
+      </div>
+    </div>
 
               {/* NFC */}
               {isNFC && (

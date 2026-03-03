@@ -87,7 +87,7 @@ export default function CreateEventModal({
 
 // Recognition de voz ativo na tela de agendamento
 useEffect(() => {
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) ;
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
 
   const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   const voiceRecognition = new SpeechRecognition();

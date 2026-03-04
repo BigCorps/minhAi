@@ -6,7 +6,7 @@
  */
 
 interface ContextPattern {
-  target: 'whatsapp' | 'instagram' | 'pix';
+  target: 'whatsapp' | 'instagram' | 'pix' | 'link_pagamento' | 'nfc_debito' | 'nfc_credito';
   contextWords: string[]; // Palavras que aparecem junto
   fuzzyMatches: string[]; // Palavras similares que Vosk pode retornar
   minConfidence: number; // 0-1
@@ -50,23 +50,47 @@ const CONTEXT_PATTERNS: ContextPattern[] = [
     ],
     minConfidence: 0.5
   },
-  
-  // ========================================
-  // PIX
-  // ========================================
+
+  {
+    target: 'link_pagamento' as any,
+    contextWords: [
+      'link', 'linque', 'gerar link', 'cobrar link',
+      'link de pagamento', 'pagamento link',
+    ],
+    fuzzyMatches: [
+      'link', 'linc', 'ling', 'linc', 'linque',
+    ],
+    minConfidence: 0.6
+  },
+
+  // ✅ NOVO: NFC (prioridade ANTES do PIX)
+  {
+    target: 'nfc' as any,
+    contextWords: [
+      'nfc', 'aproximação', 'aproximacao', 'aproximar',
+      'débito', 'debito', 'crédito', 'credito',
+      'cartão', 'cartao', 'tap', 'maquininha',
+    ],
+    fuzzyMatches: [
+      'nfc', 'efe', 'efe ce', 'enfe', 'infc',
+    ],
+    minConfidence: 0.6
+  },
+
+  // PIX — agora só dispara se não tiver contexto de NFC/link
   {
     target: 'pix',
     contextWords: [
-      'gerar', 'criar', 'fazer', 'cobrança', 'cobranca',
-      'cobrar', 'pagar', 'pagamento', 'receber', 'transferir',
-      'reais', 'real', 'dinheiro', 'valor'
+      'pix', 'gerar pix', 'cobrar pix',
+      'chave pix', 'qr code', 'qrcode',
+      // ✅ REMOVIDO: 'cobrar', 'pagamento', 'valor' sozinhos — muito genéricos
     ],
     fuzzyMatches: [
       'pix', 'pics', 'pic', 'picos', 'kit', 'pis',
       'pitch', 'piche', 'pia', 'picks', 'mix', 'fix',
       'pixel', 'pico', 'pica'
     ],
-    minConfidence: 0.7
+    minConfidence: 0.7 // ✅ threshold mais alto que NFC/link
   }
 ];
 

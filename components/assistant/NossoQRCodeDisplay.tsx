@@ -7,8 +7,8 @@ import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVo
 
 interface NossoQRCodeDisplayProps {
   data: {
-    qrContent: string;       // qualquer conteúdo: URL, texto, Pix, etc.
-    qrLabel: string;         // texto curto que o assistente fala e exibe
+    qrContent: string;
+    qrLabel: string;
     companyName?: string;
     autoCloseDuration?: number;
   };
@@ -28,7 +28,6 @@ export default function NossoQRCodeDisplay({
 
   const { qrContent, qrLabel, companyName } = data;
 
-  // Regra 2
   const handleManualClose = () => {
     window.speechSynthesis.cancel();
     onClose();
@@ -36,12 +35,10 @@ export default function NossoQRCodeDisplay({
 
   useModalVoiceClose(handleManualClose);
 
-  // Regra 3
   useEffect(() => {
     return () => window.speechSynthesis.cancel();
   }, []);
 
-  // Gerar QR Code
   useEffect(() => {
     if (qrContent) {
       const size = 400;
@@ -50,7 +47,6 @@ export default function NossoQRCodeDisplay({
     }
   }, [qrContent]);
 
-  // Regra 1: auto-close
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -83,15 +79,15 @@ export default function NossoQRCodeDisplay({
         {/* Header */}
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isDark ? 'bg-orange-900/30' : 'bg-orange-100'}`}>
-              <QrCode className={`w-5 h-5 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
+              <QrCode className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
             </div>
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               QR Code {companyName ? `· ${companyName}` : ''}
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${isDark ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>
+            <div className={`px-3 py-1 rounded-full text-sm font-medium ${isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
               {timeLeft}s
             </div>
             <button
@@ -113,19 +109,19 @@ export default function NossoQRCodeDisplay({
               <img src={qrCodeUrl} alt="QR Code" className="w-56 h-56 object-contain" />
             ) : (
               <div className="w-56 h-56 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-600" />
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
               </div>
             )}
           </div>
 
-          {/* Texto/Label — falado pelo assistente */}
+          {/* Label falado pelo assistente */}
           <div className={`w-full rounded-xl px-5 py-4 text-center ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
             <p className={`text-base font-medium leading-relaxed ${isDark ? 'text-white/90' : 'text-gray-800'}`}>
               {qrLabel}
             </p>
           </div>
 
-          {/* Conteúdo do QR (copiável) */}
+          {/* Conteúdo copiável */}
           <div className={`w-full rounded-xl p-3 flex items-center gap-2 ${isDark ? 'bg-slate-700/30' : 'bg-gray-50 border border-gray-200'}`}>
             <span className={`text-xs truncate flex-1 font-mono ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
               {qrContent}
@@ -144,7 +140,7 @@ export default function NossoQRCodeDisplay({
         {/* Barra de progresso */}
         <div className={`h-1 ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
           <div
-            className="h-full bg-orange-600 transition-all duration-1000 ease-linear"
+            className="h-full bg-blue-600 transition-all duration-1000 ease-linear"
             style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }}
           />
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createPortal } from 'react-dom';
 import { Check, X, Mail, Loader2, AlertCircle, Mic } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -115,34 +116,11 @@ export default function SendEmailModal({
   }, [step, isSending, emailBody]);
 
   // Recognition de voz na etapa de confirmação
-  useEffect(() => {
-    if (step !== 'confirming') return;
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+  useModalVoiceCommand({
+    active: step === 'confirming',
+    onTranscript: (transcript) => {
+      console.log('🎤 [Confirmação Email] Ouviu:', transcript);
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const confirmRecognition = new SpeechRecognition();
-
-    confirmRecognition.lang = 'pt-BR';
-    confirmRecognition.continuous = false;
-    confirmRecognition.interimResults = false;
-    confirmRecognition.maxAlternatives = 3;
-
-    const CONFIRM_TRIGGERS = [
-      'confirmar envio', 'confirmar email', 'confirma', 'enviar agora',
-      'pode enviar', 'pode mandar', 'envia', 'manda', 'sim', 'correto',
-      'enviar', 'confirmar',
-    ];
-
-    const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'regravar', 'não', 'fechar'];
-
-    confirmRecognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase().trim()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[.,!?;:]+/g, '');
-
-      console.log('🎤 [Confirmação] Ouviu:', transcript);
-
-      // ✅ Normaliza email falado para formato correto
       const normalizeSpokenEmail = (text: string): string | null => {
         let t = text.toLowerCase().trim();
         t = t
@@ -152,32 +130,12 @@ export default function SendEmailModal({
           .replace(/\s+traco\s+/g, '-').replace(/\s+hifen\s+/g, '-')
           .replace(/\s+underline\s+/g, '_').replace(/\s+sublinhado\s+/g, '_')
           .replace(/\s*@\s*/g, '@').replace(/\s*\.\s*/g, '.').replace(/\s*-\s*/g, '-');
-
         if (t.includes('@')) t = t.replace(/\s+/g, '');
-        else t = t.replace(/\s+/g, '');
-
-        const dominios: [RegExp, string][] = [
-          [/gmail\.?com$/i, 'gmail.com'],
-          [/hotmail\.?com$/i, 'hotmail.com'],
-          [/outlook\.?com$/i, 'outlook.com'],
-          [/yahoo\.?com$/i, 'yahoo.com'],
-          [/icloud\.?com$/i, 'icloud.com'],
-          [/live\.?com$/i, 'live.com'],
-          [/uol\.?com\.?br$/i, 'uol.com.br'],
-          [/bol\.?com\.?br$/i, 'bol.com.br'],
-          [/terra\.?com\.?br$/i, 'terra.com.br'],
-          [/\.?com\.?br$/i, '.com.br'],
-          [/\.?com$/i, '.com'],
-        ];
-        for (const [pattern, replacement] of dominios) {
-          if (pattern.test(t)) { t = t.replace(pattern, replacement); break; }
-        }
-
         const match = t.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
         return match ? match[0] : null;
       };
 
-      // ✅ Detecta intenção de mudar email
+      // Mudar destinatário
       const emailChangeMatch = transcript.match(
         /(?:mud[ae]r?|alter[ae]r?|troc[ae]r?|envi[ae]r?\s+para|destinatario|para\s+o\s+email|email\s+para)\s+(.+)/i
       );
@@ -187,24 +145,25 @@ export default function SendEmailModal({
           setRecipientEmail(normalized);
           showToast(`Destinatário atualizado: ${normalized}`, 'success');
         } else {
-          showToast('Não entendi o email. Edite manualmente no campo acima.', 'warning');
+          showToast('Não entendi o email. Edite manualmente.', 'warning');
         }
-        try { confirmRecognition.stop(); } catch (e) {}
-        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
         return;
       }
 
-      // ✅ Voltar para email padrão
+      // Voltar email padrão
       if (transcript.includes('meu email') || transcript.includes('email padrao') || transcript.includes('voltar email')) {
         setRecipientEmail(companyEmail);
         showToast(`Destinatário restaurado: ${companyEmail}`, 'success');
-        try { confirmRecognition.stop(); } catch (e) {}
-        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 500);
         return;
       }
 
+      const CONFIRM_TRIGGERS = [
+        'confirmar envio', 'confirmar email', 'confirma', 'enviar agora',
+        'pode enviar', 'pode mandar', 'envia', 'manda', 'sim', 'correto', 'enviar', 'confirmar',
+      ];
+      const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'regravar', 'nao', 'fechar'];
+
       if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-        console.log('✅ Confirmação detectada por voz');
         handleSendEmailRef.current();
       } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
         if (transcript.includes('regravar') || transcript.includes('gravar de novo') || transcript.includes('gravar novamente')) {
@@ -215,26 +174,9 @@ export default function SendEmailModal({
         } else {
           onCloseRef.current();
         }
-      } else {
-        try { confirmRecognition.stop(); } catch (e) {}
-        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 300);
       }
-    };
-
-    confirmRecognition.onerror = (event: any) => {
-      if (event.error === 'no-speech') {
-        try { confirmRecognition.stop(); } catch (e) {}
-        setTimeout(() => { try { confirmRecognition.start(); } catch (e) {} }, 300);
-      }
-    };
-
-    confirmRecognition.start();
-    console.log('👂 [Confirmação] Aguardando comando...');
-
-    return () => {
-      try { confirmRecognition.stop(); } catch (e) {}
-    };
-  }, [step, companyEmail]);
+    }
+  });
 
   // Cleanup ao desmontar
   useEffect(() => {

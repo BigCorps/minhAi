@@ -131,6 +131,8 @@ export default function SequenciaVideosDisplay({
     onClose();
   };
 
+  useModalVoiceClose(handleClose);
+
   const handleVideoEnd = () => {
     if (hasClosedRef.current) return;
     

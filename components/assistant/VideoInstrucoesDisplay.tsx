@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 
 interface VideoInstrucoesDisplayProps {
   data: {
@@ -109,6 +110,8 @@ export default function VideoInstrucoesDisplay({
     window.speechSynthesis.cancel();
     onClose();
   };
+
+  useModalVoiceClose(handleClose);
 
   const handleVideoEnd = () => {
     if (hasClosedRef.current) return;

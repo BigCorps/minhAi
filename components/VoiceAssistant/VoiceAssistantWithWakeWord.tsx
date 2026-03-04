@@ -197,7 +197,14 @@ export function VoiceAssistantWithWakeWord({
 
     // ✅ BLOQUEIO DE CONTEXTO: Se houver um modal de entrada de dados aberto,
     // não iniciamos o listener global para evitar conflitos de áudio.
-    const isInputModalOpen = activeModal?.type === 'SendEmailModal' || activeModal?.type === 'CreateEventModal';
+    const isInputModalOpen = 
+      activeModal?.type === 'SendEmailModal' || 
+      activeModal?.type === 'CreateEventModal' ||
+      activeModal?.type === 'NossaMarcaDisplay' ||  
+      activeModal?.type === 'EnderecoDisplay' ||   
+      activeModal?.type === 'MeuSistemaDisplay' || 
+      activeModal?.type === 'VideoInstrucoesDisplay' ||
+      activeModal?.type === 'SequenciaVideosDisplay';  
     if (isInputModalOpen) {
       console.log(`🚫 Bloqueio de Contexto: Modal ${activeModal?.type} aberto. Listener global suspenso.`);
       return;

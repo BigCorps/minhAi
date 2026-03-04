@@ -76,6 +76,9 @@ const CONFIGURABLE_FUNCTIONS = [
   'nfc_credito',
   'nfc_debito',
   'sequencia_videos'
+  'wifi_qrcode',
+  'cardapio',
+  'nosso_qrcode',
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

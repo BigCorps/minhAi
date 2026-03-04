@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createPortal } from 'react-dom';
 import { X, Calendar as CalendarIcon, Loader2, AlertCircle, ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -231,134 +232,75 @@ const handleViewChange = (view: 'month' | 'week' | 'day') => {
   // ── Recognition de voz dentro da agenda ──────────────────
   const handleCloseAgenda = () => { window.speechSynthesis.cancel(); onClose(); };
 
-  useEffect(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
-
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SR();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
-
-    const MESES: Record<string, number> = {
-      janeiro: 0, fevereiro: 1, março: 2, marco: 2, abril: 3,
-      maio: 4, junho: 5, julho: 6, agosto: 7, setembro: 8,
-      outubro: 9, novembro: 10, dezembro: 11,
-    };
-    const SEMANAS = ['primeira', 'segunda', 'terceira', 'quarta', 'quinta'];
-    const DIAS_SEMANA: Record<string, number> = {
-      domingo: 0, segunda: 1, 'segunda-feira': 1, terca: 2, 'terça-feira': 2,
-      quarta: 3, 'quarta-feira': 3, quinta: 4, 'quinta-feira': 4,
-      sexta: 5, 'sexta-feira': 5, sabado: 6, 'sábado': 6,
-    };
-
-    recognition.onresult = (event: any) => {
-      const raw = event.results[0][0].transcript
-        .toLowerCase().trim()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[.,!?;:]+/g, '');
-
-      console.log('🎤 [Agenda] Ouviu:', raw);
-
-      // ── FECHAR ────────────────────────────────────────────
+  useModalVoiceCommand({
+    onTranscript: (raw) => {
+      // ── FECHAR ──────────────────────────────────────────
       const CLOSE = ['fechar', 'fecha', 'sair', 'voltar', 'cancelar', 'tchau', 'obrigado'];
-      if (CLOSE.some(t => raw.includes(t))) {
-        handleCloseAgenda();
-        return;
-      }
+      if (CLOSE.some(t => raw.includes(t))) { handleCloseAgenda(); return; }
 
-      // ── MUDAR VIEW ────────────────────────────────────────
-      if (raw.includes('ver mes') || raw.includes('visao mes') || raw.includes('modo mes') || raw.includes('mostrar mes')) {
-        handleViewChange('month'); restart(); return;
+      // ── MUDAR VIEW ──────────────────────────────────────
+      if (raw.includes('ver mes') || raw.includes('modo mes') || raw.includes('mostrar mes')) {
+        handleViewChange('month'); return;
       }
-      if (raw.includes('ver semana') || raw.includes('visao semana') || raw.includes('modo semana') || raw.includes('mostrar semana')) {
-        handleViewChange('week'); restart(); return;
+      if (raw.includes('ver semana') || raw.includes('modo semana')) {
+        handleViewChange('week'); return;
       }
-      if (raw.includes('ver dia') || raw.includes('visao dia') || raw.includes('modo dia') || raw.includes('mostrar dia') || raw.includes('hoje')) {
+      if (raw.includes('ver dia') || raw.includes('modo dia') || raw.includes('hoje')) {
         if (raw.includes('hoje')) setCurrentDate(new Date());
-        handleViewChange('day'); restart(); return;
+        handleViewChange('day'); return;
       }
 
-      // ── NAVEGAR: próximo / anterior ───────────────────────
-      if (raw.includes('proximo') || raw.includes('proxima') || raw.includes('avançar') || raw.includes('avancar')) {
-        handleNav('next'); restart(); return;
+      // ── NAVEGAR ─────────────────────────────────────────
+      if (raw.includes('proximo') || raw.includes('proxima') || raw.includes('avancar')) {
+        handleNav('next'); return;
       }
-      if (raw.includes('anterior') || raw.includes('voltar') || raw.includes('antes')) {
-        handleNav('prev'); restart(); return;
+      if (raw.includes('anterior') || raw.includes('antes')) {
+        handleNav('prev'); return;
       }
 
-      // ── IR PARA MÊS ESPECÍFICO ────────────────────────────
+      // ── MÊS ESPECÍFICO ──────────────────────────────────
+      const MESES: Record<string, number> = {
+        janeiro: 0, fevereiro: 1, marco: 2, abril: 3, maio: 4, junho: 5,
+        julho: 6, agosto: 7, setembro: 8, outubro: 9, novembro: 10, dezembro: 11,
+      };
       for (const [nome, idx] of Object.entries(MESES)) {
         if (raw.includes(nome)) {
-          const ano = raw.match(/\b(202\d)\b/)?.[1];
           const novaData = new Date(currentDate);
           novaData.setMonth(idx);
-          if (ano) novaData.setFullYear(parseInt(ano));
           setCurrentDate(novaData);
-
-          // Força atualização do calendário
           setTimeout(() => {
             const api = calendarRef.current?.getApi();
-            if (api) {
-              api.gotoDate(novaData);
-              updateTitle(api.view.title);
-            }
+            if (api) { api.gotoDate(novaData); updateTitle(api.view.title); }
           }, 50);
-          restart(); return;
+          return;
         }
       }
 
-      // ── IR PARA DIA ESPECÍFICO ────────────────────────────
-      // "dia 15", "dia vinte", "no dia 3"
+      // ── DIA ESPECÍFICO ──────────────────────────────────
       const diaMatch = raw.match(/\bdia\s+(\d{1,2})\b/);
       if (diaMatch) {
         const novaData = new Date(currentDate);
         novaData.setDate(parseInt(diaMatch[1]));
         setCurrentDate(novaData);
         handleViewChange('day');
-
-        setTimeout(() => {
-          const api = calendarRef.current?.getApi();
-          if (api) api.gotoDate(novaData);
-        }, 50);
-        restart(); return;
+        setTimeout(() => { calendarRef.current?.getApi()?.gotoDate(novaData); }, 50);
+        return;
       }
 
-      // ── IR PARA SEMANA ESPECÍFICA (primeira, segunda...) ──
-      // "primeira semana", "segunda semana de março"
+      // ── SEMANA ESPECÍFICA ───────────────────────────────
+      const SEMANAS = ['primeira', 'segunda', 'terceira', 'quarta', 'quinta'];
       for (let i = 0; i < SEMANAS.length; i++) {
         if (raw.includes(SEMANAS[i]) && raw.includes('semana')) {
           const novaData = new Date(currentDate);
-          novaData.setDate(1 + i * 7); // início aproximado de cada semana
+          novaData.setDate(1 + i * 7);
           setCurrentDate(novaData);
           handleViewChange('week');
-
-          setTimeout(() => {
-            const api = calendarRef.current?.getApi();
-            if (api) api.gotoDate(novaData);
-          }, 50);
-          restart(); return;
+          setTimeout(() => { calendarRef.current?.getApi()?.gotoDate(novaData); }, 50);
+          return;
         }
       }
-
-      // Não entendeu — reinicia
-      restart();
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === 'no-speech') restart();
-    };
-
-    const restart = () => {
-      try { recognition.stop(); } catch (e) {}
-      setTimeout(() => { try { recognition.start(); } catch (e) {} }, 300);
-    };
-
-    recognition.start();
-    console.log('👂 [Agenda] Ouvindo comandos...');
-    return () => { try { recognition.stop(); } catch (e) {} };
-  }, [onClose]); // ← sem deps de currentDate/view para evitar restart constante
+    }
+  });
 
   // Renderizar visão diária customizada
   const renderDayView = () => {

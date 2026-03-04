@@ -49,6 +49,7 @@ const CATEGORY_NAMES: { [key: string]: string } = {
   'products': 'Comercial',
   'images': 'Imagens',
   'utylities': 'Utilitários',
+  'services': 'Serviços',
 };
 
 const CONFIGURABLE_FUNCTIONS = [

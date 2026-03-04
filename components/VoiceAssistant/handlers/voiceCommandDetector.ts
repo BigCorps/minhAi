@@ -16,6 +16,7 @@ import { handleNossaMarcaCommand, handleEnderecoCommand } from './companyHandler
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './utilitiesHandlers';
+import { handleWifiQRCode, handleCardapio, handleNossoQRCode } from './companyHandlers';
 
 // ── Interface de dependências ─────────────────────────────────
 // IMPORTANTE: setActiveModal é o único setter de modal necessário.

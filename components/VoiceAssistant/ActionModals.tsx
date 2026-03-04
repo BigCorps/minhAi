@@ -25,6 +25,9 @@ import CronometroDisplay from '@/components/assistant/CronometroDisplay';
 import TemporizadorDisplay from '@/components/assistant/TemporizadorDisplay';
 import RelogioMundialDisplay from '@/components/assistant/RelogioMundialDisplay';
 import AlarmeDisplay from '@/components/assistant/AlarmeDisplay';
+import WifiQRCodeDisplay from '@/components/assistant/WifiQRCodeDisplay';
+import CardapioDisplay from '@/components/assistant/CardapioDisplay';
+import NossoQRCodeDisplay from '@/components/assistant/NossoQRCodeDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -50,6 +53,9 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'TemporizadorDisplay': TemporizadorDisplay,
   'RelogioMundialDisplay': RelogioMundialDisplay,
   'AlarmeDisplay': AlarmeDisplay,
+  'WifiQRCodeDisplay': WifiQRCodeDisplay,
+  'CardapioDisplay': CardapioDisplay,
+  'NossoQRCodeDisplay': NossoQRCodeDisplay,
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

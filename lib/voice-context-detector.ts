@@ -82,8 +82,7 @@ const CONTEXT_PATTERNS: ContextPattern[] = [
     target: 'pix',
     contextWords: [
       'pix', 'gerar pix', 'cobrar pix',
-      'chave pix', 'qr code', 'qrcode',
-      // ✅ REMOVIDO: 'cobrar', 'pagamento', 'valor' sozinhos — muito genéricos
+      'chave pix',
     ],
     fuzzyMatches: [
       'pix', 'pics', 'pic', 'picos', 'kit', 'pis',

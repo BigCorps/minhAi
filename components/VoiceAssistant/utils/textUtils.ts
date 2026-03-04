@@ -58,8 +58,10 @@ export function correctTranscriptionErrors(text: string): string {
 
   const corrections: { [key: string]: string } = {
     'picos': 'pix', 'picks': 'pix', 'piche': 'pix', 'pics': 'pix', 'pixel': 'pix',
-    'debito': 'débito', 'debitou': 'débito',
-    'credito': 'crédito', 'creditou': 'crédito',
+    'debito': 'débito',
+    'credito': 'crédito',
+    'nfc debito': 'nfc débito',
+    'nfc credito': 'nfc crédito',
     'linque': 'link', 'linki': 'link', 'linking': 'link',
     'cobranca': 'cobrança', 'cobranças': 'cobrança',
     'watts': 'whatsapp', "what's": 'whatsapp', 'whats': 'whatsapp',

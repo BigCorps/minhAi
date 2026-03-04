@@ -222,7 +222,7 @@ export async function handleSequenciaVideosCommand({
   }
 }
 
-export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
+export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText }) {
   try {
     setIsProcessing(true);
     const supabase = createClient();
@@ -231,10 +231,12 @@ export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveMo
       .select('wifi_network_name, wifi_network_password, name')
       .eq('id', companyId)
       .single();
+
     if (!data?.wifi_network_name) {
       await playText('O Wi-Fi ainda não foi configurado. Configure no painel.');
       return;
     }
+
     setActiveModal({
       type: 'WifiQRCodeDisplay',
       data: {
@@ -251,7 +253,7 @@ export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveMo
   }
 }
 
-export async function handleCardapio({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
+export async function handleCardapio({ companyId, setIsProcessing, setActiveModal, playText }) {
   try {
     setIsProcessing(true);
     const supabase = createClient();
@@ -260,10 +262,12 @@ export async function handleCardapio({ companyId, setIsProcessing, setActiveModa
       .select('cardapio_url, cardapio_description, name')
       .eq('id', companyId)
       .single();
+
     if (!data?.cardapio_url) {
       await playText('O cardápio ainda não foi configurado. Configure no painel.');
       return;
     }
+
     setActiveModal({
       type: 'CardapioDisplay',
       data: {
@@ -284,7 +288,7 @@ export async function handleCardapio({ companyId, setIsProcessing, setActiveModa
   }
 }
 
-export async function handleNossoQRCode({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
+export async function handleNossoQRCode({ companyId, setIsProcessing, setActiveModal, playText }) {
   try {
     setIsProcessing(true);
     const supabase = createClient();
@@ -293,10 +297,12 @@ export async function handleNossoQRCode({ companyId, setIsProcessing, setActiveM
       .select('qrcode_content, qrcode_label, name')
       .eq('id', companyId)
       .single();
+
     if (!data?.qrcode_content) {
       await playText('O QR Code ainda não foi configurado. Configure no painel.');
       return;
     }
+
     setActiveModal({
       type: 'NossoQRCodeDisplay',
       data: {

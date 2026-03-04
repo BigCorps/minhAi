@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom'
 import { X, MapPin, Clock, Copy, ExternalLink, Check } from 'lucide-react';
+import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 
 interface NossaMarcaDisplayProps {
   data: {
@@ -34,6 +35,8 @@ export default function NossaMarcaDisplay({
     window.speechSynthesis.cancel(); // 👈 Para a fala imediatamente
     onClose();
   };
+
+  useModalVoiceClose(handleManualClose);
   
   const {
     companyName,

@@ -272,8 +272,18 @@ export default function SendEmailModal({
             return;
           }
 
-          finalTranscriptRef.current += text + ' ';
-          setEmailBody(finalTranscriptRef.current.trim());
+          const isSoloTrigger = FIM_TRIGGERS.some(t => lowerT === t);
+          if (!isSoloTrigger) {
+            let textToAdd = text.trim();
+            for (const t of FIM_TRIGGERS) {
+              textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+            }
+            textToAdd = textToAdd.trim();
+            if (textToAdd) {
+              finalTranscriptRef.current += textToAdd + ' ';
+              setEmailBody(finalTranscriptRef.current.trim());
+            }
+          }
         },
         onError: (err) => {
           console.error('❌ [Mobile] Erro gravação:', err);
@@ -324,10 +334,35 @@ export default function SendEmailModal({
             const foundEmail = extractEmailFromSpeech(lowerT);
             if (foundEmail) { setRecipientEmail(foundEmail); showToast(`Destinatário: ${foundEmail}`, 'success'); continue; }
           }
-          finalTranscriptRef.current += transcript + ' ';
-          const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto'];
-          const clean = transcript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.,!?;:]+/g, '');
-          if (FIM_TRIGGERS.some(t => clean.endsWith(t))) { recognition.stop(); return; }
+          const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto', 'fim'];
+          const cleanedTranscript = transcript.trim();
+          const lowerClean = cleanedTranscript.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[.,!?;:]+/g, '');
+
+          const isSoloTrigger = FIM_TRIGGERS.some(t => lowerClean === t);
+          if (isSoloTrigger) {
+            recognition.stop(); return;
+          }
+
+          if (FIM_TRIGGERS.some(t => lowerClean.endsWith(t))) {
+            // Remove trigger do final e acumula o texto antes
+            let textToAdd = cleanedTranscript;
+            for (const t of FIM_TRIGGERS) {
+              textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+            }
+            textToAdd = textToAdd.trim();
+            if (textToAdd) finalTranscriptRef.current += textToAdd + ' ';
+            recognition.stop(); return;
+          }
+
+          // Acumula normalmente
+          let textToAdd = cleanedTranscript;
+          for (const t of FIM_TRIGGERS) {
+            textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+          }
+          textToAdd = textToAdd.trim();
+          if (textToAdd) finalTranscriptRef.current += textToAdd + ' ';
         } else {
           interimTranscript += transcript;
         }

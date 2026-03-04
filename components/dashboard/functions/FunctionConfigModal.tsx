@@ -974,6 +974,138 @@ const ChatGptForm = ({ settings, onChange }: any) => (
   </div>
 );
 
+const WifiQRCodeForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Nome da Rede (SSID) <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Minha Empresa - WiFi"
+        value={settings.wifi_network_name || ''}
+        onChange={e => onChange('wifi_network_name', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-orange-500"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Senha da Rede
+      </label>
+      <input
+        type="text"
+        placeholder="Deixe em branco se a rede for aberta"
+        value={settings.wifi_network_password || ''}
+        onChange={e => onChange('wifi_network_password', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-orange-500"
+      />
+    </div>
+    {settings.wifi_network_name && (
+      <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+        <p className="text-xs text-orange-800 dark:text-orange-200">
+          ✅ QR Code gerado automaticamente no formato padrão Wi-Fi
+        </p>
+      </div>
+    )}
+  </div>
+);
+
+const CardapioForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+      <p className="text-sm text-blue-800 dark:text-blue-200">
+        💡 Funciona com Google Drive (PDF público), iFood, Linktree, site próprio e qualquer link público.
+      </p>
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Link do Cardápio <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="url"
+        placeholder="https://meusite.com/cardapio ou link do PDF"
+        value={settings.cardapio_url || ''}
+        onChange={e => onChange('cardapio_url', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-orange-500"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Descrição (opcional)
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Cardápio completo com pratos, bebidas e sobremesas"
+        value={settings.cardapio_description || ''}
+        onChange={e => onChange('cardapio_description', e.target.value)}
+        maxLength={120}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-orange-500"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
+        {(settings.cardapio_description || '').length}/120
+      </p>
+    </div>
+    {settings.cardapio_url && (
+      <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+        <p className="text-xs text-orange-800 dark:text-orange-200">
+          ✅ {settings.cardapio_url.toLowerCase().includes('.pdf') ? '📄 PDF detectado' : '🌐 Link de site detectado'}
+        </p>
+      </div>
+    )}
+  </div>
+);
+
+const NossoQRCodeForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Conteúdo do QR Code <span className="text-red-500">*</span>
+      </label>
+      <textarea
+        rows={3}
+        placeholder={'Ex: https://instagram.com/suaempresa\nou chave Pix: email@empresa.com'}
+        value={settings.qrcode_content || ''}
+        onChange={e => onChange('qrcode_content', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-orange-500 resize-none font-mono text-sm"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        O que o assistente vai falar <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Escaneie para nos seguir no Instagram"
+        value={settings.qrcode_label || ''}
+        onChange={e => onChange('qrcode_label', e.target.value)}
+        maxLength={100}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-orange-500"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
+        {(settings.qrcode_label || '').length}/100
+      </p>
+    </div>
+    {settings.qrcode_content && (
+      <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+        <p className="text-xs text-orange-800 dark:text-orange-200 mb-2">Prévia do QR Code:</p>
+        <img
+          src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(settings.qrcode_content)}&margin=5`}
+          alt="Preview QR"
+          className="w-20 h-20 rounded"
+        />
+      </div>
+    )}
+    <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exemplos de uso:</p>
+      <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+        <li>Chave Pix estática</li>
+        <li>Link de avaliação Google Maps</li>
+        <li>Formulário, promoção, entre outros</li>
+      </ul>
+    </div>
+  </div>
+);
+
 const OrcamentoForm = ({ settings, onChange }: any) => (
   <div className="space-y-4">
 
@@ -1158,6 +1290,9 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'link_pagamento': InfinitePayConfigForm,
   'nfc_debito':     InfinitePayConfigForm,
   'nfc_credito':    InfinitePayConfigForm,
+  'wifi_qrcode':  WifiQRCodeForm,
+  'cardapio':     CardapioForm,
+  'nosso_qrcode': NossoQRCodeForm,
 };
 
 // ===== INTERFACE =====
@@ -1188,7 +1323,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, qrcode_content, qrcode_label')
         .eq('id', companyId)
         .single();
 
@@ -1317,12 +1452,3 @@ export default function FunctionConfigModal({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-

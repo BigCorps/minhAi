@@ -222,6 +222,103 @@ export async function handleSequenciaVideosCommand({
   }
 }
 
+export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('companies')
+      .select('wifi_network_name, wifi_network_password, name')
+      .eq('id', companyId)
+      .single();
+
+    if (!data?.wifi_network_name) {
+      await playText('O Wi-Fi ainda não foi configurado. Configure no painel.');
+      return;
+    }
+
+    setActiveModal({
+      type: 'WifiQRCodeDisplay',
+      data: {
+        networkName: data.wifi_network_name,
+        networkPassword: data.wifi_network_password ?? '',
+        companyName: data.name,
+      },
+    });
+    playText(`Aqui está o QR Code do Wi-Fi. A rede é ${data.wifi_network_name}.`).catch(() => {});
+  } catch {
+    await playText('Erro ao carregar o Wi-Fi. Tente novamente.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
+export async function handleCardapio({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('companies')
+      .select('cardapio_url, cardapio_description, name')
+      .eq('id', companyId)
+      .single();
+
+    if (!data?.cardapio_url) {
+      await playText('O cardápio ainda não foi configurado. Configure no painel.');
+      return;
+    }
+
+    setActiveModal({
+      type: 'CardapioDisplay',
+      data: {
+        menuUrl: data.cardapio_url,
+        menuDescription: data.cardapio_description ?? '',
+        companyName: data.name,
+      },
+    });
+    playText(
+      data.cardapio_description
+        ? `Aqui está o cardápio. ${data.cardapio_description}`
+        : 'Aqui está o nosso cardápio.'
+    ).catch(() => {});
+  } catch {
+    await playText('Erro ao carregar o cardápio. Tente novamente.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
+export async function handleNossoQRCode({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('companies')
+      .select('qrcode_content, qrcode_label, name')
+      .eq('id', companyId)
+      .single();
+
+    if (!data?.qrcode_content) {
+      await playText('O QR Code ainda não foi configurado. Configure no painel.');
+      return;
+    }
+
+    setActiveModal({
+      type: 'NossoQRCodeDisplay',
+      data: {
+        qrContent: data.qrcode_content,
+        qrLabel: data.qrcode_label,
+        companyName: data.name,
+      },
+    });
+    playText(data.qrcode_label).catch(() => {});
+  } catch {
+    await playText('Erro ao carregar o QR Code. Tente novamente.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 // handleEnderecoCommand
 // Busca e exibe o endereço físico com link para Google Maps.

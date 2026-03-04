@@ -593,11 +593,11 @@ case 'link_pagamento':
   break;
 
 case 'nfc_credito':
-  playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir para gerar uma cobrança no crédito e o valor.').catch(() => {});
+  playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança no crédito e o valor.').catch(() => {});
   break;
 
 case 'nfc_debito':
-  playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir para gerar uma cobrança no débito e o valor.').catch(() => {});
+  playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança no débito e o valor.').catch(() => {});
   break;
 
 

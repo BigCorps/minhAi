@@ -154,6 +154,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
     voiceTriggers: [
       'nfc débito',
+      'gerar cobrança no débito',
       'cobrar no débito',
       'aproximação débito',
       'tap débito',
@@ -219,6 +220,7 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
 
     voiceTriggers: [
       'nfc crédito',
+      'gerar cobrança no crédito',
       'cobrar no crédito',
       'aproximação crédito',
       'tap crédito',

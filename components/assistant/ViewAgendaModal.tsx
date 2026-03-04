@@ -405,6 +405,37 @@ const handleViewChange = (view: 'month' | 'week' | 'day') => {
     );
   };
 
+  // ── Card de comandos de voz ───────────────────────────────
+  const VoiceHelpCard = () => (
+    <div className={`flex-shrink-0 px-3 py-2 rounded-xl border text-xs flex items-center gap-3
+      ${isDark
+        ? 'bg-slate-800/60 border-slate-700 text-slate-400'
+        : 'bg-gray-50 border-gray-200 text-gray-500'
+      }`}
+    >
+      <span className="text-base flex-shrink-0">🎤</span>
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {[
+          '"ver mês"',
+          '"ver semana"',
+          '"ver dia"',
+          '"dia 15"',
+          '"março"',
+          '"próximo"',
+          '"anterior"',
+          '"fechar"',
+        ].map(cmd => (
+          <span key={cmd}
+            className={`px-1.5 py-0.5 rounded font-mono text-[11px]
+              ${isDark ? 'bg-slate-700 text-blue-300' : 'bg-gray-200 text-blue-700'}`}
+          >
+            {cmd}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       {/* Toast */}
@@ -520,6 +551,9 @@ const handleViewChange = (view: 'month' | 'week' | 'day') => {
                   </button>
                 </div>
               </div>
+
+              {/* ✅ Card de comandos de voz */}
+              <VoiceHelpCard />
 
               {/* Calendário ou Visão Diária */}
               <div className="flex-1 min-h-0">

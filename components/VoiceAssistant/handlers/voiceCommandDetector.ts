@@ -250,6 +250,60 @@ export async function detectVoiceCommand(
     return true;
   }
 
+  // ── Link de Pagamento ─────────────────────────────────────
+const linkPagamentoTriggers = [
+  'link de pagamento', 'link pagamento', 'cobrar por link',
+  'cobrar no link', 'gerar link', 'pagamento por link', 'link cobrança', 'link cobranca',
+];
+if (linkPagamentoTriggers.some(t => lowerTranscript.includes(t))) {
+  console.log('🔗 Comando Link Pagamento detectado!');
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'link_pagamento');
+  if (!isEnabled) { await playText('Função desativada.'); return true; }
+  // handler real — substitua pelo seu quando estiver pronto
+  setActiveModal({ type: 'InfinitePayDisplay', data: { companyId, method: 'link' } });
+  playText('Gerando link de pagamento.').catch(() => {});
+  await registerFunctionUsage(companyId, 'link_pagamento', functionSettings['link_pagamento']?.creditsPerUse ?? 1);
+  return true;
+}
+
+// ── NFC Débito ────────────────────────────────────────────
+const nfcDebitoTriggers = [
+  'cobrança no débito', 'cobranca no debito',
+  'cobrar no débito', 'cobrar no debito',
+  'débito via nfc', 'debito via nfc',
+  'cartão de débito', 'cartao de debito',
+  'cobrar debito', 'cobrar débito',
+  'nfc debito', 'nfc débito',
+];
+if (nfcDebitoTriggers.some(t => lowerTranscript.includes(t))) {
+  console.log('💳 Comando NFC Débito detectado!');
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'nfc_debito');
+  if (!isEnabled) { await playText('Função desativada.'); return true; }
+  setActiveModal({ type: 'InfinitePayDisplay', data: { companyId, method: 'nfc_debito' } });
+  playText('Gerando cobrança no débito.').catch(() => {});
+  await registerFunctionUsage(companyId, 'nfc_debito', functionSettings['nfc_debito']?.creditsPerUse ?? 1);
+  return true;
+}
+
+// ── NFC Crédito ───────────────────────────────────────────
+const nfcCreditoTriggers = [
+  'cobrança no crédito', 'cobranca no credito',
+  'cobrar no crédito', 'cobrar no credito',
+  'crédito via nfc', 'credito via nfc',
+  'cartão de crédito', 'cartao de credito',
+  'cobrar credito', 'cobrar crédito',
+  'nfc credito', 'nfc crédito',
+];
+if (nfcCreditoTriggers.some(t => lowerTranscript.includes(t))) {
+  console.log('💳 Comando NFC Crédito detectado!');
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'nfc_credito');
+  if (!isEnabled) { await playText('Função desativada.'); return true; }
+  setActiveModal({ type: 'InfinitePayDisplay', data: { companyId, method: 'nfc_credito' } });
+  playText('Gerando cobrança no crédito.').catch(() => {});
+  await registerFunctionUsage(companyId, 'nfc_credito', functionSettings['nfc_credito']?.creditsPerUse ?? 1);
+  return true;
+}
+
   // ── PIX: Confirmar ────────────────────────────────────────
   const confirmTriggers = ['confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'];
   if (confirmTriggers.some(t => lowerTranscript.includes(t))) {
@@ -279,13 +333,14 @@ export async function detectVoiceCommand(
   }
 
   // ── PIX: Gerar ────────────────────────────────────────────
-  const pixPatterns = [
-    /(?:gerar|gera|criar|cria|fazer|faz|faça|quero)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-    /(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-    /(?:cobrar|cobra)\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
-    /(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?\s*(?:no|via|pelo|por)?\s*pix/i,
-    /(?:valor|no valor)\s*(?:de|com)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)/i,
-  ];
+const pixPatterns = [
+  // ✅ mantém: exige 'pix' ou 'cobrança' explícito
+  /(?:gerar|gera|criar|cria|fazer|faz|faça|quero)\s*(?:um\s*|uma\s*)?(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+  /(pix|cobrança|cobranca)\s*(?:de|com|no valor de)?\s*(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?/i,
+  // ❌ REMOVIDO: /(?:cobrar|cobra)\s*(?:r\$)?\s*... — capturava NFC/link
+  /(?:r\$)?\s*([\d]+(?:[,.]?\d{1,2})?)\s*(?:reais?)?\s*(?:no|via|pelo|por)?\s*pix/i,
+  // ❌ REMOVIDO: /(?:valor|no valor)... — genérico demais
+];
 
   for (const pattern of pixPatterns) {
     const match = transcriptWithNumbers.match(pattern);

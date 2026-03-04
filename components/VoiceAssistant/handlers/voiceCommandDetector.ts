@@ -36,6 +36,68 @@ interface DetectorDeps {
   activeFunctionContextRef: React.MutableRefObject<any>;
 }
 
+// ── Helper: parsear view/data do transcript de agenda ────────
+function parseAgendaRequest(transcript: string): {
+  view: 'month' | 'week' | 'day';
+  date?: string; // ISO: 'YYYY-MM-DD'
+} {
+  const t = transcript.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const MESES: Record<string, number> = {
+    janeiro: 0, fevereiro: 1, marco: 2, abril: 3,
+    maio: 4, junho: 5, julho: 6, agosto: 7, setembro: 8,
+    outubro: 9, novembro: 10, dezembro: 11,
+  };
+  const SEMANAS = ['primeira', 'segunda', 'terceira', 'quarta', 'quinta'];
+
+  let view: 'month' | 'week' | 'day' = 'month';
+  let date = new Date();
+
+  // Detectar view
+  if (t.includes('semana')) view = 'week';
+  if (t.includes('dia') || t.includes('hoje') || t.includes('amanha')) view = 'day';
+
+  // Detectar mês
+  for (const [nome, idx] of Object.entries(MESES)) {
+    if (t.includes(nome)) {
+      date.setMonth(idx);
+      break;
+    }
+  }
+
+  // Detectar dia específico: "dia 15"
+  const diaMatch = t.match(/\bdia\s+(\d{1,2})\b/);
+  if (diaMatch) {
+    date.setDate(parseInt(diaMatch[1]));
+    view = 'day';
+  }
+
+  // "hoje"
+  if (t.includes('hoje')) { date = new Date(); view = 'day'; }
+
+  // "amanha"
+  if (t.includes('amanha')) {
+    date = new Date();
+    date.setDate(date.getDate() + 1);
+    view = 'day';
+  }
+
+  // Semana específica: "primeira semana", "segunda semana"
+  for (let i = 0; i < SEMANAS.length; i++) {
+    if (t.includes(SEMANAS[i]) && t.includes('semana')) {
+      date.setDate(1 + i * 7);
+      view = 'week';
+      break;
+    }
+  }
+
+  return {
+    view,
+    date: date.toISOString().split('T')[0],
+  };
+}
+
 export async function detectVoiceCommand(
   transcript: string,
   deps: DetectorDeps
@@ -227,6 +289,27 @@ export async function detectVoiceCommand(
     return true;
   }
   
+  // ── Ver Agenda ────────────────────────────────────────────
+  const verAgendaTriggers = ['ver agenda', 'abrir agenda', 'minha agenda', 'ver calendario', 'ver calendário', 'abrir calendario'];
+  if (verAgendaTriggers.some(t => lowerTranscript.includes(t))) {
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'ver_agenda');
+    if (!isEnabled) { await playText('Função desativada.'); return true; }
+
+    const { view, date } = parseAgendaRequest(lowerTranscript); // ✅
+
+    setActiveModal({
+      type: 'ViewAgendaModal',
+      data: {
+        companyId,
+        initialView: view,
+        initialDate: date, // ✅
+      }
+    });
+    playText(`Abrindo ${view === 'month' ? 'o mês' : view === 'week' ? 'a semana' : 'o dia'} na agenda.`).catch(() => {});
+    await registerFunctionUsage(companyId, 'ver_agenda', functionSettings['ver_agenda']?.creditsPerUse ?? 0);
+    return true;
+  }
+
   // ── AGENDA: Confirmar evento
   const confirmarEventoTriggers = ['confirmar marcação', 'confirmar agenda', 'confirmar evento', 'confirmar compromisso', 'confirmar reunião', 'confirma reunião', 'confirma evento', 'confirma marcação', 'está correto', 'tá correto', 'está certo', 'tá certo', 'confirma', 'confirmar', 'pode marcar', 'marcar esse', 'marque esse', 'agendar esse', 'agende', 'pode agendar', 'sim confirmar', 'sim pode marcar', 'correto pode marcar', 'ok marcar', 'ok confirmar'];
   if (confirmarEventoTriggers.some(t => lowerTranscript.includes(t))) {

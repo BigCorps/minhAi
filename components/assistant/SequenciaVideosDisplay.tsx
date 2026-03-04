@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 
 interface Video {
   title: string;

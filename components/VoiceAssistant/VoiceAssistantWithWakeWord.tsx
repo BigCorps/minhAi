@@ -519,36 +519,44 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
         // ── Funções com modal (usam setActiveModal) ──────────
         case 'meu_sistema':
           // ✅ Abre via ActionModals usando type 'MeuSistemaDisplay'
+          await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
           playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
           break;
 
   case 'wifi_qrcode':
+    await stopGoogleSpeech(); 
     await handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText });
     break;
 
   case 'cardapio':
+    await stopGoogleSpeech();
     await handleCardapio({ companyId, setIsProcessing, setActiveModal, playText });
     break;
 
   case 'nosso_qrcode':
+    await stopGoogleSpeech();
     await handleNossoQRCode({ companyId, setIsProcessing, setActiveModal, playText });
     break;
 
         case 'nossa_marca':
+          await stopGoogleSpeech();
           await handleNossaMarcaCommand({ companyId, setIsProcessing, setActiveModal, playText });
           break;
 
         case 'endereco':
+          await stopGoogleSpeech();
           await handleEnderecoCommand({ companyId, setIsProcessing, setActiveModal, playText });
           break;
 
         case 'video_instrucoes':
+          await stopGoogleSpeech();
           await handleVideoInstrucoesCommand({ 
             companyId, setIsProcessing, setActiveModal, playText });
           break;
 
         case 'sequencia_videos':
+          await stopGoogleSpeech();
           await handleSequenciaVideosCommand({ companyId, setIsProcessing, setActiveModal, playText });
           break;  
 
@@ -609,14 +617,17 @@ case 'ver_agenda':
           break;
           
 case 'link_pagamento':
+  await stopGoogleSpeech();
   playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
   break;
 
 case 'nfc_credito':
+  await stopGoogleSpeech();
   playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança no crédito e o valor.').catch(() => {});
   break;
 
 case 'nfc_debito':
+  await stopGoogleSpeech();
   playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança no débito e o valor.').catch(() => {});
   break;
 

@@ -24,6 +24,7 @@ import { getFunctionByKey } from '@/lib/functions-registry';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './handlers/utilitiesHandlers';
 import { useLembreteWatcher } from './hooks/useLembreteWatcher';
+import { handleWifiQRCode, handleCardapio, handleNossoQRCode } from '@/components/VoiceAssistant/handlers/companyHandlers';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {

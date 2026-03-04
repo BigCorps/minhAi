@@ -94,6 +94,9 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     'cobrar no link',
     'link cobrança', 'link cobranca',
     'pagamento por link',
+    'via link',
+    'pelo link',
+    'por link',
   ],
 
     examplePhrases: [
@@ -154,17 +157,18 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     category: 'payment',
     responseType: 'voice+modal',
 
-  voiceTriggers: [
-    'nfc débito', 'nfc debito',
-    'cobrança no débito', 'cobranca no debito',
-    'cobrar no débito', 'cobrar no debito',
-    'gerar cobrança no débito', 'gerar cobranca no debito',
-    'aproximação débito', 'aproximacao debito',
-    'pagar no débito', 'pagar no debito',
-    'cobrar débito', 'cobrar debito',
-    'tap débito', 'tap debito',
-    'debito', // ← palavra chave isolada como fallback
-  ],
+voiceTriggers: [
+  'nfc debito', 'nfc débito',
+  'cobrar no debito', 'cobrar no débito',
+  'cobrança no debito', 'cobrança no débito',
+  'cobranca no debito',
+  'cartao de debito', 'cartão de débito',
+  // ✅ chave: sem o valor — o processor só precisa identificar a função
+  'cobrar debito', 'cobrar débito',
+  'debito via nfc', 'débito via nfc',
+  'no debito',   // ← cobre "cobrar 10,00 no debito"
+  'no débito',
+],
 
     examplePhrases: [
       'Cobrar 50 reais no débito',
@@ -223,17 +227,17 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     category: 'payment',
     responseType: 'voice+modal',
 
-  voiceTriggers: [
-    'nfc crédito', 'nfc credito',
-    'cobrança no crédito', 'cobranca no credito',
-    'cobrar no crédito', 'cobrar no credito',
-    'gerar cobrança no crédito', 'gerar cobranca no credito',
-    'aproximação crédito', 'aproximacao credito',
-    'pagar no crédito', 'pagar no credito',
-    'cobrar crédito', 'cobrar credito',
-    'tap crédito', 'tap credito',
-    'credito', // ← palavra chave isolada como fallback
-  ],
+voiceTriggers: [
+  'nfc credito', 'nfc crédito',
+  'cobrar no credito', 'cobrar no crédito',
+  'cobrança no credito', 'cobrança no crédito',
+  'cobranca no credito',
+  'cartao de credito', 'cartão de crédito',
+  'cobrar credito', 'cobrar crédito',
+  'credito via nfc', 'crédito via nfc',
+  'no credito',   // ← cobre "cobrar 10,00 no credito"
+  'no crédito',
+],
 
     examplePhrases: [
       'Cobrar 50 reais no crédito',

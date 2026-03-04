@@ -7,9 +7,9 @@ import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVo
 
 interface CardapioDisplayProps {
   data: {
-    menuUrl: string;           // link do PDF ou cardápio digital
+    menuUrl: string;
     companyName?: string;
-    menuDescription?: string;  // ex: "Cardápio completo com pratos e bebidas"
+    menuDescription?: string;
     autoCloseDuration?: number;
   };
   onClose: () => void;
@@ -31,7 +31,6 @@ export default function CardapioDisplay({
 
   const isPdf = menuUrl?.toLowerCase().includes('.pdf');
 
-  // Regra 2
   const handleManualClose = () => {
     window.speechSynthesis.cancel();
     onClose();
@@ -39,12 +38,10 @@ export default function CardapioDisplay({
 
   useModalVoiceClose(handleManualClose);
 
-  // Regra 3
   useEffect(() => {
     return () => window.speechSynthesis.cancel();
   }, []);
 
-  // Gerar QR Code do link
   useEffect(() => {
     if (menuUrl) {
       const size = 300;
@@ -53,7 +50,6 @@ export default function CardapioDisplay({
     }
   }, [menuUrl]);
 
-  // Regra 1: auto-close
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -78,7 +74,6 @@ export default function CardapioDisplay({
     window.open(menuUrl, '_blank');
   };
 
-  // URL de preview via Microlink (funciona para sites e PDFs públicos)
   const previewUrl = !previewError
     ? `https://api.microlink.io?url=${encodeURIComponent(menuUrl)}&screenshot=true&meta=false&embed=screenshot.url`
     : null;
@@ -95,15 +90,15 @@ export default function CardapioDisplay({
         {/* Header */}
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isDark ? 'bg-orange-900/30' : 'bg-orange-100'}`}>
-              <UtensilsCrossed className={`w-5 h-5 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
+            <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
+              <UtensilsCrossed className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
             </div>
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Cardápio {companyName ? `· ${companyName}` : ''}
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${isDark ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>
+            <div className={`px-3 py-1 rounded-full text-sm font-medium ${isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
               {timeLeft}s
             </div>
             <button
@@ -119,7 +114,7 @@ export default function CardapioDisplay({
         {/* Conteúdo */}
         <div className="p-8">
 
-          {/* ====== LAYOUT DESKTOP: Grid 2 colunas ====== */}
+          {/* LAYOUT DESKTOP */}
           <div className="hidden md:grid md:grid-cols-[300px_1fr] gap-8">
 
             {/* COLUNA ESQUERDA */}
@@ -132,7 +127,7 @@ export default function CardapioDisplay({
                     <img src={qrCodeUrl} alt="QR Code Cardápio" className="w-44 h-44 object-contain" />
                   ) : (
                     <div className="w-44 h-44 flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600" />
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                     </div>
                   )}
                 </div>
@@ -150,7 +145,7 @@ export default function CardapioDisplay({
 
               {/* Link */}
               <div className={`rounded-xl p-3 flex items-center gap-2 ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
-                <QrCode className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
+                <QrCode className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                 <span className={`text-xs truncate flex-1 font-mono ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                   {menuUrl}
                 </span>
@@ -168,7 +163,7 @@ export default function CardapioDisplay({
                 </button>
                 <button
                   onClick={handleOpen}
-                  className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white text-sm font-semibold transition-all inline-flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-sm font-semibold transition-all inline-flex items-center justify-center gap-2"
                 >
                   <ExternalLink className="w-4 h-4" />
                   {isPdf ? 'Abrir PDF' : 'Abrir Cardápio'}
@@ -179,7 +174,6 @@ export default function CardapioDisplay({
             {/* COLUNA DIREITA: Preview */}
             <div className={`rounded-xl overflow-hidden border h-full min-h-[420px] ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
               {isPdf ? (
-                // PDF: usar iframe embed direto
                 <iframe
                   src={`${menuUrl}#toolbar=0&navpanes=0`}
                   width="100%"
@@ -189,7 +183,6 @@ export default function CardapioDisplay({
                   onError={() => setPreviewError(true)}
                 />
               ) : previewUrl ? (
-                // Site: screenshot via Microlink
                 <div className={`relative w-full h-full min-h-[420px] flex items-center justify-center p-4 ${isDark ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
                   <img
                     src={previewUrl}
@@ -199,9 +192,8 @@ export default function CardapioDisplay({
                   />
                 </div>
               ) : (
-                // Fallback: sem preview
                 <div className={`w-full h-full min-h-[420px] flex flex-col items-center justify-center gap-4 p-8 ${isDark ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                     <UtensilsCrossed className="w-8 h-8 text-white" />
                   </div>
                   <p className={`font-semibold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -215,7 +207,7 @@ export default function CardapioDisplay({
             </div>
           </div>
 
-          {/* ====== LAYOUT MOBILE: Vertical ====== */}
+          {/* LAYOUT MOBILE */}
           <div className="md:hidden flex flex-col items-center gap-5">
 
             {/* QR Code */}
@@ -224,7 +216,7 @@ export default function CardapioDisplay({
                 <img src={qrCodeUrl} alt="QR Code Cardápio" className="w-40 h-40 object-contain" />
               ) : (
                 <div className="w-40 h-40 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                 </div>
               )}
             </div>
@@ -246,7 +238,7 @@ export default function CardapioDisplay({
               </button>
               <button
                 onClick={handleOpen}
-                className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-semibold transition-all inline-flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold transition-all inline-flex items-center justify-center gap-2"
               >
                 <ExternalLink className="w-5 h-5" />
                 {isPdf ? 'Abrir PDF' : 'Abrir Cardápio'}
@@ -258,7 +250,7 @@ export default function CardapioDisplay({
         {/* Barra de progresso */}
         <div className={`h-1 ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
           <div
-            className="h-full bg-orange-600 transition-all duration-1000 ease-linear"
+            className="h-full bg-blue-600 transition-all duration-1000 ease-linear"
             style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }}
           />
         </div>

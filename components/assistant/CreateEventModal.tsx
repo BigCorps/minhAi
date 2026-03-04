@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createPortal } from 'react-dom';
 import { Check, X, Calendar as CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -88,177 +89,111 @@ export default function CreateEventModal({
   }, [isCreating, selectedTime, eventTitle, selectedDate]);
 
 // Recognition de voz ativo na tela de agendamento
-useEffect(() => {
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+useModalVoiceCommand({
+  onTranscript: (transcript) => {
+    console.log('🎤 [Agendamento] Ouviu:', transcript);
 
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  const voiceRecognition = new SpeechRecognition();
+    const CONFIRM_TRIGGERS = [
+      'confirmar', 'confirma', 'confirme', 'pode marcar', 'marcar', 'agendar',
+      'criar evento', 'pode agendar', 'sim', 'correto', 'esta certo',
+      'ta certo', 'ok', 'confirmar evento', 'confirmar agendamento',
+    ];
+    const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'fechar', 'nao', 'sair'];
 
-  voiceRecognition.lang = 'pt-BR';
-  voiceRecognition.continuous = false;
-  voiceRecognition.interimResults = false;
-  voiceRecognition.maxAlternatives = 3;
+    const CORRECTION_PATTERNS = [
+      {
+        pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+)?nome\s+(?:para|pra)\s+(.+)/i,
+        action: (match: RegExpMatchArray) => {
+          const novoNome = match[1].trim();
+          setEventTitle(novoNome);
+          showToast(`Nome atualizado: ${novoNome}`, 'success');
+        },
+      },
+      {
+        pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+|a\s+)?(?:horario|hora)\s+(?:para|pra|as|às)?\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?/i,
+        action: (match: RegExpMatchArray) => {
+          const hora = match[1].padStart(2, '0');
+          const minuto = (match[2] || '00').padStart(2, '0');
+          setSelectedTime(`${hora}:${minuto}`);
+          showToast(`Horário atualizado: ${hora}:${minuto}`, 'success');
+        },
+      },
+      {
+        pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+|a\s+|para\s+)?(?:o\s+)?(?:data|dia)\s+(?:para|pra)?\s*(?:o\s+)?(?:dia\s+)?(\d{1,2})/i,
+        action: (match: RegExpMatchArray) => {
+          const dia = parseInt(match[1]);
+          const novaData = new Date(selectedDate);
+          novaData.setDate(dia);
+          setSelectedDate(novaData);
+          showToast(`Data atualizada: dia ${dia}`, 'success');
+        },
+      },
+      {
+        pattern: /(?:mud[ae]r?|alter[ae]r?)\s+para\s+(?:o\s+)?dia\s+(\d{1,2})/i,
+        action: (match: RegExpMatchArray) => {
+          const dia = parseInt(match[1]);
+          const novaData = new Date(selectedDate);
+          novaData.setDate(dia);
+          setSelectedDate(novaData);
+          showToast(`Data atualizada: dia ${dia}`, 'success');
+        },
+      },
+    ];
 
-const CONFIRM_TRIGGERS = [
-  'confirmar', 'confirma', 'confirme', 'pode marcar', 'marcar', 'agendar',
-  'criar evento', 'pode agendar', 'sim', 'correto', 'está certo',
-  'tá certo', 'ok', 'confirmar evento', 'confirmar agendamento',
-];
-
-  const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'fechar', 'não', 'sair'];
-
-  // Padrões para corrigir campos por voz
-  // Ex: "muda o nome para João Silva"
-  // Ex: "muda o horário para 14:30"
-  // Ex: "muda a data para dia 15"
-const CORRECTION_PATTERNS = [
-  {
-    // "mudar o nome para X" / "mudar para X" (sem "nome" explícito trata como nome)
-    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+)?nome\s+(?:para|pra)\s+(.+)/i,
-    action: (match: RegExpMatchArray) => {
-      const novoNome = match[1].trim();
-      setEventTitle(novoNome);
-      showToast(`Nome atualizado: ${novoNome}`, 'success');
-    },
-  },
-  {
-    // "mudar o horario para 18" / "mude a hora para as 18h30"
-    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+|a\s+)?(?:horario|hora)\s+(?:para|pra|as|às)?\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?/i,
-    action: (match: RegExpMatchArray) => {
-      const hora = match[1].padStart(2, '0');
-      const minuto = (match[2] || '00').padStart(2, '0');
+    // Horário solto
+    const horarioSolto = transcript.match(/(?:as)\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?\s*(?:horas?)?/);
+    if (horarioSolto && !selectedTime && !transcript.includes('mud') && !transcript.includes('alter')) {
+      const hora = horarioSolto[1].padStart(2, '0');
+      const minuto = (horarioSolto[2] || '00').padStart(2, '0');
       setSelectedTime(`${hora}:${minuto}`);
-      showToast(`Horário atualizado: ${hora}:${minuto}`, 'success');
-    },
-  },
-  {
-    // "mude o dia para o dia 5" / "mude para o dia 6" / "mude a data para dia 15"
-    pattern: /(?:mud[ae]r?|alter[ae]r?|corrig[ie]r?|troc[ae]r?)\s+(?:o\s+|a\s+|para\s+)?(?:o\s+)?(?:data|dia)\s+(?:para|pra)?\s*(?:o\s+)?(?:dia\s+)?(\d{1,2})/i,
-    action: (match: RegExpMatchArray) => {
-      const dia = parseInt(match[1]);
+      showToast(`Horário definido: ${hora}:${minuto}`, 'success');
+      return;
+    }
+
+    // Nome com contexto "com X"
+    const nomeComContexto = transcript.match(
+      /^(?:(.+?)\s+)?com\s+([a-záéíóúàâêôãõç][a-záéíóúàâêôãõç\s]{1,30})$/i
+    );
+    if (nomeComContexto && !transcript.includes('mud') && !transcript.includes('confirm') && !transcript.includes('cancel')) {
+      const tipoEvento = nomeComContexto[1]?.trim();
+      const nomeCliente = nomeComContexto[2]?.trim();
+      const titulo = tipoEvento
+        ? `${tipoEvento.charAt(0).toUpperCase() + tipoEvento.slice(1)} com ${nomeCliente.charAt(0).toUpperCase() + nomeCliente.slice(1)}`
+        : nomeCliente.charAt(0).toUpperCase() + nomeCliente.slice(1);
+      setEventTitle(titulo);
+      showToast(`Evento definido: ${titulo}`, 'success');
+      return;
+    }
+
+    // Dia solto
+    const diaSolto = transcript.match(/(?:dia|no dia)\s+(\d{1,2})/);
+    if (diaSolto && !transcript.includes('mud') && !transcript.includes('alter')) {
+      const dia = parseInt(diaSolto[1]);
       const novaData = new Date(selectedDate);
       novaData.setDate(dia);
       setSelectedDate(novaData);
-      showToast(`Data atualizada: dia ${dia}`, 'success');
-    },
-  },
-  {
-    // "mude para o dia 6" — sem mencionar "data" ou "dia" explicitamente antes
-    pattern: /(?:mud[ae]r?|alter[ae]r?)\s+para\s+(?:o\s+)?dia\s+(\d{1,2})/i,
-    action: (match: RegExpMatchArray) => {
-      const dia = parseInt(match[1]);
-      const novaData = new Date(selectedDate);
-      novaData.setDate(dia);
-      setSelectedDate(novaData);
-      showToast(`Data atualizada: dia ${dia}`, 'success');
-    },
-  },
-];
+      showToast(`Data definida: dia ${dia}`, 'success');
+      return;
+    }
 
-voiceRecognition.onresult = (event: any) => {
-  const transcript = event.results[0][0].transcript.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
-
-  console.log('🎤 [Agendamento] Ouviu:', transcript);
-
-  // ✅ NOVO: Detectar informações diretas na fala (nome, horário, data)
-  // Ex: cliente diz "João Silva" quando o nome está vazio
-  // Ex: "às 14 horas" quando horário está vazio
-  // Ex: "dia 10" quando nenhum contexto de correção
-
-  // Detecta horário solto: "às 14", "14h", "14:30", "as 14 horas"
-  const horarioSolto = transcript.match(/(?:as|as)\s*(\d{1,2})(?:[h:]\s*(\d{2})?)?\s*(?:horas?)?/);
-  if (horarioSolto && !selectedTime && !transcript.includes('mud') && !transcript.includes('alter')) {
-    const hora = horarioSolto[1].padStart(2, '0');
-    const minuto = (horarioSolto[2] || '00').padStart(2, '0');
-    setSelectedTime(`${hora}:${minuto}`);
-    showToast(`Horário definido: ${hora}:${minuto}`, 'success');
-    try { voiceRecognition.stop(); } catch (e) {}
-    setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
-    return;
-  }
-
-  // Detecta nome com contexto: "com João", "reunião com João", "corte com Ana", etc.
-// O padrão captura TUDO depois de "com" como sendo "tipo de evento + nome" ou só "nome"
-const nomeComContexto = transcript.match(
-  /^(?:(.+?)\s+)?com\s+([a-záéíóúàâêôãõç][a-záéíóúàâêôãõç\s]{1,30})$/i
-);
-if (nomeComContexto && !transcript.includes('mud') && !transcript.includes('confirm') && !transcript.includes('cancel')) {
-  const tipoEvento = nomeComContexto[1]?.trim(); // ex: "reunião", "corte", "consulta"
-  const nomeCliente = nomeComContexto[2]?.trim(); // ex: "Miriam"
-
-  // Monta o título: "Reunião com Miriam" ou só "Miriam" se não tiver tipo
-  const titulo = tipoEvento
-    ? `${tipoEvento.charAt(0).toUpperCase() + tipoEvento.slice(1)} com ${nomeCliente.charAt(0).toUpperCase() + nomeCliente.slice(1)}`
-    : nomeCliente.charAt(0).toUpperCase() + nomeCliente.slice(1);
-
-  setEventTitle(titulo);
-  showToast(`Evento definido: ${titulo}`, 'success');
-  try { voiceRecognition.stop(); } catch (e) {}
-  setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
-  return;
-}
-
-  // Detecta dia solto: "dia 10", "no dia 15"
-  const diaSolto = transcript.match(/(?:dia|no dia)\s+(\d{1,2})/);
-  if (diaSolto && !transcript.includes('mud') && !transcript.includes('alter')) {
-    const dia = parseInt(diaSolto[1]);
-    const novaData = new Date(selectedDate);
-    novaData.setDate(dia);
-    setSelectedDate(novaData);
-    showToast(`Data definida: dia ${dia}`, 'success');
-    try { voiceRecognition.stop(); } catch (e) {}
-    setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
-    return;
-  }
-
-    // 1. Verificar correções primeiro
+    // Correções
     for (const { pattern, action } of CORRECTION_PATTERNS) {
       const match = transcript.match(pattern);
-      if (match) {
-        console.log('✏️ Correção detectada:', transcript);
-        action(match);
-        // Reinicia para ouvir próximo comando
-        try { voiceRecognition.stop(); } catch (e) {}
-        setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 500);
-        ;
-      }
+      if (match) { action(match); return; }
     }
 
-    // 2. Confirmação
+    // Confirmar
     if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-      console.log('✅ Confirmação detectada por voz');
       handleCreateEventRef.current();
-      ;
+      return;
     }
 
-    // 3. Cancelamento
+    // Cancelar
     if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
-      console.log('❌ Cancelamento detectado por voz');
       onCloseRef.current();
-      ;
     }
-
-    // 4. Não entendeu — tenta de novo
-    try { voiceRecognition.stop(); } catch (e) {}
-    setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
-  };
-
-  voiceRecognition.onerror = (event: any) => {
-    if (event.error === 'no-speech') {
-      try { voiceRecognition.stop(); } catch (e) {}
-      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
-    }
-  };
-
-  voiceRecognition.start();
-  console.log('👂 [Agendamento] Ouvindo comandos de voz...');
-
-  return () => {
-    try { voiceRecognition.stop(); } catch (e) {}
-  };
-}, [selectedDate]); // selectedDate como dep para o padrão de correção de data
+  }
+});
   
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });

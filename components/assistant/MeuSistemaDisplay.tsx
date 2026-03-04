@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react';
+import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 
 interface MeuSistemaDisplayProps {
   onClose: () => void;
@@ -24,6 +25,8 @@ const handleManualClose = () => {
   window.speechSynthesis.cancel(); 
   onClose();
 };
+
+  useModalVoiceClose(handleManualClose);
 
   // ✅ SOLUÇÃO SIMPLES: Gerar QR Code direto via API (sem Edge Function)
   useEffect(() => {

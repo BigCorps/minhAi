@@ -1325,7 +1325,7 @@ voiceTriggers: [
     isPremium: false,
   },
 
-    wifi_qrcode: {
+wifi_qrcode: {
     functionKey: 'wifi_qrcode',
     functionName: 'Wi-Fi QR Code',
     category: 'services',
@@ -1336,7 +1336,20 @@ voiceTriggers: [
       'conectar wifi', 'conectar wi-fi',
       'internet', 'rede wifi', 'rede wi-fi',
     ],
+    examplePhrases: [
+      'Qual a senha do Wi-Fi?',
+      'Mostra o QR Code do Wi-Fi',
+      'Como conecto ao Wi-Fi?',
+    ],
     requiresInput: false,
+    description: 'Exibe QR Code da rede Wi-Fi para os clientes se conectarem automaticamente.',
+    shortDescription: 'QR Code para conectar ao Wi-Fi.',
+    icon: '📶',
+    color: '#D2691E',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
     handler: async ({ playText, setActiveModal, companyId }) => {
       try {
         const supabase = createClient();
@@ -1345,13 +1358,11 @@ voiceTriggers: [
           .select('wifi_network_name, wifi_network_password, name')
           .eq('id', companyId)
           .single();
-
         if (!data?.wifi_network_name) {
           await playText('O Wi-Fi ainda não foi configurado. Configure no painel.');
           return false;
         }
-
-        setActiveModal({
+        setActiveModal?.({
           type: 'WifiQRCodeDisplay',
           data: {
             networkName: data.wifi_network_name,
@@ -1368,7 +1379,7 @@ voiceTriggers: [
     },
   },
 
-  cardapio: {
+cardapio: {
     functionKey: 'cardapio',
     functionName: 'Cardápio',
     category: 'services',
@@ -1380,7 +1391,20 @@ voiceTriggers: [
       'abrir cardapio', 'abrir cardápio',
       'cardapio digital', 'cardápio digital',
     ],
+    examplePhrases: [
+      'Mostra o cardápio',
+      'Abre o cardápio digital',
+      'Quero ver o menu',
+    ],
     requiresInput: false,
+    description: 'Exibe o cardápio digital ou PDF com QR Code, preview e botão para abrir.',
+    shortDescription: 'Cardápio digital com QR Code.',
+    icon: '🍽️',
+    color: '#D2691E',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
     handler: async ({ playText, setActiveModal, companyId }) => {
       try {
         const supabase = createClient();
@@ -1389,13 +1413,11 @@ voiceTriggers: [
           .select('cardapio_url, cardapio_description, name')
           .eq('id', companyId)
           .single();
-
         if (!data?.cardapio_url) {
           await playText('O cardápio ainda não foi configurado. Configure no painel.');
           return false;
         }
-
-        setActiveModal({
+        setActiveModal?.({
           type: 'CardapioDisplay',
           data: {
             menuUrl: data.cardapio_url,
@@ -1416,7 +1438,7 @@ voiceTriggers: [
     },
   },
 
-  nosso_qrcode: {
+nosso_qrcode: {
     functionKey: 'nosso_qrcode',
     functionName: 'Nosso QR Code',
     category: 'services',
@@ -1426,7 +1448,20 @@ voiceTriggers: [
       'mostrar qr code', 'mostrar qrcode',
       'meu qr code', 'meu qrcode',
     ],
+    examplePhrases: [
+      'Mostra o QR Code',
+      'Qual é o QR Code de vocês?',
+      'Mostra o QR Code do Instagram',
+    ],
     requiresInput: false,
+    description: 'Exibe QR Code personalizado com mensagem falada pelo assistente.',
+    shortDescription: 'QR Code personalizado com mensagem de voz.',
+    icon: '📲',
+    color: '#D2691E',
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
     handler: async ({ playText, setActiveModal, companyId }) => {
       try {
         const supabase = createClient();
@@ -1435,13 +1470,11 @@ voiceTriggers: [
           .select('qrcode_content, qrcode_label, name')
           .eq('id', companyId)
           .single();
-
         if (!data?.qrcode_content) {
           await playText('O QR Code ainda não foi configurado. Configure no painel.');
           return false;
         }
-
-        setActiveModal({
+        setActiveModal?.({
           type: 'NossoQRCodeDisplay',
           data: {
             qrContent: data.qrcode_content,

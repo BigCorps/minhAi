@@ -86,13 +86,15 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     category: 'payment',
     responseType: 'voice+modal',
 
-    voiceTriggers: [
-      'link de pagamento',
-      'gerar link de pagamento',
-      'cobrar por link',
-      'link pagamento',
-      'cobrar no link',
-    ],
+  voiceTriggers: [
+    'link de pagamento',
+    'gerar link de pagamento',
+    'cobrar por link',
+    'link pagamento',
+    'cobrar no link',
+    'link cobrança', 'link cobranca',
+    'pagamento por link',
+  ],
 
     examplePhrases: [
       'Gerar link de pagamento de 50 reais',
@@ -152,16 +154,17 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     category: 'payment',
     responseType: 'voice+modal',
 
-    voiceTriggers: [
-      'nfc débito',
-      'cobrança no débito',      
-      'gerar cobrança no débito',
-      'cobrar no débito',
-      'aproximação débito',
-      'tap débito',
-      'pagar no débito',
-      'cobrar débito',
-    ],
+  voiceTriggers: [
+    'nfc débito', 'nfc debito',
+    'cobrança no débito', 'cobranca no debito',
+    'cobrar no débito', 'cobrar no debito',
+    'gerar cobrança no débito', 'gerar cobranca no debito',
+    'aproximação débito', 'aproximacao debito',
+    'pagar no débito', 'pagar no debito',
+    'cobrar débito', 'cobrar debito',
+    'tap débito', 'tap debito',
+    'debito', // ← palavra chave isolada como fallback
+  ],
 
     examplePhrases: [
       'Cobrar 50 reais no débito',
@@ -220,16 +223,17 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     category: 'payment',
     responseType: 'voice+modal',
 
-    voiceTriggers: [
-      'nfc crédito',
-      'cobrança no crédito',          
-      'gerar cobrança no crédito',
-      'cobrar no crédito',
-      'aproximação crédito',
-      'tap crédito',
-      'pagar no crédito',
-      'cobrar crédito',
-    ],
+  voiceTriggers: [
+    'nfc crédito', 'nfc credito',
+    'cobrança no crédito', 'cobranca no credito',
+    'cobrar no crédito', 'cobrar no credito',
+    'gerar cobrança no crédito', 'gerar cobranca no credito',
+    'aproximação crédito', 'aproximacao credito',
+    'pagar no crédito', 'pagar no credito',
+    'cobrar crédito', 'cobrar credito',
+    'tap crédito', 'tap credito',
+    'credito', // ← palavra chave isolada como fallback
+  ],
 
     examplePhrases: [
       'Cobrar 50 reais no crédito',

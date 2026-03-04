@@ -1325,6 +1325,140 @@ voiceTriggers: [
     isPremium: false,
   },
 
+    wifi_qrcode: {
+    functionKey: 'wifi_qrcode',
+    functionName: 'Wi-Fi QR Code',
+    category: 'services',
+    responseType: 'voice+modal',
+    voiceTriggers: [
+      'wifi', 'wi-fi',
+      'senha do wifi', 'senha do wi-fi',
+      'conectar wifi', 'conectar wi-fi',
+      'internet', 'rede wifi', 'rede wi-fi',
+    ],
+    requiresInput: false,
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('companies')
+          .select('wifi_network_name, wifi_network_password, name')
+          .eq('id', companyId)
+          .single();
+
+        if (!data?.wifi_network_name) {
+          await playText('O Wi-Fi ainda não foi configurado. Configure no painel.');
+          return false;
+        }
+
+        setActiveModal({
+          type: 'WifiQRCodeDisplay',
+          data: {
+            networkName: data.wifi_network_name,
+            networkPassword: data.wifi_network_password ?? '',
+            companyName: data.name,
+          },
+        });
+        await playText(`Aqui está o QR Code do Wi-Fi. A rede é ${data.wifi_network_name}.`);
+        return true;
+      } catch (error) {
+        console.error('Erro wifi_qrcode:', error);
+        return false;
+      }
+    },
+  },
+
+  cardapio: {
+    functionKey: 'cardapio',
+    functionName: 'Cardápio',
+    category: 'services',
+    responseType: 'voice+modal',
+    voiceTriggers: [
+      'cardapio', 'cardápio', 'menu',
+      'ver cardapio', 'ver cardápio',
+      'mostrar cardapio', 'mostrar cardápio',
+      'abrir cardapio', 'abrir cardápio',
+      'cardapio digital', 'cardápio digital',
+    ],
+    requiresInput: false,
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('companies')
+          .select('cardapio_url, cardapio_description, name')
+          .eq('id', companyId)
+          .single();
+
+        if (!data?.cardapio_url) {
+          await playText('O cardápio ainda não foi configurado. Configure no painel.');
+          return false;
+        }
+
+        setActiveModal({
+          type: 'CardapioDisplay',
+          data: {
+            menuUrl: data.cardapio_url,
+            menuDescription: data.cardapio_description ?? '',
+            companyName: data.name,
+          },
+        });
+        await playText(
+          data.cardapio_description
+            ? `Aqui está o cardápio. ${data.cardapio_description}`
+            : 'Aqui está o nosso cardápio. Você pode escanear o QR Code ou clicar para abrir.'
+        );
+        return true;
+      } catch (error) {
+        console.error('Erro cardapio:', error);
+        return false;
+      }
+    },
+  },
+
+  nosso_qrcode: {
+    functionKey: 'nosso_qrcode',
+    functionName: 'Nosso QR Code',
+    category: 'services',
+    responseType: 'voice+modal',
+    voiceTriggers: [
+      'nosso qr code', 'nosso qrcode',
+      'qr code', 'qrcode',
+      'mostrar qr code', 'mostrar qrcode',
+      'meu qr code', 'meu qrcode',
+    ],
+    requiresInput: false,
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('companies')
+          .select('qrcode_content, qrcode_label, name')
+          .eq('id', companyId)
+          .single();
+
+        if (!data?.qrcode_content) {
+          await playText('O QR Code ainda não foi configurado. Configure no painel.');
+          return false;
+        }
+
+        setActiveModal({
+          type: 'NossoQRCodeDisplay',
+          data: {
+            qrContent: data.qrcode_content,
+            qrLabel: data.qrcode_label,
+            companyName: data.name,
+          },
+        });
+        await playText(data.qrcode_label);
+        return true;
+      } catch (error) {
+        console.error('Erro nosso_qrcode:', error);
+        return false;
+      }
+    },
+  },
+
   nossa_marca: {
     functionKey: 'nossa_marca',
     functionName: 'Nossa Marca',

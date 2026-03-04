@@ -243,7 +243,7 @@ export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveMo
         companyName: data.name,
       },
     });
-    playText(`Aqui está o QR Code do Wi-Fi. A rede é ${data.wifi_network_name}.`).catch(() => {});
+    playText(`Aqui está o QR Code do Wi-Fi.`).catch(() => {});
   } catch {
     await playText('Erro ao carregar o Wi-Fi. Tente novamente.');
   } finally {

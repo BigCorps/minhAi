@@ -1423,7 +1423,6 @@ voiceTriggers: [
     responseType: 'voice+modal',
     voiceTriggers: [
       'nosso qr code', 'nosso qrcode',
-      'qr code', 'qrcode',
       'mostrar qr code', 'mostrar qrcode',
       'meu qr code', 'meu qrcode',
     ],

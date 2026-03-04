@@ -7,9 +7,9 @@
 
 interface ContextPattern {
   target: 'whatsapp' | 'instagram' | 'pix' | 'link_pagamento' | 'nfc_debito' | 'nfc_credito';
-  contextWords: string[]; // Palavras que aparecem junto
-  fuzzyMatches: string[]; // Palavras similares que Vosk pode retornar
-  minConfidence: number; // 0-1
+  contextWords: string[];
+  fuzzyMatches: string[];
+  minConfidence: number;
 }
 
 const CONTEXT_PATTERNS: ContextPattern[] = [
@@ -99,7 +99,7 @@ const CONTEXT_PATTERNS: ContextPattern[] = [
  */
 export function detectByContext(transcript: string): {
   detected: boolean;
-  target?: 'whatsapp' | 'instagram' | 'pix';
+  target?: 'whatsapp' | 'instagram' | 'pix' | 'link_pagamento' | 'nfc_debito' | 'nfc_credito';
   confidence: number;
   reason: string;
 } {

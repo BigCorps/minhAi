@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
+import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { createPortal } from 'react-dom';
 import { Check, X, Mail, Loader2, AlertCircle, Mic } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -30,10 +32,12 @@ export default function SendEmailModal({
   const [companyEmail, setCompanyEmail] = useState<string>('');
   const [recipientEmail, setRecipientEmail] = useState<string>('');
   
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<any>(null);           // desktop (mantém)
+  const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null); // mobile
   const finalTranscriptRef = useRef<string>('');
   const supabase = createClient();
   const isDark = theme === 'dark';
+  const isMobile = useIsMobile();
 
   const handleSendEmailRef = useRef<() => void>(() => {});
   const onCloseRef = useRef<() => void>(() => {});
@@ -205,40 +209,34 @@ export default function SendEmailModal({
   };
 
   // Iniciar gravação por voz
-  const startRecording = () => {
-    console.log('🎤 Iniciando gravação de voz...');
-    
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      showToast('Seu navegador não suporta reconhecimento de voz', 'error');
-      return;
+  const startRecording = async () => {
+    console.log('🎤 Iniciando gravação...');
+    if (isMobile) {
+      await startRecordingMobile();
+    } else {
+      startRecordingDesktop();
     }
+  };
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-
-    recognition.lang = 'pt-BR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
+  const startRecordingMobile = async () => {
     finalTranscriptRef.current = '';
+    setIsRecording(true);
 
-    recognition.onstart = () => {
-      setIsRecording(true);
-    };
+    const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto', 'fim'];
 
-    recognition.onresult = (event: any) => {
-      let interimTranscript = '';
+    try {
+      const gs = new GoogleSpeechWebSocket({
+        onTranscript: (text, isFinal) => {
+          if (!isFinal || !text.trim()) return;
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
+          console.log('📝 [Mobile] Final:', text);
 
-        if (event.results[i].isFinal) {
-          console.log('📝 Final:', transcript);
+          const lowerT = text.toLowerCase().trim()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[.,!?;:]+/g, '');
 
-          const lowerT = transcript.toLowerCase();
-          const hasEmailContext = 
-            lowerT.includes('enviar para') || 
+          const hasEmailContext =
+            lowerT.includes('enviar para') ||
             lowerT.includes('envia para') ||
             lowerT.includes('manda para') ||
             lowerT.includes('destinatario') ||
@@ -248,85 +246,133 @@ export default function SendEmailModal({
             const foundEmail = extractEmailFromSpeech(lowerT);
             if (foundEmail) {
               setRecipientEmail(foundEmail);
-              showToast(`Destinatário definido: ${foundEmail}`, 'success');
-              continue;
+              showToast(`Destinatário: ${foundEmail}`, 'success');
+              return;
             }
           }
 
-          finalTranscriptRef.current += transcript + ' ';
-          
-          const lowerTranscript = transcript.toLowerCase().trim();
-          const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto'];
-          const words = lowerTranscript
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/[.,!?;:]+/g, '')
-            .split(/\s+/);
-          const lastWord = words[words.length - 1];
-          const hasFim =
-            lastWord === 'acabou' ||
-            lastWord === 'concluir' ||
-            FIM_TRIGGERS.some(t => lowerTranscript.replace(/[.,!?;:]+/g, '').endsWith(t));
-          
+          const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
           if (hasFim) {
-            console.log('🛑 Encerramento detectado');
-            recognition.stop();
+            console.log('🛑 [Mobile] Encerramento detectado');
+            let cleaned = finalTranscriptRef.current;
+            for (const t of FIM_TRIGGERS) {
+              cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+            }
+            cleaned = cleaned.trim();
+            finalTranscriptRef.current = cleaned;
+            setEmailBody(cleaned);
+            stopRecording();
+
+            if (cleaned.length > 0) {
+              setStep('confirming');
+            } else {
+              showToast('Nenhum conteúdo detectado. Tente novamente.', 'warning');
+              setTimeout(() => onClose(), 2000);
+            }
             return;
           }
-        } else {
-          interimTranscript += transcript;
-        }
-      }
 
-      const fullText = finalTranscriptRef.current + interimTranscript;
-      setEmailBody(fullText);
-    };
+          finalTranscriptRef.current += text + ' ';
+          setEmailBody(finalTranscriptRef.current.trim());
+        },
+        onError: (err) => {
+          console.error('❌ [Mobile] Erro gravação:', err);
+          setIsRecording(false);
+          showToast('Erro ao capturar áudio. Tente novamente.', 'error');
+        },
+        volumeThreshold: 0.030,
+        silenceThreshold: 60,
+      });
 
-    recognition.onend = () => {
+      googleSpeechRef.current = gs;
+      await gs.connect();
+      await gs.startRecording();
+    } catch (err) {
       setIsRecording(false);
-      
-      const FIM_TRIGGERS_CLEAN = [
-        'fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou',
-      ];
-
-      let cleanedBody = finalTranscriptRef.current;
-      for (const trigger of FIM_TRIGGERS_CLEAN) {
-        const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        cleanedBody = cleanedBody.replace(new RegExp(`\\s*${escaped}\\s*$`, 'gi'), '');
-      }
-      cleanedBody = cleanedBody.trim();
-      
-      setEmailBody(cleanedBody);
-      finalTranscriptRef.current = cleanedBody;
-      
-      if (cleanedBody.length > 0) {
-        setStep('confirming');
-      } else {
-        showToast('Nenhum conteúdo foi detectado. Tente novamente.', 'warning');
-        setTimeout(() => onClose(), 2000);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      setIsRecording(false);
-      let errorMessage = 'Erro ao capturar áudio';
-      if (event.error === 'no-speech') errorMessage = 'Nenhuma fala detectada. Tente novamente.';
-      else if (event.error === 'network') errorMessage = 'Erro de rede. Verifique sua conexão.';
-      else if (event.error === 'not-allowed') errorMessage = 'Permissão do microfone negada.';
-      showToast(errorMessage, 'error');
-    };
-
-    try {
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (error) {
       showToast('Erro ao iniciar gravação', 'error');
     }
   };
 
+  const startRecordingDesktop = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      showToast('Seu navegador não suporta reconhecimento de voz', 'error');
+      return;
+    }
+
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SR();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    finalTranscriptRef.current = '';
+
+    recognition.onstart = () => setIsRecording(true);
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          console.log('📝 Final:', transcript);
+          const lowerT = transcript.toLowerCase();
+          const hasEmailContext =
+            lowerT.includes('enviar para') || lowerT.includes('envia para') ||
+            lowerT.includes('manda para') || lowerT.includes('destinatario') ||
+            lowerT.includes('arroba');
+          if (hasEmailContext) {
+            const foundEmail = extractEmailFromSpeech(lowerT);
+            if (foundEmail) { setRecipientEmail(foundEmail); showToast(`Destinatário: ${foundEmail}`, 'success'); continue; }
+          }
+          finalTranscriptRef.current += transcript + ' ';
+          const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto'];
+          const clean = transcript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.,!?;:]+/g, '');
+          if (FIM_TRIGGERS.some(t => clean.endsWith(t))) { recognition.stop(); return; }
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      setEmailBody(finalTranscriptRef.current + interimTranscript);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
+      let cleaned = finalTranscriptRef.current;
+      for (const t of FIM_TRIGGERS_CLEAN) {
+        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+      }
+      cleaned = cleaned.trim();
+      setEmailBody(cleaned);
+      finalTranscriptRef.current = cleaned;
+      if (cleaned.length > 0) setStep('confirming');
+      else { showToast('Nenhum conteúdo detectado.', 'warning'); setTimeout(() => onClose(), 2000); }
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsRecording(false);
+      if (event.error === 'no-speech') showToast('Nenhuma fala detectada.', 'warning');
+      else if (event.error === 'not-allowed') showToast('Permissão do microfone negada.', 'error');
+      else showToast('Erro ao capturar áudio.', 'error');
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+  };
+
   const stopRecording = () => {
+    // Desktop
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
     }
+    // Mobile
+    if (googleSpeechRef.current) {
+      googleSpeechRef.current.stopRecording().catch(() => {});
+      googleSpeechRef.current.disconnect();
+      googleSpeechRef.current = null;
+    }
+    setIsRecording(false);
   };
 
   const handleSendEmail = async () => {

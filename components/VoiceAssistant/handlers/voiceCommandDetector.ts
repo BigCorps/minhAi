@@ -139,6 +139,36 @@ export async function detectVoiceCommand(
     return true;
   }
 
+  // ── Wi-Fi QR Code ──
+  const wifiTriggers = ['wifi', 'wi-fi', 'senha do wifi', 'senha do wi-fi', 'conectar wifi', 'conectar wi-fi', 'rede wifi', 'rede wi-fi'];
+  if (wifiTriggers.some(t => lowerTranscript.includes(t))) {
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'wifi_qrcode');
+    if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+    await handleWifiQRCode({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+    await registerFunctionUsage(companyId, 'wifi_qrcode', 1);
+    return true;
+  }
+
+  // ── Cardápio ──
+  const cardapioTriggers = ['cardapio', 'cardápio', 'menu', 'ver cardapio', 'ver cardápio', 'mostrar cardapio', 'abrir cardapio', 'cardapio digital'];
+  if (cardapioTriggers.some(t => lowerTranscript.includes(t))) {
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'cardapio');
+    if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+    await handleCardapio({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+    await registerFunctionUsage(companyId, 'cardapio', 1);
+    return true;
+  }
+
+  // ── Nosso QR Code ──
+  const qrcodeTriggers = ['nosso qr code', 'nosso qrcode', 'meu qr code', 'meu qrcode', 'mostrar qr code', 'mostrar qrcode'];
+  if (qrcodeTriggers.some(t => lowerTranscript.includes(t))) {
+    const isEnabled = await checkIfFunctionIsEnabled(companyId, 'nosso_qrcode');
+    if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+    await handleNossoQRCode({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+    await registerFunctionUsage(companyId, 'nosso_qrcode', 1);
+    return true;
+  }
+
   // ── Finalizar Cronômetro (parar) ──────────────────────────
   const finalizarCronometroTriggers = ['finalizar cronômetro', 'parar cronômetro', 'parar contagem', 'finalizar contagem', 'stop cronômetro'];
   if (finalizarCronometroTriggers.some(t => lowerTranscript.includes(t))) {

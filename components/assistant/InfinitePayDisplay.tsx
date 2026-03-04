@@ -38,6 +38,7 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
 
   const handleConfirmarPagamentoRef = useRef<() => void>(() => {});
   const handleManualCloseRef = useRef<() => void>(() => {});
+  const onCloseRef = useRef<() => void>(() => {});
 
   const isNFC = data.tipo === 'NFC';
   const isDebit = data.nfc_payment_method === 'debit';
@@ -114,7 +115,8 @@ useEffect(() => {
       handleConfirmarPagamentoRef.current();
     } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
       console.log('❌ Fechar detectado por voz');
-      handleManualCloseRef.current();
+      window.speechSynthesis.cancel();
+      onCloseRef.current();
     } else {
       try { voiceRecognition.stop(); } catch (e) {}
       setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
@@ -180,6 +182,10 @@ useEffect(() => {
   useEffect(() => {
     handleConfirmarPagamentoRef.current = handleConfirmarPagamento;
   }, [handleConfirmarPagamento]);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const content = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">

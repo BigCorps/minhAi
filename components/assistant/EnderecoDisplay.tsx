@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom'
 import { X, Copy, ExternalLink, Check } from 'lucide-react';
+import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 
 interface EnderecoDisplayProps {
   data: {
@@ -26,6 +27,15 @@ export default function EnderecoDisplay({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(15);
   const [copied, setCopied] = useState(false);
+
+  // 1️⃣ ADICIONADO: Handler para cancelar voz e fechar
+  const handleManualClose = () => {
+    window.speechSynthesis.cancel();
+    onClose();
+  };
+
+  // 2️⃣ ADICIONADO: Hook para monitorar fechamento via voz
+  useModalVoiceClose(handleManualClose);
   
   const {
     companyName,

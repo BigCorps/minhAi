@@ -1148,7 +1148,7 @@ case 'nfc_debito':
 
         {/* Card direito: Status / Microfone */}
         {/* h-[384px] = mesma altura que o card esquerdo (h-96 = 384px) + padding p-8 */}
-        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors h-[448px] flex flex-col ${
+        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors h-[448px] flex flex-col overflow-hidden ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
           <div className="flex flex-col items-center flex-1 min-h-0">
@@ -1188,7 +1188,7 @@ case 'nfc_debito':
 
             {/* ── Área inferior fixa: cards + TextInput ── */}
             {!showStartButton && (
-              <div className="w-full mt-auto flex flex-col gap-2">
+              <div className="w-full min-w-0 overflow-hidden mt-auto flex flex-col gap-2">
 
                 {/* Card aviso de ruído / reprompt (azul) — sempre reserva espaço */}
                 <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${

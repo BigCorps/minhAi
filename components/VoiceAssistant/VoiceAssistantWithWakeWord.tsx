@@ -39,6 +39,15 @@ import {
 // ── ActionModals (renderizador unificado de modais) ────────
 import { ActionModals } from './ActionModals';
 
+import {
+  handleLerQRCode,
+  handleLerCodigoBarras,
+  handleValidarCupom,
+  handleImagemEmTexto,
+  handleTabelaEmTexto,
+  handleContratoEmTexto,
+} from '@/lib/companyHandlers';
+
 // ── Hooks ──────────────────────────────────────────────────
 import { useCompanyConfig } from './hooks/useCompanyConfig';
 import { useFunctionSettings } from './hooks/useFunctionSettings';

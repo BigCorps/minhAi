@@ -25,7 +25,7 @@ export interface FunctionDefinition {
   // Identificação
   functionKey: string;
   functionName: string;
-  category: 'contact' | 'payment' | 'information' | 'ai_assistant' | 'video' | 'productivity' | 'utylities' | 'services';
+  category: 'contact' | 'payment' | 'information' | 'ai_assistant' | 'video' | 'productivity' | 'utylities' | 'codes' | 'services';
   
   // Tipo de resposta
   responseType: ResponseType;

@@ -169,9 +169,8 @@ function ArquivosContent() {
       <div className="flex flex-col items-center gap-6 w-full max-w-xs">
         {/* Header */}
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="text-4xl">📷</div>
           <h1 className="text-xl font-bold text-white">
-            {companyName || 'eAi Assistente'}
+            {companyName || 'eAi - Funcionários de Voz'}
           </h1>
           <p className="text-slate-400 text-sm">
             Envie uma foto para o assistente
@@ -188,7 +187,6 @@ function ArquivosContent() {
             onChange={handleFileChange}
           />
           <div className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-semibold transition-all active:scale-95">
-            <span className="text-xl">📷</span>
             <span>Tirar Foto</span>
           </div>
         </label>
@@ -208,7 +206,6 @@ function ArquivosContent() {
             onChange={handleFileChange}
           />
           <div className="w-full flex items-center justify-center gap-3 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-2xl text-base font-semibold transition-all active:scale-95 border border-slate-600">
-            <span className="text-xl">🖼️</span>
             <span>Escolher da Galeria</span>
           </div>
         </label>

@@ -109,10 +109,6 @@ export function VoiceAssistantWithWakeWord({
   const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeFunctionContextRef = useRef<ActiveFunctionContext | null>(null);
 
-  // ── Refs para detecção visual de wake word (feedback interim) ──
-  const visualWakeWordRef = useRef<string[]>([]);
-  const wakeWordTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   // ── Ref de estado PIX (acesso em callbacks sem closure stale) ──
   const pixStateRef = useRef<{ qrCodeData: any; pixConfirmationData: any } | null>(null);
   useEffect(() => {
@@ -128,20 +124,6 @@ export function VoiceAssistantWithWakeWord({
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
-
-  // ── State de ativação visual da wake word ─────────────────
-  const [wakeWordActivated, setWakeWordActivated] = useState(false);
-
-  // ── Preencher palavras-chave para match visual (sem fuzzy) ──
-  useEffect(() => {
-    if (!companyWakeWord) return;
-    // Palavras simples para match visual no interim — só includes(), sem fuzzy
-    visualWakeWordRef.current = companyWakeWord
-      .split(',')
-      .map(w => w.trim().toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
-      .filter(w => w.length > 0);
-  }, [companyWakeWord]);
 
   // Wrap de playText para capturar lastResponse automaticamente
   const playText = (text: string) => {
@@ -370,18 +352,7 @@ export function VoiceAssistantWithWakeWord({
 function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
 
-  const lowerText = text.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-  // ✅ CHECK VISUAL — só interim, só acende o verde, não processa nada
-  if (!isFinal && !wakeWordActivated && !processingQuestion.current && !isProcessing) {
-    const hasVisualMatch = visualWakeWordRef.current.some(w => lowerText.includes(w));
-    if (hasVisualMatch) {
-      setWakeWordActivated(true);
-      if (wakeWordTimerRef.current) clearTimeout(wakeWordTimerRef.current);
-      wakeWordTimerRef.current = setTimeout(() => setWakeWordActivated(false), 8000);
-    }
-  }
+  const lowerText = text.toLowerCase().trim();
 
   // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
   if (isFinal && detectStopCommand(lowerText)) {

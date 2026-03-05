@@ -11,6 +11,13 @@
 
 import { X } from 'lucide-react';
 
+interface ConfigModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  companyId?: string;
+  onUpdate?: () => void;
+}
+
 interface SimpleConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,7 +46,7 @@ function SimpleConfigModal({ isOpen, onClose, title, description }: SimpleConfig
   );
 }
 
-export function LerQRCodeConfigModal({ isOpen, onClose }) {
+export function LerQRCodeConfigModal({ isOpen, onClose }: ConfigModalProps) {
   return (
     <SimpleConfigModal
       isOpen={isOpen}
@@ -50,7 +57,7 @@ export function LerQRCodeConfigModal({ isOpen, onClose }) {
   );
 }
 
-export function LerCodigoBarrasConfigModal({ isOpen, onClose }) {
+export function LerCodigoBarrasConfigModal({ isOpen, onClose }: ConfigModalProps) {
   return (
     <SimpleConfigModal
       isOpen={isOpen}
@@ -61,7 +68,7 @@ export function LerCodigoBarrasConfigModal({ isOpen, onClose }) {
   );
 }
 
-export function ImagemEmTextoConfigModal({ isOpen, onClose }) {
+export function ImagemEmTextoConfigModal({ isOpen, onClose }: ConfigModalProps) {
   return (
     <SimpleConfigModal
       isOpen={isOpen}
@@ -72,7 +79,7 @@ export function ImagemEmTextoConfigModal({ isOpen, onClose }) {
   );
 }
 
-export function TabelaEmTextoConfigModal({ isOpen, onClose }) {
+export function TabelaEmTextoConfigModal({ isOpen, onClose }: ConfigModalProps) {
   return (
     <SimpleConfigModal
       isOpen={isOpen}
@@ -83,7 +90,7 @@ export function TabelaEmTextoConfigModal({ isOpen, onClose }) {
   );
 }
 
-export function ContratoEmTextoConfigModal({ isOpen, onClose }) {
+export function ContratoEmTextoConfigModal({ isOpen, onClose }: ConfigModalProps) {
   return (
     <SimpleConfigModal
       isOpen={isOpen}
@@ -108,7 +115,7 @@ interface Cupom {
   is_active: boolean;
 }
 
-export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }) {
+export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }: ConfigModalProps) {
   const [cupons, setCupons] = useState<Cupom[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -570,21 +570,16 @@ ler_qrcode: {
   functionName: 'Ler QR Code',
   category: 'codes',
   responseType: 'voice+modal',
-  voiceTriggers: [
-    'ler qr code', 'ler qr',
-    'escanear qr', 'escanear qrcode',
-    'ler codigo qr', 'ler qrcode',
-  ],
+  voiceTriggers: ['ler qr code', 'ler qr', 'escanear qr', 'escanear qrcode', 'ler codigo qr', 'ler qrcode'],
+  examplePhrases: ['Ler QR Code', 'Escanear QR Code'],
   requiresInput: false,
+  description: 'Lê e decodifica QR Codes usando a câmera do dispositivo.',
+  shortDescription: 'Ler QR Code pela câmera',
+  icon: '📷', color: '#6366F1',
+  saveToHistory: true, creditsPerUse: 1, requiresPayment: false, isPremium: false,
   handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      setActiveModal({ type: 'LerQRCodeDisplay', data: { companyId } });
-      await playText('Abrindo leitura de QR Code. Aponte a câmera para o código.');
-      return true;
-    } catch (error) {
-      console.error('[ler_qrcode] handler error:', error);
-      return false;
-    }
+    try { setActiveModal?.({ type: 'LerQRCodeDisplay', data: { companyId } }); await playText('Abrindo leitura de QR Code.'); return true; }
+    catch { return false; }
   },
 },
 
@@ -594,21 +589,16 @@ ler_codigo_barras: {
   functionName: 'Ler Código de Barras',
   category: 'codes',
   responseType: 'voice+modal',
-  voiceTriggers: [
-    'ler codigo de barras', 'ler código de barras',
-    'escanear codigo de barras', 'escanear código de barras',
-    'ler barcode',
-  ],
+  voiceTriggers: ['ler codigo de barras', 'ler código de barras', 'escanear codigo de barras', 'escanear código de barras', 'ler barcode'],
+  examplePhrases: ['Ler código de barras', 'Escanear código de barras'],
   requiresInput: false,
+  description: 'Lê e decodifica códigos de barras usando a câmera do dispositivo.',
+  shortDescription: 'Ler código de barras pela câmera',
+  icon: '📊', color: '#3B82F6',
+  saveToHistory: true, creditsPerUse: 1, requiresPayment: false, isPremium: false,
   handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      setActiveModal({ type: 'LerCodigoBarrasDisplay', data: { companyId } });
-      await playText('Abrindo leitura de código de barras.');
-      return true;
-    } catch (error) {
-      console.error('[ler_codigo_barras] handler error:', error);
-      return false;
-    }
+    try { setActiveModal?.({ type: 'LerCodigoBarrasDisplay', data: { companyId } }); await playText('Abrindo leitura de código de barras.'); return true; }
+    catch { return false; }
   },
 },
 
@@ -618,21 +608,16 @@ validar_cupom: {
   functionName: 'Validar Cupom',
   category: 'codes',
   responseType: 'voice+modal',
-  voiceTriggers: [
-    'validar cupom', 'valida cupom',
-    'validar voucher', 'valida voucher',
-    'verificar cupom', 'verifica cupom',
-  ],
+  voiceTriggers: ['validar cupom', 'valida cupom', 'validar voucher', 'valida voucher', 'verificar cupom', 'verifica cupom'],
+  examplePhrases: ['Validar cupom', 'Verificar cupom de desconto'],
   requiresInput: false,
+  description: 'Fotografa e valida cupons de desconto verificando no banco de dados.',
+  shortDescription: 'Validar cupom por câmera',
+  icon: '🎟️', color: '#10B981',
+  saveToHistory: true, creditsPerUse: 2, requiresPayment: false, isPremium: false,
   handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      setActiveModal({ type: 'ValidarCupomDisplay', data: { companyId } });
-      await playText('Abrindo validação de cupom. Fotografe o cupom.');
-      return true;
-    } catch (error) {
-      console.error('[validar_cupom] handler error:', error);
-      return false;
-    }
+    try { setActiveModal?.({ type: 'ValidarCupomDisplay', data: { companyId } }); await playText('Abrindo validação de cupom.'); return true; }
+    catch { return false; }
   },
 },
 
@@ -642,21 +627,16 @@ imagem_em_texto: {
   functionName: 'Imagem em Texto',
   category: 'codes',
   responseType: 'voice+modal',
-  voiceTriggers: [
-    'imagem em texto', 'extrair texto',
-    'ocr', 'digitalizar imagem',
-    'texto da imagem', 'extraia texto',
-  ],
+  voiceTriggers: ['imagem em texto', 'extrair texto', 'ocr', 'digitalizar imagem', 'texto da imagem', 'extraia texto'],
+  examplePhrases: ['Extrair texto de imagem', 'Digitalizar documento'],
   requiresInput: false,
+  description: 'Extrai texto de imagens e documentos usando visão computacional.',
+  shortDescription: 'Extrair texto de imagem',
+  icon: '📝', color: '#F59E0B',
+  saveToHistory: true, creditsPerUse: 3, requiresPayment: false, isPremium: false,
   handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      setActiveModal({ type: 'ImagemEmTextoDisplay', data: { companyId } });
-      await playText('Abrindo extração de texto. Fotografe o documento.');
-      return true;
-    } catch (error) {
-      console.error('[imagem_em_texto] handler error:', error);
-      return false;
-    }
+    try { setActiveModal?.({ type: 'ImagemEmTextoDisplay', data: { companyId } }); await playText('Abrindo extração de texto.'); return true; }
+    catch { return false; }
   },
 },
 
@@ -666,21 +646,16 @@ tabela_em_texto: {
   functionName: 'Tabela em Texto',
   category: 'codes',
   responseType: 'voice+modal',
-  voiceTriggers: [
-    'tabela em texto', 'converter tabela',
-    'digitalizar tabela', 'tabela para csv',
-    'extrair tabela', 'extrai tabela',
-  ],
+  voiceTriggers: ['tabela em texto', 'converter tabela', 'digitalizar tabela', 'tabela para csv', 'extrair tabela', 'extrai tabela'],
+  examplePhrases: ['Converter tabela para texto', 'Digitalizar planilha'],
   requiresInput: false,
+  description: 'Converte tabelas fotografadas em CSV editável usando visão computacional.',
+  shortDescription: 'Converter tabela para CSV',
+  icon: '📋', color: '#8B5CF6',
+  saveToHistory: true, creditsPerUse: 3, requiresPayment: false, isPremium: false,
   handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      setActiveModal({ type: 'TabelaEmTextoDisplay', data: { companyId } });
-      await playText('Abrindo conversor de tabela. Fotografe a tabela.');
-      return true;
-    } catch (error) {
-      console.error('[tabela_em_texto] handler error:', error);
-      return false;
-    }
+    try { setActiveModal?.({ type: 'TabelaEmTextoDisplay', data: { companyId } }); await playText('Abrindo conversor de tabela.'); return true; }
+    catch { return false; }
   },
 },
 
@@ -690,21 +665,16 @@ contrato_em_texto: {
   functionName: 'Contrato em Texto',
   category: 'codes',
   responseType: 'voice+modal',
-  voiceTriggers: [
-    'contrato em texto', 'digitalizar contrato',
-    'digitaliza contrato', 'extrair contrato',
-    'ler contrato', 'extrai contrato',
-  ],
+  voiceTriggers: ['contrato em texto', 'digitalizar contrato', 'digitaliza contrato', 'extrair contrato', 'ler contrato', 'extrai contrato'],
+  examplePhrases: ['Digitalizar contrato', 'Extrair texto de contrato'],
   requiresInput: false,
+  description: 'Digitaliza contratos e documentos jurídicos extraindo dados estruturados.',
+  shortDescription: 'Digitalizar contrato',
+  icon: '📄', color: '#EF4444',
+  saveToHistory: true, creditsPerUse: 5, requiresPayment: false, isPremium: false,
   handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      setActiveModal({ type: 'ContratoEmTextoDisplay', data: { companyId } });
-      await playText('Abrindo digitalização de contrato. Fotografe o documento.');
-      return true;
-    } catch (error) {
-      console.error('[contrato_em_texto] handler error:', error);
-      return false;
-    }
+    try { setActiveModal?.({ type: 'ContratoEmTextoDisplay', data: { companyId } }); await playText('Abrindo digitalização de contrato.'); return true; }
+    catch { return false; }
   },
 },
 

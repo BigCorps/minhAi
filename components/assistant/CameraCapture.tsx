@@ -159,7 +159,7 @@ export default function CameraCapture({
             <button
               onClick={() => {
                 camera.setIsCapturing(true);
-                camera.captureFromWebcam(videoRef);
+                camera.captureFromWebcam(videoRef as React.RefObject<HTMLVideoElement>);
                 camera.setIsCapturing(false);
               }}
               disabled={camera.isCapturing}

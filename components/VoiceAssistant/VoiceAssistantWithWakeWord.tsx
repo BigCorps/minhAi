@@ -92,10 +92,6 @@ export function VoiceAssistantWithWakeWord({
   // Para abrir qualquer modal: setActiveModal({ type: 'NomeDisplay', data: {...} })
   const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
 
-  // ── Wake Word Activated ───────────────────────────────────
-  const [wakeWordActivated, setWakeWordActivated] = useState(false);
-  const wakeWordTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   // ── Sistema híbrido ───────────────────────────────────────
   const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);
   const [lastTranscript, setLastTranscript] = useState<string>("");
@@ -341,10 +337,6 @@ export function VoiceAssistantWithWakeWord({
     setActiveModal(null); // ✅ fecha qualquer modal aberto
     setShowConversationModal(false);
 
-    // ✅ Desativar wakeWordActivated
-    setWakeWordActivated(false);
-    if (wakeWordTimerRef.current) clearTimeout(wakeWordTimerRef.current);
-
     processingQuestion.current = false;
     shouldProcessAudio.current = true;
     activeFunctionContextRef.current = null;
@@ -357,36 +349,40 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ── Transcript handler ────────────────────────────────────
-  function handleGoogleTranscript(text: string, isFinal: boolean) {
-    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
-    const lowerText = text.toLowerCase().trim();
+function handleGoogleTranscript(text: string, isFinal: boolean) {
+  if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
 
-    // ✅ 1. STOPS — igual antes
-    if (isFinal && detectStopCommand(lowerText)) {
-      if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
-        stopEverything();
-        return;
-      }
+  const lowerText = text.toLowerCase().trim();
+
+  // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
+  if (isFinal && detectStopCommand(lowerText)) {
+    if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
+      console.log('🛑 Stop command interceptado antes da wake word:', lowerText);
+      stopEverything();
+      return;
     }
+  }
 
-    // ✅ 2. CONTROLES DE FUNÇÃO — igual antes
-    const CONTROL_COMMANDS = [
-      {
-        triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
-        action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
-      },
-    ];
-    for (const cmd of CONTROL_COMMANDS) {
-      if (cmd.triggers.some(t => lowerText.includes(t))) {
-        if (!isFinal) return;
-        cmd.action();
-        return;
-      }
+  // ✅ 2. INTERCEPTAR CONTROLES DE FUNÇÃO (cronômetro, etc.)
+  const CONTROL_COMMANDS = [
+    {
+      triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
+      action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
+    },
+  ];
+  for (const cmd of CONTROL_COMMANDS) {
+    if (cmd.triggers.some(t => lowerText.includes(t))) {
+      if (!isFinal) return;
+      cmd.action();
+      return;
     }
+  }
 
-    // ✅ 3. DETECTAR WAKE WORD — agora em INTERIM também
-    const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
+  // ✅ 3. SÓ AGORA verifica wake word
+  const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
+
     if (!wakeWordResult?.detected) {
+      // ✅ Fecha modal aberto mesmo quando áudio já terminou
       if ((isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) && detectStopCommand(lowerText)) {
         stopEverything();
       }
@@ -399,18 +395,11 @@ export function VoiceAssistantWithWakeWord({
       return;
     }
 
-    // ✅ VISUAL IMEDIATO — dispara em interim E em final
-    if (!wakeWordActivated) {
-      console.log(`✅ Wake word aceita: "${wakeWordResult.keyword}" (${(wakeWordResult.confidence * 100).toFixed(0)}%)`);
-      setWakeWordActivated(true);
-      if (wakeWordTimerRef.current) clearTimeout(wakeWordTimerRef.current);
-      wakeWordTimerRef.current = setTimeout(() => setWakeWordActivated(false), 8000);
-      if (isPlayingAudio || isSpeaking) stopEverything();
-    }
+    console.log(`✅ Wake word aceita: "${wakeWordResult.keyword}" (${(wakeWordResult.confidence * 100).toFixed(0)}%)`);
 
-    // ✅ PROCESSAMENTO — só no final, igual antes
-    if (!isFinal) return;
+    if (isPlayingAudio || isSpeaking) stopEverything();
     if (processingQuestion.current || isProcessing) return;
+    if (!isFinal) return;
 
     const command = extractCommand(lowerText, wakeWordResult);
     const commandWords = command.split(' ').filter((w: string) => w.length > 2);
@@ -706,11 +695,6 @@ case 'nfc_debito':
     console.log('⚡ Processando:', questionText);
 
     shouldProcessAudio.current = false;
-
-    // ✅ Desativar wakeWordActivated ao iniciar processamento
-    setWakeWordActivated(false);
-    if (wakeWordTimerRef.current) clearTimeout(wakeWordTimerRef.current);
-
     await stopGoogleSpeech();
 
     // Verificar contexto de função ativa
@@ -1004,7 +988,6 @@ case 'nfc_debito':
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
     if (showStartButton) return 'Clique em "Iniciar"';
-    if (wakeWordActivated) return 'Pode falar...';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
@@ -1013,7 +996,6 @@ case 'nfc_debito':
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
-    if (wakeWordActivated) return 'bg-purple-500 animate-pulse'; // ✅ ícone microfone permanece roxo
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
     if (isProcessing) return 'bg-yellow-400 animate-pulse';
     if (isListening) return 'bg-blue-400 animate-pulse';
@@ -1035,7 +1017,6 @@ case 'nfc_debito':
             isListening={isListening}
             isSpeaking={isPlayingAudio}
             isProcessing={isProcessing}
-            wakeWordActivated={wakeWordActivated}
             theme={theme}
             qrCodeData={qrCodeData}
             pixConfirmationData={pixConfirmationData}
@@ -1057,21 +1038,13 @@ case 'nfc_debito':
 
 {/* Avisos — abaixo do status */}
 <div className="min-h-[2.5rem] flex items-center justify-center w-full max-w-sm px-4">
-  {(wakeWordActivated || repromptWarning || noiseWarning) && (
+  {(repromptWarning || noiseWarning) && (
     <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
-      wakeWordActivated
-        ? theme === 'dark'
-          ? 'bg-green-500/20 border border-green-500/40 text-green-300'
-          : 'bg-green-50 border border-green-200 text-green-700'
-        : theme === 'dark'
+      theme === 'dark'
         ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
         : 'bg-blue-50 border border-blue-200 text-blue-700'
     }`}>
-      {wakeWordActivated
-        ? 'Palavra de ativação reconhecida — pode falar!'
-        : repromptWarning
-        ? 'Não consegui entender — pode repetir a pergunta?'
-        : 'Ambiente ruidoso — fale mais perto do microfone'}
+      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente ruidoso — fale mais perto do microfone'}
     </div>
   )}
 </div>
@@ -1114,7 +1087,6 @@ case 'nfc_debito':
               isListening={isListening}
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
-              wakeWordActivated={wakeWordActivated}
               theme={theme}
               qrCodeData={qrCodeData}
               pixConfirmationData={pixConfirmationData}
@@ -1170,31 +1142,19 @@ case 'nfc_debito':
             {!showStartButton && (
               <div className="w-full mt-auto flex flex-col gap-2">
 
-                {/* Card aviso de ruído / reprompt / wake word — sempre reserva espaço */}
+                {/* Card aviso de ruído / reprompt (azul) — sempre reserva espaço */}
                 <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
-                  wakeWordActivated
-                    ? theme === 'dark'
-                      ? 'bg-green-500/20 border-green-500/40 text-green-300'
-                      : 'bg-green-50 border-green-200 text-green-700'
-                    : (repromptWarning || noiseWarning)
+                  (repromptWarning || noiseWarning)
                     ? theme === 'dark'
                       ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
                       : 'bg-blue-50 border-blue-200 text-blue-700'
                     : 'opacity-0 pointer-events-none border-transparent bg-transparent'
                 }`}>
                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {wakeWordActivated ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 18.364a9 9 0 000-12.728M8.464 15.536a5 5 0 010-7.072" />
-                    )}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 18.364a9 9 0 000-12.728M8.464 15.536a5 5 0 010-7.072" />
                   </svg>
                   <span className="truncate">
-                    {wakeWordActivated
-                      ? 'Palavra de ativação reconhecida — pode falar!'
-                      : repromptWarning
-                      ? 'Não consegui entender — pode repetir?'
-                      : 'Estou ouvindo... fale mais perto do microfone'}
+                    {repromptWarning ? 'Não consegui entender — pode repetir?' : 'Estou ouvindo... fale mais perto do microfone'}
                   </span>
                 </div>
 

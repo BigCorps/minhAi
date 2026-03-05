@@ -8,7 +8,6 @@ interface AvatarFaceProps {
   isListening: boolean;
   isSpeaking: boolean;
   isProcessing: boolean;
-  wakeWordActivated?: boolean; 
   theme?: 'dark' | 'light';
   qrCodeData?: {
     type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
@@ -36,7 +35,6 @@ export function AvatarFace({
   isListening, 
   isSpeaking, 
   isProcessing, 
-  wakeWordActivated = false, 
   theme = 'dark',
   qrCodeData,
   pixConfirmationData,
@@ -77,13 +75,6 @@ export function AvatarFace({
       ring: isDark ? '#3b82f6' : '#2563eb',
       halo: isDark ? '#3b82f6' : '#2563eb'
     },
-wakeWord: {
-  primary: '#22c55e',
-  secondary: '#4ade80',
-  glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(34, 197, 94, 0.6)',
-  ring: isDark ? '#22c55e' : '#16a34a',
-  halo: isDark ? '#22c55e' : '#16a34a'
-},
   }), [isDark]);
 
   const [colors, setColors] = useState(statusColors.idle);
@@ -98,17 +89,14 @@ wakeWord: {
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // ✅ 1.5 — Orbe aparece também quando wakeWordActivated
-  const showFace = !isProcessing && !isSpeaking && !wakeWordActivated;
+  const showFace = !isProcessing && !isSpeaking;
 
-  // ✅ 1.4 — wakeWordActivated tem prioridade máxima nas cores
   useEffect(() => {
-    if (wakeWordActivated) setColors(statusColors.wakeWord);
-    else if (isSpeaking) setColors(statusColors.speaking);
+    if (isSpeaking) setColors(statusColors.speaking);
     else if (isProcessing) setColors(statusColors.processing);
     else if (isListening) setColors(statusColors.listening);
     else setColors(statusColors.idle);
-  }, [wakeWordActivated, isSpeaking, isProcessing, isListening, statusColors]);
+  }, [isSpeaking, isProcessing, isListening, statusColors]);
 
   useEffect(() => {
     const generateStars = () => {
@@ -249,8 +237,7 @@ wakeWord: {
     return () => { if (animationId) cancelAnimationFrame(animationId); };
   }, [particles, colors]);
 
-  // ✅ 1.6 — Tamanho do orbe quando wakeWordActivated
-  const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : wakeWordActivated ? 'scale-[1.05]' : isListening ? 'scale-95' : 'scale-90';
+  const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">

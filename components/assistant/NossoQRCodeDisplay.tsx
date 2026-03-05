@@ -72,7 +72,9 @@ export default function NossoQRCodeDisplay({
     return () => clearInterval(interval);
   }, [onClose]);
 
-  useModalVoiceCommand((transcript) => {
+useModalVoiceCommand({
+  active: true,
+  onTranscript: (transcript) => {
     const t = normalize(transcript);
 
     if (['fechar', 'cancelar', 'sair', 'voltar', 'encerrar'].some(cmd => t.includes(cmd))) {
@@ -92,7 +94,8 @@ export default function NossoQRCodeDisplay({
       setTimeout(() => setCopied(false), 2000);
       return;
     }
-  });
+  }
+});
 
   const handleCopy = () => {
     navigator.clipboard.writeText(qrContent);

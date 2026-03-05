@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Camera, Upload, Smartphone, X, ZapOff, QrCode, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { useCameraCapture } from '@/components/VoiceAssistant/hooks/useCameraCapture';
 import { useCompanionUpload } from '@/components/VoiceAssistant/hooks/useCompanionUpload';
-import { useState } from 'react';
 
 interface CameraCaptureProps {
   onCapture: (base64: string) => void;
@@ -13,10 +12,10 @@ interface CameraCaptureProps {
   theme?: 'dark' | 'light';
   acceptedTypes?: string;
   instructions?: string;
-  companyId: string; // obrigatório para a aba "Enviar do Celular"
+  companyId: string;
 }
 
-type Tab = 'webcam' | 'mobile' | 'upload' | 'companion';
+type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 
 export default function CameraCapture({
   onCapture,
@@ -35,35 +34,23 @@ export default function CameraCapture({
     typeof navigator !== 'undefined' &&
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // FIX: Aba padrão é sempre 'companion' (Celular — QR Code)
+  // Ordem: companion primeiro, depois webcam/mobile, depois upload
   const [activeTab, setActiveTab] = useState<Tab>('companion');
 
   const camera = useCameraCapture();
   const companion = useCompanionUpload({
     companyId,
-    onImageReceived: (base64) => {
-      onCapture(base64);
-    },
+    onImageReceived: (base64) => onCapture(base64),
   });
 
-  // Conectar stream ao vídeo
+  // Conectar stream ao vídeo quando disponível
   useEffect(() => {
     if (camera.stream && videoRef.current) {
       videoRef.current.srcObject = camera.stream;
     }
   }, [camera.stream]);
 
-  // FIX: Iniciar webcam na montagem somente se a aba inicial for webcam
-  useEffect(() => {
-    if (activeTab === 'webcam') {
-      camera.startWebcam();
-    }
-    return () => {
-      camera.stopWebcam();
-    };
-  }, []); // eslint-disable-line
-
-  // Iniciar companion ao entrar na aba; cancelar ao sair
+  // Gerenciar companion ao entrar/sair da aba
   useEffect(() => {
     if (activeTab === 'companion' && companion.status === 'idle') {
       companion.start();
@@ -80,17 +67,25 @@ export default function CameraCapture({
     }
   }, [camera.capturedImage, onCapture]);
 
-  // FIX: handleTabChange — removido click() automático de upload;
-  // mobile só abre câmera nativa se for realmente dispositivo mobile
+  // Parar webcam ao desmontar
+  useEffect(() => {
+    return () => {
+      camera.stopWebcam();
+    };
+  }, []); // eslint-disable-line
+
   const handleTabChange = (tab: Tab) => {
     if (tab !== 'webcam') camera.stopWebcam();
     setActiveTab(tab);
-    if (tab === 'webcam') camera.startWebcam();
+
+    if (tab === 'webcam') {
+      camera.startWebcam();
+    }
     if (tab === 'mobile') {
-      // No mobile, abrir câmera nativa diretamente
+      // Em mobile, abrir câmera nativa diretamente faz sentido
       mobileInputRef.current?.click();
     }
-    // FIX: upload NÃO chama click aqui — usuário clica no botão explicitamente
+    // upload: NÃO chamar click — usuário arrasta ou clica no botão
   };
 
   const handleCancel = () => {
@@ -114,21 +109,23 @@ export default function CameraCapture({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Instruções */}
       {instructions && (
         <p className={`text-sm text-center ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
           {instructions}
         </p>
       )}
 
-      {/* FIX: Abas — nova ordem: Celular → Webcam/Câmera → Upload */}
+      {/* Abas — ordem: Celular (QR) → Webcam/Câmera → Upload */}
       <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
-        {/* 1º — Celular (QR Code) */}
-        <button onClick={() => handleTabChange('companion')} className={tabClass(activeTab === 'companion')}>
+        {/* 1º — Enviar do Celular via QR Code */}
+        <button
+          onClick={() => handleTabChange('companion')}
+          className={tabClass(activeTab === 'companion')}
+        >
           <QrCode className="w-3.5 h-3.5" /><span>Celular</span>
         </button>
 
-        {/* 2º — Webcam (desktop) ou Câmera (mobile) */}
+        {/* 2º — Webcam (desktop) ou Câmera nativa (mobile) */}
         <button
           onClick={() => handleTabChange(isMobile ? 'mobile' : 'webcam')}
           className={tabClass(activeTab === 'webcam' || activeTab === 'mobile')}
@@ -137,8 +134,11 @@ export default function CameraCapture({
           <span>{isMobile ? 'Câmera' : 'Webcam'}</span>
         </button>
 
-        {/* 3º — Upload */}
-        <button onClick={() => handleTabChange('upload')} className={tabClass(activeTab === 'upload')}>
+        {/* 3º — Upload de arquivo */}
+        <button
+          onClick={() => handleTabChange('upload')}
+          className={tabClass(activeTab === 'upload')}
+        >
           <Upload className="w-3.5 h-3.5" /><span>Upload</span>
         </button>
       </div>
@@ -187,11 +187,10 @@ export default function CameraCapture({
               disabled={camera.isCapturing}
               className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white text-slate-900 font-bold px-6 py-2 rounded-full shadow-lg hover:bg-slate-100 transition-all disabled:opacity-50"
             >
-              {camera.isCapturing ? 'Capturando...' : '📸 Fotografar'}
+              {camera.isCapturing ? 'Capturando...' : 'Fotografar'}
             </button>
           </div>
         )}
-        {/* FIX: Spinner de webcam agora só aparece quando não há erro */}
         {activeTab === 'webcam' && !camera.stream && !camera.error && (
           <div className="flex flex-col items-center gap-2 p-6">
             <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -199,26 +198,26 @@ export default function CameraCapture({
           </div>
         )}
 
-        {/* ── Mobile (idle) ── */}
+        {/* ── Mobile — estado idle (após fechar o seletor sem selecionar) ── */}
         {activeTab === 'mobile' && (
           <div className="flex flex-col items-center gap-3 p-6 text-center">
             <Smartphone className={`w-12 h-12 ${isDark ? 'text-slate-600' : 'text-gray-300'}`} />
             <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
-              Toque abaixo para abrir a câmera do celular.
+              Toque no botão para abrir a câmera do celular.
             </p>
             <button
               onClick={() => mobileInputRef.current?.click()}
               className="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all"
             >
-              📷 Abrir câmera
+              Abrir câmera
             </button>
           </div>
         )}
 
-        {/* FIX: Upload — zona de drag-and-drop sem abrir seletor automaticamente */}
+        {/* ── Upload — zona de drag-and-drop; seletor só ao clicar no botão ── */}
         {activeTab === 'upload' && (
           <div
-            className="flex flex-col items-center gap-3 p-6 text-center w-full"
+            className="flex flex-col items-center gap-3 p-6 text-center w-full h-full"
             onDragOver={e => e.preventDefault()}
             onDrop={e => {
               e.preventDefault();
@@ -234,15 +233,14 @@ export default function CameraCapture({
               onClick={() => fileInputRef.current?.click()}
               className="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all"
             >
-              📁 Selecionar arquivo
+              Selecionar arquivo
             </button>
           </div>
         )}
 
-        {/* ── Companion — Enviar do Celular ── */}
+        {/* ── Companion — Enviar do Celular via QR Code ── */}
         {activeTab === 'companion' && (
           <div className="flex flex-col items-center gap-4 p-4 w-full">
-
             {companion.status === 'generating' && (
               <>
                 <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />

@@ -3,289 +3,242 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, QrCode, Copy, ExternalLink, Check, RefreshCw } from 'lucide-react';
+import Image from 'next/image';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
 
-interface LerQRCodeDisplayProps {
+interface Props {
   data: { companyId: string };
   onClose: () => void;
   theme?: 'dark' | 'light';
+  playText: (text: string) => Promise<void>;
 }
 
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
 
-export default function LerQRCodeDisplay({ data, onClose, theme = 'dark' }: LerQRCodeDisplayProps) {
-  const isDark = theme === 'dark';
-  const AUTO_CLOSE = 30;
+// ── Textos de voz ────────────────────────────────────────────────
+const OPENING_TEXT = 'Aponte a câmera para o QR Code e fotografe. Você pode dizer: celular para usar o QR Code, webcam, câmera, arquivo, ou fechar.';
+const AUTO_CLOSE = 30;
 
+// ── Normalização padrão ──────────────────────────────────────────
+const normalize = (text: string) =>
+  text.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.,!?;:]+/g, '');
+
+// ── VoiceHint ────────────────────────────────────────────────────
+function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+      <span className="text-base flex-shrink-0">🎤</span>
+      <div className="flex flex-wrap gap-x-2 gap-y-1">
+        {commands.map(cmd => (
+          <span key={cmd} className={`px-1.5 py-0.5 rounded font-mono text-[11px] ${isDark ? 'bg-slate-600 text-blue-300' : 'bg-gray-200 text-blue-700'}`}>
+            {cmd}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playText }: Props) {
+  const isDark = theme === 'dark';
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('capturing');
   const [qrResult, setQrResult] = useState<string | null>(null);
+  const [resultQrUrl, setResultQrUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Regra 3: cleanup ao desmontar
+  // ── Falar ao abrir ───────────────────────────────────────────
   useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, []);
+    playText(OPENING_TEXT).catch(() => {});
+    return () => { window.speechSynthesis.cancel(); };
+  }, []); // eslint-disable-line
 
-  // Regra 1: auto-close sempre chamando onClose()
+  // ── Auto-close após resultado ────────────────────────────────
   useEffect(() => {
-    if (stage !== 'result') return; // só conta após resultado
+    if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
     const interval = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
-          window.speechSynthesis.cancel();
-          onClose();
-          return 0;
-        }
+        if (prev <= 1) { onClose(); return 0; }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
   }, [stage, onClose]);
 
-  // Regra 2: fechar manual cancela áudio
-  const handleManualClose = useCallback(() => {
-    window.speechSynthesis.cancel();
-    onClose();
-  }, [onClose]);
+  // ── Gerar QR Code do resultado (para totens) ─────────────────
+  const generateResultQr = useCallback(async (text: string) => {
+    try {
+      const QRCode = (await import('qrcode')).default;
+      const url = await QRCode.toDataURL(text, { width: 200, margin: 2 });
+      setResultQrUrl(url);
+    } catch { /* silencioso */ }
+  }, []);
 
-  const speakText = (text: string) => {
-    if (typeof window === 'undefined') return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 1.0;
-    window.speechSynthesis.speak(utterance);
-  };
-
-  // Processar imagem capturada com jsQR (client-side, sem API)
+  // ── Processar imagem capturada com jsQR ──────────────────────
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
-
     try {
-      // Importação dinâmica do jsQR para não impactar bundle inicial
       const jsQR = (await import('jsqr')).default;
-
-      // Converter base64 para ImageData via canvas
-      const img = new Image();
+      const img = new window.Image();
       img.src = `data:image/jpeg;base64,${base64}`;
-
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error('Falha ao carregar imagem'));
       });
-
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context não disponível');
       ctx.drawImage(img, 0, 0);
-
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-      if (code && code.data) {
+      if (code?.data) {
         setQrResult(code.data);
         setStage('result');
-        speakText(`QR Code lido: ${code.data.slice(0, 80)}`);
+        await generateResultQr(code.data);
+        playText(`QR Code lido: ${code.data.slice(0, 80)}`).catch(() => {});
       } else {
-        // jsQR não encontrou — tentar uma segunda vez com contraste aumentado
-        // (técnica simples: inverter para melhorar detecção em casos limítrofes)
-        setErrorMsg('QR Code não detectado na imagem. Tente uma foto mais nítida e centralizada.');
+        setErrorMsg('QR Code não detectado. Tente uma foto mais nítida e centralizada.');
         setStage('error');
-        speakText('Não consegui ler o QR Code. Tente novamente com a imagem mais centralizada.');
+        playText('Não consegui ler o QR Code. Tente novamente com a imagem mais centralizada.').catch(() => {});
       }
     } catch (err: any) {
-      console.error('[LerQRCode] Erro:', err);
       setErrorMsg('Erro ao processar imagem: ' + (err.message ?? 'desconhecido'));
       setStage('error');
     }
-  }, []);
+  }, [generateResultQr, playText]);
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     if (!qrResult) return;
     await navigator.clipboard.writeText(qrResult);
     setCopied(true);
+    playText('Texto copiado.').catch(() => {});
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [qrResult, playText]);
 
-  const isUrl = (text: string) => {
-    try {
-      new URL(text);
-      return text.startsWith('http://') || text.startsWith('https://');
-    } catch {
-      return false;
-    }
-  };
-
-  const handleNewRead = () => {
+  const handleReset = useCallback(() => {
     setStage('capturing');
     setQrResult(null);
+    setResultQrUrl(null);
     setErrorMsg(null);
     setCopied(false);
     setTimeLeft(AUTO_CLOSE);
+    playText(OPENING_TEXT).catch(() => {});
+  }, [playText]);
+
+  const isUrl = (text: string) => {
+    try { new URL(text); return text.startsWith('http'); } catch { return false; }
   };
+
+  // ── Comandos de voz ──────────────────────────────────────────
+  useModalVoiceCommand((transcript) => {
+    const t = normalize(transcript);
+
+    if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
+      onClose(); return;
+    }
+    if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(cmd => t.includes(cmd))) {
+      playText(stage === 'result' && qrResult ? `QR Code lido: ${qrResult.slice(0, 80)}` : OPENING_TEXT).catch(() => {});
+      return;
+    }
+    if (stage === 'result') {
+      if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+        handleCopy(); return;
+      }
+      if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'reiniciar'].some(cmd => t.includes(cmd))) {
+        handleReset(); return;
+      }
+    }
+  });
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-      <div
-        className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${
-          isDark
-            ? 'bg-slate-800 border border-white/10'
-            : 'bg-white border border-gray-200'
-        }`}
-      >
-        {/* Header */}
+      <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
+
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <QrCode className="w-5 h-5 text-indigo-400" />
-            <h2
-              className={`text-lg font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Ler QR Code
-            </h2>
+            <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Ler QR Code</h2>
           </div>
-          <button
-            onClick={handleManualClose}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'
-            }`}
-          >
+          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Conteúdo por stage */}
-
-        {/* Captura */}
         {stage === 'capturing' && (
-          <CameraCapture
-            onCapture={handleCapture}
-            onCancel={handleManualClose}
-            theme={theme}
-            companyId={data.companyId}
-            instructions="Aponte a câmera para o QR Code e fotografe."
-          />
+          <>
+            <CameraCapture onCapture={handleCapture} onCancel={onClose} theme={theme} companyId={data.companyId} instructions="Aponte a câmera para o QR Code e fotografe." />
+            <div className="mt-3">
+              <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+            </div>
+          </>
         )}
 
-        {/* Processando */}
         {stage === 'processing' && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
-              Lendo QR Code...
-            </p>
+            <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>Lendo QR Code...</p>
           </div>
         )}
 
-        {/* Resultado */}
         {stage === 'result' && qrResult && (
           <div className="flex flex-col gap-4">
-            {/* Badge sucesso */}
-            <div
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
-                isDark
-                  ? 'bg-green-900/30 border border-green-700 text-green-300'
-                  : 'bg-green-50 border border-green-200 text-green-700'
-              }`}
-            >
-              <Check className="w-4 h-4 shrink-0" />
-              QR Code lido com sucesso!
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
+              <Check className="w-4 h-4 shrink-0" />QR Code lido com sucesso!
             </div>
 
-            {/* Conteúdo do QR */}
-            <div
-              className={`p-3 rounded-xl text-sm break-all ${
-                isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'
-              }`}
-            >
+            <div className={`p-3 rounded-xl text-sm break-all ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
               {qrResult}
             </div>
 
-            {/* Botões de ação */}
+            {/* QR Code do resultado — para totens */}
+            {resultQrUrl && (
+              <div className="flex flex-col items-center gap-2">
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar no seu celular:</p>
+                <div className={`p-2 rounded-xl ${isDark ? 'bg-white' : 'bg-white border border-gray-200'}`}>
+                  <Image src={resultQrUrl} alt="QR Code do resultado" width={140} height={140} unoptimized />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
-              <button
-                onClick={handleCopy}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isDark
-                    ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
+              <button onClick={handleCopy} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                 {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copiado!' : 'Copiar'}
               </button>
-
               {isUrl(qrResult) && (
-                <a
-                  href={qrResult}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Abrir link
+                <a href={qrResult} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">
+                  <ExternalLink className="w-4 h-4" />Abrir link
                 </a>
               )}
             </div>
 
-            <button
-              onClick={handleNewRead}
-              className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm transition-all ${
-                isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <RefreshCw className="w-4 h-4" />
-              Nova leitura
+            <button onClick={handleReset} className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}>
+              <RefreshCw className="w-4 h-4" />Nova leitura
             </button>
 
-            {/* Barra de auto-close */}
+            <VoiceHint commands={['"copiar"', '"nova leitura"', '"repetir"', '"fechar"']} isDark={isDark} />
+
             <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
-              <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
-                style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }}
-              />
+              <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />
             </div>
-            <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
-              Fechando em {timeLeft}s
-            </p>
+            <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>Fechando em {timeLeft}s</p>
           </div>
         )}
 
-        {/* Erro */}
         {stage === 'error' && (
           <div className="flex flex-col gap-4">
-            <div
-              className={`px-3 py-3 rounded-xl text-sm ${
-                isDark
-                  ? 'bg-red-900/30 border border-red-700 text-red-300'
-                  : 'bg-red-50 border border-red-200 text-red-600'
-              }`}
-            >
-              {errorMsg}
-            </div>
-            <button
-              onClick={handleNewRead}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Tentar novamente
+            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>{errorMsg}</div>
+            <button onClick={handleReset} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">
+              <RefreshCw className="w-4 h-4" />Tentar novamente
             </button>
-            <button
-              onClick={handleManualClose}
-              className={`py-2 rounded-xl text-sm ${
-                isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Fechar
-            </button>
+            <button onClick={onClose} className={`py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}>Fechar</button>
           </div>
         )}
       </div>

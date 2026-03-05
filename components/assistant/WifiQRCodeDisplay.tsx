@@ -72,7 +72,9 @@ export default function WifiQRCodeDisplay({
     return () => clearInterval(interval);
   }, [onClose]);
 
-  useModalVoiceCommand((transcript) => {
+useModalVoiceCommand({
+  active: true,
+  onTranscript: (transcript) => {
     const t = normalize(transcript);
 
     if (['fechar', 'cancelar', 'sair', 'voltar', 'encerrar'].some(cmd => t.includes(cmd))) {
@@ -84,7 +86,8 @@ export default function WifiQRCodeDisplay({
       playText(OPENING_TEXT).catch(() => {});
       return;
     }
-  });
+  }
+});
 
   const isDark = theme === 'dark';
 

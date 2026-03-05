@@ -166,7 +166,7 @@ function ArquivosContent() {
   // status === 'ready'
   return (
     <PageWrapper>
-      <div className="flex flex-col items-center gap-6 w-full max-w-xs">
+      <div className="flex flex-col items-center gap-6 w-full max-w-xs mx-auto">
         {/* Header */}
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-xl font-bold text-white">
@@ -230,7 +230,7 @@ function ArquivosContent() {
 // ── Wrapper de layout ──────────────────────────────────────────
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
+    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
         {children}
       </div>
@@ -242,7 +242,7 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 export default function ArquivosPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
       </div>
     }>

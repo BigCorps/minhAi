@@ -46,9 +46,10 @@ export async function checkIfFunctionIsEnabled(
   try {
     const supabase = createClient();
 
+    // ✅ Busca is_active E default_enabled juntos
     const { data: func } = await supabase
       .from('assistant_functions')
-      .select('is_active')
+      .select('is_active, default_enabled')
       .eq('function_key', functionKey)
       .single();
 
@@ -65,17 +66,16 @@ export async function checkIfFunctionIsEnabled(
       .single();
 
     if (!setting) {
-      console.log(`✅ Função ${functionKey} habilitada (sem setting específico)`);
-      return true;
+      // ✅ Sem setting — usa default_enabled da função
+      console.log(`${func.default_enabled ? '✅' : '❌'} Função ${functionKey} usando default_enabled: ${func.default_enabled}`);
+      return func.default_enabled ?? false;
     }
 
-    console.log(
-      `${setting.is_enabled ? '✅' : '❌'} Função ${functionKey} ${setting.is_enabled ? 'habilitada' : 'desabilitada'}`
-    );
+    console.log(`${setting.is_enabled ? '✅' : '❌'} Função ${functionKey} ${setting.is_enabled ? 'habilitada' : 'desabilitada'}`);
     return setting.is_enabled;
   } catch (error) {
     console.error('Erro ao verificar função:', error);
-    return true;
+    return false; // ✅ falha fechada
   }
 }
 

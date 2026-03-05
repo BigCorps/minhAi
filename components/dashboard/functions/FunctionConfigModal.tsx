@@ -13,7 +13,7 @@ import {
   ImagemEmTextoConfigModal,
   TabelaEmTextoConfigModal,
   ContratoEmTextoConfigModal,
-} from './CameraConfigModals';
+} from './CameraConfigModal';
 
 // ===== FORMULÁRIOS =====
 

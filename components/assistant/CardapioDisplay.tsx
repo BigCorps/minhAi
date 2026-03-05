@@ -18,8 +18,6 @@ interface CardapioDisplayProps {
   theme?: 'dark' | 'light';
 }
 
-const OPENING_TEXT = 'Aqui está o cardápio. Diga abrir para ver no navegador, copiar para copiar o link, ou fechar para sair.';
-
 export default function CardapioDisplay({
   data,
   onClose,

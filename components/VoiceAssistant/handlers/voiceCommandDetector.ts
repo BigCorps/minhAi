@@ -12,7 +12,16 @@ import { convertWordsToNumbers, correctTranscriptionErrors } from '../utils/text
 import { checkIfFunctionIsEnabled, registerFunctionUsage } from './functionUsage';
 import { handleQRCodeCommand } from './qrcodeHandlers';
 import { handlePixCommand, handleConfirmPix, handleCancelPix } from './pixHandlers';
-import { handleNossaMarcaCommand, handleEnderecoCommand } from './companyHandlers';
+import {
+  handleNossaMarcaCommand,
+  handleEnderecoCommand,
+  handleLerQRCode,
+  handleLerCodigoBarras,
+  handleValidarCupom,
+  handleImagemEmTexto,
+  handleTabelaEmTexto,
+  handleContratoEmTexto,
+} from './companyHandlers';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './utilitiesHandlers';

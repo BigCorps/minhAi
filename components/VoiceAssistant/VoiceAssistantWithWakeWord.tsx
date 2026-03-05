@@ -357,40 +357,36 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ── Transcript handler ────────────────────────────────────
-function handleGoogleTranscript(text: string, isFinal: boolean) {
-  if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
+  function handleGoogleTranscript(text: string, isFinal: boolean) {
+    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
+    const lowerText = text.toLowerCase().trim();
 
-  const lowerText = text.toLowerCase().trim();
-
-  // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
-  if (isFinal && detectStopCommand(lowerText)) {
-    if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
-      console.log('🛑 Stop command interceptado antes da wake word:', lowerText);
-      stopEverything();
-      return;
+    // ✅ 1. STOPS — igual antes
+    if (isFinal && detectStopCommand(lowerText)) {
+      if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
+        stopEverything();
+        return;
+      }
     }
-  }
 
-  // ✅ 2. INTERCEPTAR CONTROLES DE FUNÇÃO (cronômetro, etc.)
-  const CONTROL_COMMANDS = [
-    {
-      triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
-      action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
-    },
-  ];
-  for (const cmd of CONTROL_COMMANDS) {
-    if (cmd.triggers.some(t => lowerText.includes(t))) {
-      if (!isFinal) return;
-      cmd.action();
-      return;
+    // ✅ 2. CONTROLES DE FUNÇÃO — igual antes
+    const CONTROL_COMMANDS = [
+      {
+        triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
+        action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
+      },
+    ];
+    for (const cmd of CONTROL_COMMANDS) {
+      if (cmd.triggers.some(t => lowerText.includes(t))) {
+        if (!isFinal) return;
+        cmd.action();
+        return;
+      }
     }
-  }
 
-  // ✅ 3. SÓ AGORA verifica wake word
-  const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
-
+    // ✅ 3. DETECTAR WAKE WORD — agora em INTERIM também
+    const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
     if (!wakeWordResult?.detected) {
-      // ✅ Fecha modal aberto mesmo quando áudio já terminou
       if ((isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) && detectStopCommand(lowerText)) {
         stopEverything();
       }
@@ -403,18 +399,18 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
       return;
     }
 
-    console.log(`✅ Wake word aceita: "${wakeWordResult.keyword}" (${(wakeWordResult.confidence * 100).toFixed(0)}%)`);
+    // ✅ VISUAL IMEDIATO — dispara em interim E em final
+    if (!wakeWordActivated) {
+      console.log(`✅ Wake word aceita: "${wakeWordResult.keyword}" (${(wakeWordResult.confidence * 100).toFixed(0)}%)`);
+      setWakeWordActivated(true);
+      if (wakeWordTimerRef.current) clearTimeout(wakeWordTimerRef.current);
+      wakeWordTimerRef.current = setTimeout(() => setWakeWordActivated(false), 8000);
+      if (isPlayingAudio || isSpeaking) stopEverything();
+    }
 
-    // ✅ Ativar estado visual imediatamente ao detectar wake word
-    setWakeWordActivated(true);
-    if (wakeWordTimerRef.current) clearTimeout(wakeWordTimerRef.current);
-    wakeWordTimerRef.current = setTimeout(() => {
-      setWakeWordActivated(false);
-    }, 8000);
-
-    if (isPlayingAudio || isSpeaking) stopEverything();
-    if (processingQuestion.current || isProcessing) return;
+    // ✅ PROCESSAMENTO — só no final, igual antes
     if (!isFinal) return;
+    if (processingQuestion.current || isProcessing) return;
 
     const command = extractCommand(lowerText, wakeWordResult);
     const commandWords = command.split(' ').filter((w: string) => w.length > 2);
@@ -1017,7 +1013,7 @@ case 'nfc_debito':
 
   const getStatusColor = () => {
     if (!permissionGranted) return 'bg-gray-400';
-    if (wakeWordActivated) return 'bg-purple-500 animate-pulse';
+    if (wakeWordActivated) return 'bg-purple-500 animate-pulse'; // ✅ ícone microfone permanece roxo
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
     if (isProcessing) return 'bg-yellow-400 animate-pulse';
     if (isListening) return 'bg-blue-400 animate-pulse';
@@ -1065,14 +1061,14 @@ case 'nfc_debito':
     <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
       wakeWordActivated
         ? theme === 'dark'
-          ? 'bg-purple-500/20 border border-purple-500/40 text-purple-300'
-          : 'bg-purple-50 border border-purple-200 text-purple-700'
+          ? 'bg-green-500/20 border border-green-500/40 text-green-300'
+          : 'bg-green-50 border border-green-200 text-green-700'
         : theme === 'dark'
         ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
         : 'bg-blue-50 border border-blue-200 text-blue-700'
     }`}>
       {wakeWordActivated
-        ? '✅ Palavra de ativação reconhecida — pode falar!'
+        ? 'Palavra de ativação reconhecida — pode falar!'
         : repromptWarning
         ? 'Não consegui entender — pode repetir a pergunta?'
         : 'Ambiente ruidoso — fale mais perto do microfone'}
@@ -1178,8 +1174,8 @@ case 'nfc_debito':
                 <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
                   wakeWordActivated
                     ? theme === 'dark'
-                      ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                      : 'bg-purple-50 border-purple-200 text-purple-700'
+                      ? 'bg-green-500/20 border-green-500/40 text-green-300'
+                      : 'bg-green-50 border-green-200 text-green-700'
                     : (repromptWarning || noiseWarning)
                     ? theme === 'dark'
                       ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
@@ -1195,7 +1191,7 @@ case 'nfc_debito':
                   </svg>
                   <span className="truncate">
                     {wakeWordActivated
-                      ? '✅ Palavra de ativação reconhecida — pode falar!'
+                      ? 'Palavra de ativação reconhecida — pode falar!'
                       : repromptWarning
                       ? 'Não consegui entender — pode repetir?'
                       : 'Estou ouvindo... fale mais perto do microfone'}

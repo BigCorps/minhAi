@@ -51,12 +51,6 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ── Falar ao abrir ───────────────────────────────────────────
-  useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
-    return () => { window.speechSynthesis.cancel(); };
-  }, []); // eslint-disable-line
-
   // ── Auto-close após resultado ────────────────────────────────
   useEffect(() => {
     if (stage !== 'result') return;

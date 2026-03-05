@@ -27,7 +27,7 @@ export default function CameraCapture({
   companyId,
 }: CameraCaptureProps) {
   const isDark = theme === 'dark';
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 

@@ -6,7 +6,14 @@ import { X, Mail, Calendar, Settings, AlertCircle, Check, Plus, Trash2 } from 'l
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
-import { CameraConfigModal } from './CameraConfigModal';
+import {
+  LerQRCodeConfigModal,
+  LerCodigoBarrasConfigModal,
+  ValidarCupomConfigModal,
+  ImagemEmTextoConfigModal,
+  TabelaEmTextoConfigModal,
+  ContratoEmTextoConfigModal,
+} from './CameraConfigModals';
 
 // ===== FORMULÁRIOS =====
 
@@ -1294,7 +1301,12 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'wifi_qrcode':  WifiQRCodeForm,
   'cardapio':     CardapioForm,
   'nosso_qrcode': NossoQRCodeForm,
-  'validar_cupom': CameraConfigModal,
+  'ler_qrcode':          LerQRCodeConfigModal,
+  'ler_codigo_barras':   LerCodigoBarrasConfigModal,
+  'validar_cupom':       ValidarCupomConfigModal,
+  'imagem_em_texto':     ImagemEmTextoConfigModal,
+  'tabela_em_texto':     TabelaEmTextoConfigModal,
+  'contrato_em_texto':   ContratoEmTextoConfigModal,
 };
 
 // ===== INTERFACE =====

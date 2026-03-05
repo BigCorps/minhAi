@@ -137,7 +137,9 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   };
 
   // ── Comandos de voz ──────────────────────────────────────────
-  useModalVoiceCommand((transcript) => {
+useModalVoiceCommand({
+  active: true,
+  onTranscript: (transcript) => {
     const t = normalize(transcript);
 
     if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
@@ -155,7 +157,8 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
         handleReset(); return;
       }
     }
-  });
+  }
+});
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">

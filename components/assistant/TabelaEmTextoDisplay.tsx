@@ -139,7 +139,9 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
   const linhas = csvResult ? csvResult.split('\n').filter(Boolean).length : 0;
   const colunas = csvResult ? (csvResult.split('\n')[0]?.split(',').length ?? 0) : 0;
 
-  useModalVoiceCommand((transcript) => {
+useModalVoiceCommand({
+  active: true,
+  onTranscript: (transcript) => {
     const t = normalize(transcript);
 
     if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
@@ -160,7 +162,8 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
         handleReset(); return;
       }
     }
-  });
+  }
+});
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">

@@ -140,7 +140,9 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
-  useModalVoiceCommand((transcript) => {
+useModalVoiceCommand({
+  active: true,
+  onTranscript: (transcript) => {
     const t = normalize(transcript);
 
     if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
@@ -158,7 +160,8 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
         handleReset(); return;
       }
     }
-  });
+  }
+});
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">

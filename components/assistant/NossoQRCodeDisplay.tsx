@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, QrCode, Copy, Check } from 'lucide-react';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 
 interface NossoQRCodeDisplayProps {
   data: {
@@ -13,12 +14,14 @@ interface NossoQRCodeDisplayProps {
     autoCloseDuration?: number;
   };
   onClose: () => void;
+  playText: (text: string) => Promise<void>;
   theme?: 'dark' | 'light';
 }
 
 export default function NossoQRCodeDisplay({
   data,
   onClose,
+  playText,
   theme = 'dark',
 }: NossoQRCodeDisplayProps) {
   const AUTO_CLOSE = data.autoCloseDuration ?? 30;
@@ -28,6 +31,13 @@ export default function NossoQRCodeDisplay({
 
   const { qrContent, qrLabel, companyName } = data;
 
+  const OPENING_TEXT = `${qrLabel} Diga copiar para copiar o conteúdo, ou fechar para sair.`;
+
+  const normalize = (text: string) =>
+    text.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,!?;:]+/g, '');
+
   const handleManualClose = () => {
     window.speechSynthesis.cancel();
     onClose();
@@ -36,7 +46,8 @@ export default function NossoQRCodeDisplay({
   useModalVoiceClose(handleManualClose);
 
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
+    playText(OPENING_TEXT).catch(() => {});
+    return () => { window.speechSynthesis.cancel(); };
   }, []);
 
   useEffect(() => {
@@ -60,6 +71,28 @@ export default function NossoQRCodeDisplay({
     }, 1000);
     return () => clearInterval(interval);
   }, [onClose]);
+
+  useModalVoiceCommand((transcript) => {
+    const t = normalize(transcript);
+
+    if (['fechar', 'cancelar', 'sair', 'voltar', 'encerrar'].some(cmd => t.includes(cmd))) {
+      onClose();
+      return;
+    }
+
+    if (['repetir', 'repete', 'de novo'].some(cmd => t.includes(cmd))) {
+      playText(OPENING_TEXT).catch(() => {});
+      return;
+    }
+
+    if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+      navigator.clipboard.writeText(qrContent);
+      playText('Conteúdo copiado.').catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      return;
+    }
+  });
 
   const handleCopy = () => {
     navigator.clipboard.writeText(qrContent);
@@ -103,7 +136,7 @@ export default function NossoQRCodeDisplay({
         {/* Conteúdo */}
         <div className="p-8 flex flex-col items-center gap-6">
 
-          {/* QR Code centralizado e grande */}
+          {/* QR Code */}
           <div className="p-4 rounded-2xl bg-white shadow-lg">
             {qrCodeUrl ? (
               <img src={qrCodeUrl} alt="QR Code" className="w-56 h-56 object-contain" />
@@ -114,7 +147,7 @@ export default function NossoQRCodeDisplay({
             )}
           </div>
 
-          {/* Label falado pelo assistente */}
+          {/* Label */}
           <div className={`w-full rounded-xl px-5 py-4 text-center ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
             <p className={`text-base font-medium leading-relaxed ${isDark ? 'text-white/90' : 'text-gray-800'}`}>
               {qrLabel}
@@ -135,6 +168,11 @@ export default function NossoQRCodeDisplay({
               {copied ? 'Copiado!' : 'Copiar'}
             </button>
           </div>
+        </div>
+
+        {/* Voice Hint */}
+        <div className={`mx-6 mb-4 flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+          <span>Diga <strong>"copiar"</strong>, <strong>"repetir"</strong> ou <strong>"fechar"</strong></span>
         </div>
 
         {/* Barra de progresso */}

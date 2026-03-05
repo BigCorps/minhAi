@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, UtensilsCrossed, Copy, Check, ExternalLink, QrCode } from 'lucide-react';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 
 interface CardapioDisplayProps {
   data: {
@@ -13,12 +14,16 @@ interface CardapioDisplayProps {
     autoCloseDuration?: number;
   };
   onClose: () => void;
+  playText: (text: string) => Promise<void>;
   theme?: 'dark' | 'light';
 }
+
+const OPENING_TEXT = 'Aqui está o cardápio. Diga abrir para ver no navegador, copiar para copiar o link, ou fechar para sair.';
 
 export default function CardapioDisplay({
   data,
   onClose,
+  playText,
   theme = 'dark',
 }: CardapioDisplayProps) {
   const AUTO_CLOSE = data.autoCloseDuration ?? 30;
@@ -31,6 +36,11 @@ export default function CardapioDisplay({
 
   const isPdf = menuUrl?.toLowerCase().includes('.pdf');
 
+  const normalize = (text: string) =>
+    text.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,!?;:]+/g, '');
+
   const handleManualClose = () => {
     window.speechSynthesis.cancel();
     onClose();
@@ -39,7 +49,8 @@ export default function CardapioDisplay({
   useModalVoiceClose(handleManualClose);
 
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
+    playText(OPENING_TEXT).catch(() => {});
+    return () => { window.speechSynthesis.cancel(); };
   }, []);
 
   useEffect(() => {
@@ -63,6 +74,34 @@ export default function CardapioDisplay({
     }, 1000);
     return () => clearInterval(interval);
   }, [onClose]);
+
+  useModalVoiceCommand((transcript) => {
+    const t = normalize(transcript);
+
+    if (['fechar', 'cancelar', 'sair', 'voltar', 'encerrar'].some(cmd => t.includes(cmd))) {
+      onClose();
+      return;
+    }
+
+    if (['repetir', 'repete', 'de novo'].some(cmd => t.includes(cmd))) {
+      playText(OPENING_TEXT).catch(() => {});
+      return;
+    }
+
+    if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+      navigator.clipboard.writeText(menuUrl);
+      playText('Link copiado.').catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      return;
+    }
+
+    if (['abrir', 'abre', 'ver', 'abrir cardapio', 'abrir pdf'].some(cmd => t.includes(cmd))) {
+      window.open(menuUrl, '_blank');
+      playText('Abrindo o cardápio.').catch(() => {});
+      return;
+    }
+  });
 
   const handleCopy = () => {
     navigator.clipboard.writeText(menuUrl);
@@ -169,6 +208,12 @@ export default function CardapioDisplay({
                   {isPdf ? 'Abrir PDF' : 'Abrir Cardápio'}
                 </button>
               </div>
+
+              {/* Voice Hint */}
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+                <span>🎤</span>
+                <span>Diga <strong>"abrir"</strong>, <strong>"copiar"</strong>, <strong>"repetir"</strong> ou <strong>"fechar"</strong></span>
+              </div>
             </div>
 
             {/* COLUNA DIREITA: Preview */}
@@ -243,6 +288,11 @@ export default function CardapioDisplay({
                 <ExternalLink className="w-5 h-5" />
                 {isPdf ? 'Abrir PDF' : 'Abrir Cardápio'}
               </button>
+            </div>
+
+            {/* Voice Hint mobile */}
+            <div className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+              <span>Diga <strong>"abrir"</strong>, <strong>"copiar"</strong>, <strong>"repetir"</strong> ou <strong>"fechar"</strong></span>
             </div>
           </div>
         </div>

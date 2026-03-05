@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Wifi } from 'lucide-react';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 
 interface WifiQRCodeDisplayProps {
   data: {
@@ -13,12 +14,16 @@ interface WifiQRCodeDisplayProps {
     autoCloseDuration?: number;
   };
   onClose: () => void;
+  playText: (text: string) => Promise<void>;
   theme?: 'dark' | 'light';
 }
+
+const OPENING_TEXT = 'Aqui está o QR Code do Wi-Fi. Aponte a câmera para conectar automaticamente. Diga fechar para sair.';
 
 export default function WifiQRCodeDisplay({
   data,
   onClose,
+  playText,
   theme = 'dark',
 }: WifiQRCodeDisplayProps) {
   const AUTO_CLOSE = data.autoCloseDuration ?? 30;
@@ -26,6 +31,11 @@ export default function WifiQRCodeDisplay({
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   const { networkName, networkPassword, companyName } = data;
+
+  const normalize = (text: string) =>
+    text.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,!?;:]+/g, '');
 
   const handleManualClose = () => {
     window.speechSynthesis.cancel();
@@ -35,7 +45,8 @@ export default function WifiQRCodeDisplay({
   useModalVoiceClose(handleManualClose);
 
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
+    playText(OPENING_TEXT).catch(() => {});
+    return () => { window.speechSynthesis.cancel(); };
   }, []);
 
   useEffect(() => {
@@ -60,6 +71,20 @@ export default function WifiQRCodeDisplay({
     }, 1000);
     return () => clearInterval(interval);
   }, [onClose]);
+
+  useModalVoiceCommand((transcript) => {
+    const t = normalize(transcript);
+
+    if (['fechar', 'cancelar', 'sair', 'voltar', 'encerrar'].some(cmd => t.includes(cmd))) {
+      onClose();
+      return;
+    }
+
+    if (['repetir', 'repete', 'de novo'].some(cmd => t.includes(cmd))) {
+      playText(OPENING_TEXT).catch(() => {});
+      return;
+    }
+  });
 
   const isDark = theme === 'dark';
 
@@ -96,8 +121,6 @@ export default function WifiQRCodeDisplay({
 
         {/* Conteúdo */}
         <div className="p-8 flex flex-col items-center gap-6">
-
-          {/* QR Code */}
           <div className="p-4 rounded-2xl bg-white shadow-lg">
             {qrCodeUrl ? (
               <img src={qrCodeUrl} alt="QR Code Wi-Fi" className="w-56 h-56 object-contain" />
@@ -111,7 +134,11 @@ export default function WifiQRCodeDisplay({
           <p className={`text-sm text-center ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
             Aponte a câmera do celular para conectar automaticamente
           </p>
+        </div>
 
+        {/* Voice Hint */}
+        <div className={`mx-6 mb-4 flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+          <span>Diga <strong>"fechar"</strong> ou <strong>"repetir"</strong></span>
         </div>
 
         {/* Barra de progresso */}

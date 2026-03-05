@@ -1224,14 +1224,14 @@ case 'nfc_debito':
                 >
                   {/* Linha: pergunta */}
                   {lastTranscript && (
-                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium ${
-                      theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
-                    }`}>
-                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                      </svg>
-                      <span className="truncate">{lastTranscript}</span>
-                    </div>
+<div className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium min-w-0 ${
+  theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
+}`}>
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+  </svg>
+  <span className="truncate min-w-0 flex-1">{lastTranscript}</span>
+</div>
                   )}
                   {/* Divisor interno quando tem os dois */}
                   {lastTranscript && lastResponse && (
@@ -1239,14 +1239,14 @@ case 'nfc_debito':
                   )}
                   {/* Linha: resposta */}
                   {lastResponse && (
-                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs ${
-                      theme === 'dark' ? 'text-emerald-400/80' : 'text-emerald-600/80'
-                    }`}>
-                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                      </svg>
-                      <span className="truncate">{lastResponse}</span>
-                    </div>
+<div className={`px-3 py-1.5 flex items-center gap-2 text-xs min-w-0 ${
+  theme === 'dark' ? 'text-emerald-400/80' : 'text-emerald-600/80'
+}`}>
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+  </svg>
+  <span className="truncate min-w-0 flex-1">{lastResponse}</span>
+</div>
                   )}
                 </div>
 

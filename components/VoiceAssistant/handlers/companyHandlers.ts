@@ -114,7 +114,7 @@ export async function handleNossaMarcaCommand({
   }
 }
 
-export async function handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText }) {
+export async function handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);
     setActiveModal({ type: 'LerQRCodeDisplay', data: { companyId } });
@@ -124,7 +124,7 @@ export async function handleLerQRCode({ companyId, setIsProcessing, setActiveMod
   } finally { setIsProcessing(false); }
 }
 
-export async function handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal, playText }) {
+export async function handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);
     setActiveModal({ type: 'LerCodigoBarrasDisplay', data: { companyId } });
@@ -134,7 +134,7 @@ export async function handleLerCodigoBarras({ companyId, setIsProcessing, setAct
   } finally { setIsProcessing(false); }
 }
 
-export async function handleValidarCupom({ companyId, setIsProcessing, setActiveModal, playText }) {
+export async function handleValidarCupom({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);
     setActiveModal({ type: 'ValidarCupomDisplay', data: { companyId } });
@@ -144,7 +144,7 @@ export async function handleValidarCupom({ companyId, setIsProcessing, setActive
   } finally { setIsProcessing(false); }
 }
 
-export async function handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal, playText }) {
+export async function handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);
     setActiveModal({ type: 'ImagemEmTextoDisplay', data: { companyId } });
@@ -154,7 +154,7 @@ export async function handleImagemEmTexto({ companyId, setIsProcessing, setActiv
   } finally { setIsProcessing(false); }
 }
 
-export async function handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal, playText }) {
+export async function handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);
     setActiveModal({ type: 'TabelaEmTextoDisplay', data: { companyId } });
@@ -164,7 +164,7 @@ export async function handleTabelaEmTexto({ companyId, setIsProcessing, setActiv
   } finally { setIsProcessing(false); }
 }
 
-export async function handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal, playText }) {
+export async function handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);
     setActiveModal({ type: 'ContratoEmTextoDisplay', data: { companyId } });

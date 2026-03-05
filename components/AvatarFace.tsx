@@ -77,13 +77,13 @@ export function AvatarFace({
       ring: isDark ? '#3b82f6' : '#2563eb',
       halo: isDark ? '#3b82f6' : '#2563eb'
     },
-    wakeWord: {
-      primary: '#a855f7',
-      secondary: '#c084fc',
-      glow: isDark ? 'rgba(168, 85, 247, 0.6)' : 'rgba(147, 51, 234, 0.6)',
-      ring: isDark ? '#a855f7' : '#9333ea',
-      halo: isDark ? '#a855f7' : '#9333ea'
-    },
+wakeWord: {
+  primary: '#22c55e',
+  secondary: '#4ade80',
+  glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(34, 197, 94, 0.6)',
+  ring: isDark ? '#22c55e' : '#16a34a',
+  halo: isDark ? '#22c55e' : '#16a34a'
+},
   }), [isDark]);
 
   const [colors, setColors] = useState(statusColors.idle);

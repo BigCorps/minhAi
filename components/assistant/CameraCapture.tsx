@@ -35,7 +35,8 @@ export default function CameraCapture({
     typeof navigator !== 'undefined' &&
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const [activeTab, setActiveTab] = useState<Tab>(isMobile ? 'mobile' : 'webcam');
+  // FIX: Aba padrão é sempre 'companion' (Celular — QR Code)
+  const [activeTab, setActiveTab] = useState<Tab>('companion');
 
   const camera = useCameraCapture();
   const companion = useCompanionUpload({
@@ -51,6 +52,16 @@ export default function CameraCapture({
       videoRef.current.srcObject = camera.stream;
     }
   }, [camera.stream]);
+
+  // FIX: Iniciar webcam na montagem somente se a aba inicial for webcam
+  useEffect(() => {
+    if (activeTab === 'webcam') {
+      camera.startWebcam();
+    }
+    return () => {
+      camera.stopWebcam();
+    };
+  }, []); // eslint-disable-line
 
   // Iniciar companion ao entrar na aba; cancelar ao sair
   useEffect(() => {
@@ -69,12 +80,17 @@ export default function CameraCapture({
     }
   }, [camera.capturedImage, onCapture]);
 
+  // FIX: handleTabChange — removido click() automático de upload;
+  // mobile só abre câmera nativa se for realmente dispositivo mobile
   const handleTabChange = (tab: Tab) => {
     if (tab !== 'webcam') camera.stopWebcam();
     setActiveTab(tab);
     if (tab === 'webcam') camera.startWebcam();
-    if (tab === 'mobile') mobileInputRef.current?.click();
-    if (tab === 'upload') fileInputRef.current?.click();
+    if (tab === 'mobile') {
+      // No mobile, abrir câmera nativa diretamente
+      mobileInputRef.current?.click();
+    }
+    // FIX: upload NÃO chama click aqui — usuário clica no botão explicitamente
   };
 
   const handleCancel = () => {
@@ -105,19 +121,25 @@ export default function CameraCapture({
         </p>
       )}
 
-      {/* Abas */}
+      {/* FIX: Abas — nova ordem: Celular → Webcam/Câmera → Upload */}
       <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
-        <button onClick={() => handleTabChange('webcam')} className={tabClass(activeTab === 'webcam')}>
-          <Camera className="w-3.5 h-3.5" /><span>Webcam</span>
-        </button>
-        <button onClick={() => handleTabChange('mobile')} className={tabClass(activeTab === 'mobile')}>
-          <Smartphone className="w-3.5 h-3.5" /><span>Câmera</span>
-        </button>
-        <button onClick={() => handleTabChange('upload')} className={tabClass(activeTab === 'upload')}>
-          <Upload className="w-3.5 h-3.5" /><span>Upload</span>
-        </button>
+        {/* 1º — Celular (QR Code) */}
         <button onClick={() => handleTabChange('companion')} className={tabClass(activeTab === 'companion')}>
           <QrCode className="w-3.5 h-3.5" /><span>Celular</span>
+        </button>
+
+        {/* 2º — Webcam (desktop) ou Câmera (mobile) */}
+        <button
+          onClick={() => handleTabChange(isMobile ? 'mobile' : 'webcam')}
+          className={tabClass(activeTab === 'webcam' || activeTab === 'mobile')}
+        >
+          <Camera className="w-3.5 h-3.5" />
+          <span>{isMobile ? 'Câmera' : 'Webcam'}</span>
+        </button>
+
+        {/* 3º — Upload */}
+        <button onClick={() => handleTabChange('upload')} className={tabClass(activeTab === 'upload')}>
+          <Upload className="w-3.5 h-3.5" /><span>Upload</span>
         </button>
       </div>
 
@@ -169,30 +191,50 @@ export default function CameraCapture({
             </button>
           </div>
         )}
-        {activeTab === 'webcam' && !camera.stream && (
+        {/* FIX: Spinner de webcam agora só aparece quando não há erro */}
+        {activeTab === 'webcam' && !camera.stream && !camera.error && (
           <div className="flex flex-col items-center gap-2 p-6">
             <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
             <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Iniciando câmera...</p>
           </div>
         )}
 
-        {/* ── Mobile / Upload (idle) ── */}
-        {(activeTab === 'mobile' || activeTab === 'upload') && (
+        {/* ── Mobile (idle) ── */}
+        {activeTab === 'mobile' && (
           <div className="flex flex-col items-center gap-3 p-6 text-center">
-            {activeTab === 'mobile'
-              ? <Smartphone className={`w-12 h-12 ${isDark ? 'text-slate-600' : 'text-gray-300'}`} />
-              : <Upload className={`w-12 h-12 ${isDark ? 'text-slate-600' : 'text-gray-300'}`} />
-            }
+            <Smartphone className={`w-12 h-12 ${isDark ? 'text-slate-600' : 'text-gray-300'}`} />
             <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
-              {activeTab === 'mobile'
-                ? 'Toque abaixo para abrir a câmera do celular.'
-                : 'Toque abaixo para selecionar um arquivo.'}
+              Toque abaixo para abrir a câmera do celular.
             </p>
             <button
-              onClick={() => activeTab === 'mobile' ? mobileInputRef.current?.click() : fileInputRef.current?.click()}
+              onClick={() => mobileInputRef.current?.click()}
               className="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all"
             >
-              {activeTab === 'mobile' ? '📷 Abrir câmera' : '📁 Selecionar arquivo'}
+              📷 Abrir câmera
+            </button>
+          </div>
+        )}
+
+        {/* FIX: Upload — zona de drag-and-drop sem abrir seletor automaticamente */}
+        {activeTab === 'upload' && (
+          <div
+            className="flex flex-col items-center gap-3 p-6 text-center w-full"
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => {
+              e.preventDefault();
+              const file = e.dataTransfer.files?.[0];
+              if (file) camera.handleFileUpload(file);
+            }}
+          >
+            <Upload className={`w-12 h-12 ${isDark ? 'text-slate-600' : 'text-gray-300'}`} />
+            <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
+              Arraste uma imagem aqui ou clique para selecionar.
+            </p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all"
+            >
+              📁 Selecionar arquivo
             </button>
           </div>
         )}

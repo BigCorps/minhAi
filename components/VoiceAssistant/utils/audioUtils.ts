@@ -55,6 +55,28 @@ export async function requestMicrophonePermission(): Promise<boolean> {
   }
 }
 
+export async function requestCameraPermission(): Promise<boolean> {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    // Para imediatamente — só precisávamos do prompt de permissão
+    stream.getTracks().forEach(t => t.stop());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function requestLocationPermission(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(false); return; }
+    navigator.geolocation.getCurrentPosition(
+      () => resolve(true),
+      () => resolve(false),
+      { timeout: 10000 }
+    );
+  });
+}
+
 /**
  * Toca um bipe de feedback enquanto processa (aguarda API responder).
  */

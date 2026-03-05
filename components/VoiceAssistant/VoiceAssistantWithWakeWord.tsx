@@ -171,6 +171,9 @@ export function VoiceAssistantWithWakeWord({
       if (!granted) setError('Permissão do microfone negada.');
     });
 
+    requestCameraPermission().catch(() => {});    // ← já adicionado antes
+   requestLocationPermission().catch(() => {});
+
     const handleExternalFunctionClick = (event: any) => {
       handleFunctionClick(event.detail.functionKey);
     };

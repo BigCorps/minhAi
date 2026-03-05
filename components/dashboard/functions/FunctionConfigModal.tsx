@@ -6,6 +6,7 @@ import { X, Mail, Calendar, Settings, AlertCircle, Check, Plus, Trash2 } from 'l
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
+import { CameraConfigModal } from './CameraConfigModal';
 
 // ===== FORMULÁRIOS =====
 
@@ -1293,6 +1294,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'wifi_qrcode':  WifiQRCodeForm,
   'cardapio':     CardapioForm,
   'nosso_qrcode': NossoQRCodeForm,
+  'validar_cupom': CameraConfigModal,
 };
 
 // ===== INTERFACE =====
@@ -1323,7 +1325,7 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, qrcode_content, qrcode_label')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label')
         .eq('id', companyId)
         .single();
 

@@ -564,6 +564,150 @@ voiceTriggers: [
   },
 },
 
+// ── Ler QR Code ──────────────────────────────────────────────
+ler_qrcode: {
+  functionKey: 'ler_qrcode',
+  functionName: 'Ler QR Code',
+  category: 'codes',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'ler qr code', 'ler qr',
+    'escanear qr', 'escanear qrcode',
+    'ler codigo qr', 'ler qrcode',
+  ],
+  requiresInput: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal({ type: 'LerQRCodeDisplay', data: { companyId } });
+      await playText('Abrindo leitura de QR Code. Aponte a câmera para o código.');
+      return true;
+    } catch (error) {
+      console.error('[ler_qrcode] handler error:', error);
+      return false;
+    }
+  },
+},
+
+// ── Ler Código de Barras ──────────────────────────────────────
+ler_codigo_barras: {
+  functionKey: 'ler_codigo_barras',
+  functionName: 'Ler Código de Barras',
+  category: 'codes',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'ler codigo de barras', 'ler código de barras',
+    'escanear codigo de barras', 'escanear código de barras',
+    'ler barcode',
+  ],
+  requiresInput: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal({ type: 'LerCodigoBarrasDisplay', data: { companyId } });
+      await playText('Abrindo leitura de código de barras.');
+      return true;
+    } catch (error) {
+      console.error('[ler_codigo_barras] handler error:', error);
+      return false;
+    }
+  },
+},
+
+// ── Validar Cupom ─────────────────────────────────────────────
+validar_cupom: {
+  functionKey: 'validar_cupom',
+  functionName: 'Validar Cupom',
+  category: 'codes',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'validar cupom', 'valida cupom',
+    'validar voucher', 'valida voucher',
+    'verificar cupom', 'verifica cupom',
+  ],
+  requiresInput: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal({ type: 'ValidarCupomDisplay', data: { companyId } });
+      await playText('Abrindo validação de cupom. Fotografe o cupom.');
+      return true;
+    } catch (error) {
+      console.error('[validar_cupom] handler error:', error);
+      return false;
+    }
+  },
+},
+
+// ── Imagem em Texto (OCR) ─────────────────────────────────────
+imagem_em_texto: {
+  functionKey: 'imagem_em_texto',
+  functionName: 'Imagem em Texto',
+  category: 'codes',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'imagem em texto', 'extrair texto',
+    'ocr', 'digitalizar imagem',
+    'texto da imagem', 'extraia texto',
+  ],
+  requiresInput: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal({ type: 'ImagemEmTextoDisplay', data: { companyId } });
+      await playText('Abrindo extração de texto. Fotografe o documento.');
+      return true;
+    } catch (error) {
+      console.error('[imagem_em_texto] handler error:', error);
+      return false;
+    }
+  },
+},
+
+// ── Tabela em Texto ───────────────────────────────────────────
+tabela_em_texto: {
+  functionKey: 'tabela_em_texto',
+  functionName: 'Tabela em Texto',
+  category: 'codes',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'tabela em texto', 'converter tabela',
+    'digitalizar tabela', 'tabela para csv',
+    'extrair tabela', 'extrai tabela',
+  ],
+  requiresInput: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal({ type: 'TabelaEmTextoDisplay', data: { companyId } });
+      await playText('Abrindo conversor de tabela. Fotografe a tabela.');
+      return true;
+    } catch (error) {
+      console.error('[tabela_em_texto] handler error:', error);
+      return false;
+    }
+  },
+},
+
+// ── Contrato em Texto ─────────────────────────────────────────
+contrato_em_texto: {
+  functionKey: 'contrato_em_texto',
+  functionName: 'Contrato em Texto',
+  category: 'codes',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'contrato em texto', 'digitalizar contrato',
+    'digitaliza contrato', 'extrair contrato',
+    'ler contrato', 'extrai contrato',
+  ],
+  requiresInput: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal({ type: 'ContratoEmTextoDisplay', data: { companyId } });
+      await playText('Abrindo digitalização de contrato. Fotografe o documento.');
+      return true;
+    } catch (error) {
+      console.error('[contrato_em_texto] handler error:', error);
+      return false;
+    }
+  },
+},
+
   ver_agenda: {
     functionKey: 'ver_agenda',
     functionName: 'Ver Agenda',

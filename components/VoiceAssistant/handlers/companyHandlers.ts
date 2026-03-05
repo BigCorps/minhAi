@@ -114,6 +114,66 @@ export async function handleNossaMarcaCommand({
   }
 }
 
+export async function handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    setActiveModal({ type: 'LerQRCodeDisplay', data: { companyId } });
+    playText('Abrindo leitura de QR Code.').catch(() => {});
+  } catch (error) {
+    await playText('Erro ao abrir. Tente novamente.');
+  } finally { setIsProcessing(false); }
+}
+
+export async function handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    setActiveModal({ type: 'LerCodigoBarrasDisplay', data: { companyId } });
+    playText('Abrindo leitura de código de barras.').catch(() => {});
+  } catch (error) {
+    await playText('Erro ao abrir. Tente novamente.');
+  } finally { setIsProcessing(false); }
+}
+
+export async function handleValidarCupom({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    setActiveModal({ type: 'ValidarCupomDisplay', data: { companyId } });
+    playText('Abrindo validação de cupom.').catch(() => {});
+  } catch (error) {
+    await playText('Erro ao abrir. Tente novamente.');
+  } finally { setIsProcessing(false); }
+}
+
+export async function handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    setActiveModal({ type: 'ImagemEmTextoDisplay', data: { companyId } });
+    playText('Abrindo extração de texto.').catch(() => {});
+  } catch (error) {
+    await playText('Erro ao abrir. Tente novamente.');
+  } finally { setIsProcessing(false); }
+}
+
+export async function handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    setActiveModal({ type: 'TabelaEmTextoDisplay', data: { companyId } });
+    playText('Abrindo conversor de tabela.').catch(() => {});
+  } catch (error) {
+    await playText('Erro ao abrir. Tente novamente.');
+  } finally { setIsProcessing(false); }
+}
+
+export async function handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal, playText }) {
+  try {
+    setIsProcessing(true);
+    setActiveModal({ type: 'ContratoEmTextoDisplay', data: { companyId } });
+    playText('Abrindo digitalização de contrato.').catch(() => {});
+  } catch (error) {
+    await playText('Erro ao abrir. Tente novamente.');
+  } finally { setIsProcessing(false); }
+}
+
 export async function handleVideoInstrucoesCommand({
   companyId,
   setIsProcessing,

@@ -28,6 +28,12 @@ import AlarmeDisplay from '@/components/assistant/AlarmeDisplay';
 import WifiQRCodeDisplay from '@/components/assistant/WifiQRCodeDisplay';
 import CardapioDisplay from '@/components/assistant/CardapioDisplay';
 import NossoQRCodeDisplay from '@/components/assistant/NossoQRCodeDisplay';
+import LerQRCodeDisplay from '@/components/assistant/LerQRCodeDisplay';
+import LerCodigoBarrasDisplay from '@/components/assistant/LerCodigoBarrasDisplay';
+import ValidarCupomDisplay from '@/components/assistant/ValidarCupomDisplay';
+import ImagemEmTextoDisplay from '@/components/assistant/ImagemEmTextoDisplay';
+import TabelaEmTextoDisplay from '@/components/assistant/TabelaEmTextoDisplay';
+import ContratoEmTextoDisplay from '@/components/assistant/ContratoEmTextoDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -56,6 +62,12 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'WifiQRCodeDisplay': WifiQRCodeDisplay,
   'CardapioDisplay': CardapioDisplay,
   'NossoQRCodeDisplay': NossoQRCodeDisplay,
+  'LerQRCodeDisplay': LerQRCodeDisplay,
+  'LerCodigoBarrasDisplay': LerCodigoBarrasDisplay,
+  'ValidarCupomDisplay': ValidarCupomDisplay,
+  'ImagemEmTextoDisplay': ImagemEmTextoDisplay,
+  'TabelaEmTextoDisplay': TabelaEmTextoDisplay,
+  'ContratoEmTextoDisplay': ContratoEmTextoDisplay,
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

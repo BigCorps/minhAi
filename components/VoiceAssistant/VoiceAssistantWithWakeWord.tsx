@@ -524,6 +524,36 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
           playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
           break;
 
+case 'ler_qrcode':
+  await stopGoogleSpeech(); 
+  await handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText });
+  break;
+
+case 'ler_codigo_barras':
+  await stopGoogleSpeech(); 
+  await handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal, playText });
+  break;
+
+case 'validar_cupom':
+  await stopGoogleSpeech(); 
+  await handleValidarCupom({ companyId, setIsProcessing, setActiveModal, playText });
+  break;
+
+case 'imagem_em_texto':
+  await stopGoogleSpeech(); 
+  await handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
+  break;
+
+case 'tabela_em_texto':
+  await stopGoogleSpeech(); 
+  await handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
+  break;
+
+case 'contrato_em_texto':
+  await stopGoogleSpeech(); 
+  await handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
+  break;          
+
   case 'wifi_qrcode':
     await stopGoogleSpeech(); 
     await handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText });

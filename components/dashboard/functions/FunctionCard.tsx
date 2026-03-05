@@ -47,7 +47,7 @@ const CATEGORY_NAMES: { [key: string]: string } = {
   'video': 'Vídeos',
   'biometry': 'Biometria',
   'products': 'Comercial',
-  'images': 'Imagens',
+  'codes': 'Câmera',
   'utylities': 'Utilitários',
   'services': 'Serviços',
 };

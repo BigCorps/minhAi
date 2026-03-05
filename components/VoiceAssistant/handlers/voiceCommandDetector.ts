@@ -232,6 +232,66 @@ export async function detectVoiceCommand(
     return true;
   }
 
+// ── Ler QR Code ──────────────────────────────────────────────
+const qrTriggers = ['ler qr code', 'ler qr', 'escanear qr', 'escanear qrcode', 'ler codigo qr', 'ler qrcode'];
+if (qrTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'ler_qrcode');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  await handleLerQRCode({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'ler_qrcode', 1);
+  return true;
+}
+
+// ── Ler Código de Barras ──────────────────────────────────────
+const barcodeTriggers = ['ler codigo de barras', 'ler código de barras', 'escanear codigo de barras', 'escanear código de barras', 'ler barcode'];
+if (barcodeTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'ler_codigo_barras');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  await handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'ler_codigo_barras', 1);
+  return true;
+}
+
+// ── Validar Cupom ─────────────────────────────────────────────
+const cupomTriggers = ['validar cupom', 'valida cupom', 'validar voucher', 'verifica cupom', 'verificar cupom'];
+if (cupomTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'validar_cupom');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  await handleValidarCupom({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'validar_cupom', 2);
+  return true;
+}
+
+// ── Imagem em Texto ───────────────────────────────────────────
+const ocrTriggers = ['imagem em texto', 'extrair texto', 'digitalizar imagem', 'texto da imagem', 'extraia texto'];
+if (ocrTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'imagem_em_texto');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  await handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'imagem_em_texto', 3);
+  return true;
+}
+
+// ── Tabela em Texto ───────────────────────────────────────────
+const tabelaTriggers = ['tabela em texto', 'converter tabela', 'digitalizar tabela', 'tabela para csv', 'extrair tabela'];
+if (tabelaTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'tabela_em_texto');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  await handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'tabela_em_texto', 3);
+  return true;
+}
+
+// ── Contrato em Texto ─────────────────────────────────────────
+const contratoTriggers = ['contrato em texto', 'digitalizar contrato', 'digitaliza contrato', 'extrair contrato', 'ler contrato'];
+if (contratoTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'contrato_em_texto');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  await handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'contrato_em_texto', 5);
+  return true;
+}
+
   // ── Finalizar Cronômetro (parar) ──────────────────────────
   const finalizarCronometroTriggers = ['finalizar cronômetro', 'parar cronômetro', 'parar contagem', 'finalizar contagem', 'stop cronômetro'];
   if (finalizarCronometroTriggers.some(t => lowerTranscript.includes(t))) {

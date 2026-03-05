@@ -46,7 +46,7 @@ import {
   handleImagemEmTexto,
   handleTabelaEmTexto,
   handleContratoEmTexto,
-} from '@/lib/companyHandlers';
+} from './handlers/companyHandlers';
 
 // ── Hooks ──────────────────────────────────────────────────
 import { useCompanyConfig } from './hooks/useCompanyConfig';

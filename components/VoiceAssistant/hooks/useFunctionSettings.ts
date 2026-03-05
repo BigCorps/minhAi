@@ -2,7 +2,6 @@
 // hooks/useFunctionSettings.ts
 // Caminho: components/assistant/VoiceAssistant/hooks/useFunctionSettings.ts
 // ============================================================
-
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { FunctionSettings } from '../types';
@@ -17,16 +16,15 @@ export function useFunctionSettings(companyId: string): Record<string, FunctionS
   useEffect(() => {
     async function loadFunctionSettings() {
       if (!companyId) return;
-
       try {
         const supabase = createClient();
-
         const { data, error } = await supabase
           .from('assistant_functions')
           .select(`
             function_key,
             save_to_history,
             credits_per_use,
+            default_enabled,
             company_function_settings!inner(
               is_enabled,
               custom_credits_per_use
@@ -39,7 +37,7 @@ export function useFunctionSettings(companyId: string): Record<string, FunctionS
           // Fallback: buscar sem join
           const { data: fallback } = await supabase
             .from('assistant_functions')
-            .select('function_key, save_to_history, credits_per_use')
+            .select('function_key, save_to_history, credits_per_use, default_enabled')
             .eq('is_active', true);
 
           if (fallback) {
@@ -48,7 +46,7 @@ export function useFunctionSettings(companyId: string): Record<string, FunctionS
               settings[f.function_key] = {
                 saveToHistory: f.save_to_history,
                 creditsPerUse: f.credits_per_use,
-                isEnabled: true,
+                isEnabled: f.default_enabled ?? false,
               };
             });
             setFunctionSettings(settings);
@@ -63,10 +61,9 @@ export function useFunctionSettings(companyId: string): Record<string, FunctionS
           settings[f.function_key] = {
             saveToHistory: f.save_to_history,
             creditsPerUse: companySetting?.custom_credits_per_use ?? f.credits_per_use,
-            isEnabled: companySetting?.is_enabled ?? true,
+            isEnabled: companySetting?.is_enabled ?? f.default_enabled ?? false,
           };
         });
-
         setFunctionSettings(settings);
         console.log('✅ Function settings carregados');
       } catch (error) {

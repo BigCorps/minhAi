@@ -1188,7 +1188,7 @@ case 'nfc_debito':
 
             {/* ── Área inferior fixa: cards + TextInput ── */}
             {!showStartButton && (
-              <div className="w-full min-w-0 overflow-hidden mt-auto flex flex-col gap-1">
+              <div className="w-full min-w-0 overflow-hidden mt-auto flex flex-col gap-0.5">
 
                 {/* Card aviso de ruído / reprompt (azul) — sempre reserva espaço */}
                 <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${

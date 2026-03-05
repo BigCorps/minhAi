@@ -18,6 +18,8 @@ interface CardapioDisplayProps {
   theme?: 'dark' | 'light';
 }
 
+const OPENING_TEXT = 'Aqui está o cardápio. Diga abrir para ver no navegador, copiar para copiar o link, ou fechar para sair.';
+
 export default function CardapioDisplay({
   data,
   onClose,
@@ -45,11 +47,6 @@ export default function CardapioDisplay({
   };
 
   useModalVoiceClose(handleManualClose);
-
-  useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
-    return () => { window.speechSynthesis.cancel(); };
-  }, []);
 
   useEffect(() => {
     if (menuUrl) {

@@ -78,7 +78,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'sequencia_videos',
   'wifi_qrcode',
   'cardapio',
-  'nosso_qrcode'
+  'nosso_qrcode',
+  'validar_cupom'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

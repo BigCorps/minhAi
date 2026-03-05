@@ -64,11 +64,6 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
   const { process } = useCameraProcess();
 
   useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
-    return () => { window.speechSynthesis.cancel(); };
-  }, []); // eslint-disable-line
-
-  useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
     const interval = setInterval(() => {

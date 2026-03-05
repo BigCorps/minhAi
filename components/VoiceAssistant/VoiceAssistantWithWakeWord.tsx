@@ -56,7 +56,13 @@ import { useWakeWordDetector } from './hooks/useWakeWordDetector';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 
 // ── Utilitários ────────────────────────────────────────────
-import { unlockAudio, requestMicrophonePermission, playProcessingFeedback } from './utils/audioUtils';
+import { 
+  unlockAudio, 
+  requestMicrophonePermission, 
+  playProcessingFeedback,
+  requestCameraPermission,    // ← adicionar
+  requestLocationPermission,  // ← adicionar
+} from './utils/audioUtils';
 import { detectStopCommand, extractCommand } from './utils/textUtils';
 
 // ── Handlers ──────────────────────────────────────────────
@@ -172,7 +178,7 @@ export function VoiceAssistantWithWakeWord({
     });
 
     requestCameraPermission().catch(() => {});    // ← já adicionado antes
-   requestLocationPermission().catch(() => {});
+    requestLocationPermission().catch(() => {});
 
     const handleExternalFunctionClick = (event: any) => {
       handleFunctionClick(event.detail.functionKey);

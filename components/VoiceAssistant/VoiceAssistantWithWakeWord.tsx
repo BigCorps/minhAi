@@ -1068,7 +1068,7 @@ case 'nfc_debito':
         : 'bg-blue-50 border border-blue-200 text-blue-700'
     }`}>
       {wakeWordActivated
-        ? 'Palavra de ativação reconhecida — pode falar!'
+        ? '✅ Palavra de ativação reconhecida — pode falar!'
         : repromptWarning
         ? 'Não consegui entender — pode repetir a pergunta?'
         : 'Ambiente ruidoso — fale mais perto do microfone'}
@@ -1191,7 +1191,7 @@ case 'nfc_debito':
                   </svg>
                   <span className="truncate">
                     {wakeWordActivated
-                      ? 'Palavra de ativação reconhecida — pode falar!'
+                      ? '✅ Palavra de ativação reconhecida — pode falar!'
                       : repromptWarning
                       ? 'Não consegui entender — pode repetir?'
                       : 'Estou ouvindo... fale mais perto do microfone'}

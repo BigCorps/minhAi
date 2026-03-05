@@ -75,7 +75,9 @@ export default function CardapioDisplay({
     return () => clearInterval(interval);
   }, [onClose]);
 
-  useModalVoiceCommand((transcript) => {
+useModalVoiceCommand({
+  active: true,
+  onTranscript: (transcript) => {
     const t = normalize(transcript);
 
     if (['fechar', 'cancelar', 'sair', 'voltar', 'encerrar'].some(cmd => t.includes(cmd))) {
@@ -101,7 +103,8 @@ export default function CardapioDisplay({
       playText('Abrindo o cardápio.').catch(() => {});
       return;
     }
-  });
+  }
+});
 
   const handleCopy = () => {
     navigator.clipboard.writeText(menuUrl);

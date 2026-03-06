@@ -73,37 +73,40 @@ function TabCheckboxes({ enabledTabs, onChange }: TabCheckboxesProps) {
 function useEnabledTabs(companyId: string | undefined, functionKey: string, isOpen: boolean) {
   const [enabledTabs, setEnabledTabs] = useState<Tab[]>(['companion', 'webcam', 'mobile', 'upload']);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
     if (!isOpen || !companyId) return;
-supabase
-  .from('company_function_settings')
-  .select('config')
-  .eq('company_id', companyId)
-  .eq('function_key', functionKey)
-  .maybeSingle()
-  .then(({ data }) => {
-    if (data?.config?.enabled_tabs) {
-      setEnabledTabs(data.config.enabled_tabs);
-    }
-  });
+    supabase
+      .from('company_function_settings')
+      .select('config')
+      .eq('company_id', companyId)
+      .eq('function_key', functionKey)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.config?.enabled_tabs) {
+          setEnabledTabs(data.config.enabled_tabs);
+        }
+      });
   }, [isOpen, companyId, functionKey]); // eslint-disable-line
 
   const save = async (onUpdate?: () => void, onClose?: () => void) => {
     if (!companyId) return;
     setSaving(true);
     try {
-await supabase
-  .from('company_function_settings')
-  .upsert(
-    {
-      company_id: companyId,
-      function_key: functionKey,
-      config: { enabled_tabs: enabledTabs },
-    },
-    { onConflict: 'company_id,function_key' }
-  );
+      await supabase
+        .from('company_function_settings')
+        .upsert(
+          {
+            company_id: companyId,
+            function_key: functionKey,
+            config: { enabled_tabs: enabledTabs },
+          },
+          { onConflict: 'company_id,function_key' }
+        );
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
       onUpdate?.();
       onClose?.();
     } finally {
@@ -111,7 +114,7 @@ await supabase
     }
   };
 
-  return { enabledTabs, setEnabledTabs, save, saving };
+  return { enabledTabs, setEnabledTabs, save, saving, saved };
 }
 
 // ── Modal simples com checkboxes de abas ─────────────────────
@@ -123,7 +126,7 @@ interface CameraConfigModalProps extends ConfigModalProps {
 }
 
 function CameraConfigModal({ isOpen, onClose, companyId, onUpdate, title, description, functionKey }: CameraConfigModalProps) {
-  const { enabledTabs, setEnabledTabs, save, saving } = useEnabledTabs(companyId, functionKey, isOpen);
+  const { enabledTabs, setEnabledTabs, save, saving, saved } = useEnabledTabs(companyId, functionKey, isOpen);
 
   if (!isOpen) return null;
   return (
@@ -147,9 +150,11 @@ function CameraConfigModal({ isOpen, onClose, companyId, onUpdate, title, descri
           <button
             onClick={() => save(onUpdate, onClose)}
             disabled={saving}
-            className="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all disabled:opacity-50"
+            className={`flex-1 py-2 rounded-xl font-bold transition-all disabled:opacity-50 ${
+              saved ? 'bg-green-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
           >
-            {saving ? 'Salvando...' : 'Salvar'}
+            {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
           </button>
         </div>
       </div>
@@ -215,9 +220,6 @@ export function ContratoEmTextoConfigModal({ isOpen, onClose, companyId, onUpdat
 }
 
 // ── Form variants (sem modal wrapper) ────────────────────────
-// Usadas pelo FunctionConfigModal como FormComponent
-// Recebem { companyId, functionKey } e salvam por conta própria,
-// expondo um botão "Salvar" que substitui o footer padrão do pai.
 
 interface CameraFormProps {
   companyId?: string;
@@ -226,7 +228,7 @@ interface CameraFormProps {
 
 function CameraTabsForm({ companyId, functionKey }: CameraFormProps) {
   const key = functionKey ?? '';
-  const { enabledTabs, setEnabledTabs, save, saving } = useEnabledTabs(companyId, key, true);
+  const { enabledTabs, setEnabledTabs, save, saving, saved } = useEnabledTabs(companyId, key, true);
 
   return (
     <div>
@@ -234,9 +236,11 @@ function CameraTabsForm({ companyId, functionKey }: CameraFormProps) {
       <button
         onClick={() => save()}
         disabled={saving}
-        className="mt-6 w-full py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all"
+        className={`mt-6 w-full py-2 rounded-xl font-bold transition-all disabled:opacity-50 ${
+          saved ? 'bg-green-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+        }`}
       >
-        {saving ? 'Salvando...' : 'Salvar configurações de abas'}
+        {saving ? 'Salvando...' : saved ? '✓ Salvo com sucesso!' : 'Salvar configurações de abas'}
       </button>
     </div>
   );
@@ -273,7 +277,7 @@ export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newCupom, setNewCupom] = useState<Cupom>({ code: '', discount: 10, expires_at: '', is_active: true });
-  const { enabledTabs, setEnabledTabs, save: saveTabs, saving: savingTabs } = useEnabledTabs(companyId, 'validar_cupom', isOpen);
+  const { enabledTabs, setEnabledTabs, save: saveTabs, saving: savingTabs, saved: savedTabs } = useEnabledTabs(companyId, 'validar_cupom', isOpen);
   const supabase = createClient();
 
   useEffect(() => {
@@ -328,12 +332,10 @@ export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }
           <button onClick={onClose}><X className="w-5 h-5 text-gray-500" /></button>
         </div>
 
-        {/* Checkboxes de abas */}
         <TabCheckboxes enabledTabs={enabledTabs} onChange={setEnabledTabs} />
 
         <div className="border-t dark:border-slate-700 my-6" />
 
-        {/* Adicionar novo cupom */}
         <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-4 mb-6">
           <h4 className="text-sm font-semibold dark:text-white mb-3">Novo Cupom</h4>
           <div className="flex flex-col gap-3">
@@ -347,10 +349,7 @@ export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }
               <div className="flex-1">
                 <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Desconto (%)</label>
                 <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={newCupom.discount}
+                  type="number" min={1} max={100} value={newCupom.discount}
                   onChange={e => setNewCupom(p => ({ ...p, discount: Number(e.target.value) }))}
                   className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                 />
@@ -358,8 +357,7 @@ export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }
               <div className="flex-1">
                 <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Expira em</label>
                 <input
-                  type="date"
-                  value={newCupom.expires_at}
+                  type="date" value={newCupom.expires_at}
                   onChange={e => setNewCupom(p => ({ ...p, expires_at: e.target.value }))}
                   className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                 />
@@ -376,7 +374,6 @@ export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }
           </div>
         </div>
 
-        {/* Lista de cupons */}
         {loading ? (
           <div className="text-center py-4 text-sm text-gray-500">Carregando...</div>
         ) : cupons.length === 0 ? (
@@ -414,9 +411,11 @@ export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }
           <button
             onClick={() => saveTabs(onUpdate, onClose)}
             disabled={savingTabs}
-            className="flex-1 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50"
+            className={`flex-1 py-2 rounded-xl font-bold transition-all disabled:opacity-50 ${
+              savedTabs ? 'bg-green-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
           >
-            {savingTabs ? 'Salvando...' : 'Salvar'}
+            {savingTabs ? 'Salvando...' : savedTabs ? '✓ Salvo!' : 'Salvar'}
           </button>
         </div>
       </div>
@@ -430,7 +429,7 @@ export function ValidarCupomConfigForm({ companyId, functionKey }: CameraFormPro
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newCupom, setNewCupom] = useState<Cupom>({ code: '', discount: 10, expires_at: '', is_active: true });
-  const { enabledTabs, setEnabledTabs, save: saveTabs, saving: savingTabs } = useEnabledTabs(companyId, 'validar_cupom', true);
+  const { enabledTabs, setEnabledTabs, save: saveTabs, saving: savingTabs, saved: savedTabs } = useEnabledTabs(companyId, 'validar_cupom', true);
   const supabase = createClient();
 
   useEffect(() => {
@@ -477,7 +476,6 @@ export function ValidarCupomConfigForm({ companyId, functionKey }: CameraFormPro
 
       <div className="border-t dark:border-slate-700 my-6" />
 
-      {/* Novo cupom */}
       <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-4 mb-4">
         <h4 className="text-sm font-semibold dark:text-white mb-3">Novo Cupom</h4>
         <div className="flex flex-col gap-3">
@@ -509,7 +507,6 @@ export function ValidarCupomConfigForm({ companyId, functionKey }: CameraFormPro
         </div>
       </div>
 
-      {/* Lista de cupons */}
       {loading ? (
         <div className="text-center py-4 text-sm text-gray-500">Carregando...</div>
       ) : cupons.length === 0 ? (
@@ -538,9 +535,14 @@ export function ValidarCupomConfigForm({ companyId, functionKey }: CameraFormPro
         </div>
       )}
 
-      <button onClick={() => saveTabs()} disabled={savingTabs}
-        className="w-full py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all">
-        {savingTabs ? 'Salvando...' : 'Salvar configurações de abas'}
+      <button
+        onClick={() => saveTabs()}
+        disabled={savingTabs}
+        className={`w-full py-2 rounded-xl font-bold transition-all disabled:opacity-50 ${
+          savedTabs ? 'bg-green-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+        }`}
+      >
+        {savingTabs ? 'Salvando...' : savedTabs ? '✓ Salvo com sucesso!' : 'Salvar configurações de abas'}
       </button>
     </div>
   );

@@ -137,7 +137,8 @@ export default function CameraCapture(props: CameraCaptureProps) {
     ? allTabs.filter(t => props.enabledTabs!.includes(t.id))
     : allTabs;
 
-  const CONTENT_H = 'h-[240px]';
+  // MUDANÇA 2: altura mínima que cresce se precisar
+  const CONTENT_H = 'min-h-[200px]';
 
   return (
     <div className="flex flex-col gap-3">
@@ -147,13 +148,16 @@ export default function CameraCapture(props: CameraCaptureProps) {
         </p>
       )}
 
-      <div className="flex gap-3 items-start">
-        <div className={`flex flex-col gap-1 p-1 rounded-xl shrink-0 w-24 ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
+      {/* MUDANÇA 1: abas horizontais em cima, conteúdo embaixo */}
+      <div className="flex flex-col gap-2">
+
+        {/* Abas horizontais */}
+        <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
           {visibleTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={tabClass(activeTab === tab.id)}
+              className={tabClass(activeTab === tab.id) + ' flex-1'}
             >
               {tab.icon}
               <span className="truncate">{tab.label}</span>
@@ -161,8 +165,9 @@ export default function CameraCapture(props: CameraCaptureProps) {
           ))}
         </div>
 
+        {/* Área de conteúdo */}
         <div
-          className={`flex-1 relative rounded-xl overflow-hidden flex items-center justify-center ${CONTENT_H} ${
+          className={`relative rounded-xl overflow-hidden flex items-center justify-center ${CONTENT_H} ${
             isDark ? 'bg-slate-900/50' : 'bg-gray-50'
           }`}
         >
@@ -238,7 +243,8 @@ export default function CameraCapture(props: CameraCaptureProps) {
 
           {/* ── Companion ── */}
           {activeTab === 'companion' && (
-            <div className="flex flex-col items-center gap-3 p-3 w-full h-full justify-center overflow-y-auto">
+            /* MUDANÇA 3: removido overflow-y-auto e h-full */
+            <div className="flex flex-col items-center gap-3 p-3 w-full justify-center">
               {companion.status === 'generating' && (
                 <>
                   <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />

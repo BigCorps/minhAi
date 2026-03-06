@@ -165,7 +165,7 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
         body: { company_id: data.companyId, subject: 'Resultado: Contrato em Texto', body: contratoText },
       });
       if (error) throw error;
-      playText('email enviado.').catch(() => {});
+      playText('enviado.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {
       playText('Erro ao enviar email.').catch(() => {});

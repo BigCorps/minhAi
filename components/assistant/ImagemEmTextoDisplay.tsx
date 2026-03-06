@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
 import Image from 'next/image';
@@ -35,10 +35,11 @@ function useCameraProcess() {
 const OPENING_TEXT = 'Fotografe o documento ou imagem com texto. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE = 60;
 
+// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
+    .replace(/[.,!?;:\-]+/g, '');
 
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   return (
@@ -65,15 +66,24 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
   const [copied, setCopied] = useState(false);
   const [speechText, setSpeechText] = useState<string>('');
 
-  // Estado da aba elevado para o modal
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
+
+  // CORREÇÃO: debounce de aba
+  const lastTabCommandRef = useRef<string | null>(null);
+  const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { process } = useCameraProcess();
 
-  // Email
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -126,6 +136,9 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
     setErrorMsg(null);
     setCopied(false);
     setSpeechText('');
+    // Limpar debounce de aba ao resetar
+    if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
@@ -175,8 +188,15 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
       if (stage === 'capturing') {
         for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
           if (triggers.some(tr => t.includes(tr))) {
+            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
+            if (lastTabCommandRef.current === tab) return;
+            lastTabCommandRef.current = tab;
             setCameraTab(tab as Tab);
             playText(TAB_FEEDBACK[tab]).catch(() => {});
+            if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+            tabCommandTimeoutRef.current = setTimeout(() => {
+              lastTabCommandRef.current = null;
+            }, 4000);
             return;
           }
         }
@@ -192,6 +212,7 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
         if (['nova extracao', 'novo', 'outra', 'tentar novamente', 'novamente'].some(cmd => t.includes(cmd))) {
           handleReset(); return;
         }
+        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
           handleSendByEmail(); return;
         }

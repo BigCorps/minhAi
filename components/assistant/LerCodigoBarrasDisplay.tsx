@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
 
+type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
 
 interface Props {
@@ -61,6 +62,15 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
   const [resultQrUrl, setResultQrUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Estado da aba elevado para o modal
+  const [cameraTab, setCameraTab] = useState<Tab>('webcam');
+
+  // Refs para captura externa e scan automático
+  const captureRef = useRef<(() => void) | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const { process } = useCameraProcess();
 
   useEffect(() => {
@@ -118,6 +128,38 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     }
   }, [data.companyId, process, generateResultQr, playText]);
 
+  // ── Escaneamento automático via webcam ───────────────────────
+  useEffect(() => {
+    if (stage !== 'capturing' || cameraTab !== 'webcam') {
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+      return;
+    }
+
+    scanIntervalRef.current = setInterval(async () => {
+      if (!videoRef.current) return;
+
+      if ('BarcodeDetector' in window) {
+        try {
+          const detector = new (window as any).BarcodeDetector({
+            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'],
+          });
+          const barcodes = await detector.detect(videoRef.current).catch(() => []);
+          if (barcodes.length > 0) {
+            clearInterval(scanIntervalRef.current!);
+            const canvas = document.createElement('canvas');
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+            const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+            handleCapture(base64);
+          }
+        } catch { /* silencioso */ }
+      }
+    }, 500);
+
+    return () => { if (scanIntervalRef.current) clearInterval(scanIntervalRef.current); };
+  }, [stage, cameraTab, handleCapture]);
+
   const handleCopy = useCallback(async () => {
     if (!result) return;
     await navigator.clipboard.writeText(result);
@@ -135,28 +177,57 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
-useModalVoiceCommand({
-  active: true,
-  onTranscript: (transcript) => {
-    const t = normalize(transcript);
+  // ── Comandos de voz ──────────────────────────────────────────
+  const TAB_COMMANDS: Record<string, string[]> = {
+    webcam:    ['webcam', 'computador', 'camera do computador'],
+    mobile:    ['camera', 'camara', 'meu celular', 'telefone'],
+    upload:    ['arquivo', 'upload', 'galeria'],
+    companion: ['celular', 'qr code', 'qrcode', 'enviar do celular'],
+  };
+  const TAB_FEEDBACK: Record<string, string> = {
+    webcam:    'Webcam ativada. Posicionando para escanear automaticamente.',
+    mobile:    'Câmera do celular selecionada.',
+    upload:    'Selecione um arquivo de imagem.',
+    companion: 'Aponte o celular para o QR Code.',
+  };
 
-    if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
-      onClose(); return;
-    }
-    if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(cmd => t.includes(cmd))) {
-      playText(stage === 'result' && result ? `Código lido: ${result}` : OPENING_TEXT).catch(() => {});
-      return;
-    }
-    if (stage === 'result') {
-      if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
-        handleCopy(); return;
+  useModalVoiceCommand({
+    active: true,
+    onTranscript: (transcript) => {
+      const t = normalize(transcript);
+
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
+        onClose(); return;
       }
-      if (['nova leitura', 'novo', 'outra', 'tentar novamente'].some(cmd => t.includes(cmd))) {
-        handleReset(); return;
+      if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(cmd => t.includes(cmd))) {
+        playText(stage === 'result' && result ? `Código lido: ${result}` : OPENING_TEXT).catch(() => {});
+        return;
+      }
+      if (stage === 'result') {
+        if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+          handleCopy(); return;
+        }
+        if (['nova leitura', 'novo', 'outra', 'tentar novamente'].some(cmd => t.includes(cmd))) {
+          handleReset(); return;
+        }
+      }
+
+      // Mudar aba por voz
+      for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
+        if (triggers.some(tr => t.includes(tr))) {
+          setCameraTab(tab as Tab);
+          playText(TAB_FEEDBACK[tab]).catch(() => {});
+          return;
+        }
+      }
+
+      // Fotografar manual
+      if (['fotografar', 'tirar foto', 'capturar', 'foto', 'bater foto'].some(cmd => t.includes(cmd))) {
+        captureRef.current?.();
+        return;
       }
     }
-  }
-});
+  });
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
@@ -169,9 +240,20 @@ useModalVoiceCommand({
 
         {stage === 'capturing' && (
           <>
-            <CameraCapture onCapture={handleCapture} onCancel={onClose} theme={theme} companyId={data.companyId} instructions="Aponte a câmera para o código de barras." />
+            <CameraCapture
+              onCapture={handleCapture}
+              onCancel={onClose}
+              theme={theme}
+              companyId={data.companyId}
+              instructions="Aponte a câmera para o código de barras."
+              defaultTab="webcam"
+              activeTab={cameraTab}
+              onTabChange={setCameraTab}
+              captureRef={captureRef}
+              videoRef={videoRef}
+            />
             <div className="mt-3">
-              <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+              <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fotografar"', '"fechar"']} isDark={isDark} />
             </div>
           </>
         )}
@@ -193,7 +275,6 @@ useModalVoiceCommand({
               {result}
             </div>
 
-            {/* QR Code do resultado */}
             {resultQrUrl && (
               <div className="flex flex-col items-center gap-2">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para usar no celular:</p>

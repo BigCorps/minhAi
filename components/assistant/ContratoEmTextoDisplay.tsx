@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
 
+type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
 
 interface Props {
@@ -62,6 +63,12 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [speechText, setSpeechText] = useState<string>('');
+  const [isPdf, setIsPdf] = useState(false);
+  const [pageCount, setPageCount] = useState<number | null>(null);
+
+  // Ajuste 2: estado da aba elevado para o modal (companion como padrão para contratos)
+  const [cameraTab, setCameraTab] = useState<Tab>('companion');
+
   const { process } = useCameraProcess();
 
   useEffect(() => {
@@ -88,10 +95,21 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
 
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
+
+    // Detectar se é PDF pelo header base64 (JVBERi = %PDF)
+    const detectedPdf = base64.startsWith('JVBERi');
+    setIsPdf(detectedPdf);
+
     try {
       const res = await process('contrato', base64, data.companyId);
       setContratoText(res.result);
       setSpeechText(res.speech_text);
+
+      // Extrair contagem de páginas do metadata se disponível
+      if (detectedPdf && res.metadata?.page_count) {
+        setPageCount(res.metadata.page_count);
+      }
+
       setStage('result');
       await generateResultQr(res.result);
       playText(res.speech_text).catch(() => {});
@@ -128,34 +146,60 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     setErrorMsg(null);
     setCopied(false);
     setSpeechText('');
+    setIsPdf(false);
+    setPageCount(null);
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
-useModalVoiceCommand({
-  active: true,
-  onTranscript: (transcript) => {
-    const t = normalize(transcript);
+  // Resumo do resultado: "3 páginas processadas → X linhas" ou só "X linhas"
+  const getResultSummary = (text: string) => {
+    const lines = text.split('\n').filter(l => l.trim()).length;
+    const words = text.trim().split(/\s+/).length;
+    if (isPdf && pageCount) {
+      return `${pageCount} página${pageCount > 1 ? 's' : ''} processada${pageCount > 1 ? 's' : ''} · ${lines} linhas · ${words} palavras`;
+    }
+    return `${lines} linhas · ${words} palavras`;
+  };
 
-    if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
-      onClose(); return;
-    }
-    if (['repetir', 'repete', 'de novo', 'nao ouvi', 'ler contrato'].some(cmd => t.includes(cmd))) {
-      playText(stage === 'result' && speechText ? speechText : OPENING_TEXT).catch(() => {});
-      return;
-    }
-    if (stage === 'result') {
-      if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
-        handleCopy(); return;
+  useModalVoiceCommand({
+    active: true,
+    onTranscript: (transcript) => {
+      const t = normalize(transcript);
+
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
+        onClose(); return;
       }
-      if (['baixar', 'download', 'salvar', 'txt'].some(cmd => t.includes(cmd))) {
-        handleDownloadTxt(); return;
+      if (['repetir', 'repete', 'de novo', 'nao ouvi', 'ler contrato'].some(cmd => t.includes(cmd))) {
+        playText(stage === 'result' && speechText ? speechText : OPENING_TEXT).catch(() => {});
+        return;
       }
-      if (['nova digitalizacao', 'novo', 'outra', 'tentar novamente'].some(cmd => t.includes(cmd))) {
-        handleReset(); return;
+      if (stage === 'result') {
+        if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+          handleCopy(); return;
+        }
+        if (['baixar', 'download', 'salvar', 'txt'].some(cmd => t.includes(cmd))) {
+          handleDownloadTxt(); return;
+        }
+        if (['nova digitalizacao', 'novo', 'outra', 'tentar novamente'].some(cmd => t.includes(cmd))) {
+          handleReset(); return;
+        }
+      }
+
+      // Mudar aba por voz
+      const TAB_COMMANDS: Record<string, string[]> = {
+        webcam:    ['webcam', 'computador', 'camera do computador'],
+        mobile:    ['camera', 'camara', 'meu celular', 'telefone'],
+        upload:    ['arquivo', 'upload', 'galeria'],
+        companion: ['celular', 'qr code', 'qrcode', 'enviar do celular'],
+      };
+      for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
+        if (triggers.some(tr => t.includes(tr))) {
+          setCameraTab(tab as Tab);
+          return;
+        }
       }
     }
-  }
-});
+  });
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
@@ -166,13 +210,21 @@ useModalVoiceCommand({
           <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}><X className="w-5 h-5" /></button>
         </div>
 
+        {/* Ajuste 1: VoiceHint dentro do mesmo bloco, sem <div className="mt-3"> separado */}
         {stage === 'capturing' && (
-          <>
-            <CameraCapture onCapture={handleCapture} onCancel={onClose} theme={theme} companyId={data.companyId} instructions="Fotografe o contrato ou documento legal." />
-            <div className="mt-3">
-              <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
-            </div>
-          </>
+          <div className="flex flex-col gap-3">
+            <CameraCapture
+              onCapture={handleCapture}
+              onCancel={onClose}
+              theme={theme}
+              companyId={data.companyId}
+              instructions="Fotografe o contrato ou documento legal."
+              acceptPdf={true}
+              activeTab={cameraTab}
+              onTabChange={setCameraTab}
+            />
+            <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+          </div>
         )}
 
         {stage === 'processing' && (
@@ -186,7 +238,12 @@ useModalVoiceCommand({
         {stage === 'result' && contratoText && (
           <div className="flex flex-col gap-4">
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
-              <Check className="w-4 h-4" />Contrato digitalizado!
+              <Check className="w-4 h-4 shrink-0" />
+              <span>Contrato digitalizado!</span>
+              {/* Ajuste 3: resumo contextual — páginas PDF ou só contagem de linhas */}
+              <span className={`ml-auto text-xs font-normal ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
+                {getResultSummary(contratoText)}
+              </span>
             </div>
 
             <div className={`p-4 rounded-xl text-sm leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>

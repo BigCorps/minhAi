@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, QrCode, Copy, ExternalLink, Check, RefreshCw } from 'lucide-react';
+import { X, QrCode, Copy, ExternalLink, Check, RefreshCw, Mail, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
+import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import CameraCapture from '@/components/assistant/CameraCapture';
 
 interface Props {
@@ -59,6 +61,11 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   const captureRef = useRef<(() => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Email
+  const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
+  const supabase = createClient();
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // ── Auto-close após resultado ────────────────────────────────
   useEffect(() => {
@@ -165,6 +172,22 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
+  const handleSendByEmail = async () => {
+    if (!qrResult) return;
+    setIsSendingEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke('enviar-email-google', {
+        body: { company_id: data.companyId, subject: 'Resultado: Ler QR Code', body: qrResult },
+      });
+      if (error) throw error;
+      playText('Resultado enviado por email.').catch(() => {});
+    } catch {
+      playText('Erro ao enviar email.').catch(() => {});
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const isUrl = (text: string) => {
     try { new URL(text); return text.startsWith('http'); } catch { return false; }
   };
@@ -216,6 +239,12 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
       // Fotografar manual
       if (['fotografar', 'tirar foto', 'capturar', 'foto', 'bater foto'].some(cmd => t.includes(cmd))) {
         captureRef.current?.();
+        return;
+      }
+
+      // Enviar por email
+      if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
+        handleSendByEmail();
         return;
       }
     }
@@ -297,7 +326,20 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
               <RefreshCw className="w-4 h-4" />Nova leitura
             </button>
 
-            <VoiceHint commands={['"copiar"', '"nova leitura"', '"repetir"', '"fechar"']} isDark={isDark} />
+            {googleConnected && (
+              <button
+                onClick={handleSendByEmail}
+                disabled={isSendingEmail}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
+              >
+                {isSendingEmail
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                  : <><Mail className="w-4 h-4" />Enviar por email</>
+                }
+              </button>
+            )}
+
+            <VoiceHint commands={['"copiar"', '"nova leitura"', '"repetir"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']} isDark={isDark} />
 
             <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
               <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />

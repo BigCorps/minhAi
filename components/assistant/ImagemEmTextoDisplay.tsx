@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Copy, Check, RefreshCw } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Mail, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
+import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import CameraCapture from '@/components/assistant/CameraCapture';
 
+type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
 
 interface Props {
@@ -62,7 +64,16 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [speechText, setSpeechText] = useState<string>('');
+
+  // Estado da aba elevado para o modal
+  const [cameraTab, setCameraTab] = useState<Tab>('companion');
+
   const { process } = useCameraProcess();
+
+  // Email
+  const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
+  const supabase = createClient();
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -77,7 +88,6 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
   }, [stage, onClose]);
 
   const generateResultQr = useCallback(async (text: string) => {
-    // QR Code só para textos curtos (limite técnico ~2953 bytes)
     if (text.length > 500) return;
     try {
       const QRCode = (await import('qrcode')).default;
@@ -119,28 +129,69 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
-useModalVoiceCommand({
-  active: true,
-  onTranscript: (transcript) => {
-    const t = normalize(transcript);
+  const handleSendByEmail = async () => {
+    if (!extractedText) return;
+    setIsSendingEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke('enviar-email-google', {
+        body: { company_id: data.companyId, subject: 'Resultado: Imagem em Texto', body: extractedText },
+      });
+      if (error) throw error;
+      playText('Resultado enviado por email.').catch(() => {});
+    } catch {
+      playText('Erro ao enviar email.').catch(() => {});
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
-    if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
-      onClose(); return;
-    }
-    if (['repetir', 'repete', 'de novo', 'nao ouvi', 'ler texto'].some(cmd => t.includes(cmd))) {
-      playText(stage === 'result' && speechText ? speechText : OPENING_TEXT).catch(() => {});
-      return;
-    }
-    if (stage === 'result') {
-      if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
-        handleCopy(); return;
+  const TAB_COMMANDS: Record<string, string[]> = {
+    webcam:    ['webcam', 'computador', 'camera do computador'],
+    mobile:    ['camera', 'camara', 'meu celular', 'telefone'],
+    upload:    ['arquivo', 'upload', 'galeria'],
+    companion: ['celular', 'qr code', 'qrcode', 'enviar do celular'],
+  };
+  const TAB_FEEDBACK: Record<string, string> = {
+    webcam:    'Webcam ativada.',
+    mobile:    'Câmera do celular selecionada.',
+    upload:    'Selecione um arquivo de imagem.',
+    companion: 'Aponte o celular para o QR Code.',
+  };
+
+  useModalVoiceCommand({
+    active: true,
+    onTranscript: (transcript) => {
+      const t = normalize(transcript);
+
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
+        onClose(); return;
       }
-      if (['nova extracao', 'novo', 'outra', 'tentar novamente'].some(cmd => t.includes(cmd))) {
-        handleReset(); return;
+      if (['repetir', 'repete', 'de novo', 'nao ouvi', 'ler texto'].some(cmd => t.includes(cmd))) {
+        playText(stage === 'result' && speechText ? speechText : OPENING_TEXT).catch(() => {});
+        return;
+      }
+      if (stage === 'result') {
+        if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+          handleCopy(); return;
+        }
+        if (['nova extracao', 'novo', 'outra', 'tentar novamente'].some(cmd => t.includes(cmd))) {
+          handleReset(); return;
+        }
+        if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
+          handleSendByEmail(); return;
+        }
+      }
+
+      // Mudar aba por voz
+      for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
+        if (triggers.some(tr => t.includes(tr))) {
+          setCameraTab(tab as Tab);
+          playText(TAB_FEEDBACK[tab]).catch(() => {});
+          return;
+        }
       }
     }
-  }
-});
+  });
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
@@ -152,12 +203,18 @@ useModalVoiceCommand({
         </div>
 
         {stage === 'capturing' && (
-          <>
-            <CameraCapture onCapture={handleCapture} onCancel={onClose} theme={theme} companyId={data.companyId} instructions="Fotografe o documento ou imagem com texto." />
-            <div className="mt-3">
-              <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
-            </div>
-          </>
+          <div className="flex flex-col gap-3">
+            <CameraCapture
+              onCapture={handleCapture}
+              onCancel={onClose}
+              theme={theme}
+              companyId={data.companyId}
+              instructions="Fotografe o documento ou imagem com texto."
+              activeTab={cameraTab}
+              onTabChange={setCameraTab}
+            />
+            <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+          </div>
         )}
 
         {stage === 'processing' && (
@@ -184,7 +241,6 @@ useModalVoiceCommand({
               {extractedText}
             </div>
 
-            {/* QR Code do resultado — só para textos curtos */}
             {resultQrUrl && (
               <div className="flex flex-col items-center gap-2">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar o texto no celular:</p>
@@ -198,7 +254,20 @@ useModalVoiceCommand({
               <RefreshCw className="w-4 h-4" />Nova extração
             </button>
 
-            <VoiceHint commands={['"copiar"', '"ler texto"', '"nova extração"', '"fechar"']} isDark={isDark} />
+            {googleConnected && (
+              <button
+                onClick={handleSendByEmail}
+                disabled={isSendingEmail}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
+              >
+                {isSendingEmail
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                  : <><Mail className="w-4 h-4" />Enviar por email</>
+                }
+              </button>
+            )}
+
+            <VoiceHint commands={['"copiar"', '"ler texto"', '"nova extração"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']} isDark={isDark} />
 
             <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
               <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />

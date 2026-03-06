@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Copy, Check, RefreshCw, Download } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Download, Mail, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
+import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import CameraCapture from '@/components/assistant/CameraCapture';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
@@ -70,6 +71,11 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
 
   const { process } = useCameraProcess();
+
+  // Email
+  const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
+  const supabase = createClient();
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -151,6 +157,22 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
+  const handleSendByEmail = async () => {
+    if (!contratoText) return;
+    setIsSendingEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke('enviar-email-google', {
+        body: { company_id: data.companyId, subject: 'Resultado: Contrato em Texto', body: contratoText },
+      });
+      if (error) throw error;
+      playText('Resultado enviado por email.').catch(() => {});
+    } catch {
+      playText('Erro ao enviar email.').catch(() => {});
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   // Resumo do resultado: "3 páginas processadas → X linhas" ou só "X linhas"
   const getResultSummary = (text: string) => {
     const lines = text.split('\n').filter(l => l.trim()).length;
@@ -197,6 +219,12 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
           setCameraTab(tab as Tab);
           return;
         }
+      }
+
+      // Enviar por email
+      if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
+        handleSendByEmail();
+        return;
       }
     }
   });
@@ -274,7 +302,20 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
               <RefreshCw className="w-4 h-4" />Nova digitalização
             </button>
 
-            <VoiceHint commands={['"copiar"', '"baixar txt"', '"ler contrato"', '"nova digitalização"', '"fechar"']} isDark={isDark} />
+            {googleConnected && (
+              <button
+                onClick={handleSendByEmail}
+                disabled={isSendingEmail}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
+              >
+                {isSendingEmail
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                  : <><Mail className="w-4 h-4" />Enviar por email</>
+                }
+              </button>
+            )}
+
+            <VoiceHint commands={['"copiar"', '"baixar txt"', '"ler contrato"', '"nova digitalização"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']} isDark={isDark} />
 
             <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
               <div className="h-full bg-red-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />

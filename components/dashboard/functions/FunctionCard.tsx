@@ -80,6 +80,11 @@ const CONFIGURABLE_FUNCTIONS = [
   'cardapio',
   'nosso_qrcode',
   'validar_cupom'
+  'imagem_em_texto',
+  'tabela_em_texto',
+  'ler_qrcode',
+  'ler_codigo_barras',
+  'contrato_em_texto'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

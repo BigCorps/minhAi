@@ -25,6 +25,8 @@ interface CameraCaptureProps {
   onTabChange?: (tab: Tab) => void;
   // NOVO — para acionar captura externamente
   captureRef?: React.MutableRefObject<(() => void) | null>;
+  // NOVO — ref do vídeo para scan automático no modal pai
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
@@ -40,7 +42,8 @@ export default function CameraCapture(props: CameraCaptureProps) {
   } = props;
 
   const isDark = theme === 'dark';
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const internalVideoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = props.videoRef ?? internalVideoRef;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 

@@ -35,10 +35,11 @@ function useCameraProcess() {
 const OPENING_TEXT = 'Aponte a câmera para o código de barras. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE = 30;
 
+// CORREÇÃO: normalize remove hífen também ("e-mail" → "email", "QR-code" → "QRcode")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
+    .replace(/[.,!?;:\-]+/g, '');
 
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   return (
@@ -64,20 +65,31 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Estado da aba elevado para o modal
   const [cameraTab, setCameraTab] = useState<Tab>('webcam');
 
-  // Refs para captura externa e scan automático
   const captureRef = useRef<(() => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Email
+  // CORREÇÃO: debounce de aba
+  const lastTabCommandRef = useRef<string | null>(null);
+  const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // CORREÇÃO: ref para throttle do fallback edge
+  const lastFallbackRef = useRef<number | null>(null);
+
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabaseEmail = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const { process } = useCameraProcess();
+
+  // Cleanup do tabCommandTimeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -99,42 +111,63 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     } catch { /* silencioso */ }
   }, []);
 
-  const handleCapture = useCallback(async (base64: string) => {
+  // CORREÇÃO: handleCapture aceita directValue quando BarcodeDetector já leu
+  const handleCapture = useCallback(async (base64: string, directValue?: string) => {
     setStage('processing');
+
+    // Parar scan ao capturar
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+
     try {
-      // Tentar BarcodeDetector nativo primeiro
-      if ('BarcodeDetector' in window) {
-        try {
-          const detector = new (window as any).BarcodeDetector({
-            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'],
-          });
-          const img = new window.Image();
-          img.src = `data:image/jpeg;base64,${base64}`;
-          await new Promise<void>(res => { img.onload = () => res(); });
-          const barcodes = await detector.detect(img);
-          if (barcodes.length > 0) {
-            const value = barcodes[0].rawValue;
-            setResult(value);
-            setStage('result');
-            await generateResultQr(value);
-            playText(`Código lido: ${value}`).catch(() => {});
-            return;
-          }
-        } catch { /* fallback */ }
+      let finalResult: string;
+      let speechText: string;
+
+      if (directValue) {
+        // BarcodeDetector nativo já leu — não precisa chamar a edge
+        finalResult = directValue;
+        speechText = `Código de barras lido: ${directValue}`;
+      } else {
+        // Tentar BarcodeDetector nativo com base64 primeiro
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new (window as any).BarcodeDetector({
+              formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'],
+            });
+            const img = new window.Image();
+            img.src = `data:image/jpeg;base64,${base64}`;
+            await new Promise<void>(res => { img.onload = () => res(); });
+            const barcodes = await detector.detect(img);
+            if (barcodes.length > 0) {
+              finalResult = barcodes[0].rawValue;
+              speechText = `Código lido: ${finalResult}`;
+              setResult(finalResult);
+              setStage('result');
+              await generateResultQr(finalResult);
+              playText(speechText).catch(() => {});
+              return;
+            }
+          } catch { /* fallback */ }
+        }
+        // Fallback: Edge Function
+        const res = await process('barcode', base64, data.companyId);
+        finalResult = res.result;
+        speechText = res.speech_text;
       }
-      // Fallback: Edge Function
-      const res = await process('barcode', base64, data.companyId);
-      setResult(res.result);
+
+      setResult(finalResult);
       setStage('result');
-      await generateResultQr(res.result);
-      playText(res.speech_text).catch(() => {});
+      await generateResultQr(finalResult);
+      playText(speechText).catch(() => {});
     } catch (err: any) {
       setErrorMsg(err.message ?? 'Erro ao ler código de barras.');
       setStage('error');
     }
   }, [data.companyId, process, generateResultQr, playText]);
 
-  // ── Escaneamento automático via webcam ───────────────────────
+  // CORREÇÃO: scan automático captura frame no canvas (mais confiável que video element direto)
   useEffect(() => {
     if (stage !== 'capturing' || cameraTab !== 'webcam') {
       if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
@@ -142,26 +175,43 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     }
 
     scanIntervalRef.current = setInterval(async () => {
-      if (!videoRef.current) return;
+      if (!videoRef.current || videoRef.current.readyState < 2) return;
 
+      // Capturar frame atual para canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(videoRef.current, 0, 0);
+
+      // Tentar BarcodeDetector nativo no canvas
       if ('BarcodeDetector' in window) {
         try {
           const detector = new (window as any).BarcodeDetector({
-            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'],
+            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf', 'codabar'],
           });
-          const barcodes = await detector.detect(videoRef.current).catch(() => []);
+          const barcodes = await detector.detect(canvas);
           if (barcodes.length > 0) {
             clearInterval(scanIntervalRef.current!);
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+            scanIntervalRef.current = null;
             const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-            handleCapture(base64);
+            handleCapture(base64, barcodes[0].rawValue);
+            return;
           }
-        } catch { /* silencioso */ }
+        } catch (e) {
+          console.warn('[Barcode] BarcodeDetector falhou:', e);
+        }
       }
-    }, 500);
+
+      // Fallback: enviar frame para edge a cada 3s (throttle para não consumir créditos)
+      const now = Date.now();
+      if (!lastFallbackRef.current || now - lastFallbackRef.current > 3000) {
+        lastFallbackRef.current = now;
+        const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+        handleCapture(base64);
+      }
+    }, 600);
 
     return () => { if (scanIntervalRef.current) clearInterval(scanIntervalRef.current); };
   }, [stage, cameraTab, handleCapture]);
@@ -180,6 +230,10 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     setResultQrUrl(null);
     setErrorMsg(null);
     setCopied(false);
+    lastFallbackRef.current = null;
+    // Limpar debounce de aba ao resetar
+    if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
@@ -236,8 +290,15 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
         };
         for (const [trigger, tab] of Object.entries(TAB_MAP)) {
           if (t.includes(trigger)) {
-            setCameraTab(tab);
-            playText(TAB_FEEDBACK[tab]).catch(() => {});
+            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
+            if (lastTabCommandRef.current === tab) return;
+            lastTabCommandRef.current = tab;
+            setCameraTab(tab as Tab);
+            playText(TAB_FEEDBACK[tab as Tab]).catch(() => {});
+            if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+            tabCommandTimeoutRef.current = setTimeout(() => {
+              lastTabCommandRef.current = null;
+            }, 4000);
             return;
           }
         }
@@ -254,6 +315,7 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
         if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'novamente'].some(c => t.includes(c))) {
           handleReset(); return;
         }
+        // CORREÇÃO: normalize já remove hífen, então "e-mail" vira "email" automaticamente
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
           handleSendByEmail(); return;
         }

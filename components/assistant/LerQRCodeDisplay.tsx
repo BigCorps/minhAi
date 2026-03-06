@@ -19,17 +19,15 @@ interface Props {
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
 
-// ── Textos de voz ────────────────────────────────────────────────
 const OPENING_TEXT = 'Aponte a câmera para o QR Code e fotografe. Você pode dizer: celular para usar o QR Code, webcam, câmera, arquivo, ou fechar.';
 const AUTO_CLOSE = 30;
 
-// ── Normalização padrão ──────────────────────────────────────────
+// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
+    .replace(/[.,!?;:\-]+/g, '');
 
-// ── VoiceHint ────────────────────────────────────────────────────
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
@@ -54,20 +52,27 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Estado da aba elevado para o modal
   const [cameraTab, setCameraTab] = useState<Tab>('webcam');
 
-  // Refs para captura externa e scan automático
   const captureRef = useRef<(() => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Email
+  // CORREÇÃO: debounce de aba
+  const lastTabCommandRef = useRef<string | null>(null);
+  const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // ── Auto-close após resultado ────────────────────────────────
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
@@ -80,7 +85,6 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     return () => clearInterval(interval);
   }, [stage, onClose]);
 
-  // ── Gerar QR Code do resultado (para totens) ─────────────────
   const generateResultQr = useCallback(async (text: string) => {
     try {
       const QRCode = (await import('qrcode')).default;
@@ -89,9 +93,13 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     } catch { /* silencioso */ }
   }, []);
 
-  // ── Processar imagem capturada com jsQR ──────────────────────
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
+    // Parar scan ao capturar
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
     try {
       const jsQR = (await import('jsqr')).default;
       const img = new window.Image();
@@ -124,7 +132,6 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     }
   }, [generateResultQr, playText]);
 
-  // ── Escaneamento automático via webcam ───────────────────────
   useEffect(() => {
     if (stage !== 'capturing' || cameraTab !== 'webcam') {
       if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
@@ -147,6 +154,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
       const code = jsQR(imgData.data, imgData.width, imgData.height);
       if (code?.data) {
         clearInterval(scanIntervalRef.current!);
+        scanIntervalRef.current = null;
         handleCapture(base64);
       }
     }, 800);
@@ -169,6 +177,9 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     setErrorMsg(null);
     setCopied(false);
     setTimeLeft(AUTO_CLOSE);
+    // Limpar debounce de aba ao resetar
+    if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
@@ -192,7 +203,6 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   const isUrl = (text: string) => {
     try { new URL(text); return text.startsWith('http'); } catch { return false; }
   };
-
 
   useModalVoiceCommand({
     active: true,
@@ -230,8 +240,15 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
         };
         for (const [trigger, tab] of Object.entries(TAB_MAP)) {
           if (t.includes(trigger)) {
-            setCameraTab(tab);
-            playText(TAB_FEEDBACK[tab]).catch(() => {});
+            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
+            if (lastTabCommandRef.current === tab) return;
+            lastTabCommandRef.current = tab;
+            setCameraTab(tab as Tab);
+            playText(TAB_FEEDBACK[tab as Tab]).catch(() => {});
+            if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+            tabCommandTimeoutRef.current = setTimeout(() => {
+              lastTabCommandRef.current = null;
+            }, 4000);
             return;
           }
         }
@@ -248,6 +265,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
         if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'novamente'].some(c => t.includes(c))) {
           handleReset(); return;
         }
+        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
           handleSendByEmail(); return;
         }

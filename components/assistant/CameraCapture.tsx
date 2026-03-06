@@ -136,10 +136,10 @@ export default function CameraCapture(props: CameraCaptureProps) {
 
   // MUDANÇA 4: lista de abas filtrada por enabledTabs
   const visibleTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'companion', label: 'Celular', icon: <QrCode className="w-3.5 h-3.5" /> },
-    { id: 'webcam',   label: 'Webcam',  icon: <Camera className="w-3.5 h-3.5" /> },
-    { id: 'mobile',   label: 'Câmera',  icon: <Smartphone className="w-3.5 h-3.5" /> },
-    { id: 'upload',   label: 'Upload',  icon: <Upload className="w-3.5 h-3.5" /> },
+    { id: 'companion' as const, label: 'Celular', icon: <QrCode className="w-3.5 h-3.5" /> },
+    { id: 'webcam'   as const, label: 'Webcam',  icon: <Camera className="w-3.5 h-3.5" /> },
+    { id: 'mobile'   as const, label: 'Câmera',  icon: <Smartphone className="w-3.5 h-3.5" /> },
+    { id: 'upload'   as const, label: 'Upload',  icon: <Upload className="w-3.5 h-3.5" /> },
   ].filter(t => !props.enabledTabs || props.enabledTabs.includes(t.id));
 
   return (

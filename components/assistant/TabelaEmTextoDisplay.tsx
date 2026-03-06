@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic } from 'lucide-react';
 import Image from 'next/image';
@@ -32,7 +32,6 @@ function useCameraProcess() {
   return { process };
 }
 
-// 4. Função fora do componente
 function csvToMarkdown(csv: string): string {
   const rows = csv.trim().split('\n').map(r =>
     r.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
@@ -47,10 +46,11 @@ function csvToMarkdown(csv: string): string {
 const OPENING_TEXT = 'Fotografe a tabela ou planilha impressa. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE = 60;
 
+// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
+    .replace(/[.,!?;:\-]+/g, '');
 
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   return (
@@ -72,7 +72,6 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('capturing');
   const [csvResult, setCsvResult] = useState<string | null>(null);
-  // 2. Estados adicionais
   const [markdownResult, setMarkdownResult] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'csv' | 'markdown'>('csv');
   const [resultQrUrl, setResultQrUrl] = useState<string | null>(null);
@@ -80,15 +79,24 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
   const [copied, setCopied] = useState(false);
   const [speechText, setSpeechText] = useState<string>('');
 
-  // Estado da aba elevado para o modal
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
+
+  // CORREÇÃO: debounce de aba
+  const lastTabCommandRef = useRef<string | null>(null);
+  const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { process } = useCameraProcess();
 
-  // Email
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -111,13 +119,12 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
     } catch { /* silencioso */ }
   }, []);
 
-  // 3. Gerar markdown quando CSV chega
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
     try {
       const res = await process('tabela', base64, data.companyId);
       setCsvResult(res.result);
-      setMarkdownResult(csvToMarkdown(res.result)); // NOVO
+      setMarkdownResult(csvToMarkdown(res.result));
       setSpeechText(res.speech_text);
       setStage('result');
       await generateResultQr(res.result);
@@ -142,13 +149,12 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
 
   const handleDownloadXLSX = useCallback(() => {
     if (!csvResult) return;
-    // xlsx não está instalado — baixar como CSV compatível com Excel
-    const bom = '\uFEFF'; // BOM para Excel reconhecer UTF-8
+    const bom = '\uFEFF';
     const blob = new Blob([bom + csvResult], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tabela_${Date.now()}.xlsx`;  // extensão .xlsx abre direto no Excel
+    a.download = `tabela_${Date.now()}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
     playText('Arquivo Excel baixado.').catch(() => {});
@@ -172,6 +178,9 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
     setErrorMsg(null);
     setCopied(false);
     setSpeechText('');
+    // Limpar debounce de aba ao resetar
+    if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
@@ -195,8 +204,6 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
 
   const linhas = csvResult ? csvResult.split('\n').filter(Boolean).length : 0;
   const colunas = csvResult ? (csvResult.split('\n')[0]?.split(',').length ?? 0) : 0;
-
-  // Conteúdo atual conforme viewMode
   const currentContent = viewMode === 'csv' ? csvResult : markdownResult;
 
   useModalVoiceCommand({
@@ -227,8 +234,15 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
         };
         for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
           if (triggers.some(tr => t.includes(tr))) {
+            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
+            if (lastTabCommandRef.current === tab) return;
+            lastTabCommandRef.current = tab;
             setCameraTab(tab as Tab);
             playText(TAB_FEEDBACK[tab]).catch(() => {});
+            if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+            tabCommandTimeoutRef.current = setTimeout(() => {
+              lastTabCommandRef.current = null;
+            }, 4000);
             return;
           }
         }
@@ -259,6 +273,7 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
           playText('Visualizando em CSV.').catch(() => {});
           return;
         }
+        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
           handleSendByEmail(); return;
         }
@@ -283,7 +298,6 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
 
         {stage === 'capturing' && (
           <div className="flex flex-col gap-3">
-            {/* 1. acceptPdf={true} */}
             <CameraCapture
               onCapture={handleCapture}
               onCancel={onClose}
@@ -307,12 +321,10 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
 
         {stage === 'result' && csvResult && (
           <div className="flex flex-col gap-4">
-            {/* Resumo */}
             <div className={`flex items-center gap-3 text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
               <span>{linhas} linhas</span><span>·</span><span>{colunas} colunas</span>
             </div>
 
-            {/* 5. Toggle CSV / Markdown */}
             <div className={`flex gap-1 p-0.5 rounded-lg w-fit ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
               <button
                 onClick={() => setViewMode('csv')}
@@ -324,12 +336,10 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
               >Markdown</button>
             </div>
 
-            {/* Preview */}
             <div className={`p-3 rounded-xl text-xs font-mono max-h-48 overflow-y-auto whitespace-pre ${isDark ? 'bg-slate-900/60 text-slate-300' : 'bg-gray-50 text-gray-700'}`}>
               {currentContent}
             </div>
 
-            {/* 6. QR usa conteúdo do viewMode atual */}
             {resultQrUrl && (
               <div className="flex flex-col items-center gap-2">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar no celular:</p>
@@ -347,7 +357,6 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
               <button onClick={handleDownloadCSV} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
                 <Download className="w-4 h-4" />Baixar .csv
               </button>
-              {/* 7. Botão .xlsx */}
               <button onClick={handleDownloadXLSX} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-green-600 text-white hover:bg-green-700">
                 <Download className="w-4 h-4" />Baixar .xlsx
               </button>

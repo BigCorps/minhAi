@@ -180,7 +180,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
         body: { company_id: data.companyId, subject: 'Resultado: Ler QR Code', body: qrResult },
       });
       if (error) throw error;
-      playText('Resultado enviado por email.').catch(() => {});
+      playText('email enviado.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {
       playText('Erro ao enviar email.').catch(() => {});

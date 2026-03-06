@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic } from 'lucide-react';
 import Image from 'next/image';
@@ -35,10 +35,11 @@ function useCameraProcess() {
 const OPENING_TEXT = 'Fotografe o contrato ou documento legal. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE = 60;
 
+// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,!?;:]+/g, '');
+    .replace(/[.,!?;:\-]+/g, '');
 
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   return (
@@ -67,15 +68,24 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
   const [isPdf, setIsPdf] = useState(false);
   const [pageCount, setPageCount] = useState<number | null>(null);
 
-  // Ajuste 2: estado da aba elevado para o modal (companion como padrão para contratos)
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
+
+  // CORREÇÃO: debounce de aba
+  const lastTabCommandRef = useRef<string | null>(null);
+  const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { process } = useCameraProcess();
 
-  // Email
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (stage !== 'result') return;
@@ -90,7 +100,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
   }, [stage, onClose]);
 
   const generateResultQr = useCallback(async (text: string) => {
-    // Contratos geralmente são longos — só gera QR para textos curtos
     if (text.length > 500) return;
     try {
       const QRCode = (await import('qrcode')).default;
@@ -101,21 +110,15 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
 
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
-
-    // Detectar se é PDF pelo header base64 (JVBERi = %PDF)
     const detectedPdf = base64.startsWith('JVBERi');
     setIsPdf(detectedPdf);
-
     try {
       const res = await process('contrato', base64, data.companyId);
       setContratoText(res.result);
       setSpeechText(res.speech_text);
-
-      // Extrair contagem de páginas do metadata se disponível
       if (detectedPdf && res.metadata?.page_count) {
         setPageCount(res.metadata.page_count);
       }
-
       setStage('result');
       await generateResultQr(res.result);
       playText(res.speech_text).catch(() => {});
@@ -154,6 +157,9 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     setSpeechText('');
     setIsPdf(false);
     setPageCount(null);
+    // Limpar debounce de aba ao resetar
+    if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
@@ -174,7 +180,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     }
   };
 
-  // Resumo do resultado: "3 páginas processadas → X linhas" ou só "X linhas"
   const getResultSummary = (text: string) => {
     const lines = text.split('\n').filter(l => l.trim()).length;
     const words = text.trim().split(/\s+/).length;
@@ -221,8 +226,15 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
         };
         for (const [trigger, tab] of Object.entries(TAB_MAP)) {
           if (t.includes(trigger)) {
-            setCameraTab(tab);
-            playText(TAB_FEEDBACK[tab]).catch(() => {});
+            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
+            if (lastTabCommandRef.current === tab) return;
+            lastTabCommandRef.current = tab;
+            setCameraTab(tab as Tab);
+            playText(TAB_FEEDBACK[tab as Tab]).catch(() => {});
+            if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+            tabCommandTimeoutRef.current = setTimeout(() => {
+              lastTabCommandRef.current = null;
+            }, 4000);
             return;
           }
         }
@@ -242,6 +254,7 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
         if (['nova', 'novo contrato', 'nova digitalizacao', 'novamente'].some(c => t.includes(c))) {
           handleReset(); return;
         }
+        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
           handleSendByEmail(); return;
         }
@@ -265,7 +278,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
           <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}><X className="w-5 h-5" /></button>
         </div>
 
-        {/* Ajuste 1: VoiceHint dentro do mesmo bloco, sem <div className="mt-3"> separado */}
         {stage === 'capturing' && (
           <div className="flex flex-col gap-3">
             <CameraCapture
@@ -295,7 +307,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
               <Check className="w-4 h-4 shrink-0" />
               <span>Contrato digitalizado!</span>
-              {/* Ajuste 3: resumo contextual — páginas PDF ou só contagem de linhas */}
               <span className={`ml-auto text-xs font-normal ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
                 {getResultSummary(contratoText)}
               </span>
@@ -305,7 +316,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
               {contratoText}
             </div>
 
-            {/* QR Code — só para documentos curtos */}
             {resultQrUrl && (
               <div className="flex flex-col items-center gap-2">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar no celular:</p>

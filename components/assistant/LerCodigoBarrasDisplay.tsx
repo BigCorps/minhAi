@@ -75,8 +75,11 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // CORREÇÃO: ref para throttle do fallback edge
-  const lastFallbackRef = useRef<number | null>(null);
+  // Detectar suporte ao BarcodeDetector no browser
+  const [hasBarcodeDetector, setHasBarcodeDetector] = useState(false);
+  useEffect(() => {
+    setHasBarcodeDetector('BarcodeDetector' in window);
+  }, []);
 
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabaseEmail = createClient();
@@ -111,11 +114,8 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     } catch { /* silencioso */ }
   }, []);
 
-  // CORREÇÃO: handleCapture aceita directValue quando BarcodeDetector já leu
   const handleCapture = useCallback(async (base64: string, directValue?: string) => {
     setStage('processing');
-
-    // Parar scan ao capturar
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
@@ -126,32 +126,11 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
       let speechText: string;
 
       if (directValue) {
-        // BarcodeDetector nativo já leu — não precisa chamar a edge
+        // BarcodeDetector leu — não consome créditos
         finalResult = directValue;
-        speechText = `Código de barras lido: ${directValue}`;
+        speechText = `Código de barras lido: ${directValue.replace(/\d/g, '$& ')}`;
       } else {
-        // Tentar BarcodeDetector nativo com base64 primeiro
-        if ('BarcodeDetector' in window) {
-          try {
-            const detector = new (window as any).BarcodeDetector({
-              formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'],
-            });
-            const img = new window.Image();
-            img.src = `data:image/jpeg;base64,${base64}`;
-            await new Promise<void>(res => { img.onload = () => res(); });
-            const barcodes = await detector.detect(img);
-            if (barcodes.length > 0) {
-              finalResult = barcodes[0].rawValue;
-              speechText = `Código lido: ${finalResult}`;
-              setResult(finalResult);
-              setStage('result');
-              await generateResultQr(finalResult);
-              playText(speechText).catch(() => {});
-              return;
-            }
-          } catch { /* fallback */ }
-        }
-        // Fallback: Edge Function
+        // Captura manual → edge com GPT-4o Vision
         const res = await process('barcode', base64, data.companyId);
         finalResult = res.result;
         speechText = res.speech_text;
@@ -176,8 +155,8 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
 
     scanIntervalRef.current = setInterval(async () => {
       if (!videoRef.current || videoRef.current.readyState < 2) return;
+      if (!('BarcodeDetector' in window)) return; // sem detector → não faz nada automático
 
-      // Capturar frame atual para canvas
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
@@ -185,31 +164,19 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
       if (!ctx) return;
       ctx.drawImage(videoRef.current, 0, 0);
 
-      // Tentar BarcodeDetector nativo no canvas
-      if ('BarcodeDetector' in window) {
-        try {
-          const detector = new (window as any).BarcodeDetector({
-            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf', 'codabar'],
-          });
-          const barcodes = await detector.detect(canvas);
-          if (barcodes.length > 0) {
-            clearInterval(scanIntervalRef.current!);
-            scanIntervalRef.current = null;
-            const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-            handleCapture(base64, barcodes[0].rawValue);
-            return;
-          }
-        } catch (e) {
-          console.warn('[Barcode] BarcodeDetector falhou:', e);
+      try {
+        const detector = new (window as any).BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf', 'codabar'],
+        });
+        const barcodes = await detector.detect(canvas);
+        if (barcodes.length > 0) {
+          clearInterval(scanIntervalRef.current!);
+          scanIntervalRef.current = null;
+          const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+          handleCapture(base64, barcodes[0].rawValue);
         }
-      }
-
-      // Fallback: enviar frame para edge a cada 3s (throttle para não consumir créditos)
-      const now = Date.now();
-      if (!lastFallbackRef.current || now - lastFallbackRef.current > 3000) {
-        lastFallbackRef.current = now;
-        const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-        handleCapture(base64);
+      } catch {
+        // BarcodeDetector falhou neste frame, tentar no próximo
       }
     }, 600);
 
@@ -230,7 +197,6 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
     setResultQrUrl(null);
     setErrorMsg(null);
     setCopied(false);
-    lastFallbackRef.current = null;
     // Limpar debounce de aba ao resetar
     if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
     lastTabCommandRef.current = null;
@@ -353,7 +319,17 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
               captureRef={captureRef}
               videoRef={videoRef}
             />
-            <div className="mt-3">
+            <div className="mt-3 flex flex-col gap-2">
+              {cameraTab === 'webcam' && !hasBarcodeDetector && (
+                <p className="text-xs text-amber-400 text-center">
+                  Seu navegador não suporta leitura automática. Use o botão &quot;Fotografar&quot;.
+                </p>
+              )}
+              {cameraTab === 'webcam' && hasBarcodeDetector && (
+                <p className={`text-xs text-center ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                  Aponte o código de barras para a câmera — leitura automática ativada.
+                </p>
+              )}
               <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fotografar"', '"fechar"']} isDark={isDark} />
             </div>
           </>

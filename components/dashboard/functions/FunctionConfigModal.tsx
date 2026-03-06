@@ -7,13 +7,13 @@ import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
 import {
-  LerQRCodeConfigModal,
-  LerCodigoBarrasConfigModal,
-  ValidarCupomConfigModal,
-  ImagemEmTextoConfigModal,
-  TabelaEmTextoConfigModal,
-  ContratoEmTextoConfigModal,
-} from './CameraConfigModal';
+  LerQRCodeConfigForm,
+  LerCodigoBarrasConfigForm,
+  ValidarCupomConfigForm,
+  ImagemEmTextoConfigForm,
+  TabelaEmTextoConfigForm,
+  ContratoEmTextoConfigForm,
+} from './CameraConfigModals';
 
 // ===== FORMULÁRIOS =====
 
@@ -1301,12 +1301,12 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'wifi_qrcode':  WifiQRCodeForm,
   'cardapio':     CardapioForm,
   'nosso_qrcode': NossoQRCodeForm,
-  'ler_qrcode':          LerQRCodeConfigModal,
-  'ler_codigo_barras':   LerCodigoBarrasConfigModal,
-  'validar_cupom':       ValidarCupomConfigModal,
-  'imagem_em_texto':     ImagemEmTextoConfigModal,
-  'tabela_em_texto':     TabelaEmTextoConfigModal,
-  'contrato_em_texto':   ContratoEmTextoConfigModal,
+  'ler_qrcode':          LerQRCodeConfigForm,
+  'ler_codigo_barras':   LerCodigoBarrasConfigForm,
+  'validar_cupom':       ValidarCupomConfigForm,
+  'imagem_em_texto':     ImagemEmTextoConfigForm,
+  'tabela_em_texto':     TabelaEmTextoConfigForm,
+  'contrato_em_texto':   ContratoEmTextoConfigForm,
 };
 
 // ===== INTERFACE =====

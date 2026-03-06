@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, QrCode, Copy, ExternalLink, Check, RefreshCw, Mail, Loader2 } from 'lucide-react';
+import { X, QrCode, Copy, ExternalLink, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
@@ -33,7 +33,7 @@ const normalize = (text: string) =>
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
-      <span className="text-base flex-shrink-0">🎤</span>
+      <Mic className="w-3.5 h-3.5 shrink-0" />
       <div className="flex flex-wrap gap-x-2 gap-y-1">
         {commands.map(cmd => (
           <span key={cmd} className={`px-1.5 py-0.5 rounded font-mono text-[11px] ${isDark ? 'bg-slate-600 text-blue-300' : 'bg-gray-200 text-blue-700'}`}>
@@ -181,6 +181,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
       });
       if (error) throw error;
       playText('Resultado enviado por email.').catch(() => {});
+      setTimeout(() => onClose(), 1500);
     } catch {
       playText('Erro ao enviar email.').catch(() => {});
     } finally {
@@ -192,60 +193,71 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     try { new URL(text); return text.startsWith('http'); } catch { return false; }
   };
 
-  // ── Comandos de voz ──────────────────────────────────────────
-  const TAB_COMMANDS: Record<string, string[]> = {
-    webcam:    ['webcam', 'computador', 'camera do computador'],
-    mobile:    ['camera', 'camara', 'meu celular', 'telefone'],
-    upload:    ['arquivo', 'upload', 'galeria'],
-    companion: ['celular', 'qr code', 'qrcode', 'enviar do celular'],
-  };
-  const TAB_FEEDBACK: Record<string, string> = {
-    webcam:    'Webcam ativada. Posicionando para escanear automaticamente.',
-    mobile:    'Câmera do celular selecionada.',
-    upload:    'Selecione um arquivo de imagem.',
-    companion: 'Aponte o celular para o QR Code.',
-  };
 
   useModalVoiceCommand({
     active: true,
     onTranscript: (transcript) => {
       const t = normalize(transcript);
 
-      if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
+      // ── Universais ────────────────────────────────────────────
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
         onClose(); return;
       }
-      if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(cmd => t.includes(cmd))) {
+      if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(c => t.includes(c))) {
         playText(stage === 'result' && qrResult ? `QR Code lido: ${qrResult.slice(0, 80)}` : OPENING_TEXT).catch(() => {});
         return;
       }
+
+      // ── Troca de aba + fotografar (só em capturing) ──────────
+      if (stage === 'capturing') {
+        const TAB_MAP: Record<string, Tab> = {
+          celular:    'companion',
+          qrcode:     'companion',
+          'qr code':  'companion',
+          webcam:     'webcam',
+          computador: 'webcam',
+          camera:     'mobile',
+          camara:     'mobile',
+          arquivo:    'upload',
+          upload:     'upload',
+          galeria:    'upload',
+        };
+        const TAB_FEEDBACK: Record<Tab, string> = {
+          companion: 'Aponte o celular para o QR Code.',
+          webcam:    'Webcam ativada. Escaneando automaticamente.',
+          mobile:    'Câmera do celular selecionada.',
+          upload:    'Selecione um arquivo de imagem.',
+        };
+        for (const [trigger, tab] of Object.entries(TAB_MAP)) {
+          if (t.includes(trigger)) {
+            setCameraTab(tab);
+            playText(TAB_FEEDBACK[tab]).catch(() => {});
+            return;
+          }
+        }
+        if (['fotografar', 'tirar foto', 'capturar', 'foto', 'bater foto'].some(c => t.includes(c))) {
+          captureRef.current?.(); return;
+        }
+      }
+
+      // ── Resultado ────────────────────────────────────────────
       if (stage === 'result') {
-        if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+        if (['copiar', 'copia', 'copie'].some(c => t.includes(c))) {
           handleCopy(); return;
         }
-        if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'reiniciar'].some(cmd => t.includes(cmd))) {
+        if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'novamente'].some(c => t.includes(c))) {
           handleReset(); return;
         }
-      }
-
-      // Mudar aba por voz
-      for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
-        if (triggers.some(tr => t.includes(tr))) {
-          setCameraTab(tab as Tab);
-          playText(TAB_FEEDBACK[tab]).catch(() => {});
-          return;
+        if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
+          handleSendByEmail(); return;
         }
       }
 
-      // Fotografar manual
-      if (['fotografar', 'tirar foto', 'capturar', 'foto', 'bater foto'].some(cmd => t.includes(cmd))) {
-        captureRef.current?.();
-        return;
-      }
-
-      // Enviar por email
-      if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
-        handleSendByEmail();
-        return;
+      // ── Erro ─────────────────────────────────────────────────
+      if (stage === 'error') {
+        if (['tentar', 'novamente'].some(c => t.includes(c))) {
+          handleReset(); return;
+        }
       }
     }
   });

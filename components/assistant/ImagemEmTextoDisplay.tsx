@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Copy, Check, RefreshCw, Mail, Loader2 } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
@@ -43,7 +43,7 @@ const normalize = (text: string) =>
 function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }) {
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
-      <span className="text-base flex-shrink-0">🎤</span>
+      <Mic className="w-3.5 h-3.5 shrink-0" />
       <div className="flex flex-wrap gap-x-2 gap-y-1">
         {commands.map(cmd => (
           <span key={cmd} className={`px-1.5 py-0.5 rounded font-mono text-[11px] ${isDark ? 'bg-slate-600 text-blue-300' : 'bg-gray-200 text-blue-700'}`}>
@@ -138,6 +138,7 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
       });
       if (error) throw error;
       playText('Resultado enviado por email.').catch(() => {});
+      setTimeout(() => onClose(), 1500);
     } catch {
       playText('Erro ao enviar email.').catch(() => {});
     } finally {
@@ -170,11 +171,25 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
         playText(stage === 'result' && speechText ? speechText : OPENING_TEXT).catch(() => {});
         return;
       }
+
+      if (stage === 'capturing') {
+        for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
+          if (triggers.some(tr => t.includes(tr))) {
+            setCameraTab(tab as Tab);
+            playText(TAB_FEEDBACK[tab]).catch(() => {});
+            return;
+          }
+        }
+      }
+
       if (stage === 'result') {
         if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
           handleCopy(); return;
         }
-        if (['nova extracao', 'novo', 'outra', 'tentar novamente'].some(cmd => t.includes(cmd))) {
+        if (['ler', 'leia', 'ouvir'].some(cmd => t.includes(cmd))) {
+          playText(extractedText?.slice(0, 300) ?? '').catch(() => {}); return;
+        }
+        if (['nova extracao', 'novo', 'outra', 'tentar novamente', 'novamente'].some(cmd => t.includes(cmd))) {
           handleReset(); return;
         }
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
@@ -182,12 +197,9 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
         }
       }
 
-      // Mudar aba por voz
-      for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
-        if (triggers.some(tr => t.includes(tr))) {
-          setCameraTab(tab as Tab);
-          playText(TAB_FEEDBACK[tab]).catch(() => {});
-          return;
+      if (stage === 'error') {
+        if (['tentar', 'novamente', 'tentar novamente'].some(cmd => t.includes(cmd))) {
+          handleReset(); return;
         }
       }
     }

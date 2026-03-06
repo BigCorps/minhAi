@@ -209,6 +209,50 @@ export function ContratoEmTextoConfigModal({ isOpen, onClose, companyId, onUpdat
   );
 }
 
+// ── Form variants (sem modal wrapper) ────────────────────────
+// Usadas pelo FunctionConfigModal como FormComponent
+// Recebem { companyId, functionKey } e salvam por conta própria,
+// expondo um botão "Salvar" que substitui o footer padrão do pai.
+
+interface CameraFormProps {
+  companyId?: string;
+  functionKey?: string;
+}
+
+function CameraTabsForm({ companyId, functionKey }: CameraFormProps) {
+  const key = functionKey ?? '';
+  const { enabledTabs, setEnabledTabs, save, saving } = useEnabledTabs(companyId, key, true);
+
+  return (
+    <div>
+      <TabCheckboxes enabledTabs={enabledTabs} onChange={setEnabledTabs} />
+      <button
+        onClick={() => save()}
+        disabled={saving}
+        className="mt-6 w-full py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all"
+      >
+        {saving ? 'Salvando...' : 'Salvar configurações de abas'}
+      </button>
+    </div>
+  );
+}
+
+export function LerQRCodeConfigForm(props: CameraFormProps) {
+  return <CameraTabsForm {...props} functionKey="ler_qrcode" />;
+}
+export function LerCodigoBarrasConfigForm(props: CameraFormProps) {
+  return <CameraTabsForm {...props} functionKey="ler_codigo_barras" />;
+}
+export function ImagemEmTextoConfigForm(props: CameraFormProps) {
+  return <CameraTabsForm {...props} functionKey="imagem_em_texto" />;
+}
+export function TabelaEmTextoConfigForm(props: CameraFormProps) {
+  return <CameraTabsForm {...props} functionKey="tabela_em_texto" />;
+}
+export function ContratoEmTextoConfigForm(props: CameraFormProps) {
+  return <CameraTabsForm {...props} functionKey="contrato_em_texto" />;
+}
+
 // ── ValidarCupom mantém configuração adicional ────────────────
 
 interface Cupom {
@@ -371,6 +415,128 @@ export function ValidarCupomConfigModal({ isOpen, onClose, companyId, onUpdate }
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── ValidarCupomConfigForm (sem modal wrapper) ────────────────
+export function ValidarCupomConfigForm({ companyId, functionKey }: CameraFormProps) {
+  const [cupons, setCupons] = useState<Cupom[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [newCupom, setNewCupom] = useState<Cupom>({ code: '', discount: 10, expires_at: '', is_active: true });
+  const { enabledTabs, setEnabledTabs, save: saveTabs, saving: savingTabs } = useEnabledTabs(companyId, 'validar_cupom', true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (!companyId) return;
+    setLoading(true);
+    supabase
+      .from('cupons')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setCupons(data ?? []); setLoading(false); });
+  }, [companyId]); // eslint-disable-line
+
+  const handleAddCupom = async () => {
+    if (!newCupom.code.trim()) return;
+    setSaving(true);
+    try {
+      await supabase.from('cupons').insert({
+        company_id: companyId,
+        code: newCupom.code.trim().toUpperCase(),
+        discount: newCupom.discount,
+        expires_at: newCupom.expires_at || null,
+        is_active: newCupom.is_active,
+      });
+      setNewCupom({ code: '', discount: 10, expires_at: '', is_active: true });
+      const { data } = await supabase.from('cupons').select('*').eq('company_id', companyId).order('created_at', { ascending: false });
+      setCupons(data ?? []);
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from('cupons').delete().eq('id', id);
+    setCupons(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleToggle = async (id: string, is_active: boolean) => {
+    await supabase.from('cupons').update({ is_active: !is_active }).eq('id', id);
+    setCupons(prev => prev.map(c => c.id === id ? { ...c, is_active: !is_active } : c));
+  };
+
+  return (
+    <div>
+      <TabCheckboxes enabledTabs={enabledTabs} onChange={setEnabledTabs} />
+
+      <div className="border-t dark:border-slate-700 my-6" />
+
+      {/* Novo cupom */}
+      <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-4 mb-4">
+        <h4 className="text-sm font-semibold dark:text-white mb-3">Novo Cupom</h4>
+        <div className="flex flex-col gap-3">
+          <input
+            value={newCupom.code}
+            onChange={e => setNewCupom(p => ({ ...p, code: e.target.value.toUpperCase() }))}
+            placeholder="CÓDIGO (ex: DESCONTO10)"
+            className="w-full border rounded-lg px-3 py-2 text-sm font-mono dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+          />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Desconto (%)</label>
+              <input type="number" min={1} max={100} value={newCupom.discount}
+                onChange={e => setNewCupom(p => ({ ...p, discount: Number(e.target.value) }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500 dark:text-slate-400 mb-1 block">Expira em</label>
+              <input type="date" value={newCupom.expires_at}
+                onChange={e => setNewCupom(p => ({ ...p, expires_at: e.target.value }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+            </div>
+          </div>
+          <button onClick={handleAddCupom} disabled={saving || !newCupom.code.trim()}
+            className="flex items-center justify-center gap-2 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+            <Plus className="w-4 h-4" />
+            {saving ? 'Adicionando...' : 'Adicionar Cupom'}
+          </button>
+        </div>
+      </div>
+
+      {/* Lista de cupons */}
+      {loading ? (
+        <div className="text-center py-4 text-sm text-gray-500">Carregando...</div>
+      ) : cupons.length === 0 ? (
+        <div className="text-center py-4 text-sm text-gray-400 dark:text-slate-500">Nenhum cupom cadastrado.</div>
+      ) : (
+        <div className="flex flex-col gap-2 mb-4">
+          {cupons.map(cupom => (
+            <div key={cupom.id} className={`flex items-center justify-between p-3 rounded-xl border ${cupom.is_active ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' : 'border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-800'}`}>
+              <div className="flex flex-col">
+                <span className="font-mono font-bold text-sm dark:text-white">{cupom.code}</span>
+                <span className="text-xs text-gray-500 dark:text-slate-400">
+                  {cupom.discount}% off{cupom.expires_at ? ` · expira ${new Date(cupom.expires_at).toLocaleDateString('pt-BR')}` : ''}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => handleToggle(cupom.id!, cupom.is_active)}
+                  className={`text-xs px-2 py-1 rounded-lg font-medium ${cupom.is_active ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                  {cupom.is_active ? 'Ativo' : 'Inativo'}
+                </button>
+                <button onClick={() => handleDelete(cupom.id!)} className="text-red-400 hover:text-red-600">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={() => saveTabs()} disabled={savingTabs}
+        className="w-full py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all">
+        {savingTabs ? 'Salvando...' : 'Salvar configurações de abas'}
+      </button>
     </div>
   );
 }

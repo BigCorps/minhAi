@@ -184,7 +184,7 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
         body: { company_id: data.companyId, subject: 'Resultado: Tabela em Texto', body: content },
       });
       if (error) throw error;
-      playText('Resultado enviado por email.').catch(() => {});
+      playText('enviado.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {
       playText('Erro ao enviar email.').catch(() => {});

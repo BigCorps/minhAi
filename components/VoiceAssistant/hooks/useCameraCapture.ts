@@ -1,7 +1,5 @@
 'use client';
-
 import { useState, useCallback, useEffect } from 'react';
-
 export interface UseCameraCaptureReturn {
   mode: 'idle' | 'webcam' | 'mobile' | 'upload';
   setMode: (mode: 'idle' | 'webcam' | 'mobile' | 'upload') => void;
@@ -11,33 +9,33 @@ export interface UseCameraCaptureReturn {
   error: string | null;
   setError: (e: string | null) => void;
   stream: MediaStream | null;
-  startWebcam: () => Promise<void>;
+  facingMode: 'user' | 'environment';
+  startWebcam: (facingMode?: 'user' | 'environment') => Promise<void>;
   stopWebcam: () => void;
   captureFromWebcam: (videoRef: React.RefObject<HTMLVideoElement>) => string | null;
   handleFileUpload: (file: File) => void;
   handleMobileCapture: (file: File) => void;
   clearCapture: () => void;
+  flipCamera: () => Promise<void>;
 }
-
 export function useCameraCapture(): UseCameraCaptureReturn {
   const [mode, setMode] = useState<'idle' | 'webcam' | 'mobile' | 'upload'>('idle');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   // Limpar stream ao desmontar
   useEffect(() => {
     return () => {
       if (stream) stream.getTracks().forEach(t => t.stop());
     };
   }, [stream]);
-
-  const startWebcam = useCallback(async () => {
+  const startWebcam = useCallback(async (facingMode: 'user' | 'environment' = 'environment') => {
     setError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       setStream(s);
       setMode('webcam');
@@ -51,7 +49,15 @@ export function useCameraCapture(): UseCameraCaptureReturn {
       }
     }
   }, []);
-
+  const flipCamera = useCallback(async () => {
+    const next = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(next);
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      setStream(null);
+    }
+    await startWebcam(next);
+  }, [facingMode, stream, startWebcam]);
   const stopWebcam = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
@@ -59,7 +65,6 @@ export function useCameraCapture(): UseCameraCaptureReturn {
     }
     setMode('idle');
   }, [stream]);
-
   const captureFromWebcam = useCallback(
     (videoRef: React.RefObject<HTMLVideoElement>): string | null => {
       if (!videoRef.current) return null;
@@ -74,7 +79,6 @@ export function useCameraCapture(): UseCameraCaptureReturn {
     },
     [stopWebcam]
   );
-
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -82,10 +86,11 @@ export function useCameraCapture(): UseCameraCaptureReturn {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-
   const handleFileUpload = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setError('Selecione um arquivo de imagem.');
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) {
+      setError('Selecione uma imagem ou PDF.');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -96,19 +101,16 @@ export function useCameraCapture(): UseCameraCaptureReturn {
     setCapturedImage(base64);
     setMode('upload');
   }, []);
-
   const handleMobileCapture = useCallback(async (file: File) => {
     const base64 = await fileToBase64(file);
     setCapturedImage(base64);
     setMode('mobile');
   }, []);
-
   const clearCapture = useCallback(() => {
     setCapturedImage(null);
     setMode('idle');
     setError(null);
   }, []);
-
   return {
     mode,
     setMode,
@@ -118,11 +120,13 @@ export function useCameraCapture(): UseCameraCaptureReturn {
     error,
     setError,
     stream,
+    facingMode,
     startWebcam,
     stopWebcam,
     captureFromWebcam,
     handleFileUpload,
     handleMobileCapture,
     clearCapture,
+    flipCamera,
   };
 }

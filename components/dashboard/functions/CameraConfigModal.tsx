@@ -77,28 +77,33 @@ function useEnabledTabs(companyId: string | undefined, functionKey: string, isOp
 
   useEffect(() => {
     if (!isOpen || !companyId) return;
-    supabase
-      .from('assistant_functions')
-      .select('config')
-      .eq('company_id', companyId)
-      .eq('function_key', functionKey)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.config?.enabled_tabs) {
-          setEnabledTabs(data.config.enabled_tabs);
-        }
-      });
+supabase
+  .from('company_function_settings')
+  .select('config')
+  .eq('company_id', companyId)
+  .eq('function_key', functionKey)
+  .maybeSingle()
+  .then(({ data }) => {
+    if (data?.config?.enabled_tabs) {
+      setEnabledTabs(data.config.enabled_tabs);
+    }
+  });
   }, [isOpen, companyId, functionKey]); // eslint-disable-line
 
   const save = async (onUpdate?: () => void, onClose?: () => void) => {
     if (!companyId) return;
     setSaving(true);
     try {
-      await supabase
-        .from('assistant_functions')
-        .update({ config: { enabled_tabs: enabledTabs } })
-        .eq('company_id', companyId)
-        .eq('function_key', functionKey);
+await supabase
+  .from('company_function_settings')
+  .upsert(
+    {
+      company_id: companyId,
+      function_key: functionKey,
+      config: { enabled_tabs: enabledTabs },
+    },
+    { onConflict: 'company_id,function_key' }
+  );
       onUpdate?.();
       onClose?.();
     } finally {

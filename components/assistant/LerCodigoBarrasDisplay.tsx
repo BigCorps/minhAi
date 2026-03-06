@@ -211,7 +211,7 @@ export default function LerCodigoBarrasDisplay({ data, onClose, theme = 'dark', 
         body: { company_id: data.companyId, subject: 'Resultado: Ler Código de Barras', body: result },
       });
       if (error) throw error;
-      playText('Resultado enviado por email.').catch(() => {});
+      playText('email enviado.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {
       playText('Erro ao enviar email.').catch(() => {});

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, QrCode, Copy, ExternalLink, Check, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
@@ -14,6 +14,7 @@ interface Props {
   playText: (text: string) => Promise<void>;
 }
 
+type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
 
 // ── Textos de voz ────────────────────────────────────────────────
@@ -50,6 +51,14 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   const [resultQrUrl, setResultQrUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Estado da aba elevado para o modal
+  const [cameraTab, setCameraTab] = useState<Tab>('webcam');
+
+  // Refs para captura externa e scan automático
+  const captureRef = useRef<(() => void) | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ── Auto-close após resultado ────────────────────────────────
   useEffect(() => {
@@ -108,6 +117,36 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     }
   }, [generateResultQr, playText]);
 
+  // ── Escaneamento automático via webcam ───────────────────────
+  useEffect(() => {
+    if (stage !== 'capturing' || cameraTab !== 'webcam') {
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+      return;
+    }
+
+    scanIntervalRef.current = setInterval(async () => {
+      if (!videoRef.current || videoRef.current.readyState < 2) return;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+      const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+
+      const jsQR = (await import('jsqr')).default;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imgData.data, imgData.width, imgData.height);
+      if (code?.data) {
+        clearInterval(scanIntervalRef.current!);
+        handleCapture(base64);
+      }
+    }, 800);
+
+    return () => { if (scanIntervalRef.current) clearInterval(scanIntervalRef.current); };
+  }, [stage, cameraTab, handleCapture]);
+
   const handleCopy = useCallback(async () => {
     if (!qrResult) return;
     await navigator.clipboard.writeText(qrResult);
@@ -131,28 +170,56 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   };
 
   // ── Comandos de voz ──────────────────────────────────────────
-useModalVoiceCommand({
-  active: true,
-  onTranscript: (transcript) => {
-    const t = normalize(transcript);
+  const TAB_COMMANDS: Record<string, string[]> = {
+    webcam:    ['webcam', 'computador', 'camera do computador'],
+    mobile:    ['camera', 'camara', 'meu celular', 'telefone'],
+    upload:    ['arquivo', 'upload', 'galeria'],
+    companion: ['celular', 'qr code', 'qrcode', 'enviar do celular'],
+  };
+  const TAB_FEEDBACK: Record<string, string> = {
+    webcam:    'Webcam ativada. Posicionando para escanear automaticamente.',
+    mobile:    'Câmera do celular selecionada.',
+    upload:    'Selecione um arquivo de imagem.',
+    companion: 'Aponte o celular para o QR Code.',
+  };
 
-    if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
-      onClose(); return;
-    }
-    if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(cmd => t.includes(cmd))) {
-      playText(stage === 'result' && qrResult ? `QR Code lido: ${qrResult.slice(0, 80)}` : OPENING_TEXT).catch(() => {});
-      return;
-    }
-    if (stage === 'result') {
-      if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
-        handleCopy(); return;
+  useModalVoiceCommand({
+    active: true,
+    onTranscript: (transcript) => {
+      const t = normalize(transcript);
+
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(cmd => t.includes(cmd))) {
+        onClose(); return;
       }
-      if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'reiniciar'].some(cmd => t.includes(cmd))) {
-        handleReset(); return;
+      if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(cmd => t.includes(cmd))) {
+        playText(stage === 'result' && qrResult ? `QR Code lido: ${qrResult.slice(0, 80)}` : OPENING_TEXT).catch(() => {});
+        return;
+      }
+      if (stage === 'result') {
+        if (['copiar', 'copia', 'copie'].some(cmd => t.includes(cmd))) {
+          handleCopy(); return;
+        }
+        if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'reiniciar'].some(cmd => t.includes(cmd))) {
+          handleReset(); return;
+        }
+      }
+
+      // Mudar aba por voz
+      for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
+        if (triggers.some(tr => t.includes(tr))) {
+          setCameraTab(tab as Tab);
+          playText(TAB_FEEDBACK[tab]).catch(() => {});
+          return;
+        }
+      }
+
+      // Fotografar manual
+      if (['fotografar', 'tirar foto', 'capturar', 'foto', 'bater foto'].some(cmd => t.includes(cmd))) {
+        captureRef.current?.();
+        return;
       }
     }
-  }
-});
+  });
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
@@ -170,9 +237,20 @@ useModalVoiceCommand({
 
         {stage === 'capturing' && (
           <>
-            <CameraCapture onCapture={handleCapture} onCancel={onClose} theme={theme} companyId={data.companyId} instructions="Aponte a câmera para o QR Code e fotografe." />
+            <CameraCapture
+              onCapture={handleCapture}
+              onCancel={onClose}
+              theme={theme}
+              companyId={data.companyId}
+              instructions="Aponte a câmera para o QR Code e fotografe."
+              defaultTab="webcam"
+              activeTab={cameraTab}
+              onTabChange={setCameraTab}
+              captureRef={captureRef}
+              videoRef={videoRef}
+            />
             <div className="mt-3">
-              <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+              <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fotografar"', '"fechar"']} isDark={isDark} />
             </div>
           </>
         )}
@@ -194,7 +272,6 @@ useModalVoiceCommand({
               {qrResult}
             </div>
 
-            {/* QR Code do resultado — para totens */}
             {resultQrUrl && (
               <div className="flex flex-col items-center gap-2">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar no seu celular:</p>

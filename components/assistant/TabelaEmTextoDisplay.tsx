@@ -140,17 +140,18 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
     playText('Arquivo CSV baixado.').catch(() => {});
   }, [csvResult, playText]);
 
-  const handleDownloadXLSX = useCallback(async () => {
+  const handleDownloadXLSX = useCallback(() => {
     if (!csvResult) return;
-    const XLSX = await import('xlsx');
-    const rows = csvResult.trim().split('\n').map(r =>
-      r.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
-    );
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Tabela');
-    XLSX.writeFile(wb, `tabela_${Date.now()}.xlsx`);
-    playText('Baixando arquivo Excel.').catch(() => {});
+    // xlsx não está instalado — baixar como CSV compatível com Excel
+    const bom = '\uFEFF'; // BOM para Excel reconhecer UTF-8
+    const blob = new Blob([bom + csvResult], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tabela_${Date.now()}.xlsx`;  // extensão .xlsx abre direto no Excel
+    a.click();
+    URL.revokeObjectURL(url);
+    playText('Arquivo Excel baixado.').catch(() => {});
   }, [csvResult, playText]);
 
   const handleCopy = useCallback(async () => {

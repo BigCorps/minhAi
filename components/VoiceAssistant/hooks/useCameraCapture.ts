@@ -31,7 +31,7 @@ export function useCameraCapture(): UseCameraCaptureReturn {
       if (stream) stream.getTracks().forEach(t => t.stop());
     };
   }, [stream]);
-  const startWebcam = useCallback(async (facingMode: 'user' | 'environment' = 'environment') => {
+  const startWebcam = useCallback(async (facingMode: 'user' | 'environment' = 'user') => {
     setError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({

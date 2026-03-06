@@ -79,7 +79,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'wifi_qrcode',
   'cardapio',
   'nosso_qrcode',
-  'validar_cupom'
+  'validar_cupom',
   'imagem_em_texto',
   'tabela_em_texto',
   'ler_qrcode',

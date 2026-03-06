@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import * as XLSX from 'xlsx';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
@@ -141,9 +140,9 @@ export default function TabelaEmTextoDisplay({ data, onClose, theme = 'dark', pl
     playText('Arquivo CSV baixado.').catch(() => {});
   }, [csvResult, playText]);
 
-  // 7. Download .xlsx com SheetJS
-  const handleDownloadXLSX = useCallback(() => {
+  const handleDownloadXLSX = useCallback(async () => {
     if (!csvResult) return;
+    const XLSX = await import('xlsx');
     const rows = csvResult.trim().split('\n').map(r =>
       r.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
     );

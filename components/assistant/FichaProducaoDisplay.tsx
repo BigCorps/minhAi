@@ -586,7 +586,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6 }}>
-                <ClipboardCheck style={{ width: 18, height: 18, color: '#fff' }} />
+                <Clipboard style={{ width: 18, height: 18, color: '#fff' }} />
               </div>
               <div>
                 <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Fichas de Producao</p>
@@ -628,7 +628,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
                   <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 8 }}>
-                    <ClipboardCheck style={{ width: 22, height: 22, color: '#fff' }} />
+                    <Clipboard style={{ width: 22, height: 22, color: '#fff' }} />
                   </div>
                   <div>
                     <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>Fichas de</p>

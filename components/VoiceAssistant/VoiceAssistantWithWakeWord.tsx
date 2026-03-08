@@ -618,6 +618,16 @@ case 'contrato_em_texto':
           playText('Diga o conteúdo e quando acabar, diga CONCLUIR.').catch(() => {});
           break;
 
+case 'fichas_producao':
+  setActiveModal({
+    type: 'FichaProducaoDisplay',
+    data: {
+      companyId: company.id,
+      prefilled: transcript ? { nome: transcript } : undefined,
+    },
+  });
+  break;
+
 case 'agendar_compromisso':
   // ✅ Abre modal de criar evento no calendário
   await stopGoogleSpeech(); // Para o listener global

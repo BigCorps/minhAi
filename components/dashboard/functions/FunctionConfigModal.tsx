@@ -1273,33 +1273,44 @@ const NossaMarcaForm = ({ settings, onChange }: any) => (
   </div>
 );
 
-const FichasProducaoForm = () => (
-  <div className="space-y-4">
-    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-      <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
-        Fichas de Producao
-      </p>
-      <p className="text-sm text-blue-700 dark:text-blue-300">
-        Esta funcao nao requer configuracoes adicionais. Cada empresa cria e gerencia suas proprias fichas diretamente pelo assistente ou pelo dashboard.
-      </p>
+const FichasProducaoForm = ({ companyId }: any) => {
+  const router = useRouter();
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
+          Fichas de Producao
+        </p>
+        <p className="text-sm text-blue-700 dark:text-blue-300">
+          Gerencie suas fichas técnicas, ingredientes e preços diretamente no dashboard.
+        </p>
+      </div>
+      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10 space-y-2">
+        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Como usar:</p>
+        <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+          <li>• Diga "criar ficha" ou "nova receita" para o assistente</li>
+          <li>• O assistente gera uma ficha base automaticamente</li>
+          <li>• Corrija quantidades e precos por voz ou manualmente</li>
+          <li>• Custa 3 créditos por ficha salva</li>
+        </ul>
+      </div>
+      <button
+        type="button"
+        onClick={() => router.push(`/dashboard/fichas?company=${companyId}`)}
+        className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2"
+      >
+        <ExternalLink size={16} />
+        Abrir Fichas de Producao no Dashboard
+      </button>
+      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
+        <p className="text-xs text-yellow-800 dark:text-yellow-300">
+          Precos estimados pela IA são marcados com aviso. Confirme com seus fornecedores antes de tomar decisões financeiras.
+        </p>
+      </div>
     </div>
-    <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10 space-y-2">
-      <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Como usar:</p>
-      <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-        <li>• Diga "criar ficha" ou "nova receita" para o assistente</li>
-        <li>• O assistente gera uma ficha base automaticamente</li>
-        <li>• Corrija quantidades e precos por voz ou manualmente</li>
-        <li>• Confirme para salvar — custa 3 creditos por ficha</li>
-        <li>• Gerencie todas as fichas em Dashboard / Fichas de Producao</li>
-      </ul>
-    </div>
-    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
-      <p className="text-xs text-yellow-800 dark:text-yellow-300">
-        Precos estimados pela IA sao marcados com aviso. Confirme sempre com seus fornecedores antes de tomar decisoes financeiras.
-      </p>
-    </div>
-  </div>
-);
+  );
+};
 
 // ===== MAPEAMENTO: function_key → componente =====
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {

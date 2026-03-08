@@ -622,7 +622,7 @@ case 'fichas_producao':
   setActiveModal({
     type: 'FichaProducaoDisplay',
     data: {
-      companyId: company.id,
+      companyId,
       prefilled: transcript ? { nome: transcript } : undefined,
     },
   });

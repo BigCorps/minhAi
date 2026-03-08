@@ -84,7 +84,14 @@ const CONFIGURABLE_FUNCTIONS = [
   'tabela_em_texto',
   'ler_qrcode',
   'ler_codigo_barras',
-  'contrato_em_texto'
+  'contrato_em_texto',
+  'fichas_producao',
+  'cancelar_agendamento',
+  'confirmar_presenca',
+  'reagendar_compromisso',
+  'horarios_disponiveis',
+  'tef_debito',
+  'tef_credito'
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

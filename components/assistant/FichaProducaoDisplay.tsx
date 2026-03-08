@@ -586,7 +586,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6 }}>
-                <Clipboard style={{ width: 18, height: 18, color: '#fff' }} />
+                <Clipboard size={18} color="#fff" />
               </div>
               <div>
                 <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Fichas de Producao</p>
@@ -601,7 +601,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
               onClick={handleClose}
               style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer' }}
             >
-              <X style={{ width: 18, height: 18, color: '#fff' }} />
+              <X size={18} color="#fff" />
             </button>
           </div>
 
@@ -628,7 +628,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
                   <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 8 }}>
-                    <Clipboard style={{ width: 22, height: 22, color: '#fff' }} />
+                    <Clipboard size={22} color="#fff" />
                   </div>
                   <div>
                     <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>Fichas de</p>
@@ -685,7 +685,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   )}
                   {temEstimativas && (
                     <div style={{ background: 'rgba(234,179,8,0.2)', borderRadius: 10, padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <AlertTriangle style={{ width: 14, height: 14, color: '#fde047', flexShrink: 0, marginTop: 1 }} />
+                      <AlertTriangle size={14} color="#fde047" />
                       <p style={{ color: '#fde047', fontSize: 11, margin: 0 }}>Contém estimativas de IA</p>
                     </div>
                   )}
@@ -835,7 +835,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                                         padding: 4, borderRadius: 6, color: C.textMuted,
                                       }}
                                     >
-                                      <Trash2 style={{ width: 14, height: 14 }} />
+                                      <Trash2 size={14} />
                                     </button>
                                   </td>
                                 </tr>
@@ -887,7 +887,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                           cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
                         }}
                       >
-                        <Plus style={{ width: 15, height: 15 }} /> Adicionar
+                        <Plus size={15} /> Adicionar
                       </button>
                     </div>
 
@@ -897,7 +897,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                         padding: '10px 14px', borderRadius: 10,
                         background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)',
                       }}>
-                        <AlertTriangle style={{ width: 15, height: 15, color: '#eab308', flexShrink: 0, marginTop: 1 }} />
+                        <AlertTriangle size={15} color="#eab308" />
                         <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
                       </div>
                     )}
@@ -991,7 +991,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                         padding: '10px 14px', borderRadius: 10,
                         background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)',
                       }}>
-                        <AlertTriangle style={{ width: 15, height: 15, color: '#eab308', flexShrink: 0, marginTop: 1 }} />
+                        <AlertTriangle size={15} color="#eab308" />
                         <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
                       </div>
                     )}
@@ -1002,7 +1002,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                 {estagio === 'saved' && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '16px 0' }}>
                     <div style={{ background: 'rgba(34,197,94,0.15)', borderRadius: '50%', padding: 20 }}>
-                      <CheckCircle style={{ width: 48, height: 48, color: '#4ade80' }} />
+                      <CheckCircle size={48} color="#4ade80" />
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: C.text }}>Ficha salva com sucesso!</p>
@@ -1027,7 +1027,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                           border: `1px solid ${C.btnOutline.border}`, color: C.btnOutline.text,
                         }}
                       >
-                        <FileText style={{ width: 16, height: 16 }} /> Exportar PDF
+                        <FileText size={16} /> Exportar PDF
                       </button>
                       {fichaIdSalva && (
                         <a
@@ -1038,7 +1038,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                           }}
                         >
-                          <ExternalLink style={{ width: 16, height: 16 }} /> Ver no Dashboard
+                          <ExternalLink size={16} /> Ver no Dashboard
                         </a>
                       )}
                     </div>
@@ -1048,7 +1048,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                         padding: '10px 14px', borderRadius: 10,
                         background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)',
                       }}>
-                        <AlertTriangle style={{ width: 15, height: 15, color: '#eab308', flexShrink: 0, marginTop: 1 }} />
+                        <AlertTriangle size={15} color="#eab308" />
                         <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
                       </div>
                     )}
@@ -1078,7 +1078,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                         }}
                       >
-                        <CheckCircle style={{ width: 16, height: 16 }} /> Revisar Ficha
+                        <CheckCircle size={16} /> Revisar Ficha
                       </button>
                     )}
                     {estagio === 'reviewing' && (
@@ -1113,7 +1113,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                               Salvando...
                             </>
                           ) : (
-                            <><Save style={{ width: 16, height: 16 }} /> Salvar Ficha (3 creditos)</>
+                            <><Save size={16} /> Salvar Ficha (3 creditos)</>
                           )}
                         </button>
                       </>

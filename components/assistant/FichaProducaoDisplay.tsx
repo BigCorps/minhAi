@@ -9,10 +9,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  X, ClipboardList, Plus, Trash2, CheckCircle,
-  FileText, AlertTriangle, Save, ExternalLink,
-} from 'lucide-react';
+import { X, Mail, Calendar, Settings, AlertCircle, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 import { createClient } from '@/lib/supabase-browser';

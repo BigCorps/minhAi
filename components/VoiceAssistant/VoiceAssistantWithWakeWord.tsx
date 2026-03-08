@@ -623,7 +623,6 @@ case 'fichas_producao':
     type: 'FichaProducaoDisplay',
     data: {
       companyId,
-      prefilled: transcript ? { nome: transcript } : undefined,
     },
   });
   break;

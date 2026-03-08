@@ -34,6 +34,7 @@ import ValidarCupomDisplay from '@/components/assistant/ValidarCupomDisplay';
 import ImagemEmTextoDisplay from '@/components/assistant/ImagemEmTextoDisplay';
 import TabelaEmTextoDisplay from '@/components/assistant/TabelaEmTextoDisplay';
 import ContratoEmTextoDisplay from '@/components/assistant/ContratoEmTextoDisplay';
+import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -68,6 +69,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ImagemEmTextoDisplay': ImagemEmTextoDisplay,
   'TabelaEmTextoDisplay': TabelaEmTextoDisplay,
   'ContratoEmTextoDisplay': ContratoEmTextoDisplay,
+  'FichaProducaoDisplay': FichaProducaoDisplay,
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

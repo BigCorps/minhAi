@@ -69,7 +69,7 @@ interface FichaProducaoDisplayProps {
 // ─────────────────────────────────────────────────────────────
 
 const OPENING_TEXT =
-  'Vou ajudar voce a criar a estimativa correta da sua produçāo. Me diga o nome da receita. Por exemplo: pizza de mussarela, molho de tomate, ou qualquer outra receita.';
+  'Vou ajudar voce a criar a estimativa correta da sua producao. Me diga o nome da receita. Por exemplo: pizza de mussarela, molho de tomate, ou qualquer outra receita.';
 
 const AVISO_ESTIMATIVAS =
   'Esta ficha contém estimativas de IA. Confirme os preços com seus fornecedores antes de tomar decisões financeiras.';
@@ -619,44 +619,31 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
   // ─────────────────────────────────────────────────────────
 
   return createPortal(
-    <>
-      {/* Overlay */}
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
-        onClick={handleClose}
-      />
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center md:items-center bg-black/70 backdrop-blur-sm p-0 md:p-4">
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 10000, padding: '10px 18px', borderRadius: 12, fontSize: 13,
+          fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8,
+          background: toastStyle.bg, color: toastStyle.text, border: `1px solid ${toastStyle.border}`,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+        }}>
+          {toast.msg}
+        </div>
+      )}
 
       {/* Modal */}
       <div
         onClick={e => e.stopPropagation()}
-        style={isMobile ? {
-          position: 'fixed', zIndex: 9999,
-          bottom: 0, left: 0, right: 0,
-          maxHeight: '92vh', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column',
-        } : {
-          position: 'fixed', zIndex: 9999,
-          top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '100%', maxWidth: 860, padding: '0 16px',
-        }}
+        className="relative w-full md:max-w-3xl rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row"
+        style={{ background: C.bg, border: `1px solid ${C.border}`, maxHeight: '92vh' }}
       >
-        <div style={{
-          background: C.bg,
-          border: `1px solid ${C.border}`,
-          borderRadius: isMobile ? '16px 16px 0 0' : 16,
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          maxHeight: isMobile ? '92vh' : '88vh',
-          overflow: 'hidden',
-          flex: isMobile ? 1 : undefined,
-          minHeight: isMobile ? 0 : undefined,
-        }}>
-
-          {/* ── Sidebar azul (desktop) ── */}
-          {!isMobile && <div style={{ background: '#1d4ed8', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 220, flexShrink: 0, padding: 24 }}>
+        {/* ── Sidebar azul (desktop only) ── */}
+        {!isMobile && (
+          <div style={{ background: '#1d4ed8', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 220, flexShrink: 0, padding: 24 }}>
             <div>
-              {/* Título */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
                 <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 8, lineHeight: 0 }}>
                   <IconClipboard size={22} color="#fff" />
@@ -666,8 +653,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>Producao</p>
                 </div>
               </div>
-
-              {/* Stepper */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {estagios.map((e, i) => {
                   const isActive = estagio === e;
@@ -683,10 +668,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                       }}>
                         {isDone ? '✓' : i + 1}
                       </div>
-                      <span style={{
-                        fontSize: 13, fontWeight: 500,
-                        color: isDone ? '#86efac' : isActive ? '#fff' : 'rgba(255,255,255,0.35)',
-                      }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: isDone ? '#86efac' : isActive ? '#fff' : 'rgba(255,255,255,0.35)' }}>
                         {estagioLabels[i]}
                       </span>
                     </div>
@@ -694,8 +676,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                 })}
               </div>
             </div>
-
-            {/* Resumo financeiro */}
             {ficha.itens.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
                 <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 14px' }}>
@@ -722,178 +702,87 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                 )}
               </div>
             )}
-          </div>}
+          </div>
+        )}
 
-          {/* ── Coluna principal ── */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* ── Coluna principal ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
 
-            {/* Header — condicional por JS, não CSS */}
-            {isMobile ? (
-              <div style={{ background: '#1d4ed8', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6, lineHeight: 0 }}>
-                    <IconClipboard size={18} color="#fff" />
-                  </div>
-                  <div>
+          {/* Header */}
+          <div style={isMobile
+            ? { background: '#1d4ed8', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }
+            : { padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${C.border}` }
+          }>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {isMobile && (
+                <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6, lineHeight: 0 }}>
+                  <IconClipboard size={18} color="#fff" />
+                </div>
+              )}
+              <div>
+                {isMobile ? (
+                  <>
                     <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Fichas de Producao</p>
                     <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: 0 }}>
                       {estagio === 'collecting' && 'Coletando ingredientes...'}
                       {estagio === 'reviewing'  && 'Revisao final'}
                       {estagio === 'saved'      && ficha.nome}
                     </p>
-                  </div>
-                </div>
-                <button onClick={handleClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', lineHeight: 0 }}>
-                  <IconX size={18} color="#fff" />
-                </button>
+                  </>
+                ) : (
+                  <>
+                    <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
+                      {estagio === 'saved' ? 'Ficha Salva!' : estagio === 'reviewing' ? 'Revisao Final' : 'Coletando Ingredientes'}
+                    </h2>
+                    {ficha.nome && <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>}
+                  </>
+                )}
               </div>
-            ) : (
-              <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
+            </div>
+            <button
+              onClick={handleClose}
+              style={isMobile
+                ? { background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', lineHeight: 0 }
+                : { background: 'none', border: 'none', cursor: 'pointer', padding: 8, borderRadius: 8, lineHeight: 0 }
+              }
+            >
+              <IconX size={18} color={isMobile ? '#fff' : C.textMuted} />
+            </button>
+          </div>
+
+          {/* Conteúdo scrollável */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* ══ COLLECTING ══ */}
+            {estagio === 'collecting' && (
+              <>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
-                    {estagio === 'saved' ? 'Ficha Salva!' : estagio === 'reviewing' ? 'Revisao Final' : 'Coletando Ingredientes'}
-                  </h2>
-                  {ficha.nome && <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>}
+                  <label style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, display: 'block', marginBottom: 4 }}>Nome da receita</label>
+                  <input
+                    value={ficha.nome}
+                    onChange={e => setFicha(prev => ({ ...prev, nome: e.target.value }))}
+                    placeholder="Ex: Pizza de Mussarela"
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 14, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none', boxSizing: 'border-box' }}
+                  />
                 </div>
-                <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, borderRadius: 8, lineHeight: 0 }}>
-                  <IconX size={18} color={C.textMuted} />
-                </button>
-              </div>
-            )}
 
-            {/* Toast */}
-            {toast && (
-              <div style={{ margin: '12px 20px 0', padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500, flexShrink: 0, background: toastStyle.bg, color: toastStyle.text, border: `1px solid ${toastStyle.border}` }}>
-                {toast.msg}
-              </div>
-            )}
-
-            {/* Conteúdo scrollável */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-              {/* ══ COLLECTING ══ */}
-              {estagio === 'collecting' && (
-                <>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, display: 'block', marginBottom: 4 }}>Nome da receita</label>
-                    <input
-                      value={ficha.nome}
-                      onChange={e => setFicha(prev => ({ ...prev, nome: e.target.value }))}
-                      placeholder="Ex: Pizza de Mussarela"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 14, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none', boxSizing: 'border-box' }}
-                    />
+                {isLoadingIA && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)' }}>
+                    <Spinner size={16} color="#3b82f6" />
+                    <span style={{ fontSize: 13, color: '#60a5fa' }}>Criando ficha base com IA...</span>
+                    {streamingItem && <span style={{ fontSize: 12, color: '#93c5fd' }}>Adicionando: {streamingItem}...</span>}
                   </div>
+                )}
 
-                  {isLoadingIA && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)' }}>
-                      <Spinner size={16} color="#3b82f6" />
-                      <span style={{ fontSize: 13, color: '#60a5fa' }}>Criando ficha base com IA...</span>
-                    </div>
-                  )}
-
-                  {streamingItem && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: C.bgTertiary, fontSize: 13, color: C.textMuted }}>
-                      <Spinner size={12} color="#60a5fa" />
-                      Adicionando: <strong style={{ color: C.text }}>{streamingItem}</strong>
-                    </div>
-                  )}
-
-                  {ficha.itens.length > 0 && (
-                    <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}` }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                        <thead>
-                          <tr style={{ background: C.bgSecondary }}>
-                            <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Ingrediente</th>
-                            <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Qtd</th>
-                            <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>R$/un</th>
-                            <th style={{ width: 32 }} />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {ficha.itens.map(item => {
-                            const isEst = item.source !== 'user_input';
-                            return (
-                              <tr key={item.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                                <td style={{ padding: '8px 12px', fontWeight: 500, fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>
-                                  {item.ingrediente_nome}
-                                  {isEst && <span style={{ marginLeft: 4, fontSize: 10, color: '#eab308' }}>est.</span>}
-                                </td>
-                                <td style={{ padding: '8px 12px', textAlign: 'right', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>
-                                  {item.quantidade}{item.unidade}
-                                </td>
-                                <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                                  <input
-                                    type="number" min="0" step="0.01"
-                                    value={item.preco_por_unidade}
-                                    onChange={e => atualizarPreco(item.id, parseFloat(e.target.value) || 0)}
-                                    style={{ width: 72, textAlign: 'right', padding: '2px 6px', borderRadius: 6, fontSize: 12, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
-                                  />
-                                </td>
-                                <td style={{ padding: '4px 8px' }}>
-                                  <button onClick={() => removerItem(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, lineHeight: 0, color: C.textMuted }}>
-                                    <IconTrash size={14} color={C.textMuted} />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* Custo parcial mobile */}
-                  {ficha.itens.length > 0 && (
-                    <div style={{ display: isMobile ? 'flex' : 'none', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 12, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
-                      <span style={{ fontSize: 13, color: C.textMuted }}>Custo parcial</span>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: '#3b82f6' }}>{fmt(resultado.custo_total)}</span>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      value={novoItem}
-                      onChange={e => setNovoItem(e.target.value)}
-                      placeholder='Ex: "mussarela 280g" ou diga em voz alta'
-                      onKeyDown={e => { if (e.key === 'Enter' && novoItem.trim()) { adicionarIngrediente(novoItem); setNovoItem(''); } }}
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
-                    />
-                    <button
-                      onClick={() => { if (novoItem.trim()) { adicionarIngrediente(novoItem); setNovoItem(''); } }}
-                      style={{ padding: '8px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                    >
-                      <IconPlus size={15} color="#fff" /> Adicionar
-                    </button>
-                  </div>
-
-                  {temEstimativas && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
-                      <IconAlert size={15} color="#eab308" />
-                      <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* ══ REVIEWING ══ */}
-              {estagio === 'reviewing' && (
-                <>
-                  <div style={{ padding: '12px 16px', borderRadius: 12, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
-                    <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 14, color: C.text }}>{ficha.nome}</p>
-                    <p style={{ margin: 0, fontSize: 12, color: C.textMuted }}>
-                      Rendimento: {ficha.rendimento_qtd} {ficha.rendimento_unid}
-                      {ficha.categoria && ` · ${ficha.categoria}`}
-                    </p>
-                  </div>
-
+                {ficha.itens.length > 0 && (
                   <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}` }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                       <thead>
                         <tr style={{ background: C.bgSecondary }}>
                           <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Ingrediente</th>
                           <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Qtd</th>
-                          <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Custo</th>
-                          <th style={{ padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Fonte</th>
+                          <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>R$/un</th>
+                          <th style={{ width: 32 }} />
                         </tr>
                       </thead>
                       <tbody>
@@ -901,24 +790,102 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                           const isEst = item.source !== 'user_input';
                           return (
                             <tr key={item.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                              <td style={{ padding: '8px 12px', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>{item.ingrediente_nome}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>{item.quantidade}{item.unidade}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>{fmt(calcCusto(item))}</td>
-                              <td style={{ padding: '8px 12px', fontSize: 11, color: isEst ? '#eab308' : '#22c55e' }}>{isEst ? '⚠ estimado' : '✓ confirmado'}</td>
+                              <td style={{ padding: '8px 12px', fontWeight: 500, fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>
+                                {item.ingrediente_nome}
+                                {isEst && <span style={{ marginLeft: 4, fontSize: 10, color: '#eab308' }}>est.</span>}
+                              </td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>
+                                {item.quantidade}{item.unidade}
+                              </td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                                <input
+                                  type="number" min="0" step="0.01"
+                                  value={item.preco_por_unidade}
+                                  onChange={e => atualizarPreco(item.id, parseFloat(e.target.value) || 0)}
+                                  style={{ width: 72, textAlign: 'right', padding: '2px 6px', borderRadius: 6, fontSize: 12, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '4px 8px' }}>
+                                <button onClick={() => removerItem(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, lineHeight: 0 }}>
+                                  <IconTrash size={14} color={C.textMuted} />
+                                </button>
+                              </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
+                )}
 
-                  {/* Cards resumo mobile */}
-                  <div style={{ display: isMobile ? 'grid' : 'none', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {ficha.itens.length > 0 && isMobile && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 12, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: 13, color: C.textMuted }}>Custo parcial</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#3b82f6' }}>{fmt(resultado.custo_total)}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={novoItem}
+                    onChange={e => setNovoItem(e.target.value)}
+                    placeholder='Ex: "mussarela 280g" ou diga em voz alta'
+                    onKeyDown={e => { if (e.key === 'Enter' && novoItem.trim()) { adicionarIngrediente(novoItem); setNovoItem(''); } }}
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
+                  />
+                  <button
+                    onClick={() => { if (novoItem.trim()) { adicionarIngrediente(novoItem); setNovoItem(''); } }}
+                    style={{ padding: '8px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    <IconPlus size={15} color="#fff" /> Adicionar
+                  </button>
+                </div>
+
+                {temEstimativas && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
+                    <IconAlert size={15} color="#eab308" />
+                    <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ══ REVIEWING ══ */}
+            {estagio === 'reviewing' && (
+              <>
+                <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.bgSecondary }}>
+                        <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Ingrediente</th>
+                        <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Qtd</th>
+                        <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Custo</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 500, color: C.textMuted }}>Fonte</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ficha.itens.map(item => {
+                        const isEst = item.source !== 'user_input';
+                        return (
+                          <tr key={item.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '8px 12px', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>{item.ingrediente_nome}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>{item.quantidade}{item.unidade}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>{fmt(calcCusto(item))}</td>
+                            <td style={{ padding: '8px 12px', fontSize: 11, color: isEst ? '#eab308' : '#22c55e' }}>{isEst ? '⚠ estimado' : '✓ confirmado'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {isMobile && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     {[
-                      { label: 'Custo Total',  value: fmt(resultado.custo_total),         accent: true  },
-                      { label: 'Peso Total',   value: `${resultado.peso_total_kg.toFixed(2)} kg`, accent: false },
-                      { label: 'Custo/Unid',  value: fmt(resultado.custo_por_unidade),    accent: false },
-                      { label: 'Preco Sug.',  value: fmt(resultado.preco_sugerido),       accent: true  },
+                      { label: 'Custo Total',  value: fmt(resultado.custo_total),                    accent: true  },
+                      { label: 'Peso Total',   value: `${resultado.peso_total_kg.toFixed(2)} kg`,    accent: false },
+                      { label: 'Custo/Unid',  value: fmt(resultado.custo_por_unidade),               accent: false },
+                      { label: 'Preco Sug.',  value: fmt(resultado.preco_sugerido),                  accent: true  },
                     ].map(({ label, value, accent }) => (
                       <div key={label} style={{ padding: '10px 14px', borderRadius: 10, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
                         <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>{label}</p>
@@ -926,122 +893,124 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                       </div>
                     ))}
                   </div>
+                )}
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <label style={{ fontSize: 13, color: C.textMuted, whiteSpace: 'nowrap' }}>Preco de venda:</label>
-                    <input
-                      type="number" min="0" step="0.01"
-                      value={ficha.preco_venda ?? ''}
-                      onChange={e => setFicha(prev => ({ ...prev, preco_venda: parseFloat(e.target.value) || undefined }))}
-                      placeholder="R$ 0,00"
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
-                    />
-                    {ficha.preco_venda && ficha.preco_venda > 0 && (
-                      <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', color: resultado.margem_bruta > 30 ? '#22c55e' : '#eab308' }}>
-                        {resultado.margem_bruta.toFixed(1)}%
-                      </span>
-                    )}
-                  </div>
-
-                  {temEstimativas && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
-                      <IconAlert size={15} color="#eab308" />
-                      <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* ══ SAVED ══ */}
-              {estagio === 'saved' && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '16px 0' }}>
-                  <div style={{ background: 'rgba(34,197,94,0.15)', borderRadius: '50%', padding: 20, lineHeight: 0 }}>
-                    <IconCheckBig size={48} color="#4ade80" />
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: C.text }}>Ficha salva com sucesso!</p>
-                    <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>
-                  </div>
-                  <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div style={{ padding: '12px 16px', borderRadius: 12, textAlign: 'center', background: C.bgSecondary, border: `1px solid ${C.border}` }}>
-                      <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Custo Total</p>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: '#3b82f6' }}>{fmt(resultado.custo_total)}</p>
-                    </div>
-                    <div style={{ padding: '12px 16px', borderRadius: 12, textAlign: 'center', background: C.bgSecondary, border: `1px solid ${C.border}` }}>
-                      <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Preco Sugerido</p>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.text }}>{fmt(resultado.preco_sugerido)}</p>
-                    </div>
-                  </div>
-                  <div style={{ width: '100%', display: 'flex', gap: 12 }}>
-                    <button
-                      onClick={exportarPDF}
-                      style={{ flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, border: `1px solid ${C.btnOutline.border}`, color: C.btnOutline.text }}
-                    >
-                      <IconFile size={16} color={C.btnOutline.text} /> Exportar PDF
-                    </button>
-                    {fichaIdSalva && (
-                      <a href="/dashboard/fichas" style={{ flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: '#16a34a', color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                        <IconLink size={16} color="#fff" /> Ver no Dashboard
-                      </a>
-                    )}
-                  </div>
-                  {temEstimativas && (
-                    <div style={{ width: '100%', display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
-                      <IconAlert size={15} color="#eab308" />
-                      <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <label style={{ fontSize: 13, color: C.textMuted, whiteSpace: 'nowrap' }}>Preco de venda:</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={ficha.preco_venda ?? ''}
+                    onChange={e => setFicha(prev => ({ ...prev, preco_venda: parseFloat(e.target.value) || undefined }))}
+                    placeholder="R$ 0,00"
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
+                  />
+                  {ficha.preco_venda && ficha.preco_venda > 0 && (
+                    <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', color: resultado.margem_bruta > 30 ? '#22c55e' : '#eab308' }}>
+                      {resultado.margem_bruta.toFixed(1)}%
+                    </span>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Footer */}
-            {estagio !== 'saved' && (
-              <div style={{ padding: '14px 20px', flexShrink: 0, borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {estagio === 'collecting' && (
-                    <button
-                      onClick={() => { setEstagio('reviewing'); playText('Revisando sua ficha. Confira e diga salvar para confirmar.').catch(() => {}); }}
-                      disabled={ficha.itens.length === 0 || isLoadingIA}
-                      style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: ficha.itens.length === 0 || isLoadingIA ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', cursor: ficha.itens.length === 0 || isLoadingIA ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                    >
-                      <IconCheck size={16} color="#fff" /> Revisar Ficha
-                    </button>
-                  )}
-                  {estagio === 'reviewing' && (
-                    <>
-                      <button
-                        onClick={() => setEstagio('collecting')}
-                        style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 500, background: 'none', cursor: 'pointer', border: `1px solid ${C.btnOutline.border}`, color: C.btnOutline.text }}
-                      >
-                        Voltar e Editar
-                      </button>
-                      <button
-                        onClick={salvarFicha}
-                        disabled={isSaving}
-                        style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: isSaving ? '#86efac' : '#16a34a', color: '#fff', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                      >
-                        {isSaving
-                          ? <><Spinner size={14} color="#fff" /> Salvando...</>
-                          : <><IconSave size={16} color="#fff" /> Salvar Ficha (3 creditos)</>
-                        }
-                      </button>
-                    </>
+                {temEstimativas && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
+                    <IconAlert size={15} color="#eab308" />
+                    <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ══ SAVED ══ */}
+            {estagio === 'saved' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '16px 0' }}>
+                <div style={{ background: 'rgba(34,197,94,0.15)', borderRadius: '50%', padding: 20, lineHeight: 0 }}>
+                  <IconCheckBig size={48} color="#4ade80" />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: C.text }}>Ficha salva com sucesso!</p>
+                  <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>
+                </div>
+                <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ padding: '12px 16px', borderRadius: 12, textAlign: 'center', background: C.bgSecondary, border: `1px solid ${C.border}` }}>
+                    <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Custo Total</p>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: '#3b82f6' }}>{fmt(resultado.custo_total)}</p>
+                  </div>
+                  <div style={{ padding: '12px 16px', borderRadius: 12, textAlign: 'center', background: C.bgSecondary, border: `1px solid ${C.border}` }}>
+                    <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Preco Sugerido</p>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.text }}>{fmt(resultado.preco_sugerido)}</p>
+                  </div>
+                </div>
+                <div style={{ width: '100%', display: 'flex', gap: 12 }}>
+                  <button
+                    onClick={exportarPDF}
+                    style={{ flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, border: `1px solid ${C.btnOutline.border}`, color: C.btnOutline.text }}
+                  >
+                    <IconFile size={16} color={C.btnOutline.text} /> Exportar PDF
+                  </button>
+                  {fichaIdSalva && (
+                    <a href="/dashboard/fichas" style={{ flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: '#16a34a', color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <IconLink size={16} color="#fff" /> Ver no Dashboard
+                    </a>
                   )}
                 </div>
-                {/* Voice hint — texto puro */}
-                <div style={{ padding: '8px 12px', borderRadius: 10, fontSize: 12, background: C.hintBg, color: C.hintText, border: `1px solid ${C.border}` }}>
-                  {estagio === 'collecting'
-                    ? 'Diga: "adicionar [ingrediente] [quantidade]", "remover [ingrediente]" ou "revisar"'
-                    : 'Diga: "salvar" para confirmar, "exportar" para PDF ou "voltar" para editar'
-                  }
-                </div>
+                {temEstimativas && (
+                  <div style={{ width: '100%', display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
+                    <IconAlert size={15} color="#eab308" />
+                    <p style={{ margin: 0, fontSize: 11, color: '#eab308' }}>{AVISO_ESTIMATIVAS}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
+
+          {/* Footer */}
+          {estagio !== 'saved' && (
+            <div style={{ padding: '14px 20px', flexShrink: 0, borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {estagio === 'collecting' && (
+                  <button
+                    onClick={() => { setEstagio('reviewing'); playText('Revisando sua ficha. Confira e diga salvar para confirmar.').catch(() => {}); }}
+                    disabled={ficha.itens.length === 0 || isLoadingIA}
+                    style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: ficha.itens.length === 0 || isLoadingIA ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', cursor: ficha.itens.length === 0 || isLoadingIA ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <IconCheck size={16} color="#fff" /> Revisar Ficha
+                  </button>
+                )}
+                {estagio === 'reviewing' && (
+                  <>
+                    <button
+                      onClick={() => setEstagio('collecting')}
+                      style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 500, background: 'none', cursor: 'pointer', border: `1px solid ${C.btnOutline.border}`, color: C.btnOutline.text }}
+                    >
+                      Voltar e Editar
+                    </button>
+                    <button
+                      onClick={salvarFicha}
+                      disabled={isSaving}
+                      style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: isSaving ? '#86efac' : '#16a34a', color: '#fff', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    >
+                      {isSaving
+                        ? <><Spinner size={14} color="#fff" /> Salvando...</>
+                        : <><IconSave size={16} color="#fff" /> Salvar Ficha (3 creditos)</>
+                      }
+                    </button>
+                  </>
+                )}
+              </div>
+              <div style={{ padding: '8px 12px', borderRadius: 10, fontSize: 12, background: C.hintBg, color: C.hintText, border: `1px solid ${C.border}` }}>
+                {estagio === 'collecting'
+                  ? 'Diga: "adicionar [ingrediente] [quantidade]", "remover [ingrediente]" ou "revisar"'
+                  : 'Diga: "salvar" para confirmar, "exportar" para PDF ou "voltar" para editar'
+                }
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </>,
+
+      {/* Spinner keyframes */}
+      <style>{`@keyframes fichaSpinner { to { transform: rotate(360deg); } }`}</style>
+    </div>,
     document.body
   );
 }

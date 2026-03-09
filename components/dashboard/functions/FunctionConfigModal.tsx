@@ -1761,8 +1761,10 @@ function GoogleCalendarScheduleForm({
                   Para usar esta função, você precisa conectar sua conta do Google Calendar.
                 </p>
                 
+<a
                   href="/dashboard/google-connect"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
+                >
                   <Calendar className="w-4 h-4" />
                   Gerenciar Conexão Google
                 </a>

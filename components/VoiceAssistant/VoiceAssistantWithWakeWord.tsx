@@ -223,7 +223,8 @@ export function VoiceAssistantWithWakeWord({
       activeModal?.type === 'EnderecoDisplay' ||   
       activeModal?.type === 'MeuSistemaDisplay' || 
       activeModal?.type === 'VideoInstrucoesDisplay' ||
-      activeModal?.type === 'SequenciaVideosDisplay';  
+      activeModal?.type === 'MeuCupomDisplay' ||
+      activeModal?.type === 'SequenciaVideosDisplay';
     if (isInputModalOpen) {
       console.log(`🚫 Bloqueio de Contexto: Modal ${activeModal?.type} aberto. Listener global suspenso.`);
       return;

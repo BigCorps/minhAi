@@ -268,16 +268,19 @@ export default function FichaProducaoDisplay({
 
   // Abertura
   useEffect(() => {
-    if (prefilled?.nome) {
-      const text = `Otimo! Vou criar uma ficha base para ${prefilled.nome}. Ja estou montando os ingredientes tipicos.`;
-      playText(text).catch(() => {});
-      lastText.current = text;
-      gerarFichaBase(prefilled.nome, prefilled.categoria ?? '');
-    } else {
-      playText(OPENING_TEXT).catch(() => {});
-      lastText.current = OPENING_TEXT;
-    }
-    return () => { window.speechSynthesis?.cancel(); };
+    window.speechSynthesis?.cancel();
+    const timer = setTimeout(() => {
+      if (prefilled?.nome) {
+        const text = `Otimo! Vou criar uma ficha base para ${prefilled.nome}. Ja estou montando os ingredientes tipicos.`;
+        playText(text).catch(() => {});
+        lastText.current = text;
+        gerarFichaBase(prefilled.nome, prefilled.categoria ?? '');
+      } else {
+        playText(OPENING_TEXT).catch(() => {});
+        lastText.current = OPENING_TEXT;
+      }
+    }, 300);
+    return () => { clearTimeout(timer); window.speechSynthesis?.cancel(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

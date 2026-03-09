@@ -14,10 +14,10 @@ export default function ArquivosClient({ companies }: ArquivosClientProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2 transition-colors text-gray-900 dark:text-white">
-            Arquivos
+            Arquivos e Cupons
           </h2>
           <p className="transition-colors text-gray-600 dark:text-white/60">
-            Selecione uma empresa para gerenciar cupons e outros arquivos
+            Selecione seu assistente para gerenciar cupons e outros arquivos
           </p>
         </div>
 
@@ -28,16 +28,16 @@ export default function ArquivosClient({ companies }: ArquivosClientProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
               </svg>
               <h3 className="text-xl font-bold mb-2 transition-colors text-gray-900 dark:text-white">
-                Nenhuma empresa cadastrada
+                Nenhum assistente cadastrado
               </h3>
               <p className="mb-6 transition-colors text-gray-600 dark:text-white/60">
-                Você precisa criar uma empresa antes de acessar os arquivos
+                Você precisa criar um assistente antes de acessar os arquivos
               </p>
               <Link
-                href="/dashboard/empresas/nova"
+                href="/dashboard/assistentes/create"
                 className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold dark:bg-blue-500 dark:hover:bg-blue-600"
               >
-                + Criar Primeira Empresa
+                + Criar Primeiro Assistente
               </Link>
             </div>
           </div>

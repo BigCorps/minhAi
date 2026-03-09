@@ -1312,6 +1312,191 @@ const FichasProducaoForm = ({ companyId }: any) => {
   );
 };
 
+const MeuCupomForm = ({ companyId }: any) => {
+  const [config, setConfig] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchConfig();
+  }, [companyId]);
+
+  async function fetchConfig() {
+    setLoading(true);
+    const { data } = await supabase
+      .from('company_function_settings')
+      .select('config')
+      .eq('company_id', companyId)
+      .eq('function_key', 'meu_cupom')
+      .maybeSingle();
+    setConfig(data?.config || {});
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    const { error } = await supabase
+      .from('company_function_settings')
+      .update({ config, updated_at: new Date().toISOString() })
+      .eq('company_id', companyId)
+      .eq('function_key', 'meu_cupom');
+
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } else {
+      console.error('Erro ao salvar config meu_cupom:', error);
+      alert('Erro ao salvar. Tente novamente.');
+    }
+    setSaving(false);
+  }
+
+  function handleChange(key: string, value: any) {
+    setConfig((prev: any) => ({ ...prev, [key]: value }));
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+          Programa de Indicação
+        </p>
+        <p className="text-sm text-blue-700 dark:text-blue-300">
+          Clientes geram cupons personalizados pelo assistente de voz. 
+          Configure aqui o benefício que cada cupom concede.
+        </p>
+      </div>
+
+      {/* Tipo de desconto */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Tipo de Desconto
+        </label>
+        <select
+          value={config.discount_type || 'percentage'}
+          onChange={e => handleChange('discount_type', e.target.value)}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="percentage">Porcentagem (%)</option>
+          <option value="fixed">Valor fixo (R$)</option>
+        </select>
+      </div>
+
+      {/* Valor */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Valor do Desconto
+        </label>
+        <input
+          type="number"
+          min="1"
+          max={config.discount_type === 'percentage' ? 100 : undefined}
+          placeholder={config.discount_type === 'percentage' ? 'Ex: 10' : 'Ex: 25'}
+          value={config.discount_value || ''}
+          onChange={e => handleChange('discount_value', Number(e.target.value))}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-blue-500"
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {config.discount_type === 'percentage'
+            ? 'Percentual de desconto que o cupom concede (1–100)'
+            : 'Valor em reais que o cupom concede (ex: 25 = R$ 25,00)'}
+        </p>
+      </div>
+
+      {/* Validade */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Validade (dias)
+        </label>
+        <input
+          type="number"
+          min="1"
+          placeholder="Ex: 30 — deixe vazio para sem expiração"
+          value={config.validity_days || ''}
+          onChange={e => handleChange('validity_days', e.target.value ? Number(e.target.value) : null)}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Destino do QR */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Destino do QR Code
+        </label>
+        <select
+          value={config.qr_destination || 'share_only'}
+          onChange={e => handleChange('qr_destination', e.target.value)}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="share_only">Apenas o código (para compartilhar)</option>
+          <option value="assistant_preconfigured">Link para o assistente com cupom</option>
+          <option value="landing_page">Landing page personalizada</option>
+        </select>
+      </div>
+
+      {/* Landing page URL — só aparece se qr_destination = landing_page */}
+      {config.qr_destination === 'landing_page' && (
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+            URL da Landing Page
+          </label>
+          <input
+            type="url"
+            placeholder="https://meusite.com.br/promocao"
+            value={config.landing_page_url || ''}
+            onChange={e => handleChange('landing_page_url', e.target.value)}
+            className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            O QR Code apontará para: {config.landing_page_url || 'sua-url'}?ref=CODIGO
+          </p>
+        </div>
+      )}
+
+      {/* Preview */}
+      {config.discount_value > 0 && (
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <p className="text-xs text-blue-800 dark:text-blue-200">
+            ✅ Cupom configurado:{' '}
+            <strong>
+              {config.discount_type === 'percentage'
+                ? `${config.discount_value}% de desconto`
+                : `R$ ${config.discount_value},00 de desconto`}
+            </strong>
+            {config.validity_days ? ` · válido por ${config.validity_days} dias` : ' · sem expiração'}
+          </p>
+        </div>
+      )}
+
+      {/* Botão salvar próprio (não usa o handleSave do modal pai) */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
+      >
+        {saving
+          ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /><span>Salvando...</span></>
+          : saved ? '✓ Salvo!' : 'Salvar Configurações'
+        }
+      </button>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+        Estas configurações são lidas pela edge function ao gerar cada cupom.
+      </p>
+    </div>
+  );
+};
+
 // ===== MAPEAMENTO: function_key → componente =====
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_whatsapp': WhatsappForm,
@@ -1347,6 +1532,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'tabela_em_texto':     TabelaEmTextoConfigForm,
   'contrato_em_texto':   ContratoEmTextoConfigForm,
   'fichas_producao': FichasProducaoForm,
+  'meu_cupom': MeuCupomForm,
 };
 
 // ===== INTERFACE =====
@@ -1506,3 +1692,4 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+

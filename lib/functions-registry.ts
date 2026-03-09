@@ -294,13 +294,19 @@ voiceTriggers: [
 // CATEGORIA: AGENDAMENTOS (schedule)
 // ============================================================
 
+// ============================================================
+// CATEGORIA: AGENDAMENTOS (schedule)
+// ============================================================
+
 confirmar_presenca: {
   functionKey: 'confirmar_presenca',
   functionName: 'Confirmar Presença',
   category: 'schedule',
   description: 'Confirma presença em agendamento marcado',
+  shortDescription: 'Confirmar presença',
   icon: '✅',
   color: '#10B981',
+  
   voiceTriggers: [
     'confirmar presença',
     'confirmar agendamento',
@@ -309,9 +315,21 @@ confirmar_presenca: {
     'vou comparecer',
     'confirmar consulta',
   ],
+  
+  examplePhrases: [
+    'Confirmar presença no agendamento',
+    'Quero confirmar minha consulta',
+    'Confirmar horário marcado',
+  ],
+  
   creditsPerUse: 1,
   responseType: 'modal',
   uiComponent: 'ConfirmPresenceModal',
+  requiresInput: false,
+  
+  saveToHistory: true,
+  requiresPayment: false,
+  isPremium: false,
   
   handler: async ({ 
     transcript,
@@ -349,8 +367,10 @@ reagendar_compromisso: {
   functionName: 'Reagendamento',
   category: 'schedule',
   description: 'Reagenda compromisso para nova data e horário',
+  shortDescription: 'Reagendar compromisso',
   icon: '🔄',
   color: '#3B82F6',
+  
   voiceTriggers: [
     'reagendar',
     'remarcar',
@@ -360,9 +380,21 @@ reagendar_compromisso: {
     'desmarcar e marcar',
     'mudar agendamento',
   ],
+  
+  examplePhrases: [
+    'Preciso reagendar minha consulta',
+    'Remarcar para outro dia',
+    'Mudar horário do agendamento',
+  ],
+  
   creditsPerUse: 2,
   responseType: 'modal',
   uiComponent: 'RescheduleModal',
+  requiresInput: false,
+  
+  saveToHistory: true,
+  requiresPayment: false,
+  isPremium: false,
   
   handler: async ({ 
     transcript,
@@ -400,8 +432,10 @@ cancelar_agendamento: {
   functionName: 'Cancelar Agendamento',
   category: 'schedule',
   description: 'Cancela agendamento marcado',
+  shortDescription: 'Cancelar agendamento',
   icon: '❌',
   color: '#EF4444',
+  
   voiceTriggers: [
     'cancelar agendamento',
     'cancelar consulta',
@@ -410,9 +444,21 @@ cancelar_agendamento: {
     'não posso ir',
     'cancelar horário',
   ],
+  
+  examplePhrases: [
+    'Cancelar meu agendamento',
+    'Desmarcar consulta',
+    'Não poderei comparecer',
+  ],
+  
   creditsPerUse: 1,
   responseType: 'modal',
   uiComponent: 'CancelAppointmentModal',
+  requiresInput: false,
+  
+  saveToHistory: true,
+  requiresPayment: false,
+  isPremium: false,
   
   handler: async ({ 
     transcript,
@@ -450,8 +496,10 @@ horarios_disponiveis: {
   functionName: 'Horários Disponíveis',
   category: 'schedule',
   description: 'Consulta horários disponíveis na agenda',
+  shortDescription: 'Consultar disponibilidade',
   icon: '🕐',
   color: '#8B5CF6',
+  
   voiceTriggers: [
     'tem horário',
     'está disponível',
@@ -462,14 +510,20 @@ horarios_disponiveis: {
     'ver disponibilidade',
     'horários disponíveis',
   ],
+  
   examplePhrases: [
     'Tem horário disponível amanhã às 14h?',
     'Está vago dia 15 às 10h?',
     'Horários livres na próxima semana',
   ],
+  
   creditsPerUse: 1,
   responseType: 'voice',
   requiresInput: false,
+  
+  saveToHistory: true,
+  requiresPayment: false,
+  isPremium: false,
   
   handler: async ({ 
     transcript,

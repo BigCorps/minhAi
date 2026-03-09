@@ -373,6 +373,8 @@ reagendar_compromisso: {
   
   voiceTriggers: [
     'reagendar',
+    'reagendar compromisso',
+    'reagendamento',
     'remarcar',
     'mudar data',
     'mudar horário',

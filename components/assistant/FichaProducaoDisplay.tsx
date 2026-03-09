@@ -1025,12 +1025,17 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
           position: fixed;
           z-index: 9999;
           bottom: 0; left: 0; right: 0;
+          max-height: 92vh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
         }
         .ficha-modal-inner {
           border-radius: 16px 16px 0 0;
           display: flex;
           flex-direction: column;
-          max-height: 92vh;
+          flex: 1;
+          min-height: 0;
           overflow: hidden;
         }
         .ficha-sidebar         { display: none; }
@@ -1042,11 +1047,13 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
             bottom: auto; left: 50%; right: auto; top: 50%;
             transform: translate(-50%, -50%);
             width: 100%; max-width: 860px; padding: 0 16px;
+            display: block; overflow: visible; max-height: none;
           }
           .ficha-modal-inner {
             border-radius: 16px;
             flex-direction: row;
             max-height: 88vh;
+            flex: unset; min-height: unset;
           }
           .ficha-sidebar        { display: flex; flex-direction: column; justify-content: space-between; width: 220px; flex-shrink: 0; padding: 24px; }
           .ficha-custo-mobile   { display: none !important; }

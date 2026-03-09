@@ -546,7 +546,7 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
 case 'confirmar_presenca':
   setActiveModal({ 
     type: 'ConfirmPresenceModal', 
-    data: { companyId, transcript } 
+    data: { companyId }
   });
   playText('Vou buscar seu agendamento para confirmar presença.').catch(() => {});
   break;
@@ -554,7 +554,7 @@ case 'confirmar_presenca':
 case 'reagendar_compromisso':
   setActiveModal({ 
     type: 'RescheduleModal', 
-    data: { companyId, transcript } 
+    data: { companyId }
   });
   playText('Vou buscar seu agendamento para reagendar.').catch(() => {});
   break;
@@ -562,9 +562,13 @@ case 'reagendar_compromisso':
 case 'cancelar_agendamento':
   setActiveModal({ 
     type: 'CancelAppointmentModal', 
-    data: { companyId, transcript } 
+    data: { companyId }
   });
   playText('Vou buscar seu agendamento para cancelar.').catch(() => {});
+  break;
+
+case 'horarios_disponiveis':
+  // Este é tratado direto no handler do registry
   break;
 
 case 'meu_cupom': {

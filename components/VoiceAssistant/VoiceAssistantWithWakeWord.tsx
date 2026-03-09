@@ -632,6 +632,8 @@ case 'contrato_em_texto':
           break;
 
 case 'fichas_producao':
+  await stopGoogleSpeech();
+  stopAudioImmediately();
   setActiveModal({
     type: 'FichaProducaoDisplay',
     data: {

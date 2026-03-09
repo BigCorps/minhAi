@@ -1151,7 +1151,6 @@ contrato_em_texto: {
     isPremium: false,
 
     handler: async ({ playText, setActiveModal, companyId }) => {
-      await playText('Abrindo fichas de producao. Me diga o nome da receita.');
       setActiveModal?.({
         type: 'FichaProducaoDisplay',
         data: { companyId },

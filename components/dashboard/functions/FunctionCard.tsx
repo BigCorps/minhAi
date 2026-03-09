@@ -90,6 +90,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'confirmar_presenca',
   'reagendar_compromisso',
   'horarios_disponiveis',
+  'meu_cupom',
+  'fichas_producao',
   'tef_debito',
   'tef_credito'
 ];

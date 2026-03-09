@@ -503,20 +503,80 @@ horarios_disponiveis: {
   color: '#8B5CF6',
   
   voiceTriggers: [
+    // ── TRIGGERS DIRETOS ──────────────────────────────────
     'tem horário',
+    'tem horario',
+    'horário disponível',
+    'horario disponivel',
+    'horários disponíveis',
+    'horarios disponiveis',
     'está disponível',
+    'esta disponivel',
     'horário livre',
+    'horario livre',
     'horário vago',
+    'horario vago',
     'tem vaga',
+    'tem hora',
     'consultar agenda',
     'ver disponibilidade',
-    'horários disponíveis',
+    'verificar disponibilidade',
+    'checar disponibilidade',
+    
+    // ── COM PALAVRAS TEMPORAIS ────────────────────────────
+    'horário hoje',
+    'horario hoje',
+    'disponível hoje',
+    'disponivel hoje',
+    'tem hoje',
+    'vaga hoje',
+    'livre hoje',
+    
+    'horário amanhã',
+    'horario amanha',
+    'disponível amanhã',
+    'disponivel amanha',
+    'tem amanhã',
+    'tem amanha',
+    'vaga amanhã',
+    'vaga amanha',
+    'livre amanhã',
+    'livre amanha',
+    
+    // ── COM PERGUNTAS ─────────────────────────────────────
+    'qual horário',
+    'qual horario',
+    'quais horários',
+    'quais horarios',
+    'que horas',
+    'que horário',
+    'que horario',
+    
+    // ── COM DIA/DATA ──────────────────────────────────────
+    'horário dia',
+    'horario dia',
+    'disponível dia',
+    'disponivel dia',
+    'tem no dia',
+    'vaga no dia',
+    'livre no dia',
+    
+    // ── FRASES COMPLETAS COMUNS ───────────────────────────
+    'tem algum horário',
+    'tem algum horario',
+    'algum horário disponível',
+    'algum horario disponivel',
+    'alguma vaga',
+    'algum horário livre',
+    'algum horario livre',
   ],
   
   examplePhrases: [
     'Tem horário disponível amanhã às 14h?',
     'Está vago dia 15 às 10h?',
     'Horários livres na próxima semana',
+    'Tem hoje?',
+    'Qual horário disponível?',
   ],
   
   creditsPerUse: 1,
@@ -560,13 +620,12 @@ horarios_disponiveis: {
       
       if (result.success) {
         if (result.available) {
-          // ✅ DISPONÍVEL - Oferecer marcar ou ver agenda
+          // ✅ DISPONÍVEL
           await playText(
             `${result.speech_text} Quer que eu marque agora ou prefere ver a agenda completa? ` +
             `Diga "marcar agora" para agendar ou "ver agenda" para visualizar o dia inteiro.`
           );
           
-          // Salvar contexto para próximo comando
           if (typeof window !== 'undefined') {
             (window as any).eAi_lastAvailabilityCheck = {
               available: true,
@@ -577,13 +636,12 @@ horarios_disponiveis: {
           }
           
         } else {
-          // ❌ OCUPADO - Oferecer ver agenda para escolher outro horário
+          // ❌ OCUPADO
           await playText(
             `${result.speech_text} Quer ver a agenda para escolher outro horário? ` +
             `Diga "ver agenda" para visualizar os horários disponíveis.`
           );
           
-          // Salvar contexto
           if (typeof window !== 'undefined') {
             (window as any).eAi_lastAvailabilityCheck = {
               available: false,

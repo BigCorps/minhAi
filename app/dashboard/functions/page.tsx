@@ -51,11 +51,11 @@ interface Company {
 
 const categories = [
   { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
-  { key: 'contact',       name: 'Contato',      color: '#10B981' },
   { key: 'payment',       name: 'Financeiro',    color: '#F44336' },
   { key: 'information',   name: 'Informação',   color: '#00FFF7' },
   { key: 'video',         name: 'Multimídia',   color: '#A52A2A' },
   { key: 'schedule',      name: 'Agendamento',  color: '#FFC0CB' },
+  { key: 'contact',       name: 'Contato',      color: '#10B981' },
   { key: 'configuration', name: 'Localização',  color: '#800080' },
   { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
   { key: 'biometry',      name: 'Biometria',    color: '#808000' },

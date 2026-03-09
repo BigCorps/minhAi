@@ -16,27 +16,47 @@ export default function ArquivosCompanyPage() {
   const [stats, setStats] = useState({ totalCupons: 0, ativos: 0, totalResgates: 0 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+  console.log('🟡 [ArquivosCompanyPage] render — companyId:', companyId);
 
-      const { data: companyData } = await supabase
+  useEffect(() => {
+    console.log('🔵 [useEffect] disparou — companyId:', companyId);
+
+    const load = async () => {
+      console.log('🔵 [load] iniciando...');
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('🔵 [load] user:', user?.id, '| authError:', authError);
+
+      if (!user) {
+        console.log('🔴 [load] sem user → redirect /login');
+        router.push('/login');
+        return;
+      }
+
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id, name, slug')
         .eq('id', companyId)
         .eq('user_id', user.id)
         .single();
 
-      if (!companyData) { router.push('/dashboard/arquivos'); return; }
+      console.log('🔵 [load] companyData:', companyData, '| companyError:', companyError);
+
+      if (!companyData) {
+        console.log('🔴 [load] empresa não encontrada → redirect /dashboard/arquivos');
+        router.push('/dashboard/arquivos');
+        return;
+      }
 
       setCompany(companyData);
 
-      const { data: cuponsData } = await supabase
+      const { data: cuponsData, error: cuponsError } = await supabase
         .from('cupons')
         .select('id, code, type, discount_type, discount_value, times_used, max_uses, is_active, expires_at, created_at, metadata')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
+
+      console.log('🔵 [load] cuponsData count:', cuponsData?.length, '| cuponsError:', cuponsError);
 
       const lista = cuponsData || [];
       setCupons(lista);
@@ -48,11 +68,14 @@ export default function ArquivosCompanyPage() {
         totalResgates: lista.reduce((sum, c) => sum + (c.times_used || 0), 0),
       });
 
+      console.log('✅ [load] concluído — setLoading(false)');
       setLoading(false);
     };
 
     load();
   }, [companyId]);
+
+  console.log('🟡 [ArquivosCompanyPage] loading:', loading, '| company:', company?.name);
 
   if (loading) {
     return (
@@ -64,7 +87,10 @@ export default function ArquivosCompanyPage() {
     );
   }
 
-  if (!company) return null;
+  if (!company) {
+    console.log('🔴 [ArquivosCompanyPage] company null após loading — retornando null');
+    return null;
+  }
 
   return (
     <ArquivosCompanyClient

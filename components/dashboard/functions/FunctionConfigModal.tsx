@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Mail, Calendar, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';
@@ -1516,8 +1516,12 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'nossa_marca': NossaMarcaForm,
   'video_instrucoes': VideoInstrucoesForm,
   'enviar_email': GoogleEmailForm,
-  'agendar_compromisso': GoogleCalendarForm,
-  'ver_agenda': GoogleCalendarForm, 
+  'ver_agenda': GoogleCalendarScheduleForm,
+  'agendar_compromisso': GoogleCalendarScheduleForm,
+  'confirmar_presenca': GoogleCalendarScheduleForm,
+  'reagendar_compromisso': GoogleCalendarScheduleForm,
+  'cancelar_agendamento': GoogleCalendarScheduleForm,
+  'horarios_disponiveis': GoogleCalendarScheduleForm,
   'sequencia_videos': SequenciaVideosForm,
   'link_pagamento': InfinitePayConfigForm,
   'nfc_debito':     InfinitePayConfigForm,
@@ -1542,6 +1546,298 @@ interface FunctionConfigModalProps {
   functionData: any;
   companyId: string;
   onUpdate: () => void;
+}
+
+// ============================================================
+// GOOGLE CALENDAR SCHEDULE FORM - Para todas as 6 funções
+// ============================================================
+
+interface GoogleCalendarScheduleFormProps {
+  functionKey: string;
+  isConfigured: boolean;
+  companyId: string;
+}
+
+function GoogleCalendarScheduleForm({ 
+  functionKey, 
+  isConfigured, 
+  companyId 
+}: GoogleCalendarScheduleFormProps) {
+  const [googleAccount, setGoogleAccount] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkGoogleConnection();
+  }, [companyId]);
+
+  async function checkGoogleConnection() {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('google_accounts')
+        .select('*')
+        .eq('company_id', companyId)
+        .single();
+
+      if (!error && data) {
+        // Verificar se tem scope de calendar
+        const hasCalendarScope = data.scopes?.includes('https://www.googleapis.com/auth/calendar');
+        if (hasCalendarScope) {
+          setGoogleAccount(data);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao verificar Google:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Configurações específicas por função
+  const FUNCTION_INFO: Record<string, {
+    title: string;
+    description: string;
+    icon: string;
+    color: string;
+    howItWorks: string[];
+    voiceCommands: string[];
+  }> = {
+    ver_agenda: {
+      title: 'Ver Agenda',
+      description: 'Visualiza eventos do Google Calendar',
+      icon: '📆',
+      color: 'blue',
+      howItWorks: [
+        'Diga "Ver agenda" para visualizar eventos',
+        'Escolha o período: mês, semana ou dia',
+        'Sincronização automática com Google Calendar',
+      ],
+      voiceCommands: [
+        'Ver minha agenda',
+        'Mostrar calendário',
+        'Meus compromissos',
+      ],
+    },
+    agendar_compromisso: {
+      title: 'Marcar Evento',
+      description: 'Cria eventos no Google Calendar',
+      icon: '📅',
+      color: 'green',
+      howItWorks: [
+        'Diga "Marcar evento" para criar compromissos',
+        'Informe data, hora e descrição',
+        'O evento será criado automaticamente no calendário',
+      ],
+      voiceCommands: [
+        'Agendar reunião',
+        'Marcar compromisso',
+        'Criar evento',
+      ],
+    },
+    confirmar_presenca: {
+      title: 'Confirmar Presença',
+      description: 'Confirma presença em agendamento marcado',
+      icon: '✅',
+      color: 'green',
+      howItWorks: [
+        'Cliente informa email ou telefone',
+        'Sistema busca o agendamento',
+        'Cliente confirma presença com um clique',
+      ],
+      voiceCommands: [
+        'Confirmar presença',
+        'Confirmar agendamento',
+        'Vou comparecer',
+      ],
+    },
+    reagendar_compromisso: {
+      title: 'Reagendamento',
+      description: 'Reagenda compromisso para nova data',
+      icon: '🔄',
+      color: 'blue',
+      howItWorks: [
+        'Cliente informa email ou telefone',
+        'Sistema mostra agendamento atual',
+        'Cliente escolhe nova data e horário',
+        'Calendário é atualizado automaticamente',
+      ],
+      voiceCommands: [
+        'Reagendar',
+        'Remarcar',
+        'Mudar data',
+      ],
+    },
+    cancelar_agendamento: {
+      title: 'Cancelar Agendamento',
+      description: 'Cancela agendamento marcado',
+      icon: '❌',
+      color: 'red',
+      howItWorks: [
+        'Cliente informa email ou telefone',
+        'Sistema mostra agendamento a cancelar',
+        'Cliente confirma cancelamento',
+        'Evento é removido do calendário',
+      ],
+      voiceCommands: [
+        'Cancelar agendamento',
+        'Desmarcar',
+        'Não poderei comparecer',
+      ],
+    },
+    horarios_disponiveis: {
+      title: 'Horários Disponíveis',
+      description: 'Consulta horários disponíveis na agenda',
+      icon: '🕐',
+      color: 'purple',
+      howItWorks: [
+        'Cliente pergunta sobre horário específico',
+        'Sistema verifica disponibilidade',
+        'Responde por voz se está livre ou ocupado',
+        'Oferece opções: marcar ou ver agenda',
+      ],
+      voiceCommands: [
+        'Tem horário disponível?',
+        'Está livre amanhã às 14h?',
+        'Horários vagos',
+      ],
+    },
+  };
+
+  const info = FUNCTION_INFO[functionKey] || FUNCTION_INFO.ver_agenda;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header da Função */}
+      <div className="flex items-start gap-4">
+        <div className={`text-4xl`}>{info.icon}</div>
+        <div className="flex-1">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            {info.title}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {info.description}
+          </p>
+        </div>
+      </div>
+
+      {/* Status da Conexão */}
+      <div className={`p-4 rounded-lg border ${
+        googleAccount 
+          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+          : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+      }`}>
+        <div className="flex items-start gap-3">
+          {googleAccount ? (
+            <>
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">
+                  ✅ Conta Google Conectada
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Email: <span className="font-mono">{googleAccount.email}</span>
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  Esta conta será usada para gerenciar eventos no calendário.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                  ⚠️ Google Calendar Não Conectado
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                  Para usar esta função, você precisa conectar sua conta do Google Calendar.
+                </p>
+                
+                  href="/dashboard/google-connect"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Gerenciar Conexão Google
+                </a>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Como Funciona */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+          <Info className="w-4 h-4" />
+          Como funciona o {info.title}
+        </h4>
+        <ul className="space-y-2">
+          {info.howItWorks.map((step, index) => (
+            <li key={index} className="flex items-start gap-2 text-sm text-blue-800 dark:text-blue-200">
+              <span className="text-blue-600 dark:text-blue-400 font-bold">✓</span>
+              {step}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Comandos de Voz */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <Mic className="w-4 h-4" />
+          Comandos de Voz
+        </h4>
+        <div className="space-y-2">
+          {info.voiceCommands.map((cmd, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <code className="text-sm px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-800 dark:text-gray-200">
+                "{cmd}"
+              </code>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Funcionalidades Específicas */}
+      {(functionKey === 'horarios_disponiveis' || 
+        functionKey === 'confirmar_presenca' || 
+        functionKey === 'reagendar_compromisso' || 
+        functionKey === 'cancelar_agendamento') && (
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2 flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            Funcionalidade Inteligente
+          </h4>
+          {functionKey === 'horarios_disponiveis' && (
+            <p className="text-sm text-purple-800 dark:text-purple-200">
+              Esta função usa IA para entender consultas em linguagem natural como 
+              "tem horário amanhã de manhã?" e verifica automaticamente a disponibilidade 
+              no Google Calendar. Após consultar, o cliente pode escolher marcar direto 
+              ou visualizar a agenda completa.
+            </p>
+          )}
+          {(functionKey === 'confirmar_presenca' || 
+            functionKey === 'reagendar_compromisso' || 
+            functionKey === 'cancelar_agendamento') && (
+            <p className="text-sm text-purple-800 dark:text-purple-200">
+              O sistema busca automaticamente o agendamento do cliente usando email ou 
+              telefone. Todas as alterações são sincronizadas em tempo real com o 
+              Google Calendar.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function FunctionConfigModal({
@@ -1692,4 +1988,5 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 

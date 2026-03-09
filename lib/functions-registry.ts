@@ -503,7 +503,9 @@ horarios_disponiveis: {
   color: '#8B5CF6',
   
   voiceTriggers: [
-    // ── TRIGGERS DIRETOS ──────────────────────────────────
+    // ══════════════════════════════════════════════════════
+    // VERIFICAR DISPONIBILIDADE (está livre?)
+    // ══════════════════════════════════════════════════════
     'tem horário',
     'tem horario',
     'horário disponível',
@@ -522,8 +524,15 @@ horarios_disponiveis: {
     'ver disponibilidade',
     'verificar disponibilidade',
     'checar disponibilidade',
+    'está livre',
+    'esta livre',
+    'está vago',
+    'esta vago',
+    'posso marcar',
+    'dá para marcar',
+    'da para marcar',
     
-    // ── COM PALAVRAS TEMPORAIS ────────────────────────────
+    // ── COM PALAVRAS TEMPORAIS (disponibilidade) ──────────
     'horário hoje',
     'horario hoje',
     'disponível hoje',
@@ -531,6 +540,7 @@ horarios_disponiveis: {
     'tem hoje',
     'vaga hoje',
     'livre hoje',
+    'vago hoje',
     
     'horário amanhã',
     'horario amanha',
@@ -543,7 +553,7 @@ horarios_disponiveis: {
     'livre amanhã',
     'livre amanha',
     
-    // ── COM PERGUNTAS ─────────────────────────────────────
+    // ── COM PERGUNTAS (disponibilidade) ───────────────────
     'qual horário',
     'qual horario',
     'quais horários',
@@ -552,7 +562,7 @@ horarios_disponiveis: {
     'que horário',
     'que horario',
     
-    // ── COM DIA/DATA ──────────────────────────────────────
+    // ── COM DIA/DATA (disponibilidade) ────────────────────
     'horário dia',
     'horario dia',
     'disponível dia',
@@ -560,8 +570,9 @@ horarios_disponiveis: {
     'tem no dia',
     'vaga no dia',
     'livre no dia',
+    'vago no dia',
     
-    // ── FRASES COMPLETAS COMUNS ───────────────────────────
+    // ── FRASES COMPLETAS (disponibilidade) ────────────────
     'tem algum horário',
     'tem algum horario',
     'algum horário disponível',
@@ -569,14 +580,86 @@ horarios_disponiveis: {
     'alguma vaga',
     'algum horário livre',
     'algum horario livre',
+    
+    // ══════════════════════════════════════════════════════
+    // VERIFICAR O QUE ESTÁ MARCADO (o que tem agendado?)
+    // ══════════════════════════════════════════════════════
+    'tem algo marcado',
+    'tem alguma coisa marcada',
+    'o que está marcado',
+    'o que esta marcado',
+    'o que tem marcado',
+    'que está marcado',
+    'que esta marcado',
+    'que tem marcado',
+    
+    'tem agendamento',
+    'tem algum agendamento',
+    'tem compromisso',
+    'tem algum compromisso',
+    'tem consulta',
+    'tem alguma consulta',
+    
+    'já tem algo',
+    'ja tem algo',
+    'já está marcado',
+    'ja esta marcado',
+    'já tem marcado',
+    'ja tem marcado',
+    
+    'quem está agendado',
+    'quem esta agendado',
+    'quem tem agendado',
+    'quantos agendamentos',
+    'quantas marcações',
+    'quantos compromissos',
+    
+    // ── COM PALAVRAS TEMPORAIS (o que está marcado) ───────
+    'marcado hoje',
+    'agendado hoje',
+    'compromisso hoje',
+    'agendamento hoje',
+    
+    'marcado amanhã',
+    'marcado amanha',
+    'agendado amanhã',
+    'agendado amanha',
+    'compromisso amanhã',
+    'compromisso amanha',
+    
+    // ── COM DIA/DATA (o que está marcado) ─────────────────
+    'marcado dia',
+    'agendado dia',
+    'compromisso dia',
+    'agendamento dia',
+    'algo no dia',
+    
+    // ── COM HORÁRIO (o que está marcado) ──────────────────
+    'marcado às',
+    'marcado as',
+    'agendado às',
+    'agendado as',
+    'compromisso às',
+    'compromisso as',
+    
+    // ── COM PERÍODO (o que está marcado) ──────────────────
+    'marcado de manhã',
+    'marcado de manha',
+    'agendado de manhã',
+    'agendado de manha',
+    'marcado de tarde',
+    'agendado de tarde',
+    'marcado de noite',
+    'agendado de noite',
   ],
   
   examplePhrases: [
     'Tem horário disponível amanhã às 14h?',
     'Está vago dia 15 às 10h?',
-    'Horários livres na próxima semana',
-    'Tem hoje?',
-    'Qual horário disponível?',
+    'Tem algo marcado dia 12?',
+    'O que está marcado hoje?',
+    'Tem compromisso às 13h do dia 25?',
+    'Quantos agendamentos tem amanhã?',
   ],
   
   creditsPerUse: 1,
@@ -619,37 +702,51 @@ horarios_disponiveis: {
       const result = await response.json();
       
       if (result.success) {
-        if (result.available) {
-          // ✅ DISPONÍVEL
-          await playText(
-            `${result.speech_text} Quer que eu marque agora ou prefere ver a agenda completa? ` +
-            `Diga "marcar agora" para agendar ou "ver agenda" para visualizar o dia inteiro.`
-          );
+        // ✅ A Edge Function já retorna o speech_text correto baseado na intenção
+        
+        if (result.intent === 'check_scheduled') {
+          // Cliente perguntou O QUE ESTÁ MARCADO
+          await playText(result.speech_text);
           
-          if (typeof window !== 'undefined') {
-            (window as any).eAi_lastAvailabilityCheck = {
-              available: true,
-              date: result.date,
-              time: result.time,
-              transcript: transcript,
-            };
+          // Se houver agendamentos, pode oferecer ver detalhes
+          if (!result.available && result.appointment_count > 0) {
+            await playText('Quer ver os detalhes na agenda? Diga "ver agenda".');
           }
           
         } else {
-          // ❌ OCUPADO
-          await playText(
-            `${result.speech_text} Quer ver a agenda para escolher outro horário? ` +
-            `Diga "ver agenda" para visualizar os horários disponíveis.`
-          );
-          
-          if (typeof window !== 'undefined') {
-            (window as any).eAi_lastAvailabilityCheck = {
-              available: false,
-              date: result.date,
-              time: result.time,
-              transcript: transcript,
-              existing_appointments: result.existing_appointments,
-            };
+          // Cliente perguntou DISPONIBILIDADE
+          if (result.available) {
+            // DISPONÍVEL
+            await playText(
+              `${result.speech_text} Quer que eu marque agora ou prefere ver a agenda completa? ` +
+              `Diga "marcar agora" para agendar ou "ver agenda" para visualizar.`
+            );
+            
+            if (typeof window !== 'undefined') {
+              (window as any).eAi_lastAvailabilityCheck = {
+                available: true,
+                date: result.date,
+                time: result.time,
+                transcript: transcript,
+              };
+            }
+            
+          } else {
+            // OCUPADO
+            await playText(
+              `${result.speech_text} Quer ver a agenda para escolher outro horário? ` +
+              `Diga "ver agenda" para visualizar.`
+            );
+            
+            if (typeof window !== 'undefined') {
+              (window as any).eAi_lastAvailabilityCheck = {
+                available: false,
+                date: result.date,
+                time: result.time,
+                transcript: transcript,
+                existing_appointments: result.existing_appointments,
+              };
+            }
           }
         }
         

@@ -35,7 +35,7 @@ import ImagemEmTextoDisplay from '@/components/assistant/ImagemEmTextoDisplay';
 import TabelaEmTextoDisplay from '@/components/assistant/TabelaEmTextoDisplay';
 import ContratoEmTextoDisplay from '@/components/assistant/ContratoEmTextoDisplay';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
-import { MeuCupomDisplay } from './modals/MeuCupomDisplay';
+import { MeuCupomDisplay } from '@/components/assistant/MeuCupomDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 

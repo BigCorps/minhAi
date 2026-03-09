@@ -542,6 +542,18 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
           playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
           break;
 
+case 'meu_cupom': {
+  await stopGoogleSpeech();
+  // Tenta extrair nome do transcript global (se vier de comando de voz)
+  // Se vier do botão do carrossel, prefillName fica vazio e o modal pede
+  setActiveModal({
+    type: 'MeuCupomDisplay',
+    data: { companyId, prefillName: '' },
+  });
+  await playText('Digite seu nome para gerar seu cupom de indicação.');
+  break;
+}
+          
 case 'ler_qrcode':
   await stopGoogleSpeech(); 
   await handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText });

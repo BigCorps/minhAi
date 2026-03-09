@@ -8,6 +8,7 @@
 // ============================================================
 
 import { useEffect, useState, useRef } from 'react';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
@@ -249,6 +250,8 @@ export default function FichaProducaoDisplay({
   const [novoItem, setNovoItem] = useState('');
   const [streamingItem, setStreamingItem] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; tipo: 'success' | 'error' | 'warning' } | null>(null);
+
+  const isMobile = useIsMobile();
 
   const lastText = useRef('');
   const fichaRef = useRef(ficha);
@@ -625,7 +628,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
         <div className="ficha-modal-inner" style={{ background: C.bg, border: `1px solid ${C.border}` }}>
 
           {/* ── Sidebar azul (desktop) ── */}
-          <div className="ficha-sidebar" style={{ background: '#1d4ed8' }}>
+          {!isMobile && <div className="ficha-sidebar" style={{ background: '#1d4ed8' }}>
             <div>
               {/* Título */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
@@ -693,43 +696,44 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                 )}
               </div>
             )}
-          </div>
+          </div>}
 
           {/* ── Coluna principal ── */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 
-            {/* Header azul mobile */}
-            <div className="ficha-header-mobile" style={{ background: '#1d4ed8', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6, lineHeight: 0 }}>
-                  <IconClipboard size={18} color="#fff" />
+            {/* Header — condicional por JS, não CSS */}
+            {isMobile ? (
+              <div style={{ background: '#1d4ed8', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 6, lineHeight: 0 }}>
+                    <IconClipboard size={18} color="#fff" />
+                  </div>
+                  <div>
+                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Fichas de Producao</p>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: 0 }}>
+                      {estagio === 'collecting' && 'Coletando ingredientes...'}
+                      {estagio === 'reviewing'  && 'Revisao final'}
+                      {estagio === 'saved'      && ficha.nome}
+                    </p>
+                  </div>
                 </div>
+                <button onClick={handleClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', lineHeight: 0 }}>
+                  <IconX size={18} color="#fff" />
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Fichas de Producao</p>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: 0 }}>
-                    {estagio === 'collecting' && 'Coletando ingredientes...'}
-                    {estagio === 'reviewing'  && 'Revisao final'}
-                    {estagio === 'saved'      && ficha.nome}
-                  </p>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
+                    {estagio === 'saved' ? 'Ficha Salva!' : estagio === 'reviewing' ? 'Revisao Final' : 'Coletando Ingredientes'}
+                  </h2>
+                  {ficha.nome && <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>}
                 </div>
+                <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, borderRadius: 8, lineHeight: 0 }}>
+                  <IconX size={18} color={C.textMuted} />
+                </button>
               </div>
-              <button onClick={handleClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', lineHeight: 0 }}>
-                <IconX size={18} color="#fff" />
-              </button>
-            </div>
-
-            {/* Header desktop */}
-            <div className="ficha-header-desktop" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
-                  {estagio === 'saved' ? 'Ficha Salva!' : estagio === 'reviewing' ? 'Revisao Final' : 'Coletando Ingredientes'}
-                </h2>
-                {ficha.nome && <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>}
-              </div>
-              <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, borderRadius: 8, lineHeight: 0, color: C.textMuted }}>
-                <IconX size={18} color={C.textMuted} />
-              </button>
-            </div>
+            )}
 
             {/* Toast */}
             {toast && (
@@ -1030,8 +1034,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
           overflow: hidden;
         }
         .ficha-sidebar         { display: none; }
-        .ficha-header-mobile   { display: flex; }
-        .ficha-header-desktop  { display: none; }
         .ficha-custo-mobile    { display: flex; }
         .ficha-cards-mobile    { display: grid; }
 
@@ -1047,8 +1049,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
             max-height: 88vh;
           }
           .ficha-sidebar        { display: flex; flex-direction: column; justify-content: space-between; width: 220px; flex-shrink: 0; padding: 24px; }
-          .ficha-header-mobile  { display: none; }
-          .ficha-header-desktop { display: flex; }
           .ficha-custo-mobile   { display: none !important; }
           .ficha-cards-mobile   { display: none !important; }
         }

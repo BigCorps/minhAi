@@ -36,6 +36,9 @@ import TabelaEmTextoDisplay from '@/components/assistant/TabelaEmTextoDisplay';
 import ContratoEmTextoDisplay from '@/components/assistant/ContratoEmTextoDisplay';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 import MeuCupomDisplay from '@/components/assistant/MeuCupomDisplay';
+import ConfirmPresenceModal from '@/components/assistant/ConfirmPresenceModal';
+import RescheduleModal from '@/components/assistant/RescheduleModal';
+import CancelAppointmentModal from '@/components/assistant/CancelAppointmentModal';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -72,6 +75,9 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ContratoEmTextoDisplay': ContratoEmTextoDisplay,
   'FichaProducaoDisplay': FichaProducaoDisplay,
   'MeuCupomDisplay': MeuCupomDisplay,
+  'ConfirmPresenceModal': ConfirmPresenceModal,
+  'RescheduleModal': RescheduleModal,
+  'CancelAppointmentModal': CancelAppointmentModal,
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

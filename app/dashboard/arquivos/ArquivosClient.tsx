@@ -80,3 +80,4 @@ export default function ArquivosClient({ companies }: ArquivosClientProps) {
       </div>
     </div>
   );
+}

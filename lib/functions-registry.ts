@@ -602,6 +602,58 @@ ler_codigo_barras: {
   },
 },
 
+meu_cupom: {
+  functionKey: 'meu_cupom',
+  functionName: 'Meu Cupom',
+  category: 'codes',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'meu cupom',
+    'gerar cupom',
+    'quero um cupom',
+    'cupom de desconto',
+    'cupom de indicação',
+    'cupom de indicacao',
+    'gerar meu cupom',
+  ],
+  examplePhrases: [
+    'Gerar meu cupom de indicação',
+    'Quero um cupom de desconto',
+    'Me gera um cupom',
+  ],
+  requiresInput: false,
+  description: 'Gera um cupom de indicação personalizado com QR Code para compartilhar.',
+  shortDescription: 'Gerar cupom de indicação',
+  icon: '🎟️',
+  color: '#3B82F6',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+  try {
+    let prefillName = '';
+    const nameMatch = transcript?.match(
+      /(?:para|de|do|da|nome|chamado|chama)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú]?[a-zà-ú]+)*)/i
+    );
+    if (nameMatch) prefillName = nameMatch[1].trim();
+
+    setActiveModal?.({
+      type: 'MeuCupomDisplay',
+      data: { companyId, prefillName },
+    });
+    await playText(
+      prefillName
+        ? `Encontrei o nome ${prefillName}. Confirme e gere seu cupom.`
+        : 'Digite seu nome para gerar seu cupom de indicação.'
+    );
+    return true;
+  } catch {
+    return false;
+  }
+},
+},
+
 // ── Validar Cupom ─────────────────────────────────────────────
 validar_cupom: {
   functionKey: 'validar_cupom',

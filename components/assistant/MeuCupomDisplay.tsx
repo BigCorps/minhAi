@@ -162,7 +162,6 @@ export default function MeuCupomDisplay({
         {/* Header */}
         <div className={`flex items-center justify-between px-5 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
           <div className="flex items-center gap-2">
-            <span className="text-xl">🎟️</span>
             <span className={`font-bold text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Meu Cupom
             </span>
@@ -210,7 +209,6 @@ export default function MeuCupomDisplay({
                 />
               </div>
               <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
-                <span>🎤</span>
                 <span>Você também pode falar seu nome ao assistente</span>
               </div>
               <button
@@ -236,7 +234,7 @@ export default function MeuCupomDisplay({
             <div className="space-y-4">
               {/* Badge desconto */}
               <div className={`text-center px-4 py-2 rounded-xl font-bold text-sm ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
-                🎉 {formatDiscount()}
+                {formatDiscount()}
               </div>
 
               {/* Código + copiar */}

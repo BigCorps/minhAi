@@ -69,7 +69,7 @@ interface FichaProducaoDisplayProps {
 // ─────────────────────────────────────────────────────────────
 
 const OPENING_TEXT =
-  'Ola! Vou ajudar voce a criar sua ficha de producao. Me diga o nome da receita. Por exemplo: pizza de mussarela, molho de tomate, ou qualquer outra receita.';
+  'Vou ajudar voce a criar a estimativa correta da sua produçāo. Me diga o nome da receita. Por exemplo: pizza de mussarela, molho de tomate, ou qualquer outra receita.';
 
 const AVISO_ESTIMATIVAS =
   'Esta ficha contém estimativas de IA. Confirme os preços com seus fornecedores antes de tomar decisões financeiras.';
@@ -627,11 +627,34 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       />
 
       {/* Modal */}
-      <div className="ficha-modal-root" onClick={e => e.stopPropagation()}>
-        <div className="ficha-modal-inner" style={{ background: C.bg, border: `1px solid ${C.border}` }}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={isMobile ? {
+          position: 'fixed', zIndex: 9999,
+          bottom: 0, left: 0, right: 0,
+          maxHeight: '92vh', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+        } : {
+          position: 'fixed', zIndex: 9999,
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '100%', maxWidth: 860, padding: '0 16px',
+        }}
+      >
+        <div style={{
+          background: C.bg,
+          border: `1px solid ${C.border}`,
+          borderRadius: isMobile ? '16px 16px 0 0' : 16,
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          maxHeight: isMobile ? '92vh' : '88vh',
+          overflow: 'hidden',
+          flex: isMobile ? 1 : undefined,
+          minHeight: isMobile ? 0 : undefined,
+        }}>
 
           {/* ── Sidebar azul (desktop) ── */}
-          {!isMobile && <div className="ficha-sidebar" style={{ background: '#1d4ed8' }}>
+          {!isMobile && <div style={{ background: '#1d4ed8', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 220, flexShrink: 0, padding: 24 }}>
             <div>
               {/* Título */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
@@ -821,7 +844,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
 
                   {/* Custo parcial mobile */}
                   {ficha.itens.length > 0 && (
-                    <div className="ficha-custo-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 12, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
+                    <div style={{ display: isMobile ? 'flex' : 'none', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 12, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
                       <span style={{ fontSize: 13, color: C.textMuted }}>Custo parcial</span>
                       <span style={{ fontSize: 16, fontWeight: 700, color: '#3b82f6' }}>{fmt(resultado.custo_total)}</span>
                     </div>
@@ -890,7 +913,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   </div>
 
                   {/* Cards resumo mobile */}
-                  <div className="ficha-cards-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div style={{ display: isMobile ? 'grid' : 'none', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     {[
                       { label: 'Custo Total',  value: fmt(resultado.custo_total),         accent: true  },
                       { label: 'Peso Total',   value: `${resultado.peso_total_kg.toFixed(2)} kg`, accent: false },
@@ -1018,51 +1041,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
           </div>
         </div>
       </div>
-
-     {/* CSS responsivo */}
-      <style>{`
-        @keyframes fichaSpinner {
-          to { transform: rotate(360deg); }
-        }
-        .ficha-modal-root {
-          position: fixed;
-          z-index: 9999;
-          bottom: 0; left: 0; right: 0;
-          max-height: 92vh;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-        }
-        .ficha-modal-inner {
-          border-radius: 16px 16px 0 0;
-          display: flex;
-          flex-direction: column;
-          flex: 1;
-          min-height: 0;
-          overflow: hidden;
-        }
-        .ficha-sidebar         { display: none; }
-        .ficha-custo-mobile    { display: flex; }
-        .ficha-cards-mobile    { display: grid; }
-
-        @media (min-width: 768px) {
-          .ficha-modal-root {
-            bottom: auto; left: 50%; right: auto; top: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%; max-width: 860px; padding: 0 16px;
-            display: block; overflow: visible; max-height: none;
-          }
-          .ficha-modal-inner {
-            border-radius: 16px;
-            flex-direction: row;
-            max-height: 88vh;
-            flex: unset; min-height: unset;
-          }
-          .ficha-sidebar        { display: flex; flex-direction: column; justify-content: space-between; width: 220px; flex-shrink: 0; padding: 24px; }
-          .ficha-custo-mobile   { display: none !important; }
-          .ficha-cards-mobile   { display: none !important; }
-        }
-      `}</style>
     </>,
     document.body
   );

@@ -1,7 +1,9 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import ArquivosCompanyClient from '../ArquivosCompanyClient';
+import ArquivosCompanyClient from './ArquivosCompanyClient';
 
 export default function ArquivosCompanyPage() {
   const params = useParams();
@@ -16,11 +18,9 @@ export default function ArquivosCompanyPage() {
 
   useEffect(() => {
     const load = async () => {
-      // Verificar autenticação
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      // Buscar empresa + verificar acesso
       const { data: companyData } = await supabase
         .from('companies')
         .select('id, name, slug')
@@ -32,7 +32,6 @@ export default function ArquivosCompanyPage() {
 
       setCompany(companyData);
 
-      // Buscar cupons
       const { data: cuponsData } = await supabase
         .from('cupons')
         .select('id, code, type, discount_type, discount_value, times_used, max_uses, is_active, expires_at, created_at, metadata')

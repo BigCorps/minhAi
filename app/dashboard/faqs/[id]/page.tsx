@@ -131,7 +131,7 @@ export default function CompanyFAQsPage() {
             }`}
           >
             <ArrowLeft className="w-4 h-4" />
-            Voltar para lista de empresas
+            Voltar para lista
           </Link>
 
           <div>

@@ -1118,6 +1118,7 @@ contrato_em_texto: {
       'criar ficha',
       'nova ficha',
       'ficha de producao',
+      'fichas de produção',
       'ficha de produção',
       'ficha tecnica',
       'ficha técnica',

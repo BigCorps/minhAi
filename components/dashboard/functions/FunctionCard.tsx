@@ -40,7 +40,7 @@ const CATEGORY_NAMES: { [key: string]: string } = {
   'knowledge': 'Consultas',
   'configuration': 'Localização',
   'contact': 'Contato',
-  'payment': 'Pagamento',
+  'payment': 'Financeiro',
   'schedule': 'Agendamento',
   'information': 'Informação',
   'ai_assistant': 'Conhecimento',

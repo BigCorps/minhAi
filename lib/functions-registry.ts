@@ -290,6 +290,222 @@ voiceTriggers: [
     },
   },
 
+  // ============================================================
+// CATEGORIA: AGENDAMENTOS (schedule)
+// ============================================================
+
+confirmar_presenca: {
+  functionKey: 'confirmar_presenca',
+  functionName: 'Confirmar Presença',
+  category: 'schedule',
+  description: 'Confirma presença em agendamento marcado',
+  icon: '✅',
+  color: '#10B981',
+  voiceTriggers: [
+    'confirmar presença',
+    'confirmar agendamento',
+    'confirmar horário',
+    'estou confirmado',
+    'vou comparecer',
+    'confirmar consulta',
+  ],
+  creditsPerUse: 1,
+  responseType: 'modal',
+  uiComponent: 'ConfirmPresenceModal',
+  
+  handler: async ({ 
+    transcript,
+    playText, 
+    setActiveModal, 
+    companyId 
+  }) => {
+    try {
+      console.log('✅ [CONFIRMAR PRESENÇA] Abrindo modal');
+      
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConfirmPresenceModal',
+          data: { 
+            companyId,
+            transcript 
+          }
+        });
+      }
+      
+      await playText('Vou buscar seu agendamento para confirmar presença.');
+      
+      return true;
+      
+    } catch (error) {
+      console.error('✅ [CONFIRMAR PRESENÇA] ERRO:', error);
+      await playText('Desculpe, não consegui buscar seu agendamento.');
+      return false;
+    }
+  }
+},
+
+reagendar_compromisso: {
+  functionKey: 'reagendar_compromisso',
+  functionName: 'Reagendamento',
+  category: 'schedule',
+  description: 'Reagenda compromisso para nova data e horário',
+  icon: '🔄',
+  color: '#3B82F6',
+  voiceTriggers: [
+    'reagendar',
+    'remarcar',
+    'mudar data',
+    'mudar horário',
+    'trocar dia',
+    'desmarcar e marcar',
+    'mudar agendamento',
+  ],
+  creditsPerUse: 2,
+  responseType: 'modal',
+  uiComponent: 'RescheduleModal',
+  
+  handler: async ({ 
+    transcript,
+    playText, 
+    setActiveModal, 
+    companyId 
+  }) => {
+    try {
+      console.log('🔄 [REAGENDAMENTO] Abrindo modal');
+      
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'RescheduleModal',
+          data: { 
+            companyId,
+            transcript 
+          }
+        });
+      }
+      
+      await playText('Vou buscar seu agendamento para reagendar.');
+      
+      return true;
+      
+    } catch (error) {
+      console.error('🔄 [REAGENDAMENTO] ERRO:', error);
+      await playText('Desculpe, não consegui acessar seu agendamento.');
+      return false;
+    }
+  }
+},
+
+cancelar_agendamento: {
+  functionKey: 'cancelar_agendamento',
+  functionName: 'Cancelar Agendamento',
+  category: 'schedule',
+  description: 'Cancela agendamento marcado',
+  icon: '❌',
+  color: '#EF4444',
+  voiceTriggers: [
+    'cancelar agendamento',
+    'cancelar consulta',
+    'desmarcar',
+    'não vou comparecer',
+    'não posso ir',
+    'cancelar horário',
+  ],
+  creditsPerUse: 1,
+  responseType: 'modal',
+  uiComponent: 'CancelAppointmentModal',
+  
+  handler: async ({ 
+    transcript,
+    playText, 
+    setActiveModal, 
+    companyId 
+  }) => {
+    try {
+      console.log('❌ [CANCELAR AGENDAMENTO] Abrindo modal');
+      
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'CancelAppointmentModal',
+          data: { 
+            companyId,
+            transcript 
+          }
+        });
+      }
+      
+      await playText('Vou buscar seu agendamento para cancelar.');
+      
+      return true;
+      
+    } catch (error) {
+      console.error('❌ [CANCELAR AGENDAMENTO] ERRO:', error);
+      await playText('Desculpe, não consegui acessar seu agendamento.');
+      return false;
+    }
+  }
+},
+
+horarios_disponiveis: {
+  functionKey: 'horarios_disponiveis',
+  functionName: 'Horários Disponíveis',
+  category: 'schedule',
+  description: 'Consulta horários disponíveis na agenda',
+  icon: '🕐',
+  color: '#8B5CF6',
+  voiceTriggers: [
+    'tem horário',
+    'está disponível',
+    'horário livre',
+    'horário vago',
+    'tem vaga',
+    'consultar agenda',
+    'ver disponibilidade',
+    'horários disponíveis',
+  ],
+  creditsPerUse: 1,
+  responseType: 'voice',
+  
+  handler: async ({ 
+    transcript,
+    playText, 
+    companyId 
+  }) => {
+    try {
+      console.log('🕐 [HORÁRIOS DISPONÍVEIS] Consultando...');
+      
+      // Chamar Edge Function
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/consultar-disponibilidade`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          user_input: transcript,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        await playText(result.speech_text);
+        
+        // Salvar histórico já é feito na Edge Function
+        return true;
+      } else {
+        await playText(result.speech_text || 'Não consegui consultar a disponibilidade.');
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('🕐 [HORÁRIOS DISPONÍVEIS] ERRO:', error);
+      await playText('Desculpe, não consegui consultar os horários.');
+      return false;
+    }
+  }
+},
+
   sequencia_videos: {
     functionKey: 'sequencia_videos',
     functionName: 'Sequência de Vídeos',

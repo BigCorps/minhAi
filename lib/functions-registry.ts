@@ -462,36 +462,83 @@ horarios_disponiveis: {
     'ver disponibilidade',
     'horários disponíveis',
   ],
+  examplePhrases: [
+    'Tem horário disponível amanhã às 14h?',
+    'Está vago dia 15 às 10h?',
+    'Horários livres na próxima semana',
+  ],
   creditsPerUse: 1,
   responseType: 'voice',
+  requiresInput: false,
   
   handler: async ({ 
     transcript,
     playText, 
+    setActiveModal,
     companyId 
   }) => {
     try {
-      console.log('🕐 [HORÁRIOS DISPONÍVEIS] Consultando...');
+      console.log('🕐 [HORÁRIOS DISPONÍVEIS] Consultando disponibilidade...');
       
       // Chamar Edge Function
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/consultar-disponibilidade`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          company_id: companyId,
-          user_input: transcript,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/consultar-disponibilidade`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            company_id: companyId,
+            user_input: transcript,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Erro na requisição');
+      }
       
       const result = await response.json();
       
       if (result.success) {
-        await playText(result.speech_text);
+        if (result.available) {
+          // ✅ DISPONÍVEL - Oferecer marcar ou ver agenda
+          await playText(
+            `${result.speech_text} Quer que eu marque agora ou prefere ver a agenda completa? ` +
+            `Diga "marcar agora" para agendar ou "ver agenda" para visualizar o dia inteiro.`
+          );
+          
+          // Salvar contexto para próximo comando
+          if (typeof window !== 'undefined') {
+            (window as any).eAi_lastAvailabilityCheck = {
+              available: true,
+              date: result.date,
+              time: result.time,
+              transcript: transcript,
+            };
+          }
+          
+        } else {
+          // ❌ OCUPADO - Oferecer ver agenda para escolher outro horário
+          await playText(
+            `${result.speech_text} Quer ver a agenda para escolher outro horário? ` +
+            `Diga "ver agenda" para visualizar os horários disponíveis.`
+          );
+          
+          // Salvar contexto
+          if (typeof window !== 'undefined') {
+            (window as any).eAi_lastAvailabilityCheck = {
+              available: false,
+              date: result.date,
+              time: result.time,
+              transcript: transcript,
+              existing_appointments: result.existing_appointments,
+            };
+          }
+        }
         
-        // Salvar histórico já é feito na Edge Function
         return true;
       } else {
         await playText(result.speech_text || 'Não consegui consultar a disponibilidade.');
@@ -500,7 +547,7 @@ horarios_disponiveis: {
       
     } catch (error) {
       console.error('🕐 [HORÁRIOS DISPONÍVEIS] ERRO:', error);
-      await playText('Desculpe, não consegui consultar os horários.');
+      await playText('Desculpe, não consegui consultar os horários. Tente novamente.');
       return false;
     }
   }
@@ -588,50 +635,95 @@ horarios_disponiveis: {
     },
   },
   
-  agendar_compromisso: {
-    functionKey: 'agendar_compromisso',
-    functionName: 'Marcar Evento',
-    category: 'productivity',
-    responseType: 'modal',
-    
-    voiceTriggers: [
-      'agendar',
-      'marcar na agenda',
-      'marcar compromisso',
-      'marcar evento',
-      'criar evento',
-      'agendar reunião',
-      'marcar reunião',
-      'agendar compromisso',
-      'novo evento',
-      'nova reunião',
-      'marcar horário',
-      'agendar horário',
-    ],
-    
-    examplePhrases: [
-      'Agendar reunião para amanhã',
-      'Marcar compromisso na próxima semana',
-      'Criar evento no calendário',
-    ],
-    
-    edgeFunction: 'criar-evento-calendario',
-    requiresInput: false,
-    
-    description: 'Cria eventos no Google Calendar através de comando de voz',
-    shortDescription: 'Marcar evento',
-    icon: '📅',
-    color: '#10B981',
-    
-    saveToHistory: true,
-    creditsPerUse: 1,
-    requiresPayment: false,
-    isPremium: false,
-    
+agendar_compromisso: {
+  functionKey: 'agendar_compromisso',
+  functionName: 'Marcar Evento',
+  category: 'productivity',
+  responseType: 'modal',
+  
+  voiceTriggers: [
+    'agendar',
+    'marcar na agenda',
+    'marcar compromisso',
+    'marcar evento',
+    'criar evento',
+    'agendar reunião',
+    'marcar reunião',
+    'agendar compromisso',
+    'novo evento',
+    'nova reunião',
+    'marcar horário',
+    'agendar horário',
+    // ✅ ADICIONAR TRIGGERS DE FOLLOW-UP
+    'marcar agora',
+    'marcar sim',
+    'pode marcar',
+    'quero marcar',
+  ],
+  
+  examplePhrases: [
+    'Agendar reunião para amanhã',
+    'Marcar compromisso na próxima semana',
+    'Criar evento no calendário',
+  ],
+  
+  edgeFunction: 'criar-evento-calendario',
+  requiresInput: false,
+  
+  description: 'Cria eventos no Google Calendar através de comando de voz',
+  shortDescription: 'Marcar evento',
+  icon: '📅',
+  color: '#10B981',
+  
+  saveToHistory: true,
+  creditsPerUse: 2, // ← Crédito só cobrado ao criar evento
+  requiresPayment: false,
+  isPremium: false,
+  
   handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     try {
       console.log('📅 [MARCAR EVENTO] Processando comando');
       
+      // ✅ VERIFICAR SE É UM FOLLOW-UP DE CONSULTA DE DISPONIBILIDADE
+      const lastCheck = typeof window !== 'undefined' 
+        ? (window as any).eAi_lastAvailabilityCheck 
+        : null;
+      
+      const isFollowUp = transcript && (
+        transcript.includes('marcar agora') ||
+        transcript.includes('marcar sim') ||
+        transcript.includes('pode marcar') ||
+        transcript.includes('quero marcar')
+      );
+      
+      // Se for follow-up E tiver contexto disponível
+      if (isFollowUp && lastCheck?.available) {
+        console.log('📅 [MARCAR EVENTO] Follow-up detectado - usando dados da consulta');
+        
+        if (setActiveModal) {
+          setActiveModal({
+            type: 'CreateEventModal',
+            data: {
+              companyId,
+              prefilledData: {
+                date: lastCheck.date ? new Date(lastCheck.date) : undefined,
+                time: lastCheck.time || undefined,
+              }
+            }
+          });
+        }
+        
+        await playText('Perfeito! Confirme o horário e me diga seu nome para finalizar o agendamento.');
+        
+        // Limpar contexto
+        if (typeof window !== 'undefined') {
+          delete (window as any).eAi_lastAvailabilityCheck;
+        }
+        
+        return true;
+      }
+      
+      // ✅ FLUXO NORMAL (não é follow-up)
       const transcriptText = transcript?.toLowerCase() || '';
       
       // Objeto para armazenar os dados extraídos
@@ -751,9 +843,7 @@ horarios_disponiveis: {
         }
       }
       
-      // ==================== DECIDIR QUAL MODAL ABRIR ====================
-      const hasAllRequiredData = extractedData.date && extractedData.time && extractedData.name;
-      
+      // ==================== ABRIR MODAL ====================
       if (setActiveModal) {
         setActiveModal({ 
           type: 'CreateEventModal', 
@@ -763,6 +853,8 @@ horarios_disponiveis: {
           } 
         });
       }
+      
+      const hasAllRequiredData = extractedData.date && extractedData.time && extractedData.name;
       
       if (hasAllRequiredData) {
         await playText('Verifique os dados e confirme para criar o evento.');
@@ -946,48 +1038,92 @@ contrato_em_texto: {
   },
 },
 
-  ver_agenda: {
-    functionKey: 'ver_agenda',
-    functionName: 'Ver Agenda',
-    category: 'productivity',
-    responseType: 'modal',
-    
-    voiceTriggers: [
-      'ver agenda',
-      'mostrar agenda',
-      'minha agenda',
-      'compromissos',
-      'ver calendário',
-      'mostrar calendário',
-      'ver eventos',
-      'mostrar eventos',
-      'o que tenho agendado',
-      'o que está marcado',
-    ],
-    
-    examplePhrases: [
-      'Ver minha agenda de hoje',
-      'Mostrar compromissos da semana',
-      'O que tenho agendado?',
-    ],
-    
-    edgeFunction: 'listar-eventos-google',
-    requiresInput: false,
-    
-    description: 'Visualiza eventos do Google Calendar',
-    shortDescription: 'Ver agenda',
-    icon: '📆',
-    color: '#3B82F6',
-    
-    saveToHistory: true,
-    creditsPerUse: 1,
-    requiresPayment: false,
-    isPremium: true,
-    
+ver_agenda: {
+  functionKey: 'ver_agenda',
+  functionName: 'Ver Agenda',
+  category: 'productivity',
+  responseType: 'modal',
+  
+  voiceTriggers: [
+    'ver agenda',
+    'mostrar agenda',
+    'minha agenda',
+    'compromissos',
+    'ver calendário',
+    'mostrar calendário',
+    'ver eventos',
+    'mostrar eventos',
+    'o que tenho agendado',
+    'o que está marcado',
+    // ✅ ADICIONAR TRIGGERS DE FOLLOW-UP
+    'visualizar agenda',
+    'quero ver',
+  ],
+  
+  examplePhrases: [
+    'Ver minha agenda de hoje',
+    'Mostrar compromissos da semana',
+    'O que tenho agendado?',
+  ],
+  
+  edgeFunction: 'listar-eventos-google',
+  requiresInput: false,
+  
+  description: 'Visualiza eventos do Google Calendar',
+  shortDescription: 'Ver agenda',
+  icon: '📆',
+  color: '#3B82F6',
+  
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  
   handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     try {
       console.log('📆 [VER AGENDA] Abrindo modal');
       
+      // ✅ VERIFICAR SE É UM FOLLOW-UP DE CONSULTA DE DISPONIBILIDADE
+      const lastCheck = typeof window !== 'undefined' 
+        ? (window as any).eAi_lastAvailabilityCheck 
+        : null;
+      
+      const isFollowUp = transcript && (
+        transcript.includes('ver agenda') ||
+        transcript.includes('mostrar agenda') ||
+        transcript.includes('visualizar')
+      );
+      
+      // Se for follow-up E tiver contexto
+      if (isFollowUp && lastCheck) {
+        console.log('📆 [VER AGENDA] Follow-up detectado - abrindo na data consultada');
+        
+        if (setActiveModal) {
+          setActiveModal({
+            type: 'ViewAgendaModal',
+            data: {
+              companyId,
+              initialView: 'day',
+              initialDate: lastCheck.date || undefined,
+            }
+          });
+        }
+        
+        await playText(
+          lastCheck.date 
+            ? 'Abrindo a agenda do dia consultado. Você pode navegar para outros dias se preferir.'
+            : 'Abrindo a agenda.'
+        );
+        
+        // Limpar contexto
+        if (typeof window !== 'undefined') {
+          delete (window as any).eAi_lastAvailabilityCheck;
+        }
+        
+        return true;
+      }
+      
+      // ✅ FLUXO NORMAL (não é follow-up)
       let initialView: 'month' | 'week' | 'day' = 'month';
       const lowerTranscript = transcript?.toLowerCase() || '';
       

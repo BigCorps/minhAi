@@ -1631,7 +1631,7 @@ function GoogleCalendarScheduleForm({
         'Confirmar agendamento',
         'Vou comparecer',
       ],
-      smartFeature: 'Busca automática do agendamento usando email ou telefone. Todas as alterações sincronizam em tempo real com o Google Calendar.',
+      smartFeature: 'Busca automática do agendamento. Todas as alterações sincronizam em tempo real com o Google Calendar.',
     },
     reagendar_compromisso: {
       howItWorks: [
@@ -1644,7 +1644,7 @@ function GoogleCalendarScheduleForm({
         'Remarcar',
         'Mudar data',
       ],
-      smartFeature: 'Busca automática do agendamento usando email ou telefone. Todas as alterações sincronizam em tempo real com o Google Calendar.',
+      smartFeature: 'Busca automática do agendamento. Todas as alterações sincronizam em tempo real com o Google Calendar.',
     },
     cancelar_agendamento: {
       howItWorks: [
@@ -1657,7 +1657,7 @@ function GoogleCalendarScheduleForm({
         'Desmarcar',
         'Não poderei comparecer',
       ],
-      smartFeature: 'Busca automática do agendamento usando email ou telefone. Todas as alterações sincronizam em tempo real com o Google Calendar.',
+      smartFeature: 'Busca automática do agendamento. Todas as alterações sincronizam em tempo real com o Google Calendar.',
     },
     horarios_disponiveis: {
       howItWorks: [

@@ -543,6 +543,30 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
           playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
           break;
 
+case 'confirmar_presenca':
+  setActiveModal({ 
+    type: 'ConfirmPresenceModal', 
+    data: { companyId, transcript } 
+  });
+  playText('Vou buscar seu agendamento para confirmar presença.').catch(() => {});
+  break;
+
+case 'reagendar_compromisso':
+  setActiveModal({ 
+    type: 'RescheduleModal', 
+    data: { companyId, transcript } 
+  });
+  playText('Vou buscar seu agendamento para reagendar.').catch(() => {});
+  break;
+
+case 'cancelar_agendamento':
+  setActiveModal({ 
+    type: 'CancelAppointmentModal', 
+    data: { companyId, transcript } 
+  });
+  playText('Vou buscar seu agendamento para cancelar.').catch(() => {});
+  break;
+
 case 'meu_cupom': {
   await stopGoogleSpeech();
   // Tenta extrair nome do transcript global (se vier de comando de voz)

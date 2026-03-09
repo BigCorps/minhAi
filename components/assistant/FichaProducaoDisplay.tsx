@@ -1047,7 +1047,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
             max-height: 88vh;
           }
           .ficha-sidebar        { display: flex; flex-direction: column; justify-content: space-between; width: 220px; flex-shrink: 0; padding: 24px; }
-          .ficha-header-mobile  { display: none; }
+          .ficha-header-mobile  { display: flex; }
           .ficha-header-desktop { display: flex; }
           .ficha-custo-mobile   { display: none !important; }
           .ficha-cards-mobile   { display: none !important; }

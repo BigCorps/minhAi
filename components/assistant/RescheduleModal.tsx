@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar as CalendarIcon, Loader2, AlertCircle, Clock, RefreshCw, MapPin, User, CheckCircle } from 'lucide-react';
+import { X, Calendar, Clock, User, Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 
@@ -20,6 +19,15 @@ interface RescheduleModalProps {
   playText?: (text: string) => Promise<void>;
 }
 
+type Step = 'search' | 'select_event' | 'select_date' | 'success';
+
+interface Event {
+  id: string;
+  summary: string;
+  start: { dateTime: string };
+  end: { dateTime: string };
+}
+
 export default function RescheduleModal({
   data,
   onClose,
@@ -28,306 +36,342 @@ export default function RescheduleModal({
 }: RescheduleModalProps) {
   const { companyId, transcript } = data;
   
-  const [step, setStep] = useState<'search' | 'select_date' | 'confirm' | 'success'>(transcript ? 'search' : 'search');
+  const [step, setStep] = useState<Step>('search');
   const [loading, setLoading] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [appointment, setAppointment] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Campos de busca
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [searchDate, setSearchDate] = useState('');
+  const [searchTime, setSearchTime] = useState('');
+  const [searchName, setSearchName] = useState('');
+
+  // Eventos e seleção
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   
   // Nova data/hora
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState('');
-  const [reason, setReason] = useState('');
-  
-  const calendarRef = useRef<FullCalendar>(null);
-  const supabase = createClient();
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+
   const isDark = theme === 'dark';
-  
   const bg = isDark ? 'bg-slate-900' : 'bg-white';
   const border = isDark ? 'border-slate-700' : 'border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
 
+  const supabase = createClient();
+
+  // Auto-extrair data/hora/nome do transcript
   useEffect(() => {
-    // Tentar extrair email/telefone do transcript
-    if (transcript) {
-      const emailMatch = transcript.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
-      const phoneMatch = transcript.match(/(\d{10,11})/);
-      
-      if (emailMatch) {
-        setCustomerEmail(emailMatch[1]);
-        searchAppointment(emailMatch[1], undefined);
-      } else if (phoneMatch) {
-        setCustomerPhone(phoneMatch[1]);
-        searchAppointment(undefined, phoneMatch[1]);
-      }
+    if (!transcript) return;
+    
+    const hoje = new Date().toISOString().split('T')[0];
+    const amanha = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    
+    if (/hoje/i.test(transcript)) {
+      setSearchDate(hoje);
+    } else if (/amanh[ãa]/i.test(transcript)) {
+      setSearchDate(amanha);
     }
-  }, []);
+    
+    const timeMatch = transcript.match(/(\d{1,2})[:h](\d{2})?/i);
+    if (timeMatch) {
+      const hour = timeMatch[1].padStart(2, '0');
+      const min = timeMatch[2] || '00';
+      setSearchTime(`${hour}:${min}`);
+    }
+  }, [transcript]);
 
-  async function searchAppointment(email?: string, phone?: string) {
+  const handleSearch = async () => {
+    if (!searchDate) {
+      setError('Por favor, informe a data do agendamento');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      const searchEmail = email || customerEmail;
-      const searchPhone = phone || customerPhone;
-      
-      if (!searchEmail && !searchPhone) {
-        setError('Por favor, informe seu email ou telefone.');
-        setLoading(false);
-        return;
-      }
-
-      // Buscar agendamento via Supabase
-      let query = supabase
-        .from('customer_appointments')
-        .select('*')
-        .eq('company_id', companyId)
-        .in('status', ['scheduled', 'confirmed', 'rescheduled'])
-        .gte('appointment_date', new Date().toISOString())
-        .order('appointment_date', { ascending: true })
-        .limit(1);
-
-      if (searchEmail) {
-        query = query.eq('customer_email', searchEmail);
-      } else if (searchPhone) {
-        query = query.eq('customer_phone', searchPhone);
-      }
-
-      const { data: appointments, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      if (!appointments || appointments.length === 0) {
-        setError('Nenhum agendamento encontrado com esses dados.');
-        if (playText) {
-          playText('Não encontrei nenhum agendamento com esses dados.').catch(() => {});
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/listar-eventos-google`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            company_id: companyId,
+            time_min: `${searchDate}T00:00:00`,
+            time_max: `${searchDate}T23:59:59`,
+          }),
         }
-        setLoading(false);
+      );
+
+      const result = await response.json();
+
+      if (!result.success || !result.events || result.events.length === 0) {
+        setError('Nenhum agendamento encontrado para esta data');
+        setEvents([]);
+        if (playText) {
+          playText('Nenhum agendamento encontrado para esta data').catch(() => {});
+        }
         return;
       }
 
-      setAppointment(appointments[0]);
-      setStep('select_date');
-      if (playText) {
-        playText('Agendamento encontrado! Selecione a nova data e horário.').catch(() => {});
+      let filteredEvents = result.events;
+
+      if (searchTime) {
+        filteredEvents = filteredEvents.filter((event: Event) => {
+          const eventTime = new Date(event.start.dateTime).toTimeString().substring(0, 5);
+          return eventTime === searchTime;
+        });
       }
-    } catch (err: any) {
-      console.error('Erro ao buscar agendamento:', err);
-      setError('Erro ao buscar agendamento. Tente novamente.');
+
+      if (searchName) {
+        const nameLower = searchName.toLowerCase();
+        filteredEvents = filteredEvents.filter((event: Event) =>
+          event.summary?.toLowerCase().includes(nameLower)
+        );
+      }
+
+      if (filteredEvents.length === 0) {
+        setError('Nenhum agendamento encontrado com os critérios informados');
+        setEvents([]);
+        if (playText) {
+          playText('Nenhum agendamento encontrado').catch(() => {});
+        }
+        return;
+      }
+
+      setEvents(filteredEvents);
+      
+      if (filteredEvents.length === 1) {
+        setSelectedEvent(filteredEvents[0]);
+        setStep('select_date');
+        await loadCalendarEvents();
+        if (playText) {
+          playText('Agendamento encontrado. Escolha a nova data e horário.').catch(() => {});
+        }
+      } else {
+        setStep('select_event');
+        if (playText) {
+          playText(`Encontrei ${filteredEvents.length} agendamentos. Selecione um.`).catch(() => {});
+        }
+      }
+
+    } catch (err) {
+      console.error('Erro ao buscar eventos:', err);
+      setError('Erro ao buscar agendamentos. Tente novamente.');
       if (playText) {
-        playText('Erro ao buscar agendamento. Tente novamente.').catch(() => {});
+        playText('Erro ao buscar agendamentos').catch(() => {});
       }
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  function handleDateClick(info: any) {
-    const clickedDate = new Date(info.dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (clickedDate < today) {
-      setError('Não é possível reagendar para datas passadas.');
+  const loadCalendarEvents = async () => {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      const endOfMonth = new Date(startOfMonth);
+      endOfMonth.setMonth(endOfMonth.getMonth() + 2);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/listar-eventos-google`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            company_id: companyId,
+            time_min: startOfMonth.toISOString(),
+            time_max: endOfMonth.toISOString(),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success && result.events) {
+        const formatted = result.events.map((evt: Event) => ({
+          title: evt.summary || 'Evento',
+          start: evt.start.dateTime,
+          end: evt.end.dateTime,
+          color: '#3b82f6',
+        }));
+        setCalendarEvents(formatted);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar eventos do calendário:', err);
+    }
+  };
+
+  const handleDateClick = (info: any) => {
+    setNewDate(info.dateStr);
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedEvent || !newDate || !newTime) {
+      setError('Por favor, selecione uma nova data e horário');
       return;
     }
-    
-    setSelectedDate(clickedDate);
+
+    setLoading(true);
     setError(null);
-  }
-
-  async function handleReschedule() {
-    if (!appointment || !selectedDate || !selectedTime) {
-      setError('Por favor, selecione uma data e horário.');
-      return;
-    }
 
     try {
-      setProcessing(true);
-      setError(null);
+      const newDateTime = `${newDate}T${newTime}:00`;
+      const oldStart = new Date(selectedEvent.start.dateTime);
+      const oldEnd = new Date(selectedEvent.end.dateTime);
+      const duration = oldEnd.getTime() - oldStart.getTime();
+      const newEndDateTime = new Date(new Date(newDateTime).getTime() + duration).toISOString();
 
-      const [hours, minutes] = selectedTime.split(':');
-      const newDate = new Date(selectedDate);
-      newDate.setHours(parseInt(hours), parseInt(minutes), 0);
+      // Chamar Edge Function para reagendar
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/reagendar-compromisso`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            company_id: companyId,
+            event_id: selectedEvent.id,
+            new_start_time: newDateTime,
+            new_end_time: newEndDateTime,
+          }),
+        }
+      );
 
-      const response = await supabase.functions.invoke('reagendar-compromisso', {
-        body: {
-          company_id: companyId,
-          appointment_id: appointment.id,
-          new_date: newDate.toISOString().split('T')[0],
-          new_time: selectedTime,
-          reschedule_reason: reason || undefined,
-        },
-      });
-
-      if (response.error) throw response.error;
-
-      const result = response.data;
+      const result = await response.json();
 
       if (result.success) {
-        setStep('success');
+        const dateStr = new Date(newDateTime).toLocaleDateString('pt-BR');
+        const timeStr = new Date(newDateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
         if (playText) {
-          playText(result.speech_text).catch(() => {});
+          await playText(`Agendamento reagendado com sucesso para o dia ${dateStr} às ${timeStr}.`);
         }
         
-        setTimeout(() => {
-          onClose();
-        }, 3000);
+        setStep('success');
+        setTimeout(() => onClose(), 3000);
       } else {
-        setError(result.speech_text || 'Erro ao reagendar.');
+        setError(result.speech_text || 'Erro ao reagendar');
         if (playText) {
-          playText(result.speech_text || 'Erro ao reagendar.').catch(() => {});
+          playText(result.speech_text || 'Erro ao reagendar').catch(() => {});
         }
       }
-    } catch (err: any) {
+
+    } catch (err) {
       console.error('Erro ao reagendar:', err);
       setError('Erro ao reagendar. Tente novamente.');
       if (playText) {
-        playText('Erro ao reagendar. Tente novamente.').catch(() => {});
+        playText('Erro ao reagendar').catch(() => {});
       }
     } finally {
-      setProcessing(false);
+      setLoading(false);
+    }
+  };
+
+  // Gerar slots de horário (8h-18h, 30min)
+  const timeSlots = [];
+  for (let h = 8; h < 18; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      timeSlots.push(time);
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  // Gerar horários disponíveis (8h às 18h, intervalo de 30min)
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 8; hour < 18; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
-    return slots;
-  };
-
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div
-        className={`relative w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
-          animate-in zoom-in-95 duration-300 max-h-[92vh] flex flex-col`}
-      >
+      <div className={`relative w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300`}>
+        
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'} flex-shrink-0`}>
+        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <RefreshCw className="w-5 h-5 text-white" />
+                <Calendar className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className={`text-xl font-bold ${textPrimary}`}>
-                  Reagendar Compromisso
-                </h2>
+                <h2 className={`text-xl font-bold ${textPrimary}`}>Reagendar Compromisso</h2>
                 <p className={`text-sm ${textMuted}`}>
-                  {step === 'search' && 'Encontre seu agendamento'}
+                  {step === 'search' && 'Busque seu agendamento'}
+                  {step === 'select_event' && 'Selecione o agendamento'}
                   {step === 'select_date' && 'Escolha nova data e horário'}
-                  {step === 'confirm' && 'Confirme o reagendamento'}
-                  {step === 'success' && 'Reagendamento concluído'}
+                  {step === 'success' && 'Reagendado com sucesso'}
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition"
-            >
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition">
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="h-1 bg-gray-200 dark:bg-slate-800 flex-shrink-0">
-          <div
+        {/* Progress Bar */}
+        <div className={`h-1 ${isDark ? 'bg-slate-800' : 'bg-gray-200'}`}>
+          <div 
             className="h-full bg-blue-600 transition-all duration-300"
-            style={{
-              width:
-                step === 'search' ? '25%' :
-                step === 'select_date' ? '50%' :
-                step === 'confirm' ? '75%' : '100%'
+            style={{ 
+              width: step === 'search' ? '25%' : step === 'select_event' ? '50%' : step === 'select_date' ? '75%' : '100%' 
             }}
           />
         </div>
 
-        {/* Content com scroll */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* STEP 1: SEARCH */}
+        {/* Content */}
+        <div className="p-6 max-h-[70vh] overflow-y-auto">
+          {error && (
+            <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'}`}>
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className={`text-sm ${isDark ? 'text-red-200' : 'text-red-800'}`}>{error}</p>
+            </div>
+          )}
+
+          {/* STEP 1: BUSCA */}
           {step === 'search' && (
             <div className="space-y-4 max-w-md mx-auto">
-              {error && (
-                <div className={`p-3 rounded-lg border flex items-start gap-2 ${
-                  isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
-                }`}>
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className={`text-sm ${isDark ? 'text-red-200' : 'text-red-800'}`}>
-                    {error}
-                  </p>
-                </div>
-              )}
-
-              <p className={`text-sm ${textMuted}`}>
-                Para reagendar, informe o email ou telefone usado no agendamento:
-              </p>
-
               <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Email
-                </label>
+                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Data *</label>
                 <input
-                  type="email"
-                  placeholder="seuemail@exemplo.com"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  disabled={loading}
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50`}
+                  type="date"
+                  value={searchDate}
+                  onChange={(e) => setSearchDate(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} focus:ring-2 focus:ring-blue-500 transition`}
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
-                <span className={`text-xs ${textMuted}`}>OU</span>
-                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Horário (opcional)</label>
+                <input
+                  type="time"
+                  value={searchTime}
+                  onChange={(e) => setSearchTime(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} focus:ring-2 focus:ring-blue-500 transition`}
+                />
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Telefone
-                </label>
+                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Nome (opcional)</label>
                 <input
-                  type="tel"
-                  placeholder="(11) 99999-9999"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  disabled={loading}
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50`}
+                  type="text"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  placeholder="Ex: João, Reunião..."
+                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-blue-500 transition`}
                 />
               </div>
 
               <button
-                onClick={() => searchAppointment()}
-                disabled={loading || (!customerEmail && !customerPhone)}
-                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                onClick={handleSearch}
+                disabled={loading || !searchDate}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -341,126 +385,163 @@ export default function RescheduleModal({
             </div>
           )}
 
-          {/* STEP 2: SELECT DATE */}
-          {step === 'select_date' && appointment && (
+          {/* STEP 2: SELEÇÃO DE EVENTO */}
+          {step === 'select_event' && (
             <div className="space-y-4">
-              {error && (
-                <div className={`p-3 rounded-lg border flex items-start gap-2 ${
-                  isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
-                }`}>
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className={`text-sm ${isDark ? 'text-red-200' : 'text-red-800'}`}>
-                    {error}
-                  </p>
-                </div>
-              )}
+              <p className={`text-sm ${textMuted} mb-3`}>
+                Encontramos {events.length} agendamentos. Selecione qual deseja reagendar:
+              </p>
+              <div className="grid gap-2 max-h-96 overflow-y-auto">
+                {events.map((event) => (
+                  <button
+                    key={event.id}
+                    onClick={() => {
+                      setSelectedEvent(event);
+                      setStep('select_date');
+                      loadCalendarEvents();
+                    }}
+                    className={`w-full p-4 ${isDark ? 'bg-slate-800 hover:bg-slate-750' : 'bg-gray-50 hover:bg-gray-100'} border ${border} rounded-lg text-left transition`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-medium ${textPrimary} truncate`}>
+                          {event.summary || 'Sem título'}
+                        </div>
+                        <div className={`text-sm ${textMuted}`}>
+                          {new Date(event.start.dateTime).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setStep('search')}
+                className={`w-full py-3 ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} rounded-lg font-semibold transition`}
+              >
+                Voltar à Busca
+              </button>
+            </div>
+          )}
 
-              {/* Agendamento Atual */}
-              <div className={`p-4 rounded-lg border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
-                <h3 className={`text-sm font-semibold ${textPrimary} mb-3`}>
-                  Agendamento Atual:
-                </h3>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-blue-500" />
-                    <span className={textMuted}>{formatDate(appointment.appointment_date)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-green-500" />
-                    <span className={textMuted}>{formatTime(appointment.appointment_date)}</span>
-                  </div>
+          {/* STEP 3: SELEÇÃO DE NOVA DATA */}
+          {step === 'select_date' && selectedEvent && (
+            <div className="space-y-4">
+              {/* Evento Atual */}
+              <div className={`p-4 ${isDark ? 'bg-slate-800' : 'bg-gray-50'} border ${border} rounded-lg`}>
+                <p className={`text-xs ${textMuted} mb-2`}>Agendamento atual:</p>
+                <div className={`font-medium ${textPrimary}`}>{selectedEvent.summary}</div>
+                <div className={`text-sm ${textMuted}`}>
+                  {new Date(selectedEvent.start.dateTime).toLocaleString('pt-BR', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </div>
               </div>
 
-              {/* Calendário */}
-              <div className={`rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} p-4`}>
-                <h3 className={`text-sm font-semibold ${textPrimary} mb-3`}>
-                  Selecione a nova data:
-                </h3>
-                <FullCalendar
-                  ref={calendarRef}
-                  plugins={[dayGridPlugin, interactionPlugin]}
-                  initialView="dayGridMonth"
-                  headerToolbar={{
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: ''
-                  }}
-                  locale={ptBrLocale}
-                  height={400}
-                  dateClick={handleDateClick}
-                  selectable={true}
-                  validRange={{
-                    start: new Date().toISOString().split('T')[0]
-                  }}
-                />
-              </div>
-
-              {/* Seleção de Horário */}
-              {selectedDate && (
-                <div className={`p-4 rounded-lg border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
-                  <h3 className={`text-sm font-semibold ${textPrimary} mb-3`}>
-                    Selecione o horário:
-                  </h3>
-                  <div className="grid grid-cols-4 gap-2">
-                    {generateTimeSlots().map(time => (
-                      <button
-                        key={time}
-                        onClick={() => setSelectedTime(time)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                          selectedTime === time
-                            ? 'bg-blue-600 text-white'
-                            : isDark
-                            ? 'bg-slate-700 hover:bg-slate-600 text-white'
-                            : 'bg-white hover:bg-gray-100 text-gray-900 border border-gray-200'
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Motivo (opcional) */}
-              {selectedDate && selectedTime && (
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Calendário */}
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                    Motivo do reagendamento (opcional)
+                    Selecione a nova data:
                   </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Ex: Compromisso imprevisto, necessidade de alterar horário..."
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none`}
-                  />
+                  <div className={`${isDark ? 'dark-calendar' : ''}`}>
+                    <FullCalendar
+                      plugins={[dayGridPlugin, interactionPlugin]}
+                      initialView="dayGridMonth"
+                      locale={ptBrLocale}
+                      dateClick={handleDateClick}
+                      events={calendarEvents}
+                      height="auto"
+                      headerToolbar={{
+                        left: 'prev,next',
+                        center: 'title',
+                        right: '',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Horários */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+                    Escolha o horário:
+                  </label>
+                  {newDate ? (
+                    <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto p-2">
+                      {timeSlots.map((time) => (
+                        <button
+                          key={time}
+                          onClick={() => setNewTime(time)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                            newTime === time
+                              ? 'bg-blue-600 text-white'
+                              : isDark
+                              ? 'bg-slate-800 hover:bg-slate-700 text-white'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                          }`}
+                        >
+                          {time}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`p-8 text-center ${textMuted}`}>
+                      Selecione uma data no calendário
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Resumo da Nova Data */}
+              {newDate && newTime && (
+                <div className={`p-4 ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'} border border-blue-600/20 rounded-lg`}>
+                  <p className={`text-xs ${textMuted} mb-1`}>Nova data e horário:</p>
+                  <p className={`font-medium ${textPrimary}`}>
+                    {new Date(`${newDate}T${newTime}`).toLocaleString('pt-BR', {
+                      weekday: 'long',
+                      day: '2-digit',
+                      month: 'long',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
                 </div>
               )}
 
               {/* Botões */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep('search')}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'
-                  }`}
+                  onClick={() => {
+                    setSelectedEvent(null);
+                    setStep(events.length > 1 ? 'select_event' : 'search');
+                  }}
+                  className={`flex-1 py-3 ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} rounded-lg font-semibold transition`}
                 >
                   Voltar
                 </button>
                 <button
                   onClick={handleReschedule}
-                  disabled={!selectedDate || !selectedTime || processing}
-                  className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                  disabled={loading || !newDate || !newTime}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
                 >
-                  {processing ? (
+                  {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
                       Reagendando...
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="w-5 h-5" />
+                      <CheckCircle2 className="w-5 h-5" />
                       Confirmar Reagendamento
                     </>
                   )}
@@ -469,37 +550,16 @@ export default function RescheduleModal({
             </div>
           )}
 
-          {/* STEP 3: SUCCESS */}
+          {/* STEP 4: SUCESSO */}
           {step === 'success' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+              <div className={`w-16 h-16 rounded-full ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'} flex items-center justify-center mb-4`}>
+                <CheckCircle2 className="w-10 h-10 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className={`text-xl font-bold ${textPrimary} mb-2`}>
-                Reagendamento Concluído!
-              </h3>
-              <p className={`text-sm ${textMuted} text-center max-w-md`}>
-                Seu compromisso foi reagendado com sucesso. Aguardamos você no novo horário.
+              <h3 className={`text-xl font-bold ${textPrimary} mb-2`}>Reagendado com Sucesso!</h3>
+              <p className={`text-sm ${textMuted} text-center`}>
+                Seu compromisso foi reagendado.
               </p>
-              {selectedDate && selectedTime && (
-                <div className={`mt-4 p-4 rounded-lg border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
-                  <p className={`text-sm ${textMuted} mb-2`}>Novo horário:</p>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4 text-blue-500" />
-                      <span className={`text-sm font-medium ${textPrimary}`}>
-                        {selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-green-500" />
-                      <span className={`text-sm font-medium ${textPrimary}`}>
-                        {selectedTime}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>

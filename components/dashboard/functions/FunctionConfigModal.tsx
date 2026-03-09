@@ -1554,13 +1554,11 @@ interface FunctionConfigModalProps {
 
 interface GoogleCalendarScheduleFormProps {
   functionKey: string;
-  isConfigured: boolean;
   companyId: string;
 }
 
 function GoogleCalendarScheduleForm({ 
   functionKey, 
-  isConfigured, 
   companyId 
 }: GoogleCalendarScheduleFormProps) {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
@@ -1580,7 +1578,6 @@ function GoogleCalendarScheduleForm({
         .single();
 
       if (!error && data) {
-        // Verificar se tem scope de calendar
         const hasCalendarScope = data.scopes?.includes('https://www.googleapis.com/auth/calendar');
         if (hasCalendarScope) {
           setGoogleAccount(data);
@@ -1595,22 +1592,15 @@ function GoogleCalendarScheduleForm({
 
   // Configurações específicas por função
   const FUNCTION_INFO: Record<string, {
-    title: string;
-    description: string;
-    icon: string;
-    color: string;
     howItWorks: string[];
     voiceCommands: string[];
+    smartFeature?: string;
   }> = {
     ver_agenda: {
-      title: 'Ver Agenda',
-      description: 'Visualiza eventos do Google Calendar',
-      icon: '📆',
-      color: 'blue',
       howItWorks: [
-        'Diga "Ver agenda" para visualizar eventos',
+        'Visualize eventos do Google Calendar por voz',
         'Escolha o período: mês, semana ou dia',
-        'Sincronização automática com Google Calendar',
+        'Sincronização automática em tempo real',
       ],
       voiceCommands: [
         'Ver minha agenda',
@@ -1619,14 +1609,10 @@ function GoogleCalendarScheduleForm({
       ],
     },
     agendar_compromisso: {
-      title: 'Marcar Evento',
-      description: 'Cria eventos no Google Calendar',
-      icon: '📅',
-      color: 'green',
       howItWorks: [
-        'Diga "Marcar evento" para criar compromissos',
+        'Crie eventos apenas com comandos de voz',
         'Informe data, hora e descrição',
-        'O evento será criado automaticamente no calendário',
+        'Evento criado automaticamente no calendário',
       ],
       voiceCommands: [
         'Agendar reunião',
@@ -1635,71 +1621,56 @@ function GoogleCalendarScheduleForm({
       ],
     },
     confirmar_presenca: {
-      title: 'Confirmar Presença',
-      description: 'Confirma presença em agendamento marcado',
-      icon: '✅',
-      color: 'green',
       howItWorks: [
         'Cliente informa email ou telefone',
-        'Sistema busca o agendamento',
-        'Cliente confirma presença com um clique',
+        'Sistema busca o agendamento automaticamente',
+        'Confirmação com um clique',
       ],
       voiceCommands: [
         'Confirmar presença',
         'Confirmar agendamento',
         'Vou comparecer',
       ],
+      smartFeature: 'Busca automática do agendamento usando email ou telefone. Todas as alterações sincronizam em tempo real com o Google Calendar.',
     },
     reagendar_compromisso: {
-      title: 'Reagendamento',
-      description: 'Reagenda compromisso para nova data',
-      icon: '🔄',
-      color: 'blue',
       howItWorks: [
         'Cliente informa email ou telefone',
         'Sistema mostra agendamento atual',
-        'Cliente escolhe nova data e horário',
-        'Calendário é atualizado automaticamente',
+        'Escolha nova data e horário no calendário interativo',
       ],
       voiceCommands: [
         'Reagendar',
         'Remarcar',
         'Mudar data',
       ],
+      smartFeature: 'Busca automática do agendamento usando email ou telefone. Todas as alterações sincronizam em tempo real com o Google Calendar.',
     },
     cancelar_agendamento: {
-      title: 'Cancelar Agendamento',
-      description: 'Cancela agendamento marcado',
-      icon: '❌',
-      color: 'red',
       howItWorks: [
         'Cliente informa email ou telefone',
         'Sistema mostra agendamento a cancelar',
-        'Cliente confirma cancelamento',
-        'Evento é removido do calendário',
+        'Confirmação de cancelamento com motivo opcional',
       ],
       voiceCommands: [
         'Cancelar agendamento',
         'Desmarcar',
         'Não poderei comparecer',
       ],
+      smartFeature: 'Busca automática do agendamento usando email ou telefone. Todas as alterações sincronizam em tempo real com o Google Calendar.',
     },
     horarios_disponiveis: {
-      title: 'Horários Disponíveis',
-      description: 'Consulta horários disponíveis na agenda',
-      icon: '🕐',
-      color: 'purple',
       howItWorks: [
         'Cliente pergunta sobre horário específico',
-        'Sistema verifica disponibilidade',
+        'IA verifica disponibilidade no calendário',
         'Responde por voz se está livre ou ocupado',
-        'Oferece opções: marcar ou ver agenda',
       ],
       voiceCommands: [
         'Tem horário disponível?',
         'Está livre amanhã às 14h?',
         'Horários vagos',
       ],
+      smartFeature: 'IA entende linguagem natural como "tem horário amanhã de manhã?" e verifica automaticamente. Após consultar, oferece opções: marcar direto ou visualizar agenda.',
     },
   };
 
@@ -1714,22 +1685,9 @@ function GoogleCalendarScheduleForm({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header da Função */}
-      <div className="flex items-start gap-4">
-        <div className={`text-4xl`}>{info.icon}</div>
-        <div className="flex-1">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            {info.title}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {info.description}
-          </p>
-        </div>
-      </div>
-
-{/* Status da Conexão */}
-      <div className={`p-4 rounded-lg border ${
+    <div className="space-y-4">
+      {/* Status da Conexão */}
+      <div className={`p-3 rounded-lg border ${
         googleAccount 
           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
           : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
@@ -1739,14 +1697,11 @@ function GoogleCalendarScheduleForm({
             <>
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">
-                  ✅ Conta Google Conectada
+                <p className="text-sm font-semibold text-green-900 dark:text-green-100">
+                  Conta Google Conectada
                 </p>
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  Email: <span className="font-mono">{googleAccount.google_email}</span>
-                </p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Esta conta será usada para gerenciar eventos no calendário.
+                <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                  {googleAccount.google_email}
                 </p>
               </div>
             </>
@@ -1754,19 +1709,19 @@ function GoogleCalendarScheduleForm({
             <>
               <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
-                  ⚠️ Google Calendar Não Conectado
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  Google Calendar não conectado
                 </p>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                  Para usar esta função, você precisa conectar sua conta do Google Calendar.
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  Conecte sua conta Google para usar esta função.
                 </p>
                 
 <a
                   href="/dashboard/google-connect"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition mt-2"
                 >
-                  <Calendar className="w-4 h-4" />
-                  Gerenciar Conexão Google
+                  <Calendar className="w-3.5 h-3.5" />
+                  Conectar Conta
                 </a>
               </div>
             </>
@@ -1775,15 +1730,15 @@ function GoogleCalendarScheduleForm({
       </div>
 
       {/* Como Funciona */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-          <Info className="w-4 h-4" />
-          Como funciona o {info.title}
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+        <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5" />
+          Como funciona
         </h4>
-        <ul className="space-y-2">
+        <ul className="space-y-1">
           {info.howItWorks.map((step, index) => (
-            <li key={index} className="flex items-start gap-2 text-sm text-blue-800 dark:text-blue-200">
-              <span className="text-blue-600 dark:text-blue-400 font-bold">✓</span>
+            <li key={index} className="flex items-start gap-1.5 text-xs text-blue-800 dark:text-blue-200">
+              <span className="text-blue-600 dark:text-blue-400 font-bold mt-0.5">·</span>
               {step}
             </li>
           ))}
@@ -1791,16 +1746,16 @@ function GoogleCalendarScheduleForm({
       </div>
 
       {/* Comandos de Voz */}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <Mic className="w-4 h-4" />
-          Comandos de Voz
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+        <h4 className="text-xs font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
+          <Mic className="w-3.5 h-3.5" />
+          Comandos de voz
         </h4>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {info.voiceCommands.map((cmd, index) => (
             <div key={index} className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-              <code className="text-sm px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-800 dark:text-gray-200">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></div>
+              <code className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-gray-800 dark:text-gray-200">
                 "{cmd}"
               </code>
             </div>
@@ -1808,33 +1763,16 @@ function GoogleCalendarScheduleForm({
         </div>
       </div>
 
-      {/* Funcionalidades Específicas */}
-      {(functionKey === 'horarios_disponiveis' || 
-        functionKey === 'confirmar_presenca' || 
-        functionKey === 'reagendar_compromisso' || 
-        functionKey === 'cancelar_agendamento') && (
-        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2 flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            Funcionalidade Inteligente
+      {/* Funcionalidade Inteligente (apenas para funções específicas) */}
+      {info.smartFeature && (
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+          <h4 className="text-xs font-semibold text-purple-900 dark:text-purple-100 mb-1.5 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            IA Integrada
           </h4>
-          {functionKey === 'horarios_disponiveis' && (
-            <p className="text-sm text-purple-800 dark:text-purple-200">
-              Esta função usa IA para entender consultas em linguagem natural como 
-              "tem horário amanhã de manhã?" e verifica automaticamente a disponibilidade 
-              no Google Calendar. Após consultar, o cliente pode escolher marcar direto 
-              ou visualizar a agenda completa.
-            </p>
-          )}
-          {(functionKey === 'confirmar_presenca' || 
-            functionKey === 'reagendar_compromisso' || 
-            functionKey === 'cancelar_agendamento') && (
-            <p className="text-sm text-purple-800 dark:text-purple-200">
-              O sistema busca automaticamente o agendamento do cliente usando email ou 
-              telefone. Todas as alterações são sincronizadas em tempo real com o 
-              Google Calendar.
-            </p>
-          )}
+          <p className="text-xs text-purple-800 dark:text-purple-200 leading-relaxed">
+            {info.smartFeature}
+          </p>
         </div>
       )}
     </div>

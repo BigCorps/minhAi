@@ -619,7 +619,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
   // ─────────────────────────────────────────────────────────
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center md:items-center bg-black/70 backdrop-blur-sm p-0 md:p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
 
       {/* Toast */}
       {toast && (
@@ -637,7 +637,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       {/* Modal */}
       <div
         onClick={e => e.stopPropagation()}
-        className="relative w-full md:max-w-3xl rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row"
+        className="relative w-full max-w-lg md:max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row"
         style={{ background: C.bg, border: `1px solid ${C.border}`, maxHeight: '92vh' }}
       >
         {/* ── Sidebar azul (desktop only) ── */}

@@ -552,6 +552,24 @@ case 'enviar_arquivo':
   playText('Você pode enviar um arquivo diretamente para a empresa, que já recebem na hora!').catch(() => {});
   break;
 
+case 'gerar_qrcode':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'GerarQRCodeDisplay',
+    data: { companyId },
+  });
+  playText('Abrindo gerador de QR Code. Diga ou digite o texto ou link.').catch(() => {});
+  break;
+
+case 'gerar_codigo_barras':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'GerarCodigoBarrasDisplay',
+    data: { companyId },
+  });
+  playText('Abrindo gerador de código de barras. Escolha o formato e diga o conteúdo.').catch(() => {});
+  break;
+
 case 'confirmar_presenca':
   setActiveModal({ 
     type: 'ConfirmPresenceModal', 

@@ -49,15 +49,10 @@ export default function MeuCupomDisplay({
 
   // ── Padrão NossaMarcaDisplay ──────────────────────────
   const handleManualClose = () => {
-    window.speechSynthesis.cancel();
     onClose();
   };
 
   useModalVoiceClose(handleManualClose);
-
-  useEffect(() => {
-    return () => window.speechSynthesis.cancel();
-  }, []);
 
   // ── Fala abertura ─────────────────────────────────────
   useEffect(() => {
@@ -75,7 +70,6 @@ export default function MeuCupomDisplay({
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          window.speechSynthesis.cancel();
           onClose();
           return 0;
         }

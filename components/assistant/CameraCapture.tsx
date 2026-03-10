@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Upload, Smartphone, ZapOff, QrCode, RefreshCw, Timer } from 'lucide-react';
+import { Camera, Upload, Smartphone, ZapOff, QrCode, RefreshCw, Timer, Copy, Check } from 'lucide-react';
 import Image from 'next/image';
 import { useCameraCapture } from '@/components/VoiceAssistant/hooks/useCameraCapture';
 import { useCompanionUpload } from '@/components/VoiceAssistant/hooks/useCompanionUpload';
@@ -41,6 +41,7 @@ export default function CameraCapture(props: CameraCaptureProps) {
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
   const [isMobile, setIsMobile] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   useEffect(() => {
     setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
   }, []);
@@ -263,6 +264,35 @@ export default function CameraCapture(props: CameraCaptureProps) {
                       unoptimized
                     />
                   </div>
+                  {/* Link copiável */}
+                  {companion.uploadUrl && (
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border w-full ${
+                      isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <span className={`flex-1 text-xs font-mono truncate ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                        {companion.uploadUrl}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(companion.uploadUrl!);
+                          setCopiedUrl(true);
+                          setTimeout(() => setCopiedUrl(false), 2000);
+                        }}
+                        title="Copiar link"
+                        className={`shrink-0 p-1.5 rounded-lg transition-all ${
+                          isDark
+                            ? 'hover:bg-slate-700 text-slate-400 hover:text-slate-200'
+                            : 'hover:bg-gray-200 text-gray-400 hover:text-gray-700'
+                        }`}
+                      >
+                        {copiedUrl
+                          ? <Check className="w-3.5 h-3.5 text-green-400" />
+                          : <Copy className="w-3.5 h-3.5" />
+                        }
+                      </button>
+                    </div>
+                  )}
+
                   <div className={`flex items-center gap-1.5 text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                     <Timer className="w-3.5 h-3.5 shrink-0" />
                     <span>Expira em {formatCountdown(companion.timeLeft)}</span>

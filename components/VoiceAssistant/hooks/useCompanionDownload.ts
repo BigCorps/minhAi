@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { createShortLink } from '@/lib/short-links';
 import QRCode from 'qrcode';
 
 interface UseCompanionDownloadOptions {
@@ -42,7 +41,6 @@ export function useCompanionDownload({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentTokenRef = useRef<string | null>(null);
   const statusRef = useRef<UseCompanionDownloadReturn['status']>('idle');
   const hasGeneratedRef = useRef(false);
 
@@ -76,32 +74,28 @@ export function useCompanionDownload({
           file_type: fileType,
           file_base64: fileBase64,
         })
-        .select('token, expires_at')
+        .select('token')
         .single();
 
       if (dbError || !data) throw new Error('Erro ao gerar token de download.');
 
       const newToken = data.token as string;
-      const expiresAt = data.expires_at as string;
-      currentTokenRef.current = newToken;
+      const url = `${window.location.origin}/download/${newToken}`;
 
-      // 2. Gerar short link — QR Code mais curto e fácil de escanear
-      const shortUrl = await createShortLink('download', newToken, companyId, expiresAt);
-
-      // 3. Gerar QR Code com a URL curta
-      const qr = await QRCode.toDataURL(shortUrl, {
+      // 2. Gerar QR Code
+      const qr = await QRCode.toDataURL(url, {
         width: 180,
         margin: 2,
         color: { dark: '#1e293b', light: '#ffffff' },
         errorCorrectionLevel: 'M',
       });
 
-      setDownloadUrl(shortUrl);
+      setDownloadUrl(url);
       setQrCodeUrl(qr);
       setStatus('ready');
       setTimeLeft(EXPIRY_SECONDS);
 
-      // 4. Contagem regressiva
+      // 3. Contagem regressiva
       countdownRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -118,7 +112,7 @@ export function useCompanionDownload({
         });
       }, 1000);
 
-      // 5. Timeout total
+      // 4. Timeout total
       timerRef.current = setTimeout(() => {
         if (statusRef.current === 'ready') {
           cleanupAll();
@@ -131,7 +125,7 @@ export function useCompanionDownload({
         }
       }, EXPIRY_SECONDS * 1000);
 
-      // 6. Supabase Realtime — detectar quando o cliente baixou
+      // 5. Supabase Realtime — detectar quando o cliente baixou
       const channel = supabase
         .channel(`companion-download-${newToken}`)
         .on(
@@ -154,7 +148,7 @@ export function useCompanionDownload({
 
       channelRef.current = channel;
 
-      // 7. Polling de fallback
+      // 6. Polling de fallback — usa newToken do closure, não ref
       pollRef.current = setInterval(async () => {
         if (statusRef.current !== 'ready') {
           clearInterval(pollRef.current!);
@@ -163,7 +157,7 @@ export function useCompanionDownload({
         const { data: row } = await supabase
           .from('companion_downloads')
           .select('status')
-          .eq('token', currentTokenRef.current)
+          .eq('token', newToken)
           .single();
 
         if (row?.status === 'downloaded') {
@@ -179,7 +173,6 @@ export function useCompanionDownload({
     }
   }, [companyId, fileName, fileType, fileBase64, supabase, cleanupAll]);
 
-  // Disparar quando enabled vira true (apenas uma vez)
   useEffect(() => {
     if (enabled && !hasGeneratedRef.current && fileBase64) {
       hasGeneratedRef.current = true;
@@ -195,7 +188,6 @@ export function useCompanionDownload({
     setDownloadUrl(null);
     setTimeLeft(EXPIRY_SECONDS);
     setError(null);
-    currentTokenRef.current = null;
     if (enabled && fileBase64) {
       hasGeneratedRef.current = true;
       generate();

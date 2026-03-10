@@ -543,6 +543,15 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
           playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
           break;
 
+case 'enviar_arquivo':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'EnviarArquivoDisplay',
+    data: { companyId },
+  });
+  playText('Você pode enviar um arquivo diretamente para a empresa, que já recebem na hora!').catch(() => {});
+  break;
+
 case 'confirmar_presenca':
   setActiveModal({ 
     type: 'ConfirmPresenceModal', 

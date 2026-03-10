@@ -45,7 +45,7 @@ export default function ProducaoClient({ companies }: ProducaoClientProps) {
             {companies.map((company) => (
               <Link
                 key={company.id}
-                href={`/dashboard/arquivos/${company.id}`}
+                href={`/dashboard/producao/${company.id}`}
                 className="block rounded-xl shadow-md p-6 hover:shadow-lg transition group bg-white/80 hover:shadow-xl dark:bg-white/5 dark:border dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
               >
                 <div className="flex items-start justify-between mb-4">

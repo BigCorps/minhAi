@@ -11,7 +11,6 @@ interface DownloadData {
   fileBase64: string;
   companyName: string;
   expiresAt: string;
-  status: string;
 }
 
 function formatTimeLeft(expiresAt: string): string {
@@ -21,9 +20,17 @@ function formatTimeLeft(expiresAt: string): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// ── Componente extraído — aceita token como prop ───────────────
-// Reutilizado por /download/[token]/page.tsx e /link/[slug]/page.tsx
-export function DownloadContent({ token }: { token: string }) {
+function PageWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DownloadPageContent({ token }: { token: string }) {
   const [status, setStatus] = useState<PageStatus>('validating');
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DownloadData | null>(null);
@@ -36,7 +43,7 @@ export function DownloadContent({ token }: { token: string }) {
     async function validateToken() {
       const { data: row, error: dbError } = await supabase
         .from('companion_downloads')
-        .select('file_name, file_type, file_base64, status, expires_at, company_id, companies(name)')
+        .select('file_name, file_type, file_base64, status, expires_at, companies(name)')
         .eq('token', token)
         .single();
 
@@ -57,7 +64,6 @@ export function DownloadContent({ token }: { token: string }) {
         fileBase64: row.file_base64,
         companyName: (row.companies as any)?.name ?? 'eAi',
         expiresAt: row.expires_at,
-        status: row.status,
       });
 
       setTimeDisplay(formatTimeLeft(row.expires_at));
@@ -118,7 +124,7 @@ export function DownloadContent({ token }: { token: string }) {
     <PageWrapper>
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm">Verificando QR Code...</p>
+        <p className="text-slate-400 text-sm">Verificando link...</p>
       </div>
     </PageWrapper>
   );
@@ -217,18 +223,6 @@ export function DownloadContent({ token }: { token: string }) {
   );
 }
 
-// ── Wrapper de layout ──────────────────────────────────────────
-function PageWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ── Page default — token vem do segmento dinâmico da rota ──────
 export default function DownloadPage({ params }: { params: { token: string } }) {
-  return <DownloadContent token={params.token} />;
+  return <DownloadPageContent token={params.token} />;
 }

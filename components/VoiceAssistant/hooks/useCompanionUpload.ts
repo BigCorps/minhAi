@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { createShortLink } from '@/lib/short-links';
 import QRCode from 'qrcode';
 
 interface UseCompanionUploadOptions {
@@ -99,19 +98,16 @@ export function useCompanionUpload({
       const { data, error: dbError } = await supabase
         .from('companion_uploads')
         .insert({ company_id: companyId })
-        .select('token, expires_at')
+        .select('token')
         .single();
 
       if (dbError || !data) throw new Error('Erro ao gerar token de upload.');
 
       const newToken = data.token as string;
-      const expiresAt = data.expires_at as string;
+      const url = `${window.location.origin}/arquivos?token=${newToken}`;
 
-      // 2. Gerar short link
-      const shortUrl = await createShortLink('upload', newToken, companyId, expiresAt);
-
-      // 3. Gerar QR Code
-      const qr = await QRCode.toDataURL(shortUrl, {
+      // 2. Gerar QR Code
+      const qr = await QRCode.toDataURL(url, {
         width: 280,
         margin: 2,
         color: { dark: '#1e293b', light: '#ffffff' },
@@ -119,12 +115,12 @@ export function useCompanionUpload({
       });
 
       setToken(newToken);
-      setUploadUrl(shortUrl);
+      setUploadUrl(url);
       setQrCodeUrl(qr);
       setStatus('waiting');
       setTimeLeft(EXPIRY_SECONDS);
 
-      // 4. Contagem regressiva
+      // 3. Contagem regressiva
       countdownRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -136,7 +132,7 @@ export function useCompanionUpload({
         });
       }, 1000);
 
-      // 5. Timeout total
+      // 4. Timeout total
       timerRef.current = setTimeout(() => {
         if (statusRef.current === 'waiting') {
           cleanupAll();
@@ -144,7 +140,7 @@ export function useCompanionUpload({
         }
       }, EXPIRY_SECONDS * 1000);
 
-      // 6. Supabase Realtime
+      // 5. Supabase Realtime
       const channel = supabase
         .channel(`companion-upload-${newToken}`)
         .on(
@@ -166,8 +162,7 @@ export function useCompanionUpload({
 
       channelRef.current = channel;
 
-      // 7. Polling de fallback — usa newToken capturado no closure, não ref
-      // (evita token=eq.null quando cancel() é chamado antes do tick)
+      // 6. Polling de fallback — usa newToken do closure, não ref
       pollRef.current = setInterval(async () => {
         if (statusRef.current !== 'waiting') {
           clearInterval(pollRef.current!);
@@ -176,7 +171,7 @@ export function useCompanionUpload({
         const { data: row } = await supabase
           .from('companion_uploads')
           .select('status, storage_path')
-          .eq('token', newToken)  // ← closure, não ref
+          .eq('token', newToken)
           .single();
 
         if (row?.status === 'uploaded' && row.storage_path) {

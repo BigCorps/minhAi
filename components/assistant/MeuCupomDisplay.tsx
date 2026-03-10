@@ -63,8 +63,6 @@ export default function MeuCupomDisplay({
   useEffect(() => {
     if (prefillName) {
       playText?.(`Encontrei o nome ${prefillName}. Confirme e clique em gerar.`).catch(() => {});
-    } else {
-      playText?.('Digite seu nome para gerar seu cupom de indicação personalizado.').catch(() => {});
     }
   }, []);
 

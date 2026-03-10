@@ -9,7 +9,6 @@ interface DownloadData {
   fileName: string;
   fileType: string;
   fileBase64: string;
-  companyName: string;
   expiresAt: string;
 }
 
@@ -23,9 +22,7 @@ function formatTimeLeft(expiresAt: string): string {
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        {children}
-      </div>
+      <div className="w-full max-w-sm">{children}</div>
     </div>
   );
 }
@@ -35,15 +32,53 @@ function DownloadPageContent({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DownloadData | null>(null);
   const [timeDisplay, setTimeDisplay] = useState('');
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [autoCountdown, setAutoCountdown] = useState(10);
+  const expiryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasAutoDownloaded = useRef(false);
 
   const supabase = createClient();
+
+  const triggerDownload = async (downloadData: DownloadData, tkn: string) => {
+    if (hasAutoDownloaded.current) return;
+    hasAutoDownloaded.current = true;
+
+    setStatus('downloading');
+
+    try {
+      const byteString = atob(downloadData.fileBase64);
+      const byteArray = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i++) {
+        byteArray[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([byteArray], { type: downloadData.fileType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = downloadData.fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      await supabase
+        .from('companion_downloads')
+        .update({ status: 'downloaded' })
+        .eq('token', tkn);
+
+      setStatus('downloaded');
+    } catch (err: any) {
+      hasAutoDownloaded.current = false;
+      setError('Erro ao baixar arquivo: ' + (err.message ?? 'Erro desconhecido.'));
+      setStatus('error');
+    }
+  };
 
   useEffect(() => {
     async function validateToken() {
       const { data: row, error: dbError } = await supabase
         .from('companion_downloads')
-        .select('file_name, file_type, file_base64, status, expires_at, company_id')
+        .select('file_name, file_type, file_base64, status, expires_at')
         .eq('token', token)
         .single();
 
@@ -58,14 +93,14 @@ function DownloadPageContent({ token }: { token: string }) {
         return;
       }
 
-      setData({
+      const downloadData: DownloadData = {
         fileName: row.file_name,
         fileType: row.file_type,
         fileBase64: row.file_base64,
-        companyName: 'eAi',
         expiresAt: row.expires_at,
-      });
+      };
 
+      setData(downloadData);
       setTimeDisplay(formatTimeLeft(row.expires_at));
       setStatus(row.status === 'downloaded' ? 'downloaded' : 'pending');
     }
@@ -73,52 +108,42 @@ function DownloadPageContent({ token }: { token: string }) {
     validateToken();
   }, [token]); // eslint-disable-line
 
-  // Countdown visual
+  // Countdown de expiração
   useEffect(() => {
     if (status !== 'pending' || !data) return;
 
-    timerRef.current = setInterval(() => {
+    expiryTimerRef.current = setInterval(() => {
       setTimeDisplay(formatTimeLeft(data.expiresAt));
       if (new Date(data.expiresAt) < new Date()) {
-        clearInterval(timerRef.current!);
+        clearInterval(expiryTimerRef.current!);
         setStatus('expired');
       }
     }, 1000);
 
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => { if (expiryTimerRef.current) clearInterval(expiryTimerRef.current); };
   }, [status, data]);
 
-  const handleDownload = async () => {
-    if (!data) return;
-    setStatus('downloading');
+  // Auto-download em 10 segundos
+  useEffect(() => {
+    if (status !== 'pending' || !data) return;
 
-    try {
-      const byteString = atob(data.fileBase64);
-      const byteArray = new Uint8Array(byteString.length);
-      for (let i = 0; i < byteString.length; i++) {
-        byteArray[i] = byteString.charCodeAt(i);
-      }
-      const blob = new Blob([byteArray], { type: data.fileType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = data.fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    setAutoCountdown(10);
 
-      await supabase
-        .from('companion_downloads')
-        .update({ status: 'downloaded' })
-        .eq('token', token);
+    autoTimerRef.current = setInterval(() => {
+      setAutoCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(autoTimerRef.current!);
+          triggerDownload(data, token);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-      setStatus('downloaded');
-    } catch (err: any) {
-      setError('Erro ao baixar arquivo: ' + (err.message ?? 'Erro desconhecido.'));
-      setStatus('error');
-    }
-  };
+    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
+  }, [status, data]); // eslint-disable-line
+
+  // ── Estados de loading / erro / expirado ──
 
   if (status === 'validating') return (
     <PageWrapper>
@@ -134,9 +159,7 @@ function DownloadPageContent({ token }: { token: string }) {
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="text-5xl">⏱️</div>
         <h2 className="text-xl font-bold text-white">Link expirado</h2>
-        <p className="text-slate-400 text-sm max-w-xs">
-          Este link expirou. O arquivo estava disponível por 10 minutos.
-        </p>
+        <p className="text-slate-400 text-sm">Este link expirou. O arquivo estava disponível por 10 minutos.</p>
         <p className="text-slate-500 text-xs mt-1">Volte ao assistente e gere um novo QR Code.</p>
       </div>
     </PageWrapper>
@@ -147,7 +170,6 @@ function DownloadPageContent({ token }: { token: string }) {
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
         <p className="text-slate-300 text-sm font-medium">Baixando arquivo...</p>
-        <p className="text-slate-500 text-xs">Aguarde um momento.</p>
       </div>
     </PageWrapper>
   );
@@ -157,11 +179,9 @@ function DownloadPageContent({ token }: { token: string }) {
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="w-16 h-16 flex items-center justify-center rounded-full bg-green-500/20 text-4xl">✅</div>
         <h2 className="text-xl font-bold text-white">Arquivo baixado!</h2>
-        <p className="text-slate-400 text-sm max-w-xs">
-          {data?.fileName ?? 'Arquivo'} foi salvo no seu dispositivo.
-        </p>
+        <p className="text-slate-400 text-sm">{data?.fileName ?? 'Arquivo'} foi salvo no seu dispositivo.</p>
         <button
-          onClick={handleDownload}
+          onClick={() => { hasAutoDownloaded.current = false; data && triggerDownload(data, token); }}
           className="mt-2 px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm font-medium transition-all active:scale-95 border border-slate-600"
         >
           Baixar novamente
@@ -176,7 +196,7 @@ function DownloadPageContent({ token }: { token: string }) {
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="text-5xl">❌</div>
         <h2 className="text-xl font-bold text-white">Erro</h2>
-        <p className="text-red-400 text-sm max-w-xs">{error}</p>
+        <p className="text-red-400 text-sm">{error}</p>
         <button
           onClick={() => window.location.reload()}
           className="mt-2 px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium"
@@ -187,37 +207,53 @@ function DownloadPageContent({ token }: { token: string }) {
     </PageWrapper>
   );
 
-  // status === 'pending'
+  // ── status === 'pending' ──
   return (
     <PageWrapper>
-      <div className="flex flex-col items-center gap-6 w-full max-w-xs mx-auto">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-xl font-bold text-white">
-            {data?.companyName || 'eAi - Funcionários de Voz'}
-          </h1>
-          <p className="text-slate-400 text-sm">Arquivo pronto para download</p>
+      <div className="flex flex-col items-center gap-6 w-full">
+
+        <div className="flex flex-col items-center gap-1 text-center">
+          <h1 className="text-xl font-bold text-white">Arquivo pronto!</h1>
+          <p className="text-slate-400 text-sm">O download iniciará automaticamente</p>
         </div>
 
+        {/* Card do arquivo */}
         <div className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-5 flex flex-col items-center gap-3 text-center">
           <div className="text-4xl">📄</div>
           <p className="text-white font-semibold text-base break-all">{data?.fileName}</p>
           <p className="text-slate-500 text-xs">{data?.fileType}</p>
           {timeDisplay && (
-            <p className="text-amber-400 text-sm font-medium">⏱ Expira em {timeDisplay}</p>
+            <p className="text-amber-400 text-xs">⏱ Link expira em {timeDisplay}</p>
           )}
         </div>
 
+        {/* Countdown auto-download */}
+        <div className="w-full flex flex-col items-center gap-3">
+          <p className="text-slate-400 text-sm">
+            Baixando em{' '}
+            <span className="text-indigo-400 font-bold text-lg">{autoCountdown}s</span>
+          </p>
+          <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+              style={{ width: `${((10 - autoCountdown) / 10) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Botão imediato */}
         <button
-          onClick={handleDownload}
+          onClick={() => {
+            if (autoTimerRef.current) clearInterval(autoTimerRef.current);
+            data && triggerDownload(data, token);
+          }}
           className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-semibold transition-all active:scale-95"
         >
           <span>⬇</span>
-          <span>Baixar arquivo</span>
+          <span>Baixar agora</span>
         </button>
 
-        <div className="text-center">
-          <p className="text-slate-600 text-xs">Seus dados são processados com segurança.</p>
-        </div>
+        <p className="text-slate-600 text-xs text-center">Seus dados são processados com segurança.</p>
       </div>
     </PageWrapper>
   );

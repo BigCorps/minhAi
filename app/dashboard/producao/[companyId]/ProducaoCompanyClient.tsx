@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
 import { ArrowLeft, ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';

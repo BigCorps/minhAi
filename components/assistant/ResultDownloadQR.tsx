@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Smartphone, Timer, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useCompanionDownload } from '@/components/VoiceAssistant/hooks/useCompanionDownload';
 
 interface ResultDownloadQRProps {
@@ -77,9 +77,10 @@ export function ResultDownloadQR({
       <div className={`rounded-2xl border p-4 flex flex-col items-center gap-3 ${
         isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
       }`}>
-        <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          📱 Baixar no celular
-        </p>
+        <div className={`flex items-center gap-1.5 text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <Smartphone className="w-3.5 h-3.5" />
+          <span>Baixar no celular</span>
+        </div>
         <div className={`w-[140px] h-[140px] rounded-xl flex items-center justify-center ${
           isDark ? 'bg-slate-700' : 'bg-slate-200'
         }`}>
@@ -98,10 +99,11 @@ export function ResultDownloadQR({
       <div className={`rounded-2xl border p-4 flex flex-col items-center gap-3 ${
         isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
       }`}>
-        <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          📱 Baixar no celular
-        </p>
-        <div className="text-3xl">⏱️</div>
+        <div className={`flex items-center gap-1.5 text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <Smartphone className="w-3.5 h-3.5" />
+          <span>Baixar no celular</span>
+        </div>
+        <Timer className={`w-10 h-10 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
         <p className={`text-xs text-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
           Link expirado
         </p>
@@ -121,11 +123,12 @@ export function ResultDownloadQR({
       <div className={`rounded-2xl border p-4 flex flex-col items-center gap-3 ${
         isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
       }`}>
-        <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          📱 Baixar no celular
-        </p>
-        <div className="w-14 h-14 flex items-center justify-center rounded-full bg-green-500/20 text-3xl">
-          ✅
+        <div className={`flex items-center gap-1.5 text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <Smartphone className="w-3.5 h-3.5" />
+          <span>Baixar no celular</span>
+        </div>
+        <div className="w-14 h-14 flex items-center justify-center rounded-full bg-green-500/20">
+          <CheckCircle className="w-8 h-8 text-green-400" />
         </div>
         <p className={`text-sm font-semibold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
           Baixado no celular!
@@ -167,9 +170,10 @@ export function ResultDownloadQR({
       isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'
     }`}>
       {/* Título */}
-      <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-        📱 Baixar no celular
-      </p>
+      <div className={`flex items-center gap-1.5 text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+        <Smartphone className="w-3.5 h-3.5" />
+        <span>Baixar no celular</span>
+      </div>
 
       {/* QR Code */}
       {qrCodeUrl && (
@@ -190,11 +194,12 @@ export function ResultDownloadQR({
       )}
 
       {/* Countdown */}
-      <p className={`text-xs font-medium ${
+      <div className={`flex items-center gap-1 text-xs font-medium ${
         timeLeft < 60 ? 'text-red-400' : isDark ? 'text-amber-400' : 'text-amber-600'
       }`}>
-        ⏱ Expira em {formatTime(timeLeft)}
-      </p>
+        <Timer className="w-3.5 h-3.5 shrink-0" />
+        Expira em {formatTime(timeLeft)}
+      </div>
 
       {/* Barra de progresso */}
       <div className={`w-full h-1.5 rounded-full overflow-hidden ${

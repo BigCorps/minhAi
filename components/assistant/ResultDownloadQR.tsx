@@ -29,7 +29,7 @@ function CopyLinkRow({ url, isDark }: { url: string; isDark: boolean }) {
   };
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border w-full min-w-0 ${
       isDark ? 'bg-slate-900/60 border-slate-700' : 'bg-gray-50 border-gray-200'
     }`}>
       <span className={`flex-1 text-xs font-mono truncate ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>

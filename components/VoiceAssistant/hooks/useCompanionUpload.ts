@@ -21,7 +21,7 @@ export interface UseCompanionUploadReturn {
   cancel: () => void;
 }
 
-const EXPIRY_SECONDS = 600; // 10 minutos
+const EXPIRY_SECONDS = 600;
 
 export function useCompanionUpload({
   companyId,
@@ -39,7 +39,6 @@ export function useCompanionUpload({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentTokenRef = useRef<string | null>(null);
   const statusRef = useRef<UseCompanionUploadReturn['status']>('idle');
 
   useEffect(() => { statusRef.current = status; }, [status]);
@@ -66,7 +65,6 @@ export function useCompanionUpload({
     setStatus('idle');
     setTimeLeft(EXPIRY_SECONDS);
     setError(null);
-    currentTokenRef.current = null;
   }, [cleanupAll]);
 
   const processReceivedUpload = useCallback(async (storagePath: string) => {
@@ -108,12 +106,11 @@ export function useCompanionUpload({
 
       const newToken = data.token as string;
       const expiresAt = data.expires_at as string;
-      currentTokenRef.current = newToken;
 
-      // 2. Gerar short link — QR Code mais curto e fácil de escanear
+      // 2. Gerar short link
       const shortUrl = await createShortLink('upload', newToken, companyId, expiresAt);
 
-      // 3. Gerar QR Code com a URL curta
+      // 3. Gerar QR Code
       const qr = await QRCode.toDataURL(shortUrl, {
         width: 280,
         margin: 2,
@@ -139,7 +136,7 @@ export function useCompanionUpload({
         });
       }, 1000);
 
-      // 5. Timeout total de 10 min
+      // 5. Timeout total
       timerRef.current = setTimeout(() => {
         if (statusRef.current === 'waiting') {
           cleanupAll();
@@ -169,7 +166,8 @@ export function useCompanionUpload({
 
       channelRef.current = channel;
 
-      // 7. Polling de fallback
+      // 7. Polling de fallback — usa newToken capturado no closure, não ref
+      // (evita token=eq.null quando cancel() é chamado antes do tick)
       pollRef.current = setInterval(async () => {
         if (statusRef.current !== 'waiting') {
           clearInterval(pollRef.current!);
@@ -178,7 +176,7 @@ export function useCompanionUpload({
         const { data: row } = await supabase
           .from('companion_uploads')
           .select('status, storage_path')
-          .eq('token', currentTokenRef.current)
+          .eq('token', newToken)  // ← closure, não ref
           .single();
 
         if (row?.status === 'uploaded' && row.storage_path) {

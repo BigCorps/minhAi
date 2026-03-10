@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { createShortLink } from '@/lib/short-links';
 import QRCode from 'qrcode';
 
 interface UseCompanionUploadOptions {
@@ -38,14 +39,11 @@ export function useCompanionUpload({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Guardar token atual em ref para usar no polling sem closure stale
   const currentTokenRef = useRef<string | null>(null);
   const statusRef = useRef<UseCompanionUploadReturn['status']>('idle');
 
-  // Sincronizar statusRef com o estado
   useEffect(() => { statusRef.current = status; }, [status]);
 
-  // Cleanup ao desmontar
   useEffect(() => {
     return () => { cleanupAll(); };
   }, []); // eslint-disable-line
@@ -71,7 +69,6 @@ export function useCompanionUpload({
     currentTokenRef.current = null;
   }, [cleanupAll]);
 
-  // Lógica de processar imagem recebida (compartilhada entre Realtime e polling)
   const processReceivedUpload = useCallback(async (storagePath: string) => {
     cleanupAll();
     setStatus('received');
@@ -104,18 +101,20 @@ export function useCompanionUpload({
       const { data, error: dbError } = await supabase
         .from('companion_uploads')
         .insert({ company_id: companyId })
-        .select('token')
+        .select('token, expires_at')
         .single();
 
       if (dbError || !data) throw new Error('Erro ao gerar token de upload.');
 
       const newToken = data.token as string;
+      const expiresAt = data.expires_at as string;
       currentTokenRef.current = newToken;
 
-      const url = `${window.location.origin}/arquivos?token=${newToken}`;
+      // 2. Gerar short link — QR Code mais curto e fácil de escanear
+      const shortUrl = await createShortLink('upload', newToken, companyId, expiresAt);
 
-      // 2. Gerar QR Code
-      const qr = await QRCode.toDataURL(url, {
+      // 3. Gerar QR Code com a URL curta
+      const qr = await QRCode.toDataURL(shortUrl, {
         width: 280,
         margin: 2,
         color: { dark: '#1e293b', light: '#ffffff' },
@@ -123,12 +122,12 @@ export function useCompanionUpload({
       });
 
       setToken(newToken);
-      setUploadUrl(url);
+      setUploadUrl(shortUrl);
       setQrCodeUrl(qr);
       setStatus('waiting');
       setTimeLeft(EXPIRY_SECONDS);
 
-      // 3. Contagem regressiva
+      // 4. Contagem regressiva
       countdownRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -140,7 +139,7 @@ export function useCompanionUpload({
         });
       }, 1000);
 
-      // 4. Timeout total de 10 min
+      // 5. Timeout total de 10 min
       timerRef.current = setTimeout(() => {
         if (statusRef.current === 'waiting') {
           cleanupAll();
@@ -148,7 +147,7 @@ export function useCompanionUpload({
         }
       }, EXPIRY_SECONDS * 1000);
 
-      // 5. Supabase Realtime
+      // 6. Supabase Realtime
       const channel = supabase
         .channel(`companion-upload-${newToken}`)
         .on(
@@ -170,7 +169,7 @@ export function useCompanionUpload({
 
       channelRef.current = channel;
 
-      // 6. Polling de fallback (caso Realtime caia) — verifica a cada 5s
+      // 7. Polling de fallback
       pollRef.current = setInterval(async () => {
         if (statusRef.current !== 'waiting') {
           clearInterval(pollRef.current!);

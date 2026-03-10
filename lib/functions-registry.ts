@@ -295,27 +295,58 @@ voiceTriggers: [
 // ============================================================
 
 enviar_arquivo: {
-  function_key: 'enviar_arquivo',
-  function_name: 'Enviar Arquivo',
-  function_category: 'images',
-  icon: '🌐',
-  color: '#000080',
-  description: 'Recebe arquivos enviados pelo celular via QR Code ou selecionados localmente. Imagens, PDFs, planilhas e documentos.',
-  short_description: 'Receba arquivos do celular ou upload local.',
+  functionKey: 'enviar_arquivo',
+  functionName: 'Enviar Arquivo',
+  category: 'images',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'enviar arquivo',
+    'mandar arquivo',
+    'envie arquivo',
+    'mande arquivo',
+    'enviar documento',
+    'mandar documento',
+    'enviar pdf',
+    'mandar pdf',
+    'subir arquivo',
+    'upload de arquivo',
+    'quero enviar arquivo',
+    'receber arquivo',
+  ],
+
   examplePhrases: [
     'Enviar um arquivo',
     'Quero mandar um documento',
-    'Envie um PDF pelo celular',
+    'Enviar PDF pelo celular',
   ],
+
+  requiresInput: false,
+
+  description: 'Recebe arquivos enviados pelo celular via QR Code ou selecionados localmente. Imagens, PDFs, planilhas e documentos.',
+  shortDescription: 'Receba arquivos do celular ou upload local.',
+  icon: '🌐',
+  color: '#000080',
+
   saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: false,
-  ui_component: 'EnviarArquivoDisplay',
-  edit_modal_component: null,
-  function_type: 'action',
-  default_enabled: false,
-  display_order: 21,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({
+        type: 'EnviarArquivoDisplay',
+        data: { companyId },
+      });
+      await playText('Abrindo envio de arquivo. Diga "celular" para escanear o QR Code ou "arquivo" para selecionar do computador.');
+      return true;
+    } catch (error) {
+      console.error('📁 [ENVIAR ARQUIVO] ERRO:', error);
+      await playText('Desculpe, não consegui abrir o envio de arquivo.');
+      return false;
+    }
+  },
 },
 
 // ============================================================

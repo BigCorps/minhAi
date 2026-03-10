@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 
 type PageStatus = 'validating' | 'pending' | 'downloading' | 'downloaded' | 'expired' | 'error';
@@ -265,6 +265,7 @@ function DownloadPageContent({ token }: { token: string }) {
   );
 }
 
-export default function DownloadPage({ params }: { params: { token: string } }) {
-  return <DownloadPageContent token={params.token} />;
+export default function DownloadPage({ params }: { params: { token: string } | Promise<{ token: string }> }) {
+  const resolvedParams = params instanceof Promise ? use(params) : params;
+  return <DownloadPageContent token={resolvedParams.token} />;
 }

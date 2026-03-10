@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import CameraCapture from '@/components/assistant/CameraCapture';
+import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
@@ -35,7 +35,6 @@ function useCameraProcess() {
 const OPENING_TEXT = 'Fotografe o documento ou imagem com texto. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE = 60;
 
-// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -61,24 +60,21 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('capturing');
   const [extractedText, setExtractedText] = useState<string | null>(null);
-  const [resultQrUrl, setResultQrUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [speechText, setSpeechText] = useState<string>('');
+  const [fileBase64, setFileBase64] = useState<string>('');
+  const [fileName, setFileName] = useState<string>('');
 
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
-
-  // CORREÇÃO: debounce de aba
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { process } = useCameraProcess();
-
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // Cleanup ao desmontar
   useEffect(() => {
     return () => {
       if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
@@ -97,29 +93,24 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
     return () => clearInterval(interval);
   }, [stage, onClose]);
 
-  const generateResultQr = useCallback(async (text: string) => {
-    if (text.length > 500) return;
-    try {
-      const QRCode = (await import('qrcode')).default;
-      const url = await QRCode.toDataURL(text, { width: 180, margin: 2 });
-      setResultQrUrl(url);
-    } catch { /* silencioso */ }
-  }, []);
-
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
     try {
       const res = await process('ocr', base64, data.companyId);
+      const name = `imagem_texto_${Date.now()}.txt`;
+      const b64 = btoa(unescape(encodeURIComponent(res.result)));
+
       setExtractedText(res.result);
       setSpeechText(res.speech_text);
+      setFileName(name);
+      setFileBase64(b64);
       setStage('result');
-      await generateResultQr(res.result);
       playText(res.speech_text).catch(() => {});
     } catch (err: any) {
       setErrorMsg(err.message ?? 'Erro ao extrair texto.');
       setStage('error');
     }
-  }, [data.companyId, process, generateResultQr, playText]);
+  }, [data.companyId, process, playText]);
 
   const handleCopy = useCallback(async () => {
     if (!extractedText) return;
@@ -132,11 +123,11 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
   const handleReset = useCallback(() => {
     setStage('capturing');
     setExtractedText(null);
-    setResultQrUrl(null);
     setErrorMsg(null);
     setCopied(false);
     setSpeechText('');
-    // Limpar debounce de aba ao resetar
+    setFileBase64('');
+    setFileName('');
     if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
     lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
@@ -188,7 +179,6 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
       if (stage === 'capturing') {
         for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
           if (triggers.some(tr => t.includes(tr))) {
-            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
             if (lastTabCommandRef.current === tab) return;
             lastTabCommandRef.current = tab;
             setCameraTab(tab as Tab);
@@ -212,7 +202,6 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
         if (['nova extracao', 'novo', 'outra', 'tentar novamente', 'novamente'].some(cmd => t.includes(cmd))) {
           handleReset(); return;
         }
-        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
           handleSendByEmail(); return;
         }
@@ -226,15 +215,22 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
     }
   });
 
+  // Modal mais largo no desktop quando em resultado
+  const modalMaxWidth = stage === 'result' ? 'max-w-lg sm:max-w-3xl' : 'max-w-lg';
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-      <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
+      <div className={`w-full ${modalMaxWidth} rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
+        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Imagem em Texto</h2>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
+        {/* ── Capturing ── */}
         {stage === 'capturing' && (
           <div className="flex flex-col gap-3">
             <CameraCapture
@@ -250,6 +246,7 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
           </div>
         )}
 
+        {/* ── Processing ── */}
         {stage === 'processing' && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -257,65 +254,110 @@ export default function ImagemEmTextoDisplay({ data, onClose, theme = 'dark', pl
           </div>
         )}
 
+        {/* ── Result ── */}
         {stage === 'result' && extractedText && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{extractedText.length} caracteres</span>
-              <button
-                onClick={handleCopy}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copiado!' : 'Copiar tudo'}
-              </button>
+
+            {/* Banner */}
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
+              <Check className="w-4 h-4 shrink-0" />
+              <span>Texto extraído!</span>
+              <span className={`ml-auto text-xs font-normal ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
+                {extractedText.length} caracteres
+              </span>
             </div>
 
-            <div className={`p-4 rounded-xl text-sm leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
-              {extractedText}
-            </div>
+            {/* Layout responsivo: coluna única mobile / duas colunas desktop */}
+            <div className="flex flex-col sm:flex-row gap-4">
 
-            {resultQrUrl && (
-              <div className="flex flex-col items-center gap-2">
-                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar o texto no celular:</p>
-                <div className={`p-2 rounded-xl ${isDark ? 'bg-white' : 'bg-white border border-gray-200'}`}>
-                  <Image src={resultQrUrl} alt="QR Code do resultado" width={140} height={140} unoptimized />
+              {/* Coluna esquerda — texto + ações */}
+              <div className="flex flex-col gap-3 flex-1 min-w-0">
+                {/* Texto extraído */}
+                <div className={`p-4 rounded-xl text-sm leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
+                  {extractedText}
+                </div>
+
+                {/* Botão copiar */}
+                <button
+                  onClick={handleCopy}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copiado!' : 'Copiar texto'}
+                </button>
+
+                {/* Nova extração + Enviar email na mesma linha */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleReset}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    <RefreshCw className="w-4 h-4" />Nova extração
+                  </button>
+
+                  {googleConnected && (
+                    <button
+                      onClick={handleSendByEmail}
+                      disabled={isSendingEmail}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isSendingEmail
+                        ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                        : <><Mail className="w-4 h-4" />Enviar por email</>
+                      }
+                    </button>
+                  )}
                 </div>
               </div>
-            )}
 
-            <button onClick={handleReset} className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}>
-              <RefreshCw className="w-4 h-4" />Nova extração
-            </button>
+              {/* Coluna direita — QR de download (apenas desktop) */}
+              <div className="hidden sm:flex flex-col shrink-0 w-56">
+                <ResultDownloadQR
+                  companyId={data.companyId}
+                  fileName={fileName}
+                  fileType="text/plain"
+                  fileBase64={fileBase64}
+                  isDark={isDark}
+                  enabled={stage === 'result' && !!fileBase64}
+                />
+              </div>
 
-            {googleConnected && (
-              <button
-                onClick={handleSendByEmail}
-                disabled={isSendingEmail}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
-              >
-                {isSendingEmail
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
-                  : <><Mail className="w-4 h-4" />Enviar por email</>
-                }
-              </button>
-            )}
+              {/* QR mobile — apenas em telas pequenas */}
+              <div className="sm:hidden">
+                <ResultDownloadQR
+                  companyId={data.companyId}
+                  fileName={fileName}
+                  fileType="text/plain"
+                  fileBase64={fileBase64}
+                  isDark={isDark}
+                  enabled={stage === 'result' && !!fileBase64}
+                />
+              </div>
 
-            <VoiceHint commands={['"copiar"', '"ler texto"', '"nova extração"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']} isDark={isDark} />
-
-            <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
-              <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />
             </div>
+
+            <VoiceHint
+              commands={['"copiar"', '"ler texto"', '"nova extração"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']}
+              isDark={isDark}
+            />
           </div>
         )}
 
+        {/* ── Error ── */}
         {stage === 'error' && (
           <div className="flex flex-col gap-4">
-            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>{errorMsg}</div>
-            <button onClick={handleReset} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700">
+            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+              {errorMsg}
+            </div>
+            <button
+              onClick={handleReset}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+            >
               <RefreshCw className="w-4 h-4" />Tentar novamente
             </button>
           </div>
         )}
+
       </div>
     </div>,
     document.body

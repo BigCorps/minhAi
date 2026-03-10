@@ -255,10 +255,14 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     }
   });
 
+  // No stage result, modal é mais largo no desktop para layout em 2 colunas
+  const modalMaxWidth = stage === 'result' ? 'max-w-lg sm:max-w-3xl' : 'max-w-lg';
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-      <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
+      <div className={`w-full ${modalMaxWidth} rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
+        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Contrato em Texto</h2>
           <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
@@ -266,6 +270,7 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
           </button>
         </div>
 
+        {/* ── Capturing ── */}
         {stage === 'capturing' && (
           <div className="flex flex-col gap-3">
             <CameraCapture
@@ -282,6 +287,7 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
           </div>
         )}
 
+        {/* ── Processing ── */}
         {stage === 'processing' && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
@@ -290,8 +296,10 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
           </div>
         )}
 
+        {/* ── Result ── */}
         {stage === 'result' && contratoText && (
           <div className="flex flex-col gap-4">
+
             {/* Banner de sucesso */}
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
               <Check className="w-4 h-4 shrink-0" />
@@ -301,64 +309,85 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
               </span>
             </div>
 
-            {/* Texto do contrato */}
-            <div className={`p-4 rounded-xl text-sm leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
-              {contratoText}
+            {/* Layout responsivo: coluna única mobile / duas colunas desktop */}
+            <div className="flex flex-col sm:flex-row gap-4">
+
+              {/* Coluna esquerda — texto + ações */}
+              <div className="flex flex-col gap-3 flex-1 min-w-0">
+                {/* Texto do contrato */}
+                <div className={`p-4 rounded-xl text-sm leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
+                  {contratoText}
+                </div>
+
+                {/* Botões de ação */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCopy}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'Copiado!' : 'Copiar'}
+                  </button>
+                  <button
+                    onClick={handleDownloadTxt}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+                  >
+                    <Download className="w-4 h-4" />Baixar .txt
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleReset}
+                  className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <RefreshCw className="w-4 h-4" />Nova digitalização
+                </button>
+
+                {googleConnected && (
+                  <button
+                    onClick={handleSendByEmail}
+                    disabled={isSendingEmail}
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
+                  >
+                    {isSendingEmail
+                      ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                      : <><Mail className="w-4 h-4" />Enviar por email</>
+                    }
+                  </button>
+                )}
+              </div>
+
+              {/* Coluna direita — QR de download (apenas desktop, em pé) */}
+              <div className="hidden sm:flex flex-col shrink-0 w-56">
+                <ResultDownloadQR
+                  companyId={data.companyId}
+                  fileName={fileName}
+                  fileType="text/plain"
+                  fileBase64={fileBase64}
+                  isDark={isDark}
+                  enabled={stage === 'result' && !!fileBase64}
+                />
+              </div>
+
+              {/* QR mobile — apenas em telas pequenas, abaixo das ações */}
+              <div className="sm:hidden">
+                <ResultDownloadQR
+                  companyId={data.companyId}
+                  fileName={fileName}
+                  fileType="text/plain"
+                  fileBase64={fileBase64}
+                  isDark={isDark}
+                  enabled={stage === 'result' && !!fileBase64}
+                />
+              </div>
+
             </div>
 
-            {/* QR de download para celular — substitui o QR de texto antigo */}
-            <ResultDownloadQR
-              companyId={data.companyId}
-              fileName={fileName}
-              fileType="text/plain"
-              fileBase64={fileBase64}
-              isDark={isDark}
-              enabled={stage === 'result' && !!fileBase64}
-            />
-
-            {/* Botões de ação */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleCopy}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copiado!' : 'Copiar'}
-              </button>
-              <button
-                onClick={handleDownloadTxt}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
-              >
-                <Download className="w-4 h-4" />Baixar .txt
-              </button>
-            </div>
-
-            <button
-              onClick={handleReset}
-              className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <RefreshCw className="w-4 h-4" />Nova digitalização
-            </button>
-
-            {googleConnected && (
-              <button
-                onClick={handleSendByEmail}
-                disabled={isSendingEmail}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
-              >
-                {isSendingEmail
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
-                  : <><Mail className="w-4 h-4" />Enviar por email</>
-                }
-              </button>
-            )}
-
+            {/* Voice hint + barra de auto-close */}
             <VoiceHint
               commands={['"copiar"', '"baixar txt"', '"ler contrato"', '"nova digitalização"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']}
               isDark={isDark}
             />
-
-            {/* Barra de progresso de auto-close */}
             <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
               <div
                 className="h-full bg-red-500 rounded-full transition-all duration-1000"
@@ -368,6 +397,7 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
           </div>
         )}
 
+        {/* ── Error ── */}
         {stage === 'error' && (
           <div className="flex flex-col gap-4">
             <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>

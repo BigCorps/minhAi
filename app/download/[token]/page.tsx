@@ -43,7 +43,7 @@ function DownloadPageContent({ token }: { token: string }) {
     async function validateToken() {
       const { data: row, error: dbError } = await supabase
         .from('companion_downloads')
-        .select('file_name, file_type, file_base64, status, expires_at, companies(name)')
+        .select('file_name, file_type, file_base64, status, expires_at, company_id')
         .eq('token', token)
         .single();
 
@@ -62,7 +62,7 @@ function DownloadPageContent({ token }: { token: string }) {
         fileName: row.file_name,
         fileType: row.file_type,
         fileBase64: row.file_base64,
-        companyName: (row.companies as any)?.name ?? 'eAi',
+        companyName: 'eAi',
         expiresAt: row.expires_at,
       });
 

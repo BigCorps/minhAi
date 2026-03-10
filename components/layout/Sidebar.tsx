@@ -8,6 +8,7 @@ import {
   Bot,
   Settings,
   Wallet,
+  ClipboardList,
   MessageSquare,
   Menu,
   X,
@@ -23,9 +24,10 @@ const menuItems = [
   { href: '/dashboard/assistentes',  label: 'Assistentes',                      icon: Bot },
   { href: '/dashboard/functions',    label: 'Funções',                          icon: Settings },
   { href: '/dashboard/faqs',         label: 'Perguntas e Respostas',            icon: HelpCircle },
-  { href: '/dashboard/agenda',       label: 'Serviços Google',            icon: Calendar }, // ← NOVO
-  { href: '/dashboard/atendimentos', label: 'Serviços Meta',             icon: Share2 },
-  { href: '/dashboard/arquivos',     label: 'Arquivos e Cupons',              icon: FolderOpen },
+  { href: '/dashboard/agenda',       label: 'Serviços Google',                  icon: Calendar },
+  { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: Share2 },
+  { href: '/dashboard/producao',     label: 'Fichas de Produção',               icon: ClipboardList },
+  { href: '/dashboard/arquivos',     label: 'Arquivos e Cupons',                icon: FolderOpen },
   { href: '/dashboard/saldo',        label: 'Recebimentos',                     icon: Wallet },
   { href: '/dashboard/historico',    label: 'Histórico',                        icon: MessageSquare },
 ];

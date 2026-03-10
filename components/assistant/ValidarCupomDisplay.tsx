@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RefreshCw, Check, Mail, Loader2, Mic } from 'lucide-react';
-import Image from 'next/image';
+import { X, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
@@ -40,7 +39,6 @@ function useCameraProcess() {
 const OPENING_TEXT = 'Fotografe o cupom ou voucher. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE = 30;
 
-// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -72,18 +70,14 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
   const [speechText, setSpeechText] = useState<string>('');
 
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
-
-  // CORREÇÃO: debounce de aba
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { process } = useCameraProcess();
-
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // Cleanup ao desmontar
   useEffect(() => {
     return () => {
       if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
@@ -105,7 +99,12 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
   const generateResultQr = useCallback(async (text: string) => {
     try {
       const QRCode = (await import('qrcode')).default;
-      const url = await QRCode.toDataURL(text, { width: 180, margin: 2 });
+      // QR do código do cupom — para o celular escanear e usar o desconto
+      const url = await QRCode.toDataURL(text, {
+        width: 160,
+        margin: 2,
+        color: { dark: '#1e293b', light: '#ffffff' },
+      });
       setResultQrUrl(url);
     } catch { /* silencioso */ }
   }, []);
@@ -133,7 +132,6 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
     setResultQrUrl(null);
     setErrorMsg(null);
     setSpeechText('');
-    // Limpar debounce de aba ao resetar
     if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
     lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
@@ -188,7 +186,6 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
       if (stage === 'capturing') {
         for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
           if (triggers.some(tr => t.includes(tr))) {
-            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
             if (lastTabCommandRef.current === tab) return;
             lastTabCommandRef.current = tab;
             setCameraTab(tab as Tab);
@@ -206,7 +203,6 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
         if (['novo cupom', 'novo', 'outra', 'tentar novamente', 'novamente'].some(cmd => t.includes(cmd))) {
           handleReset(); return;
         }
-        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(cmd => t.includes(cmd))) {
           handleSendByEmail(); return;
         }
@@ -224,11 +220,15 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
       <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
+        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Validar Cupom</h2>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
+        {/* ── Capturing ── */}
         {stage === 'capturing' && (
           <div className="flex flex-col gap-3">
             <CameraCapture
@@ -244,6 +244,7 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
           </div>
         )}
 
+        {/* ── Processing ── */}
         {stage === 'processing' && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
@@ -251,14 +252,18 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
           </div>
         )}
 
+        {/* ── Result ── */}
         {stage === 'result' && (
           <div className="flex flex-col gap-4">
+
+            {/* Código do cupom */}
             {cupomCode && (
               <div className={`text-center p-3 rounded-xl font-mono text-xl font-bold tracking-widest ${isDark ? 'bg-slate-900/60 text-white' : 'bg-gray-50 text-gray-900'}`}>
                 {cupomCode}
               </div>
             )}
 
+            {/* Status */}
             {cupomStatus && (
               <div className={`px-4 py-3 rounded-xl text-sm font-medium text-center ${
                 cupomStatus.valid
@@ -272,48 +277,59 @@ export default function ValidarCupomDisplay({ data, onClose, theme = 'dark', pla
               </div>
             )}
 
+            {/* QR do código do cupom — para escanear e usar */}
             {resultQrUrl && cupomCode && (
               <div className="flex flex-col items-center gap-2">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Código do cupom em QR:</p>
-                <div className={`p-2 rounded-xl ${isDark ? 'bg-white' : 'bg-white border border-gray-200'}`}>
-                  <Image src={resultQrUrl} alt="QR Code do cupom" width={120} height={120} unoptimized />
+                <div className="p-2 bg-white rounded-xl shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={resultQrUrl} alt="QR Code do cupom" width={120} height={120} className="rounded-lg" />
                 </div>
               </div>
             )}
 
-            <button onClick={handleReset} className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-              <RefreshCw className="w-4 h-4" />Novo cupom
-            </button>
-
-            {googleConnected && (
+            {/* Novo cupom + Enviar email na mesma linha */}
+            <div className="flex gap-2">
               <button
-                onClick={handleSendByEmail}
-                disabled={isSendingEmail}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
+                onClick={handleReset}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
-                {isSendingEmail
-                  ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
-                  : <><Mail className="w-4 h-4" />Enviar por email</>
-                }
+                <RefreshCw className="w-4 h-4" />Novo cupom
               </button>
-            )}
 
-            <VoiceHint commands={['"novo cupom"', '"repetir"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']} isDark={isDark} />
-
-            <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
-              <div className="h-full bg-amber-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />
+              {googleConnected && (
+                <button
+                  onClick={handleSendByEmail}
+                  disabled={isSendingEmail}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isSendingEmail
+                    ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                    : <><Mail className="w-4 h-4" />Enviar por email</>
+                  }
+                </button>
+              )}
             </div>
+
+            <VoiceHint
+              commands={['"novo cupom"', '"repetir"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']}
+              isDark={isDark}
+            />
           </div>
         )}
 
+        {/* ── Error ── */}
         {stage === 'error' && (
           <div className="flex flex-col gap-4">
-            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>{errorMsg}</div>
+            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+              {errorMsg}
+            </div>
             <button onClick={handleReset} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-amber-600 text-white hover:bg-amber-700">
               <RefreshCw className="w-4 h-4" />Tentar novamente
             </button>
           </div>
         )}
+
       </div>
     </div>,
     document.body

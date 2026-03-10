@@ -290,9 +290,33 @@ voiceTriggers: [
     },
   },
 
-  // ============================================================
-// CATEGORIA: AGENDAMENTOS (schedule)
 // ============================================================
+// CATEGORIA: ENVIAR ARQUIVOS
+// ============================================================
+
+enviar_arquivo: {
+  function_key: 'enviar_arquivo',
+  function_name: 'Enviar Arquivo',
+  function_category: 'images',
+  icon: '🌐',
+  color: '#000080',
+  description: 'Recebe arquivos enviados pelo celular via QR Code ou selecionados localmente. Imagens, PDFs, planilhas e documentos.',
+  short_description: 'Receba arquivos do celular ou upload local.',
+  examplePhrases: [
+    'Enviar um arquivo',
+    'Quero mandar um documento',
+    'Envie um PDF pelo celular',
+  ],
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  ui_component: 'EnviarArquivoDisplay',
+  edit_modal_component: null,
+  function_type: 'action',
+  default_enabled: false,
+  display_order: 21,
+},
 
 // ============================================================
 // CATEGORIA: AGENDAMENTOS (schedule)

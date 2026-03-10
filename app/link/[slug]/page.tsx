@@ -1,8 +1,7 @@
-// app/link/[slug]/page.tsx
-// Página unificada de short links — resolve slug e renderiza upload ou download
-// sem redirect, mantendo a URL curta na barra do celular.
+'use client';
 
-import { createClient } from '@/lib/supabase-server';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase-browser';
 import { UploadContent } from '@/app/arquivos/page';
 import { DownloadContent } from '@/app/download/[token]/page';
 
@@ -42,31 +41,49 @@ function ExpiredPage() {
   );
 }
 
-export default async function ShortLinkPage({ params }: { params: { slug: string } }) {
-  const supabase = createClient();
+export default function ShortLinkPage({ params }: { params: { slug: string } }) {
+  const [state, setState] = useState<'loading' | 'upload' | 'download' | 'expired' | 'notfound'>('loading');
+  const [resolvedToken, setResolvedToken] = useState<string | null>(null);
 
-  const { data: link } = await supabase
-    .from('short_links')
-    .select('*')
-    .eq('slug', params.slug)
-    .maybeSingle();
+  useEffect(() => {
+    const supabase = createClient();
 
-  if (!link) {
-    return <NotFoundPage />;
-  }
+    async function resolve() {
+      const { data: link, error } = await supabase
+        .from('short_links')
+        .select('type, target_token, expires_at')
+        .eq('slug', params.slug)
+        .maybeSingle();
 
-  if (link.expires_at && new Date(link.expires_at) < new Date()) {
-    return <ExpiredPage />;
-  }
+      if (error || !link) {
+        setState('notfound');
+        return;
+      }
 
-  if (link.type === 'upload') {
-    return <UploadContent token={link.target_token} />;
-  }
+      if (link.expires_at && new Date(link.expires_at) < new Date()) {
+        setState('expired');
+        return;
+      }
 
-  if (link.type === 'download') {
-    return <DownloadContent token={link.target_token} />;
-  }
+      setResolvedToken(link.target_token);
+      setState(link.type as 'upload' | 'download');
+    }
 
-  // Fallback — tipo desconhecido
+    resolve();
+  }, [params.slug]); // eslint-disable-line
+
+  if (state === 'loading') return (
+    <PageWrapper>
+      <div className="flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    </PageWrapper>
+  );
+
+  if (state === 'notfound') return <NotFoundPage />;
+  if (state === 'expired') return <ExpiredPage />;
+  if (state === 'upload' && resolvedToken) return <UploadContent token={resolvedToken} />;
+  if (state === 'download' && resolvedToken) return <DownloadContent token={resolvedToken} />;
+
   return <NotFoundPage />;
 }

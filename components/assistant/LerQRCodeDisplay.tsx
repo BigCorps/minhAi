@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, QrCode, Copy, ExternalLink, Check, RefreshCw, Mail, Loader2, Mic } from 'lucide-react';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
@@ -22,7 +21,6 @@ type Stage = 'capturing' | 'processing' | 'result' | 'error';
 const OPENING_TEXT = 'Aponte a câmera para o QR Code e fotografe. Você pode dizer: celular para usar o QR Code, webcam, câmera, arquivo, ou fechar.';
 const AUTO_CLOSE = 30;
 
-// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -43,9 +41,12 @@ function VoiceHint({ commands, isDark }: { commands: string[]; isDark: boolean }
   );
 }
 
+const isUrl = (text: string) => {
+  try { new URL(text); return text.startsWith('http'); } catch { return false; }
+};
+
 export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playText }: Props) {
   const isDark = theme === 'dark';
-  const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('capturing');
   const [qrResult, setQrResult] = useState<string | null>(null);
   const [resultQrUrl, setResultQrUrl] = useState<string | null>(null);
@@ -53,12 +54,9 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [cameraTab, setCameraTab] = useState<Tab>('webcam');
-
   const captureRef = useRef<(() => void) | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // CORREÇÃO: debounce de aba
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -66,13 +64,8 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // Cleanup ao desmontar
-  useEffect(() => {
-    return () => {
-      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
-    };
-  }, []);
-
+  // Auto-close no result
+  const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
@@ -85,6 +78,12 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     return () => clearInterval(interval);
   }, [stage, onClose]);
 
+  useEffect(() => {
+    return () => {
+      if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
+    };
+  }, []);
+
   const generateResultQr = useCallback(async (text: string) => {
     try {
       const QRCode = (await import('qrcode')).default;
@@ -95,11 +94,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
 
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
-    // Parar scan ao capturar
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
-    }
+    if (scanIntervalRef.current) { clearInterval(scanIntervalRef.current); scanIntervalRef.current = null; }
     try {
       const jsQR = (await import('jsqr')).default;
       const img = new window.Image();
@@ -132,21 +127,19 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     }
   }, [generateResultQr, playText]);
 
+  // Scan automático via jsQR
   useEffect(() => {
     if (stage !== 'capturing' || cameraTab !== 'webcam') {
       if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
       return;
     }
-
     scanIntervalRef.current = setInterval(async () => {
       if (!videoRef.current || videoRef.current.readyState < 2) return;
-
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
       canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
       const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-
       const jsQR = (await import('jsqr')).default;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -158,7 +151,6 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
         handleCapture(base64);
       }
     }, 800);
-
     return () => { if (scanIntervalRef.current) clearInterval(scanIntervalRef.current); };
   }, [stage, cameraTab, handleCapture]);
 
@@ -176,8 +168,6 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     setResultQrUrl(null);
     setErrorMsg(null);
     setCopied(false);
-    setTimeLeft(AUTO_CLOSE);
-    // Limpar debounce de aba ao resetar
     if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
     lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
@@ -191,7 +181,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
         body: { company_id: data.companyId, subject: 'Resultado: Ler QR Code', body: qrResult },
       });
       if (error) throw error;
-      playText('enviado.').catch(() => {});
+      playText('Enviado por email.').catch(() => {});
       setTimeout(() => onClose(), 1500);
     } catch {
       playText('Erro ao enviar email.').catch(() => {});
@@ -200,55 +190,35 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     }
   };
 
-  const isUrl = (text: string) => {
-    try { new URL(text); return text.startsWith('http'); } catch { return false; }
-  };
-
   useModalVoiceCommand({
     active: true,
     onTranscript: (transcript) => {
       const t = normalize(transcript);
-
-      // ── Universais ────────────────────────────────────────────
-      if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
-        onClose(); return;
-      }
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) { onClose(); return; }
       if (['repetir', 'repete', 'de novo', 'nao ouvi'].some(c => t.includes(c))) {
-        playText(stage === 'result' && qrResult ? `QR Code lido: ${qrResult.slice(0, 80)}` : OPENING_TEXT).catch(() => {});
-        return;
+        playText(stage === 'result' && qrResult ? `QR Code lido: ${qrResult.slice(0, 80)}` : OPENING_TEXT).catch(() => {}); return;
       }
-
-      // ── Troca de aba + fotografar (só em capturing) ──────────
       if (stage === 'capturing') {
         const TAB_MAP: Record<string, Tab> = {
-          celular:    'companion',
-          qrcode:     'companion',
-          'qr code':  'companion',
-          webcam:     'webcam',
-          computador: 'webcam',
-          camera:     'mobile',
-          camara:     'mobile',
-          arquivo:    'upload',
-          upload:     'upload',
-          galeria:    'upload',
+          celular: 'companion', qrcode: 'companion', 'qr code': 'companion',
+          webcam: 'webcam', computador: 'webcam',
+          camera: 'mobile', camara: 'mobile',
+          arquivo: 'upload', upload: 'upload', galeria: 'upload',
         };
         const TAB_FEEDBACK: Record<Tab, string> = {
           companion: 'Aponte o celular para o QR Code.',
-          webcam:    'Webcam ativada. Escaneando automaticamente.',
-          mobile:    'Câmera do celular selecionada.',
-          upload:    'Selecione um arquivo de imagem.',
+          webcam: 'Webcam ativada. Escaneando automaticamente.',
+          mobile: 'Câmera do celular selecionada.',
+          upload: 'Selecione um arquivo de imagem.',
         };
         for (const [trigger, tab] of Object.entries(TAB_MAP)) {
           if (t.includes(trigger)) {
-            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
             if (lastTabCommandRef.current === tab) return;
             lastTabCommandRef.current = tab;
             setCameraTab(tab as Tab);
             playText(TAB_FEEDBACK[tab as Tab]).catch(() => {});
             if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
-            tabCommandTimeoutRef.current = setTimeout(() => {
-              lastTabCommandRef.current = null;
-            }, 4000);
+            tabCommandTimeoutRef.current = setTimeout(() => { lastTabCommandRef.current = null; }, 4000);
             return;
           }
         }
@@ -256,26 +226,13 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
           captureRef.current?.(); return;
         }
       }
-
-      // ── Resultado ────────────────────────────────────────────
       if (stage === 'result') {
-        if (['copiar', 'copia', 'copie'].some(c => t.includes(c))) {
-          handleCopy(); return;
-        }
-        if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'novamente'].some(c => t.includes(c))) {
-          handleReset(); return;
-        }
-        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
-        if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
-          handleSendByEmail(); return;
-        }
+        if (['copiar', 'copia', 'copie'].some(c => t.includes(c))) { handleCopy(); return; }
+        if (['nova leitura', 'novo', 'outra', 'tentar novamente', 'novamente'].some(c => t.includes(c))) { handleReset(); return; }
+        if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) { handleSendByEmail(); return; }
       }
-
-      // ── Erro ─────────────────────────────────────────────────
       if (stage === 'error') {
-        if (['tentar', 'novamente'].some(c => t.includes(c))) {
-          handleReset(); return;
-        }
+        if (['tentar', 'novamente'].some(c => t.includes(c))) { handleReset(); return; }
       }
     }
   });
@@ -284,16 +241,25 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
       <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
+        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <QrCode className="w-5 h-5 text-indigo-400" />
             <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Ler QR Code</h2>
           </div>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {stage === 'result' && (
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                {timeLeft}s
+              </span>
+            )}
+            <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
+        {/* ── Capturing ── */}
         {stage === 'capturing' && (
           <>
             <CameraCapture
@@ -314,6 +280,7 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
           </>
         )}
 
+        {/* ── Processing ── */}
         {stage === 'processing' && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -321,41 +288,53 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
           </div>
         )}
 
+        {/* ── Result ── */}
         {stage === 'result' && qrResult && (
           <div className="flex flex-col gap-4">
+
+            {/* Banner */}
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
               <Check className="w-4 h-4 shrink-0" />QR Code lido com sucesso!
             </div>
 
+            {/* Conteúdo */}
             <div className={`p-3 rounded-xl text-sm break-all ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
               {qrResult}
             </div>
 
+            {/* QR do conteúdo — para celular escanear */}
             {resultQrUrl && (
               <div className="flex flex-col items-center gap-2">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar no seu celular:</p>
-                <div className={`p-2 rounded-xl ${isDark ? 'bg-white' : 'bg-white border border-gray-200'}`}>
-                  <Image src={resultQrUrl} alt="QR Code do resultado" width={140} height={140} unoptimized />
+                <div className="p-2 bg-white rounded-xl shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={resultQrUrl} alt="QR Code do resultado" width={140} height={140} className="rounded-lg" />
                 </div>
               </div>
             )}
 
+            {/* Copiar + Abrir link (se URL) + Nova leitura */}
             <div className="flex gap-2">
               <button onClick={handleCopy} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                 {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copiado!' : 'Copiar'}
               </button>
               {isUrl(qrResult) && (
-                <a href={qrResult} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">
+                <a
+                  href={qrResult}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
+                >
                   <ExternalLink className="w-4 h-4" />Abrir link
                 </a>
               )}
+              <button onClick={handleReset} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                <RefreshCw className="w-4 h-4" />Nova leitura
+              </button>
             </div>
 
-            <button onClick={handleReset} className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}>
-              <RefreshCw className="w-4 h-4" />Nova leitura
-            </button>
-
+            {/* Enviar email */}
             {googleConnected && (
               <button
                 onClick={handleSendByEmail}
@@ -370,23 +349,26 @@ export default function LerQRCodeDisplay({ data, onClose, theme = 'dark', playTe
             )}
 
             <VoiceHint commands={['"copiar"', '"nova leitura"', '"repetir"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']} isDark={isDark} />
-
-            <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
-              <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />
-            </div>
-            <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>Fechando em {timeLeft}s</p>
           </div>
         )}
 
+        {/* ── Error ── */}
         {stage === 'error' && (
           <div className="flex flex-col gap-4">
-            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>{errorMsg}</div>
-            <button onClick={handleReset} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">
-              <RefreshCw className="w-4 h-4" />Tentar novamente
-            </button>
-            <button onClick={onClose} className={`py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}>Fechar</button>
+            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+              {errorMsg}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleReset} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">
+                <RefreshCw className="w-4 h-4" />Tentar novamente
+              </button>
+              <button onClick={onClose} className={`flex-1 py-2.5 rounded-xl text-sm font-medium border ${isDark ? 'border-white/10 text-slate-400 hover:bg-white/5' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                Fechar
+              </button>
+            </div>
           </div>
         )}
+
       </div>
     </div>,
     document.body

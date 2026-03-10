@@ -63,7 +63,7 @@ interface FichaProducaoDisplayProps {
 // ─────────────────────────────────────────────────────────────
 
 const OPENING_TEXT =
-  'Vou ajudar voce a criar a estimativa correta da sua producao. Me diga o nome da receita. Por exemplo: pizza de mussarela, molho de tomate, ou qualquer outra receita.';
+  'Vou ajudar voce a criar a estimativa correta da sua produçāo. Me diga o nome da receita. Por exemplo: pizza de mussarela, molho de tomate, ou qualquer outra receita.';
 
 const AVISO_ESTIMATIVAS =
   'Esta ficha contém estimativas de IA. Confirme os preços com seus fornecedores antes de tomar decisões financeiras.';

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, use } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { Timer, CheckCircle, XCircle, FileText, Download } from 'lucide-react';
 
 type PageStatus = 'validating' | 'pending' | 'downloading' | 'downloaded' | 'expired' | 'error';
 
@@ -149,8 +150,6 @@ function DownloadPageContent({ token }: { token: string }) {
     return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
   }, [status, data]); // eslint-disable-line
 
-  // ── Estados de loading / erro / expirado ──
-
   if (status === 'validating') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4">
@@ -163,7 +162,9 @@ function DownloadPageContent({ token }: { token: string }) {
   if (status === 'expired') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="text-5xl">⏱️</div>
+        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-amber-500/20">
+          <Timer className="w-8 h-8 text-amber-400" />
+        </div>
         <h2 className="text-xl font-bold text-white">Link expirado</h2>
         <p className="text-slate-400 text-sm">Este link expirou. O arquivo estava disponível por 10 minutos.</p>
         <p className="text-slate-500 text-xs mt-1">Volte ao assistente e gere um novo QR Code.</p>
@@ -183,7 +184,9 @@ function DownloadPageContent({ token }: { token: string }) {
   if (status === 'downloaded') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-green-500/20 text-4xl">✅</div>
+        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-green-500/20">
+          <CheckCircle className="w-8 h-8 text-green-400" />
+        </div>
         <h2 className="text-xl font-bold text-white">Arquivo baixado!</h2>
         <p className="text-slate-400 text-sm">{data?.fileName ?? 'Arquivo'} foi salvo no seu dispositivo.</p>
         <button
@@ -200,7 +203,9 @@ function DownloadPageContent({ token }: { token: string }) {
   if (status === 'error') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="text-5xl">❌</div>
+        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-red-500/20">
+          <XCircle className="w-8 h-8 text-red-400" />
+        </div>
         <h2 className="text-xl font-bold text-white">Erro</h2>
         <p className="text-red-400 text-sm">{error}</p>
         <button
@@ -213,7 +218,7 @@ function DownloadPageContent({ token }: { token: string }) {
     </PageWrapper>
   );
 
-  // ── status === 'pending' ──
+  // status === 'pending'
   return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-6 w-full">
@@ -225,11 +230,16 @@ function DownloadPageContent({ token }: { token: string }) {
 
         {/* Card do arquivo */}
         <div className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-5 flex flex-col items-center gap-3 text-center">
-          <div className="text-4xl">📄</div>
+          <div className="w-14 h-14 flex items-center justify-center rounded-full bg-indigo-500/20">
+            <FileText className="w-7 h-7 text-indigo-400" />
+          </div>
           <p className="text-white font-semibold text-base break-all">{data?.fileName}</p>
           <p className="text-slate-500 text-xs">{data?.fileType}</p>
           {timeDisplay && (
-            <p className="text-amber-400 text-xs">⏱ Link expira em {timeDisplay}</p>
+            <div className="flex items-center gap-1 text-amber-400 text-xs">
+              <Timer className="w-3.5 h-3.5 shrink-0" />
+              <span>Link expira em {timeDisplay}</span>
+            </div>
           )}
         </div>
 
@@ -255,7 +265,7 @@ function DownloadPageContent({ token }: { token: string }) {
           }}
           className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-semibold transition-all active:scale-95"
         >
-          <span>⬇</span>
+          <Download className="w-5 h-5" />
           <span>Baixar agora</span>
         </button>
 

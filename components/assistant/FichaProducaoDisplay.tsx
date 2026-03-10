@@ -1,11 +1,5 @@
+// components/assistant/FichaProducaoDisplay.tsx
 'use client';
-
-// ============================================================
-// FichaProducaoDisplay.tsx
-// Caminho: components/assistant/FichaProducaoDisplay.tsx
-// Layout: sidebar azul + conteúdo (desktop) | sheet bottom (mobile)
-// SEM ícones lucide-react
-// ============================================================
 
 import { useEffect, useState, useRef } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -253,7 +247,7 @@ export default function FichaProducaoDisplay({
 
   const isMobile = useIsMobile();
 
-  const lastText = useRef('');
+  const lastSpeech = useRef(OPENING_TEXT); 
   const fichaRef = useRef(ficha);
   useEffect(() => { fichaRef.current = ficha; }, [ficha]);
 
@@ -267,27 +261,25 @@ export default function FichaProducaoDisplay({
     setToast({ msg, tipo });
 
   // Abertura
-  useEffect(() => {
-    window.speechSynthesis?.cancel();
-    const timer = setTimeout(() => {
-      if (prefilled?.nome) {
-        const text = `Otimo! Vou criar uma ficha base para ${prefilled.nome}. Ja estou montando os ingredientes tipicos.`;
-        playText(text).catch(() => {});
-        lastText.current = text;
-        gerarFichaBase(prefilled.nome, prefilled.categoria ?? '');
-      } else {
-        playText(OPENING_TEXT).catch(() => {});
-        lastText.current = OPENING_TEXT;
-      }
-    }, 300);
-    return () => { clearTimeout(timer); window.speechSynthesis?.cancel(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (prefilled?.nome) {
+      const text = `Otimo! Vou criar uma ficha base para ${prefilled.nome}. Ja estou montando os ingredientes tipicos.`;
+      lastSpeech.current = text;
+      playText(text).catch(() => {});
+      gerarFichaBase(prefilled.nome, prefilled.categoria ?? '');
+    } else {
+      lastSpeech.current = OPENING_TEXT;
+      playText(OPENING_TEXT).catch(() => {});
+    }
+  }, 300);
+  return () => { clearTimeout(timer); };
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   useModalVoiceClose(handleClose);
 
   function handleClose() {
-    window.speechSynthesis?.cancel();
     onClose();
   }
 
@@ -346,8 +338,8 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       setStreamingItem(null);
 
       const speech = `Pronto! Criei a ficha de ${parsed.nome ?? nome} com ${itens.length} ingredientes. Os valores em italico sao estimativas. O que voce quer ajustar?`;
+      lastSpeech.current = speech;
       playText(speech).catch(() => {});
-      lastText.current = speech;
     } catch (err) {
       console.error('gerarFichaBase:', err);
       showToast('Nao consegui gerar a ficha. Adicione os ingredientes manualmente.', 'error');
@@ -426,8 +418,8 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
     const speech = source !== 'user_input'
       ? `Adicionei ${nomeIng}, ${quantidade} ${unidade}. Estimei ${fmt(preco)} por ${unidade}. Voce pode corrigir depois.`
       : `Adicionei ${nomeIng}, ${quantidade} ${unidade}. Preco: ${fmt(preco)} por ${unidade}.`;
+    lastSpeech.current = speech;
     playText(speech).catch(() => {});
-    lastText.current = speech;
   }
 
   function removerItem(id: string) {
@@ -538,8 +530,8 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       setFichaIdSalva(fichaId);
       setEstagio('saved');
       const speech = `Incrivel! Ficha ${ficha.nome} salva. Custo: ${fmt(resultado.custo_total)}. Preco sugerido: ${fmt(resultado.preco_sugerido)}.`;
+      lastSpeech.current = speech;
       playText(speech).catch(() => {});
-      lastText.current = speech;
     } catch (err) {
       console.error('salvarFicha:', err);
       showToast('Erro ao salvar. Tente novamente.', 'error');
@@ -555,7 +547,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
     onTranscript: (transcript) => {
       const t = normalize(transcript);
       if (['fechar', 'cancelar', 'sair', 'encerrar'].some(c => t.includes(c))) { handleClose(); return; }
-      if (['repetir', 'repete', 'de novo', 'repita'].some(c => t.includes(c))) { playText(lastText.current).catch(() => {}); return; }
+      if (['repetir', 'repete', 'de novo', 'repita'].some(c => t.includes(c))) { playText(lastSpeech.current).catch(() => {}); return; }
       if (['exportar', 'pdf', 'imprimir'].some(c => t.includes(c))) { exportarPDF(); return; }
       if (['salvar', 'salva', 'confirmar', 'confirma', 'concluir', 'pronto'].some(c => t.includes(c))) {
         if (estagio === 'collecting') {
@@ -567,7 +559,8 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
           }));
           const res = calcularResultadoFicha(itensC, f.rendimento_qtd);
           const speech = `Aqui esta sua ficha! Custo: ${fmt(res.custo_total)}, preco sugerido: ${fmt(res.preco_sugerido)}.${fichaTemEstimativas(f.itens) ? ' Alguns valores sao estimativas.' : ''} Diga salvar para confirmar.`;
-          playText(speech).catch(() => {}); lastText.current = speech;
+          lastSpeech.current = speech;
+          playText(speech).catch(() => {});
         } else if (estagio === 'reviewing') { salvarFicha(); }
         return;
       }

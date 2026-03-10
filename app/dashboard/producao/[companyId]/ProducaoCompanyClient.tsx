@@ -165,8 +165,8 @@ useEffect(() => {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { label: 'Total de Fichas', value: stats.totalFichas, color: 'text-blue-600 dark:text-blue-400' },
-            { label: 'Fichas Ativas', value: stats.ativas, color: 'text-green-600 dark:text-green-400' },
+            { label: 'Total de Guias', value: stats.totalFichas, color: 'text-blue-600 dark:text-blue-400' },
+            { label: 'Guias Ativas', value: stats.ativas, color: 'text-green-600 dark:text-green-400' },
             { label: 'Com Custo Calculado', value: stats.comCusto, color: 'text-purple-600 dark:text-purple-400' },
           ].map(s => (
             <div
@@ -220,7 +220,7 @@ useEffect(() => {
               <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
               <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma ficha encontrada</p>
               <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                As fichas são criadas pelo assistente de voz dizendo "criar ficha" ou "nova receita"
+                As guias são criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"
               </p>
             </div>
           ) : (
@@ -384,8 +384,8 @@ useEffect(() => {
         <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
           <p className="text-sm text-blue-800 dark:text-blue-200">
             💡 Para criar ou editar fichas, use o assistente de voz e diga{' '}
-            <strong>"criar ficha"</strong> ou <strong>"nova receita"</strong>.
-            Fichas com ⚠ possuem preços estimados pela IA — confirme com seus fornecedores.
+            <strong>"criar guia"</strong> ou <strong>"nova receita"</strong>.
+            Guias com ⚠ possuem preços estimados pela IA — confirme com seus fornecedores.
           </p>
         </div>
       </div>

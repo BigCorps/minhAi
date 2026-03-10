@@ -349,6 +349,116 @@ enviar_arquivo: {
   },
 },
 
+gerar_qrcode: {
+  functionKey: 'gerar_qrcode',
+  functionName: 'Gerar QR Code',
+  category: 'images',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'gerar qr code',
+    'criar qr code',
+    'gerar qrcode',
+    'criar qrcode',
+    'qr code',
+    'qrcode',
+    'gerar qr',
+    'criar qr',
+    'fazer qr code',
+    'montar qr code',
+    'transformar em qr',
+    'converter para qr',
+  ],
+
+  examplePhrases: [
+    'Gerar QR Code de um link',
+    'Criar QR Code com meu site',
+    'Converter texto em QR Code',
+  ],
+
+  requiresInput: false,
+
+  description: 'Gera QR Code a partir de qualquer texto ou URL. Resultado pode ser baixado em PNG ou enviado por email.',
+  shortDescription: 'Converta texto ou link em QR Code.',
+  icon: '🌐',
+  color: '#000080',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({
+        type: 'GerarQRCodeDisplay',
+        data: { companyId },
+      });
+      await playText('Abrindo gerador de QR Code. Diga ou digite o texto ou link.');
+      return true;
+    } catch (error) {
+      console.error('🔲 [GERAR QR CODE] ERRO:', error);
+      await playText('Desculpe, não consegui abrir o gerador de QR Code.');
+      return false;
+    }
+  },
+},
+
+gerar_codigo_barras: {
+  functionKey: 'gerar_codigo_barras',
+  functionName: 'Gerar Código de Barras',
+  category: 'images',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'gerar codigo de barras',
+    'criar codigo de barras',
+    'codigo de barras',
+    'gerar barcode',
+    'criar barcode',
+    'barcode',
+    'fazer codigo de barras',
+    'montar codigo de barras',
+    'gerar ean',
+    'gerar ean 13',
+    'gerar code 128',
+    'gerar code 39',
+  ],
+
+  examplePhrases: [
+    'Gerar código de barras EAN-13',
+    'Criar barcode do produto',
+    'Código de barras Code 128',
+  ],
+
+  requiresInput: false,
+
+  description: 'Gera código de barras nos formatos Code 128, EAN-13 ou Code 39. Resultado pode ser baixado em PNG ou enviado por email.',
+  shortDescription: 'Gere códigos de barras EAN-13, Code 128 ou Code 39.',
+  icon: '🌐',
+  color: '#000080',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({
+        type: 'GerarCodigoBarrasDisplay',
+        data: { companyId },
+      });
+      await playText('Abrindo gerador de código de barras. Escolha o formato e diga o conteúdo.');
+      return true;
+    } catch (error) {
+      console.error('📊 [GERAR CÓDIGO DE BARRAS] ERRO:', error);
+      await playText('Desculpe, não consegui abrir o gerador de código de barras.');
+      return false;
+    }
+  },
+},
+
 // ============================================================
 // CATEGORIA: AGENDAMENTOS (schedule)
 // ============================================================

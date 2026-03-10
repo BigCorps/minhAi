@@ -3,8 +3,19 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
+import { Timer, CheckCircle, XCircle, ImageUp } from 'lucide-react';
 
 type PageStatus = 'validating' | 'ready' | 'uploading' | 'success' | 'expired' | 'error';
+
+function PageWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function ArquivosContent() {
   const searchParams = useSearchParams();
@@ -105,7 +116,9 @@ function ArquivosContent() {
   if (status === 'expired') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="text-5xl">⏱️</div>
+        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-amber-500/20">
+          <Timer className="w-8 h-8 text-amber-400" />
+        </div>
         <h2 className="text-xl font-bold text-white">QR Code expirado</h2>
         <p className="text-slate-400 text-sm max-w-xs">
           Este QR Code expirou. Volte ao assistente e gere um novo.
@@ -117,8 +130,8 @@ function ArquivosContent() {
   if (status === 'success') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-green-500/20 text-4xl">
-          ✅
+        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-green-500/20">
+          <CheckCircle className="w-8 h-8 text-green-400" />
         </div>
         <h2 className="text-xl font-bold text-white">Enviado com sucesso!</h2>
         <p className="text-slate-400 text-sm max-w-xs">
@@ -142,7 +155,9 @@ function ArquivosContent() {
   if (status === 'error') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="text-5xl">❌</div>
+        <div className="w-16 h-16 flex items-center justify-center rounded-full bg-red-500/20">
+          <XCircle className="w-8 h-8 text-red-400" />
+        </div>
         <h2 className="text-xl font-bold text-white">Erro</h2>
         <p className="text-red-400 text-sm max-w-xs">{error}</p>
         <button
@@ -177,6 +192,7 @@ function ArquivosContent() {
             onChange={handleFileChange}
           />
           <div className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-semibold transition-all active:scale-95">
+            <ImageUp className="w-5 h-5" />
             <span>Tirar Foto</span>
           </div>
         </label>
@@ -195,6 +211,7 @@ function ArquivosContent() {
             onChange={handleFileChange}
           />
           <div className="w-full flex items-center justify-center gap-3 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-2xl text-base font-semibold transition-all active:scale-95 border border-slate-600">
+            <ImageUp className="w-5 h-5" />
             <span>Escolher da Galeria</span>
           </div>
         </label>
@@ -211,16 +228,6 @@ function ArquivosContent() {
         </div>
       </div>
     </PageWrapper>
-  );
-}
-
-function PageWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        {children}
-      </div>
-    </div>
   );
 }
 

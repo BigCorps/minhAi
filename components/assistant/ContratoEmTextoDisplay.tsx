@@ -336,25 +336,27 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
                   </button>
                 </div>
 
-                <button
-                  onClick={handleReset}
-                  className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  <RefreshCw className="w-4 h-4" />Nova digitalização
-                </button>
-
-                {googleConnected && (
+                <div className="flex gap-2">
                   <button
-                    onClick={handleSendByEmail}
-                    disabled={isSendingEmail}
-                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 w-full"
+                    onClick={handleReset}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
-                    {isSendingEmail
-                      ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
-                      : <><Mail className="w-4 h-4" />Enviar por email</>
-                    }
+                    <RefreshCw className="w-4 h-4" />Nova digitalização
                   </button>
-                )}
+
+                  {googleConnected && (
+                    <button
+                      onClick={handleSendByEmail}
+                      disabled={isSendingEmail}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isSendingEmail
+                        ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                        : <><Mail className="w-4 h-4" />Enviar por email</>
+                      }
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Coluna direita — QR de download (apenas desktop, em pé) */}
@@ -383,17 +385,11 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
 
             </div>
 
-            {/* Voice hint + barra de auto-close */}
+            {/* Voice hint */}
             <VoiceHint
               commands={['"copiar"', '"baixar txt"', '"ler contrato"', '"nova digitalização"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']}
               isDark={isDark}
             />
-            <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
-              <div
-                className="h-full bg-red-500 rounded-full transition-all duration-1000"
-                style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }}
-              />
-            </div>
           </div>
         )}
 

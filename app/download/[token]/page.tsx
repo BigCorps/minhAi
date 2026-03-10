@@ -80,9 +80,15 @@ function DownloadPageContent({ token }: { token: string }) {
         .from('companion_downloads')
         .select('file_name, file_type, file_base64, status, expires_at')
         .eq('token', token)
-        .single();
+        .maybeSingle();
 
-      if (dbError || !row) {
+      if (dbError) {
+        setError(`Erro: ${dbError.message} (código: ${dbError.code})`);
+        setStatus('error');
+        return;
+      }
+
+      if (!row) {
         setError('QR Code inválido ou não encontrado.');
         setStatus('error');
         return;

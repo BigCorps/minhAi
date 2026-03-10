@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 
-// ── Tipos de status ────────────────────────────────────────────
 type PageStatus = 'validating' | 'ready' | 'uploading' | 'success' | 'expired' | 'error';
 
-// ── Componente extraído — aceita token como prop ───────────────
-// Isso permite que /link/[slug]/page.tsx reutilize este conteúdo
-// sem redirect, mantendo a URL curta na barra do celular.
-export function UploadContent({ token }: { token: string }) {
+function ArquivosContent() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+
   const [status, setStatus] = useState<PageStatus>('validating');
   const [error, setError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('');
@@ -18,7 +18,7 @@ export function UploadContent({ token }: { token: string }) {
 
   useEffect(() => {
     if (!token) {
-      setError('Token não encontrado.');
+      setError('Token não encontrado na URL.');
       setStatus('error');
       return;
     }
@@ -214,7 +214,6 @@ export function UploadContent({ token }: { token: string }) {
   );
 }
 
-// ── Wrapper de layout ──────────────────────────────────────────
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center p-6">
@@ -225,18 +224,6 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Componente interno que lê token da query string ────────────
-function ArquivosContent() {
-  // Leitura dinâmica via window.location para evitar Suspense issues com useSearchParams
-  // A página /link/[slug] injeta o token via prop diretamente, sem passar por aqui
-  const token = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('token') ?? ''
-    : '';
-
-  return <UploadContent token={token} />;
-}
-
-// ── Export default com Suspense ────────────────────────────────
 export default function ArquivosPage() {
   return (
     <Suspense fallback={

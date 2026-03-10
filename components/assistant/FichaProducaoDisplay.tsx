@@ -715,7 +715,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
               <div>
                 {isMobile ? (
                   <>
-                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Fichas de Producao</p>
+                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Guias de Produção</p>
                     <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: 0 }}>
                       {estagio === 'collecting' && 'Coletando ingredientes...'}
                       {estagio === 'reviewing'  && 'Revisao final'}
@@ -725,7 +725,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                 ) : (
                   <>
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
-                      {estagio === 'saved' ? 'Ficha Salva!' : estagio === 'reviewing' ? 'Revisao Final' : 'Coletando Ingredientes'}
+                      {estagio === 'saved' ? 'Guia Salvo!' : estagio === 'reviewing' ? 'Revisao Final' : 'Coletando Ingredientes'}
                     </h2>
                     {ficha.nome && <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>}
                   </>
@@ -762,7 +762,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                 {isLoadingIA && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)' }}>
                     <Spinner size={16} color="#3b82f6" />
-                    <span style={{ fontSize: 13, color: '#60a5fa' }}>Criando ficha base com IA...</span>
+                    <span style={{ fontSize: 13, color: '#60a5fa' }}>Criando guia com IA...</span>
                     {streamingItem && <span style={{ fontSize: 12, color: '#93c5fd' }}>Adicionando: {streamingItem}...</span>}
                   </div>
                 )}
@@ -962,7 +962,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
               <div style={{ display: 'flex', gap: 10 }}>
                 {estagio === 'collecting' && (
                   <button
-                    onClick={() => { setEstagio('reviewing'); playText('Revisando sua ficha. Confira e diga salvar para confirmar.').catch(() => {}); }}
+                    onClick={() => { setEstagio('reviewing'); playText('Revisando seu guia. Confira e diga salvar para confirmar.').catch(() => {}); }}
                     disabled={ficha.itens.length === 0 || isLoadingIA}
                     style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: ficha.itens.length === 0 || isLoadingIA ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', cursor: ficha.itens.length === 0 || isLoadingIA ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   >
@@ -984,7 +984,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                     >
                       {isSaving
                         ? <><Spinner size={14} color="#fff" /> Salvando...</>
-                        : <><IconSave size={16} color="#fff" /> Salvar Ficha (3 creditos)</>
+                        : <><IconSave size={16} color="#fff" /> Salvar Ficha</>
                       }
                     </button>
                   </>

@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic } from 'lucide-react';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import CameraCapture from '@/components/assistant/CameraCapture';
+import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'capturing' | 'processing' | 'result' | 'error';
@@ -35,7 +35,6 @@ function useCameraProcess() {
 const OPENING_TEXT = 'Fotografe o contrato ou documento legal. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE = 60;
 
-// CORREÇÃO: normalize remove hífen também ("e-mail" → "email")
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -61,26 +60,23 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [stage, setStage] = useState<Stage>('capturing');
   const [contratoText, setContratoText] = useState<string | null>(null);
-  const [resultQrUrl, setResultQrUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [speechText, setSpeechText] = useState<string>('');
   const [isPdf, setIsPdf] = useState(false);
   const [pageCount, setPageCount] = useState<number | null>(null);
+  const [fileBase64, setFileBase64] = useState<string>('');
+  const [fileName, setFileName] = useState<string>('');
 
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
-
-  // CORREÇÃO: debounce de aba
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { process } = useCameraProcess();
-
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // Cleanup ao desmontar
   useEffect(() => {
     return () => {
       if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
@@ -99,34 +95,30 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     return () => clearInterval(interval);
   }, [stage, onClose]);
 
-  const generateResultQr = useCallback(async (text: string) => {
-    if (text.length > 500) return;
-    try {
-      const QRCode = (await import('qrcode')).default;
-      const url = await QRCode.toDataURL(text, { width: 180, margin: 2 });
-      setResultQrUrl(url);
-    } catch { /* silencioso */ }
-  }, []);
-
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
     const detectedPdf = base64.startsWith('JVBERi');
     setIsPdf(detectedPdf);
     try {
       const res = await process('contrato', base64, data.companyId);
+      const name = `contrato_${Date.now()}.txt`;
+      const b64 = btoa(unescape(encodeURIComponent(res.result)));
+
       setContratoText(res.result);
       setSpeechText(res.speech_text);
+      setFileName(name);
+      setFileBase64(b64);
+
       if (detectedPdf && res.metadata?.page_count) {
         setPageCount(res.metadata.page_count);
       }
       setStage('result');
-      await generateResultQr(res.result);
       playText(res.speech_text).catch(() => {});
     } catch (err: any) {
       setErrorMsg(err.message ?? 'Erro ao digitalizar contrato.');
       setStage('error');
     }
-  }, [data.companyId, process, generateResultQr, playText]);
+  }, [data.companyId, process, playText]);
 
   const handleCopy = useCallback(async () => {
     if (!contratoText) return;
@@ -142,22 +134,22 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `contrato_${Date.now()}.txt`;
+    a.download = fileName || `contrato_${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
     playText('Arquivo de contrato baixado.').catch(() => {});
-  }, [contratoText, playText]);
+  }, [contratoText, fileName, playText]);
 
   const handleReset = useCallback(() => {
     setStage('capturing');
     setContratoText(null);
-    setResultQrUrl(null);
     setErrorMsg(null);
     setCopied(false);
     setSpeechText('');
     setIsPdf(false);
     setPageCount(null);
-    // Limpar debounce de aba ao resetar
+    setFileBase64('');
+    setFileName('');
     if (tabCommandTimeoutRef.current) clearTimeout(tabCommandTimeoutRef.current);
     lastTabCommandRef.current = null;
     playText(OPENING_TEXT).catch(() => {});
@@ -194,7 +186,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
     onTranscript: (transcript) => {
       const t = normalize(transcript);
 
-      // ── Universais ────────────────────────────────────────────
       if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
         onClose(); return;
       }
@@ -203,7 +194,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
         return;
       }
 
-      // ── Troca de aba (só em capturing) ───────────────────────
       if (stage === 'capturing') {
         const TAB_MAP: Record<string, Tab> = {
           celular:    'companion',
@@ -226,7 +216,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
         };
         for (const [trigger, tab] of Object.entries(TAB_MAP)) {
           if (t.includes(trigger)) {
-            // CORREÇÃO: debounce — ignorar se mesmo comando executado recentemente
             if (lastTabCommandRef.current === tab) return;
             lastTabCommandRef.current = tab;
             setCameraTab(tab as Tab);
@@ -240,7 +229,6 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
         }
       }
 
-      // ── Resultado ────────────────────────────────────────────
       if (stage === 'result' && contratoText) {
         if (['copiar', 'copia', 'copie'].some(c => t.includes(c))) {
           handleCopy(); return;
@@ -254,13 +242,11 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
         if (['nova', 'novo contrato', 'nova digitalizacao', 'novamente'].some(c => t.includes(c))) {
           handleReset(); return;
         }
-        // CORREÇÃO: normalize já remove hífen — "e-mail" vira "email"
         if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
           handleSendByEmail(); return;
         }
       }
 
-      // ── Erro ─────────────────────────────────────────────────
       if (stage === 'error') {
         if (['tentar', 'novamente', 'tentar novamente'].some(c => t.includes(c))) {
           handleReset(); return;
@@ -275,7 +261,9 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
 
         <div className="flex items-center justify-between mb-5">
           <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Contrato em Texto</h2>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {stage === 'capturing' && (
@@ -304,6 +292,7 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
 
         {stage === 'result' && contratoText && (
           <div className="flex flex-col gap-4">
+            {/* Banner de sucesso */}
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
               <Check className="w-4 h-4 shrink-0" />
               <span>Contrato digitalizado!</span>
@@ -312,30 +301,42 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
               </span>
             </div>
 
+            {/* Texto do contrato */}
             <div className={`p-4 rounded-xl text-sm leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap ${isDark ? 'bg-slate-900/60 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
               {contratoText}
             </div>
 
-            {resultQrUrl && (
-              <div className="flex flex-col items-center gap-2">
-                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Escaneie para acessar no celular:</p>
-                <div className={`p-2 rounded-xl ${isDark ? 'bg-white' : 'bg-white border border-gray-200'}`}>
-                  <Image src={resultQrUrl} alt="QR Code do contrato" width={140} height={140} unoptimized />
-                </div>
-              </div>
-            )}
+            {/* QR de download para celular — substitui o QR de texto antigo */}
+            <ResultDownloadQR
+              companyId={data.companyId}
+              fileName={fileName}
+              fileType="text/plain"
+              fileBase64={fileBase64}
+              isDark={isDark}
+              enabled={stage === 'result' && !!fileBase64}
+            />
 
+            {/* Botões de ação */}
             <div className="flex gap-2">
-              <button onClick={handleCopy} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <button
+                onClick={handleCopy}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
                 {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copiado!' : 'Copiar'}
               </button>
-              <button onClick={handleDownloadTxt} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700">
+              <button
+                onClick={handleDownloadTxt}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+              >
                 <Download className="w-4 h-4" />Baixar .txt
               </button>
             </div>
 
-            <button onClick={handleReset} className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button
+              onClick={handleReset}
+              className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`}
+            >
               <RefreshCw className="w-4 h-4" />Nova digitalização
             </button>
 
@@ -352,22 +353,35 @@ export default function ContratoEmTextoDisplay({ data, onClose, theme = 'dark', 
               </button>
             )}
 
-            <VoiceHint commands={['"copiar"', '"baixar txt"', '"ler contrato"', '"nova digitalização"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']} isDark={isDark} />
+            <VoiceHint
+              commands={['"copiar"', '"baixar txt"', '"ler contrato"', '"nova digitalização"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']}
+              isDark={isDark}
+            />
 
+            {/* Barra de progresso de auto-close */}
             <div className={`h-1 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
-              <div className="h-full bg-red-500 rounded-full transition-all duration-1000" style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }} />
+              <div
+                className="h-full bg-red-500 rounded-full transition-all duration-1000"
+                style={{ width: `${(timeLeft / AUTO_CLOSE) * 100}%` }}
+              />
             </div>
           </div>
         )}
 
         {stage === 'error' && (
           <div className="flex flex-col gap-4">
-            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>{errorMsg}</div>
-            <button onClick={handleReset} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700">
+            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+              {errorMsg}
+            </div>
+            <button
+              onClick={handleReset}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+            >
               <RefreshCw className="w-4 h-4" />Tentar novamente
             </button>
           </div>
         )}
+
       </div>
     </div>,
     document.body

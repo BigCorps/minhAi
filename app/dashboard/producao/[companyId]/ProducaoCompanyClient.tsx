@@ -47,8 +47,27 @@ export default function ProducaoCompanyClient({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'ativas' | 'inativas'>('todas');
   const supabase = createClient();
-  const { playText, stopAudio } = usePlayText();
-  const [showNovaFicha, setShowNovaFicha] = useState(false);
+const { playText, stopAudio } = usePlayText();
+const [showNovaFicha, setShowNovaFicha] = useState(false);
+const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+
+useEffect(() => {
+  const detectTheme = () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    setPageTheme(isDark ? 'dark' : 'light');
+  };
+
+  detectTheme();
+
+  // Observa mudanças de tema em tempo real
+  const observer = new MutationObserver(detectTheme);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+
+  return () => observer.disconnect();
+}, []);
 
   // ── Toggle ativo/inativo ──────────────────────────────────
   async function handleToggleAtivo(fichaId: string, current: boolean) {
@@ -349,17 +368,16 @@ export default function ProducaoCompanyClient({
         </div>
 
 {showNovaFicha && (
-  <FichaProducaoDisplay
-    data={{ companyId: company.id }}
-    onClose={() => {
-      stopAudio();
-      setShowNovaFicha(false);
-      // Recarrega fichas após fechar
-      window.location.reload();
-    }}
-    playText={playText}
-    theme="light"
-  />
+<FichaProducaoDisplay
+  data={{ companyId: company.id }}
+  onClose={() => {
+    stopAudio();
+    setShowNovaFicha(false);
+    window.location.reload();
+  }}
+  playText={playText}
+  theme={pageTheme}  // ← era theme="light"
+/>
 )}
 
         {/* Dica */}

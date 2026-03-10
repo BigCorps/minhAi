@@ -20,7 +20,7 @@ function NotFoundPage() {
         <div className="text-5xl">🔍</div>
         <h2 className="text-xl font-bold text-white">Link não encontrado</h2>
         <p className="text-slate-400 text-sm max-w-xs">
-          Este link não existe ou já foi removido.
+          Este link não existe ou expirou.
         </p>
       </div>
     </PageWrapper>

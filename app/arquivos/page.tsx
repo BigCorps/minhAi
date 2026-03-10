@@ -1,27 +1,24 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 
 // ── Tipos de status ────────────────────────────────────────────
 type PageStatus = 'validating' | 'ready' | 'uploading' | 'success' | 'expired' | 'error';
 
-// ── Componente interno (usa useSearchParams — precisa de Suspense) ──
-function ArquivosContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-
+// ── Componente extraído — aceita token como prop ───────────────
+// Isso permite que /link/[slug]/page.tsx reutilize este conteúdo
+// sem redirect, mantendo a URL curta na barra do celular.
+export function UploadContent({ token }: { token: string }) {
   const [status, setStatus] = useState<PageStatus>('validating');
   const [error, setError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('');
 
   const supabase = createClient();
 
-  // Validar token ao carregar
   useEffect(() => {
     if (!token) {
-      setError('Token não encontrado na URL.');
+      setError('Token não encontrado.');
       setStatus('error');
       return;
     }
@@ -58,7 +55,6 @@ function ArquivosContent() {
     const file = e.target.files?.[0];
     if (!file || !token) return;
 
-    // Validações básicas no cliente
     if (!file.type.startsWith('image/')) {
       setError('Selecione um arquivo de imagem (JPG, PNG, etc).');
       return;
@@ -72,7 +68,6 @@ function ArquivosContent() {
     setError(null);
 
     try {
-      // 1. Upload para Storage usando o token como pasta
       const ext = file.name.split('.').pop() ?? 'jpg';
       const fileName = `${token}/${Date.now()}.${ext}`;
 
@@ -83,12 +78,11 @@ function ArquivosContent() {
 
       if (uploadError) throw new Error('Erro no upload: ' + uploadError.message);
 
-      // 2. Atualizar status na tabela — isso dispara o Realtime no kiosk
       const { error: updateError } = await supabase
         .from('companion_uploads')
         .update({ status: 'uploaded', storage_path: fileName })
         .eq('token', token)
-        .eq('status', 'pending'); // só atualiza se ainda estiver pending
+        .eq('status', 'pending');
 
       if (updateError) throw new Error('Erro ao confirmar envio: ' + updateError.message);
 
@@ -98,8 +92,6 @@ function ArquivosContent() {
       setStatus('error');
     }
   };
-
-  // ── Renders por status ─────────────────────────────────────────
 
   if (status === 'validating') return (
     <PageWrapper>
@@ -167,7 +159,6 @@ function ArquivosContent() {
   return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-6 w-full max-w-xs mx-auto">
-        {/* Header */}
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-xl font-bold text-white">
             {companyName || 'eAi - Funcionários de Voz'}
@@ -177,7 +168,6 @@ function ArquivosContent() {
           </p>
         </div>
 
-        {/* Botão câmera — abre câmera nativa no mobile */}
         <label className="w-full cursor-pointer">
           <input
             type="file"
@@ -197,7 +187,6 @@ function ArquivosContent() {
           <div className="flex-1 h-px bg-slate-700" />
         </div>
 
-        {/* Botão galeria */}
         <label className="w-full cursor-pointer">
           <input
             type="file"
@@ -210,14 +199,12 @@ function ArquivosContent() {
           </div>
         </label>
 
-        {/* Erro inline */}
         {error && (
           <div className="w-full px-4 py-3 bg-red-900/30 border border-red-700 text-red-300 rounded-xl text-sm text-center">
             {error}
           </div>
         )}
 
-        {/* Rodapé */}
         <div className="text-center mt-2">
           <p className="text-slate-600 text-xs">Esta página expira em 10 minutos.</p>
           <p className="text-slate-600 text-xs">Seus dados são processados com segurança.</p>
@@ -238,7 +225,18 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Export default com Suspense (obrigatório para useSearchParams) ──
+// ── Componente interno que lê token da query string ────────────
+function ArquivosContent() {
+  // Leitura dinâmica via window.location para evitar Suspense issues com useSearchParams
+  // A página /link/[slug] injeta o token via prop diretamente, sem passar por aqui
+  const token = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('token') ?? ''
+    : '';
+
+  return <UploadContent token={token} />;
+}
+
+// ── Export default com Suspense ────────────────────────────────
 export default function ArquivosPage() {
   return (
     <Suspense fallback={

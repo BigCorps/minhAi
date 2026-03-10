@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
-import { ArrowLeft, ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { ArrowLeft, ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { usePlayText } from '@/hooks/usePlayText';
+import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 
 interface Ingrediente {
   id: string;
@@ -45,6 +47,8 @@ export default function ProducaoCompanyClient({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'ativas' | 'inativas'>('todas');
   const supabase = createClient();
+  const { playText, stopAudio } = usePlayText();
+  const [showNovaFicha, setShowNovaFicha] = useState(false);
 
   // ── Toggle ativo/inativo ──────────────────────────────────
   async function handleToggleAtivo(fichaId: string, current: boolean) {
@@ -173,9 +177,20 @@ export default function ProducaoCompanyClient({
               </button>
             ))}
           </div>
-          <span className="text-xs text-gray-400 dark:text-white/40">
-            {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
-          </span>
+<div className="flex items-center gap-3">
+  <span className="text-xs text-gray-400 dark:text-white/40">
+    {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
+  </span>
+  <button
+    onClick={() => setShowNovaFicha(true)}
+    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all"
+  >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14"/><path d="M12 5v14"/>
+    </svg>
+    Nova Ficha
+  </button>
+</div>
         </div>
 
         {/* Lista de fichas */}
@@ -332,6 +347,20 @@ export default function ProducaoCompanyClient({
             </div>
           )}
         </div>
+
+{showNovaFicha && (
+  <FichaProducaoDisplay
+    data={{ companyId: company.id }}
+    onClose={() => {
+      stopAudio();
+      setShowNovaFicha(false);
+      // Recarrega fichas após fechar
+      window.location.reload();
+    }}
+    playText={playText}
+    theme="light"
+  />
+)}
 
         {/* Dica */}
         <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">

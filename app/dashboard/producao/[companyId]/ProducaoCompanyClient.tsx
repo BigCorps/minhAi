@@ -27,6 +27,7 @@ interface Ficha {
   custo_total: number | null;
   margem_lucro: number | null;
   is_active: boolean;
+  is_ficha_preparo: boolean; // ← FASE C
   created_at: string;
   producao_ingredientes: Ingrediente[];
 }
@@ -36,6 +37,79 @@ interface ProducaoCompanyClientProps {
   fichas: Ficha[];
   stats: { totalFichas: number; ativas: number; comCusto: number };
 }
+
+// ── FASE C: Componente auxiliar — ingrediente gerado pela ficha de preparo ──
+function IngredienteGerado({
+  fichaId,
+  isDark,
+}: {
+  fichaId: string;
+  isDark: boolean;
+}) {
+  const supabase = createClient();
+  const [ingrediente, setIngrediente] = useState<{
+    nome: string;
+    preco_por_unidade: number;
+    unidade: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('producao_ingredientes')
+      .select('nome, preco_por_unidade, unidade')
+      .eq('ficha_id', fichaId)
+      .eq('tipo', 'produzido')
+      .maybeSingle()
+      .then(({ data }) => {
+        setIngrediente(data);
+        setLoading(false);
+      });
+  }, [fichaId]);
+
+  if (loading) return (
+    <p className="text-xs text-gray-400 dark:text-white/30 py-1">Carregando ingrediente...</p>
+  );
+  if (!ingrediente) return (
+    <p className="text-xs text-gray-400 dark:text-white/30 py-1">
+      Ingrediente ainda não gerado.
+    </p>
+  );
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '10px 12px',
+      background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)',
+      border: `1px solid ${isDark ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.15)'}`,
+      borderRadius: 8,
+    }}>
+      <span style={{ fontSize: 20 }}>⚗️</span>
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#a855f7' }}>
+          {ingrediente.nome}
+        </p>
+        <p style={{ margin: 0, fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', marginTop: 2 }}>
+          R$ {ingrediente.preco_por_unidade.toFixed(2).replace('.', ',')}/{ingrediente.unidade}
+        </p>
+      </div>
+      <span style={{
+        padding: '4px 8px',
+        background: 'rgba(168,85,247,0.2)',
+        color: '#a855f7',
+        borderRadius: 12,
+        fontSize: 11,
+        fontWeight: 600,
+      }}>
+        PRODUZIDO
+      </span>
+    </div>
+  );
+}
+
+// ── Componente principal ─────────────────────────────────────────────────────
 
 export default function ProducaoCompanyClient({
   company,
@@ -47,27 +121,30 @@ export default function ProducaoCompanyClient({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'ativas' | 'inativas'>('todas');
-  // ── FASE A: Controle de abas ──────────────────────────────
+
+  // ── FASE A: aba principal (fichas / ingredientes)
   const [activeTab, setActiveTab] = useState<'fichas' | 'ingredientes'>('fichas');
+
+  // ── FASE C: sub-aba dentro de fichas (produtos / preparos)
+  const [tipoFicha, setTipoFicha] = useState<'produtos' | 'preparos'>('produtos');
+
+  // ── FASE C: tipo passado ao modal
+  const [novaFichaTipo, setNovaFichaTipo] = useState<'produto' | 'preparo'>('produto');
+
   const supabase = createClient();
   const { playText, stopAudio } = usePlayText();
   const [showNovaFicha, setShowNovaFicha] = useState(false);
   const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+  const isDark = pageTheme === 'dark';
 
   useEffect(() => {
     const detectTheme = () => {
-      const isDark = document.documentElement.classList.contains('dark');
-      setPageTheme(isDark ? 'dark' : 'light');
+      const dark = document.documentElement.classList.contains('dark');
+      setPageTheme(dark ? 'dark' : 'light');
     };
-
     detectTheme();
-
     const observer = new MutationObserver(detectTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
 
@@ -112,8 +189,12 @@ export default function ProducaoCompanyClient({
     setLoadingId(null);
   }
 
-  // ── Filtrar fichas ────────────────────────────────────────
-  const fichasFiltradas = fichas.filter(f => {
+  // ── Filtrar fichas por tipo e status ─────────────────────
+  const fichasPorTipo = fichas.filter(f =>
+    tipoFicha === 'preparos' ? f.is_ficha_preparo : !f.is_ficha_preparo
+  );
+
+  const fichasFiltradas = fichasPorTipo.filter(f => {
     if (filtro === 'ativas') return f.is_active;
     if (filtro === 'inativas') return !f.is_active;
     return true;
@@ -143,6 +224,12 @@ export default function ProducaoCompanyClient({
     return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Ativa</span>;
   }
 
+  // ── Abrir modal com tipo correto ──────────────────────────
+  function abrirNovaFicha(tipo: 'produto' | 'preparo') {
+    setNovaFichaTipo(tipo);
+    setShowNovaFicha(true);
+  }
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -168,20 +255,17 @@ export default function ProducaoCompanyClient({
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Total de Guias', value: stats.totalFichas, color: 'text-blue-600 dark:text-blue-400' },
-            { label: 'Guias Ativas', value: stats.ativas, color: 'text-green-600 dark:text-green-400' },
-            { label: 'Com Custo Calculado', value: stats.comCusto, color: 'text-purple-600 dark:text-purple-400' },
+            { label: 'Guias Ativas',   value: stats.ativas,      color: 'text-green-600 dark:text-green-400' },
+            { label: 'Com Custo',      value: stats.comCusto,    color: 'text-purple-600 dark:text-purple-400' },
           ].map(s => (
-            <div
-              key={s.label}
-              className="rounded-xl p-5 bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm"
-            >
+            <div key={s.label} className="rounded-xl p-5 bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm">
               <p className="text-sm text-gray-500 dark:text-white/50 mb-1">{s.label}</p>
               <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
             </div>
           ))}
         </div>
 
-        {/* ── FASE A: Abas de navegação ──────────────────────── */}
+        {/* ── FASE A: Abas principais ────────────────────────── */}
         <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-white/10">
           <button
             onClick={() => setActiveTab('fichas')}
@@ -213,6 +297,80 @@ export default function ProducaoCompanyClient({
         {/* ── Aba: Fichas ───────────────────────────────────── */}
         {activeTab === 'fichas' && (
           <>
+            {/* ── FASE C: Sub-abas Produtos / Fichas de Preparo ── */}
+            <div style={{
+              display: 'flex',
+              gap: 4,
+              marginBottom: 20,
+              borderBottom: `2px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'}`,
+            }}>
+              <button
+                onClick={() => setTipoFicha('produtos')}
+                style={{
+                  padding: '10px 20px',
+                  background: 'transparent',
+                  color: tipoFicha === 'produtos'
+                    ? '#3b82f6'
+                    : isDark ? 'rgba(255,255,255,0.4)' : '#64748b',
+                  border: 'none',
+                  borderBottom: `3px solid ${tipoFicha === 'produtos' ? '#3b82f6' : 'transparent'}`,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: tipoFicha === 'produtos' ? 600 : 500,
+                  transition: 'all 0.15s',
+                  marginBottom: -2,
+                }}
+              >
+                📋 Produtos Finais
+                <span style={{
+                  marginLeft: 6,
+                  padding: '1px 7px',
+                  borderRadius: 10,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: tipoFicha === 'produtos'
+                    ? 'rgba(59,130,246,0.15)'
+                    : isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                  color: tipoFicha === 'produtos' ? '#3b82f6' : isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8',
+                }}>
+                  {fichas.filter(f => !f.is_ficha_preparo).length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setTipoFicha('preparos')}
+                style={{
+                  padding: '10px 20px',
+                  background: 'transparent',
+                  color: tipoFicha === 'preparos'
+                    ? '#a855f7'
+                    : isDark ? 'rgba(255,255,255,0.4)' : '#64748b',
+                  border: 'none',
+                  borderBottom: `3px solid ${tipoFicha === 'preparos' ? '#a855f7' : 'transparent'}`,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: tipoFicha === 'preparos' ? 600 : 500,
+                  transition: 'all 0.15s',
+                  marginBottom: -2,
+                }}
+              >
+                ⚗️ Fichas de Preparo
+                <span style={{
+                  marginLeft: 6,
+                  padding: '1px 7px',
+                  borderRadius: 10,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: tipoFicha === 'preparos'
+                    ? 'rgba(168,85,247,0.15)'
+                    : isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                  color: tipoFicha === 'preparos' ? '#a855f7' : isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8',
+                }}>
+                  {fichas.filter(f => f.is_ficha_preparo).length}
+                </span>
+              </button>
+            </div>
+
             {/* Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div className="flex gap-2">
@@ -234,14 +392,18 @@ export default function ProducaoCompanyClient({
                 <span className="text-xs text-gray-400 dark:text-white/40">
                   {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
                 </span>
+                {/* ── FASE C: botão muda conforme sub-aba ── */}
                 <button
-                  onClick={() => setShowNovaFicha(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all"
+                  onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+                  style={{
+                    background: tipoFicha === 'preparos' ? '#7c3aed' : '#2563eb',
+                  }}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14"/><path d="M12 5v14"/>
                   </svg>
-                  Nova Guia
+                  {tipoFicha === 'preparos' ? '⚗️ Nova Ficha de Preparo' : 'Nova Guia'}
                 </button>
               </div>
             </div>
@@ -251,9 +413,14 @@ export default function ProducaoCompanyClient({
               {fichasFiltradas.length === 0 ? (
                 <div className="py-16 text-center">
                   <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
-                  <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma guia encontrada</p>
+                  <p className="text-gray-500 dark:text-white/40 font-medium">
+                    {tipoFicha === 'preparos' ? 'Nenhuma ficha de preparo encontrada' : 'Nenhuma guia encontrada'}
+                  </p>
                   <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                    As guias são criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"
+                    {tipoFicha === 'preparos'
+                      ? 'Crie fichas de preparo para ingredientes semielaborados como molhos, massas e recheios'
+                      : 'As guias são criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"'
+                    }
                   </p>
                 </div>
               ) : (
@@ -267,10 +434,27 @@ export default function ProducaoCompanyClient({
                           {/* Nome + status */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              {/* ── FASE C: ícone de preparo ── */}
+                              {ficha.is_ficha_preparo && (
+                                <span className="text-sm">⚗️</span>
+                              )}
                               <span className="font-semibold text-gray-900 dark:text-white truncate">
                                 {ficha.nome}
                               </span>
                               {getStatusBadge(ficha)}
+                              {/* ── FASE C: badge PREPARO ── */}
+                              {ficha.is_ficha_preparo && (
+                                <span style={{
+                                  padding: '2px 8px',
+                                  background: 'rgba(168,85,247,0.15)',
+                                  color: '#a855f7',
+                                  borderRadius: 20,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                }}>
+                                  PREPARO
+                                </span>
+                              )}
                               {ficha.producao_ingredientes?.some(i => i.custo_estimado) && (
                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400">
                                   ⚠ Preço estimado
@@ -287,23 +471,33 @@ export default function ProducaoCompanyClient({
                           </div>
 
                           {/* Custo e margem */}
-                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[100px]">
+                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[110px]">
                             <span className="text-sm font-semibold text-gray-900 dark:text-white">
                               {formatCusto(ficha.custo_total)}
                             </span>
-                            <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
-                              Margem: {formatMargem(ficha.margem_lucro)}
-                            </span>
-                            {ficha.preco_venda_sugerido && (
-                              <span className="text-xs text-blue-600 dark:text-blue-400">
-                                Venda: {formatCusto(ficha.preco_venda_sugerido)}
-                              </span>
+                            {/* ── FASE C: preparo mostra custo/unidade; produto mostra margem ── */}
+                            {ficha.is_ficha_preparo ? (
+                              ficha.custo_total !== null && ficha.rendimento > 0 && (
+                                <span className="text-xs font-medium" style={{ color: '#a855f7' }}>
+                                  {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
+                                </span>
+                              )
+                            ) : (
+                              <>
+                                <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
+                                  Margem: {formatMargem(ficha.margem_lucro)}
+                                </span>
+                                {ficha.preco_venda_sugerido && (
+                                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                                    Venda: {formatCusto(ficha.preco_venda_sugerido)}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
 
                           {/* Ações */}
                           <div className="flex items-center gap-1">
-                            {/* Expandir ingredientes */}
                             <button
                               onClick={() => setExpandedId(expandedId === ficha.id ? null : ficha.id)}
                               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400 dark:text-white/40"
@@ -315,7 +509,6 @@ export default function ProducaoCompanyClient({
                               }
                             </button>
 
-                            {/* Toggle ativo */}
                             <button
                               onClick={() => handleToggleAtivo(ficha.id, ficha.is_active)}
                               disabled={loadingId === ficha.id}
@@ -334,7 +527,6 @@ export default function ProducaoCompanyClient({
                               }
                             </button>
 
-                            {/* Deletar */}
                             <button
                               onClick={() => handleDelete(ficha.id)}
                               disabled={loadingId === ficha.id}
@@ -351,47 +543,72 @@ export default function ProducaoCompanyClient({
                           <span className="font-semibold text-gray-900 dark:text-white">
                             Custo: {formatCusto(ficha.custo_total)}
                           </span>
-                          <span className={getMargemColor(ficha.margem_lucro)}>
-                            Margem: {formatMargem(ficha.margem_lucro)}
-                          </span>
-                          {ficha.preco_venda_sugerido && (
-                            <span className="text-blue-600 dark:text-blue-400">
-                              Venda: {formatCusto(ficha.preco_venda_sugerido)}
-                            </span>
+                          {ficha.is_ficha_preparo ? (
+                            ficha.custo_total !== null && ficha.rendimento > 0 && (
+                              <span style={{ color: '#a855f7' }}>
+                                {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
+                              </span>
+                            )
+                          ) : (
+                            <>
+                              <span className={getMargemColor(ficha.margem_lucro)}>
+                                Margem: {formatMargem(ficha.margem_lucro)}
+                              </span>
+                              {ficha.preco_venda_sugerido && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  Venda: {formatCusto(ficha.preco_venda_sugerido)}
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
 
-                      {/* Ingredientes expandidos */}
-                      {expandedId === ficha.id && ficha.producao_ingredientes?.length > 0 && (
+                      {/* Expandido: ingredientes + (FASE C) ingrediente gerado para preparos */}
+                      {expandedId === ficha.id && (
                         <div className="px-6 pb-4 bg-gray-50/80 dark:bg-white/3">
-                          <p className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3">
-                            Ingredientes
-                          </p>
-                          <div className="grid sm:grid-cols-2 gap-2">
-                            {ficha.producao_ingredientes.map(ing => (
-                              <div
-                                key={ing.id}
-                                className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm"
-                              >
-                                <div className="flex items-center gap-2">
-                                  {ing.custo_estimado && (
-                                    <span title="Preço estimado pela IA" className="text-yellow-500 text-xs">⚠</span>
-                                  )}
-                                  <span className="text-gray-900 dark:text-white font-medium">{ing.nome}</span>
-                                  <span className="text-gray-400 dark:text-white/40">
-                                    {ing.quantidade} {ing.unidade}
-                                  </span>
-                                </div>
-                                <span className="text-gray-600 dark:text-white/60 font-mono text-xs">
-                                  {ing.custo_unitario !== null
-                                    ? `R$ ${(ing.custo_unitario * ing.quantidade).toFixed(2).replace('.', ',')}`
-                                    : '—'
-                                  }
-                                </span>
+
+                          {/* ── FASE C: ingrediente gerado (só para preparos) ── */}
+                          {ficha.is_ficha_preparo && (
+                            <div className="mb-4 mt-3">
+                              <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider mb-2">
+                                Ingrediente Gerado
+                              </p>
+                              <IngredienteGerado fichaId={ficha.id} isDark={isDark} />
+                            </div>
+                          )}
+
+                          {ficha.producao_ingredientes?.length > 0 && (
+                            <>
+                              <p className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3 mt-3">
+                                Ingredientes
+                              </p>
+                              <div className="grid sm:grid-cols-2 gap-2">
+                                {ficha.producao_ingredientes.map(ing => (
+                                  <div
+                                    key={ing.id}
+                                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {ing.custo_estimado && (
+                                        <span title="Preço estimado pela IA" className="text-yellow-500 text-xs">⚠</span>
+                                      )}
+                                      <span className="text-gray-900 dark:text-white font-medium">{ing.nome}</span>
+                                      <span className="text-gray-400 dark:text-white/40">
+                                        {ing.quantidade} {ing.unidade}
+                                      </span>
+                                    </div>
+                                    <span className="text-gray-600 dark:text-white/60 font-mono text-xs">
+                                      {ing.custo_unitario !== null
+                                        ? `R$ ${(ing.custo_unitario * ing.quantidade).toFixed(2).replace('.', ',')}`
+                                        : '—'
+                                      }
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -400,14 +617,27 @@ export default function ProducaoCompanyClient({
               )}
             </div>
 
-            {/* Dica */}
-            <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                Para criar ou editar guia, use o assistente de voz e diga{' '}
-                <strong>"criar guia"</strong> ou <strong>"nova receita"</strong>.
-                Guias com ⚠ possuem preços estimados pela IA — confirme com seus fornecedores.
-              </p>
-            </div>
+            {/* ── FASE C: info footer contextual ── */}
+            {tipoFicha === 'preparos' ? (
+              <div className="mt-6 p-4 rounded-xl border" style={{
+                background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)',
+                borderColor: isDark ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.15)',
+              }}>
+                <p className="text-sm" style={{ color: isDark ? '#e9d5ff' : '#7c3aed' }}>
+                  <strong>⚗️ Fichas de Preparo</strong> produzem ingredientes automaticamente.
+                  O custo por unidade é calculado e alimenta o cadastro de ingredientes,
+                  propagando para todas as fichas que os utilizam.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Para criar ou editar guia, use o assistente de voz e diga{' '}
+                  <strong>"criar guia"</strong> ou <strong>"nova receita"</strong>.
+                  Guias com ⚠ possuem preços estimados pela IA — confirme com seus fornecedores.
+                </p>
+              </div>
+            )}
           </>
         )}
 
@@ -415,7 +645,7 @@ export default function ProducaoCompanyClient({
 
       {showNovaFicha && (
         <FichaProducaoDisplay
-          data={{ companyId: company.id }}
+          data={{ companyId: company.id, fichaType: novaFichaTipo }} // ← FASE C
           onClose={() => {
             stopAudio();
             setShowNovaFicha(false);

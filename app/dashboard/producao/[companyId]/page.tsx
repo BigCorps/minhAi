@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
@@ -33,20 +32,31 @@ export default function ProducaoCompanyPage() {
 
       const { data: fichasData } = await supabase
         .from('producao_fichas')
-.select(`
-  id, nome, descricao, rendimento, unidade_rendimento,
-  preco_venda_sugerido, custo_total, margem_lucro, is_active, created_at,
-  producao_ficha_itens(
-    id, ingrediente_nome_temp, quantidade, unidade, preco_temp, source,
-    producao_ingredientes(id, nome)
-  )
-`)
+        .select(`
+          id, nome, descricao, rendimento, unidade_rendimento,
+          preco_venda_sugerido, custo_total, margem_lucro, is_active, created_at,
+          producao_ficha_itens(
+            id, ingrediente_nome_temp, quantidade, unidade, preco_temp, source,
+            producao_ingredientes(id, nome)
+          )
+        `)
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
-      const lista = fichasData || [];
+      // Normaliza o shape para o que ProducaoCompanyClient espera
+      const lista = (fichasData || []).map((ficha: any) => ({
+        ...ficha,
+        producao_ingredientes: (ficha.producao_ficha_itens ?? []).map((item: any) => ({
+          id: item.id,
+          nome: item.producao_ingredientes?.nome ?? item.ingrediente_nome_temp ?? 'Ingrediente',
+          quantidade: item.quantidade,
+          unidade: item.unidade,
+          custo_unitario: item.preco_temp ?? null,
+          custo_estimado: item.source === 'estimado',
+        })),
+      }));
+
       setFichas(lista);
-      const now = new Date();
       setStats({
         totalFichas: lista.length,
         ativas: lista.filter((f: any) => f.is_active).length,
@@ -54,6 +64,7 @@ export default function ProducaoCompanyPage() {
       });
       setLoading(false);
     };
+
     load();
   }, [companyId]);
 

@@ -30,31 +30,40 @@ export default function ProducaoCompanyPage() {
       if (!companyData) { router.push('/dashboard/producao'); return; }
       setCompany(companyData);
 
-      const { data: fichasData } = await supabase
-        .from('producao_fichas')
-        .select(`
-          id, nome, descricao, rendimento, unidade_rendimento,
-          preco_venda_sugerido, custo_total, margem_lucro, is_active, created_at,
-          producao_ficha_itens(
-            id, ingrediente_nome_temp, quantidade, unidade, preco_temp, source,
-            producao_ingredientes(id, nome)
-          )
-        `)
-        .eq('company_id', companyId)
-        .order('created_at', { ascending: false });
+const { data: fichasData } = await supabase
+  .from('producao_fichas')
+  .select(`
+    id, nome, categoria, descricao,
+    rendimento_qtd, rendimento_unid,
+    preco_venda, markup_base,
+    tem_estimativas, criado_por_voz,
+    created_at,
+    producao_ficha_itens(
+      id, ingrediente_nome_temp, quantidade, unidade, preco_temp, source,
+      producao_ingredientes(id, nome)
+    )
+  `)
+  .eq('company_id', companyId)
+  .order('created_at', { ascending: false });
 
-      // Normaliza o shape para o que ProducaoCompanyClient espera
-      const lista = (fichasData || []).map((ficha: any) => ({
-        ...ficha,
-        producao_ingredientes: (ficha.producao_ficha_itens ?? []).map((item: any) => ({
-          id: item.id,
-          nome: item.producao_ingredientes?.nome ?? item.ingrediente_nome_temp ?? 'Ingrediente',
-          quantidade: item.quantidade,
-          unidade: item.unidade,
-          custo_unitario: item.preco_temp ?? null,
-          custo_estimado: item.source === 'estimado',
-        })),
-      }));
+const lista = (fichasData || []).map((ficha: any) => ({
+  ...ficha,
+  // Aliases para compatibilidade com ProducaoCompanyClient
+  rendimento: ficha.rendimento_qtd,
+  unidade_rendimento: ficha.rendimento_unid,
+  preco_venda_sugerido: ficha.preco_venda,
+  custo_total: null,      // coluna não existe ainda
+  margem_lucro: null,     // coluna não existe ainda
+  is_active: true,        // coluna não existe ainda
+  producao_ingredientes: (ficha.producao_ficha_itens ?? []).map((item: any) => ({
+    id: item.id,
+    nome: item.producao_ingredientes?.nome ?? item.ingrediente_nome_temp ?? 'Ingrediente',
+    quantidade: item.quantidade,
+    unidade: item.unidade,
+    custo_unitario: item.preco_temp ?? null,
+    custo_estimado: item.source === 'ai_estimate' || item.source === 'ai_default',
+  })),
+}));
 
       setFichas(lista);
       setStats({

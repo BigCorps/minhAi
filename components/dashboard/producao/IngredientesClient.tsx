@@ -531,7 +531,7 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                       background: 'transparent',
                       border: 'none',
                       cursor: (ing.fichas_usando ?? 0) > 0 ? 'not-allowed' : 'pointer',
-                      opacity: ing.fichas_usando > 0 ? 0.3 : 0.6,
+                      opacity: (ing.fichas_usando ?? 0) > 0 ? 0.3 : 0.6,
                       transition: 'opacity 0.2s',
                     }}
                     onMouseEnter={(e) => {

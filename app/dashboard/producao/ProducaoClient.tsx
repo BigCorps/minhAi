@@ -30,7 +30,7 @@ export default function ProducaoClient({ companies }: ProducaoClientProps) {
                 Nenhum assistente cadastrado
               </h3>
               <p className="mb-6 transition-colors text-gray-600 dark:text-white/60">
-                Você precisa criar um assistente antes de acessar as fichas de produção
+                Você precisa criar um assistente antes de acessar as guias de produção
               </p>
               <Link
                 href="/dashboard/assistentes/create"

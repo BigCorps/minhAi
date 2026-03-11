@@ -393,9 +393,10 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                 style={{ width: '100%', padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '14px' }}
               >
                 <option value="kg">kg</option>
-                <option value="L">L</option>
-                <option value="unidade">unidade</option>
-                <option value="dúzia">dúzia</option>
+                <option value="g">g</option>
+                <option value="l">l (litro)</option>
+                <option value="ml">ml</option>
+                <option value="un">un (unidade)</option>
               </select>
             </div>
 

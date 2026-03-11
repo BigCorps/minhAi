@@ -48,7 +48,7 @@ const { data: fichasData } = await supabase
 
 const lista = (fichasData || []).map((ficha: any) => ({
   ...ficha,
-  // Aliases para compatibilidade com ProducaoCompanyClient
+  is_ficha_preparo: ficha.is_ficha_preparo ?? false, // ← ADICIONAR
   rendimento: ficha.rendimento_qtd,
   unidade_rendimento: ficha.rendimento_unid,
   preco_venda_sugerido: ficha.preco_venda,

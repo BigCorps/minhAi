@@ -52,6 +52,7 @@ interface FichaProducaoDisplayProps {
     companyId: string;
     fichaId?: string;
     prefilled?: { nome?: string; categoria?: string };
+    fichaType?: 'produto' | 'preparo'; // ← FASE C
   };
   onClose: () => void;
   playText: (text: string) => Promise<void>;
@@ -64,6 +65,9 @@ interface FichaProducaoDisplayProps {
 
 const OPENING_TEXT =
   'Vou ajudar voce a criar a estimativa correta da sua produçāo. Me diga o nome da receita. Por exemplo: pizza de mussarela, molho de tomate, ou qualquer outra receita.';
+
+const OPENING_TEXT_PREPARO =
+  'Vamos criar uma ficha de preparo. Diga o nome do ingrediente que sera produzido. Por exemplo: frango desfiado, molho bechamel, ou massa de pizza.';
 
 const AVISO_ESTIMATIVAS =
   'Esta ficha contém estimativas de IA. Confirme os preços com seus fornecedores antes de tomar decisões financeiras.';
@@ -226,9 +230,11 @@ export default function FichaProducaoDisplay({
   playText,
   theme = 'dark',
 }: FichaProducaoDisplayProps) {
-  const { companyId, prefilled } = data;
+  const { companyId, prefilled, fichaType = 'produto' } = data; // ← FASE C
+  const isFichaPreparo = fichaType === 'preparo';               // ← FASE C
   const supabase = createClient();
   const C = theme === 'dark' ? DARK : LIGHT;
+  const isDark = theme === 'dark';
 
   const [estagio, setEstagio] = useState<Estagio>('collecting');
   const [ficha, setFicha] = useState<FichaState>({
@@ -244,10 +250,14 @@ export default function FichaProducaoDisplay({
   const [novoItem, setNovoItem] = useState('');
   const [streamingItem, setStreamingItem] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; tipo: 'success' | 'error' | 'warning' } | null>(null);
+  // ← FASE C: armazena info do ingrediente criado pela ficha de preparo
+  const [ingredienteCriado, setIngredienteCriado] = useState<{ nome: string; preco: number; unidade: string } | null>(null);
 
   const isMobile = useIsMobile();
 
-  const lastSpeech = useRef(OPENING_TEXT); 
+  // ← FASE C: texto de abertura varia por tipo
+  const openingText = isFichaPreparo ? OPENING_TEXT_PREPARO : OPENING_TEXT;
+  const lastSpeech = useRef(openingText);
   const fichaRef = useRef(ficha);
   useEffect(() => { fichaRef.current = ficha; }, [ficha]);
 
@@ -261,21 +271,21 @@ export default function FichaProducaoDisplay({
     setToast({ msg, tipo });
 
   // Abertura
-useEffect(() => {
-  const timer = setTimeout(() => {
-    if (prefilled?.nome) {
-      const text = `Otimo! Vou criar uma ficha base para ${prefilled.nome}. Ja estou montando os ingredientes tipicos.`;
-      lastSpeech.current = text;
-      playText(text).catch(() => {});
-      gerarFichaBase(prefilled.nome, prefilled.categoria ?? '');
-    } else {
-      lastSpeech.current = OPENING_TEXT;
-      playText(OPENING_TEXT).catch(() => {});
-    }
-  }, 300);
-  return () => { clearTimeout(timer); };
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (prefilled?.nome) {
+        const text = `Otimo! Vou criar uma ficha base para ${prefilled.nome}. Ja estou montando os ingredientes tipicos.`;
+        lastSpeech.current = text;
+        playText(text).catch(() => {});
+        gerarFichaBase(prefilled.nome, prefilled.categoria ?? '');
+      } else {
+        lastSpeech.current = openingText;
+        playText(openingText).catch(() => {});
+      }
+    }, 300);
+    return () => { clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useModalVoiceClose(handleClose);
 
@@ -288,7 +298,14 @@ useEffect(() => {
   async function gerarFichaBase(nome: string, categoria: string) {
     setIsLoadingIA(true);
     try {
-      const prompt = `Você é especialista em gastronomia brasileira. Crie uma ficha técnica para: "${nome}".
+      const prompt = isFichaPreparo
+        ? `Você é especialista em gastronomia brasileira. Crie uma ficha de PREPARO (não é produto final) para: "${nome}".
+Categoria: ${categoria || 'não informada'}.
+Este é um ingrediente semielaborado que será usado em outras fichas.
+Responda SOMENTE com JSON válido sem texto extra:
+{"nome":"string","categoria":"string","rendimento_qtd":number,"rendimento_unid":"string","itens":[{"ingrediente_nome":"string","quantidade":number,"unidade":"kg|g|l|ml|un","preco_por_unidade":number,"perda_percentual":number}]}
+Regras: 2-6 ingredientes típicos, quantidades e preços realistas para o Brasil. Foque na matéria-prima.`
+        : `Você é especialista em gastronomia brasileira. Crie uma ficha técnica para: "${nome}".
 Categoria: ${categoria || 'não informada'}.
 Responda SOMENTE com JSON válido sem texto extra:
 {"nome":"string","categoria":"string","rendimento_qtd":number,"rendimento_unid":"string","itens":[{"ingrediente_nome":"string","quantidade":number,"unidade":"kg|g|l|ml|un","preco_por_unidade":number,"perda_percentual":number}]}
@@ -337,7 +354,9 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       }
       setStreamingItem(null);
 
-      const speech = `Pronto! Criei a ficha de ${parsed.nome ?? nome} com ${itens.length} ingredientes. Os valores em italico sao estimativas. O que voce quer ajustar?`;
+      const speech = isFichaPreparo
+        ? `Pronto! Criei a ficha de preparo de ${parsed.nome ?? nome} com ${itens.length} ingredientes. Ajuste as quantidades se necessario.`
+        : `Pronto! Criei a ficha de ${parsed.nome ?? nome} com ${itens.length} ingredientes. Os valores em italico sao estimativas. O que voce quer ajustar?`;
       lastSpeech.current = speech;
       playText(speech).catch(() => {});
     } catch (err) {
@@ -446,7 +465,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
     const res = calcularResultadoFicha(itensC, f.rendimento_qtd, f.preco_venda);
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text(`Ficha de Producao: ${f.nome}`, 14, 20);
+    doc.text(`${isFichaPreparo ? 'Ficha de Preparo' : 'Ficha de Producao'}: ${f.nome}`, 14, 20);
     doc.setFontSize(11);
     doc.text(`Categoria: ${f.categoria || '-'}  |  Rendimento: ${f.rendimento_qtd} ${f.rendimento_unid}`, 14, 30);
     autoTable(doc, {
@@ -463,8 +482,12 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
     doc.setFontSize(12);
     doc.text(`Custo Total: ${fmt(res.custo_total)}`, 14, fy);
     doc.text(`Peso Total: ${res.peso_total_kg.toFixed(2)} kg`, 14, fy + 8);
-    doc.text(`Preco Sugerido (3x): ${fmt(res.preco_sugerido)}`, 14, fy + 16);
-    if (f.preco_venda) doc.text(`Margem Bruta: ${res.margem_bruta.toFixed(1)}%`, 14, fy + 24);
+    if (!isFichaPreparo) {
+      doc.text(`Preco Sugerido (3x): ${fmt(res.preco_sugerido)}`, 14, fy + 16);
+      if (f.preco_venda) doc.text(`Margem Bruta: ${res.margem_bruta.toFixed(1)}%`, 14, fy + 24);
+    } else {
+      doc.text(`Custo por ${f.rendimento_unid}: ${fmt(res.custo_total / (f.rendimento_qtd || 1))}`, 14, fy + 16);
+    }
     if (fichaTemEstimativas(f.itens)) {
       doc.setFontSize(9);
       doc.setTextColor(180, 100, 0);
@@ -488,9 +511,14 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       const resultado = calcularResultadoFicha(itensC, ficha.rendimento_qtd, ficha.preco_venda);
 
       const { data: fd, error: fe } = await supabase.from('producao_fichas').insert({
-        company_id: companyId, nome: ficha.nome, categoria: ficha.categoria || null,
-        rendimento_qtd: ficha.rendimento_qtd, rendimento_unid: ficha.rendimento_unid,
-        preco_venda: ficha.preco_venda || null, criado_por_voz: true,
+        company_id: companyId,
+        nome: ficha.nome,
+        categoria: ficha.categoria || null,
+        rendimento_qtd: ficha.rendimento_qtd,
+        rendimento_unid: ficha.rendimento_unid,
+        preco_venda: isFichaPreparo ? null : (ficha.preco_venda || null), // ← FASE C
+        is_ficha_preparo: isFichaPreparo,                                  // ← FASE C
+        criado_por_voz: true,
         tem_estimativas: resultado.tem_estimativas,
       }).select('id').single();
       if (fe || !fd) throw fe ?? new Error('Erro ao criar ficha');
@@ -527,11 +555,52 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
         });
       }
 
+      // ── FASE C: Para fichas de preparo, criar ingrediente vinculado ──
+      if (isFichaPreparo) {
+        const custoPorUnidade = resultado.custo_total / Math.max(ficha.rendimento_qtd, 0.001);
+
+        // Mapear rendimento_unid para unidade válida no banco
+        const unidadeMap: Record<string, string> = {
+          'kg': 'kg', 'g': 'g', 'l': 'l', 'ml': 'ml',
+          'unidades': 'un', 'unidade': 'un', 'un': 'un',
+        };
+        const unidadeValida = unidadeMap[ficha.rendimento_unid?.toLowerCase() ?? ''] ?? 'kg';
+
+        const { data: ingCriado } = await supabase
+          .from('producao_ingredientes')
+          .upsert({
+            company_id: companyId,
+            nome: ficha.nome,
+            unidade: unidadeValida,
+            preco_por_unidade: custoPorUnidade,
+            source: 'system_calculated' as any,
+            estimado_ia: false,
+            tipo: 'produzido',
+            ficha_id: fichaId,
+            observacoes: `Calculado automaticamente pela ficha de preparo`,
+          }, { onConflict: 'company_id,nome' })
+          .select('id, nome, preco_por_unidade, unidade')
+          .single();
+
+        if (ingCriado) {
+          setIngredienteCriado({
+            nome: ingCriado.nome,
+            preco: ingCriado.preco_por_unidade,
+            unidade: ingCriado.unidade,
+          });
+          const speech = `Ficha de preparo "${ficha.nome}" salva! Custo por ${ingCriado.unidade}: ${fmt(ingCriado.preco_por_unidade)}. O ingrediente foi criado automaticamente como tipo produzido.`;
+          lastSpeech.current = speech;
+          playText(speech).catch(() => {});
+        }
+      } else {
+        const speech = `Incrivel! Ficha ${ficha.nome} salva. Custo: ${fmt(resultado.custo_total)}. Preco sugerido: ${fmt(resultado.preco_sugerido)}.`;
+        lastSpeech.current = speech;
+        playText(speech).catch(() => {});
+      }
+      // ── FIM FASE C ──
+
       setFichaIdSalva(fichaId);
       setEstagio('saved');
-      const speech = `Incrivel! Ficha ${ficha.nome} salva. Custo: ${fmt(resultado.custo_total)}. Preco sugerido: ${fmt(resultado.preco_sugerido)}.`;
-      lastSpeech.current = speech;
-      playText(speech).catch(() => {});
     } catch (err) {
       console.error('salvarFicha:', err);
       showToast('Erro ao salvar. Tente novamente.', 'error');
@@ -558,7 +627,9 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
             preco_por_unidade: i.preco_por_unidade, perda_percentual: i.perda_percentual, source: i.source,
           }));
           const res = calcularResultadoFicha(itensC, f.rendimento_qtd);
-          const speech = `Aqui esta sua ficha! Custo: ${fmt(res.custo_total)}, preco sugerido: ${fmt(res.preco_sugerido)}.${fichaTemEstimativas(f.itens) ? ' Alguns valores sao estimativas.' : ''} Diga salvar para confirmar.`;
+          const speech = isFichaPreparo
+            ? `Aqui esta sua ficha de preparo! Custo total: ${fmt(res.custo_total)}, custo por ${f.rendimento_unid}: ${fmt(res.custo_total / Math.max(f.rendimento_qtd, 0.001))}.${fichaTemEstimativas(f.itens) ? ' Alguns valores sao estimativas.' : ''} Diga salvar para confirmar.`
+            : `Aqui esta sua ficha! Custo: ${fmt(res.custo_total)}, preco sugerido: ${fmt(res.preco_sugerido)}.${fichaTemEstimativas(f.itens) ? ' Alguns valores sao estimativas.' : ''} Diga salvar para confirmar.`;
           lastSpeech.current = speech;
           playText(speech).catch(() => {});
         } else if (estagio === 'reviewing') { salvarFicha(); }
@@ -596,6 +667,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
   }));
   const resultado = calcularResultadoFicha(itensC, ficha.rendimento_qtd, ficha.preco_venda);
   const temEstimativas = fichaTemEstimativas(ficha.itens);
+  const custoPorUnidadePreparo = resultado.custo_total / Math.max(ficha.rendimento_qtd, 0.001);
 
   const toastStyle = toast
     ? toast.tipo === 'success' ? C.toastSuccess
@@ -633,17 +705,27 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
         className="relative w-full max-w-lg md:max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row"
         style={{ background: C.bg, border: `1px solid ${C.border}`, maxHeight: '92vh' }}
       >
-        {/* ── Sidebar azul (desktop only) ── */}
+        {/* ── Sidebar (desktop only) ── */}
+        {/* ← FASE C: cor da sidebar muda para roxo em fichas de preparo */}
         {!isMobile && (
-          <div style={{ background: '#1d4ed8', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 220, flexShrink: 0, padding: 24 }}>
+          <div style={{
+            background: isFichaPreparo ? '#6d28d9' : '#1d4ed8',
+            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+            width: 220, flexShrink: 0, padding: 24,
+          }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
                 <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 8, lineHeight: 0 }}>
                   <IconClipboard size={22} color="#fff" />
                 </div>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>Fichas de</p>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>Producao</p>
+                  {/* ← FASE C: título da sidebar */}
+                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>
+                    {isFichaPreparo ? 'Ficha de' : 'Fichas de'}
+                  </p>
+                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>
+                    {isFichaPreparo ? 'Preparo' : 'Producao'}
+                  </p>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -657,7 +739,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 12, fontWeight: 700,
                         background: isDone ? '#4ade80' : isActive ? '#fff' : 'rgba(255,255,255,0.2)',
-                        color: isDone ? '#fff' : isActive ? '#1d4ed8' : 'rgba(255,255,255,0.4)',
+                        color: isDone ? '#fff' : isActive ? (isFichaPreparo ? '#6d28d9' : '#1d4ed8') : 'rgba(255,255,255,0.4)',
                       }}>
                         {isDone ? '✓' : i + 1}
                       </div>
@@ -675,11 +757,23 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, margin: '0 0 2px' }}>Custo Total</p>
                   <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>{fmt(resultado.custo_total)}</p>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 14px' }}>
-                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, margin: '0 0 2px' }}>Sugerido (3x)</p>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{fmt(resultado.preco_sugerido)}</p>
-                </div>
-                {ficha.preco_venda && ficha.preco_venda > 0 && (
+                {/* ← FASE C: sidebar mostra custo/unidade para preparo, preço sugerido para produto */}
+                {isFichaPreparo ? (
+                  <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 14px' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, margin: '0 0 2px' }}>
+                      Custo por {ficha.rendimento_unid}
+                    </p>
+                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>
+                      {fmt(custoPorUnidadePreparo)}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 14px' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, margin: '0 0 2px' }}>Sugerido (3x)</p>
+                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{fmt(resultado.preco_sugerido)}</p>
+                  </div>
+                )}
+                {!isFichaPreparo && ficha.preco_venda && ficha.preco_venda > 0 && (
                   <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 14px' }}>
                     <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, margin: '0 0 2px' }}>Margem Bruta</p>
                     <p style={{ color: resultado.margem_bruta > 30 ? '#86efac' : '#fde047', fontWeight: 700, fontSize: 16, margin: 0 }}>
@@ -703,7 +797,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
 
           {/* Header */}
           <div style={isMobile
-            ? { background: '#1d4ed8', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }
+            ? { background: isFichaPreparo ? '#6d28d9' : '#1d4ed8', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }
             : { padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${C.border}` }
           }>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -715,7 +809,10 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
               <div>
                 {isMobile ? (
                   <>
-                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>Guias de Produção</p>
+                    {/* ← FASE C: título mobile */}
+                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>
+                      {isFichaPreparo ? '⚗️ Ficha de Preparo' : 'Guias de Produção'}
+                    </p>
                     <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: 0 }}>
                       {estagio === 'collecting' && 'Coletando ingredientes...'}
                       {estagio === 'reviewing'  && 'Revisao final'}
@@ -724,8 +821,14 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   </>
                 ) : (
                   <>
+                    {/* ← FASE C: título desktop */}
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
-                      {estagio === 'saved' ? 'Guia Salvo!' : estagio === 'reviewing' ? 'Revisao Final' : 'Coletando Ingredientes'}
+                      {estagio === 'saved'
+                        ? `${isFichaPreparo ? '⚗️ Ficha de Preparo' : 'Guia'} Salvo!`
+                        : estagio === 'reviewing'
+                          ? 'Revisao Final'
+                          : isFichaPreparo ? '⚗️ Ficha de Preparo' : 'Coletando Ingredientes'
+                      }
                     </h2>
                     {ficha.nome && <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>}
                   </>
@@ -750,14 +853,33 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
             {estagio === 'collecting' && (
               <>
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, display: 'block', marginBottom: 4 }}>Nome da receita</label>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: C.textMuted, display: 'block', marginBottom: 4 }}>
+                    {isFichaPreparo ? 'Nome do ingrediente produzido' : 'Nome da receita'}
+                  </label>
                   <input
                     value={ficha.nome}
                     onChange={e => setFicha(prev => ({ ...prev, nome: e.target.value }))}
-                    placeholder="Ex: Pizza de Mussarela"
+                    placeholder={isFichaPreparo ? 'Ex: Frango Desfiado, Molho Bechamel' : 'Ex: Pizza de Mussarela'}
                     style={{ width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 14, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
+
+                {/* ← FASE C: aviso visual roxo para fichas de preparo */}
+                {isFichaPreparo && (
+                  <div style={{
+                    padding: '12px 16px',
+                    background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)',
+                    border: `1px solid ${isDark ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.2)'}`,
+                    borderRadius: 10,
+                    fontSize: 13,
+                    color: isDark ? '#e9d5ff' : '#7c3aed',
+                  }}>
+                    <strong>⚗️ Ficha de Preparo</strong>
+                    <div style={{ marginTop: 4, opacity: 0.9, fontSize: 12 }}>
+                      Esta ficha produzirá o ingrediente <strong>"{ficha.nome || '...'}"</strong>. O custo por {ficha.rendimento_unid} será calculado automaticamente e adicionado à sua lista de ingredientes como tipo <em>Produzido</em>.
+                    </div>
+                  </div>
+                )}
 
                 {isLoadingIA && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)' }}>
@@ -813,8 +935,12 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
 
                 {ficha.itens.length > 0 && isMobile && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 12, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
-                    <span style={{ fontSize: 13, color: C.textMuted }}>Custo parcial</span>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: '#3b82f6' }}>{fmt(resultado.custo_total)}</span>
+                    <span style={{ fontSize: 13, color: C.textMuted }}>
+                      {isFichaPreparo ? `Custo por ${ficha.rendimento_unid}` : 'Custo parcial'}
+                    </span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: isFichaPreparo ? '#a855f7' : '#3b82f6' }}>
+                      {isFichaPreparo ? fmt(custoPorUnidadePreparo) : fmt(resultado.custo_total)}
+                    </span>
                   </div>
                 )}
 
@@ -822,13 +948,13 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   <input
                     value={novoItem}
                     onChange={e => setNovoItem(e.target.value)}
-                    placeholder='Ex: "mussarela 280g" ou diga em voz alta'
+                    placeholder='Ex: "farinha 500g" ou diga em voz alta'
                     onKeyDown={e => { if (e.key === 'Enter' && novoItem.trim()) { adicionarIngrediente(novoItem); setNovoItem(''); } }}
                     style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
                   />
                   <button
                     onClick={() => { if (novoItem.trim()) { adicionarIngrediente(novoItem); setNovoItem(''); } }}
-                    style={{ padding: '8px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                    style={{ padding: '8px 14px', background: isFichaPreparo ? '#7c3aed' : '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                   >
                     <IconPlus size={15} color="#fff" /> Adicionar
                   </button>
@@ -874,35 +1000,76 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
 
                 {isMobile && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    {[
-                      { label: 'Custo Total',  value: fmt(resultado.custo_total),                    accent: true  },
-                      { label: 'Peso Total',   value: `${resultado.peso_total_kg.toFixed(2)} kg`,    accent: false },
-                      { label: 'Custo/Unid',  value: fmt(resultado.custo_por_unidade),               accent: false },
-                      { label: 'Preco Sug.',  value: fmt(resultado.preco_sugerido),                  accent: true  },
-                    ].map(({ label, value, accent }) => (
-                      <div key={label} style={{ padding: '10px 14px', borderRadius: 10, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
-                        <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>{label}</p>
-                        <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: accent ? '#3b82f6' : C.text }}>{value}</p>
-                      </div>
-                    ))}
+                    {isFichaPreparo ? (
+                      // ← FASE C: cards mobile para preparo
+                      <>
+                        {[
+                          { label: 'Custo Total',             value: fmt(resultado.custo_total),          accent: true  },
+                          { label: 'Peso Total',              value: `${resultado.peso_total_kg.toFixed(2)} kg`, accent: false },
+                          { label: `Custo/${ficha.rendimento_unid}`, value: fmt(custoPorUnidadePreparo), accent: true  },
+                          { label: 'Rendimento',              value: `${ficha.rendimento_qtd} ${ficha.rendimento_unid}`, accent: false },
+                        ].map(({ label, value, accent }) => (
+                          <div key={label} style={{ padding: '10px 14px', borderRadius: 10, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
+                            <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>{label}</p>
+                            <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: accent ? '#a855f7' : C.text }}>{value}</p>
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {[
+                          { label: 'Custo Total',  value: fmt(resultado.custo_total),             accent: true  },
+                          { label: 'Peso Total',   value: `${resultado.peso_total_kg.toFixed(2)} kg`, accent: false },
+                          { label: 'Custo/Unid',   value: fmt(resultado.custo_por_unidade),        accent: false },
+                          { label: 'Preco Sug.',   value: fmt(resultado.preco_sugerido),            accent: true  },
+                        ].map(({ label, value, accent }) => (
+                          <div key={label} style={{ padding: '10px 14px', borderRadius: 10, background: C.bgSecondary, border: `1px solid ${C.border}` }}>
+                            <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>{label}</p>
+                            <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: accent ? '#3b82f6' : C.text }}>{value}</p>
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <label style={{ fontSize: 13, color: C.textMuted, whiteSpace: 'nowrap' }}>Preco de venda:</label>
-                  <input
-                    type="number" min="0" step="0.01"
-                    value={ficha.preco_venda ?? ''}
-                    onChange={e => setFicha(prev => ({ ...prev, preco_venda: parseFloat(e.target.value) || undefined }))}
-                    placeholder="R$ 0,00"
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
-                  />
-                  {ficha.preco_venda && ficha.preco_venda > 0 && (
-                    <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', color: resultado.margem_bruta > 30 ? '#22c55e' : '#eab308' }}>
-                      {resultado.margem_bruta.toFixed(1)}%
-                    </span>
-                  )}
-                </div>
+                {/* ← FASE C: campo preço de venda só para fichas de produto */}
+                {!isFichaPreparo && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <label style={{ fontSize: 13, color: C.textMuted, whiteSpace: 'nowrap' }}>Preco de venda:</label>
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={ficha.preco_venda ?? ''}
+                      onChange={e => setFicha(prev => ({ ...prev, preco_venda: parseFloat(e.target.value) || undefined }))}
+                      placeholder="R$ 0,00"
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none' }}
+                    />
+                    {ficha.preco_venda && ficha.preco_venda > 0 && (
+                      <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', color: resultado.margem_bruta > 30 ? '#22c55e' : '#eab308' }}>
+                        {resultado.margem_bruta.toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* ← FASE C: resumo do custo/unidade para preparo na revisão */}
+                {isFichaPreparo && (
+                  <div style={{
+                    padding: '12px 16px',
+                    background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)',
+                    border: `1px solid ${isDark ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.2)'}`,
+                    borderRadius: 10,
+                    fontSize: 13,
+                    color: isDark ? '#e9d5ff' : '#7c3aed',
+                  }}>
+                    <strong>⚗️ Resumo da Ficha de Preparo</strong>
+                    <div style={{ marginTop: 6, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                      <span>Custo total: <strong>{fmt(resultado.custo_total)}</strong></span>
+                      <span>Rendimento: <strong>{ficha.rendimento_qtd} {ficha.rendimento_unid}</strong></span>
+                      <span>Custo por {ficha.rendimento_unid}: <strong>{fmt(custoPorUnidadePreparo)}</strong></span>
+                    </div>
+                  </div>
+                )}
 
                 {temEstimativas && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
@@ -916,23 +1083,57 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
             {/* ══ SAVED ══ */}
             {estagio === 'saved' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '16px 0' }}>
-                <div style={{ background: 'rgba(34,197,94,0.15)', borderRadius: '50%', padding: 20, lineHeight: 0 }}>
-                  <IconCheckBig size={48} color="#4ade80" />
+                <div style={{ background: isFichaPreparo ? 'rgba(168,85,247,0.15)' : 'rgba(34,197,94,0.15)', borderRadius: '50%', padding: 20, lineHeight: 0 }}>
+                  <IconCheckBig size={48} color={isFichaPreparo ? '#c084fc' : '#4ade80'} />
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: C.text }}>Ficha salva com sucesso!</p>
+                  <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: C.text }}>
+                    {isFichaPreparo ? '⚗️ Ficha de Preparo salva!' : 'Ficha salva com sucesso!'}
+                  </p>
                   <p style={{ margin: 0, fontSize: 13, color: C.textMuted }}>{ficha.nome}</p>
                 </div>
+
                 <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div style={{ padding: '12px 16px', borderRadius: 12, textAlign: 'center', background: C.bgSecondary, border: `1px solid ${C.border}` }}>
                     <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Custo Total</p>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: '#3b82f6' }}>{fmt(resultado.custo_total)}</p>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: isFichaPreparo ? '#a855f7' : '#3b82f6' }}>
+                      {fmt(resultado.custo_total)}
+                    </p>
                   </div>
                   <div style={{ padding: '12px 16px', borderRadius: 12, textAlign: 'center', background: C.bgSecondary, border: `1px solid ${C.border}` }}>
-                    <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Preco Sugerido</p>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.text }}>{fmt(resultado.preco_sugerido)}</p>
+                    {isFichaPreparo ? (
+                      <>
+                        <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Custo por {ficha.rendimento_unid}</p>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.text }}>{fmt(custoPorUnidadePreparo)}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p style={{ margin: '0 0 2px', fontSize: 11, color: C.textMuted }}>Preco Sugerido</p>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.text }}>{fmt(resultado.preco_sugerido)}</p>
+                      </>
+                    )}
                   </div>
                 </div>
+
+                {/* ← FASE C: card do ingrediente criado automaticamente */}
+                {isFichaPreparo && ingredienteCriado && (
+                  <div style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)',
+                    border: `1px solid ${isDark ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.2)'}`,
+                    borderRadius: 12,
+                    fontSize: 13,
+                  }}>
+                    <p style={{ margin: '0 0 6px', fontWeight: 700, color: isDark ? '#e9d5ff' : '#7c3aed' }}>
+                      ✓ Ingrediente criado automaticamente
+                    </p>
+                    <p style={{ margin: 0, color: C.textMuted, fontSize: 12 }}>
+                      <strong style={{ color: C.text }}>{ingredienteCriado.nome}</strong> foi adicionado à sua lista de ingredientes como tipo <em>Produzido</em> com custo de <strong>{fmt(ingredienteCriado.preco)}/{ingredienteCriado.unidade}</strong>.
+                    </p>
+                  </div>
+                )}
+
                 <div style={{ width: '100%', display: 'flex', gap: 12 }}>
                   <button
                     onClick={exportarPDF}
@@ -941,7 +1142,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                     <IconFile size={16} color={C.btnOutline.text} /> Exportar PDF
                   </button>
                   {fichaIdSalva && (
-                    <a href="/dashboard/fichas" style={{ flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: '#16a34a', color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <a href="/dashboard/fichas" style={{ flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: isFichaPreparo ? '#7c3aed' : '#16a34a', color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                       <IconLink size={16} color="#fff" /> Ver no Dashboard
                     </a>
                   )}
@@ -964,7 +1165,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   <button
                     onClick={() => { setEstagio('reviewing'); playText('Revisando seu guia. Confira e diga salvar para confirmar.').catch(() => {}); }}
                     disabled={ficha.itens.length === 0 || isLoadingIA}
-                    style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: ficha.itens.length === 0 || isLoadingIA ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', cursor: ficha.itens.length === 0 || isLoadingIA ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: ficha.itens.length === 0 || isLoadingIA ? '#93c5fd' : (isFichaPreparo ? '#7c3aed' : '#2563eb'), color: '#fff', border: 'none', cursor: ficha.itens.length === 0 || isLoadingIA ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                   >
                     <IconCheck size={16} color="#fff" /> Revisar Ficha
                   </button>
@@ -980,11 +1181,11 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                     <button
                       onClick={salvarFicha}
                       disabled={isSaving}
-                      style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: isSaving ? '#86efac' : '#16a34a', color: '#fff', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: isSaving ? (isFichaPreparo ? '#c084fc' : '#86efac') : (isFichaPreparo ? '#7c3aed' : '#16a34a'), color: '#fff', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     >
                       {isSaving
                         ? <><Spinner size={14} color="#fff" /> Salvando...</>
-                        : <><IconSave size={16} color="#fff" /> Salvar Ficha</>
+                        : <><IconSave size={16} color="#fff" /> {isFichaPreparo ? 'Salvar Preparo' : 'Salvar Ficha'}</>
                       }
                     </button>
                   </>

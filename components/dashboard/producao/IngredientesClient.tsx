@@ -20,7 +20,7 @@ interface IngredientesClientProps {
 
 export default function IngredientesClient({ companyId, theme = 'dark' }: IngredientesClientProps) {
   const isDark = theme === 'dark';
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   
   const [ingredientes, setIngredientes] = useState<Ingrediente[]>([]);
   const [loading, setLoading] = useState(true);

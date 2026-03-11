@@ -499,7 +499,7 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                       <span className="animate-pulse">●</span>
                       Atualizando {ing.fichas_usando}
                     </span>
-                  ) : ing.fichas_usando > 0 ? (
+                  ) : (ing.fichas_usando ?? 0) > 0 ? (
                     <span style={{
                       display: 'inline-block',
                       padding: '4px 10px',
@@ -524,13 +524,13 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                 {/* Botão deletar */}
                 <div style={{ textAlign: 'right' }}>
                   <button
-                    onClick={() => deletarIngrediente(ing.id, ing.nome, ing.fichas_usando || 0)}
-                    disabled={ing.fichas_usando > 0}
+                    onClick={() => deletarIngrediente(ing.id, ing.nome, ing.fichas_usando ?? 0)}
+                    disabled={(ing.fichas_usando ?? 0) > 0}
                     style={{
                       padding: '6px',
                       background: 'transparent',
                       border: 'none',
-                      cursor: ing.fichas_usando > 0 ? 'not-allowed' : 'pointer',
+                      cursor: (ing.fichas_usando ?? 0) > 0 ? 'not-allowed' : 'pointer',
                       opacity: ing.fichas_usando > 0 ? 0.3 : 0.6,
                       transition: 'opacity 0.2s',
                     }}
@@ -540,7 +540,7 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                       }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = ing.fichas_usando > 0 ? '0.3' : '0.6';
+                      e.currentTarget.style.opacity = (ing.fichas_usando ?? 0) > 0 ? '0.3' : '0.6';
                     }}
                   >
                     <Trash2 className="w-4 h-4" style={{ color: C.danger }} />

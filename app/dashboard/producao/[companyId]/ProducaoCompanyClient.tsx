@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePlayText } from '@/hooks/usePlayText';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
+import IngredientesClient from '@/components/dashboard/producao/IngredientesClient';
 
 interface Ingrediente {
   id: string;
@@ -46,28 +47,29 @@ export default function ProducaoCompanyClient({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'ativas' | 'inativas'>('todas');
+  // ── FASE A: Controle de abas ──────────────────────────────
+  const [activeTab, setActiveTab] = useState<'fichas' | 'ingredientes'>('fichas');
   const supabase = createClient();
-const { playText, stopAudio } = usePlayText();
-const [showNovaFicha, setShowNovaFicha] = useState(false);
-const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+  const { playText, stopAudio } = usePlayText();
+  const [showNovaFicha, setShowNovaFicha] = useState(false);
+  const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
 
-useEffect(() => {
-  const detectTheme = () => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setPageTheme(isDark ? 'dark' : 'light');
-  };
+  useEffect(() => {
+    const detectTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setPageTheme(isDark ? 'dark' : 'light');
+    };
 
-  detectTheme();
+    detectTheme();
 
-  // Observa mudanças de tema em tempo real
-  const observer = new MutationObserver(detectTheme);
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  });
+    const observer = new MutationObserver(detectTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
 
-  return () => observer.disconnect();
-}, []);
+    return () => observer.disconnect();
+  }, []);
 
   // ── Toggle ativo/inativo ──────────────────────────────────
   async function handleToggleAtivo(fichaId: string, current: boolean) {
@@ -179,216 +181,250 @@ useEffect(() => {
           ))}
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="flex gap-2">
-            {(['todas', 'ativas', 'inativas'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFiltro(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                  filtro === f
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-<div className="flex items-center gap-3">
-  <span className="text-xs text-gray-400 dark:text-white/40">
-    {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
-  </span>
-  <button
-    onClick={() => setShowNovaFicha(true)}
-    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all"
-  >
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12h14"/><path d="M12 5v14"/>
-    </svg>
-    Nova Guia
-  </button>
-</div>
+        {/* ── FASE A: Abas de navegação ──────────────────────── */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-white/10">
+          <button
+            onClick={() => setActiveTab('fichas')}
+            className={`px-4 py-2 text-sm font-medium transition-all border-b-2 -mb-px ${
+              activeTab === 'fichas'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white/70'
+            }`}
+          >
+            Guias de Produção
+          </button>
+          <button
+            onClick={() => setActiveTab('ingredientes')}
+            className={`px-4 py-2 text-sm font-medium transition-all border-b-2 -mb-px ${
+              activeTab === 'ingredientes'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white/70'
+            }`}
+          >
+            Ingredientes Base
+          </button>
         </div>
 
-        {/* Lista de fichas */}
-        <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+        {/* ── Aba: Ingredientes ─────────────────────────────── */}
+        {activeTab === 'ingredientes' && (
+          <IngredientesClient companyId={company.id} theme={pageTheme} />
+        )}
 
-          {fichasFiltradas.length === 0 ? (
-            <div className="py-16 text-center">
-              <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
-              <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma guia encontrada</p>
-              <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                As guias são criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"
-              </p>
+        {/* ── Aba: Fichas ───────────────────────────────────── */}
+        {activeTab === 'fichas' && (
+          <>
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div className="flex gap-2">
+                {(['todas', 'ativas', 'inativas'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFiltro(f)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                      filtro === f
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400 dark:text-white/40">
+                  {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={() => setShowNovaFicha(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14"/><path d="M12 5v14"/>
+                  </svg>
+                  Nova Guia
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className="divide-y divide-gray-50 dark:divide-white/5">
-              {fichasFiltradas.map(ficha => (
-                <div key={ficha.id}>
-                  {/* Linha principal */}
-                  <div className="px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-4">
 
-                      {/* Nome + status */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-semibold text-gray-900 dark:text-white truncate">
-                            {ficha.nome}
+            {/* Lista de fichas */}
+            <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+              {fichasFiltradas.length === 0 ? (
+                <div className="py-16 text-center">
+                  <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
+                  <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma guia encontrada</p>
+                  <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
+                    As guias são criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50 dark:divide-white/5">
+                  {fichasFiltradas.map(ficha => (
+                    <div key={ficha.id}>
+                      {/* Linha principal */}
+                      <div className="px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-4">
+
+                          {/* Nome + status */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-semibold text-gray-900 dark:text-white truncate">
+                                {ficha.nome}
+                              </span>
+                              {getStatusBadge(ficha)}
+                              {ficha.producao_ingredientes?.some(i => i.custo_estimado) && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400">
+                                  ⚠ Preço estimado
+                                </span>
+                              )}
+                            </div>
+                            {ficha.descricao && (
+                              <p className="text-xs text-gray-500 dark:text-white/40 truncate">{ficha.descricao}</p>
+                            )}
+                            <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">
+                              Rendimento: {ficha.rendimento} {ficha.unidade_rendimento} ·{' '}
+                              {ficha.producao_ingredientes?.length ?? 0} ingrediente{(ficha.producao_ingredientes?.length ?? 0) !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+
+                          {/* Custo e margem */}
+                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[100px]">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {formatCusto(ficha.custo_total)}
+                            </span>
+                            <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
+                              Margem: {formatMargem(ficha.margem_lucro)}
+                            </span>
+                            {ficha.preco_venda_sugerido && (
+                              <span className="text-xs text-blue-600 dark:text-blue-400">
+                                Venda: {formatCusto(ficha.preco_venda_sugerido)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Ações */}
+                          <div className="flex items-center gap-1">
+                            {/* Expandir ingredientes */}
+                            <button
+                              onClick={() => setExpandedId(expandedId === ficha.id ? null : ficha.id)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400 dark:text-white/40"
+                              title="Ver ingredientes"
+                            >
+                              {expandedId === ficha.id
+                                ? <ChevronUp className="w-4 h-4" />
+                                : <ChevronDown className="w-4 h-4" />
+                              }
+                            </button>
+
+                            {/* Toggle ativo */}
+                            <button
+                              onClick={() => handleToggleAtivo(ficha.id, ficha.is_active)}
+                              disabled={loadingId === ficha.id}
+                              title={ficha.is_active ? 'Desativar ficha' : 'Ativar ficha'}
+                              className={`p-1.5 rounded-lg transition-all text-xs font-medium px-2 py-1 ${
+                                loadingId === ficha.id
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : ficha.is_active
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-white/40'
+                              }`}
+                            >
+                              {loadingId === ficha.id
+                                ? <RefreshCw className="w-3 h-3 animate-spin" />
+                                : ficha.is_active ? 'Ativa' : 'Inativa'
+                              }
+                            </button>
+
+                            {/* Deletar */}
+                            <button
+                              onClick={() => handleDelete(ficha.id)}
+                              disabled={loadingId === ficha.id}
+                              title="Excluir ficha"
+                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Custo mobile */}
+                        <div className="sm:hidden mt-2 flex items-center gap-4 text-xs">
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            Custo: {formatCusto(ficha.custo_total)}
                           </span>
-                          {getStatusBadge(ficha)}
-                          {ficha.producao_ingredientes?.some(i => i.custo_estimado) && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400">
-                              ⚠ Preço estimado
+                          <span className={getMargemColor(ficha.margem_lucro)}>
+                            Margem: {formatMargem(ficha.margem_lucro)}
+                          </span>
+                          {ficha.preco_venda_sugerido && (
+                            <span className="text-blue-600 dark:text-blue-400">
+                              Venda: {formatCusto(ficha.preco_venda_sugerido)}
                             </span>
                           )}
                         </div>
-                        {ficha.descricao && (
-                          <p className="text-xs text-gray-500 dark:text-white/40 truncate">{ficha.descricao}</p>
-                        )}
-                        <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">
-                          Rendimento: {ficha.rendimento} {ficha.unidade_rendimento} ·{' '}
-                          {ficha.producao_ingredientes?.length ?? 0} ingrediente{(ficha.producao_ingredientes?.length ?? 0) !== 1 ? 's' : ''}
-                        </p>
                       </div>
 
-                      {/* Custo e margem */}
-                      <div className="hidden sm:flex flex-col items-end gap-1 min-w-[100px]">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {formatCusto(ficha.custo_total)}
-                        </span>
-                        <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
-                          Margem: {formatMargem(ficha.margem_lucro)}
-                        </span>
-                        {ficha.preco_venda_sugerido && (
-                          <span className="text-xs text-blue-600 dark:text-blue-400">
-                            Venda: {formatCusto(ficha.preco_venda_sugerido)}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Ações */}
-                      <div className="flex items-center gap-1">
-                        {/* Expandir ingredientes */}
-                        <button
-                          onClick={() => setExpandedId(expandedId === ficha.id ? null : ficha.id)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400 dark:text-white/40"
-                          title="Ver ingredientes"
-                        >
-                          {expandedId === ficha.id
-                            ? <ChevronUp className="w-4 h-4" />
-                            : <ChevronDown className="w-4 h-4" />
-                          }
-                        </button>
-
-                        {/* Toggle ativo */}
-                        <button
-                          onClick={() => handleToggleAtivo(ficha.id, ficha.is_active)}
-                          disabled={loadingId === ficha.id}
-                          title={ficha.is_active ? 'Desativar ficha' : 'Ativar ficha'}
-                          className={`p-1.5 rounded-lg transition-all text-xs font-medium px-2 py-1 ${
-                            loadingId === ficha.id
-                              ? 'opacity-50 cursor-not-allowed'
-                              : ficha.is_active
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-400'
-                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-white/40'
-                          }`}
-                        >
-                          {loadingId === ficha.id
-                            ? <RefreshCw className="w-3 h-3 animate-spin" />
-                            : ficha.is_active ? 'Ativa' : 'Inativa'
-                          }
-                        </button>
-
-                        {/* Deletar */}
-                        <button
-                          onClick={() => handleDelete(ficha.id)}
-                          disabled={loadingId === ficha.id}
-                          title="Excluir ficha"
-                          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Custo mobile */}
-                    <div className="sm:hidden mt-2 flex items-center gap-4 text-xs">
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        Custo: {formatCusto(ficha.custo_total)}
-                      </span>
-                      <span className={getMargemColor(ficha.margem_lucro)}>
-                        Margem: {formatMargem(ficha.margem_lucro)}
-                      </span>
-                      {ficha.preco_venda_sugerido && (
-                        <span className="text-blue-600 dark:text-blue-400">
-                          Venda: {formatCusto(ficha.preco_venda_sugerido)}
-                        </span>
+                      {/* Ingredientes expandidos */}
+                      {expandedId === ficha.id && ficha.producao_ingredientes?.length > 0 && (
+                        <div className="px-6 pb-4 bg-gray-50/80 dark:bg-white/3">
+                          <p className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3">
+                            Ingredientes
+                          </p>
+                          <div className="grid sm:grid-cols-2 gap-2">
+                            {ficha.producao_ingredientes.map(ing => (
+                              <div
+                                key={ing.id}
+                                className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {ing.custo_estimado && (
+                                    <span title="Preço estimado pela IA" className="text-yellow-500 text-xs">⚠</span>
+                                  )}
+                                  <span className="text-gray-900 dark:text-white font-medium">{ing.nome}</span>
+                                  <span className="text-gray-400 dark:text-white/40">
+                                    {ing.quantidade} {ing.unidade}
+                                  </span>
+                                </div>
+                                <span className="text-gray-600 dark:text-white/60 font-mono text-xs">
+                                  {ing.custo_unitario !== null
+                                    ? `R$ ${(ing.custo_unitario * ing.quantidade).toFixed(2).replace('.', ',')}`
+                                    : '—'
+                                  }
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* Ingredientes expandidos */}
-                  {expandedId === ficha.id && ficha.producao_ingredientes?.length > 0 && (
-                    <div className="px-6 pb-4 bg-gray-50/80 dark:bg-white/3">
-                      <p className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3">
-                        Ingredientes
-                      </p>
-                      <div className="grid sm:grid-cols-2 gap-2">
-                        {ficha.producao_ingredientes.map(ing => (
-                          <div
-                            key={ing.id}
-                            className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm"
-                          >
-                            <div className="flex items-center gap-2">
-                              {ing.custo_estimado && (
-                                <span title="Preço estimado pela IA" className="text-yellow-500 text-xs">⚠</span>
-                              )}
-                              <span className="text-gray-900 dark:text-white font-medium">{ing.nome}</span>
-                              <span className="text-gray-400 dark:text-white/40">
-                                {ing.quantidade} {ing.unidade}
-                              </span>
-                            </div>
-                            <span className="text-gray-600 dark:text-white/60 font-mono text-xs">
-                              {ing.custo_unitario !== null
-                                ? `R$ ${(ing.custo_unitario * ing.quantidade).toFixed(2).replace('.', ',')}`
-                                : '—'
-                              }
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
 
-{showNovaFicha && (
-<FichaProducaoDisplay
-  data={{ companyId: company.id }}
-  onClose={() => {
-    stopAudio();
-    setShowNovaFicha(false);
-    window.location.reload();
-  }}
-  playText={playText}
-  theme={pageTheme}  // ← era theme="light"
-/>
-)}
+            {/* Dica */}
+            <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Para criar ou editar guia, use o assistente de voz e diga{' '}
+                <strong>"criar guia"</strong> ou <strong>"nova receita"</strong>.
+                Guias com ⚠ possuem preços estimados pela IA — confirme com seus fornecedores.
+              </p>
+            </div>
+          </>
+        )}
 
-        {/* Dica */}
-        <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            Para criar ou editar guia, use o assistente de voz e diga{' '}
-            <strong>"criar guia"</strong> ou <strong>"nova receita"</strong>.
-            Guias com ⚠ possuem preços estimados pela IA — confirme com seus fornecedores.
-          </p>
-        </div>
       </div>
+
+      {showNovaFicha && (
+        <FichaProducaoDisplay
+          data={{ companyId: company.id }}
+          onClose={() => {
+            stopAudio();
+            setShowNovaFicha(false);
+            window.location.reload();
+          }}
+          playText={playText}
+          theme={pageTheme}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { Loader2, Plus, Trash2, Search, AlertCircle } from 'lucide-react';
 
 interface Ingrediente {

@@ -33,13 +33,14 @@ export default function ProducaoCompanyPage() {
 
       const { data: fichasData } = await supabase
         .from('producao_fichas')
-        .select(`
-          id, nome, descricao, rendimento, unidade_rendimento,
-          preco_venda_sugerido, custo_total, margem_lucro, is_active, created_at,
-          producao_ingredientes (
-            id, nome, quantidade, unidade, custo_unitario, custo_estimado
-          )
-        `)
+.select(`
+  id, nome, descricao, rendimento, unidade_rendimento,
+  preco_venda_sugerido, custo_total, margem_lucro, is_active, created_at,
+  producao_ficha_itens(
+    id, ingrediente_nome_temp, quantidade, unidade, preco_temp, source,
+    producao_ingredientes(id, nome)
+  )
+`)
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 

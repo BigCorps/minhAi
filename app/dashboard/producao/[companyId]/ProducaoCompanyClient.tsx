@@ -207,7 +207,7 @@ useEffect(() => {
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14"/><path d="M12 5v14"/>
     </svg>
-    Nova Ficha
+    Nova Guia
   </button>
 </div>
         </div>
@@ -218,7 +218,7 @@ useEffect(() => {
           {fichasFiltradas.length === 0 ? (
             <div className="py-16 text-center">
               <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
-              <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma ficha encontrada</p>
+              <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma guia encontrada</p>
               <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
                 As guias são criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"
               </p>
@@ -383,7 +383,7 @@ useEffect(() => {
         {/* Dica */}
         <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            💡 Para criar ou editar fichas, use o assistente de voz e diga{' '}
+            Para criar ou editar guia, use o assistente de voz e diga{' '}
             <strong>"criar guia"</strong> ou <strong>"nova receita"</strong>.
             Guias com ⚠ possuem preços estimados pela IA — confirme com seus fornecedores.
           </p>

@@ -7,6 +7,7 @@ import { ArrowLeft, ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } f
 import { usePlayText } from '@/hooks/usePlayText';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 import IngredientesClient from '@/components/dashboard/producao/IngredientesClient';
+import FichaProducaoConversacionalDisplay from '@/components/assistant/FichaProducaoConversacionalDisplay';
 
 interface Ingrediente {
   id: string;
@@ -117,6 +118,7 @@ export default function ProducaoCompanyClient({
   const [showNovaFicha, setShowNovaFicha] = useState(false);
   const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
   const isDark = pageTheme === 'dark';
+  const [showConversacional, setShowConversacional] = useState(false);
 
   useEffect(() => {
     const detectTheme = () => {
@@ -299,39 +301,51 @@ export default function ProducaoCompanyClient({
         {/* Aba: Fichas */}
         {activeTab === 'fichas' && (
           <>
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex gap-2">
-                {(['todas', 'ativas', 'inativas'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFiltro(f)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                      filtro === f
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
-                    }`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400 dark:text-white/40">
-                  {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
-                </span>
-                <button
-                  onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
-                  style={{ background: tipoFicha === 'preparos' ? '#7c3aed' : '#2563eb' }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14"/><path d="M12 5v14"/>
-                  </svg>
-                  {tipoFicha === 'preparos' ? 'Nova Ficha de Preparo' : 'Nova Guia'}
-                </button>
-              </div>
-            </div>
+{/* Toolbar */}
+<div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <div className="flex gap-2">
+    {(['todas', 'ativas', 'inativas'] as const).map(f => (
+      <button
+        key={f}
+        onClick={() => setFiltro(f)}
+        className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+          filtro === f
+            ? 'bg-blue-600 text-white'
+            : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
+        }`}
+      >
+        {f}
+      </button>
+    ))}
+  </div>
+  <div className="flex items-center gap-2">
+    <span className="text-xs text-gray-400 dark:text-white/40">
+      {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
+    </span>
+
+    {/* ✅ NOVO: Criar por Conversa */}
+    <button
+      onClick={() => setShowConversacional(true)}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+      style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)' }}
+    >
+      <span className="text-sm leading-none">💬</span>
+      Criar por Conversa
+    </button>
+
+    {/* Botão existente: Nova Guia */}
+    <button
+      onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+      style={{ background: tipoFicha === 'preparos' ? '#7c3aed' : '#2563eb' }}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 12h14"/><path d="M12 5v14"/>
+      </svg>
+      {tipoFicha === 'preparos' ? 'Nova Ficha de Preparo' : 'Nova Guia'}
+    </button>
+  </div>
+</div>
 
             {/* Lista de fichas */}
             <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
@@ -561,6 +575,22 @@ export default function ProducaoCompanyClient({
         )}
 
       </div>
+
+      {showConversacional && (
+  <FichaProducaoConversacionalDisplay
+    data={{
+      companyId: company.id,
+      fichaType: tipoFicha === 'preparos' ? 'preparo' : 'produto',
+    }}
+    onClose={() => {
+      stopAudio();
+      setShowConversacional(false);
+      window.location.reload();
+    }}
+    playText={playText}
+    theme={pageTheme}
+  />
+)}
 
       {showNovaFicha && (
         <FichaProducaoDisplay

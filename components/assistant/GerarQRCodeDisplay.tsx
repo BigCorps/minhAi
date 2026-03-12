@@ -126,9 +126,8 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
 
   // ── Falar ao abrir ──────────────────────────────────────────────────────────
   useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
     return () => { window.speechSynthesis.cancel(); };
-  }, []); // eslint-disable-line
+  }, []);
 
   // ── Gerar QR ────────────────────────────────────────────────────────────────
 

@@ -330,7 +330,7 @@ export default function ProducaoCompanyClient({
       style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)' }}
     >
       <span className="text-sm leading-none">🔘</span>
-      Assistente de Produção 
+      Auxiliar de Produção 
     </button>
 
     {/* Botão existente: Nova Guia */}

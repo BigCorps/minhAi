@@ -86,7 +86,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'ler_qrcode',
   'ler_codigo_barras',
   'contrato_em_texto',
-  'fichas_producao',
+  'fichas_producao_conversacional',
   'cancelar_agendamento',
   'confirmar_presenca',
   'reagendar_compromisso',

@@ -124,11 +124,11 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
           ================================================ */}
           {monthlyPlans.length > 0 && (
             <div>
-              <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-3 ${
-                isDark ? 'text-blue-400/60' : 'text-blue-600/60'
-              }`}>
-                Planos Mensais — inclui acesso às integrações
-              </p>
+<p className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-3 text-center ${
+  isDark ? 'text-blue-400/60' : 'text-blue-600/60'
+}`}>
+  Planos Mensais — inclui acesso às integrações
+</p>
 
               {/* MOBILE: lista compacta */}
               <div className="flex flex-col gap-3 sm:hidden">
@@ -259,9 +259,9 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               PACOTES DE CRÉDITOS — 4 cards verticais
           ================================================ */}
           <div>
-            <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-3 ${
-              isDark ? 'text-white/30' : 'text-gray-400'
-            }`}>
+<p className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-3 text-center ${
+  isDark ? 'text-blue-400/60' : 'text-blue-600/60'
+}`}>
               Pacotes de Créditos Avulsos — sem mensalidade
             </p>
 

@@ -298,6 +298,8 @@ fichas_producao_conversacional: {
 
   voiceTriggers: [
     'criar ficha conversando',
+    'auxiliar de produção',
+    'asssistente de produção',
     'criar receita conversando',
     'ficha conversacional',
     'conversar para criar receita',

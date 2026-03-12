@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { Loader2, Send, Mic, X, Plus, Trash2 } from 'lucide-react';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket'; // ✅ REUTILIZAR
 

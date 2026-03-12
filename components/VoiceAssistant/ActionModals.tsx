@@ -42,6 +42,7 @@ import CancelAppointmentModal from '@/components/assistant/CancelAppointmentModa
 import EnviarArquivoDisplay from '@/components/assistant/EnviarArquivoDisplay';
 import GerarQRCodeDisplay       from '@/components/assistant/GerarQRCodeDisplay';
 import GerarCodigoBarrasDisplay  from '@/components/assistant/GerarCodigoBarrasDisplay';
+import FichaConversacionalDisplay from './FichaConversacionalDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -84,6 +85,8 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'EnviarArquivoDisplay': EnviarArquivoDisplay,
   'GerarQRCodeDisplay':      GerarQRCodeDisplay,
   'GerarCodigoBarrasDisplay': GerarCodigoBarrasDisplay,
+  'fichas_producao_conversacional': FichaConversacionalDisplay,
+
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

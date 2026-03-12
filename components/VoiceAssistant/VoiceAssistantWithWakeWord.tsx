@@ -371,7 +371,7 @@ export function VoiceAssistantWithWakeWord({
 function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
 
-  const lowerText = text.toLower().trim();
+  const lowerText = text.toLowerCase().trim();
 
   // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
   if (isFinal && detectStopCommand(lowerText)) {

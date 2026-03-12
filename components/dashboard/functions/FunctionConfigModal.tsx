@@ -1536,6 +1536,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'tabela_em_texto':     TabelaEmTextoConfigForm,
   'contrato_em_texto':   ContratoEmTextoConfigForm,
   'fichas_producao': FichasProducaoForm,
+  'fichas_producao_conversacional': FichasProducaoForm,
   'meu_cupom': MeuCupomForm,
 };
 
@@ -1927,6 +1928,7 @@ export default function FunctionConfigModal({
     </div>
   );
 }
+
 
 
 

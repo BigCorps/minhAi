@@ -1,14 +1,17 @@
 // middleware.ts
-// PROTEGE /dashboard e subpastas
-
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+// Rotas que exigem has_active_plan = true
+const PLAN_PROTECTED_ROUTES = [
+  '/dashboard/google',       // Serviços Google
+  '/dashboard/meta',         // Serviços Meta
+  '/dashboard/producao',     // Linha de Produção
+];
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   });
 
   const supabase = createServerClient(
@@ -36,26 +39,45 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
 
-  // Rotas públicas (não precisam autenticação)
   const publicRoutes = ['/', '/login', '/auth/callback', '/auth/confirm', '/termos', '/aviso'];
-
-  // ✅ MUDANÇA: Proteger /dashboard e todas suas subpastas
   const isProtectedRoute = pathname.startsWith('/dashboard');
-
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Se é rota protegida e usuário NÃO está logado → redirecionar para login
+  // 1. Sem login → redireciona para /login
   if (isProtectedRoute && !user) {
-    console.log('🔒 Rota protegida sem login:', pathname);
     const redirectUrl = new URL('/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Se usuário está logado e tenta acessar login → redirecionar para dashboard
+  // 2. Logado tentando acessar /login → redireciona para /dashboard
   if (user && pathname === '/login') {
-    console.log('✅ Usuário logado tentando acessar login, redirecionando para /dashboard');
     return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // 3. Rotas que exigem plano ativo
+  const requiresPlan = PLAN_PROTECTED_ROUTES.some(route =>
+    pathname.startsWith(route)
+  );
+
+  if (requiresPlan && user) {
+    const { data: credits } = await supabase
+      .from('user_credits')
+      .select('has_active_plan, plan_expires_at')
+      .eq('user_id', user.id)
+      .single();
+
+    const hasActivePlan =
+      credits?.has_active_plan === true &&
+      credits?.plan_expires_at != null &&
+      new Date(credits.plan_expires_at) > new Date();
+
+    if (!hasActivePlan) {
+      // Redireciona para créditos com aviso de que precisa de um plano
+      const redirectUrl = new URL('/dashboard/credits', request.url);
+      redirectUrl.searchParams.set('requires_plan', '1');
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   return response;

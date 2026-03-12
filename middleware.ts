@@ -4,8 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 // Rotas que exigem has_active_plan = true
 const PLAN_PROTECTED_ROUTES = [
-  '/dashboard/google',       // Serviços Google
-  '/dashboard/meta',         // Serviços Meta
+  '/dashboard/agenda',       // Serviços Google
+  '/dashboard/atendimentos',         // Serviços Meta
   '/dashboard/producao',     // Linha de Produção
 ];
 

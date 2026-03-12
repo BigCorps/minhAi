@@ -131,9 +131,8 @@ export default function GerarCodigoBarrasDisplay({ data, onClose, theme = 'dark'
   // ── Falar ao abrir ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
     return () => { window.speechSynthesis.cancel(); };
-  }, []); // eslint-disable-line
+  }, []);
 
   // ── Validação ───────────────────────────────────────────────────────────────
 

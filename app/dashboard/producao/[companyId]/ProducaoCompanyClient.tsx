@@ -7,7 +7,7 @@ import { ArrowLeft, ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } f
 import { usePlayText } from '@/hooks/usePlayText';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 import IngredientesClient from '@/components/dashboard/producao/IngredientesClient';
-import FichaProducaoConversacionalDisplay from '@/components/assistant/FichaProducaoConversacionalDisplay';
+import FichaConversacionalDisplay from '@/components/assistant/FichaConversacionalDisplay';
 
 interface Ingrediente {
   id: string;
@@ -577,7 +577,7 @@ export default function ProducaoCompanyClient({
       </div>
 
       {showConversacional && (
-  <FichaProducaoConversacionalDisplay
+  <FichaConversacionalDisplay
     data={{
       companyId: company.id,
       fichaType: tipoFicha === 'preparos' ? 'preparo' : 'produto',

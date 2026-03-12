@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { createClient } from '@/lib/supabase-browser';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Loader2, Send, Mic, X, Plus, Trash2 } from 'lucide-react';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket'; // ✅ REUTILIZAR
 
@@ -61,7 +61,7 @@ export default function FichaConversacionalDisplay({
   const { companyId, fichaType = 'produto' } = data;
   const isFichaPreparo = fichaType === 'preparo';
   const isDark = theme === 'dark';
-  const supabase = createClient();
+  const supabase = createClientComponentClient();
 
   // Estados
   const [messages, setMessages] = useState<Message[]>([]);
@@ -220,82 +220,25 @@ export default function FichaConversacionalDisplay({
     setIsProcessing(true);
 
     try {
-      // Montar contexto
-      const conversaAtual = [...messages, userMsg]
-        .map(m => `${m.role === 'user' ? 'Usuário' : 'Assistente'}: ${m.content}`)
-        .join('\n');
-
-      const fichaAtual = JSON.stringify(fichaPreview, null, 2);
-
-      // Prompt para o GPT
-      const prompt = `Você é um assistente especializado em criar fichas de produção para restaurantes e lanchonetes no Brasil.
-
-CONTEXTO DA CONVERSA:
-${conversaAtual}
-
-FICHA ATUAL:
-${fichaAtual}
-
-TIPO DE FICHA: ${isFichaPreparo ? 'Ficha de Preparo (produz um ingrediente)' : 'Produto Final (será vendido)'}
-
-INSTRUÇÕES:
-1. Extraia informações do que o usuário disse
-2. Atualize a ficha com as novas informações
-3. Estime preços de ingredientes brasileiros se necessário (em R$/kg ou R$/L)
-4. Normalize unidades (kg, g, L, ml, unidade, dúzia)
-5. Responda de forma natural e amigável
-6. Se algo não estiver claro, pergunte
-
-Retorne APENAS um JSON válido (sem markdown, sem \`\`\`):
-{
-  "ficha": {
-    "nome": "string",
-    "categoria": "string",
-    "rendimento_qtd": number,
-    "rendimento_unid": "string",
-    "preco_venda": number ou null,
-    "itens": [
-      {
-        "id": "temp-timestamp",
-        "nome": "string",
-        "quantidade": number,
-        "unidade": "kg|g|L|ml|unidade|dúzia",
-        "preco_unitario": number,
-        "perda_percentual": number,
-        "preco_estimado": boolean
-      }
-    ]
-  },
-  "resposta": "string - mensagem amigável ao usuário",
-  "completo": boolean - true se a ficha está pronta para salvar
-}
-
-IMPORTANTE: Sempre estime preços brasileiros realistas. Exemplos:
-- Farinha de trigo: R$ 5,00/kg
-- Frango: R$ 15,00/kg
-- Açúcar: R$ 3,50/kg
-- Leite: R$ 4,00/L
-- Ovos: R$ 0,50/unidade`;
-
-      // Chamar API da Anthropic
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // ✅ Chamar rota API do Next.js (evita CORS e mantém API key segura)
+      const response = await fetch('/api/voice/process-conversation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [...messages, userMsg],
+          fichaAtual: fichaPreview,
+          isFichaPreparo,
         }),
       });
 
-      if (!response.ok) throw new Error('Erro na API');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Erro na API:', errorData);
+        throw new Error(errorData.error || 'Erro ao processar');
+      }
 
-      const data = await response.json();
-      const conteudo = data.content[0].text;
-
-      // Limpar possíveis backticks
-      const jsonLimpo = conteudo.replace(/```json\n?|\n?```/g, '').trim();
-      const resultado = JSON.parse(jsonLimpo);
+      // ✅ Resultado já vem parseado
+      const resultado = await response.json();
 
       // Atualizar ficha preview
       setFichaPreview(resultado.ficha);

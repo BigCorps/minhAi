@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase-browser';
 import { Loader2, Send, Mic, X, Plus, Trash2 } from 'lucide-react';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket'; // ✅ REUTILIZAR
 
@@ -61,7 +61,7 @@ export default function FichaConversacionalDisplay({
   const { companyId, fichaType = 'produto' } = data;
   const isFichaPreparo = fichaType === 'preparo';
   const isDark = theme === 'dark';
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   // Estados
   const [messages, setMessages] = useState<Message[]>([]);

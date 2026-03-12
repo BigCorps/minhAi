@@ -61,7 +61,7 @@ export default function FichaConversacionalDisplay({
   const { companyId, fichaType = 'produto' } = data;
   const isFichaPreparo = fichaType === 'preparo';
   const isDark = theme === 'dark';
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   // Estados
   const [messages, setMessages] = useState<Message[]>([]);

@@ -329,8 +329,8 @@ export default function ProducaoCompanyClient({
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
       style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)' }}
     >
-      <span className="text-sm leading-none">💬</span>
-      Criar por Conversa
+      <span className="text-sm leading-none">🔘</span>
+      Assistente de Produção 
     </button>
 
     {/* Botão existente: Nova Guia */}

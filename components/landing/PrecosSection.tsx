@@ -16,6 +16,9 @@ interface Package {
   price_per_interaction: number;
   is_highlighted: boolean;
   display_order: number;
+  package_type: 'credits' | 'monthly';
+  unlocks_features: boolean;
+  has_consultoria: boolean;
 }
 
 export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
@@ -34,7 +37,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
           .gt('price_cents', 0)
           .order('display_order');
 
-        setPackages((data || []).filter((p: Package) => p.display_order < 10));
+        setPackages(data || []);
       } catch (err) {
         console.error('Erro ao carregar pacotes:', err);
       } finally {
@@ -43,6 +46,9 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
     };
     loadPackages();
   }, []);
+
+  const monthlyPlans = packages.filter(p => p.package_type === 'monthly');
+  const creditPlans = packages.filter(p => p.package_type === 'credits');
 
   return (
     <div
@@ -77,16 +83,14 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
         <p className={`text-xs sm:text-sm max-w-md mx-auto transition-colors ${
           isDark ? 'text-white/40' : 'text-gray-400'
         }`}>
-          Créditos compartilhados entre todos os seus assistentes. Sem expiração.
+          Planos mensais com acesso completo ou créditos avulsos sem expiração.
         </p>
       </div>
 
       {/* Card Grátis */}
       <div className="relative z-10 w-full max-w-5xl mb-3 sm:mb-4">
         <div className={`rounded-xl border px-4 py-2.5 sm:py-3 flex items-center justify-center gap-3 sm:gap-4 transition-colors ${
-          isDark
-            ? 'bg-green-500/5 border-green-500/15'
-            : 'bg-green-50 border-green-100'
+          isDark ? 'bg-green-500/5 border-green-500/15' : 'bg-green-50 border-green-100'
         }`}>
           <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
             isDark ? 'bg-green-500/15' : 'bg-green-100'
@@ -106,23 +110,164 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="relative z-10 w-full max-w-5xl">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${
-              isDark ? 'border-blue-400' : 'border-blue-600'
-            }`} />
-          </div>
-        ) : packages.length === 0 ? (
-          <p className={`text-center py-8 text-sm ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
-            Pacotes em breve disponíveis.
-          </p>
-        ) : (
-          <>
-            {/* MOBILE: lista compacta empilhada */}
+      {loading ? (
+        <div className="relative z-10 flex items-center justify-center py-8">
+          <div className={`w-6 h-6 border-2 border-t-transparent rounded-full animate-spin ${
+            isDark ? 'border-blue-400' : 'border-blue-600'
+          }`} />
+        </div>
+      ) : (
+        <div className="relative z-10 w-full max-w-5xl space-y-5 sm:space-y-7">
+
+          {/* ================================================
+              PLANOS MENSAIS — 2 cards deitados
+          ================================================ */}
+          {monthlyPlans.length > 0 && (
+            <div>
+              <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-3 ${
+                isDark ? 'text-blue-400/60' : 'text-blue-600/60'
+              }`}>
+                Planos Mensais — inclui acesso às integrações
+              </p>
+
+              {/* MOBILE: lista compacta */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {monthlyPlans.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className={`relative rounded-xl transition-all duration-300 ${
+                      pkg.is_highlighted
+                        ? isDark
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/10'
+                          : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-300/20'
+                        : isDark
+                          ? 'bg-slate-800/40 border border-white/5 backdrop-blur-sm'
+                          : 'bg-white/80 border border-gray-100 backdrop-blur-sm shadow-sm'
+                    }`}
+                  >
+                    {pkg.is_highlighted && (
+                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                        Recomendado
+                      </div>
+                    )}
+                    <div className="px-4 py-3.5 flex items-center justify-between gap-4">
+                      <div className="flex-shrink-0">
+                        <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${
+                          pkg.is_highlighted ? 'text-blue-200' : isDark ? 'text-white/40' : 'text-gray-400'
+                        }`}>Mensal</p>
+                        <p style={{ fontFamily: "'Nunito', sans-serif" }}
+                          className={`text-xs font-semibold mb-0.5 ${!pkg.is_highlighted && (isDark ? 'text-white/70' : 'text-gray-500')}`}>
+                          {pkg.name}
+                        </p>
+                        <div className="flex items-baseline gap-0.5">
+                          <p className="text-xl font-bold leading-tight">
+                            R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
+                          </p>
+                          <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/30' : 'text-gray-400'}`}>/mês</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 text-right">
+                        <div className="flex items-center gap-1.5">
+                          <svg className={`w-3 h-3 ${pkg.is_highlighted ? 'text-white/70' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          <span className="font-semibold text-xs">{pkg.interactions} créditos/mês</span>
+                        </div>
+                        <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                          Google · Meta · Produção
+                        </span>
+                        {pkg.has_consultoria && (
+                          <span className={`text-[10px] ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                            + Webapp · Consultoria
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* DESKTOP: 2 cards lado a lado horizontais */}
+              <div className="hidden sm:grid sm:grid-cols-2 gap-3 md:gap-4">
+                {monthlyPlans.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className={`relative rounded-2xl transition-all duration-300 ${
+                      pkg.is_highlighted
+                        ? isDark
+                          ? 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-xl shadow-blue-500/10'
+                          : 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-xl shadow-blue-300/20'
+                        : isDark
+                          ? 'bg-slate-800/40 border border-white/5 backdrop-blur-sm'
+                          : 'bg-white/80 border border-gray-100 backdrop-blur-sm shadow-sm'
+                    }`}
+                  >
+                    {pkg.is_highlighted && (
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                        Recomendado
+                      </div>
+                    )}
+
+                    <div className="p-5 md:p-6 flex gap-5">
+                      {/* Esquerda: nome + preço */}
+                      <div className="flex flex-col justify-center min-w-[130px]">
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${
+                          pkg.is_highlighted ? 'text-blue-200' : isDark ? 'text-white/40' : 'text-gray-400'
+                        }`}>Mensal</p>
+                        <h3 style={{ fontFamily: "'Nunito', sans-serif" }}
+                          className={`text-lg font-bold mb-1 ${!pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')}`}>
+                          {pkg.name}
+                        </h3>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-bold">
+                            R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
+                          </span>
+                          <span className={`text-xs ${pkg.is_highlighted ? 'text-white/60' : isDark ? 'text-white/30' : 'text-gray-400'}`}>/mês</span>
+                        </div>
+                      </div>
+
+                      {/* Divisor */}
+                      <div className={`w-px self-stretch ${pkg.is_highlighted ? 'bg-white/15' : isDark ? 'bg-white/5' : 'bg-gray-100'}`} />
+
+                      {/* Direita: features */}
+                      <div className="flex-1 flex flex-col justify-center gap-2">
+                        {[
+                          `${pkg.interactions} créditos por mês`,
+                          'Serviços Google',
+                          'Serviços Meta',
+                          'Linha de Produção',
+                          ...(pkg.has_consultoria ? ['Webapp com subdomínio', 'Consultoria incluída'] : []),
+                        ].map((feature, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5">
+                            <svg className={`w-3 h-3 flex-shrink-0 ${pkg.is_highlighted ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className={`text-xs ${pkg.is_highlighted ? 'text-white/90' : isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                              {feature}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ================================================
+              PACOTES DE CRÉDITOS — 4 cards verticais
+          ================================================ */}
+          <div>
+            <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-3 ${
+              isDark ? 'text-white/30' : 'text-gray-400'
+            }`}>
+              Pacotes de Créditos Avulsos — sem mensalidade
+            </p>
+
+            {/* MOBILE: lista compacta */}
             <div className="flex flex-col gap-3 sm:hidden">
-              {packages.map((pkg) => (
+              {creditPlans.map((pkg) => (
                 <div
                   key={pkg.id}
                   className={`relative rounded-xl transition-all duration-300 ${
@@ -135,30 +280,21 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                         : 'bg-white/80 border border-gray-100 backdrop-blur-sm shadow-sm'
                   }`}
                 >
-                  {/* Badge */}
                   {pkg.is_highlighted && (
                     <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
                       Mais Popular
                     </div>
                   )}
-
                   <div className="px-4 py-3.5 flex items-center justify-between gap-4">
-                    {/* Esquerda: nome + preço */}
                     <div className="flex-shrink-0">
-                      <p
-                        style={{ fontFamily: "'Nunito', sans-serif" }}
-                        className={`text-xs font-semibold mb-0.5 ${
-                          !pkg.is_highlighted && (isDark ? 'text-white/70' : 'text-gray-500')
-                        }`}
-                      >
+                      <p style={{ fontFamily: "'Nunito', sans-serif" }}
+                        className={`text-xs font-semibold mb-0.5 ${!pkg.is_highlighted && (isDark ? 'text-white/70' : 'text-gray-500')}`}>
                         {pkg.name}
                       </p>
                       <p className="text-xl font-bold leading-tight">
                         R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
                       </p>
                     </div>
-
-                    {/* Direita: detalhes */}
                     <div className="flex flex-col items-end gap-1 text-right">
                       <div className="flex items-center gap-1.5">
                         <svg className={`w-3 h-3 ${pkg.is_highlighted ? 'text-white/70' : isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,9 +313,9 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
               ))}
             </div>
 
-            {/* DESKTOP (sm+): grid de cards verticais centralizados */}
+            {/* DESKTOP: grid de 4 cards verticais */}
             <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              {packages.map((pkg) => (
+              {creditPlans.map((pkg) => (
                 <div
                   key={pkg.id}
                   className={`relative rounded-2xl transition-all duration-300 flex flex-col ${
@@ -192,7 +328,6 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                         : 'bg-white/80 border border-gray-100 backdrop-blur-sm shadow-sm'
                   }`}
                 >
-                  {/* Badge */}
                   {pkg.is_highlighted && (
                     <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
                       Mais Popular
@@ -200,24 +335,17 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                   )}
 
                   <div className="p-5 md:p-6 flex-1 flex flex-col items-center text-center">
-                    {/* Nome */}
-                    <h3
-                      style={{ fontFamily: "'Nunito', sans-serif" }}
-                      className={`text-sm md:text-base font-semibold mb-2 ${
-                        !pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')
-                      }`}
-                    >
+                    <h3 style={{ fontFamily: "'Nunito', sans-serif" }}
+                      className={`text-sm md:text-base font-semibold mb-2 ${!pkg.is_highlighted && (isDark ? 'text-white' : 'text-gray-900')}`}>
                       {pkg.name}
                     </h3>
 
-                    {/* Preço */}
                     <div className="mb-4">
                       <span className="text-2xl md:text-3xl font-bold">
                         R$ {(pkg.price_cents / 100).toFixed(2).replace('.', ',')}
                       </span>
                     </div>
 
-                    {/* Features centralizadas */}
                     <div className="space-y-2.5 flex-1">
                       <div className="flex items-center justify-center gap-2">
                         <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -262,9 +390,9 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                 </div>
               ))}
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Info Banner */}
       <div className="relative z-10 mt-3 sm:mt-5 max-w-xl w-full">

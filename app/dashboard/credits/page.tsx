@@ -53,6 +53,23 @@ export default function CreditsPage() {
   const supabase = createClient();
   const searchParams = useSearchParams();
   const requiresPlan = searchParams.get('requires_plan') === '1';
+  const successParam = searchParams.get('success');
+
+// Adicionar junto aos outros useEffects
+useEffect(() => {
+  if (successParam === 'true' && user) {
+    const reload = async () => {
+      const { data } = await supabase
+        .from('user_credits')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data) setCredits(data);
+    };
+    reload();
+  }
+}, [successParam, user]);
 
   useEffect(() => {
     setMounted(true);

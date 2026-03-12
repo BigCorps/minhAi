@@ -1,8 +1,8 @@
 // =========================================================
-// Rota API: Processar Conversação com Claude
+// Rota API: Processar Conversação com ChatGPT
 // Arquivo: app/api/voice/process-conversation/route.ts
 // =========================================================
-// Processa mensagens da conversa e chama Claude API server-side
+// Processa mensagens da conversa e chama OpenAI API server-side
 // =========================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Obter API key do ambiente
-    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     
-    if (!ANTHROPIC_API_KEY) {
-      console.error('❌ ANTHROPIC_API_KEY não configurada');
+    if (!OPENAI_API_KEY) {
+      console.error('❌ OPENAI_API_KEY não configurada');
       return NextResponse.json(
         { error: 'API key not configured' },
         { status: 500 }
@@ -37,14 +37,8 @@ export async function POST(request: NextRequest) {
 
     const fichaAtualStr = JSON.stringify(fichaAtual || {}, null, 2);
 
-    // Prompt para o Claude
-    const prompt = `Você é um assistente especializado em criar fichas de produção para restaurantes e lanchonetes no Brasil.
-
-CONTEXTO DA CONVERSA:
-${conversaAtual}
-
-FICHA ATUAL:
-${fichaAtualStr}
+    // Prompt para o ChatGPT
+    const systemPrompt = `Você é um assistente especializado em criar fichas de produção para restaurantes e lanchonetes no Brasil.
 
 TIPO DE FICHA: ${isFichaPreparo ? 'Ficha de Preparo (produz um ingrediente)' : 'Produto Final (será vendido)'}
 
@@ -55,6 +49,18 @@ INSTRUÇÕES:
 4. Normalize unidades (kg, g, L, ml, unidade, dúzia)
 5. Responda de forma natural e amigável
 6. Se algo não estiver claro, pergunte
+
+IMPORTANTE: Sempre estime preços brasileiros realistas. Exemplos:
+- Farinha de trigo: R$ 5,00/kg
+- Frango: R$ 15,00/kg
+- Açúcar: R$ 3,50/kg
+- Leite: R$ 4,00/L
+- Ovos: R$ 0,50/unidade
+- Óleo: R$ 8,00/L
+- Sal: R$ 2,00/kg
+- Manteiga: R$ 35,00/kg
+- Queijo: R$ 40,00/kg
+- Presunto: R$ 30,00/kg
 
 Retorne APENAS um JSON válido (sem markdown, sem \`\`\`):
 {
@@ -78,69 +84,67 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`):
   },
   "resposta": "string - mensagem amigável ao usuário",
   "completo": boolean - true se a ficha está pronta para salvar
-}
+}`;
 
-IMPORTANTE: Sempre estime preços brasileiros realistas. Exemplos:
-- Farinha de trigo: R$ 5,00/kg
-- Frango: R$ 15,00/kg
-- Açúcar: R$ 3,50/kg
-- Leite: R$ 4,00/L
-- Ovos: R$ 0,50/unidade
-- Óleo: R$ 8,00/L
-- Sal: R$ 2,00/kg
-- Manteiga: R$ 35,00/kg
-- Queijo: R$ 40,00/kg
-- Presunto: R$ 30,00/kg`;
+    const userPrompt = `CONTEXTO DA CONVERSA:
+${conversaAtual}
 
-    console.log('📡 Chamando Anthropic API...');
+FICHA ATUAL:
+${fichaAtualStr}`;
 
-    // Chamar API da Anthropic
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    console.log('📡 Chamando OpenAI API...');
+
+    // Chamar API da OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        model: 'gpt-4o', // ou 'gpt-4-turbo' se preferir
         messages: [
           {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
             role: 'user',
-            content: prompt,
+            content: userPrompt,
           },
         ],
+        temperature: 0.7,
+        max_tokens: 2000,
+        response_format: { type: 'json_object' }, // ✅ Force JSON response
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('❌ Erro na API Anthropic:', errorData);
+      console.error('❌ Erro na API OpenAI:', errorData);
       return NextResponse.json(
-        { error: 'Anthropic API error', details: errorData },
+        { error: 'OpenAI API error', details: errorData },
         { status: response.status }
       );
     }
 
     const data = await response.json();
-    const conteudo = data.content[0].text;
-
-    // Limpar possíveis backticks de markdown
-    const jsonLimpo = conteudo.replace(/```json\n?|\n?```/g, '').trim();
+    const conteudo = data.choices[0].message.content;
 
     console.log('✅ Resposta recebida');
 
     // Tentar parsear o JSON
     let resultado;
     try {
+      // Limpar possíveis backticks se houver
+      const jsonLimpo = conteudo.replace(/```json\n?|\n?```/g, '').trim();
       resultado = JSON.parse(jsonLimpo);
     } catch (parseError) {
-      console.error('❌ Erro ao parsear JSON:', jsonLimpo);
+      console.error('❌ Erro ao parsear JSON:', conteudo);
       return NextResponse.json(
         { 
           error: 'Invalid JSON response', 
-          rawResponse: jsonLimpo 
+          rawResponse: conteudo 
         },
         { status: 500 }
       );
@@ -158,5 +162,5 @@ IMPORTANTE: Sempre estime preços brasileiros realistas. Exemplos:
   }
 }
 
-// Configurar runtime como edge (opcional, mais rápido)
-export const runtime = 'edge';
+// Runtime padrão do Next.js (funciona tanto em Node quanto Edge)
+export const runtime = 'nodejs';

@@ -290,6 +290,66 @@ voiceTriggers: [
     },
   },
 
+fichas_producao_conversacional: {
+  functionKey: 'fichas_producao_conversacional',
+  functionName: 'Fichas de Produção Conversacional',
+  category: 'services',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'criar ficha conversando',
+    'criar receita conversando',
+    'ficha conversacional',
+    'conversar para criar receita',
+    'criar ficha falando',
+    'criar receita falando',
+    'nova ficha conversando',
+  ],
+
+  examplePhrases: [
+    'Criar ficha conversando',
+    'Conversar para criar receita',
+    'Criar ficha falando com o assistente',
+  ],
+
+  requiresInput: false,
+
+  description: 'Crie fichas de produção conversando naturalmente com o assistente de voz. Basta descrever sua receita e o sistema estrutura automaticamente.',
+  shortDescription: 'Criar ficha de produção por conversa',
+  icon: '💬',
+  color: '#667eea',
+
+  saveToHistory: true,
+  creditsPerUse: 5,
+  requiresPayment: true,
+  isPremium: true,
+
+  handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+    try {
+      // Detectar tipo de ficha pelo transcript (produto ou preparo)
+      const lowerTranscript = transcript?.toLowerCase() ?? '';
+      const fichaType = lowerTranscript.includes('preparo') ? 'preparo' : 'produto';
+
+      setActiveModal?.({
+        type: 'FichaProducaoConversacionalDisplay',
+        data: { companyId, fichaType },
+      });
+
+      await playText(
+        fichaType === 'preparo'
+          ? 'Abrindo criação de preparo por conversa. Me descreva sua receita.'
+          : 'Abrindo criação de ficha por conversa. Me descreva seu produto.'
+      );
+
+      return true;
+    } catch (error) {
+      console.error('💬 [FICHAS CONVERSACIONAL] ERRO:', error);
+      await playText('Não consegui abrir o modo conversacional.');
+      return false;
+    }
+  },
+},
+
 // ============================================================
 // CATEGORIA: ENVIAR ARQUIVOS
 // ============================================================

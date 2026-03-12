@@ -52,7 +52,7 @@ interface FichaProducaoDisplayProps {
     companyId: string;
     fichaId?: string;
     prefilled?: { nome?: string; categoria?: string };
-    fichaType?: 'produto' | 'preparo'; // ← FASE C
+    fichaType?: 'produto' | 'preparo';
   };
   onClose: () => void;
   playText: (text: string) => Promise<void>;
@@ -230,8 +230,8 @@ export default function FichaProducaoDisplay({
   playText,
   theme = 'dark',
 }: FichaProducaoDisplayProps) {
-  const { companyId, prefilled, fichaType = 'produto' } = data; // ← FASE C
-  const isFichaPreparo = fichaType === 'preparo';               // ← FASE C
+  const { companyId, prefilled, fichaType = 'produto' } = data;
+  const isFichaPreparo = fichaType === 'preparo';
   const supabase = createClient();
   const C = theme === 'dark' ? DARK : LIGHT;
   const isDark = theme === 'dark';
@@ -250,12 +250,15 @@ export default function FichaProducaoDisplay({
   const [novoItem, setNovoItem] = useState('');
   const [streamingItem, setStreamingItem] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; tipo: 'success' | 'error' | 'warning' } | null>(null);
-  // ← FASE C: armazena info do ingrediente criado pela ficha de preparo
   const [ingredienteCriado, setIngredienteCriado] = useState<{ nome: string; preco: number; unidade: string } | null>(null);
+
+  // ── FASE D: novos estados ──────────────────────────────────
+  const [newItemId, setNewItemId] = useState<string | null>(null);
+  const [autoCloseTimer, setAutoCloseTimer] = useState<NodeJS.Timeout | null>(null);
+  const [countdown, setCountdown] = useState(2.5);
 
   const isMobile = useIsMobile();
 
-  // ← FASE C: texto de abertura varia por tipo
   const openingText = isFichaPreparo ? OPENING_TEXT_PREPARO : OPENING_TEXT;
   const lastSpeech = useRef(openingText);
   const fichaRef = useRef(ficha);
@@ -266,6 +269,29 @@ export default function FichaProducaoDisplay({
     const t = setTimeout(() => setToast(null), 3500);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // ── FASE D: countdown regressivo quando saved ──────────────
+  useEffect(() => {
+    if (estagio === 'saved') {
+      setCountdown(2.5);
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 0.1) { clearInterval(interval); return 0; }
+          return prev - 0.1;
+        });
+      }, 100);
+      return () => clearInterval(interval);
+    } else {
+      setCountdown(2.5);
+    }
+  }, [estagio]);
+
+  // ── FASE D: cleanup do timer ao desmontar ──────────────────
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimer) clearTimeout(autoCloseTimer);
+    };
+  }, [autoCloseTimer]);
 
   const showToast = (msg: string, tipo: 'success' | 'error' | 'warning' = 'success') =>
     setToast({ msg, tipo });
@@ -290,8 +316,31 @@ export default function FichaProducaoDisplay({
   useModalVoiceClose(handleClose);
 
   function handleClose() {
+    if (autoCloseTimer) clearTimeout(autoCloseTimer);
     onClose();
   }
+
+  // ── FASE D: resetFicha ─────────────────────────────────────
+  const resetFicha = () => {
+    setFicha({
+      nome: '',
+      categoria: '',
+      rendimento_qtd: 1,
+      rendimento_unid: 'unidades',
+      preco_venda: undefined,
+      itens: [],
+    });
+    setEstagio('collecting');
+    setFichaIdSalva(null);
+    setNewItemId(null);
+    setIngredienteCriado(null);
+
+    const nextText = isFichaPreparo
+      ? 'Diga o nome do próximo ingrediente a ser produzido.'
+      : 'Diga o nome do próximo produto.';
+    lastSpeech.current = nextText;
+    playText(nextText).catch(() => {});
+  };
 
   // ── Gera ficha base via IA ────────────────────────────────
 
@@ -422,10 +471,13 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
     const confianca: Confianca = ingEx ? 'alta' : 'media';
     if (!ingEx) preco = await estimarPreco(nomeIng, unidade);
 
+    // ── FASE D: ID único para efeito de piscar verde ──
+    const novoId = `temp-${Date.now()}-${Math.random()}`;
+
     setFicha(prev => ({
       ...prev,
       itens: [...prev.itens, {
-        id: tempId(), ingrediente_nome: nomeIng, quantidade, unidade,
+        id: novoId, ingrediente_nome: nomeIng, quantidade, unidade,
         preco_por_unidade: preco, perda_percentual: 0, source, confianca,
         chat_message_id: `voice_${Date.now()}`,
         chat_timestamp: new Date().toISOString(),
@@ -433,6 +485,10 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       }],
     }));
     setStreamingItem(null);
+
+    // ── FASE D: marcar item novo para piscar verde ──
+    setNewItemId(novoId);
+    setTimeout(() => setNewItemId(null), 1500);
 
     const speech = source !== 'user_input'
       ? `Adicionei ${nomeIng}, ${quantidade} ${unidade}. Estimei ${fmt(preco)} por ${unidade}. Voce pode corrigir depois.`
@@ -516,8 +572,8 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
         categoria: ficha.categoria || null,
         rendimento_qtd: ficha.rendimento_qtd,
         rendimento_unid: ficha.rendimento_unid,
-        preco_venda: isFichaPreparo ? null : (ficha.preco_venda || null), // ← FASE C
-        is_ficha_preparo: isFichaPreparo,                                  // ← FASE C
+        preco_venda: isFichaPreparo ? null : (ficha.preco_venda || null),
+        is_ficha_preparo: isFichaPreparo,
         criado_por_voz: true,
         tem_estimativas: resultado.tem_estimativas,
       }).select('id').single();
@@ -559,7 +615,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
       if (isFichaPreparo) {
         const custoPorUnidade = resultado.custo_total / Math.max(ficha.rendimento_qtd, 0.001);
 
-        // Mapear rendimento_unid para unidade válida no banco
         const unidadeMap: Record<string, string> = {
           'kg': 'kg', 'g': 'g', 'l': 'l', 'ml': 'ml',
           'unidades': 'un', 'unidade': 'un', 'un': 'un',
@@ -588,19 +643,34 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
             preco: ingCriado.preco_por_unidade,
             unidade: ingCriado.unidade,
           });
-          const speech = `Ficha de preparo "${ficha.nome}" salva! Custo por ${ingCriado.unidade}: ${fmt(ingCriado.preco_por_unidade)}. O ingrediente foi criado automaticamente como tipo produzido.`;
-          lastSpeech.current = speech;
-          playText(speech).catch(() => {});
         }
-      } else {
-        const speech = `Incrivel! Ficha ${ficha.nome} salva. Custo: ${fmt(resultado.custo_total)}. Preco sugerido: ${fmt(resultado.preco_sugerido)}.`;
-        lastSpeech.current = speech;
-        playText(speech).catch(() => {});
-      }
-      // ── FIM FASE C ──
 
-      setFichaIdSalva(fichaId);
-      setEstagio('saved');
+        // ── FASE D: feedback + reset automático para preparo ──
+        setFichaIdSalva(fichaId);
+        setEstagio('saved');
+
+        const speechPreparo = ingCriado
+          ? `Ficha de preparo "${ficha.nome}" salva! Custo por ${ingCriado.unidade}: ${fmt(ingCriado.preco_por_unidade)}. Ingrediente criado automaticamente. Qual a próxima receita?`
+          : `Ficha de preparo "${ficha.nome}" salva! Qual a próxima receita?`;
+        lastSpeech.current = speechPreparo;
+        playText(speechPreparo).catch(() => {});
+
+      } else {
+        // ── FASE D: feedback + reset automático para produto ──
+        setFichaIdSalva(fichaId);
+        setEstagio('saved');
+
+        const speechProduto = `Ficha "${ficha.nome}" salva! Custo: ${fmt(resultado.custo_total)}. Qual a próxima receita?`;
+        lastSpeech.current = speechProduto;
+        playText(speechProduto).catch(() => {});
+      }
+
+      // ── FASE D: aguardar 2.5s e resetar o modal ──
+      const timer = setTimeout(() => {
+        resetFicha();
+      }, 2500);
+      setAutoCloseTimer(timer);
+
     } catch (err) {
       console.error('salvarFicha:', err);
       showToast('Erro ao salvar. Tente novamente.', 'error');
@@ -615,7 +685,23 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
     active: true,
     onTranscript: (transcript) => {
       const t = normalize(transcript);
-      if (['fechar', 'cancelar', 'sair', 'encerrar'].some(c => t.includes(c))) { handleClose(); return; }
+
+      // ── FASE D: comandos de voz no estágio saved ──
+      if (estagio === 'saved') {
+        if (['proxima', 'próxima', 'nova', 'criar outra'].some(cmd => t.includes(cmd))) {
+          if (autoCloseTimer) clearTimeout(autoCloseTimer);
+          resetFicha();
+          return;
+        }
+        if (['concluir', 'finalizar', 'fechar', 'encerrar'].some(cmd => t.includes(cmd))) {
+          if (autoCloseTimer) clearTimeout(autoCloseTimer);
+          onClose();
+          return;
+        }
+        return; // No estágio saved, ignorar outros comandos
+      }
+
+      if (['fechar', 'cancelar', 'sair'].some(c => t.includes(c))) { handleClose(); return; }
       if (['repetir', 'repete', 'de novo', 'repita'].some(c => t.includes(c))) { playText(lastSpeech.current).catch(() => {}); return; }
       if (['exportar', 'pdf', 'imprimir'].some(c => t.includes(c))) { exportarPDF(); return; }
       if (['salvar', 'salva', 'confirmar', 'confirma', 'concluir', 'pronto'].some(c => t.includes(c))) {
@@ -706,7 +792,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
         style={{ background: C.bg, border: `1px solid ${C.border}`, maxHeight: '92vh' }}
       >
         {/* ── Sidebar (desktop only) ── */}
-        {/* ← FASE C: cor da sidebar muda para roxo em fichas de preparo */}
         {!isMobile && (
           <div style={{
             background: isFichaPreparo ? '#6d28d9' : '#1d4ed8',
@@ -719,7 +804,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   <IconClipboard size={22} color="#fff" />
                 </div>
                 <div>
-                  {/* ← FASE C: título da sidebar */}
                   <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0, lineHeight: 1.2 }}>
                     {isFichaPreparo ? 'Ficha de' : 'Fichas de'}
                   </p>
@@ -757,7 +841,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, margin: '0 0 2px' }}>Custo Total</p>
                   <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>{fmt(resultado.custo_total)}</p>
                 </div>
-                {/* ← FASE C: sidebar mostra custo/unidade para preparo, preço sugerido para produto */}
                 {isFichaPreparo ? (
                   <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 14px' }}>
                     <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, margin: '0 0 2px' }}>
@@ -809,7 +892,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
               <div>
                 {isMobile ? (
                   <>
-                    {/* ← FASE C: título mobile */}
                     <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: 0 }}>
                       {isFichaPreparo ? '⚗️ Ficha de Preparo' : 'Guias de Produção'}
                     </p>
@@ -821,7 +903,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   </>
                 ) : (
                   <>
-                    {/* ← FASE C: título desktop */}
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
                       {estagio === 'saved'
                         ? `${isFichaPreparo ? '⚗️ Ficha de Preparo' : 'Guia'} Salvo!`
@@ -864,7 +945,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   />
                 </div>
 
-                {/* ← FASE C: aviso visual roxo para fichas de preparo */}
                 {isFichaPreparo && (
                   <div style={{
                     padding: '12px 16px',
@@ -903,8 +983,17 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                       <tbody>
                         {ficha.itens.map(item => {
                           const isEst = item.source !== 'user_input';
+                          // ── FASE D: piscar verde para novo item ──
+                          const isNew = newItemId === item.id;
                           return (
-                            <tr key={item.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                            <tr
+                              key={item.id}
+                              style={{
+                                borderTop: `1px solid ${C.border}`,
+                                background: isNew ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                                transition: 'background 0.6s ease',
+                              }}
+                            >
                               <td style={{ padding: '8px 12px', fontWeight: 500, fontStyle: isEst ? 'italic' : 'normal', color: isEst ? C.textMuted : C.text }}>
                                 {item.ingrediente_nome}
                                 {isEst && <span style={{ marginLeft: 4, fontSize: 10, color: '#eab308' }}>est.</span>}
@@ -1001,7 +1090,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                 {isMobile && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     {isFichaPreparo ? (
-                      // ← FASE C: cards mobile para preparo
                       <>
                         {[
                           { label: 'Custo Total',             value: fmt(resultado.custo_total),          accent: true  },
@@ -1033,7 +1121,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   </div>
                 )}
 
-                {/* ← FASE C: campo preço de venda só para fichas de produto */}
                 {!isFichaPreparo && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <label style={{ fontSize: 13, color: C.textMuted, whiteSpace: 'nowrap' }}>Preco de venda:</label>
@@ -1052,7 +1139,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   </div>
                 )}
 
-                {/* ← FASE C: resumo do custo/unidade para preparo na revisão */}
                 {isFichaPreparo && (
                   <div style={{
                     padding: '12px 16px',
@@ -1115,7 +1201,6 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   </div>
                 </div>
 
-                {/* ← FASE C: card do ingrediente criado automaticamente */}
                 {isFichaPreparo && ingredienteCriado && (
                   <div style={{
                     width: '100%',
@@ -1134,6 +1219,58 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                   </div>
                 )}
 
+                {/* ── FASE D: barra de progresso regressiva ── */}
+                <div style={{ width: '100%' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: 13, color: C.textMuted, textAlign: 'center' }}>
+                    Próxima ficha em {countdown.toFixed(1)}s...
+                  </p>
+                  <div style={{
+                    width: '100%', height: 4, background: C.border,
+                    borderRadius: 2, overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      width: `${(countdown / 2.5) * 100}%`,
+                      height: '100%',
+                      background: isFichaPreparo ? '#7c3aed' : '#16a34a',
+                      transition: 'width 0.1s linear',
+                    }} />
+                  </div>
+                </div>
+
+                {/* ── FASE D: botões Criar Outra e Concluir ── */}
+                <div style={{ width: '100%', display: 'flex', gap: 12 }}>
+                  <button
+                    onClick={() => {
+                      if (autoCloseTimer) clearTimeout(autoCloseTimer);
+                      resetFicha();
+                    }}
+                    style={{
+                      flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13,
+                      fontWeight: 600, cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', gap: 6,
+                      background: isFichaPreparo ? '#7c3aed' : '#16a34a',
+                      color: '#fff', border: 'none',
+                    }}
+                  >
+                    <IconPlus size={15} color="#fff" /> Criar Outra Agora
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (autoCloseTimer) clearTimeout(autoCloseTimer);
+                      onClose();
+                    }}
+                    style={{
+                      flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13,
+                      fontWeight: 500, cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', gap: 6,
+                      background: 'none', border: `1px solid ${C.btnOutline.border}`,
+                      color: C.btnOutline.text,
+                    }}
+                  >
+                    ✓ Concluir
+                  </button>
+                </div>
+
                 <div style={{ width: '100%', display: 'flex', gap: 12 }}>
                   <button
                     onClick={exportarPDF}
@@ -1147,6 +1284,7 @@ Regras: 3-8 ingredientes típicos, quantidades e preços realistas para o Brasil
                     </a>
                   )}
                 </div>
+
                 {temEstimativas && (
                   <div style={{ width: '100%', display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)' }}>
                     <IconAlert size={15} color="#eab308" />

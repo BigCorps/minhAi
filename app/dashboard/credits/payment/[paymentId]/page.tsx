@@ -69,9 +69,9 @@ export default function PaymentPage() {
       setPayment(data);
       
       if (data.status === 'paid') {
-        setTimeout(() => {
-          router.push('/dashboard/credits?success=true');
-        }, 3000);
+setTimeout(() => {
+  window.location.href = '/dashboard/credits?success=true';
+}, 3000);
       }
     } catch (err) {
       console.error('Erro ao buscar pagamento:', err);

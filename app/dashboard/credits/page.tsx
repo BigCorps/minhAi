@@ -269,14 +269,13 @@ export default function CreditsPage() {
       {/* ====================================================
           PLANOS MENSAIS — 2 cards deitados
       ==================================================== */}
-      {monthlyPlans.length > 0 && (
-        <div>
-          <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Planos com Acesso às Integrações
-          </h2>
-          <p className={`text-sm mb-6 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-            Libera Serviços Google, Serviços Meta e Linha de Produção. Renova mensalmente e inclui créditos todo mês.
-          </p>
+{monthlyPlans.length > 0 && (
+  <div className="text-center mb-8">
+    <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      Planos com Acesso às Integrações
+    </h2>
+  </div>
+)}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {monthlyPlans.map((pkg) => (
@@ -391,13 +390,11 @@ export default function CreditsPage() {
       {/* ====================================================
           PACOTES DE CRÉDITOS — 4 cards verticais
       ==================================================== */}
-      <div>
-        <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          Pacotes de Créditos
-        </h2>
-        <p className={`text-sm mb-6 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-          Créditos avulsos, sem mensalidade. Não expiram.
-        </p>
+<div className="text-center mb-8">
+  <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+    Pacotes de Créditos
+  </h2>
+</div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {creditPlans.map((pkg) => (

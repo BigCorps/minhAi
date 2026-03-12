@@ -371,7 +371,7 @@ export function VoiceAssistantWithWakeWord({
 function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
 
-  const lowerText = text.toLowerCase().trim();
+  const lowerText = text.toLower().trim();
 
   // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
   if (isFinal && detectStopCommand(lowerText)) {
@@ -475,7 +475,7 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
   }
 
   // ── Function click (carrossel) ────────────────────────────
-  // ✅ PARA ADICIONAR NOVA FUNÇÃO: adicione um case no switch abaixo.
+  // ✅ PARA ADICIONAR NOVA FUNÇÃO: adicione um  no switch abaixo.
   async function handleFunctionClick(functionKey: string) {
     console.log('🎯 Função clicada:', functionKey);
 
@@ -693,6 +693,18 @@ case 'fichas_producao':
     type: 'FichaProducaoDisplay',
     data: {
       companyId,
+    },
+  });
+  break;
+
+case 'fichas_producao_conversacional':
+  await stopGoogleSpeech();
+  stopAudioImmediately();
+  setActiveModal({
+    type: 'FichaProducaoConversacionalDisplay',
+    data: {
+      companyId,
+      fichaType: 'produto',
     },
   });
   break;

@@ -203,7 +203,6 @@ export default function EnviarArquivoDisplay({ data, onClose, theme = 'dark', pl
   // Iniciar aba celular ao montar
   useEffect(() => {
     startCelular();
-    playText(OPENING_TEXT).catch(() => {});
   }, []); // eslint-disable-line
 
   // ── Upload local ─────────────────────────────────────────────────────────

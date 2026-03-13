@@ -543,6 +543,56 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
           playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
           break;
 
+case 'consultar_cambio':
+  setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de câmbio.');
+  break;
+
+case 'consultar_cep':
+  setActiveModal?.({ type: 'ConsultarCEPDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de CEP.');
+  break;
+
+case 'consultar_cnpj':
+  setActiveModal?.({ type: 'ConsultarCNPJDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de CNPJ.');
+  break;
+
+case 'consultar_cpf':
+  setActiveModal?.({ type: 'ConsultarCPFDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de CPF.');
+  break;
+
+case 'restricoes_cpf':
+  setActiveModal?.({ type: 'RestricoesCPFDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de restrições de CPF.');
+  break;
+
+case 'restricoes_cnpj':
+  setActiveModal?.({ type: 'RestricoesCNPJDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de restrições de CNPJ.');
+  break;
+
+case 'consultar_feriados':
+  setActiveModal?.({ type: 'FeriadosNacionaisDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de feriados nacionais.');
+  break;
+
+case 'consultar_ddd':
+  setActiveModal?.({ type: 'ConsultarDDDDisplay', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de DDD.');
+  break;
+
+case 'consultar_placa':
+  // TODO: Implementar após modal de pagamento
+  await playText('Consulta de placa temporariamente indisponível.');
+  break;
+
+case 'consultar_leilao':
+  // TODO: Implementar após modal de pagamento
+  await playText('Consulta de leilão temporariamente indisponível.');
+  break;
+
 case 'cadastro':
   await handleCadastro({ companyId, setIsProcessing, setActiveModal, playText });
   break;

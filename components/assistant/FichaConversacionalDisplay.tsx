@@ -142,8 +142,8 @@ export default function FichaConversacionalDisplay({
     if (!hasSpokenInitialRef.current) return; // Não rodar na primeira vez
 
     const novaMensagem = isFichaPreparo
-      ? 'Agora vamos criar uma ficha de preparo. Me diga o ingrediente que você quer produzir.'
-      : 'Agora vamos criar um produto final. Me diga o nome do produto.';
+      ? 'Vamos criar uma ficha de preparo. Me diga o ingrediente que você quer produzir.'
+      : 'Vamos criar um produto final. Me diga o nome do produto.';
     
     const msg: Message = {
       id: Date.now().toString(),

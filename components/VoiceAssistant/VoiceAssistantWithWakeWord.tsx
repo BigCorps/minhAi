@@ -545,52 +545,42 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
 
 case 'consultar_cambio':
   setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } }); // SEM company?.id
-  await playText('Abrindo consulta de câmbio.');
   break;
 
 case 'consultar_cep':
   setActiveModal?.({ type: 'ConsultarCEPDisplay', data: { companyId } });
-  await playText('Abrindo consulta de CEP.');
   break;
 
 case 'consultar_cnpj':
   setActiveModal?.({ type: 'ConsultarCnpjModal', data: { companyId } });
-  await playText('Abrindo consulta de CNPJ.');
   break;
 
 case 'consultar_cpf':
   setActiveModal?.({ type: 'ConsultarCpfModal', data: { companyId } });
-  await playText('Abrindo consulta de CPF.');
   break;
 
 case 'restricoes_cpf':
   setActiveModal?.({ type: 'RestricoesCPFDisplay', data: { companyId } });
-  await playText('Abrindo consulta de restrições de CPF.');
   break;
 
 case 'restricoes_cnpj':
   setActiveModal?.({ type: 'RestricoesCNPJDisplay', data: { companyId } });
-  await playText('Abrindo consulta de restrições de CNPJ.');
   break;
 
 case 'consultar_feriados':
   setActiveModal?.({ type: 'FeriadosNacionaisDisplay', data: { companyId } });
-  await playText('Abrindo consulta de feriados nacionais.');
   break;
 
 case 'consultar_ddd':
   setActiveModal?.({ type: 'ConsultarDDDDisplay', data: { companyId } });
-  await playText('Abrindo consulta de DDD.');
   break;
 
 case 'consultar_placa':
   setActiveModal?.({ type: 'ConsultarPlacaModal', data: { companyId } });
-  await playText('Abrindo consulta de placa.');
   break;
 
 case 'consultar_leilao':
   setActiveModal?.({ type: 'ConsultarLeilaoModal', data: { companyId } });
-  await playText('Abrindo consulta de leilão.');
   break;
           
 case 'cadastro':

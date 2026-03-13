@@ -346,6 +346,39 @@ fichas_producao_conversacional: {
   },
 },
 
+// ── Câmbio (Cotação de Moedas) ────────────────────────────────
+cotacao_moedas: {
+  functionKey: 'cotacao_moedas',
+  functionName: 'Câmbio',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'cotação de moedas', 'cotacao de moedas', 'cotação moeda', 'cotacao moeda',
+    'preço do dólar', 'preco do dolar', 'valor do dólar', 'valor do dolar',
+    'preço do euro', 'preco do euro', 'valor do euro',
+    'câmbio', 'cambio', 'moeda estrangeira', 'dólar hoje', 'dolar hoje'
+  ],
+  examplePhrases: ['Cotação do dólar', 'Preço do euro hoje', 'Câmbio de moedas'],
+  requiresInput: false,
+  description: 'Consulta cotações de moedas estrangeiras em tempo real (dólar, euro, libra, iene, etc.).',
+  shortDescription: 'Câmbio',
+  icon: '💱',
+  color: '#10B981',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } });
+      await playText('Abrindo consulta de câmbio.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
 // ============================================================
 // CATEGORIA: ENVIAR ARQUIVOS
 // ============================================================

@@ -114,6 +114,20 @@ export async function handleNossaMarcaCommand({
   }
 }
 
+export async function handleCadastro({
+  companyId, setIsProcessing, setActiveModal, playText,
+}: CompanyHandlerDeps) {
+  try {
+    setIsProcessing(true);
+    setActiveModal({ type: 'RegistrationDisplay', data: { companyId } });
+    playText('Abrindo cadastro.').catch(() => {});
+  } catch (error) {
+    await playText('Erro ao abrir o cadastro. Tente novamente.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
 export async function handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);

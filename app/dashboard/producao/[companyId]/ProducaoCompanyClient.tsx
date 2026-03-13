@@ -302,9 +302,11 @@ export default function ProducaoCompanyClient({
         {activeTab === 'fichas' && (
           <>
 {/* Toolbar */}
-<div className="flex flex-col gap-2 mb-4">
-  {/* Linha 1: Filtros + contador */}
-  <div className="flex items-center gap-2">
+{/* Mobile: duas linhas | Desktop: uma linha */}
+<div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+
+  {/* Filtros + contador */}
+  <div className="flex items-center gap-2 flex-1">
     {(['todas', 'ativas', 'inativas'] as const).map(f => (
       <button
         key={f}
@@ -318,17 +320,17 @@ export default function ProducaoCompanyClient({
         {f}
       </button>
     ))}
-    <span className="text-xs text-gray-400 dark:text-white/40 ml-auto whitespace-nowrap">
+    <span className="text-xs text-gray-400 dark:text-white/40 ml-auto sm:ml-2 whitespace-nowrap">
       {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
     </span>
   </div>
 
-  {/* Linha 2: Botões de ação */}
+  {/* Botões de ação */}
   <div className="flex gap-2">
     {/* Auxiliar de Produção — verde */}
     <button
       onClick={() => setShowConversacional(true)}
-      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
       style={{ background: '#16a34a' }}
     >
       <span className="text-sm leading-none">🔘</span>
@@ -338,7 +340,7 @@ export default function ProducaoCompanyClient({
     {/* Nova Guia / Nova Ficha — azul sempre */}
     <button
       onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
-      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
       style={{ background: '#2563eb' }}
     >
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -556,15 +558,15 @@ export default function ProducaoCompanyClient({
             {tipoFicha === 'preparos' ? (
               <div className="mt-6 p-4 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente. Para criar ou editar uma ficha, faça tudo pelo <strong>Auxiliar de Produção</strong> por voz ou texto, ou manualmente em <strong>Nova Ficha</strong>.
-                  O custo por unidade é calculado e alimenta o cadastro de ingredientes,
+                  <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente.
+                  O custo por unidade e calculado e alimenta o cadastro de ingredientes,
                   propagando para todas as fichas que os utilizam.
                 </p>
               </div>
             ) : (
               <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Para criar ou editar um guia, faça tudo pelo <strong>Auxiliar de Produção</strong> por voz ou texto, ou manualmente em <strong>Nova Guia</strong>.
+                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>.
                   Guias com preço estimado possuem valores aproximados pela IA — confirme com seus fornecedores.
                 </p>
               </div>

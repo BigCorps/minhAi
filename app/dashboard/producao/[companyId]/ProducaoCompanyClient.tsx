@@ -556,15 +556,15 @@ export default function ProducaoCompanyClient({
             {tipoFicha === 'preparos' ? (
               <div className="mt-6 p-4 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente.
-                  O custo por unidade e calculado e alimenta o cadastro de ingredientes,
+                  <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente. Para criar ou editar uma ficha, faça tudo pelo <strong>Auxiliar de Produção</strong> por voz ou texto, ou manualmente em <strong>Nova Ficha</strong>.
+                  O custo por unidade é calculado e alimenta o cadastro de ingredientes,
                   propagando para todas as fichas que os utilizam.
                 </p>
               </div>
             ) : (
               <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>.
+                  Para criar ou editar um guia, faça tudo pelo <strong>Auxiliar de Produção</strong> por voz ou texto, ou manualmente em <strong>Nova Guia</strong>.
                   Guias com preço estimado possuem valores aproximados pela IA — confirme com seus fornecedores.
                 </p>
               </div>

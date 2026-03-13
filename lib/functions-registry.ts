@@ -1891,57 +1891,6 @@ ver_agenda: {
       }
     },
   },
-
-  fichas_producao: {
-    functionKey: 'fichas_producao',
-    functionName: 'Fichas de Producao',
-    category: 'services',
-    responseType: 'voice+modal',
-
-    voiceTriggers: [
-      'criar ficha',
-      'nova ficha',
-      'ficha de producao',
-      'fichas de produção',
-      'ficha de produção',
-      'ficha tecnica',
-      'ficha técnica',
-      'cadastrar receita',
-      'nova receita',
-      'calcular custo',
-      'custo da receita',
-      'custo da pizza',
-      'custo do lanche',
-      'custo do prato',
-    ],
-
-    examplePhrases: [
-      'Criar ficha da pizza de frango',
-      'Qual o custo da minha pizza?',
-      'Cadastrar nova receita',
-      'Calcular custo do prato',
-    ],
-
-    requiresInput: false,
-
-    description: 'Crie fichas técnicas de receitas conversando com o assistente. Cálculo automático de custos, margens e pesos.',
-    shortDescription: 'Calcule o custo real das suas receitas',
-    icon: 'ClipboardList',
-    color: '#3B82F6',
-
-    saveToHistory: true,
-    creditsPerUse: 3,
-    requiresPayment: false,
-    isPremium: false,
-
-    handler: async ({ playText, setActiveModal, companyId }) => {
-      setActiveModal?.({
-        type: 'FichaProducaoDisplay',
-        data: { companyId },
-      });
-      return true;
-    },
-  },
   
   enviar_email: {
     functionKey: 'enviar_email',

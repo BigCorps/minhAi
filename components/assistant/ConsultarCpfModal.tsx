@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useModalVoiceCommand } from '@/hooks/useModalVoiceCommand';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { supabase } from '@/lib/supabase-browser';
 
 const OPENING_TEXT = "Informe o CPF que deseja consultar";

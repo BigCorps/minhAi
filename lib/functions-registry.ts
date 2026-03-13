@@ -1526,7 +1526,7 @@ consultar_cnpj: {
   ],
   handler: async ({ playText, setActiveModal, companyId }) => {
     try {
-      setActiveModal?.({ type: 'ConsultarCNPJDisplay', data: { companyId } });
+      setActiveModal?.({ type: 'ConsultarCnpjModal', data: { companyId } }); // era ConsultarCNPJDisplay
       await playText('Abrindo consulta de CNPJ.');
       return true;
     } catch {
@@ -1551,7 +1551,7 @@ consultar_cpf: {
   ],
   handler: async ({ playText, setActiveModal, companyId }) => {
     try {
-      setActiveModal?.({ type: 'ConsultarCPFDisplay', data: { companyId } });
+      setActiveModal?.({ type: 'ConsultarCpfModal', data: { companyId } }); // era ConsultarCPFDisplay
       await playText('Abrindo consulta de CPF.');
       return true;
     } catch {
@@ -1678,8 +1678,7 @@ consultar_placa: {
   ],
   handler: async ({ playText, setActiveModal, companyId }) => {
     try {
-      // TODO: Implementar modal de consulta de placa com integração de pagamento
-      // setActiveModal?.({ type: 'ConsultarPlacaDisplay', data: { companyId } });
+      setActiveModal?.({ type: 'ConsultarPlacaModal', data: { companyId } }); // era ConsultarPlacaDisplay
       await playText('Consulta de placa temporariamente indisponível. Aguarde implementação do pagamento.');
       return false;
     } catch {
@@ -1705,8 +1704,7 @@ consultar_leilao: {
   ],
   handler: async ({ playText, setActiveModal, companyId }) => {
     try {
-      // TODO: Implementar modal de consulta de leilão com integração de pagamento
-      // setActiveModal?.({ type: 'ConsultarLeilaoDisplay', data: { companyId } });
+      setActiveModal?.({ type: 'ConsultarLeilaoModal', data: { companyId } }); // era ConsultarLeilaoDisplay
       await playText('Consulta de leilão temporariamente indisponível. Aguarde implementação do pagamento.');
       return false;
     } catch {

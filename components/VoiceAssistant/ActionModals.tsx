@@ -43,6 +43,7 @@ import EnviarArquivoDisplay from '@/components/assistant/EnviarArquivoDisplay';
 import GerarQRCodeDisplay       from '@/components/assistant/GerarQRCodeDisplay';
 import GerarCodigoBarrasDisplay  from '@/components/assistant/GerarCodigoBarrasDisplay';
 import FichaConversacionalDisplay from '@/components/assistant/FichaConversacionalDisplay';
+import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -87,6 +88,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'GerarCodigoBarrasDisplay': GerarCodigoBarrasDisplay,
   'fichas_producao_conversacional': FichaConversacionalDisplay,
   'FichaProducaoConversacionalDisplay': FichaConversacionalDisplay,
+  'RegistrationDisplay': RegistrationDisplay,
 
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,

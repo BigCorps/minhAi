@@ -74,12 +74,12 @@ function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boole
       alignItems: 'center',
       gap: 12,
       padding: '10px 12px',
-      background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)',
-      border: `1px solid ${isDark ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.15)'}`,
+      background: isDark ? 'rgba(37,99,235,0.1)' : 'rgba(37,99,235,0.05)',
+      border: `1px solid ${isDark ? 'rgba(37,99,235,0.25)' : 'rgba(37,99,235,0.15)'}`,
       borderRadius: 8,
     }}>
       <div style={{ flex: 1 }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#a855f7' }}>
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#2563eb' }}>
           {ingrediente.nome}
         </p>
         <p style={{ margin: 0, fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', marginTop: 2 }}>
@@ -88,8 +88,8 @@ function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boole
       </div>
       <span style={{
         padding: '4px 8px',
-        background: 'rgba(168,85,247,0.2)',
-        color: '#a855f7',
+        background: 'rgba(37,99,235,0.2)',
+        color: '#2563eb',
         borderRadius: 12,
         fontSize: 11,
         fontWeight: 600,
@@ -234,7 +234,7 @@ export default function ProducaoCompanyClient({
           {[
             { label: 'Total de Guias', value: stats.totalFichas, color: 'text-blue-600 dark:text-blue-400' },
             { label: 'Guias Ativas',   value: stats.ativas,      color: 'text-green-600 dark:text-green-400' },
-            { label: 'Com Custo',      value: stats.comCusto,    color: 'text-purple-600 dark:text-purple-400' },
+            { label: 'Com Custo',      value: stats.comCusto,    color: 'text-blue-600 dark:text-blue-400' },
           ].map(s => (
             <div key={s.label} className="rounded-xl p-5 bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm">
               <p className="text-sm text-gray-500 dark:text-white/50 mb-1">{s.label}</p>
@@ -267,14 +267,14 @@ export default function ProducaoCompanyClient({
             onClick={() => { setActiveTab('fichas'); setTipoFicha('preparos'); }}
             className={`px-4 py-2 text-sm font-medium transition-all border-b-2 -mb-px ${
               activeTab === 'fichas' && tipoFicha === 'preparos'
-                ? 'border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
                 : 'border-transparent text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white/70'
             }`}
           >
             Fichas de Preparo
             <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
               activeTab === 'fichas' && tipoFicha === 'preparos'
-                ? 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400'
+                ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
                 : 'bg-gray-100 text-gray-400 dark:bg-white/10 dark:text-white/30'
             }`}>
               {fichas.filter(f => f.is_ficha_preparo).length}
@@ -302,13 +302,14 @@ export default function ProducaoCompanyClient({
         {activeTab === 'fichas' && (
           <>
 {/* Toolbar */}
-<div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-  <div className="flex gap-2">
+<div className="flex flex-col gap-2 mb-4">
+  {/* Linha 1: Filtros + contador */}
+  <div className="flex items-center gap-2">
     {(['todas', 'ativas', 'inativas'] as const).map(f => (
       <button
         key={f}
         onClick={() => setFiltro(f)}
-        className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
           filtro === f
             ? 'bg-blue-600 text-white'
             : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
@@ -317,27 +318,28 @@ export default function ProducaoCompanyClient({
         {f}
       </button>
     ))}
-  </div>
-  <div className="flex items-center gap-2">
-    <span className="text-xs text-gray-400 dark:text-white/40">
+    <span className="text-xs text-gray-400 dark:text-white/40 ml-auto whitespace-nowrap">
       {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
     </span>
+  </div>
 
-    {/* ✅ NOVO: Criar por Conversa */}
+  {/* Linha 2: Botões de ação */}
+  <div className="flex gap-2">
+    {/* Auxiliar de Produção — verde */}
     <button
       onClick={() => setShowConversacional(true)}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
-      style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)' }}
+      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+      style={{ background: '#16a34a' }}
     >
       <span className="text-sm leading-none">🔘</span>
-      Auxiliar de Produção 
+      Auxiliar de Produção
     </button>
 
-    {/* Botão existente: Nova Guia */}
+    {/* Nova Guia / Nova Ficha — azul sempre */}
     <button
       onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
-      style={{ background: tipoFicha === 'preparos' ? '#7c3aed' : '#2563eb' }}
+      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+      style={{ background: '#2563eb' }}
     >
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12h14"/><path d="M12 5v14"/>
@@ -381,8 +383,8 @@ export default function ProducaoCompanyClient({
                               {ficha.is_ficha_preparo && (
                                 <span style={{
                                   padding: '2px 8px',
-                                  background: 'rgba(168,85,247,0.15)',
-                                  color: '#a855f7',
+                                  background: 'rgba(37,99,235,0.15)',
+                                  color: '#2563eb',
                                   borderRadius: 20,
                                   fontSize: 11,
                                   fontWeight: 600,
@@ -412,7 +414,7 @@ export default function ProducaoCompanyClient({
                             </span>
                             {ficha.is_ficha_preparo ? (
                               ficha.custo_total !== null && ficha.rendimento > 0 && (
-                                <span className="text-xs font-medium" style={{ color: '#a855f7' }}>
+                                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
                                   {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
                                 </span>
                               )
@@ -479,7 +481,7 @@ export default function ProducaoCompanyClient({
                           </span>
                           {ficha.is_ficha_preparo ? (
                             ficha.custo_total !== null && ficha.rendimento > 0 && (
-                              <span style={{ color: '#a855f7' }}>
+                              <span className="text-blue-600 dark:text-blue-400">
                                 {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
                               </span>
                             )
@@ -504,7 +506,7 @@ export default function ProducaoCompanyClient({
 
                           {ficha.is_ficha_preparo && (
                             <div className="mb-4 mt-3">
-                              <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider mb-2">
+                              <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">
                                 Ingrediente Gerado
                               </p>
                               <IngredienteGerado fichaId={ficha.id} isDark={isDark} />
@@ -552,11 +554,8 @@ export default function ProducaoCompanyClient({
 
             {/* Footer contextual */}
             {tipoFicha === 'preparos' ? (
-              <div className="mt-6 p-4 rounded-xl border" style={{
-                background: isDark ? 'rgba(168,85,247,0.1)' : 'rgba(168,85,247,0.05)',
-                borderColor: isDark ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.15)',
-              }}>
-                <p className="text-sm" style={{ color: isDark ? '#e9d5ff' : '#7c3aed' }}>
+              <div className="mt-6 p-4 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
                   <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente.
                   O custo por unidade e calculado e alimenta o cadastro de ingredientes,
                   propagando para todas as fichas que os utilizam.
@@ -565,9 +564,8 @@ export default function ProducaoCompanyClient({
             ) : (
               <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Para criar ou editar guia, use o assistente de voz e diga{' '}
-                  <strong>"criar guia"</strong> ou <strong>"nova receita"</strong>.
-                  Guias com preco estimado possuem valores aproximados pela IA — confirme com seus fornecedores.
+                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>.
+                  Guias com preço estimado possuem valores aproximados pela IA — confirme com seus fornecedores.
                 </p>
               </div>
             )}

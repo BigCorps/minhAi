@@ -1498,18 +1498,21 @@ const MeuCupomForm = ({ companyId }: any) => {
 };
 
 const RegistrationConfigForm = ({ companyId }: any) => {
-  const ALL_FIELDS = [
-    { key: 'nome',        label: 'Nome completo',  required: true },
-    { key: 'telefone',    label: 'Telefone',        required: false },
-    { key: 'email',       label: 'E-mail',          required: false },
-    { key: 'cpf',         label: 'CPF',             required: false },
-    { key: 'endereco',    label: 'Endereço',        required: false },
-    { key: 'empresa',     label: 'Empresa',         required: false },
-    { key: 'cargo',       label: 'Cargo',           required: false },
-    { key: 'observacoes', label: 'Observações',     required: false },
+  const FIXED_FIELDS = [
+    { key: 'nome',        label: 'Nome',        required: true },
+    { key: 'sobrenome',   label: 'Sobrenome',   required: false },
+    { key: 'telefone',    label: 'Telefone',    required: false },
+    { key: 'email',       label: 'E-mail',      required: false },
+    { key: 'cpf',         label: 'CPF',         required: false },
+    { key: 'endereco',    label: 'Endereço',    required: false },
+    { key: 'empresa',     label: 'Empresa',     required: false },
+    { key: 'cargo',       label: 'Cargo',       required: false },
+    { key: 'observacoes', label: 'Observações', required: false },
   ];
 
   const [selectedFields, setSelectedFields] = useState<string[]>(['nome']);
+  // Campos customizados: [{ key: 'outros_0', label: 'Meu Campo' }, ...]
+  const [customFields, setCustomFields] = useState<{ key: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -1520,10 +1523,12 @@ const RegistrationConfigForm = ({ companyId }: any) => {
       setLoading(true);
       const { data } = await supabase
         .from('registration_configs')
-        .select('fields')
+        .select('fields, custom_fields')
         .eq('company_id', companyId)
         .maybeSingle();
+
       if (data?.fields) setSelectedFields(data.fields);
+      if (data?.custom_fields) setCustomFields(data.custom_fields);
       setLoading(false);
     }
     fetchConfig();
@@ -1536,16 +1541,43 @@ const RegistrationConfigForm = ({ companyId }: any) => {
     );
   }
 
-  const orderedSelected = ALL_FIELDS
-    .filter(f => selectedFields.includes(f.key))
-    .map(f => f.key);
+  function addCustomField() {
+    const key = `outros_${Date.now()}`;
+    setCustomFields(prev => [...prev, { key, label: '' }]);
+    setSelectedFields(prev => [...prev, key]);
+  }
+
+  function updateCustomLabel(key: string, label: string) {
+    setCustomFields(prev => prev.map(f => f.key === key ? { ...f, label } : f));
+  }
+
+  function removeCustomField(key: string) {
+    setCustomFields(prev => prev.filter(f => f.key !== key));
+    setSelectedFields(prev => prev.filter(k => k !== key));
+  }
+
+  // Ordem: fixos selecionados primeiro, depois customizados
+  const allFieldLabels: Record<string, string> = {
+    ...Object.fromEntries(FIXED_FIELDS.map(f => [f.key, f.label])),
+    ...Object.fromEntries(customFields.map(f => [f.key, f.label || 'Campo sem nome'])),
+  };
+
+  const orderedSelected = [
+    ...FIXED_FIELDS.filter(f => selectedFields.includes(f.key)).map(f => f.key),
+    ...customFields.filter(f => selectedFields.includes(f.key)).map(f => f.key),
+  ];
 
   async function handleSave() {
     setSaving(true);
     const { error } = await supabase
       .from('registration_configs')
       .upsert(
-        { company_id: companyId, fields: orderedSelected, updated_at: new Date().toISOString() },
+        {
+          company_id: companyId,
+          fields: orderedSelected,
+          custom_fields: customFields,
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: 'company_id' }
       );
     if (!error) {
@@ -1561,7 +1593,7 @@ const RegistrationConfigForm = ({ companyId }: any) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
     );
   }
@@ -1574,34 +1606,34 @@ const RegistrationConfigForm = ({ companyId }: any) => {
           Campos do Cadastro
         </p>
         <p className="text-sm text-blue-700 dark:text-blue-300">
-          Selecione quais informações o assistente irá coletar durante o cadastro por voz.
-          <strong className="text-blue-900 dark:text-blue-100"> Nome</strong> é obrigatório.
+          Selecione quais informações o assistente irá coletar.{' '}
+          <strong className="text-blue-900 dark:text-blue-100">Nome</strong> é obrigatório.
         </p>
       </div>
 
-      {/* Seletor de campos */}
-      <div className="space-y-2">
-        {ALL_FIELDS.map(field => {
+      {/* Grid 2 colunas no desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {FIXED_FIELDS.map(field => {
           const isSelected = selectedFields.includes(field.key);
           return (
             <button
               key={field.key}
               type="button"
               onClick={() => toggleField(field.key)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-sm ${
+              className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-sm ${
                 isSelected
-                  ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                   : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-300 dark:hover:border-slate-600'
               } ${field.required ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
             >
               <span className="font-medium">{field.label}</span>
               <div className="flex items-center gap-2">
                 {field.required && (
-                  <span className="text-xs text-yellow-600 dark:text-yellow-500">obrigatório</span>
+                  <span className="text-xs text-blue-500 dark:text-blue-400">obrigatório</span>
                 )}
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                   isSelected
-                    ? 'border-yellow-500 bg-yellow-500'
+                    ? 'border-blue-500 bg-blue-500'
                     : 'border-gray-300 dark:border-slate-600'
                 }`}>
                   {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
@@ -1612,20 +1644,56 @@ const RegistrationConfigForm = ({ companyId }: any) => {
         })}
       </div>
 
+      {/* Campos customizados */}
+      {customFields.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-gray-500 dark:text-slate-400">Campos personalizados:</p>
+          {customFields.map(cf => (
+            <div key={cf.key} className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Nome do campo (ex: Matrícula, Setor...)"
+                value={cf.label}
+                onChange={e => updateCustomLabel(cf.key, e.target.value)}
+                className="flex-1 px-3 py-2 text-sm border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={() => removeCustomField(cf.key)}
+                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition flex-shrink-0"
+                title="Remover campo"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Botão adicionar campo customizado */}
+      <button
+        type="button"
+        onClick={addCustomField}
+        className="w-full py-2.5 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 text-sm text-gray-500 dark:text-slate-400 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition flex items-center justify-center gap-2"
+      >
+        <Plus size={16} />
+        Adicionar campo personalizado
+      </button>
+
       {/* Preview da ordem */}
-      <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10">
-        <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">Ordem das perguntas:</p>
-        <p className="text-sm text-gray-600 dark:text-slate-300">
-          {orderedSelected.map((k, i) => {
-            const label = ALL_FIELDS.find(f => f.key === k)?.label ?? k;
-            return (
+      {orderedSelected.length > 0 && (
+        <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10">
+          <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">Ordem das perguntas:</p>
+          <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+            {orderedSelected.map((k, i) => (
               <span key={k}>
-                {i + 1}. {label}{i < orderedSelected.length - 1 ? ' → ' : ''}
+                {i + 1}. {allFieldLabels[k] || 'Campo sem nome'}
+                {i < orderedSelected.length - 1 ? ' → ' : ''}
               </span>
-            );
-          })}
-        </p>
-      </div>
+            ))}
+          </p>
+        </div>
+      )}
 
       {/* Em breve */}
       <div className="p-3 rounded-xl border border-dashed border-gray-300 dark:border-slate-600 opacity-60">
@@ -1636,11 +1704,11 @@ const RegistrationConfigForm = ({ companyId }: any) => {
         </div>
       </div>
 
-      {/* Botão salvar próprio */}
+      {/* Botão salvar */}
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-2.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
       >
         {saving
           ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /><span>Salvando...</span></>

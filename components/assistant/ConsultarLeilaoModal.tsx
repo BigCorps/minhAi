@@ -1,123 +1,111 @@
-// ARQUIVO: components/modals/ConsultarLeilaoModal.tsx
+'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { X, Car, Loader2, AlertCircle, FileText, Download, CheckCircle, Mail, ShieldCheck } from 'lucide-react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
+import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { createClient } from '@/lib/supabase-browser';
+import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
 
-const OPENING_TEXT = "Informe a placa do veículo para consultar o histórico de leilão";
-
-const DARK = {
-  bg: '#1a1a1a',
-  card: '#2a2a2a',
-  border: '#3a3a3a',
-  text: '#ffffff',
-  textMuted: '#a0a0a0',
-  accent: '#FFFF00',
-  error: '#ff4444',
-  success: '#00ff88',
-};
-
-const LIGHT = {
-  bg: '#ffffff',
-  card: '#f5f5f5',
-  border: '#e0e0e0',
-  text: '#000000',
-  textMuted: '#666666',
-  accent: '#FFCC00',
-  error: '#cc0000',
-  success: '#00aa55',
-};
+// =================================================================================
+// ARQUIVO: components/assistant/ConsultarLeilaoModal.tsx
+// DESCRIÇÃO: Modal para consulta de histórico de leilão de veículos via API
+// PADRÃO: Padrão 10 (read-only result) - eAi
+// =================================================================================
 
 interface ConsultarLeilaoModalProps {
-  isOpen: boolean;
+  data: {
+    companyId: string;
+    placaPrefill?: string;
+  };
   onClose: () => void;
-  companyId: string;
+  theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
-  placaPrefill?: string;
 }
 
-export function ConsultarLeilaoModal({
-  isOpen,
+type Step = 'input' | 'loading' | 'result';
+
+interface ResultadoFormatado {
+  label: string;
+  value: string;
+}
+
+const normalize = (text: string) =>
+  text.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.,!?;:\-]+/g, '');
+
+export default function ConsultarLeilaoModal({
+  data,
   onClose,
-  companyId,
+  theme = 'dark',
   playText,
-  placaPrefill = '',
 }: ConsultarLeilaoModalProps) {
+  const { companyId, placaPrefill = '' } = data;
+
+  const [step, setStep] = useState<Step>('input');
   const [placa, setPlaca] = useState(placaPrefill);
-  const [loading, setLoading] = useState(false);
-  const [resultado, setResultado] = useState<[string, string][] | null>(null);
-  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<ResultadoFormatado[] | null>(null);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string>('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  const isDark = true;
-  const colors = isDark ? DARK : LIGHT;
+  const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
-  useModalVoiceCommand({
-    isOpen,
-    openingText: OPENING_TEXT,
-    playText,
-    commands: [
-      {
-        patterns: /[A-Z]{3}[\s-]?\d[A-Z\d]\d{2}/i,
-        action: (match) => {
-          const placaLimpa = match[0].replace(/[\s-]/g, '').toUpperCase();
-          setPlaca(placaLimpa);
-        },
-      },
-    ],
-  });
+  const isDark = theme === 'dark';
+  const bg = isDark ? 'bg-slate-900' : 'bg-white';
+  const border = isDark ? 'border-slate-700' : 'border-gray-200';
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
+  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
+
+  // ── formatação / validação ───────────────────────────────────────────────
 
   const formatarPlaca = (valor: string) => {
     const limpo = valor.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 7);
-    
     if (limpo.length <= 3) return limpo;
-    if (limpo.length <= 4) return `${limpo.slice(0, 3)}-${limpo.slice(3)}`;
     return `${limpo.slice(0, 3)}-${limpo.slice(3, 7)}`;
   };
 
   const handlePlacaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valorFormatado = formatarPlaca(e.target.value);
-    setPlaca(valorFormatado);
+    setPlaca(formatarPlaca(e.target.value));
   };
 
   const validarPlaca = (placaStr: string): boolean => {
-    const placaLimpa = placaStr.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    
-    if (placaLimpa.length !== 7) return false;
-    
-    const padraoAntigo = /^[A-Z]{3}\d{4}$/;
-    const padraoMercosul = /^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
-    
-    return padraoAntigo.test(placaLimpa) || padraoMercosul.test(placaLimpa);
+    const p = placaStr.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    if (p.length !== 7) return false;
+    return /^[A-Z]{3}\d{4}$/.test(p) || /^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(p);
   };
+
+  // ── consultar ───────────────────────────────────────────────────────────
 
   const handleConsultar = async () => {
     const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
 
     if (!validarPlaca(placaLimpa)) {
       setError('Placa inválida. Formato: ABC1234 ou ABC1D23.');
-      playText('Placa inválida. Por favor, informe uma placa válida.');
+      playText('Placa inválida. Por favor, informe uma placa válida.').catch(() => {});
       return;
     }
 
-    setLoading(true);
+    setStep('loading');
     setError(null);
     setResultado(null);
     setPdfBase64(null);
 
     try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+
+      // 1. Executar consulta
       const { data: execData, error: execError } = await supabase.functions.invoke(
         'executar-consulta-eai',
         {
           body: {
-            consulta: {
-              id: 'leilao',
-              nome: 'Consultar Leilão',
-              custoOriginal: 2.0,
-            },
+            consulta: { id: 'leilao', nome: 'Consultar Leilão', custoOriginal: 2.0 },
             dadosEntrada: { placa: placaLimpa },
-            userId: (await supabase.auth.getUser()).data.user?.id,
+            userId: userData.user?.id,
             companyId,
           },
         }
@@ -127,271 +115,353 @@ export function ConsultarLeilaoModal({
 
       if (execData.status === 'SALDO_INSUFICIENTE') {
         setError('Saldo de créditos insuficiente.');
-        playText('Saldo de créditos insuficiente para realizar a consulta.');
+        setStep('input');
+        playText('Saldo de créditos insuficiente para realizar a consulta.').catch(() => {});
         return;
       }
 
       if (execData.status === 'PENDENTE_PIX') {
         setError('Pagamento via PIX necessário. Funcionalidade não disponível neste modal.');
-        playText('Pagamento via PIX necessário.');
+        setStep('input');
+        playText('Pagamento via PIX necessário.').catch(() => {});
         return;
       }
 
-      if (execData.status === 'PAGO_AUTOMATICAMENTE' || execData.status === 'EXECUTADO_GRATUITAMENTE') {
-        const { data: confirmData, error: confirmError } = await supabase.functions.invoke(
-          'confirmar-e-executar-consulta-eai',
-          {
-            body: { historicoId: execData.historicoId },
-          }
-        );
+      // 2. Confirmar e executar
+      const { data: confirmData, error: confirmError } = await supabase.functions.invoke(
+        'confirmar-e-executar-consulta-eai',
+        { body: { historicoId: execData.historicoId } }
+      );
 
-        if (confirmError) throw confirmError;
+      if (confirmError) throw confirmError;
 
-        setResultado(confirmData.resultado);
-        setPdfBase64(confirmData.pdfGerado);
-        
-        const temLeilao = confirmData.resultado && confirmData.resultado.length > 0;
-        if (temLeilao) {
-          playText('Consulta realizada. Histórico de leilão encontrado.');
-        } else {
-          playText('Consulta realizada. Este veículo não possui histórico de leilão.');
-        }
-      }
+      const fileName = `consulta-leilao-${placaLimpa}.pdf`;
+      // normaliza resultado: aceita [label, value][] ou {label, value}[]
+      const rows: ResultadoFormatado[] = (confirmData.resultado ?? []).map(
+        (r: any) => Array.isArray(r) ? { label: r[0], value: r[1] } : r
+      );
+      setResultado(rows);
+      setPdfBase64(confirmData.pdfGerado || null);
+      setPdfFileName(fileName);
+      setStep('result');
+
+      playText(
+        rows.length > 0
+          ? 'Consulta realizada. Histórico de leilão encontrado.'
+          : 'Consulta realizada. Este veículo não possui histórico de leilão.'
+      ).catch(() => {});
+
     } catch (err: any) {
       console.error('Erro ao consultar leilão:', err);
       setError(err.message || 'Erro ao consultar histórico de leilão.');
-      playText('Erro ao consultar leilão. Tente novamente.');
-    } finally {
-      setLoading(false);
+      setStep('input');
+      playText('Erro ao consultar leilão. Tente novamente.').catch(() => {});
     }
   };
+
+  // ── download PDF ─────────────────────────────────────────────────────────
 
   const handleDownloadPdf = () => {
     if (!pdfBase64) return;
     const link = document.createElement('a');
     link.href = pdfBase64;
-    link.download = `consulta_leilao_${placa.replace(/[^A-Z0-9]/gi, '')}.pdf`;
+    link.download = pdfFileName || `consulta_leilao_${placa.replace(/[^A-Z0-9]/gi, '')}.pdf`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    playText('PDF baixado com sucesso.').catch(() => {});
   };
 
-  if (!isOpen) return null;
+  // ── enviar por e-mail ────────────────────────────────────────────────────
+
+  const handleSendByEmail = async () => {
+    if (!resultado) return;
+    setIsSendingEmail(true);
+    try {
+      const supabase = createClient();
+      const bodyText = resultado.length > 0
+        ? resultado.map(r => (r.label === '---' ? `\n${r.value}` : `${r.label}: ${r.value}`)).join('\n')
+        : 'Este veículo não possui histórico de leilão registrado.';
+
+      const { error } = await supabase.functions.invoke('enviar-email-google', {
+        body: {
+          company_id: companyId,
+          subject: `Resultado: Consulta Leilão ${placa}`,
+          body: bodyText,
+        },
+      });
+      if (error) throw error;
+      playText('E-mail enviado com sucesso.').catch(() => {});
+      setTimeout(() => onClose(), 1500);
+    } catch {
+      playText('Erro ao enviar e-mail.').catch(() => {});
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  // ── voz ──────────────────────────────────────────────────────────────────
+
+  useModalVoiceCommand({
+    active: true,
+    onTranscript: (transcript) => {
+      const t = normalize(transcript);
+
+      if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
+        onClose(); return;
+      }
+
+      // Detecta placa ditada durante o step de input
+      if (step === 'input') {
+        const match = transcript.replace(/\s/g, '').match(/[A-Z]{3}\d[A-Z0-9]\d{2}|[A-Z]{3}\d{4}/i);
+        if (match) {
+          setPlaca(formatarPlaca(match[0]));
+          return;
+        }
+      }
+
+      if (step === 'result') {
+        if (['baixar', 'download', 'pdf'].some(c => t.includes(c))) {
+          handleDownloadPdf(); return;
+        }
+        if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
+          handleSendByEmail(); return;
+        }
+      }
+    },
+  });
+
+  // ── render ───────────────────────────────────────────────────────────────
+
+  const modalMaxWidth = step === 'result' ? 'max-w-lg sm:max-w-3xl' : 'max-w-lg';
+  const semHistorico = resultado !== null && resultado.length === 0;
 
   return createPortal(
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '1rem',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: colors.bg,
-          borderRadius: '12px',
-          width: '100%',
-          maxWidth: '600px',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          style={{
-            padding: '1.5rem',
-            borderBottom: `1px solid ${colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '2rem' }}>🟡</span>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: colors.text, margin: 0 }}>
-              Consultar Leilão
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
-              color: colors.textMuted,
-              padding: '0.25rem',
-            }}
-          >
-            ✕
-          </button>
-        </div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className={`relative w-full ${modalMaxWidth} rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col`}>
 
-        <div style={{ padding: '1.5rem' }}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: colors.text,
-              }}
-            >
-              Placa do Veículo
-            </label>
-            <input
-              type="text"
-              value={placa}
-              onChange={handlePlacaChange}
-              placeholder="ABC-1234 ou ABC-1D23"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: colors.card,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '8px',
-                color: colors.text,
-                fontSize: '1rem',
-                outline: 'none',
-                textTransform: 'uppercase',
-              }}
-            />
-            <p style={{ fontSize: '0.75rem', color: colors.textMuted, marginTop: '0.5rem' }}>
-              Consulta histórico de leilões do veículo (pátio, data, comitente, índice de risco)
-            </p>
-          </div>
-
-          {!resultado && (
-            <button
-              onClick={handleConsultar}
-              disabled={loading || !placa}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: loading || !placa ? colors.border : colors.accent,
-                color: '#000',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: loading || !placa ? 'not-allowed' : 'pointer',
-                marginBottom: '1rem',
-              }}
-            >
-              {loading ? 'Consultando...' : 'Consultar Histórico de Leilão'}
-            </button>
-          )}
-
-          {error && (
-            <div
-              style={{
-                padding: '1rem',
-                backgroundColor: `${colors.error}22`,
-                border: `1px solid ${colors.error}`,
-                borderRadius: '8px',
-                color: colors.error,
-                marginBottom: '1rem',
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          {resultado && resultado.length > 0 && (
-            <div
-              style={{
-                backgroundColor: colors.card,
-                borderRadius: '8px',
-                padding: '1rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: '1.125rem',
-                  fontWeight: 'bold',
-                  color: colors.text,
-                  marginBottom: '1rem',
-                }}
-              >
-                Histórico de Leilão
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {resultado.map(([label, valor], index) => {
-                  if (label === '---') {
-                    return (
-                      <div
-                        key={index}
-                        style={{
-                          fontWeight: 'bold',
-                          color: colors.accent,
-                          marginTop: index > 0 ? '0.5rem' : 0,
-                        }}
-                      >
-                        {valor}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      key={index}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '160px 1fr',
-                        gap: '0.5rem',
-                      }}
-                    >
-                      <span style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
-                        {label}:
-                      </span>
-                      <span style={{ color: colors.text, fontWeight: '500' }}>{valor}</span>
-                    </div>
-                  );
-                })}
+        {/* Header */}
+        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-yellow-950/40' : 'bg-yellow-50'} flex-shrink-0`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                <Car className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className={`text-xl font-bold ${textPrimary}`}>Consultar Leilão</h2>
+                <p className={`text-sm ${textMuted}`}>Histórico de leilão do veículo</p>
               </div>
             </div>
-          )}
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-          {resultado && resultado.length === 0 && (
-            <div
-              style={{
-                padding: '1rem',
-                backgroundColor: `${colors.success}22`,
-                border: `1px solid ${colors.success}`,
-                borderRadius: '8px',
-                color: colors.success,
-                marginBottom: '1rem',
-                textAlign: 'center',
-              }}
-            >
-              ✓ Este veículo não possui histórico de leilão registrado.
+        {/* Content */}
+        <div className="p-6 overflow-y-auto flex-1">
+
+          {error && (
+            <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'}`}>
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className={`text-sm ${isDark ? 'text-red-200' : 'text-red-800'}`}>{error}</p>
             </div>
           )}
 
-          {pdfBase64 && (
-            <button
-              onClick={handleDownloadPdf}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: colors.success,
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-              }}
-            >
-              📄 Baixar PDF
-            </button>
+          {/* ── STEP: INPUT ── */}
+          {step === 'input' && (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+                  Placa do Veículo *
+                </label>
+                <input
+                  type="text"
+                  value={placa}
+                  onChange={handlePlacaChange}
+                  placeholder="ABC-1234 ou ABC-1D23"
+                  maxLength={8}
+                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-yellow-500 transition uppercase`}
+                  autoFocus
+                />
+                <p className={`mt-1 text-xs ${textMuted}`}>
+                  Consulta pátio, data, comitente e índice de risco do veículo
+                </p>
+              </div>
+
+              <div className={`p-4 rounded-lg border ${border} ${isDark ? 'bg-blue-950/20' : 'bg-blue-50'}`}>
+                <div className="flex items-start gap-2">
+                  <FileText className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className={`text-sm font-medium ${textPrimary}`}>Custo da consulta</p>
+                    <p className={`text-xs ${textMuted} mt-1`}>
+                      2 créditos serão consumidos ao realizar esta consulta
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleConsultar}
+                disabled={!placa || placa.replace(/[^A-Z0-9]/gi, '').length < 7}
+                className="w-full py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-black rounded-lg font-semibold transition flex items-center justify-center gap-2"
+              >
+                <Car className="w-5 h-5" />
+                Consultar Histórico de Leilão
+              </button>
+            </div>
+          )}
+
+          {/* ── STEP: LOADING ── */}
+          {step === 'loading' && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-12 h-12 text-yellow-500 animate-spin mb-4" />
+              <p className={`text-lg font-medium ${textPrimary}`}>Consultando leilão...</p>
+              <p className={`text-sm ${textMuted} mt-2`}>Aguarde enquanto buscamos os dados</p>
+            </div>
+          )}
+
+          {/* ── STEP: RESULT ── */}
+          {step === 'result' && resultado !== null && (
+            <div className="flex flex-col gap-4">
+
+              {/* Banner sucesso */}
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
+                <span className={`font-semibold ${textPrimary}`}>Consulta realizada com sucesso</span>
+              </div>
+
+              {/* Sem histórico */}
+              {semHistorico && (
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${isDark ? 'bg-green-900/20 border-green-700 text-green-300' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                  <ShieldCheck className="w-5 h-5 shrink-0" />
+                  <p className="text-sm font-medium">Este veículo não possui histórico de leilão registrado.</p>
+                </div>
+              )}
+
+              {/* Layout responsivo: coluna única mobile / duas colunas desktop */}
+              {!semHistorico && (
+                <div className="flex flex-col sm:flex-row gap-4">
+
+                  {/* Coluna esquerda — tabela + botões */}
+                  <div className="flex flex-col gap-3 flex-1 min-w-0">
+
+                    {/* Tabela de resultados */}
+                    <div className={`border ${border} rounded-xl overflow-hidden`}>
+                      <div className="max-h-[360px] overflow-y-auto">
+                        {resultado.map((item, index) => (
+                          <div
+                            key={index}
+                            className={`px-4 py-3 border-b ${border} last:border-b-0 ${
+                              index % 2 === 0
+                                ? isDark ? 'bg-slate-800/50' : 'bg-gray-50'
+                                : isDark ? 'bg-slate-900' : 'bg-white'
+                            }`}
+                          >
+                            {item.label === '---' ? (
+                              <div className="font-semibold text-yellow-400 text-sm">{item.value}</div>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className={`text-sm font-medium ${textMuted}`}>{item.label}</div>
+                                <div className={`col-span-2 text-sm ${textPrimary}`}>{item.value}</div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Botões de ação */}
+                    <div className="flex gap-2">
+                      {pdfBase64 && (
+                        <button
+                          onClick={handleDownloadPdf}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-black"
+                        >
+                          <Download className="w-4 h-4" />
+                          Baixar PDF
+                        </button>
+                      )}
+
+                      {googleConnected && (
+                        <button
+                          onClick={handleSendByEmail}
+                          disabled={isSendingEmail}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                        >
+                          {isSendingEmail
+                            ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                            : <><Mail className="w-4 h-4" />Enviar por e-mail</>
+                          }
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Coluna direita — QR de download (apenas desktop) */}
+                  {pdfBase64 && (
+                    <div className="hidden sm:flex flex-col shrink-0 w-56">
+                      <ResultDownloadQR
+                        companyId={companyId}
+                        fileName={pdfFileName}
+                        fileType="application/pdf"
+                        fileBase64={pdfBase64}
+                        isDark={isDark}
+                        enabled={step === 'result' && !!pdfBase64}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* QR mobile — apenas em telas pequenas */}
+              {!semHistorico && pdfBase64 && (
+                <div className="sm:hidden">
+                  <ResultDownloadQR
+                    companyId={companyId}
+                    fileName={pdfFileName}
+                    fileType="application/pdf"
+                    fileBase64={pdfBase64}
+                    isDark={isDark}
+                    enabled={step === 'result' && !!pdfBase64}
+                  />
+                </div>
+              )}
+
+              {/* Botões quando não há histórico (sem QR) */}
+              {semHistorico && (
+                <div className="flex gap-2">
+                  {pdfBase64 && (
+                    <button
+                      onClick={handleDownloadPdf}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-black"
+                    >
+                      <Download className="w-4 h-4" />
+                      Baixar PDF
+                    </button>
+                  )}
+                  {googleConnected && (
+                    <button
+                      onClick={handleSendByEmail}
+                      disabled={isSendingEmail}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                    >
+                      {isSendingEmail
+                        ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                        : <><Mail className="w-4 h-4" />Enviar por e-mail</>
+                      }
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={onClose}
+                className={`w-full py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+              >
+                Fechar
+              </button>
+            </div>
           )}
         </div>
       </div>

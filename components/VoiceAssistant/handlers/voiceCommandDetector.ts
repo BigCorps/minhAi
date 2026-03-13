@@ -129,6 +129,22 @@ export async function detectVoiceCommand(
   const lowerTranscript = correctedTranscript.toLowerCase().trim();
   const transcriptWithNumbers = convertWordsToNumbers(lowerTranscript);
 
+// Adicionar dentro de detectVoiceCommand(), antes do commandProcessor
+const cadastroTriggers = [
+  'fazer cadastro', 'fazer o cadastro', 'novo cadastro',
+  'cadastrar', 'cadastrar cliente', 'cadastrar funcionario',
+  'cadastrar funcionário', 'cadastrar morador', 'cadastrar empresa',
+  'iniciar cadastro', 'quero me cadastrar',
+];
+
+if (cadastroTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'cadastro');
+  if (!isEnabled) { await playText('A função de cadastro está desativada.'); return true; }
+  await handleCadastro({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'cadastro', 1);
+  return true;
+}
+
   // 1. PRIMEIRO: Verificar se é um comando de ABERTURA de função (via Registry)
   // Isso evita que comandos como "enviar email" caiam na confirmação antes do modal abrir.
   if (commandProcessor) {

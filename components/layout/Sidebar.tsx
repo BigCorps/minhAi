@@ -15,6 +15,7 @@ import {
   HelpCircle,
   Share2,
   FolderOpen,
+  UserPlus,
   Calendar,  // ← NOVO: Calendário
   Mail,      // ← NOVO: Emails
 } from 'lucide-react';
@@ -26,7 +27,8 @@ const menuItems = [
   { href: '/dashboard/faqs',         label: 'Perguntas e Respostas',            icon: HelpCircle },
   { href: '/dashboard/agenda',       label: 'Serviços Google',                  icon: Calendar },
   { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: Share2 },
-  { href: '/dashboard/producao',     label: 'Linha de Produção',               icon: ClipboardList },
+  { href: '/dashboard/producao',     label: 'Linha de Produção',                icon: ClipboardList },
+  { href: '/dashboard/cadastros',    label: 'Cadastros',                        icon: UserPlus },
   { href: '/dashboard/arquivos',     label: 'Arquivos e Cupons',                icon: FolderOpen },
   { href: '/dashboard/saldo',        label: 'Recebimentos',                     icon: Wallet },
   { href: '/dashboard/historico',    label: 'Histórico',                        icon: MessageSquare },

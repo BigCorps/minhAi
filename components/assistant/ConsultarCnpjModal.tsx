@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Building, Loader2, AlertCircle, FileText, Download, CheckCircle } from 'lucide-react';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
 
 interface ConsultarCnpjModalProps {

@@ -1497,6 +1497,160 @@ const MeuCupomForm = ({ companyId }: any) => {
   );
 };
 
+const RegistrationConfigForm = ({ companyId }: any) => {
+  const ALL_FIELDS = [
+    { key: 'nome',        label: 'Nome completo',  required: true },
+    { key: 'telefone',    label: 'Telefone',        required: false },
+    { key: 'email',       label: 'E-mail',          required: false },
+    { key: 'cpf',         label: 'CPF',             required: false },
+    { key: 'endereco',    label: 'Endereço',        required: false },
+    { key: 'empresa',     label: 'Empresa',         required: false },
+    { key: 'cargo',       label: 'Cargo',           required: false },
+    { key: 'observacoes', label: 'Observações',     required: false },
+  ];
+
+  const [selectedFields, setSelectedFields] = useState<string[]>(['nome']);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchConfig() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('registration_configs')
+        .select('fields')
+        .eq('company_id', companyId)
+        .maybeSingle();
+      if (data?.fields) setSelectedFields(data.fields);
+      setLoading(false);
+    }
+    fetchConfig();
+  }, [companyId]);
+
+  function toggleField(key: string) {
+    if (key === 'nome') return;
+    setSelectedFields(prev =>
+      prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+    );
+  }
+
+  const orderedSelected = ALL_FIELDS
+    .filter(f => selectedFields.includes(f.key))
+    .map(f => f.key);
+
+  async function handleSave() {
+    setSaving(true);
+    const { error } = await supabase
+      .from('registration_configs')
+      .upsert(
+        { company_id: companyId, fields: orderedSelected, updated_at: new Date().toISOString() },
+        { onConflict: 'company_id' }
+      );
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } else {
+      console.error('Erro ao salvar registration_configs:', error);
+      alert('Erro ao salvar. Tente novamente.');
+    }
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Info */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+          Campos do Cadastro
+        </p>
+        <p className="text-sm text-blue-700 dark:text-blue-300">
+          Selecione quais informações o assistente irá coletar durante o cadastro por voz.
+          <strong className="text-blue-900 dark:text-blue-100"> Nome</strong> é obrigatório.
+        </p>
+      </div>
+
+      {/* Seletor de campos */}
+      <div className="space-y-2">
+        {ALL_FIELDS.map(field => {
+          const isSelected = selectedFields.includes(field.key);
+          return (
+            <button
+              key={field.key}
+              type="button"
+              onClick={() => toggleField(field.key)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-sm ${
+                isSelected
+                  ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                  : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-300 dark:hover:border-slate-600'
+              } ${field.required ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
+            >
+              <span className="font-medium">{field.label}</span>
+              <div className="flex items-center gap-2">
+                {field.required && (
+                  <span className="text-xs text-yellow-600 dark:text-yellow-500">obrigatório</span>
+                )}
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                  isSelected
+                    ? 'border-yellow-500 bg-yellow-500'
+                    : 'border-gray-300 dark:border-slate-600'
+                }`}>
+                  {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Preview da ordem */}
+      <div className="p-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10">
+        <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">Ordem das perguntas:</p>
+        <p className="text-sm text-gray-600 dark:text-slate-300">
+          {orderedSelected.map((k, i) => {
+            const label = ALL_FIELDS.find(f => f.key === k)?.label ?? k;
+            return (
+              <span key={k}>
+                {i + 1}. {label}{i < orderedSelected.length - 1 ? ' → ' : ''}
+              </span>
+            );
+          })}
+        </p>
+      </div>
+
+      {/* Em breve */}
+      <div className="p-3 rounded-xl border border-dashed border-gray-300 dark:border-slate-600 opacity-60">
+        <p className="text-xs text-gray-400 dark:text-slate-500 font-medium mb-2">Em breve</p>
+        <div className="flex gap-4 text-xs text-gray-400 dark:text-slate-500">
+          <span>Cadastro com biometria</span>
+          <span>Identificação facial</span>
+        </div>
+      </div>
+
+      {/* Botão salvar próprio */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-2.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
+      >
+        {saving
+          ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /><span>Salvando...</span></>
+          : saved ? '✓ Salvo!' : 'Salvar Configurações'
+        }
+      </button>
+    </div>
+  );
+};
+
 // ===== MAPEAMENTO: function_key → componente =====
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_whatsapp': WhatsappForm,
@@ -1538,6 +1692,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'fichas_producao': FichasProducaoForm,
   'fichas_producao_conversacional': FichasProducaoForm,
   'meu_cupom': MeuCupomForm,
+  'cadastro': RegistrationConfigForm,
 };
 
 // ===== INTERFACE =====

@@ -686,17 +686,6 @@ case 'contrato_em_texto':
           playText('Diga o conteúdo e quando acabar, diga CONCLUIR.').catch(() => {});
           break;
 
-case 'fichas_producao':
-  await stopGoogleSpeech();
-  stopAudioImmediately();
-  setActiveModal({
-    type: 'FichaProducaoDisplay',
-    data: {
-      companyId,
-    },
-  });
-  break;
-
 case 'fichas_producao_conversacional':
   await stopGoogleSpeech();
   stopAudioImmediately();

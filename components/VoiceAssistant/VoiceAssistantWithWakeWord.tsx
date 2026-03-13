@@ -553,14 +553,24 @@ case 'consultar_cep':
   await playText('Abrindo consulta de CEP.');
   break;
 
+case 'consultar_cpf':
+  setActiveModal?.({ type: 'ConsultarCpfModal', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de CPF.');
+  break;
+
 case 'consultar_cnpj':
-  setActiveModal?.({ type: 'ConsultarCNPJDisplay', data: { companyId: company?.id } });
+  setActiveModal?.({ type: 'ConsultarCnpjModal', data: { companyId: company?.id } });
   await playText('Abrindo consulta de CNPJ.');
   break;
 
-case 'consultar_cpf':
-  setActiveModal?.({ type: 'ConsultarCPFDisplay', data: { companyId: company?.id } });
-  await playText('Abrindo consulta de CPF.');
+case 'consultar_placa':
+  setActiveModal?.({ type: 'ConsultarPlacaModal', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de placa.');
+  break;
+
+case 'consultar_leilao':
+  setActiveModal?.({ type: 'ConsultarLeilaoModal', data: { companyId: company?.id } });
+  await playText('Abrindo consulta de leilão.');
   break;
 
 case 'restricoes_cpf':
@@ -581,16 +591,6 @@ case 'consultar_feriados':
 case 'consultar_ddd':
   setActiveModal?.({ type: 'ConsultarDDDDisplay', data: { companyId: company?.id } });
   await playText('Abrindo consulta de DDD.');
-  break;
-
-case 'consultar_placa':
-  // TODO: Implementar após modal de pagamento
-  await playText('Consulta de placa temporariamente indisponível.');
-  break;
-
-case 'consultar_leilao':
-  // TODO: Implementar após modal de pagamento
-  await playText('Consulta de leilão temporariamente indisponível.');
   break;
 
 case 'cadastro':

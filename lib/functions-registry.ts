@@ -1451,6 +1451,263 @@ tabela_em_texto: {
   },
 },
 
+// ========================================
+// FERRAMENTAS / CONSULTAS
+// ========================================
+
+// ── Cotação de Moedas ─────────────────────────────────────────
+cotacao_moedas: {
+  functionKey: 'cotacao_moedas',
+  functionName: 'Cotação de Moedas',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'cotação de moedas', 'cotacao de moedas', 'cotação moeda', 'cotacao moeda',
+    'preço do dólar', 'preco do dolar', 'valor do dólar', 'valor do dolar',
+    'preço do euro', 'preco do euro', 'valor do euro',
+    'câmbio', 'cambio', 'moeda estrangeira'
+  ],
+  examplePhrases: ['Cotação do dólar', 'Preço do euro hoje', 'Câmbio de moedas'],
+  requiresInput: false,
+  description: 'Consulta cotações de moedas estrangeiras em tempo real (dólar, euro, libra, etc.).',
+  shortDescription: 'Cotação de moedas',
+  icon: '💱',
+  color: '#10B981',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } });
+      await playText('Abrindo consulta de cotação de moedas.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+// ── Consultar CEP ─────────────────────────────────────────────
+consultar_cep: {
+  functionKey: 'consultar_cep',
+  functionName: 'Consultar CEP',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'consultar cep', 'consulta cep', 'buscar cep', 'pesquisar cep',
+    'cep', 'código postal', 'codigo postal', 'endereço por cep', 'endereco por cep'
+  ],
+  examplePhrases: ['Consultar CEP', 'Buscar endereço por CEP', 'Pesquisar CEP'],
+  requiresInput: false,
+  description: 'Consulta endereços completos a partir do CEP (logradouro, bairro, cidade, UF).',
+  shortDescription: 'Consultar CEP',
+  icon: '📍',
+  color: '#3B82F6',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'ConsultarCEPDisplay', data: { companyId } });
+      await playText('Abrindo consulta de CEP.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+// ── Consultar CNPJ ────────────────────────────────────────────
+consultar_cnpj: {
+  functionKey: 'consultar_cnpj',
+  functionName: 'Dados CNPJ',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'consultar cnpj', 'consulta cnpj', 'buscar cnpj', 'pesquisar cnpj',
+    'dados cnpj', 'dados da empresa', 'informações da empresa', 'informacoes da empresa',
+    'cnpj', 'razão social', 'razao social'
+  ],
+  examplePhrases: ['Consultar CNPJ', 'Dados da empresa por CNPJ', 'Buscar razão social'],
+  requiresInput: false,
+  description: 'Consulta dados cadastrais de empresas pelo CNPJ (razão social, endereço, situação cadastral).',
+  shortDescription: 'Dados CNPJ',
+  icon: '🏢',
+  color: '#8B5CF6',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'ConsultarCNPJDisplay', data: { companyId } });
+      await playText('Abrindo consulta de CNPJ.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+// ── Consultar CPF ─────────────────────────────────────────────
+consultar_cpf: {
+  functionKey: 'consultar_cpf',
+  functionName: 'Dados CPF',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'consultar cpf', 'consulta cpf', 'buscar cpf', 'pesquisar cpf',
+    'dados cpf', 'validar cpf', 'verificar cpf', 'cpf'
+  ],
+  examplePhrases: ['Consultar CPF', 'Validar CPF', 'Dados de CPF'],
+  requiresInput: false,
+  description: 'Valida e consulta informações básicas de CPF (situação cadastral, dígito verificador).',
+  shortDescription: 'Dados CPF',
+  icon: '👤',
+  color: '#F59E0B',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'ConsultarCPFDisplay', data: { companyId } });
+      await playText('Abrindo consulta de CPF.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+// ── Restrições CPF ────────────────────────────────────────────
+restricoes_cpf: {
+  functionKey: 'restricoes_cpf',
+  functionName: 'Restrições CPF',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'restrições cpf', 'restricoes cpf', 'pendências cpf', 'pendencias cpf',
+    'consultar restrições cpf', 'consultar restricoes cpf', 'verificar pendências cpf',
+    'protestos cpf', 'dívidas cpf', 'dividas cpf'
+  ],
+  examplePhrases: ['Restrições de CPF', 'Consultar pendências de CPF', 'Verificar protestos CPF'],
+  requiresInput: false,
+  description: 'Consulta restrições e pendências financeiras de CPF (simulação - use API oficial para dados reais).',
+  shortDescription: 'Restrições CPF',
+  icon: '⚠️',
+  color: '#EF4444',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'RestricoesCPFDisplay', data: { companyId } });
+      await playText('Abrindo consulta de restrições de CPF.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+// ── Restrições CNPJ ───────────────────────────────────────────
+restricoes_cnpj: {
+  functionKey: 'restricoes_cnpj',
+  functionName: 'Restrições CNPJ',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'restrições cnpj', 'restricoes cnpj', 'pendências cnpj', 'pendencias cnpj',
+    'consultar restrições cnpj', 'consultar restricoes cnpj', 'verificar pendências cnpj',
+    'protestos cnpj', 'dívidas cnpj', 'dividas cnpj', 'débitos empresa', 'debitos empresa'
+  ],
+  examplePhrases: ['Restrições de CNPJ', 'Consultar pendências de empresa', 'Verificar débitos CNPJ'],
+  requiresInput: false,
+  description: 'Consulta restrições e pendências financeiras de CNPJ (simulação - use API oficial para dados reais).',
+  shortDescription: 'Restrições CNPJ',
+  icon: '🚨',
+  color: '#DC2626',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'RestricoesCNPJDisplay', data: { companyId } });
+      await playText('Abrindo consulta de restrições de CNPJ.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+// ── Feriados Nacionais ────────────────────────────────────────
+feriados_nacionais: {
+  functionKey: 'feriados_nacionais',
+  functionName: 'Feriados Nacionais',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'feriados nacionais', 'feriados', 'feriado', 'consultar feriados',
+    'feriados do ano', 'lista de feriados', 'calendário de feriados', 'calendario de feriados'
+  ],
+  examplePhrases: ['Feriados nacionais', 'Listar feriados do ano', 'Calendário de feriados'],
+  requiresInput: false,
+  description: 'Lista todos os feriados nacionais de um determinado ano com datas e tipos.',
+  shortDescription: 'Feriados nacionais',
+  icon: '📅',
+  color: '#EC4899',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'FeriadosNacionaisDisplay', data: { companyId } });
+      await playText('Abrindo consulta de feriados nacionais.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+// ── Consultar DDD ─────────────────────────────────────────────
+consultar_ddd: {
+  functionKey: 'consultar_ddd',
+  functionName: 'Consultar DDD',
+  category: 'tools',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'consultar ddd', 'consulta ddd', 'buscar ddd', 'pesquisar ddd',
+    'ddd', 'código de área', 'codigo de area', 'cidades por ddd', 'região ddd', 'regiao ddd'
+  ],
+  examplePhrases: ['Consultar DDD', 'Cidades do DDD 11', 'Buscar DDD'],
+  requiresInput: false,
+  description: 'Consulta cidades atendidas por um código de DDD e informações da região.',
+  shortDescription: 'Consultar DDD',
+  icon: '📞',
+  color: '#06B6D4',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'ConsultarDDDDisplay', data: { companyId } });
+      await playText('Abrindo consulta de DDD.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
 // ── Contrato em Texto ─────────────────────────────────────────
 contrato_em_texto: {
   functionKey: 'contrato_em_texto',

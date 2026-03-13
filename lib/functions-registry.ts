@@ -1473,7 +1473,7 @@ consultar_cambio: {
     'Preço do euro hoje',
     'Câmbio de moedas'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } });
       await playText('Abrindo consulta de câmbio.');
@@ -1498,7 +1498,7 @@ consultar_cep: {
     'Buscar endereço por CEP',
     'Pesquisar CEP'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'ConsultarCEPDisplay', data: { companyId } });
       await playText('Abrindo consulta de CEP.');
@@ -1524,7 +1524,7 @@ consultar_cnpj: {
     'Dados da empresa por CNPJ',
     'Buscar razão social'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'ConsultarCNPJDisplay', data: { companyId } });
       await playText('Abrindo consulta de CNPJ.');
@@ -1549,7 +1549,7 @@ consultar_cpf: {
     'Validar CPF',
     'Dados de CPF'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'ConsultarCPFDisplay', data: { companyId } });
       await playText('Abrindo consulta de CPF.');
@@ -1575,7 +1575,7 @@ restricoes_cpf: {
     'Consultar pendências de CPF',
     'Verificar protestos CPF'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'RestricoesCPFDisplay', data: { companyId } });
       await playText('Abrindo consulta de restrições de CPF.');
@@ -1601,7 +1601,7 @@ restricoes_cnpj: {
     'Consultar pendências de empresa',
     'Verificar débitos CNPJ'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'RestricoesCNPJDisplay', data: { companyId } });
       await playText('Abrindo consulta de restrições de CNPJ.');
@@ -1626,7 +1626,7 @@ consultar_feriados: {
     'Listar feriados do ano',
     'Calendário de feriados'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'FeriadosNacionaisDisplay', data: { companyId } });
       await playText('Abrindo consulta de feriados nacionais.');
@@ -1651,7 +1651,7 @@ consultar_ddd: {
     'Cidades do DDD 11',
     'Buscar DDD'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'ConsultarDDDDisplay', data: { companyId } });
       await playText('Abrindo consulta de DDD.');
@@ -1676,7 +1676,7 @@ consultar_placa: {
     'Dados do veículo por placa',
     'Buscar informações de carro'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       // TODO: Implementar modal de consulta de placa com integração de pagamento
       // setActiveModal?.({ type: 'ConsultarPlacaDisplay', data: { companyId } });
@@ -1703,7 +1703,7 @@ consultar_leilao: {
     'Buscar veículo em leilão',
     'Leilão de carro'
   ],
-  handler: async ({ playText, setActiveModal, companyId }: FunctionHandlerParams) => {
+  handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       // TODO: Implementar modal de consulta de leilão com integração de pagamento
       // setActiveModal?.({ type: 'ConsultarLeilaoDisplay', data: { companyId } });

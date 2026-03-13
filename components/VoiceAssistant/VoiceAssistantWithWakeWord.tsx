@@ -543,6 +543,10 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
           playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
           break;
 
+case 'cadastro':
+  await handleCadastro({ companyId, setIsProcessing, setActiveModal, playText });
+  break;
+
 case 'enviar_arquivo':
   await stopGoogleSpeech();
   setActiveModal({

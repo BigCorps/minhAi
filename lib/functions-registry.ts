@@ -25,7 +25,7 @@ export interface FunctionDefinition {
   // Identificação
   functionKey: string;
   functionName: string;
-  category: 'contact' | 'payment' | 'biometry' | 'schedule' | 'information' | 'images' | 'ai_assistant' | 'video' | 'productivity' | 'utylities' | 'codes' | 'services';
+  category: 'contact' | 'payment' | 'biometry' | 'knowledge' | 'schedule' | 'information' | 'images' | 'ai_assistant' | 'video' | 'productivity' | 'utylities' | 'codes' | 'services';
   
   // Tipo de resposta
   responseType: ResponseType;
@@ -1630,13 +1630,659 @@ cadastro: {
   handler: async ({ playText, setActiveModal, companyId }) => {
     try {
       setActiveModal?.({ type: 'RegistrationDisplay', data: { companyId } });
-      await playText('Abrindo cadastro.');
       return true;
     } catch (error) {
       console.error('Erro ao abrir cadastro:', error);
       return false;
     }
   }
+},
+
+// ============================================================
+// CATEGORIA: KNOWLEDGE (🟡 - #FFFF00)
+// ============================================================
+ 
+consultar_cnpj: {
+  functionKey: 'consultar_cnpj',
+  functionName: 'Dados CNPJ',
+  category: 'knowledge',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'cnpj',
+    'dados da empresa',
+    'consultar empresa',
+    'razão social',
+    'receita federal',
+    'dados do cnpj',
+    'informações do cnpj',
+    'buscar empresa',
+  ],
+ 
+  examplePhrases: [
+    'Consultar CNPJ 12.345.678/0001-90',
+    'Dados da empresa',
+    'Informações do CNPJ',
+    'Buscar empresa por CNPJ',
+  ],
+ 
+  requiresInput: false,
+  description: 'Consulta dados cadastrais completos de empresas na Receita Federal. Retorna informação detalhada incluindo razão social, nome fantasia, CNAE, capital social, endereço completo, situação cadastral, data de início das atividades, contatos e sócios.',
+  shortDescription: 'Dados cadastrais de CNPJ',
+  icon: '🟡',
+  color: '#FFFF00',
+ 
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🟡 [CONSULTAR CNPJ] Abrindo modal');
+ 
+      // Extrair CNPJ do transcript
+      const cnpjMatch = transcript?.match(/\d{14}|\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-\s]?\d{2}/);
+      const cnpjPrefill = cnpjMatch ? cnpjMatch[0].replace(/\D/g, '') : '';
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConsultarCnpjModal',
+          data: {
+            companyId,
+            cnpjPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        cnpjPrefill
+          ? `Digite ou confirme o CNPJ ${cnpjPrefill} para consultar.`
+          : 'Digite o CNPJ que deseja consultar.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🟡 [CONSULTAR CNPJ] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de CNPJ.');
+      return false;
+    }
+  },
+},
+ 
+consultar_cpf: {
+  functionKey: 'consultar_cpf',
+  functionName: 'Dados CPF',
+  category: 'knowledge',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'cpf',
+    'dados pessoais',
+    'consultar cpf',
+    'pessoa física',
+    'dados do cpf',
+    'informações de pessoa física',
+    'buscar cpf',
+  ],
+ 
+  examplePhrases: [
+    'Consultar CPF 123.456.789-00',
+    'Dados do CPF',
+    'Informações de pessoa física',
+    'Buscar CPF',
+  ],
+ 
+  requiresInput: false,
+  description: 'Consulta informações cadastrais de pessoa física. Retorna dados como nome completo, nome da mãe, data de nascimento, idade, sexo e situação cadastral na Receita Federal.',
+  shortDescription: 'Dados cadastrais de CPF',
+  icon: '🟡',
+  color: '#FFFF00',
+ 
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🟡 [CONSULTAR CPF] Abrindo modal');
+ 
+      // Extrair CPF do transcript
+      const cpfMatch = transcript?.match(/\d{11}|\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}/);
+      const cpfPrefill = cpfMatch ? cpfMatch[0].replace(/\D/g, '') : '';
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConsultarCpfModal',
+          data: {
+            companyId,
+            cpfPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        cpfPrefill
+          ? `Digite ou confirme o CPF ${cpfPrefill} para consultar.`
+          : 'Digite o CPF que deseja consultar.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🟡 [CONSULTAR CPF] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de CPF.');
+      return false;
+    }
+  },
+},
+ 
+consultar_placa: {
+  functionKey: 'consultar_placa',
+  functionName: 'Consultar Placa',
+  category: 'knowledge',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'placa',
+    'veículo',
+    'consultar placa',
+    'dados do carro',
+    'detran',
+    'dados do veículo',
+    'informações da placa',
+    'buscar placa',
+  ],
+ 
+  examplePhrases: [
+    'Consultar placa ABC1D23',
+    'Dados do veículo',
+    'Informações da placa',
+    'Buscar veículo por placa',
+  ],
+ 
+  requiresInput: false,
+  description: 'Consulta dados completos de veículos pela placa. Retorna marca, modelo, ano de fabricação, ano do modelo, cor, chassi, situação, características técnicas (motor, combustível, potência, cilindradas), capacidade de passageiros, IPVA e histórico de roubo/furto.',
+  shortDescription: 'Dados completos de veículos',
+  icon: '🟡',
+  color: '#FFFF00',
+ 
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🟡 [CONSULTAR PLACA] Abrindo modal');
+ 
+      // Extrair placa do transcript (padrão BR: ABC1234 ou ABC1D23)
+      const placaMatch = transcript?.match(/[A-Z]{3}[\s-]?\d[A-Z\d]\d{2}/i);
+      const placaPrefill = placaMatch ? placaMatch[0].replace(/[\s-]/g, '').toUpperCase() : '';
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConsultarPlacaModal',
+          data: {
+            companyId,
+            placaPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        placaPrefill
+          ? `Digite ou confirme a placa ${placaPrefill} para consultar.`
+          : 'Digite a placa do veículo que deseja consultar.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🟡 [CONSULTAR PLACA] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de placa.');
+      return false;
+    }
+  },
+},
+ 
+consultar_leilao: {
+  functionKey: 'consultar_leilao',
+  functionName: 'Consultar Leilão',
+  category: 'knowledge',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'leilão',
+    'leilao',
+    'veículo leiloado',
+    'consultar leilão',
+    'histórico leilão',
+    'histórico de leilão',
+    'carro de leilão',
+    'buscar leilão',
+  ],
+ 
+  examplePhrases: [
+    'Consultar leilão da placa ABC1D23',
+    'Veículo tem leilão',
+    'Histórico de leilão',
+    'Buscar leilão por placa',
+  ],
+ 
+  requiresInput: false,
+  description: 'Verifica o histórico de leilão de veículos pela placa. Retorna informações sobre leilões anteriores, data do leilão, pátio, comitente, condição geral do veículo, quantidade em leilão, índice de risco e parecer técnico.',
+  shortDescription: 'Histórico de leilão de veículos',
+  icon: '🟡',
+  color: '#FFFF00',
+ 
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🟡 [CONSULTAR LEILÃO] Abrindo modal');
+ 
+      // Extrair placa do transcript
+      const placaMatch = transcript?.match(/[A-Z]{3}[\s-]?\d[A-Z\d]\d{2}/i);
+      const placaPrefill = placaMatch ? placaMatch[0].replace(/[\s-]/g, '').toUpperCase() : '';
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConsultarLeilaoModal',
+          data: {
+            companyId,
+            placaPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        placaPrefill
+          ? `Digite ou confirme a placa ${placaPrefill} para consultar o histórico de leilão.`
+          : 'Digite a placa do veículo para consultar o histórico de leilão.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🟡 [CONSULTAR LEILÃO] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de leilão.');
+      return false;
+    }
+  },
+},
+ 
+restricoes_cpf: {
+  functionKey: 'restricoes_cpf',
+  functionName: 'Restrições CPF',
+  category: 'knowledge',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'restrições cpf',
+    'restricoes cpf',
+    'score',
+    'quod',
+    'serasa',
+    'análise de crédito',
+    'analise de credito',
+    'inadimplência',
+    'inadimplencia',
+    'score de crédito',
+    'consultar quod',
+  ],
+ 
+  examplePhrases: [
+    'Restrições do CPF 123.456.789-00',
+    'Score de crédito',
+    'Consultar Quod CPF',
+    'Análise de crédito',
+  ],
+ 
+  requiresInput: false,
+  description: 'Consulta completa de restrições financeiras e score de crédito de CPF via Quod. Retorna score, probabilidade de inadimplência, nível de risco, histórico de protestos, restrições, pendências financeiras e análise de crédito detalhada.',
+  shortDescription: 'Score e restrições de CPF',
+  icon: '🟡',
+  color: '#FFFF00',
+ 
+  saveToHistory: true,
+  creditsPerUse: 15,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🟡 [RESTRIÇÕES CPF] Abrindo modal');
+ 
+      // Extrair CPF do transcript
+      const cpfMatch = transcript?.match(/\d{11}|\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}/);
+      const cpfPrefill = cpfMatch ? cpfMatch[0].replace(/\D/g, '') : '';
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'RestricoesCpfModal',
+          data: {
+            companyId,
+            cpfPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        cpfPrefill
+          ? `Digite ou confirme o CPF ${cpfPrefill} para consultar restrições.`
+          : 'Digite o CPF para consultar restrições e score de crédito.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🟡 [RESTRIÇÕES CPF] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de restrições de CPF.');
+      return false;
+    }
+  },
+},
+ 
+restricoes_cnpj: {
+  functionKey: 'restricoes_cnpj',
+  functionName: 'Restrições CNPJ',
+  category: 'knowledge',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'restrições cnpj',
+    'restricoes cnpj',
+    'score empresa',
+    'quod cnpj',
+    'análise crédito empresa',
+    'analise credito empresa',
+    'inadimplência empresa',
+    'inadimplencia empresa',
+    'score empresarial',
+    'consultar quod empresa',
+  ],
+ 
+  examplePhrases: [
+    'Restrições do CNPJ 12.345.678/0001-90',
+    'Score da empresa',
+    'Consultar Quod CNPJ',
+    'Análise de crédito empresarial',
+  ],
+ 
+  requiresInput: false,
+  description: 'Consulta completa de restrições financeiras e score de crédito de CNPJ via Quod. Retorna score empresarial, probabilidade de inadimplência, nível de risco, histórico de protestos, pendências financeiras, análise de crédito e informações de sócios. Requer CPF de um dos sócios.',
+  shortDescription: 'Score e restrições de CNPJ',
+  icon: '🟡',
+  color: '#FFFF00',
+ 
+  saveToHistory: true,
+  creditsPerUse: 20,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🟡 [RESTRIÇÕES CNPJ] Abrindo modal');
+ 
+      // Extrair CNPJ do transcript
+      const cnpjMatch = transcript?.match(/\d{14}|\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-\s]?\d{2}/);
+      const cnpjPrefill = cnpjMatch ? cnpjMatch[0].replace(/\D/g, '') : '';
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'RestricoesCnpjModal',
+          data: {
+            companyId,
+            cnpjPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        cnpjPrefill
+          ? `Digite ou confirme o CNPJ ${cnpjPrefill} e o CPF de um sócio para consultar restrições.`
+          : 'Digite o CNPJ da empresa e o CPF de um sócio para consultar restrições e score.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🟡 [RESTRIÇÕES CNPJ] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de restrições de CNPJ.');
+      return false;
+    }
+  },
+},
+ 
+// ============================================================
+// CATEGORIA: INFORMATION (🧊 - #00FFF7)
+// ============================================================
+ 
+consultar_cambio: {
+  functionKey: 'consultar_cambio',
+  functionName: 'Cotação de Câmbio',
+  category: 'information',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'câmbio',
+    'cambio',
+    'dólar',
+    'dolar',
+    'cotação',
+    'cotacao',
+    'moeda',
+    'euro',
+    'bitcoin',
+    'cripto',
+    'libra',
+    'peso argentino',
+    'cotação do dólar',
+    'cotacao do dolar',
+    'preço do euro',
+    'preco do euro',
+  ],
+ 
+  examplePhrases: [
+    'Qual a cotação do dólar',
+    'Preço do euro hoje',
+    'Quanto está o bitcoin',
+    'Cotação USD',
+  ],
+ 
+  requiresInput: false,
+  description: 'Consulta cotações atualizadas de moedas em tempo real. Retorna valores de compra e venda, variação do dia, porcentagem de mudança, máxima e mínima do dia para moedas como Dólar (USD), Euro (EUR), Libra (GBP), Peso Argentino (ARS), Bitcoin (BTC) e Ethereum (ETH).',
+  shortDescription: 'Cotações de moedas em tempo real',
+  icon: '🧊',
+  color: '#00FFF7',
+ 
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🧊 [CONSULTAR CÂMBIO] Abrindo modal');
+ 
+      // Detectar moeda do transcript
+      const lowerTranscript = transcript?.toLowerCase() || '';
+      let moedaSelecionada = 'USD-BRL'; // Padrão: Dólar
+ 
+      if (lowerTranscript.includes('euro')) {
+        moedaSelecionada = 'EUR-BRL';
+      } else if (lowerTranscript.includes('libra')) {
+        moedaSelecionada = 'GBP-BRL';
+      } else if (lowerTranscript.includes('peso') || lowerTranscript.includes('argentino')) {
+        moedaSelecionada = 'ARS-BRL';
+      } else if (lowerTranscript.includes('bitcoin') || lowerTranscript.includes('btc')) {
+        moedaSelecionada = 'BTC-BRL';
+      } else if (lowerTranscript.includes('ethereum') || lowerTranscript.includes('eth')) {
+        moedaSelecionada = 'ETH-BRL';
+      }
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConsultarCambioModal',
+          data: {
+            companyId,
+            moedaSelecionada,
+          },
+        });
+      }
+ 
+      await playText('Consultando cotação de moedas em tempo real.');
+ 
+      return true;
+    } catch (error) {
+      console.error('🧊 [CONSULTAR CÂMBIO] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de câmbio.');
+      return false;
+    }
+  },
+},
+ 
+consultar_feriados: {
+  functionKey: 'consultar_feriados',
+  functionName: 'Feriados Nacionais',
+  category: 'information',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'feriados',
+    'feriado nacional',
+    'dias não úteis',
+    'dias nao uteis',
+    'calendário',
+    'calendario',
+    'feriados nacionais',
+    'lista de feriados',
+    'quais os feriados',
+  ],
+ 
+  examplePhrases: [
+    'Feriados de 2025',
+    'Quais os feriados nacionais',
+    'Calendário de feriados',
+    'Lista de feriados',
+  ],
+ 
+  requiresInput: false,
+  description: 'Lista todos os feriados nacionais de um ano específico. Retorna nome do feriado, data completa e tipo (nacional, religioso, etc). Útil para planejamento de eventos, agendas e organização empresarial.',
+  shortDescription: 'Lista de feriados nacionais',
+  icon: '🧊',
+  color: '#00FFF7',
+ 
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🧊 [CONSULTAR FERIADOS] Abrindo modal');
+ 
+      // Extrair ano do transcript
+      const anoMatch = transcript?.match(/\b(20\d{2})\b/);
+      const anoPrefill = anoMatch ? anoMatch[1] : new Date().getFullYear().toString();
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConsultarFeriadosModal',
+          data: {
+            companyId,
+            anoPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        anoMatch
+          ? `Consultando feriados nacionais de ${anoPrefill}.`
+          : 'Digite o ano para consultar os feriados nacionais.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🧊 [CONSULTAR FERIADOS] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de feriados.');
+      return false;
+    }
+  },
+},
+ 
+// ============================================================
+// CATEGORIA: CONFIGURATION (🟣 - #800080)
+// ============================================================
+ 
+consultar_ddd: {
+  functionKey: 'consultar_ddd',
+  functionName: 'Consultar DDD',
+  category: 'configuration',
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'ddd',
+    'código de área',
+    'codigo de area',
+    'telefone',
+    'área telefônica',
+    'area telefonica',
+    'código telefônico',
+    'codigo telefonico',
+    'consultar ddd',
+    'qual o ddd',
+  ],
+ 
+  examplePhrases: [
+    'Qual o DDD de São Paulo',
+    'DDD 11',
+    'Código de área 21',
+    'Consultar DDD',
+  ],
+ 
+  requiresInput: false,
+  description: 'Identifica estado e cidades correspondentes a um código de área (DDD). Retorna a unidade federativa e lista completa de municípios que utilizam aquele código de área telefônica.',
+  shortDescription: 'Identifica estado e cidades por DDD',
+  icon: '🟣',
+  color: '#800080',
+ 
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: true,
+  isPremium: true,
+ 
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      console.log('🟣 [CONSULTAR DDD] Abrindo modal');
+ 
+      // Extrair DDD do transcript (2 dígitos)
+      const dddMatch = transcript?.match(/\b(\d{2})\b/);
+      const dddPrefill = dddMatch ? dddMatch[1] : '';
+ 
+      if (setActiveModal) {
+        setActiveModal({
+          type: 'ConsultarDddModal',
+          data: {
+            companyId,
+            dddPrefill,
+          },
+        });
+      }
+ 
+      await playText(
+        dddPrefill
+          ? `Digite ou confirme o DDD ${dddPrefill} para consultar.`
+          : 'Digite o código de área (DDD) com 2 dígitos para consultar.'
+      );
+ 
+      return true;
+    } catch (error) {
+      console.error('🟣 [CONSULTAR DDD] ERRO:', error);
+      await playText('Desculpe, não consegui abrir a consulta de DDD.');
+      return false;
+    }
+  },
 },
   
 // ── Utilitários ─────────────

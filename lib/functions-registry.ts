@@ -25,7 +25,7 @@ export interface FunctionDefinition {
   // Identificação
   functionKey: string;
   functionName: string;
-  category: 'contact' | 'payment' | 'schedule' | 'information' | 'images' | 'ai_assistant' | 'video' | 'productivity' | 'utylities' | 'codes' | 'services';
+  category: 'contact' | 'payment' | 'biometry' | 'schedule' | 'information' | 'images' | 'ai_assistant' | 'video' | 'productivity' | 'utylities' | 'codes' | 'services';
   
   // Tipo de resposta
   responseType: ResponseType;
@@ -1607,8 +1607,39 @@ ver_agenda: {
     }
   },
 },
+
+cadastro: {
+  functionKey: 'cadastro',
+  functionName: 'Cadastro',
+  category: 'biometry',
+  responseType: 'voice+modal',
+  description: 'Realiza cadastros por voz com campos configuráveis pelo operador.',
+  examplePhrases: ['Fazer cadastro', 'Cadastrar cliente', 'Novo cadastro'],
+  voiceTriggers: [
+    'fazer cadastro', 'fazer o cadastro',
+    'cadastrar', 'novo cadastro',
+    'cadastrar cliente', 'cadastrar funcionario', 'cadastrar funcionário',
+    'cadastrar morador', 'cadastrar empresa',
+    'iniciar cadastro', 'quero me cadastrar',
+  ],
+  requiresInput: false,
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal({ type: 'RegistrationDisplay', data: { companyId } });
+      await playText('Abrindo cadastro.');
+      return true;
+    } catch (error) {
+      console.error('Erro ao abrir cadastro:', error);
+      return false;
+    }
+  }
+},
   
-// ── Entradas a adicionar no FUNCTIONS_REGISTRY ─────────────
+// ── Utilitários ─────────────
 
   criar_lembrete: {
     functionKey: 'criar_lembrete',

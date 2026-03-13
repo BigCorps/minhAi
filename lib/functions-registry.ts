@@ -337,12 +337,6 @@ fichas_producao_conversacional: {
         data: { companyId, fichaType },
       });
 
-      await playText(
-        fichaType === 'preparo'
-          ? 'Abrindo criação de preparo por conversa. Me descreva sua receita.'
-          : 'Abrindo criação de ficha por conversa. Me descreva seu produto.'
-      );
-
       return true;
     } catch (error) {
       console.error('💬 [FICHAS CONVERSACIONAL] ERRO:', error);

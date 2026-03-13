@@ -1629,7 +1629,7 @@ cadastro: {
   isPremium: false,
   handler: async ({ playText, setActiveModal, companyId }) => {
     try {
-      setActiveModal({ type: 'RegistrationDisplay', data: { companyId } });
+      setActiveModal?.({ type: 'RegistrationDisplay', data: { companyId } });
       await playText('Abrindo cadastro.');
       return true;
     } catch (error) {

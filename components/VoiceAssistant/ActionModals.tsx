@@ -86,6 +86,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'GerarQRCodeDisplay':      GerarQRCodeDisplay,
   'GerarCodigoBarrasDisplay': GerarCodigoBarrasDisplay,
   'fichas_producao_conversacional': FichaConversacionalDisplay,
+  'FichaProducaoConversacionalDisplay': FichaConversacionalDisplay,
 
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,

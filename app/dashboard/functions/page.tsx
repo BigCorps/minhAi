@@ -58,7 +58,7 @@ const categories = [
   { key: 'contact',       name: 'Contato',      color: '#10B981' },
   { key: 'configuration', name: 'Localização',  color: '#800080' },
   { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
-  { key: 'biometry',      name: 'Biometria',    color: '#808000' },
+  { key: 'biometry',      name: 'Identificação',    color: '#808000' },
   { key: 'products',      name: 'Comercial',    color: '#FF00FF' },
   { key: 'images',        name: 'Arquivos',     color: '#000080' },
   { key: 'utylities',     name: 'Utilitários',  color: '#FFA500' },

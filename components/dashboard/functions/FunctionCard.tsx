@@ -45,7 +45,7 @@ const CATEGORY_NAMES: { [key: string]: string } = {
   'information': 'Informação',
   'ai_assistant': 'Conhecimento',
   'video': 'Multimídia',
-  'biometry': 'Biometria',
+  'biometry': 'Identificação',
   'products': 'Comercial',
   'images': 'Arquivos',
   'codes': 'Câmera',

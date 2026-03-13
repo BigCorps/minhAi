@@ -26,7 +26,7 @@ function TipoBadge({ tipo }: { tipo: TipoIngrediente }) {
   const map: Record<TipoIngrediente, { label: string; bg: string; color: string }> = {
     direto:      { label: 'Direto',      bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
     beneficiado: { label: 'Beneficiado', bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b' },
-    produzido:   { label: 'Produzido',   bg: 'rgba(168,85,247,0.15)', color: '#a855f7' },
+    produzido:   { label: 'Produzido',   bg: 'rgba(37,99,235,0.15)',   color: '#2563eb' },
   };
   const t = map[tipo] ?? map.direto;
   return (
@@ -252,118 +252,71 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div>
 
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: C.text, marginBottom: '8px' }}>
-          Ingredientes Base
-        </h2>
-        <p style={{ color: C.textMuted, fontSize: '14px' }}>
-          Gerencie os preços e tipos dos ingredientes. As fichas são recalculadas automaticamente.
-        </p>
-      </div>
-
-      {/* Filtros de tipo */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {([
-          { key: 'todos',       label: 'Todos' },
-          { key: 'direto',      label: 'Direto' },
-          { key: 'beneficiado', label: 'Beneficiado' },
-          { key: 'produzido',   label: 'Produzido' },
-        ] as const).map(({ key, label }) => {
-          const active = filtroTipo === key;
-          const colorMap: Record<string, string> = {
-            todos: C.accent, direto: '#3b82f6', beneficiado: '#f59e0b', produzido: '#a855f7',
-          };
-          return (
-            <button
-              key={key}
-              onClick={() => setFiltroTipo(key)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '20px',
-                border: `1px solid ${active ? colorMap[key] : C.border}`,
-                background: active ? colorMap[key] : 'transparent',
-                color: active ? '#fff' : C.textMuted,
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-              }}
-            >
-              {label}
-              <span style={{
-                marginLeft: '6px',
-                padding: '1px 6px',
-                borderRadius: '10px',
-                background: active ? 'rgba(255,255,255,0.25)' : C.bgSecondary,
-                fontSize: '11px',
-              }}>
-                {contadores[key]}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Barra de busca + botão adicionar */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1', minWidth: '250px', position: 'relative' }}>
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
-            style={{ color: C.textMuted }}
-          />
-          <input
-            type="text"
-            placeholder="Buscar ingrediente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 10px 10px 40px',
-              background: C.bgSecondary,
-              border: `1px solid ${C.border}`,
-              borderRadius: '8px',
-              color: C.text,
-              fontSize: '14px',
-            }}
-          />
+      {/* Toolbar — linha 1: filtros de tipo */}
+      <div className="flex flex-col gap-2 mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          {([
+            { key: 'todos',       label: 'Todos' },
+            { key: 'direto',      label: 'Direto' },
+            { key: 'beneficiado', label: 'Beneficiado' },
+            { key: 'produzido',   label: 'Produzido' },
+          ] as const).map(({ key, label }) => {
+            const active = filtroTipo === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setFiltroTipo(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  active
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
+                }`}
+              >
+                {label}
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                  active
+                    ? 'bg-white/25 text-white'
+                    : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-white/40'
+                }`}>
+                  {contadores[key]}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{
-            padding: '10px 20px',
-            background: C.accent,
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          Novo Ingrediente
-        </button>
+        {/* Linha 2: busca + botão */}
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-white/40" />
+            <input
+              type="text"
+              placeholder="Buscar ingrediente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg text-xs bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/30 border-0 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+            style={{ background: '#2563eb' }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Novo Ingrediente
+          </button>
+        </div>
       </div>
 
       {/* Formulário de adicionar */}
       {showAddForm && (
-        <div style={{
-          background: C.bgSecondary,
-          border: `1px solid ${C.border}`,
-          borderRadius: '12px',
-          padding: '16px',
-          marginBottom: '20px',
-        }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
+        <div className="rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 mb-4">
+          {/* Mobile: empilhado / Desktop: grid */}
+          <div className="flex flex-col sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-end">
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: C.textMuted }}>Nome</label>
+              <label className="block mb-1.5 text-xs text-gray-500 dark:text-white/50">Nome</label>
               <input
                 type="text"
                 placeholder="Ex: Farinha de Trigo"
@@ -372,9 +325,8 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                 style={{ width: '100%', padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '14px' }}
               />
             </div>
-
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: C.textMuted }}>Preço</label>
+              <label className="block mb-1.5 text-xs text-gray-500 dark:text-white/50">Preço</label>
               <input
                 type="number"
                 step="0.01"
@@ -384,9 +336,8 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                 style={{ width: '100%', padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '14px' }}
               />
             </div>
-
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: C.textMuted }}>Unidade</label>
+              <label className="block mb-1.5 text-xs text-gray-500 dark:text-white/50">Unidade</label>
               <select
                 value={novoIngrediente.unidade}
                 onChange={(e) => setNovoIngrediente(prev => ({ ...prev, unidade: e.target.value }))}
@@ -399,9 +350,8 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                 <option value="un">un (unidade)</option>
               </select>
             </div>
-
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: C.textMuted }}>Tipo</label>
+              <label className="block mb-1.5 text-xs text-gray-500 dark:text-white/50">Tipo</label>
               <select
                 value={novoIngrediente.tipo}
                 onChange={(e) => setNovoIngrediente(prev => ({ ...prev, tipo: e.target.value as TipoIngrediente }))}
@@ -412,10 +362,10 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                 <option value="produzido">Produzido</option>
               </select>
             </div>
-
             <button
               onClick={adicionarIngrediente}
-              style={{ padding: '8px 16px', background: C.success, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+              className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-medium text-white transition-all"
+              style={{ background: C.success }}
             >
               Adicionar
             </button>
@@ -423,171 +373,201 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
         </div>
       )}
 
-      {/* Tabela */}
+      {/* Lista vazia */}
       {ingredientesFiltrados.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: C.textMuted }}>
-          <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p style={{ fontSize: '16px', marginBottom: '8px' }}>
+        <div className="py-16 text-center">
+          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
+          <p className="text-gray-500 dark:text-white/40 font-medium">
             {searchTerm || filtroTipo !== 'todos' ? 'Nenhum ingrediente encontrado' : 'Nenhum ingrediente cadastrado'}
           </p>
-          <p style={{ fontSize: '14px' }}>
+          <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
             {!searchTerm && filtroTipo === 'todos' && 'Adicione ingredientes para começar a criar fichas de produção'}
           </p>
         </div>
       ) : (
-        <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
+        <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 
-          {/* Header da tabela */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '2fr 1fr 80px 130px 120px 60px',
-            gap: '12px',
-            padding: '12px 16px',
-            background: C.bgSecondary,
-            borderBottom: `1px solid ${C.border}`,
-            fontSize: '13px',
-            fontWeight: '600',
-            color: C.textMuted,
-          }}>
-            <div>INGREDIENTE</div>
-            <div>PREÇO</div>
-            <div>UNIDADE</div>
-            <div>TIPO</div>
-            <div>FICHAS</div>
+          {/* Header da tabela — só desktop */}
+          <div className="hidden sm:grid sm:grid-cols-[2fr_1fr_80px_130px_120px_60px] gap-3 px-4 py-3 border-b border-gray-100 dark:border-white/10 text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wider"
+            style={{ background: C.bgSecondary }}>
+            <div>Ingrediente</div>
+            <div>Preço</div>
+            <div>Unidade</div>
+            <div>Tipo</div>
+            <div>Fichas</div>
             <div></div>
           </div>
 
-          {/* Linhas */}
-          {ingredientesFiltrados.map((ing) => {
-            const isUpdating = updatingIds.has(ing.id);
-            const isEditing  = editingId === ing.id;
+          <div className="divide-y divide-gray-50 dark:divide-white/5">
+            {ingredientesFiltrados.map((ing) => {
+              const isUpdating = updatingIds.has(ing.id);
+              const isEditing  = editingId === ing.id;
 
-            return (
-              <div
-                key={ing.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1fr 80px 130px 120px 60px',
-                  gap: '12px',
-                  padding: '14px 16px',
-                  borderBottom: `1px solid ${C.border}`,
-                  alignItems: 'center',
-                  background: isUpdating ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
-                  transition: 'background 0.3s ease',
-                }}
-              >
-                {/* Nome */}
-                <div style={{ fontSize: '14px', fontWeight: '500', color: C.text }}>
-                  {ing.nome}
-                </div>
+              return (
+                <div
+                  key={ing.id}
+                  className="transition-colors"
+                  style={{ background: isUpdating ? 'rgba(34,197,94,0.08)' : 'transparent', transition: 'background 0.3s ease' }}
+                >
+                  {/* Desktop: grid de uma linha */}
+                  <div className="hidden sm:grid sm:grid-cols-[2fr_1fr_80px_130px_120px_60px] gap-3 px-4 py-3.5 items-center">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{ing.nome}</div>
 
-                {/* Preço editável */}
-                <div>
-                  {isEditing ? (
-                    <input
-                      ref={inputRef}
-                      type="number"
-                      step="0.01"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => salvarPreco(ing.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') salvarPreco(ing.id);
-                        if (e.key === 'Escape') setEditingId(null);
-                      }}
-                      style={{ width: '100%', padding: '6px 10px', background: C.bg, border: `2px solid ${C.accent}`, borderRadius: '6px', color: C.text, fontSize: '14px' }}
-                    />
-                  ) : (
-                    <div
-                      onClick={() => iniciarEdicao(ing)}
-                      title="Clique para editar"
-                      style={{ padding: '6px 10px', background: C.bgSecondary, borderRadius: '6px', cursor: 'pointer', fontSize: '14px', color: C.text, fontFamily: 'monospace' }}
-                    >
-                      R$ {ing.preco_por_unidade.toFixed(2)}
+                    <div>
+                      {isEditing ? (
+                        <input
+                          ref={inputRef}
+                          type="number"
+                          step="0.01"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => salvarPreco(ing.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') salvarPreco(ing.id);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          style={{ width: '100%', padding: '6px 10px', background: C.bg, border: `2px solid ${C.accent}`, borderRadius: '6px', color: C.text, fontSize: '14px' }}
+                        />
+                      ) : (
+                        <div
+                          onClick={() => iniciarEdicao(ing)}
+                          title="Clique para editar"
+                          className="px-2.5 py-1.5 rounded-lg cursor-pointer text-sm font-mono text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                          style={{ background: C.bgSecondary }}
+                        >
+                          R$ {ing.preco_por_unidade.toFixed(2)}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {/* Unidade */}
-                <div style={{ fontSize: '14px', color: C.textMuted }}>
-                  {ing.unidade}
-                </div>
+                    <div className="text-sm text-gray-500 dark:text-white/50">{ing.unidade}</div>
 
-                {/* Tipo — select inline */}
-                <div>
-                  {ing.tipo === 'produzido' ? (
-                    // Produzido mostra badge sem select (controlado por ficha de preparo)
-                    <TipoBadge tipo={ing.tipo} />
-                  ) : (
-                    <select
-                      value={ing.tipo}
-                      onChange={(e) => salvarTipo(ing.id, e.target.value as TipoIngrediente)}
-                      style={selectStyle}
-                    >
-                      <option value="direto">Direto</option>
-                      <option value="beneficiado">Beneficiado</option>
-                      <option value="produzido">Produzido</option>
-                    </select>
-                  )}
-                </div>
+                    <div>
+                      {ing.tipo === 'produzido' ? (
+                        <TipoBadge tipo={ing.tipo} />
+                      ) : (
+                        <select value={ing.tipo} onChange={(e) => salvarTipo(ing.id, e.target.value as TipoIngrediente)} style={selectStyle}>
+                          <option value="direto">Direto</option>
+                          <option value="beneficiado">Beneficiado</option>
+                          <option value="produzido">Produzido</option>
+                        </select>
+                      )}
+                    </div>
 
-                {/* Badge fichas */}
-                <div>
-                  {isUpdating ? (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      padding: '4px 10px', background: 'rgba(34,197,94,0.2)', color: C.success,
-                      borderRadius: '12px', fontSize: '12px', fontWeight: '600',
-                    }}>
-                      <span className="animate-pulse">●</span>
-                      Atualizando {ing.fichas_usando}
-                    </span>
-                  ) : (ing.fichas_usando ?? 0) > 0 ? (
-                    <span style={{
-                      display: 'inline-block', padding: '4px 10px',
-                      background: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.1)',
-                      color: C.accent, borderRadius: '12px', fontSize: '12px', fontWeight: '600',
-                    }}>
-                      {ing.fichas_usando} {ing.fichas_usando === 1 ? 'ficha' : 'fichas'}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '12px', color: C.textMuted }}>Não usado</span>
-                  )}
-                </div>
+                    <div>
+                      {isUpdating ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: 'rgba(34,197,94,0.2)', color: C.success }}>
+                          <span className="animate-pulse">●</span> Atualizando
+                        </span>
+                      ) : (ing.fichas_usando ?? 0) > 0 ? (
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.1)', color: C.accent }}>
+                          {ing.fichas_usando} {ing.fichas_usando === 1 ? 'ficha' : 'fichas'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-white/30">Não usado</span>
+                      )}
+                    </div>
 
-                {/* Deletar */}
-                <div style={{ textAlign: 'right' }}>
-                  <button
-                    onClick={() => deletarIngrediente(ing.id, ing.nome, ing.fichas_usando ?? 0)}
-                    disabled={(ing.fichas_usando ?? 0) > 0}
-                    style={{
-                      padding: '6px', background: 'transparent', border: 'none',
-                      cursor: (ing.fichas_usando ?? 0) > 0 ? 'not-allowed' : 'pointer',
-                      opacity: (ing.fichas_usando ?? 0) > 0 ? 0.3 : 0.6,
-                      transition: 'opacity 0.2s',
-                    }}
-                    onMouseEnter={(e) => { if ((ing.fichas_usando ?? 0) === 0) e.currentTarget.style.opacity = '1'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.opacity = (ing.fichas_usando ?? 0) > 0 ? '0.3' : '0.6'; }}
-                  >
-                    <Trash2 className="w-4 h-4" style={{ color: C.danger }} />
-                  </button>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => deletarIngrediente(ing.id, ing.nome, ing.fichas_usando ?? 0)}
+                        disabled={(ing.fichas_usando ?? 0) > 0}
+                        className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mobile: card */}
+                  <div className="sm:hidden px-4 py-4">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-gray-900 dark:text-white text-sm">{ing.nome}</span>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <TipoBadge tipo={ing.tipo} />
+                          {(ing.fichas_usando ?? 0) > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.1)', color: C.accent }}>
+                              {ing.fichas_usando} {ing.fichas_usando === 1 ? 'ficha' : 'fichas'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => deletarIngrediente(ing.id, ing.nome, ing.fichas_usando ?? 0)}
+                        disabled={(ing.fichas_usando ?? 0) > 0}
+                        className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-2">
+                      {/* Preço editável mobile */}
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <input
+                            ref={inputRef}
+                            type="number"
+                            step="0.01"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => salvarPreco(ing.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') salvarPreco(ing.id);
+                              if (e.key === 'Escape') setEditingId(null);
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg text-sm font-mono"
+                            style={{ background: C.bg, border: `2px solid ${C.accent}`, color: C.text }}
+                          />
+                        ) : (
+                          <div
+                            onClick={() => iniciarEdicao(ing)}
+                            title="Toque para editar"
+                            className="px-2.5 py-1.5 rounded-lg cursor-pointer text-sm font-mono text-gray-900 dark:text-white"
+                            style={{ background: C.bgSecondary }}
+                          >
+                            R$ {ing.preco_por_unidade.toFixed(2)} <span className="text-xs text-gray-400 dark:text-white/30">/{ing.unidade}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tipo select mobile (apenas não-produzido) */}
+                      {ing.tipo !== 'produzido' && (
+                        <select
+                          value={ing.tipo}
+                          onChange={(e) => salvarTipo(ing.id, e.target.value as TipoIngrediente)}
+                          className="text-xs rounded-lg px-2 py-1.5"
+                          style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text }}
+                        >
+                          <option value="direto">Direto</option>
+                          <option value="beneficiado">Beneficiado</option>
+                          <option value="produzido">Produzido</option>
+                        </select>
+                      )}
+                    </div>
+
+                    {isUpdating && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: 'rgba(34,197,94,0.2)', color: C.success }}>
+                          <span className="animate-pulse">●</span> Atualizando fichas...
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
       {/* Footer */}
-      <div style={{
-        marginTop: '16px', padding: '12px 16px',
-        background: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)',
-        border: `1px solid ${isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.1)'}`,
-        borderRadius: '8px', fontSize: '13px', color: C.textMuted,
-      }}>
-        <strong style={{ color: C.text }}>Dica:</strong> Ao alterar o preço de um ingrediente,
-        todas as fichas que o utilizam são recalculadas automaticamente.{' '}
-        Ingredientes <strong style={{ color: '#a855f7' }}>Produzidos</strong> têm preço calculado automaticamente pela sua Ficha de Preparo (Fase C).
+      <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          Ao alterar o preço de um ingrediente, todas as fichas que o utilizam são recalculadas automaticamente.{' '}
+          Ingredientes <strong>Produzidos</strong> têm preço calculado automaticamente pela sua Ficha de Preparo.
+        </p>
       </div>
     </div>
   );

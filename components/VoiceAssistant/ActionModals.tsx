@@ -107,7 +107,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ConsultarDDDDisplay': ConsultarDDDDisplay,
   // 'ConsultarPlacaDisplay': ConsultarPlacaDisplay, // TODO
   // 'ConsultarLeilaoDisplay': ConsultarLeilaoDisplay, // TODO
-};
+
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

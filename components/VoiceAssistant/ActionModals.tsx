@@ -44,11 +44,13 @@ import GerarQRCodeDisplay       from '@/components/assistant/GerarQRCodeDisplay'
 import GerarCodigoBarrasDisplay  from '@/components/assistant/GerarCodigoBarrasDisplay';
 import FichaConversacionalDisplay from '@/components/assistant/FichaConversacionalDisplay';
 import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
+import ConsultarCpfModal from '@/components/assistant/ConsultarCpfModal';
+import ConsultarCnpjModal from '@/components/assistant/ConsultarCnpjModal';
+import ConsultarPlacaModal from '@/components/assistant/ConsultarPlacaModal';
+import ConsultarLeilaoModal from '@/components/assistant/ConsultarLeilaoModal';
 import CotacaoMoedasDisplay from '@/components/assistant/CotacaoMoedasDisplay';
 import ConsultarCEPDisplay from '@/components/assistant/ConsultarCEPDisplay';
-import ConsultarCNPJDisplay from '@/components/assistant/ConsultarCNPJDisplay';
-import ConsultarCPFDisplay from '@/components/assistant/ConsultarCPFDisplay';
-import RestricoesCpfModal from '@/components/assistant/RestricoesCPFDisplay';
+import RestricoesCPFDisplay from '@/components/assistant/RestricoesCPFDisplay';
 import RestricoesCNPJDisplay from '@/components/assistant/RestricoesCNPJDisplay';
 import FeriadosNacionaisDisplay from '@/components/assistant/FeriadosNacionaisDisplay';
 import ConsultarDDDDisplay from '@/components/assistant/ConsultarDDDDisplay';
@@ -97,16 +99,16 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'fichas_producao_conversacional': FichaConversacionalDisplay,
   'FichaProducaoConversacionalDisplay': FichaConversacionalDisplay,
   'RegistrationDisplay': RegistrationDisplay,
+  'ConsultarCpfModal': ConsultarCpfModal,
+  'ConsultarCnpjModal': ConsultarCnpjModal,
+  'ConsultarPlacaModal': ConsultarPlacaModal,
+  'ConsultarLeilaoModal': ConsultarLeilaoModal,
   'CotacaoMoedasDisplay': CotacaoMoedasDisplay,
   'ConsultarCEPDisplay': ConsultarCEPDisplay,
-  'ConsultarCNPJDisplay': ConsultarCNPJDisplay,
-  'ConsultarCpfModal': ConsultarCpfModal,
   'RestricoesCPFDisplay': RestricoesCPFDisplay,
   'RestricoesCNPJDisplay': RestricoesCNPJDisplay,
   'FeriadosNacionaisDisplay': FeriadosNacionaisDisplay,
   'ConsultarDDDDisplay': ConsultarDDDDisplay,
-  // 'ConsultarPlacaDisplay': ConsultarPlacaDisplay, // TODO
-  // 'ConsultarLeilaoDisplay': ConsultarLeilaoDisplay, // TODO
 
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,

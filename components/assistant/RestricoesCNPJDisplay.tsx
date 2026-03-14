@@ -89,8 +89,8 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
     setErrorMsg(null);
 
     try {
-      const { data: res, error } = await supabase.functions.invoke('restricoes-cnpj', {
-        body: { company_id: data.companyId, cnpj: cleanCnpj },
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: data.companyId, action: 'restricoes_cnpj', cnpj }
       });
 
       if (error) throw new Error(error.message);

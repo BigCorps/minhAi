@@ -1647,8 +1647,8 @@ consultar_cambio: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'câmbio', 'cambio', 'dólar', 'dolar', 'cotação', 'cotacao',
-    'moeda', 'euro', 'bitcoin', 'cripto', 'libra', 'peso argentino',
+    'câmbio', 'cambio', 'dólar', 'dolar', 'cotação', 'cotacao', 'consultar cambio', 'consultar câmbio', 
+    'moeda', 'euro', 'bitcoin', 'cripto', 'libra', 'peso argentino', 'cotacao de cambio', 'cotacao de câmbio',  
     'cotação do dólar', 'cotacao do dolar', 'preço do euro', 'preco do euro'
   ],
 

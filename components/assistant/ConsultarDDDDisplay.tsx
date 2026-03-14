@@ -121,17 +121,39 @@ export default function ConsultarDDDDisplay({ data, onClose, theme = 'dark', pla
     setTimeout(() => setCopied(false), 2000);
   }, [resultData, playText]);
 
-  const handleDownloadPdf = useCallback(() => {
-    if (!fileBase64) return;
-    const blob = new Blob([Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0))], { type: 'application/pdf' });
+const handleDownloadPdf = useCallback(() => {
+  if (!fileBase64) return;
+  
+  // ✅ ADICIONAR ESTA PARTE (que está faltando):
+  try {
+    // Remover prefixo se existir
+    let base64Clean = fileBase64;
+    if (base64Clean.includes(',')) {
+      base64Clean = base64Clean.split(',')[1];
+    }
+    
+    // Decodificar base64
+    const byteString = atob(base64Clean);
+    const byteArray = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+      byteArray[i] = byteString.charCodeAt(i);
+    }
+    
+    // Criar blob e fazer download
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName || `ddd_${Date.now()}.pdf`;
+    a.download = fileName || `consulta_${Date.now()}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-    playText('PDF de DDD baixado.').catch(() => {});
-  }, [fileBase64, fileName, playText]);
+    
+    playText('PDF baixado.').catch(() => {});
+  } catch (error) {
+    console.error('Erro ao baixar PDF:', error);
+    playText('Erro ao baixar PDF.').catch(() => {});
+  }
+}, [fileBase64, fileName, playText]);
 
   const handleReset = useCallback(() => {
     setStage('input');

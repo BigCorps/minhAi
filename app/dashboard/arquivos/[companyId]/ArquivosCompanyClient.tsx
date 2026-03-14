@@ -472,23 +472,19 @@ export default function ArquivosCompanyClient({
                         </td>
 
                         <td className="px-6 py-4">
-                          {consulta.pdf_disponivel ? (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span className="text-xs text-gray-600 dark:text-white/60">
-                                Disponível ({Math.floor(consulta.minutos_restantes)} min)
-                              </span>
-                            </div>
-                          ) : consulta.expirado ? (
-                            <span className="text-xs text-gray-400 dark:text-white/40">
-                              Expirado
-                            </span>
-                          ) : (
-                            <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                              Processando...
-                            </span>
-                          )}
-                        </td>
+  {consulta.pdf_disponivel ? (
+    <div className="flex items-center gap-2">
+      <CheckCircle className="w-4 h-4 text-green-500" />
+      <span className="text-xs text-gray-600 dark:text-white/60">
+        Disponível ({Math.floor(consulta.minutos_restantes)} min)
+      </span>
+    </div>
+  ) : (
+    <span className="text-xs text-gray-400 dark:text-white/40">
+      —
+    </span>
+  )}
+</td>
 
                         <td className="px-6 py-4">
                           {consulta.pdf_disponivel ? (

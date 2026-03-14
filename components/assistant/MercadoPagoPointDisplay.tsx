@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase-browser'
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand'
 import {
   X,
   CreditCard,
@@ -68,6 +69,8 @@ export default function MercadoPagoPointDisplay({
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const handleGerarRef = useRef<(overrideCents?: number) => void>(() => {})
+  const handleCloseRef = useRef<() => void>(() => {})
 
   // ── Limpeza ────────────────────────────────────────────────────────────────
 
@@ -82,6 +85,33 @@ export default function MercadoPagoPointDisplay({
       window.speechSynthesis?.cancel()
     }
   }, [clearPolling])
+
+  // ── Reconhecimento de voz no modal ────────────────────────────────────────
+  // stage 'input'   → ouve valor em reais e dispara a cobrança
+  // stage 'awaiting' → ouve "fechar" / "cancelar" e encerra
+
+  useModalVoiceCommand({
+    active: stage === 'input' || stage === 'awaiting',
+    onTranscript: (transcript) => {
+      const t = transcript.toLowerCase().trim()
+
+      // ── Fechar / cancelar (qualquer stage ativo) ──────────────────────────
+      const CLOSE_TRIGGERS = ['fechar', 'fecha', 'cancelar', 'cancela', 'sair', 'sai', 'não', 'nao']
+      if (CLOSE_TRIGGERS.some(w => t.includes(w))) {
+        window.speechSynthesis?.cancel()
+        handleCloseRef.current()
+        return
+      }
+
+      // ── Extrair valor e cobrar (só no stage input) ────────────────────────
+      if (stage === 'input') {
+        const cents = extractCentsFromTranscript(t)
+        if (cents && cents >= 100) {
+          handleGerarRef.current(cents)
+        }
+      }
+    },
+  })
 
   // ── Countdown ──────────────────────────────────────────────────────────────
 
@@ -270,6 +300,38 @@ export default function MercadoPagoPointDisplay({
     onClose()
   }
 
+  // Manter refs atualizados com as funções mais recentes
+  useEffect(() => { handleGerarRef.current = handleGerar })
+  useEffect(() => { handleCloseRef.current = handleClose })
+
+  // ── Helper: extrair centavos de um transcript ────────────────────────────
+
+  function extractCentsFromTranscript(t: string): number | null {
+    // Converter palavras numéricas para dígitos
+    const wordMap: Record<string, string> = {
+      'zero': '0', 'um': '1', 'uma': '1', 'dois': '2', 'duas': '2',
+      'três': '3', 'tres': '3', 'quatro': '4', 'cinco': '5', 'seis': '6',
+      'sete': '7', 'oito': '8', 'nove': '9', 'dez': '10', 'onze': '11',
+      'doze': '12', 'treze': '13', 'quatorze': '14', 'quinze': '15',
+      'dezesseis': '16', 'dezessete': '17', 'dezoito': '18', 'dezenove': '19',
+      'vinte': '20', 'trinta': '30', 'quarenta': '40', 'cinquenta': '50',
+      'sessenta': '60', 'setenta': '70', 'oitenta': '80', 'noventa': '90',
+      'cem': '100', 'cento': '100', 'duzentos': '200', 'trezentos': '300',
+      'quatrocentos': '400', 'quinhentos': '500', 'mil': '1000',
+    }
+    let normalized = t
+    for (const [word, num] of Object.entries(wordMap)) {
+      normalized = normalized.replace(new RegExp(`\\b${word}\\b`, 'gi'), num)
+    }
+    // Capturar padrão numérico com vírgula ou ponto (ex: "10,50", "10.50", "10")
+    const match = normalized.match(/(\d+(?:[.,]\d{1,2})?)/)
+    if (!match) return null
+    const value = parseFloat(match[1].replace(',', '.'))
+    if (isNaN(value) || value <= 0) return null
+    // Se o valor parece centavos literais (ex: "1050" sem separador), assumir reais
+    return Math.round(value * 100)
+  }
+
   // ── Valor atual em centavos (para cálculos inline) ────────────────────────
 
   const currentCents = Math.round(parseFloat(amountInput.replace(',', '.') || '0') * 100)
@@ -314,6 +376,19 @@ export default function MercadoPagoPointDisplay({
           {/* ── INPUT ── */}
           {(stage === 'input' || (stage === 'error' && !orderId)) && (
             <div className="space-y-4">
+
+              {/* Indicador de voz ativo */}
+              <div className="flex justify-center">
+                <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium ${
+                  isDark
+                    ? 'bg-green-900/30 text-green-300 border border-green-700'
+                    : 'bg-green-50 text-green-700 border border-green-200'
+                }`}>
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                  Ouvindo... diga o valor ou "FECHAR"
+                </div>
+              </div>
+
               <div>
                 <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
                   Valor (R$)

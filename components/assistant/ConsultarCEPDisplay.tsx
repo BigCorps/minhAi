@@ -86,8 +86,8 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
     setErrorMsg(null);
 
     try {
-      const { data: res, error } = await supabase.functions.invoke('consultar-cep', {
-        body: { company_id: data.companyId, cep: cleanCep },
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: data.companyId, action: 'consultar_cambio', currency: moeda }
       });
 
       if (error) throw new Error(error.message);

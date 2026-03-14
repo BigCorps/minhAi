@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
+import { generateConsultaPDF } from '@/lib/generatePDF';
 
 interface Props {
   data: { companyId: string };
@@ -125,17 +126,24 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
     setTimeout(() => setCopied(false), 2000);
   }, [resultData, playText]);
 
-  const handleDownloadPdf = useCallback(() => {
-    if (!fileBase64) return;
-    const blob = new Blob([Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0))], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
+const handleDownloadPdf = useCallback(() => {
+  if (!resultadoFormatado) return;
+  
+  try {
+    // ✅ Gerar PDF no frontend
+    const pdfDataUri = generateConsultaPDF('consultar_cep', resultadoFormatado);
+    
     const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName || `cep_${Date.now()}.pdf`;
+    a.href = pdfDataUri;
+    a.download = fileName || `consulta_${Date.now()}.pdf`;
     a.click();
-    URL.revokeObjectURL(url);
-    playText('PDF de CEP baixado.').catch(() => {});
-  }, [fileBase64, fileName, playText]);
+    
+    playText('PDF baixado.').catch(() => {});
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error);
+    playText('Erro ao gerar PDF.').catch(() => {});
+  }
+}, [resultadoFormatado, fileName, playText]);
 
   const handleReset = useCallback(() => {
     setStage('input');

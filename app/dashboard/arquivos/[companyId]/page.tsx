@@ -34,7 +34,6 @@ export default function ArquivosCompanyPage() {
         return;
       }
 
-      // Buscar empresa
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id, name, slug')
@@ -52,7 +51,6 @@ export default function ArquivosCompanyPage() {
 
       setCompany(companyData);
 
-      // Buscar cupons
       const { data: cuponsData, error: cuponsError } = await supabase
         .from('cupons')
         .select('id, code, type, discount_type, discount_value, times_used, max_uses, is_active, expires_at, created_at, metadata')
@@ -71,7 +69,6 @@ export default function ArquivosCompanyPage() {
         totalResgates: listaCupons.reduce((sum, c) => sum + (c.times_used || 0), 0),
       });
 
-      // Buscar consultas
       const { data: consultasData, error: consultasError } = await supabase
         .from('historico_consultas')
         .select('*')
@@ -80,16 +77,21 @@ export default function ArquivosCompanyPage() {
 
       console.log('🔵 [load] consultasData count:', consultasData?.length, '| consultasError:', consultasError);
 
-      // Processar consultas para adicionar status de disponibilidade
       const consultasProcessadas = (consultasData || []).map(c => {
         const createdAt = new Date(c.created_at);
         const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
         
+        // PDF disponível = existe E ainda não expirou (< 24h)
+        const pdf_disponivel = c.pdf_base64 !== null && horasPassadas < 24;
+        
+        // Expirado = passou 24h (independente de ter PDF ou não)
+        const expirado = horasPassadas >= 24;
+        
         return {
           ...c,
-          pdf_disponivel: c.pdf_base64 !== null && horasPassadas < 24,
-          horas_restantes: c.pdf_base64 ? Math.max(0, 24 - horasPassadas) : 0,
-          foi_baixado: c.pdf_base64 === null && horasPassadas < 24,
+          pdf_disponivel,
+          horas_restantes: Math.max(0, 24 - horasPassadas),
+          expirado,
         };
       });
 

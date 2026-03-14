@@ -1748,7 +1748,7 @@ consultar_cnpj: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'cnpj', 'dados da empresa', 'consultar empresa', 'razão social',
+    'cnpj', 'dados da empresa', 'consultar empresa', 'razão social', 'consultar cnpj', 'consulta cnpj', 'consulte o cnpj',
     'receita federal', 'dados do cnpj', 'informações do cnpj', 'buscar empresa'
   ],
 
@@ -1795,7 +1795,7 @@ consultar_cpf: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'cpf', 'dados pessoais', 'consultar cpf', 'pessoa física',
+    'cpf', 'dados pessoais', 'consultar cpf', 'pessoa física', 'consulta cpf','consulte meu cpf',
     'dados do cpf', 'informações de pessoa física', 'buscar cpf'
   ],
 

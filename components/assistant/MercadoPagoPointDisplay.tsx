@@ -460,7 +460,7 @@ export default function MercadoPagoPointDisplay({
               )}
 
               <button
-                onClick={handleGerar}
+                onClick={() => handleGerar()}
                 disabled={isLoading || !amountInput}
                 className="w-full bg-[#F44336] hover:bg-red-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
               >

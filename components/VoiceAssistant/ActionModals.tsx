@@ -110,7 +110,18 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'RestricoesCNPJDisplay': RestricoesCNPJDisplay,
   'FeriadosNacionaisDisplay': FeriadosNacionaisDisplay,
   'ConsultarDDDDisplay': ConsultarDDDDisplay,
-  'MercadoPagoPointDisplay': MercadoPagoPointDisplay,
+  'MercadoPagoPointDisplay': ({ data, onClose, playText }: any) => (
+  <MercadoPagoPointDisplay
+    companyId={data.companyId}
+    paymentType={data.paymentType}
+    initialAmount={data.initialAmount}
+    initialInstallments={data.initialInstallments}
+    maxInstallments={data.maxInstallments}
+    minInstallmentValueCents={data.minInstallmentValueCents}
+    playText={playText}
+    onClose={onClose}
+  />
+),
   // ⬇️ Novas funções — adicione aqui
   // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
 };

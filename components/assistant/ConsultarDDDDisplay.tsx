@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, RefreshCw, Download, Mail, Loader2, Mic, Phone, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -56,12 +56,16 @@ export default function ConsultarDDDDisplay({ data, onClose, theme = 'dark', pla
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-const hasSpoken = useRef(false);
-useEffect(() => {
-  if (hasSpoken.current) return;
-  hasSpoken.current = true;
-  playText(OPENING_TEXT).catch(() => {});
-}, []);
+  // ✅ CORREÇÃO: useRef como guarda impede duplo disparo do React 18 StrictMode.
+  // Em StrictMode o React monta o componente duas vezes intencionalmente,
+  // fazendo o useEffect[] rodar duas vezes. O ref persiste entre as montagens
+  // e garante que playText seja chamado uma única vez.
+  const hasSpoken = useRef(false);
+  useEffect(() => {
+    if (hasSpoken.current) return;
+    hasSpoken.current = true;
+    playText(OPENING_TEXT).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (stage !== 'result') return;

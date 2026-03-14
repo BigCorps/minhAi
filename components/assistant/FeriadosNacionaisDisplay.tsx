@@ -57,10 +57,6 @@ export default function FeriadosNacionaisDisplay({ data, onClose, theme = 'dark'
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
-
-  useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);
     const interval = setInterval(() => {
@@ -84,8 +80,8 @@ export default function FeriadosNacionaisDisplay({ data, onClose, theme = 'dark'
     setErrorMsg(null);
 
     try {
-      const { data: res, error } = await supabase.functions.invoke('feriados-nacionais', {
-        body: { company_id: data.companyId, ano: year },
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: data.companyId, action: 'consultar_feriados', ano }
       });
 
       if (error) throw new Error(error.message);

@@ -17,7 +17,16 @@ function formatTimeLeft(expiresAt: string): string {
   const diff = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
   const m = Math.floor(diff / 60);
   const s = diff % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  
+  // Se tem menos de 1 hora, mostrar em minutos
+  if (m < 60) {
+    return `${m} min`;
+  }
+  
+  // Senão, mostrar em horas
+  const h = Math.floor(m / 60);
+  const remainingM = m % 60;
+  return remainingM > 0 ? `${h}h ${remainingM}min` : `${h}h`;
 }
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
@@ -241,11 +250,11 @@ function DownloadPageContent({ token }: { token: string }) {
           </div>
           <p className="text-white font-semibold text-base break-all">{data?.fileName}</p>
           <p className="text-slate-500 text-xs">{data?.fileType}</p>
-          {timeDisplay && (
-            <div className="flex items-center gap-1 text-amber-400 text-xs">
-              <Timer className="w-3.5 h-3.5 shrink-0" />
-              <span>Link expira em {timeDisplay}</span>
-            </div>
+{timeDisplay && (
+  <div className="flex items-center gap-1 text-amber-400 text-xs">
+    <Timer className="w-3.5 h-3.5 shrink-0" />
+    <span>Expira em {timeDisplay}</span>
+  </div>
           )}
         </div>
 

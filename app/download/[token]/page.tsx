@@ -47,7 +47,13 @@ function DownloadPageContent({ token }: { token: string }) {
     setStatus('downloading');
 
     try {
-      const byteString = atob(downloadData.fileBase64);
+      // ✅ CORREÇÃO: Remover prefixo Data URI se existir
+      let base64Clean = downloadData.fileBase64;
+      if (base64Clean.includes(',')) {
+        base64Clean = base64Clean.split(',')[1];
+      }
+
+      const byteString = atob(base64Clean);
       const byteArray = new Uint8Array(byteString.length);
       for (let i = 0; i < byteString.length; i++) {
         byteArray[i] = byteString.charCodeAt(i);

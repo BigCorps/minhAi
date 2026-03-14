@@ -140,7 +140,7 @@ export function MpPointConfigForm({ companyId, functionKey, onSaved }: MpPointCo
             onClick={() => setShowToken(!showToken)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
           >
-            {showToken ? '🙈' : '👁'}
+            {showToken ? '❌' : '👁'}
           </button>
         </div>
         <p className="text-xs text-gray-400 mt-1">
@@ -205,7 +205,7 @@ export function MpPointConfigForm({ companyId, functionKey, onSaved }: MpPointCo
           )}
 
           <div className="bg-amber-50 rounded-lg p-2 text-xs text-amber-700">
-            ⚠️ Os juros do parcelamento são cobrados pelo Mercado Pago diretamente ao lojista.
+            Os juros do parcelamento são cobrados pelo Mercado Pago diretamente ao lojista.
             As taxas variam conforme o plano contratado com o MP.
           </div>
         </div>

@@ -31,26 +31,29 @@ export async function GET(request: Request) {
       // Verificar se existe download ativo (não expirado) em companion_downloads
       const { data: download } = await supabase
         .from('companion_downloads')
-        .select('id, expires_at, status')
+        .select('id, expires_at, status, token, file_base64, file_name, file_type')
         .eq('company_id', companyId)
-        .ilike('file_name', `%${c.tipo_consulta}%`) // Busca por tipo de consulta no nome do arquivo
-        .gte('expires_at', now.toISOString()) // Ainda não expirado
+        .ilike('file_name', `%${c.tipo_consulta}%`)
+        .gte('expires_at', now.toISOString())
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
       const temDownloadAtivo = !!download;
-      const expirado = horasPassadas >= 24;
+      const expirado = download ? new Date(download.expires_at) < now : horasPassadas >= 24;
       
       return {
         ...c,
         pdf_disponivel: temDownloadAtivo,
-        horas_restantes: temDownloadAtivo 
-          ? Math.max(0, (new Date(download.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60))
+        minutos_restantes: temDownloadAtivo 
+          ? Math.max(0, Math.floor((new Date(download.expires_at).getTime() - now.getTime()) / (1000 * 60)))
           : 0,
         expirado,
-        download_token: download?.id || null,
+        download_token: download?.token || null,
+        file_base64: download?.file_base64 || null,
+        file_name: download?.file_name || null,
+        file_type: download?.file_type || null,
       };
     })
   );

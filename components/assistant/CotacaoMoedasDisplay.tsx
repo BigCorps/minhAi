@@ -74,10 +74,6 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-
-useEffect(() => {
-  playText(OPENING_TEXT).catch(() => {});
-}, []);
   
   useEffect(() => {
     if (stage !== 'result') return;

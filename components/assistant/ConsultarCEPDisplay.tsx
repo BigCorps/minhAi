@@ -87,7 +87,7 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
 
     try {
       const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
-        body: { company_id: data.companyId, action: 'consultar_cambio', currency: moeda }
+        body: { company_id: data.companyId, action: 'consultar_cep', cep: cepDigitado }
       });
 
       if (error) throw new Error(error.message);

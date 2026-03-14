@@ -118,6 +118,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     initialInstallments={data.initialInstallments}
     maxInstallments={data.maxInstallments}
     minInstallmentValueCents={data.minInstallmentValueCents}
+    installmentsCost={data.installmentsCost}
     playText={playText}
     onClose={onClose}
   />

@@ -56,10 +56,6 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-useEffect(() => {
-  playText(OPENING_TEXT).catch(() => {});
-}, []);
-
   useEffect(() => {
     if (stage !== 'result') return;
     setTimeLeft(AUTO_CLOSE);

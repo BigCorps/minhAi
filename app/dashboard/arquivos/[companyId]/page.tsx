@@ -14,7 +14,11 @@ export default function ArquivosCompanyPage() {
   const [company, setCompany] = useState<any>(null);
   const [cupons, setCupons] = useState<any[]>([]);
   const [consultas, setConsultas] = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalCupons: 0, ativos: 0, totalResgates: 0 });
+  const [stats, setStats] = useState({ 
+    totalCupons: 0, 
+    totalConsultas: 0, 
+    totalArquivos: 0 
+  });
   const [loading, setLoading] = useState(true);
 
   console.log('🟡 [ArquivosCompanyPage] render — companyId:', companyId);
@@ -51,6 +55,7 @@ export default function ArquivosCompanyPage() {
 
       setCompany(companyData);
 
+      // Buscar cupons
       const { data: cuponsData, error: cuponsError } = await supabase
         .from('cupons')
         .select('id, code, type, discount_type, discount_value, times_used, max_uses, is_active, expires_at, created_at, metadata')
@@ -62,13 +67,7 @@ export default function ArquivosCompanyPage() {
       const listaCupons = cuponsData || [];
       setCupons(listaCupons);
 
-      const now = new Date();
-      setStats({
-        totalCupons: listaCupons.length,
-        ativos: listaCupons.filter(c => c.is_active && (!c.expires_at || new Date(c.expires_at) > now)).length,
-        totalResgates: listaCupons.reduce((sum, c) => sum + (c.times_used || 0), 0),
-      });
-
+      // Buscar consultas
       const { data: consultasData, error: consultasError } = await supabase
         .from('historico_consultas')
         .select('*')
@@ -77,25 +76,52 @@ export default function ArquivosCompanyPage() {
 
       console.log('🔵 [load] consultasData count:', consultasData?.length, '| consultasError:', consultasError);
 
-      const consultasProcessadas = (consultasData || []).map(c => {
-        const createdAt = new Date(c.created_at);
-        const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-        
-        // PDF disponível = existe E ainda não expirou (< 24h)
-        const pdf_disponivel = c.pdf_base64 !== null && horasPassadas < 24;
-        
-        // Expirado = passou 24h (independente de ter PDF ou não)
-        const expirado = horasPassadas >= 24;
-        
-        return {
-          ...c,
-          pdf_disponivel,
-          horas_restantes: Math.max(0, 24 - horasPassadas),
-          expirado,
-        };
-      });
+      const now = new Date();
+
+      // Processar consultas e verificar downloads ativos
+      const consultasProcessadas = await Promise.all(
+        (consultasData || []).map(async (c) => {
+          const createdAt = new Date(c.created_at);
+          const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+          
+          // Buscar download ativo em companion_downloads
+          const { data: download } = await supabase
+            .from('companion_downloads')
+            .select('id, expires_at, status, token')
+            .eq('company_id', companyId)
+            .ilike('file_name', `%${c.tipo_consulta}%`)
+            .gte('expires_at', now.toISOString())
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          const temDownloadAtivo = !!download;
+          const expirado = horasPassadas >= 24;
+          
+          return {
+            ...c,
+            pdf_disponivel: temDownloadAtivo,
+            horas_restantes: temDownloadAtivo 
+              ? Math.max(0, (new Date(download.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60))
+              : 0,
+            expirado,
+            download_token: download?.token || null,
+          };
+        })
+      );
 
       setConsultas(consultasProcessadas);
+
+      // Calcular stats
+      const totalCupons = listaCupons.length;
+      const totalConsultas = consultasData?.length || 0;
+      
+      setStats({
+        totalCupons,
+        totalConsultas,
+        totalArquivos: totalCupons + totalConsultas,
+      });
 
       console.log('✅ [load] concluído — setLoading(false)');
       setLoading(false);

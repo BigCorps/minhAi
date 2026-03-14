@@ -50,23 +50,6 @@ interface Company {
   slug: string;
 }
 
-export default function ArquivosCompanyClient({
-  company: initialCompany,
-  cupons: initialCupons,
-  stats: initialStats,
-}: ArquivosCompanyClientProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>('cupons');
-  const [cupons, setCupons] = useState(initialCupons);
-  const [stats, setStats] = useState(initialStats);
-  const [filtro, setFiltro] = useState<FiltroKey>('todos');
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [consultas, setConsultas] = useState<Consulta[]>([]);
-  const [loadingConsultas, setLoadingConsultas] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company>(initialCompany);
-  const supabase = createClient();
-
   // Buscar todas as empresas do usuário
   useEffect(() => {
     async function fetchCompanies() {

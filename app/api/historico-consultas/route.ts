@@ -11,7 +11,6 @@ export async function GET(request: Request) {
 
   const supabase = createClient();
 
-  // Buscar consultas da empresa
   const { data: consultas, error } = await supabase
     .from('historico_consultas')
     .select('*')
@@ -22,17 +21,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Processar dados para adicionar status de disponibilidade
   const now = new Date();
-  const consultasProcessadas = consultas.map(c => {
+  const consultasProcessadas = (consultas || []).map(c => {
     const createdAt = new Date(c.created_at);
     const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
     
+    // PDF disponível = existe E ainda não expirou (< 24h)
+    const pdf_disponivel = c.pdf_base64 !== null && horasPassadas < 24;
+    
+    // Expirado = passou 24h (independente de ter PDF ou não)
+    const expirado = horasPassadas >= 24;
+    
     return {
       ...c,
-      pdf_disponivel: c.pdf_base64 !== null && horasPassadas < 24,
-      horas_restantes: c.pdf_base64 ? Math.max(0, 24 - horasPassadas) : 0,
-      foi_baixado: c.pdf_base64 === null && horasPassadas < 24, // PDF removido antes de 24h = foi baixado
+      pdf_disponivel,
+      horas_restantes: Math.max(0, 24 - horasPassadas),
+      expirado,
     };
   });
 

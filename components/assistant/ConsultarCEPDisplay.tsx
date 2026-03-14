@@ -21,8 +21,6 @@ type Stage = 'input' | 'processing' | 'result' | 'error';
 const OPENING_TEXT = 'Consulta de CEP. Digite o CEP desejado ou diga o CEP em voz alta.';
 const AUTO_CLOSE = 60;
 
-const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]);
-
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -54,6 +52,8 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
   const [speechText, setSpeechText] = useState<string>('');
   const [fileBase64, setFileBase64] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
+  const [downloadToken, setDownloadToken] = useState<string>(''); // ← ADICIONAR
+  const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]); // ← ADICIONAR
 
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
@@ -90,7 +90,7 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
 
     try {
       const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
-        body: { company_id: data.companyId, action: 'consultar_cep', cep: cep } // ou só { cep }
+        body: { company_id: data.companyId, action: 'consultar_cep', cep: cleanCep }
       });
 
       if (error) throw new Error(error.message);
@@ -98,14 +98,14 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
 
       setResultData(res.result);
       setSpeechText(res.speech_text);
-      setResultadoFormatado(res.data.resultado_formatado); // ← ADICIONAR
-      setDownloadToken(res.data.download_token);
+      setResultadoFormatado(res.resultado_formatado); // ← Corrigido (era res.data.resultado_formatado)
+      setDownloadToken(res.download_token); // ← Corrigido (era res.data.download_token)
 
-      // Gerar PDF via jsPDF
-      const pdfContent = generatePdfContent(res.result);
+      // Gerar PDF no frontend via jsPDF
+      const pdfDataUri = generateConsultaPDF('Consultar CEP', res.resultado_formatado);
       const name = `cep_${cleanCep}_${Date.now()}.pdf`;
       setFileName(name);
-      setFileBase64(pdfContent);
+      setFileBase64(pdfDataUri); // ← Salvar o data URI completo
 
       setStage('result');
       playText(res.speech_text).catch(() => {});
@@ -114,12 +114,6 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
       setStage('error');
     }
   }, [cep, data.companyId, supabase, playText]);
-
-  const generatePdfContent = (result: any): string => {
-    // Mock - em produção usar jsPDF
-    const text = `CONSULTA CEP\n\nCEP: ${result.cep}\nLogradouro: ${result.logradouro}\nBairro: ${result.bairro}\nCidade: ${result.localidade}\nUF: ${result.uf}\nComplemento: ${result.complemento || '-'}`;
-    return btoa(unescape(encodeURIComponent(text)));
-  };
 
   const handleCopy = useCallback(async () => {
     if (!resultData) return;
@@ -130,24 +124,21 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
     setTimeout(() => setCopied(false), 2000);
   }, [resultData, playText]);
 
-const handleDownloadPdf = useCallback(() => {
-  if (!resultadoFormatado || resultadoFormatado.length === 0) return;
-  
-  try {
-    // ✅ Gerar PDF no frontend
-    const pdfDataUri = generateConsultaPDF('Consultar CEP', resultadoFormatado);
+  const handleDownloadPdf = useCallback(() => {
+    if (!fileBase64) return;
     
-    const a = document.createElement('a');
-    a.href = pdfDataUri;
-    a.download = `cep_${Date.now()}.pdf`;
-    a.click();
-    
-    playText('PDF baixado.').catch(() => {});
-  } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
-    playText('Erro ao gerar PDF.').catch(() => {});
-  }
-}, [resultadoFormatado, playText]);
+    try {
+      const a = document.createElement('a');
+      a.href = fileBase64; // ← Usar data URI direto
+      a.download = fileName || `cep_${Date.now()}.pdf`;
+      a.click();
+      
+      playText('PDF baixado.').catch(() => {});
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error);
+      playText('Erro ao baixar PDF.').catch(() => {});
+    }
+  }, [fileBase64, fileName, playText]);
 
   const handleReset = useCallback(() => {
     setStage('input');
@@ -158,6 +149,8 @@ const handleDownloadPdf = useCallback(() => {
     setSpeechText('');
     setFileBase64('');
     setFileName('');
+    setDownloadToken('');
+    setResultadoFormatado([]);
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 
@@ -193,7 +186,6 @@ const handleDownloadPdf = useCallback(() => {
       }
 
       if (stage === 'input') {
-        // Detectar CEP falado (ex: "cep 01310100" ou apenas números)
         const numbers = t.replace(/\D/g, '');
         if (numbers.length === 8) {
           setCep(formatCep(numbers));

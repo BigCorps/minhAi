@@ -42,6 +42,7 @@ interface Consulta {
   pdf_disponivel: boolean;
   horas_restantes: number;
   foi_baixado: boolean;
+  expirado: boolean; // ← ADICIONAR
 }
 
 interface Company {
@@ -455,24 +456,24 @@ interface Company {
                         </td>
 
                         {/* Status PDF */}
-                        <td className="px-6 py-4">
-                          {consulta.pdf_disponivel ? (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span className="text-xs text-gray-600 dark:text-white/60">
-                                Disponível ({Math.floor(consulta.horas_restantes)}h restantes)
-                              </span>
-                            </div>
-                          ) : consulta.foi_baixado ? (
-                            <span className="text-xs text-gray-400 dark:text-white/40">
-                              Expirado
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400 dark:text-white/40">
-                              Indisponível
-                            </span>
-                          )}
-                        </td>
+<td className="px-6 py-4">
+  {consulta.pdf_disponivel ? (
+    <div className="flex items-center gap-2">
+      <CheckCircle className="w-4 h-4 text-green-500" />
+      <span className="text-xs text-gray-600 dark:text-white/60">
+        Disponível ({Math.floor(consulta.horas_restantes)}h restantes)
+      </span>
+    </div>
+  ) : consulta.expirado ? (
+    <span className="text-xs text-gray-400 dark:text-white/40">
+      Expirado
+    </span>
+  ) : (
+    <span className="text-xs text-yellow-600 dark:text-yellow-400">
+      Processando...
+    </span>
+  )}
+</td>
 
                         {/* Ações */}
                         <td className="px-6 py-4">

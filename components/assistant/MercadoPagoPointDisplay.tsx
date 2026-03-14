@@ -3,6 +3,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase-browser'
+import {
+  X,
+  CreditCard,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Monitor,
+} from 'lucide-react'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -12,12 +21,14 @@ type PaymentType = 'debit_card' | 'credit_card'
 interface MercadoPagoPointDisplayProps {
   companyId: string
   paymentType: PaymentType
-  initialAmount?: number          // em centavos, extraído da voz
-  initialInstallments?: number    // parcelas extraídas da voz
-  maxInstallments?: number        // config da empresa
+  initialAmount?: number
+  initialInstallments?: number
+  maxInstallments?: number
   minInstallmentValueCents?: number
+  installmentsCost?: 'seller' | 'buyer'
   playText?: (text: string) => Promise<void>
   onClose: () => void
+  theme?: 'dark' | 'light'
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -35,11 +46,14 @@ export default function MercadoPagoPointDisplay({
   initialInstallments,
   maxInstallments = 12,
   minInstallmentValueCents = 0,
+  installmentsCost = 'seller',
   playText,
   onClose,
+  theme = 'dark',
 }: MercadoPagoPointDisplayProps) {
   const supabase = createClient()
   const isCreditCard = paymentType === 'credit_card'
+  const isDark = theme === 'dark'
 
   const [stage, setStage] = useState<Stage>('input')
   const [amountInput, setAmountInput] = useState(
@@ -214,30 +228,29 @@ export default function MercadoPagoPointDisplay({
 
   // ── Fechar ─────────────────────────────────────────────────────────────────
 
-async function handleClose() {
-  clearPolling()
-  window.speechSynthesis?.cancel()
-  
-  // Cancelar order pendente no MP ao fechar
-  if (orderId && stage === 'awaiting') {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancelar-order-mp-point`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ order_id: orderId }),
-        }
-      ).catch(() => {}) // fire and forget
+  async function handleClose() {
+    clearPolling()
+    window.speechSynthesis?.cancel()
+
+    if (orderId && stage === 'awaiting') {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancelar-order-mp-point`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ order_id: orderId }),
+          }
+        ).catch(() => {})
+      }
     }
+
+    onClose()
   }
-  
-  onClose()
-}
 
   // ── Valor atual em centavos (para cálculos inline) ────────────────────────
 
@@ -246,36 +259,45 @@ async function handleClose() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   const content = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className={`w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${
+        isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'
+      }`}>
 
         {/* Header */}
-        <div className="bg-[#F44336] px-5 py-4 flex items-center justify-between">
+        <div className={`flex items-center justify-between px-5 py-4 border-b ${
+          isDark ? 'border-white/10' : 'border-gray-200'
+        }`}>
           <div className="flex items-center gap-3">
-            <span className="text-2xl">💳</span>
+            <CreditCard className={`w-5 h-5 ${isCreditCard ? 'text-red-400' : 'text-emerald-400'}`} />
             <div>
-              <p className="text-white font-bold text-lg leading-tight">
+              <h2 className={`text-base font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 TEF {isCreditCard ? 'Crédito' : 'Débito'}
+              </h2>
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                Mercado Pago Point
               </p>
-              <p className="text-white/80 text-xs">Mercado Pago Point</p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="text-white/80 hover:text-white transition-colors text-2xl leading-none"
+            className={`p-2 rounded-lg transition-colors ${
+              isDark ? 'hover:bg-white/10 text-white/70' : 'hover:bg-gray-100 text-gray-500'
+            }`}
+            aria-label="Fechar"
           >
-            ×
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5">
+        <div className="px-5 py-5">
 
           {/* ── INPUT ── */}
           {(stage === 'input' || (stage === 'error' && !orderId)) && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
                   Valor (R$)
                 </label>
                 <input
@@ -285,20 +307,28 @@ async function handleClose() {
                   value={amountInput}
                   onChange={(e) => { setAmountInput(e.target.value); setErrorMsg('') }}
                   placeholder="0,00"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg font-semibold text-center focus:outline-none focus:ring-2 focus:ring-red-400"
+                  className={`w-full border rounded-lg px-3 py-2 text-lg font-semibold text-center focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                    isDark
+                      ? 'bg-slate-700 border-white/10 text-white placeholder-slate-500'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
                 />
               </div>
 
               {/* Parcelas — só crédito */}
               {isCreditCard && maxInstallments > 1 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
                     Parcelas
                   </label>
                   <select
                     value={installments}
                     onChange={(e) => setInstallments(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400"
+                    className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                      isDark
+                        ? 'bg-slate-700 border-white/10 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
                   >
                     {getAvailableInstallments().map((n) => {
                       const installmentValue = currentCents > 0 ? Math.ceil(currentCents / n) : 0
@@ -311,23 +341,37 @@ async function handleClose() {
                       )
                     })}
                   </select>
+
                   {isCreditCard && installments > 1 && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      ⚠️ Juros do parcelamento são cobrados pelo Mercado Pago ao lojista.
-                    </p>
+                    <div className={`flex items-start gap-2 mt-2 p-2 rounded-lg ${
+                      isDark ? 'bg-amber-900/20 border border-amber-700/40' : 'bg-amber-50 border border-amber-200'
+                    }`}>
+                      <AlertCircle className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-500'}`} />
+                      <p className={`text-xs ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+                        {installmentsCost === 'buyer'
+                          ? 'Juros do parcelamento são cobrados do cliente pelo Mercado Pago.'
+                          : 'Juros do parcelamento são cobrados do estabelecimento pelo Mercado Pago.'}
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
 
               {errorMsg && (
-                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{errorMsg}</p>
+                <div className={`flex items-start gap-2 p-3 rounded-lg ${
+                  isDark ? 'bg-red-900/20 border border-red-700/40' : 'bg-red-50 border border-red-200'
+                }`}>
+                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className={`text-sm ${isDark ? 'text-red-300' : 'text-red-600'}`}>{errorMsg}</p>
+                </div>
               )}
 
               <button
                 onClick={handleGerar}
                 disabled={isLoading || !amountInput}
-                className="w-full bg-[#F44336] hover:bg-red-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors"
+                className="w-full bg-[#F44336] hover:bg-red-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
+                <CreditCard className="w-4 h-4" />
                 Enviar para Maquininha
               </button>
             </div>
@@ -335,62 +379,83 @@ async function handleClose() {
 
           {/* ── GENERATING ── */}
           {stage === 'generating' && (
-            <div className="text-center py-6 space-y-3">
-              <div className="animate-spin w-10 h-10 border-4 border-red-400 border-t-transparent rounded-full mx-auto" />
-              <p className="text-gray-700 font-medium">Enviando para a maquininha...</p>
+            <div className="flex flex-col items-center gap-4 py-6">
+              <Loader2 className="w-10 h-10 text-red-400 animate-spin" />
+              <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                Enviando para a maquininha...
+              </p>
             </div>
           )}
 
           {/* ── AWAITING ── */}
           {stage === 'awaiting' && (
-            <div className="text-center space-y-4">
-              <div className="bg-amber-50 rounded-xl p-4">
-                <p className="text-4xl mb-2">🖥️</p>
-                <p className="font-bold text-gray-800 text-lg">Aguardando pagamento</p>
-                <p className="text-gray-500 text-sm mt-1">
+            <div className="space-y-4">
+              <div className={`flex flex-col items-center gap-3 py-4 px-4 rounded-xl ${
+                isDark ? 'bg-slate-700/50' : 'bg-gray-50'
+              }`}>
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
+                  isDark ? 'bg-amber-500/20' : 'bg-amber-100'
+                }`}>
+                  <Monitor className={`w-7 h-7 ${isDark ? 'text-amber-400' : 'text-amber-500'}`} />
+                </div>
+                <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                  Aguardando pagamento
+                </p>
+                <p className={`text-sm text-center ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                   A maquininha já recebeu a cobrança.<br />
                   Peça ao cliente para passar o cartão.
                 </p>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500 mb-1">Valor</p>
-                <p className="text-2xl font-bold text-gray-800">
+              <div className={`rounded-xl p-3 text-center ${isDark ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+                <p className={`text-xs mb-1 ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>Valor</p>
+                <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
                   {formatBRL(currentCents)}
                 </p>
                 {isCreditCard && installments > 1 && currentCents > 0 && (
-                  <p className="text-sm text-gray-500">
+                  <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                     {installments}× de {formatBRL(Math.ceil(currentCents / installments))}
                   </p>
                 )}
               </div>
 
               {timeLeft && (
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                  <span>⏱</span>
-                  <span>Expira em <span className="font-mono font-bold text-gray-700">{timeLeft}</span></span>
+                <div className={`flex items-center justify-center gap-2 text-sm ${
+                  isDark ? 'text-slate-400' : 'text-gray-500'
+                }`}>
+                  <Clock className="w-4 h-4" />
+                  <span>Expira em <span className="font-mono font-bold">{timeLeft}</span></span>
                 </div>
               )}
 
               <div className="flex items-center gap-2 justify-center">
                 <div className="animate-pulse w-2 h-2 bg-amber-400 rounded-full" />
-                <span className="text-sm text-gray-500">Aguardando confirmação...</span>
+                <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                  Aguardando confirmação...
+                </span>
               </div>
             </div>
           )}
 
           {/* ── PAID ── */}
           {stage === 'paid' && (
-            <div className="text-center py-4 space-y-3">
-              <div className="text-6xl">✅</div>
-              <p className="text-xl font-bold text-green-700">Pagamento Confirmado!</p>
-              <p className="text-gray-500 text-sm">
-                {isCreditCard ? 'Crédito' : 'Débito'} processado com sucesso.
-              </p>
+            <div className="flex flex-col items-center gap-4 py-6">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle className="w-9 h-9 text-emerald-400" />
+              </div>
+              <div className="text-center space-y-1">
+                <p className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Pagamento Confirmado!
+                </p>
+                <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                  {isCreditCard ? 'Crédito' : 'Débito'} processado com sucesso.
+                </p>
+              </div>
               <button
                 onClick={handleClose}
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-colors"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
+                <CheckCircle className="w-4 h-4" />
                 Fechar
               </button>
             </div>
@@ -398,15 +463,27 @@ async function handleClose() {
 
           {/* ── CANCELLED ── */}
           {stage === 'cancelled' && (
-            <div className="text-center py-4 space-y-3">
-              <div className="text-5xl">⏱️</div>
-              <p className="text-lg font-bold text-gray-700">Pagamento Cancelado</p>
-              <p className="text-gray-500 text-sm">
-                O tempo expirou ou o pagamento foi cancelado na maquininha.
-              </p>
+            <div className="flex flex-col items-center gap-4 py-6">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                isDark ? 'bg-slate-700' : 'bg-gray-100'
+              }`}>
+                <Clock className={`w-9 h-9 ${isDark ? 'text-slate-400' : 'text-gray-400'}`} />
+              </div>
+              <div className="text-center space-y-1">
+                <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-700'}`}>
+                  Pagamento Cancelado
+                </p>
+                <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                  O tempo expirou ou o pagamento foi cancelado na maquininha.
+                </p>
+              </div>
               <button
                 onClick={handleClose}
-                className="w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 rounded-xl transition-colors"
+                className={`w-full font-bold py-3 rounded-xl transition-colors ${
+                  isDark
+                    ? 'bg-slate-600 hover:bg-slate-500 text-white'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                }`}
               >
                 Fechar
               </button>
@@ -415,13 +492,27 @@ async function handleClose() {
 
           {/* ── ERROR (após tentar criar) ── */}
           {stage === 'error' && orderId && (
-            <div className="text-center py-4 space-y-3">
-              <div className="text-5xl">❌</div>
-              <p className="text-lg font-bold text-gray-700">Erro no Pagamento</p>
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{errorMsg}</p>
+            <div className="space-y-4">
+              <div className={`flex items-start gap-3 p-4 rounded-xl ${
+                isDark ? 'bg-red-900/20 border border-red-700/40' : 'bg-red-50 border border-red-200'
+              }`}>
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className={`text-sm font-medium ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                    Erro no Pagamento
+                  </p>
+                  <p className={`text-xs mt-1 ${isDark ? 'text-red-400' : 'text-red-500'}`}>
+                    {errorMsg}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={handleClose}
-                className="w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 rounded-xl transition-colors"
+                className={`w-full font-bold py-3 rounded-xl transition-colors ${
+                  isDark
+                    ? 'bg-slate-600 hover:bg-slate-500 text-white'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                }`}
               >
                 Fechar
               </button>
@@ -429,6 +520,8 @@ async function handleClose() {
           )}
 
         </div>
+
+        {stage === 'paid' && <div className="h-1 bg-emerald-500" />}
       </div>
     </div>
   )

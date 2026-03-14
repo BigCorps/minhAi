@@ -139,6 +139,18 @@ export default function MercadoPagoPointDisplay({
     }, 5000)
   }, [supabase, clearPolling, playText])
 
+  // ── Auto-envio quando initialAmount é fornecido pela voz ──────────────────
+
+  const autoSubmittedRef = useRef(false)
+
+  useEffect(() => {
+    if (initialAmount && initialAmount >= 100 && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true
+      handleGerar(initialAmount)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Parcelas disponíveis com base no valor atual ───────────────────────────
 
   function getAvailableInstallments(): number[] {
@@ -155,9 +167,10 @@ export default function MercadoPagoPointDisplay({
   }
 
   // ── Gerar cobrança ─────────────────────────────────────────────────────────
+  // Aceita `overrideCents` para auto-envio via voz (evita race condition com estado)
 
-  async function handleGerar() {
-    const cents = Math.round(parseFloat(amountInput.replace(',', '.')) * 100)
+  async function handleGerar(overrideCents?: number) {
+    const cents = overrideCents ?? Math.round(parseFloat(amountInput.replace(',', '.')) * 100)
     if (!cents || cents < 100) {
       setErrorMsg('Valor mínimo é R$ 1,00')
       return
@@ -172,6 +185,11 @@ export default function MercadoPagoPointDisplay({
         )
         return
       }
+    }
+
+    // Sincronizar o input visual quando o valor veio por voz
+    if (overrideCents) {
+      setAmountInput((overrideCents / 100).toFixed(2))
     }
 
     setErrorMsg('')

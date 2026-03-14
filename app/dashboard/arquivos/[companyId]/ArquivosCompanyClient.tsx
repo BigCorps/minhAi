@@ -146,7 +146,7 @@ export default function ArquivosCompanyClient({
       }
 
       // Redirecionar para página de download usando o token
-      window.open(`/d/${consulta.download_token}`, '_blank');
+      window.open(`/download/${consulta.download_token}`, '_blank');
       
     } catch (error) {
       console.error('Erro ao baixar PDF:', error);

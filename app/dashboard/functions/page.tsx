@@ -51,6 +51,7 @@ interface Company {
 
 const categories = [
   { key: 'ai_assistant',  name: 'Conhecimento', color: '#0000ff' },
+  { key: 'products',      name: 'Comercial',    color: '#FF00FF' },
   { key: 'payment',       name: 'Financeiro',    color: '#F44336' },
   { key: 'information',   name: 'Informação',   color: '#00FFF7' },
   { key: 'video',         name: 'Multimídia',   color: '#A52A2A' },
@@ -59,7 +60,6 @@ const categories = [
   { key: 'configuration', name: 'Localização',  color: '#800080' },
   { key: 'knowledge',     name: 'Consultas',    color: '#FFFF00' },
   { key: 'biometry',      name: 'Identificação',    color: '#808000' },
-  { key: 'products',      name: 'Comercial',    color: '#FF00FF' },
   { key: 'images',        name: 'Arquivos',     color: '#000080' },
   { key: 'utylities',     name: 'Utilitários',  color: '#FFA500' },
   { key: 'codes',         name: 'Câmera',       color: '#808080' },

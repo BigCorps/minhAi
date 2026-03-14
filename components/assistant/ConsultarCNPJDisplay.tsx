@@ -56,9 +56,9 @@ export default function ConsultarCNPJDisplay({ data, onClose, theme = 'dark', pl
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
+useEffect(() => {
+  playText(OPENING_TEXT).catch(() => {});
+}, []);
 
   useEffect(() => {
     if (stage !== 'result') return;

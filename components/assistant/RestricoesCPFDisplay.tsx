@@ -88,8 +88,8 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
     setErrorMsg(null);
 
     try {
-      const { data: res, error } = await supabase.functions.invoke('restricoes-cpf', {
-        body: { company_id: data.companyId, cpf: cleanCpf },
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: data.companyId, action: 'restricoes_cpf', cpf }
       });
 
       if (error) throw new Error(error.message);

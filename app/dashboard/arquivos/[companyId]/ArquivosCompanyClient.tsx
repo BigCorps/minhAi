@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
-import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw, FileText, Download, CheckCircle } from 'lucide-react';
 
 interface ArquivosCompanyClientProps {
   company: { id: string; name: string; slug: string };
@@ -11,8 +11,19 @@ interface ArquivosCompanyClientProps {
   stats: { totalCupons: number; ativos: number; totalResgates: number };
 }
 
-type TabKey = 'cupons';
+type TabKey = 'cupons' | 'consultas';
 type FiltroKey = 'todos' | 'ativos' | 'expirados' | 'esgotados';
+
+interface Consulta {
+  id: string;
+  tipo_consulta: string;
+  created_at: string;
+  status_pagamento: string;
+  pdf_base64: string | null;
+  pdf_disponivel: boolean;
+  horas_restantes: number;
+  foi_baixado: boolean;
+}
 
 export default function ArquivosCompanyClient({
   company,
@@ -24,6 +35,9 @@ export default function ArquivosCompanyClient({
   const [stats, setStats] = useState(initialStats);
   const [filtro, setFiltro] = useState<FiltroKey>('todos');
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [consultas, setConsultas] = useState<Consulta[]>([]);
+  const [loadingConsultas, setLoadingConsultas] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const supabase = createClient();
 
   async function handleToggleAtivo(cupomId: string, current: boolean) {
@@ -45,6 +59,61 @@ export default function ArquivosCompanyClient({
     }
     setLoadingId(null);
   }
+
+  async function fetchConsultas() {
+    setLoadingConsultas(true);
+    try {
+      const res = await fetch(`/api/historico-consultas?company_id=${company.id}`);
+      const data = await res.json();
+      if (data.consultas) {
+        setConsultas(data.consultas);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar consultas:', error);
+    } finally {
+      setLoadingConsultas(false);
+    }
+  }
+
+  async function handleBaixarPDF(consultaId: string) {
+    setDownloadingId(consultaId);
+    
+    try {
+      const consulta = consultas.find(c => c.id === consultaId);
+      if (!consulta || !consulta.pdf_base64) {
+        throw new Error('PDF não disponível');
+      }
+
+      // Decodificar base64
+      const base64 = consulta.pdf_base64.split(',')[1] || consulta.pdf_base64;
+      const byteString = atob(base64);
+      const byteArray = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i++) {
+        byteArray[i] = byteString.charCodeAt(i);
+      }
+
+      // Criar blob e download
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${consulta.tipo_consulta}_${new Date(consulta.created_at).toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error);
+      alert('Erro ao baixar PDF');
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  // Buscar consultas quando aba é ativada
+  useEffect(() => {
+    if (activeTab === 'consultas' && consultas.length === 0) {
+      fetchConsultas();
+    }
+  }, [activeTab]);
 
   const now = new Date();
   const cuponsFiltered = cupons.filter(c => {
@@ -75,6 +144,7 @@ export default function ArquivosCompanyClient({
 
   const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'cupons', label: 'Cupons', icon: <Ticket className="w-4 h-4" /> },
+    { key: 'consultas', label: 'Consultas', icon: <FileText className="w-4 h-4" /> },
   ];
 
   return (
@@ -219,6 +289,138 @@ export default function ArquivosCompanyClient({
                               <ToggleLeft className="w-5 h-5 text-gray-400" />
                             )}
                           </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Aba Consultas */}
+        {activeTab === 'consultas' && (
+          <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Histórico de Consultas
+              </h3>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400 dark:text-white/40">
+                  {consultas.length} consulta{consultas.length !== 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={fetchConsultas}
+                  disabled={loadingConsultas}
+                  className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loadingConsultas ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Loading */}
+            {loadingConsultas && consultas.length === 0 ? (
+              <div className="py-16 text-center">
+                <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
+                <p className="text-gray-500 dark:text-white/40 font-medium">Carregando consultas...</p>
+              </div>
+            ) : consultas.length === 0 ? (
+              <div className="py-16 text-center">
+                <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
+                <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma consulta realizada</p>
+                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
+                  As consultas aparecem aqui após serem realizadas via assistente
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-white/10">
+                      {['Tipo', 'Data', 'Status', 'PDF', 'Ações'].map(h => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                    {consultas.map(consulta => (
+                      <tr key={consulta.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                        
+                        {/* Tipo */}
+                        <td className="px-6 py-4">
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {consulta.tipo_consulta.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        </td>
+
+                        {/* Data */}
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">
+                          {new Date(consulta.created_at).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </td>
+
+                        {/* Status Pagamento */}
+                        <td className="px-6 py-4">
+                          {consulta.status_pagamento === 'PAGO' ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
+                              Pago
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
+                              Pendente
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Status PDF */}
+                        <td className="px-6 py-4">
+                          {consulta.pdf_disponivel ? (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                              <span className="text-xs text-gray-600 dark:text-white/60">
+                                Disponível ({Math.floor(consulta.horas_restantes)}h restantes)
+                              </span>
+                            </div>
+                          ) : consulta.foi_baixado ? (
+                            <span className="text-xs text-gray-400 dark:text-white/40">
+                              Expirado
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400 dark:text-white/40">
+                              Indisponível
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Ações */}
+                        <td className="px-6 py-4">
+                          {consulta.pdf_disponivel ? (
+                            <button
+                              onClick={() => handleBaixarPDF(consulta.id)}
+                              disabled={downloadingId === consulta.id}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-medium"
+                            >
+                              {downloadingId === consulta.id ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Download className="w-3.5 h-3.5" />
+                              )}
+                              Baixar
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400 dark:text-white/30">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

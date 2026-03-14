@@ -1749,6 +1749,8 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'link_pagamento': InfinitePayConfigForm,
   'nfc_debito':     InfinitePayConfigForm,
   'nfc_credito':    InfinitePayConfigForm,
+  'tef_debito': MpPointConfigForm,
+  'tef_credito': MpPointConfigForm,
   'wifi_qrcode':  WifiQRCodeForm,
   'cardapio':     CardapioForm,
   'nosso_qrcode': NossoQRCodeForm,

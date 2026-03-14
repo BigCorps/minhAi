@@ -290,6 +290,7 @@ tef_credito: {
     const maxInstallments = settings?.config?.max_installments || 12
     const minInstallmentValueCents = settings?.config?.min_installment_value_cents || 0
     const parsedInstallments = Math.min(installments, maxInstallments)
+    const installmentsCost = settings?.config?.installments_cost || 'seller'
 
     if (amount) {
       const amountStr = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -311,6 +312,7 @@ tef_credito: {
         initialInstallments: parsedInstallments,
         maxInstallments,
         minInstallmentValueCents,
+        installmentsCost,
       },
     })
 

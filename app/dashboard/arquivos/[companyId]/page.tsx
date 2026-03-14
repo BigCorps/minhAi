@@ -13,6 +13,7 @@ export default function ArquivosCompanyPage() {
 
   const [company, setCompany] = useState<any>(null);
   const [cupons, setCupons] = useState<any[]>([]);
+  const [consultas, setConsultas] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalCupons: 0, ativos: 0, totalResgates: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -33,6 +34,7 @@ export default function ArquivosCompanyPage() {
         return;
       }
 
+      // Buscar empresa
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id, name, slug')
@@ -50,6 +52,7 @@ export default function ArquivosCompanyPage() {
 
       setCompany(companyData);
 
+      // Buscar cupons
       const { data: cuponsData, error: cuponsError } = await supabase
         .from('cupons')
         .select('id, code, type, discount_type, discount_value, times_used, max_uses, is_active, expires_at, created_at, metadata')
@@ -58,15 +61,39 @@ export default function ArquivosCompanyPage() {
 
       console.log('🔵 [load] cuponsData count:', cuponsData?.length, '| cuponsError:', cuponsError);
 
-      const lista = cuponsData || [];
-      setCupons(lista);
+      const listaCupons = cuponsData || [];
+      setCupons(listaCupons);
 
       const now = new Date();
       setStats({
-        totalCupons: lista.length,
-        ativos: lista.filter(c => c.is_active && (!c.expires_at || new Date(c.expires_at) > now)).length,
-        totalResgates: lista.reduce((sum, c) => sum + (c.times_used || 0), 0),
+        totalCupons: listaCupons.length,
+        ativos: listaCupons.filter(c => c.is_active && (!c.expires_at || new Date(c.expires_at) > now)).length,
+        totalResgates: listaCupons.reduce((sum, c) => sum + (c.times_used || 0), 0),
       });
+
+      // Buscar consultas
+      const { data: consultasData, error: consultasError } = await supabase
+        .from('historico_consultas')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+
+      console.log('🔵 [load] consultasData count:', consultasData?.length, '| consultasError:', consultasError);
+
+      // Processar consultas para adicionar status de disponibilidade
+      const consultasProcessadas = (consultasData || []).map(c => {
+        const createdAt = new Date(c.created_at);
+        const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+        
+        return {
+          ...c,
+          pdf_disponivel: c.pdf_base64 !== null && horasPassadas < 24,
+          horas_restantes: c.pdf_base64 ? Math.max(0, 24 - horasPassadas) : 0,
+          foi_baixado: c.pdf_base64 === null && horasPassadas < 24,
+        };
+      });
+
+      setConsultas(consultasProcessadas);
 
       console.log('✅ [load] concluído — setLoading(false)');
       setLoading(false);
@@ -96,6 +123,7 @@ export default function ArquivosCompanyPage() {
     <ArquivosCompanyClient
       company={company}
       cupons={cupons}
+      consultas={consultas}
       stats={stats}
     />
   );

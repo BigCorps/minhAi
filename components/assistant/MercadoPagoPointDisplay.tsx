@@ -214,11 +214,30 @@ export default function MercadoPagoPointDisplay({
 
   // ── Fechar ─────────────────────────────────────────────────────────────────
 
-  function handleClose() {
-    clearPolling()
-    window.speechSynthesis?.cancel()
-    onClose()
+async function handleClose() {
+  clearPolling()
+  window.speechSynthesis?.cancel()
+  
+  // Cancelar order pendente no MP ao fechar
+  if (orderId && stage === 'awaiting') {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cancelar-order-mp-point`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ order_id: orderId }),
+        }
+      ).catch(() => {}) // fire and forget
+    }
   }
+  
+  onClose()
+}
 
   // ── Valor atual em centavos (para cálculos inline) ────────────────────────
 

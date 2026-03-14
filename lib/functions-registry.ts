@@ -151,6 +151,173 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     },
   },
 
+tef_debito: {
+  functionKey: 'tef_debito',
+  functionName: 'TEF Débito',
+  category: 'payment',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+  'tef débito', 'tef debito', 'POS debito', 'debito no POS',
+  'débito na maquininha', 'debito na maquininha',
+  'cartão na maquininha', 'cartao na maquininha',
+  'passar na maquininha',
+  'maquininha débito', 'maquininha debito',
+  'cobrar na maquininha',
+  'pagar na maquininha',
+],
+
+  examplePhrases: [
+    'Cobrar 50 reais no débito',
+    'TEF débito de 80',
+    'Passar no débito',
+  ],
+
+  requiresInput: true,
+  inputType: 'number',
+  inputPrompt: 'Qual o valor para o pagamento no débito?',
+
+  description: 'Cobra no cartão de débito direto na maquininha Mercado Pago Point Smart. O cliente passa o cartão na maquininha, sem tocar no tablet.',
+  shortDescription: 'Cobrar no débito via maquininha Point',
+  icon: '🔴',
+  color: '#F44336',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: true,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    const supabase = createClient()
+
+    const amount = extractAmount(transcript ?? '')
+
+    const { data: company } = await supabase
+      .from('companies')
+      .select('mp_access_token, mp_terminal_id')
+      .eq('id', companyId)
+      .single()
+
+    if (!company?.mp_access_token || !company?.mp_terminal_id) {
+      await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
+      return false
+    }
+
+    await playText(
+      amount
+        ? `Preparando cobrança de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} no débito na maquininha.`
+        : 'Abrindo cobrança por débito na maquininha. Informe o valor.'
+    )
+
+    setActiveModal?.({
+      type: 'MercadoPagoPointDisplay',
+      data: {
+        companyId,
+        paymentType: 'debit_card',
+        initialAmount: amount ? Math.round(amount * 100) : undefined,
+      },
+    })
+
+    return true
+  },
+},
+
+tef_credito: {
+  functionKey: 'tef_credito',
+  functionName: 'TEF Crédito',
+  category: 'payment',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+  'tef crédito', 'tef credito', 'POS credito', 'credito no POS',
+  'crédito na maquininha', 'credito na maquininha',
+  'parcelar na maquininha',
+  'maquininha crédito', 'maquininha credito',
+  'cobrar na maquininha',
+  'pagar na maquininha',
+  'parcelar', 'parcelado',
+],
+
+  examplePhrases: [
+    'Cobrar 100 reais no crédito',
+    'TEF crédito de 80',
+    'Parcelar em 3 vezes',
+    'Passar no crédito',
+  ],
+
+  requiresInput: true,
+  inputType: 'number',
+  inputPrompt: 'Qual o valor para o pagamento no crédito?',
+
+  description: 'Cobra no cartão de crédito direto na maquininha Mercado Pago Point Smart. Suporta parcelamento configurável. O cliente passa o cartão na maquininha, sem tocar no tablet.',
+  shortDescription: 'Cobrar no crédito via maquininha Point',
+  icon: '🔴',
+  color: '#F44336',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: true,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    const supabase = createClient()
+
+    const amount = extractAmount(transcript ?? '')
+
+    // Extrair parcelas do transcript
+    const installmentsMatch = (transcript ?? '').match(/(\d{1,2})\s*(?:vezes|x\b|parcelas?)/)
+    const installments = installmentsMatch ? Math.min(parseInt(installmentsMatch[1]), 12) : 1
+
+    const { data: company } = await supabase
+      .from('companies')
+      .select('mp_access_token, mp_terminal_id')
+      .eq('id', companyId)
+      .single()
+
+    if (!company?.mp_access_token || !company?.mp_terminal_id) {
+      await playText('A maquininha Mercado Pago não está configurada. Configure o Access Token e o Terminal ID no painel.')
+      return false
+    }
+
+    // Buscar config de parcelas
+    const { data: settings } = await supabase
+      .from('company_function_settings')
+      .select('config')
+      .eq('company_id', companyId)
+      .eq('function_key', 'tef_credito')
+      .single()
+
+    const maxInstallments = settings?.config?.max_installments || 12
+    const minInstallmentValueCents = settings?.config?.min_installment_value_cents || 0
+    const parsedInstallments = Math.min(installments, maxInstallments)
+
+    if (amount) {
+      const amountStr = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      await playText(
+        parsedInstallments > 1
+          ? `Preparando cobrança de ${amountStr} no crédito em ${parsedInstallments} vezes na maquininha.`
+          : `Preparando cobrança de ${amountStr} no crédito à vista na maquininha.`
+      )
+    } else {
+      await playText('Abrindo cobrança por crédito na maquininha. Informe o valor e as parcelas.')
+    }
+
+    setActiveModal?.({
+      type: 'MercadoPagoPointDisplay',
+      data: {
+        companyId,
+        paymentType: 'credit_card',
+        initialAmount: amount ? Math.round(amount * 100) : undefined,
+        initialInstallments: parsedInstallments,
+        maxInstallments,
+        minInstallmentValueCents,
+      },
+    })
+
+    return true
+  },
+},
+
   nfc_debito: {
     functionKey: 'nfc_debito',
     functionName: 'NFC Débito',
@@ -158,16 +325,13 @@ export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
     responseType: 'voice+modal',
 
 voiceTriggers: [
-  'nfc debito', 'nfc débito',
-  'cobrar no debito', 'cobrar no débito',
-  'cobrança no debito', 'cobrança no débito',
-  'cobranca no debito',
-  'cartao de debito', 'cartão de débito',
+  'nfc debito', 'nfc débito', 'tap debito', 'debito no tap',
+  'cobrar no debito tap', 'cobrar no débito nfc', 'tap to pay debito',
+  'cobrança no debito tap', 'cobrança no débito nfc',
+  'cobranca no debito boa nfc',
+  'cartao de debito no tap', 'cartão de débito no nfc',
   // ✅ chave: sem o valor — o processor só precisa identificar a função
-  'cobrar debito', 'cobrar débito',
-  'debito via nfc', 'débito via nfc',
-  'no debito',   // ← cobre "cobrar 10,00 no debito"
-  'no débito',
+  'debito via nfc', 'débito via nfc', 'debito via tap',
 ],
 
     examplePhrases: [
@@ -229,14 +393,11 @@ voiceTriggers: [
 
 voiceTriggers: [
   'nfc credito', 'nfc crédito',
-  'cobrar no credito', 'cobrar no crédito',
-  'cobrança no credito', 'cobrança no crédito',
-  'cobranca no credito',
-  'cartao de credito', 'cartão de crédito',
-  'cobrar credito', 'cobrar crédito',
-  'credito via nfc', 'crédito via nfc',
-  'no credito',   // ← cobre "cobrar 10,00 no credito"
-  'no crédito',
+  'cobrar no credito nfc', 'cobrar no crédito tap', 'tap credito', 'credito no tap',
+  'cobrança no credito via tap', 'cobrança no crédito via nfc',
+  'cobranca no credito via tap', 'tap to pay credito',
+  'cartao de credito no tap', 'cartão de crédito no nfc',
+  'credito via nfc', 'crédito via nfc', 'credito via tap',
 ],
 
     examplePhrases: [

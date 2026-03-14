@@ -55,21 +55,19 @@ export default function CreditsPage() {
   const requiresPlan = searchParams.get('requires_plan') === '1';
   const successParam = searchParams.get('success');
 
-// Adicionar junto aos outros useEffects
-useEffect(() => {
-  if (successParam === 'true' && user) {
-    const reload = async () => {
-      const { data } = await supabase
-        .from('user_credits')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (data) setCredits(data);
-    };
-    reload();
-  }
-}, [successParam, user]);
+  useEffect(() => {
+    if (successParam === 'true' && user) {
+      const reload = async () => {
+        const { data } = await supabase
+          .from('user_credits')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        if (data) setCredits(data);
+      };
+      reload();
+    }
+  }, [successParam, user]);
 
   useEffect(() => {
     setMounted(true);
@@ -88,7 +86,6 @@ useEffect(() => {
         .eq('is_active', true)
         .gt('price_cents', 0)
         .order('display_order');
-
       setPackages(data || []);
     };
     loadPackages();
@@ -97,13 +94,11 @@ useEffect(() => {
   useEffect(() => {
     const loadCredits = async () => {
       if (!user) return;
-
       const { data } = await supabase
         .from('user_credits')
         .select('*')
         .eq('user_id', user.id)
         .single();
-
       setCredits(data || {
         available_credits: 20,
         total_purchased: 0,
@@ -114,7 +109,6 @@ useEffect(() => {
       });
       setLoading(false);
     };
-
     if (user) loadCredits();
   }, [user, supabase]);
 
@@ -123,24 +117,18 @@ useEffect(() => {
       alert('Você precisa estar logado');
       return;
     }
-
     try {
       setPurchasing(packageId);
-
       const response = await fetch('/api/credits/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ package_id: packageId }),
       });
-
       const data = await response.json();
-
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Erro ao processar compra');
       }
-
       const selectedPackage = packages.find(p => p.id === packageId);
-
       setPaymentData({
         payment_id: data.payment_id,
         pix_code: data.pix_code,
@@ -149,7 +137,6 @@ useEffect(() => {
         packageName: selectedPackage?.name || 'Pacote',
       });
       setIsModalOpen(true);
-
     } catch (error) {
       console.error('Erro ao comprar:', error);
       alert(error instanceof Error ? error.message : 'Erro ao processar compra');
@@ -181,13 +168,21 @@ useEffect(() => {
     credits?.plan_expires_at != null &&
     new Date(credits.plan_expires_at) > new Date();
 
+  const isTrial = hasActivePlan && credits?.active_plan_name === 'Trial';
+
+  // Dias restantes do trial
+  const trialDaysLeft = isTrial && credits?.plan_expires_at
+    ? Math.ceil((new Date(credits.plan_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+
   const planExpiresFormatted = credits?.plan_expires_at
     ? new Date(credits.plan_expires_at).toLocaleDateString('pt-BR')
     : null;
 
   return (
     <div className="space-y-8">
-      {/* Aviso de plano necessário */}
+
+      {/* Aviso de plano necessário (redirect do middleware) */}
       {requiresPlan && (
         <div className={`rounded-2xl p-4 border flex items-center gap-3 ${
           isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
@@ -195,6 +190,20 @@ useEffect(() => {
           <Sparkles className="w-5 h-5 flex-shrink-0" />
           <p className="text-sm font-medium">
             Essa seção requer um <strong>Plano Mensal</strong> ativo. Escolha um plano abaixo para liberar o acesso.
+          </p>
+        </div>
+      )}
+
+      {/* Banner de trial ativo */}
+      {isTrial && (
+        <div className={`rounded-2xl p-4 border flex items-center gap-3 ${
+          isDark
+            ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+            : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
+          <Star className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm font-medium">
+            Você está no <strong>período de teste gratuito</strong> — {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'} (até {planExpiresFormatted}). Assine um plano abaixo para continuar com acesso após o trial.
           </p>
         </div>
       )}
@@ -212,12 +221,22 @@ useEffect(() => {
               Escolha o pacote ideal para suas necessidades
             </p>
 
+            {/* Badge de status do plano */}
             {hasActivePlan && (
               <div className={`mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
-                isDark ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-green-50 text-green-700 border border-green-200'
+                isTrial
+                  ? isDark
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : isDark
+                    ? 'bg-green-500/15 text-green-400 border border-green-500/20'
+                    : 'bg-green-50 text-green-700 border border-green-200'
               }`}>
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Plano {credits?.active_plan_name} ativo — expira em {planExpiresFormatted}
+                <div className={`w-2 h-2 rounded-full animate-pulse ${isTrial ? 'bg-amber-500' : 'bg-green-500'}`} />
+                {isTrial
+                  ? `Período de teste — expira em ${planExpiresFormatted}`
+                  : `Plano ${credits?.active_plan_name} ativo — expira em ${planExpiresFormatted}`
+                }
               </div>
             )}
           </div>
@@ -264,6 +283,9 @@ useEffect(() => {
             <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Planos com Acesso às Integrações
             </h2>
+            <p className={`text-sm mt-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+              Libera Serviços Google, Meta e Linha de Produção. Inclui créditos mensais.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -282,7 +304,7 @@ useEffect(() => {
                   </div>
                 )}
 
-                {hasActivePlan && credits?.active_plan_name === pkg.name && (
+                {hasActivePlan && !isTrial && credits?.active_plan_name === pkg.name && (
                   <div className="absolute -top-4 right-6 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
                     ✓ Ativo
                   </div>
@@ -306,7 +328,12 @@ useEffect(() => {
                     >
                       {purchasing === pkg.id ? (
                         <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      ) : hasActivePlan && credits?.active_plan_name === pkg.name ? 'Renovar Plano' : 'Assinar Agora'}
+                      ) : hasActivePlan && !isTrial && credits?.active_plan_name === pkg.name
+                        ? 'Renovar Plano'
+                        : isTrial
+                          ? 'Assinar e Continuar'
+                          : 'Assinar Agora'
+                      }
                     </button>
                   </div>
 
@@ -341,6 +368,9 @@ useEffect(() => {
         <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Pacotes de Créditos
         </h2>
+        <p className={`text-sm mt-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+          Créditos avulsos, sem mensalidade. Não expiram.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

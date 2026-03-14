@@ -9,7 +9,6 @@ import {
   AlertCircle,
   CheckCircle,
   Mic,
-  MicOff,
   ChevronRight,
   RotateCcw,
   ArrowLeft,
@@ -18,6 +17,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -67,27 +67,66 @@ export default function RegistrationDisplay({
   const { companyId } = data;
   const supabase = createClient();
 
-  // Tema
-  const isDark = theme === 'dark';
-  const bg          = isDark ? 'bg-slate-900'   : 'bg-white';
+  const isDark      = theme === 'dark';
+  const bg          = isDark ? 'bg-slate-900'    : 'bg-white';
   const border      = isDark ? 'border-slate-700' : 'border-gray-200';
-  const textPrimary = isDark ? 'text-white'       : 'text-gray-900';
-  const textMuted   = isDark ? 'text-gray-400'    : 'text-gray-500';
-  const inputCls    = `w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800 text-white placeholder-slate-500' : 'bg-white text-gray-900 placeholder-gray-400'} focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm`;
+  const textPrimary = isDark ? 'text-white'        : 'text-gray-900';
+  const textMuted   = isDark ? 'text-gray-400'     : 'text-gray-500';
 
-  // Estado geral
-  const [stage, setStage]       = useState<Stage>('loading');
-  const [fieldKeys, setFieldKeys]   = useState<string[]>([]);
-  const [fieldLabels, setFieldLabels] = useState<Record<string, string>>({});
+  const [stage, setStage]               = useState<Stage>('loading');
+  const [fieldKeys, setFieldKeys]       = useState<string[]>([]);
+  const [fieldLabels, setFieldLabels]   = useState<Record<string, string>>({});
   const [fieldQuestions, setFieldQuestions] = useState<Record<string, string>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers]   = useState<Record<string, string>>({});
-  const [typingValue, setTypingValue] = useState('');
-  const [error, setError]       = useState<string | null>(null);
-  const [inputMode, setInputMode] = useState<'voice' | 'typing'>('voice');
+  const [answers, setAnswers]           = useState<Record<string, string>>({});
+  const [typingValue, setTypingValue]   = useState('');
+  const [error, setError]               = useState<string | null>(null);
 
   const lastSpeech = useRef('');
   const inputRef   = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  // ── useModalVoiceCommand — coleta (mesmo hook do SendEmailModal) ───────────
+
+  useModalVoiceCommand({
+    active: stage === 'collecting',
+    onTranscript: (transcript: string) => {
+      const lower = transcript.toLowerCase().trim();
+
+      if (['cancelar', 'fechar', 'cancela'].some(t => lower.includes(t))) {
+        onClose(); return;
+      }
+      if (['voltar', 'anterior'].some(t => lower.includes(t))) {
+        handleGoBackRef.current(); return;
+      }
+      if (['repetir', 'repete', 'repita'].some(t => lower.includes(t))) {
+        repeatQuestionRef.current(); return;
+      }
+
+      // Qualquer outra fala → preenche o campo
+      const cleaned = transcript.trim();
+      if (cleaned) setTypingValue(cleaned);
+    },
+  });
+
+  // useModalVoiceCommand — confirmação
+  useModalVoiceCommand({
+    active: stage === 'confirming',
+    onTranscript: (transcript: string) => {
+      const lower = transcript.toLowerCase().trim();
+      if (['confirmar', 'confirma', 'salvar', 'salva', 'sim', 'correto'].some(t => lower.includes(t))) {
+        handleSaveRef.current();
+      } else if (['cancelar', 'fechar'].some(t => lower.includes(t))) {
+        onClose();
+      } else if (['voltar', 'corrigir', 'editar'].some(t => lower.includes(t))) {
+        handleGoBackRef.current();
+      }
+    },
+  });
+
+  // Refs estáveis para callbacks usados dentro dos hooks
+  const handleGoBackRef      = useRef<() => void>(() => {});
+  const repeatQuestionRef    = useRef<() => void>(() => {});
+  const handleSaveRef        = useRef<() => void>(() => {});
 
   // ── Carregar config ────────────────────────────────────────────────────────
 
@@ -99,12 +138,11 @@ export default function RegistrationDisplay({
         .eq('company_id', companyId)
         .maybeSingle();
 
-      const fields: string[]                      = cfg?.fields       ?? ['nome'];
+      const fields: string[]                          = cfg?.fields       ?? ['nome'];
       const custom: { key: string; label: string }[] = cfg?.custom_fields ?? [];
 
       const labels: Record<string, string>    = { ...FIXED_FIELD_LABELS };
       const questions: Record<string, string> = { ...FIXED_FIELD_QUESTIONS };
-
       custom.forEach(cf => {
         labels[cf.key]    = cf.label || cf.key;
         questions[cf.key] = `${cf.label || cf.key}?`;
@@ -115,69 +153,35 @@ export default function RegistrationDisplay({
       setFieldQuestions(questions);
       setStage('collecting');
 
-      // Cumprimentar e fazer a primeira pergunta
       const firstQ = questions[fields[0]] ?? `${labels[fields[0]]}?`;
       lastSpeech.current = firstQ;
       playText?.(firstQ).catch(() => {});
     }
-
     loadConfig();
   }, [companyId]);
 
-  // ── Focus no input quando troca para digitação ─────────────────────────────
-
+  // Focus no input ao mudar de campo
   useEffect(() => {
-    if (inputMode === 'typing') {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [inputMode, currentIndex]);
+    if (stage === 'collecting') setTimeout(() => inputRef.current?.focus(), 100);
+  }, [currentIndex, stage]);
 
-  // ── Avançar campo ──────────────────────────────────────────────────────────
-
-  const advanceField = useCallback(
-    async (value: string) => {
-      const key = fieldKeys[currentIndex];
-      const updated = { ...answers, [key]: value };
-      setAnswers(updated);
-      setTypingValue('');
-
-      const nextIndex = currentIndex + 1;
-
-      if (nextIndex >= fieldKeys.length) {
-        // Todos os campos preenchidos → confirmar
-        setStage('confirming');
-        const msg = 'Cadastro quase pronto. Confirme os dados ou corrija algum campo.';
-        lastSpeech.current = msg;
-        playText?.(msg).catch(() => {});
-      } else {
-        setCurrentIndex(nextIndex);
-        const nextKey = fieldKeys[nextIndex];
-        const q = fieldQuestions[nextKey] ?? `${fieldLabels[nextKey]}?`;
-        lastSpeech.current = q;
-        playText?.(q).catch(() => {});
-      }
-    },
-    [fieldKeys, currentIndex, answers, fieldLabels, fieldQuestions, playText]
-  );
-
-  // ── Repetir pergunta atual ─────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   const repeatQuestion = useCallback(() => {
     const key = fieldKeys[currentIndex];
-    const q   = fieldQuestions[key] ?? `${fieldLabels[key]}?`;
+    if (!key) return;
+    const q = fieldQuestions[key] ?? `${fieldLabels[key]}?`;
     lastSpeech.current = q;
     playText?.(q).catch(() => {});
   }, [fieldKeys, currentIndex, fieldLabels, fieldQuestions, playText]);
 
-  // ── Voltar ao campo anterior ───────────────────────────────────────────────
-
-  const goBack = useCallback(() => {
+  const handleGoBack = useCallback(() => {
     if (stage === 'confirming') {
-      setStage('collecting');
-      const lastKey = fieldKeys[fieldKeys.length - 1];
-      const idx     = fieldKeys.length - 1;
+      const idx = fieldKeys.length - 1;
       setCurrentIndex(idx);
-      const q = fieldQuestions[lastKey] ?? `${fieldLabels[lastKey]}?`;
+      setTypingValue(answers[fieldKeys[idx]] ?? '');
+      setStage('collecting');
+      const q = fieldQuestions[fieldKeys[idx]] ?? `${fieldLabels[fieldKeys[idx]]}?`;
       lastSpeech.current = q;
       playText?.(q).catch(() => {});
       return;
@@ -185,16 +189,36 @@ export default function RegistrationDisplay({
     if (currentIndex > 0) {
       const prev = currentIndex - 1;
       setCurrentIndex(prev);
-      const prevKey = fieldKeys[prev];
-      const q = fieldQuestions[prevKey] ?? `${fieldLabels[prevKey]}?`;
+      setTypingValue(answers[fieldKeys[prev]] ?? '');
+      const q = fieldQuestions[fieldKeys[prev]] ?? `${fieldLabels[fieldKeys[prev]]}?`;
       lastSpeech.current = q;
       playText?.(q).catch(() => {});
     }
-  }, [stage, currentIndex, fieldKeys, fieldLabels, fieldQuestions, playText]);
+  }, [stage, currentIndex, fieldKeys, fieldLabels, fieldQuestions, answers, playText]);
 
-  // ── Salvar ─────────────────────────────────────────────────────────────────
+  const advanceField = useCallback(() => {
+    const value = typingValue.trim();
+    if (!value) return;
+    const key     = fieldKeys[currentIndex];
+    const updated = { ...answers, [key]: value };
+    setAnswers(updated);
+    setTypingValue('');
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= fieldKeys.length) {
+      setStage('confirming');
+      const msg = 'Revise os dados e confirme o cadastro.';
+      lastSpeech.current = msg;
+      playText?.(msg).catch(() => {});
+    } else {
+      setCurrentIndex(nextIndex);
+      const nextKey = fieldKeys[nextIndex];
+      const q = fieldQuestions[nextKey] ?? `${fieldLabels[nextKey]}?`;
+      lastSpeech.current = q;
+      playText?.(q).catch(() => {});
+    }
+  }, [typingValue, fieldKeys, currentIndex, answers, fieldLabels, fieldQuestions, playText]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setStage('saving');
     setError(null);
     try {
@@ -205,7 +229,6 @@ export default function RegistrationDisplay({
         facial_id:     null,
       });
       if (err) throw err;
-
       setStage('success');
       const msg = 'Cadastro realizado com sucesso!';
       lastSpeech.current = msg;
@@ -215,40 +238,33 @@ export default function RegistrationDisplay({
       console.error('Erro ao salvar cadastro:', e);
       setError('Erro ao salvar o cadastro. Tente novamente.');
       setStage('confirming');
-      const msg = 'Erro ao salvar o cadastro. Tente novamente.';
-      lastSpeech.current = msg;
-      playText?.(msg).catch(() => {});
+      playText?.('Erro ao salvar. Tente novamente.').catch(() => {});
     }
-  };
-
-  // ── Cleanup ────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    return () => { window.speechSynthesis.cancel(); };
-  }, []);
-
-  // ── Submeter digitação ─────────────────────────────────────────────────────
-
-  const handleTypingSubmit = () => {
-    if (!typingValue.trim()) return;
-    advanceField(typingValue.trim());
-  };
-
-  // ── Editar campo na confirmação ────────────────────────────────────────────
+  }, [answers, companyId, playText, onClose]);
 
   const editField = (index: number) => {
     setCurrentIndex(index);
+    setTypingValue(answers[fieldKeys[index]] ?? '');
     setStage('collecting');
     const key = fieldKeys[index];
-    setTypingValue(answers[key] ?? '');
-    const q = fieldQuestions[key] ?? `${fieldLabels[key]}?`;
+    const q   = fieldQuestions[key] ?? `${fieldLabels[key]}?`;
     lastSpeech.current = q;
     playText?.(q).catch(() => {});
   };
 
+  // Manter refs atualizados
+  useEffect(() => { handleGoBackRef.current   = handleGoBack;   }, [handleGoBack]);
+  useEffect(() => { repeatQuestionRef.current = repeatQuestion; }, [repeatQuestion]);
+  useEffect(() => { handleSaveRef.current     = handleSave;     }, [handleSave]);
+
+  // Cleanup
+  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
+
   const currentKey      = fieldKeys[currentIndex];
-  const currentQuestion = currentKey ? (fieldQuestions[currentKey] ?? `${fieldLabels[currentKey]}?`) : '';
-  const progress        = fieldKeys.length > 0 ? ((currentIndex) / fieldKeys.length) * 100 : 0;
+  const currentQuestion = currentKey
+    ? (fieldQuestions[currentKey] ?? `${fieldLabels[currentKey]}?`)
+    : '';
+  const progress = fieldKeys.length > 0 ? (currentIndex / fieldKeys.length) * 100 : 0;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -260,7 +276,7 @@ export default function RegistrationDisplay({
         max-w-lg sm:max-w-2xl
       `}>
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* Header */}
         <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -270,7 +286,7 @@ export default function RegistrationDisplay({
               <div>
                 <h2 className={`text-xl font-bold ${textPrimary}`}>Cadastro</h2>
                 <p className={`text-sm ${textMuted}`}>
-                  {stage === 'loading'    && 'Carregando campos...'}
+                  {stage === 'loading'    && 'Carregando...'}
                   {stage === 'collecting' && `Campo ${currentIndex + 1} de ${fieldKeys.length}`}
                   {stage === 'confirming' && 'Confirme os dados'}
                   {stage === 'saving'     && 'Salvando...'}
@@ -286,7 +302,6 @@ export default function RegistrationDisplay({
             </button>
           </div>
 
-          {/* Barra de progresso */}
           {stage === 'collecting' && fieldKeys.length > 0 && (
             <div className="mt-3 h-1.5 rounded-full bg-blue-200 dark:bg-blue-900/40 overflow-hidden">
               <div
@@ -297,10 +312,9 @@ export default function RegistrationDisplay({
           )}
         </div>
 
-        {/* ── Conteúdo ─────────────────────────────────────────────────────── */}
+        {/* Conteúdo */}
         <div className="p-6">
 
-          {/* Erro */}
           {error && (
             <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'}`}>
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -308,25 +322,25 @@ export default function RegistrationDisplay({
             </div>
           )}
 
-          {/* ── LOADING ─────────────────────────────────────────────────── */}
+          {/* LOADING */}
           {stage === 'loading' && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           )}
 
-          {/* ── COLLECTING ──────────────────────────────────────────────── */}
+          {/* COLLECTING */}
           {stage === 'collecting' && currentKey && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-              {/* Coluna esquerda — campos já respondidos */}
+              {/* Esquerda: lista de campos (desktop) */}
               <div className="hidden sm:block">
                 <p className={`text-xs font-semibold uppercase tracking-wider ${textMuted} mb-3`}>
                   Campos do cadastro
                 </p>
                 <div className="space-y-2">
                   {fieldKeys.map((key, idx) => {
-                    const answered = answers[key] !== undefined;
+                    const answered  = answers[key] !== undefined;
                     const isCurrent = idx === currentIndex;
                     return (
                       <div
@@ -340,11 +354,9 @@ export default function RegistrationDisplay({
                         }`}
                       >
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isCurrent
-                            ? 'bg-blue-500'
-                            : answered
-                              ? 'bg-green-500'
-                              : isDark ? 'bg-slate-700' : 'bg-gray-200'
+                          isCurrent  ? 'bg-blue-500'
+                          : answered ? 'bg-green-500'
+                          : isDark   ? 'bg-slate-700' : 'bg-gray-200'
                         }`}>
                           {answered && !isCurrent
                             ? <CheckCircle className="w-3 h-3 text-white" />
@@ -352,10 +364,14 @@ export default function RegistrationDisplay({
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate ${isCurrent ? 'text-blue-400' : answered ? (isDark ? 'text-green-400' : 'text-green-700') : textMuted}`}>
+                          <p className={`font-medium truncate ${
+                            isCurrent  ? 'text-blue-400'
+                            : answered ? (isDark ? 'text-green-400' : 'text-green-700')
+                            : textMuted
+                          }`}>
                             {fieldLabels[key] ?? key}
                           </p>
-                          {answered && answers[key] && (
+                          {answered && !isCurrent && answers[key] && (
                             <p className={`text-xs truncate ${textMuted}`}>{answers[key]}</p>
                           )}
                         </div>
@@ -365,99 +381,71 @@ export default function RegistrationDisplay({
                 </div>
               </div>
 
-              {/* Coluna direita — campo atual */}
+              {/* Direita: campo atual */}
               <div className="flex flex-col gap-4">
+
                 <div>
-                  <p className={`text-base font-semibold ${textPrimary} mb-1`}>{currentQuestion}</p>
-                  <p className={`text-xs ${textMuted}`}>
-                    {fieldLabels[currentKey] ?? currentKey}
-                  </p>
+                  <p className={`text-base font-semibold ${textPrimary} mb-0.5`}>{currentQuestion}</p>
+                  <p className={`text-xs ${textMuted}`}>{fieldLabels[currentKey] ?? currentKey}</p>
                 </div>
 
-                {/* Toggle voz / digitação */}
-                <div className={`flex rounded-lg border ${border} overflow-hidden text-sm`}>
-                  <button
-                    onClick={() => setInputMode('voice')}
-                    className={`flex-1 py-2 flex items-center justify-center gap-1.5 transition font-medium ${
-                      inputMode === 'voice'
-                        ? 'bg-blue-600 text-white'
-                        : isDark ? 'bg-slate-800 text-gray-400 hover:bg-slate-700' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Mic className="w-3.5 h-3.5" />
-                    Voz
-                  </button>
-                  <button
-                    onClick={() => setInputMode('typing')}
-                    className={`flex-1 py-2 flex items-center justify-center gap-1.5 transition font-medium ${
-                      inputMode === 'typing'
-                        ? 'bg-blue-600 text-white'
-                        : isDark ? 'bg-slate-800 text-gray-400 hover:bg-slate-700' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    Digitar
-                  </button>
+                {/* Banner: ouvindo */}
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium ${
+                  isDark
+                    ? 'bg-blue-900/20 border-blue-800 text-blue-300'
+                    : 'bg-blue-50 border-blue-200 text-blue-700'
+                }`}>
+                  <div className="relative flex-shrink-0">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping absolute" />
+                    <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                  </div>
+                  <Mic className="w-3.5 h-3.5 flex-shrink-0" />
+                  Ouvindo — fale a resposta ou digite abaixo
                 </div>
 
-                {/* Input por voz */}
-                {inputMode === 'voice' && (
-                  <div className={`flex flex-col items-center gap-3 py-4 rounded-xl border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
-                    <div className="w-14 h-14 rounded-full bg-blue-600/10 border-2 border-blue-500/30 flex items-center justify-center">
-                      <Mic className="w-7 h-7 text-blue-400" />
-                    </div>
-                    <p className={`text-sm text-center ${textMuted}`}>
-                      Fale a resposta — o assistente irá capturar automaticamente
-                    </p>
-                    <p className={`text-xs ${textMuted} opacity-60`}>
-                      ou troque para "Digitar" abaixo
-                    </p>
-                  </div>
+                {/* Input — sempre visível */}
+                {currentKey === 'observacoes' ? (
+                  <textarea
+                    ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                    value={typingValue}
+                    onChange={e => setTypingValue(e.target.value)}
+                    placeholder={`Resposta para "${fieldLabels[currentKey]}"...`}
+                    rows={3}
+                    className={`w-full px-4 py-3 rounded-lg border ${border} resize-none text-sm
+                      ${isDark ? 'bg-slate-800 text-white placeholder-slate-500' : 'bg-white text-gray-900 placeholder-gray-400'}
+                      focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
+                    onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) advanceField(); }}
+                  />
+                ) : (
+                  <input
+                    ref={inputRef as React.RefObject<HTMLInputElement>}
+                    type={currentKey === 'email' ? 'email' : currentKey === 'telefone' ? 'tel' : 'text'}
+                    value={typingValue}
+                    onChange={e => setTypingValue(e.target.value)}
+                    placeholder={`Resposta para "${fieldLabels[currentKey]}"...`}
+                    className={`w-full px-4 py-3 rounded-lg border ${border} text-sm
+                      ${isDark ? 'bg-slate-800 text-white placeholder-slate-500' : 'bg-white text-gray-900 placeholder-gray-400'}
+                      focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
+                    onKeyDown={e => { if (e.key === 'Enter') advanceField(); }}
+                  />
                 )}
 
-                {/* Input por digitação */}
-                {inputMode === 'typing' && (
-                  <div className="space-y-3">
-                    {currentKey === 'observacoes' ? (
-                      <textarea
-                        ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-                        value={typingValue}
-                        onChange={e => setTypingValue(e.target.value)}
-                        placeholder={`Digite ${fieldLabels[currentKey] ?? currentKey}...`}
-                        rows={3}
-                        className={inputCls + ' resize-none'}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && e.ctrlKey) handleTypingSubmit();
-                        }}
-                      />
-                    ) : (
-                      <input
-                        ref={inputRef as React.RefObject<HTMLInputElement>}
-                        type={currentKey === 'email' ? 'email' : currentKey === 'telefone' ? 'tel' : 'text'}
-                        value={typingValue}
-                        onChange={e => setTypingValue(e.target.value)}
-                        placeholder={`Digite ${fieldLabels[currentKey] ?? currentKey}...`}
-                        className={inputCls}
-                        onKeyDown={e => { if (e.key === 'Enter') handleTypingSubmit(); }}
-                      />
-                    )}
-                    <button
-                      onClick={handleTypingSubmit}
-                      disabled={!typingValue.trim()}
-                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2"
-                    >
-                      Confirmar
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+                <button
+                  onClick={advanceField}
+                  disabled={!typingValue.trim()}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2"
+                >
+                  {currentIndex < fieldKeys.length - 1 ? 'Próximo' : 'Revisar'}
+                  <ChevronRight className="w-4 h-4" />
+                </button>
 
-                {/* Ações secundárias */}
                 <div className="flex gap-2">
                   {currentIndex > 0 && (
                     <button
-                      onClick={goBack}
-                      className={`flex-1 py-2 rounded-lg border ${border} ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200'} text-sm ${textPrimary} transition flex items-center justify-center gap-1.5`}
+                      onClick={handleGoBack}
+                      className={`flex-1 py-2 rounded-lg border ${border} text-sm ${textPrimary} transition
+                        ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200'}
+                        flex items-center justify-center gap-1.5`}
                     >
                       <ArrowLeft className="w-4 h-4" />
                       Voltar
@@ -465,7 +453,9 @@ export default function RegistrationDisplay({
                   )}
                   <button
                     onClick={repeatQuestion}
-                    className={`flex-1 py-2 rounded-lg border ${border} ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200'} text-sm ${textMuted} transition flex items-center justify-center gap-1.5`}
+                    className={`flex-1 py-2 rounded-lg border ${border} text-sm ${textMuted} transition
+                      ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200'}
+                      flex items-center justify-center gap-1.5`}
                   >
                     <RotateCcw className="w-4 h-4" />
                     Repetir
@@ -475,11 +465,10 @@ export default function RegistrationDisplay({
             </div>
           )}
 
-          {/* ── CONFIRMING ──────────────────────────────────────────────── */}
+          {/* CONFIRMING */}
           {stage === 'confirming' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-              {/* Resumo dos campos */}
               <div>
                 <p className={`text-xs font-semibold uppercase tracking-wider ${textMuted} mb-3`}>
                   Dados informados
@@ -488,17 +477,21 @@ export default function RegistrationDisplay({
                   {fieldKeys.map((key, idx) => (
                     <div
                       key={key}
-                      className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}
+                      className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border ${border}
+                        ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}
                     >
                       <div className="flex-1 min-w-0">
                         <p className={`text-xs font-medium ${textMuted}`}>{fieldLabels[key] ?? key}</p>
                         <p className={`text-sm font-semibold ${textPrimary} mt-0.5 truncate`}>
-                          {answers[key] || <span className={`italic ${textMuted} font-normal`}>não informado</span>}
+                          {answers[key] || (
+                            <span className={`italic ${textMuted} font-normal`}>não informado</span>
+                          )}
                         </p>
                       </div>
                       <button
                         onClick={() => editField(idx)}
-                        className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-200'} transition flex-shrink-0`}
+                        className={`p-1.5 rounded-lg flex-shrink-0 transition
+                          ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-200'}`}
                         title="Editar"
                       >
                         <Pencil className="w-3.5 h-3.5 text-blue-400" />
@@ -508,31 +501,47 @@ export default function RegistrationDisplay({
                 </div>
               </div>
 
-              {/* Painel de ações */}
               <div className="flex flex-col gap-4">
+
+                {/* Banner voz */}
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium ${
+                  isDark
+                    ? 'bg-green-900/20 border-green-800 text-green-300'
+                    : 'bg-green-50 border-green-200 text-green-700'
+                }`}>
+                  <div className="relative flex-shrink-0">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-ping absolute" />
+                    <div className="w-2 h-2 bg-green-400 rounded-full" />
+                  </div>
+                  <Mic className="w-3.5 h-3.5 flex-shrink-0" />
+                  Diga "confirmar" ou "corrigir"
+                </div>
+
                 <div className={`p-4 rounded-xl border ${border} ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
                   <p className={`text-sm font-medium ${textPrimary} mb-1`}>Tudo certo?</p>
                   <p className={`text-sm ${textMuted}`}>
-                    Revise os dados ao lado. Clique em editar em qualquer campo para corrigir, ou confirme para salvar o cadastro.
+                    Clique em editar em qualquer campo para corrigir, ou confirme para salvar.
                   </p>
                 </div>
 
                 {/* Em breve */}
-                <div className={`p-3 rounded-xl border border-dashed ${isDark ? 'border-slate-600' : 'border-gray-300'} opacity-50`}>
+                <div className={`p-3 rounded-xl border border-dashed opacity-50
+                  ${isDark ? 'border-slate-600' : 'border-gray-300'}`}>
                   <p className={`text-xs font-medium ${textMuted} mb-2`}>Em breve</p>
                   <div className="flex gap-3">
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${isDark ? 'border-slate-600 bg-slate-800' : 'border-gray-200 bg-gray-100'} text-xs ${textMuted} cursor-not-allowed`}>
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${textMuted} cursor-not-allowed
+                      ${isDark ? 'border-slate-600 bg-slate-800' : 'border-gray-200 bg-gray-100'}`}>
                       <Fingerprint className="w-3.5 h-3.5" />
                       Biometria
                     </div>
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${isDark ? 'border-slate-600 bg-slate-800' : 'border-gray-200 bg-gray-100'} text-xs ${textMuted} cursor-not-allowed`}>
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${textMuted} cursor-not-allowed
+                      ${isDark ? 'border-slate-600 bg-slate-800' : 'border-gray-200 bg-gray-100'}`}>
                       <Camera className="w-3.5 h-3.5" />
                       Facial
                     </div>
                   </div>
                 </div>
 
-                {/* Botões */}
                 <div className="flex flex-col gap-2 mt-auto">
                   <button
                     onClick={handleSave}
@@ -542,8 +551,10 @@ export default function RegistrationDisplay({
                     Confirmar e Salvar
                   </button>
                   <button
-                    onClick={goBack}
-                    className={`w-full py-2.5 rounded-lg border ${border} ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200'} text-sm ${textPrimary} transition flex items-center justify-center gap-1.5`}
+                    onClick={handleGoBack}
+                    className={`w-full py-2.5 rounded-lg border ${border} text-sm ${textPrimary} transition
+                      ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200'}
+                      flex items-center justify-center gap-1.5`}
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Voltar e Corrigir
@@ -553,7 +564,7 @@ export default function RegistrationDisplay({
             </div>
           )}
 
-          {/* ── SAVING ──────────────────────────────────────────────────── */}
+          {/* SAVING */}
           {stage === 'saving' && (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
@@ -561,10 +572,11 @@ export default function RegistrationDisplay({
             </div>
           )}
 
-          {/* ── SUCCESS ─────────────────────────────────────────────────── */}
+          {/* SUCCESS */}
           {stage === 'success' && (
             <div className="flex flex-col items-center justify-center py-10 gap-4">
-              <div className={`w-16 h-16 rounded-full ${isDark ? 'bg-green-900/30' : 'bg-green-100'} flex items-center justify-center`}>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center
+                ${isDark ? 'bg-green-900/30' : 'bg-green-100'}`}>
                 <CheckCircle className="w-10 h-10 text-green-500" />
               </div>
               <div className="text-center">
@@ -573,6 +585,7 @@ export default function RegistrationDisplay({
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>,

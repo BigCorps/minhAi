@@ -80,9 +80,9 @@ export default function ConsultarDDDDisplay({ data, onClose, theme = 'dark', pla
     setErrorMsg(null);
 
     try {
-      const { data: res, error } = await supabase.functions.invoke('consultar-ddd', {
-        body: { company_id: data.companyId, ddd: cleanDdd },
-      });
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+       body: { company_id: data.companyId, action: 'consultar_ddd', ddd }
+     });
 
       if (error) throw new Error(error.message);
       if (!res.success) throw new Error(res.error ?? 'Falha na consulta');

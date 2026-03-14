@@ -21,6 +21,8 @@ type Stage = 'input' | 'processing' | 'result' | 'error';
 const OPENING_TEXT = 'Consulta de CEP. Digite o CEP desejado ou diga o CEP em voz alta.';
 const AUTO_CLOSE = 60;
 
+const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]);
+
 const normalize = (text: string) =>
   text.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -96,6 +98,8 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
 
       setResultData(res.result);
       setSpeechText(res.speech_text);
+      setResultadoFormatado(res.data.resultado_formatado); // ← ADICIONAR
+      setDownloadToken(res.data.download_token);
 
       // Gerar PDF via jsPDF
       const pdfContent = generatePdfContent(res.result);
@@ -127,15 +131,15 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
   }, [resultData, playText]);
 
 const handleDownloadPdf = useCallback(() => {
-  if (!resultadoFormatado) return;
+  if (!resultadoFormatado || resultadoFormatado.length === 0) return;
   
   try {
     // ✅ Gerar PDF no frontend
-    const pdfDataUri = generateConsultaPDF('consultar_cep', resultadoFormatado);
+    const pdfDataUri = generateConsultaPDF('Consultar CEP', resultadoFormatado);
     
     const a = document.createElement('a');
     a.href = pdfDataUri;
-    a.download = fileName || `consulta_${Date.now()}.pdf`;
+    a.download = `cep_${Date.now()}.pdf`;
     a.click();
     
     playText('PDF baixado.').catch(() => {});
@@ -143,7 +147,7 @@ const handleDownloadPdf = useCallback(() => {
     console.error('Erro ao gerar PDF:', error);
     playText('Erro ao gerar PDF.').catch(() => {});
   }
-}, [resultadoFormatado, fileName, playText]);
+}, [resultadoFormatado, playText]);
 
   const handleReset = useCallback(() => {
     setStage('input');

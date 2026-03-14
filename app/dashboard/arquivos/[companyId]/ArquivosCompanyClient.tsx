@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
-import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw, FileText, Download, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw, FileText, Download, CheckCircle } from 'lucide-react';
 
 // ========================================
 // INTERFACES E TYPES (ANTES DA FUNÇÃO)
@@ -29,9 +29,12 @@ interface Consulta {
   created_at: string;
   status_pagamento: string;
   pdf_disponivel: boolean;
-  horas_restantes: number;
+  minutos_restantes: number; // ← CORRIGIDO: era horas_restantes
   expirado: boolean;
   download_token: string | null;
+  file_base64: string | null;
+  file_name: string | null;
+  file_type: string | null;
 }
 
 interface Company {
@@ -110,7 +113,6 @@ export default function ArquivosCompanyClient({
       setCupons(updated);
       const now = new Date();
       const totalCupons = updated.length;
-      const ativos = updated.filter(c => c.is_active && (!c.expires_at || new Date(c.expires_at) > now)).length;
       
       setStats({
         totalCupons,
@@ -141,12 +143,40 @@ export default function ArquivosCompanyClient({
     
     try {
       const consulta = consultas.find(c => c.id === consultaId);
-      if (!consulta || !consulta.download_token) {
-        throw new Error('PDF não disponível');
+      if (!consulta) {
+        throw new Error('Consulta não encontrada');
       }
 
-      // Redirecionar para página de download usando o token
-      window.open(`/download/${consulta.download_token}`, '_blank');
+      // Se tem token, usar página de download
+      if (consulta.download_token) {
+        window.open(`/download/${consulta.download_token}`, '_blank');
+        return;
+      }
+
+      // Se tem file_base64, baixar direto
+      if (consulta.file_base64) {
+        let base64Clean = consulta.file_base64;
+        if (base64Clean.includes(',')) {
+          base64Clean = base64Clean.split(',')[1];
+        }
+
+        const byteString = atob(base64Clean);
+        const byteArray = new Uint8Array(byteString.length);
+        for (let i = 0; i < byteString.length; i++) {
+          byteArray[i] = byteString.charCodeAt(i);
+        }
+
+        const blob = new Blob([byteArray], { type: consulta.file_type || 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = consulta.file_name || `${consulta.tipo_consulta}_${new Date(consulta.created_at).toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      throw new Error('PDF não disponível');
       
     } catch (error) {
       console.error('Erro ao baixar PDF:', error);
@@ -446,7 +476,7 @@ export default function ArquivosCompanyClient({
                             <div className="flex items-center gap-2">
                               <CheckCircle className="w-4 h-4 text-green-500" />
                               <span className="text-xs text-gray-600 dark:text-white/60">
-                                Disponível ({Math.floor(consulta.horas_restantes)}h restantes)
+                                Disponível ({Math.floor(consulta.minutos_restantes)} min)
                               </span>
                             </div>
                           ) : consulta.expirado ? (

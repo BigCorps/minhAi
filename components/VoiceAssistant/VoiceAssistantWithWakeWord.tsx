@@ -795,12 +795,22 @@ case 'link_pagamento':
 
 case 'nfc_credito':
   await stopGoogleSpeech();
-  playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança no crédito e o valor.').catch(() => {});
+  playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança NFC crédito e o valor.').catch(() => {});
   break;
 
 case 'nfc_debito':
   await stopGoogleSpeech();
-  playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança no débito e o valor.').catch(() => {});
+  playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança NFC débito e o valor.').catch(() => {});
+  break;
+
+case 'tef_debito':
+  await stopGoogleSpeech();
+  playText('Posso cobrar no débito direto na maquininha Point. Basta pedir uma cobrança TEF débito com o valor.').catch(() => {});
+  break;
+
+case 'tef_credito':
+  await stopGoogleSpeech();
+  playText('Posso cobrar no crédito direto na maquininha Point, à vista ou parcelado. Basta pedir uma cobrança TEF crédito com o valor.').catch(() => {});
   break;
 
 

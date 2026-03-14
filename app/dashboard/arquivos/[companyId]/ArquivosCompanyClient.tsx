@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
-import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw, FileText, Download, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw, FileText, Download, CheckCircle, XCircle } from 'lucide-react';
 
 interface ArquivosCompanyClientProps {
   company: { id: string; name: string; slug: string };
@@ -25,8 +25,14 @@ interface Consulta {
   foi_baixado: boolean;
 }
 
+interface Company {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export default function ArquivosCompanyClient({
-  company,
+  company: initialCompany,
   cupons: initialCupons,
   stats: initialStats,
 }: ArquivosCompanyClientProps) {
@@ -38,7 +44,36 @@ export default function ArquivosCompanyClient({
   const [consultas, setConsultas] = useState<Consulta[]>([]);
   const [loadingConsultas, setLoadingConsultas] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company>(initialCompany);
   const supabase = createClient();
+
+  // Buscar todas as empresas do usuário
+  useEffect(() => {
+    async function fetchCompanies() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('companies')
+        .select('id, name, slug')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (data) {
+        setCompanies(data);
+      }
+    }
+    fetchCompanies();
+  }, []);
+
+  // Recarregar dados ao trocar de empresa
+  useEffect(() => {
+    if (selectedCompany.id !== initialCompany.id) {
+      window.location.href = `/dashboard/arquivos/${selectedCompany.id}`;
+    }
+  }, [selectedCompany.id, initialCompany.id]);
 
   async function handleToggleAtivo(cupomId: string, current: boolean) {
     setLoadingId(cupomId);
@@ -63,7 +98,7 @@ export default function ArquivosCompanyClient({
   async function fetchConsultas() {
     setLoadingConsultas(true);
     try {
-      const res = await fetch(`/api/historico-consultas?company_id=${company.id}`);
+      const res = await fetch(`/api/historico-consultas?company_id=${selectedCompany.id}`);
       const data = await res.json();
       if (data.consultas) {
         setConsultas(data.consultas);
@@ -142,11 +177,6 @@ export default function ArquivosCompanyClient({
     return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Ativo</span>;
   }
 
-  const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-    { key: 'cupons', label: 'Cupons', icon: <Ticket className="w-4 h-4" /> },
-    { key: 'consultas', label: 'Consultas', icon: <FileText className="w-4 h-4" /> },
-  ];
-
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -160,12 +190,37 @@ export default function ArquivosCompanyClient({
             <ArrowLeft className="w-4 h-4" />
             Voltar para Arquivos
           </Link>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {company.name}
-          </h2>
-          <p className="text-gray-600 dark:text-white/60 mt-1">
-            Gerencie arquivos e cupons desta empresa
-          </p>
+          
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {selectedCompany.name}
+              </h2>
+              <p className="text-gray-600 dark:text-white/60 mt-1">
+                Gerencie arquivos e cupons desta empresa
+              </p>
+            </div>
+
+            {/* Seletor de Assistente */}
+            {companies.length > 1 && (
+              <div className="shrink-0">
+                <select
+                  value={selectedCompany.id}
+                  onChange={(e) => {
+                    const company = companies.find(c => c.id === e.target.value);
+                    if (company) setSelectedCompany(company);
+                  }}
+                  className="px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  {companies.map(company => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stats */}
@@ -182,22 +237,32 @@ export default function ArquivosCompanyClient({
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-white/60 dark:bg-white/5 rounded-xl p-1 w-fit border border-gray-200 dark:border-white/10">
-          {TABS.map(tab => (
+        {/* Tabs - estilo Serviços Meta */}
+        <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+          <div className="flex border-b border-gray-200 dark:border-white/10">
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab.key
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
+              onClick={() => setActiveTab('cupons')}
+              className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                activeTab === 'cupons'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              {tab.icon}
-              {tab.label}
+              <Ticket className="w-4 h-4" />
+              Cupons
             </button>
-          ))}
+            <button
+              onClick={() => setActiveTab('consultas')}
+              className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                activeTab === 'consultas'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              Consultas
+            </button>
+          </div>
         </div>
 
         {/* Aba Cupons */}
@@ -370,15 +435,15 @@ export default function ArquivosCompanyClient({
                           })}
                         </td>
 
-                        {/* Status Pagamento */}
+                        {/* Status */}
                         <td className="px-6 py-4">
                           {consulta.status_pagamento === 'PAGO' ? (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
-                              Pago
+                              Realizado
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
-                              Pendente
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+                              Erro
                             </span>
                           )}
                         </td>

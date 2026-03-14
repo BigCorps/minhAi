@@ -11,6 +11,7 @@ export async function GET(request: Request) {
 
   const supabase = createClient();
 
+  // Buscar consultas
   const { data: consultas, error } = await supabase
     .from('historico_consultas')
     .select('*')
@@ -22,23 +23,37 @@ export async function GET(request: Request) {
   }
 
   const now = new Date();
-  const consultasProcessadas = (consultas || []).map(c => {
-    const createdAt = new Date(c.created_at);
-    const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    
-    // PDF disponível = existe E ainda não expirou (< 24h)
-    const pdf_disponivel = c.pdf_base64 !== null && horasPassadas < 24;
-    
-    // Expirado = passou 24h (independente de ter PDF ou não)
-    const expirado = horasPassadas >= 24;
-    
-    return {
-      ...c,
-      pdf_disponivel,
-      horas_restantes: Math.max(0, 24 - horasPassadas),
-      expirado,
-    };
-  });
+  const consultasProcessadas = await Promise.all(
+    (consultas || []).map(async (c) => {
+      const createdAt = new Date(c.created_at);
+      const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      
+      // Verificar se existe download ativo (não expirado) em companion_downloads
+      const { data: download } = await supabase
+        .from('companion_downloads')
+        .select('id, expires_at, status')
+        .eq('company_id', companyId)
+        .ilike('file_name', `%${c.tipo_consulta}%`) // Busca por tipo de consulta no nome do arquivo
+        .gte('expires_at', now.toISOString()) // Ainda não expirado
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      const temDownloadAtivo = !!download;
+      const expirado = horasPassadas >= 24;
+      
+      return {
+        ...c,
+        pdf_disponivel: temDownloadAtivo,
+        horas_restantes: temDownloadAtivo 
+          ? Math.max(0, (new Date(download.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60))
+          : 0,
+        expirado,
+        download_token: download?.id || null,
+      };
+    })
+  );
 
   return NextResponse.json({ consultas: consultasProcessadas });
 }

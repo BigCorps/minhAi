@@ -92,8 +92,8 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
     setErrorMsg(null);
 
     try {
-      const { data: res, error } = await supabase.functions.invoke('cotacao-moedas', {
-        body: { company_id: data.companyId, currency: selectedCurrency },
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: data.companyId, action: 'consultar_cambio', currency: moeda }
       });
 
       if (error) throw new Error(error.message);

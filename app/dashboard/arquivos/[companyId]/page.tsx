@@ -78,41 +78,39 @@ export default function ArquivosCompanyPage() {
 
       const now = new Date();
 
-      // Processar consultas e verificar downloads ativos
-      const consultasProcessadas = await Promise.all(
-        (consultasData || []).map(async (c) => {
-          const createdAt = new Date(c.created_at);
-          const horasPassadas = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-          
-          // Buscar download ativo em companion_downloads
-          const { data: download } = await supabase
-            .from('companion_downloads')
-            .select('id, expires_at, status, token, file_base64, file_name, file_type')
-            .eq('company_id', companyId)
-            .ilike('file_name', `%${c.tipo_consulta}%`)
-            .gte('expires_at', now.toISOString())
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+      // Buscar TODOS os downloads ativos da empresa de uma vez
+      const { data: downloads } = await supabase
+        .from('companion_downloads')
+        .select('id, expires_at, status, token, file_base64, file_name, file_type, created_at')
+        .eq('company_id', companyId)
+        .gte('expires_at', now.toISOString())
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
 
-          const temDownloadAtivo = !!download;
-          const expirado = download ? new Date(download.expires_at) < now : horasPassadas >= 24;
-          
-          return {
-            ...c,
-            pdf_disponivel: temDownloadAtivo,
-            minutos_restantes: temDownloadAtivo 
-              ? Math.max(0, Math.floor((new Date(download.expires_at).getTime() - now.getTime()) / (1000 * 60)))
-              : 0,
-            expirado,
-            download_token: download?.token || null,
-            file_base64: download?.file_base64 || null,
-            file_name: download?.file_name || null,
-            file_type: download?.file_type || null,
-          };
-        })
-      );
+      console.log('🔵 [load] downloads ativos:', downloads?.length);
+
+      // Processar consultas e associar downloads
+      const consultasProcessadas = (consultasData || []).map((c) => {
+        // Encontrar download criado próximo ao horário da consulta (até 15min de diferença)
+        const download = downloads?.find(d => {
+          const diffMinutes = Math.abs((new Date(d.created_at).getTime() - new Date(c.created_at).getTime()) / (1000 * 60));
+          return diffMinutes < 15;
+        });
+
+        const temDownloadAtivo = !!download;
+        
+        return {
+          ...c,
+          pdf_disponivel: temDownloadAtivo,
+          minutos_restantes: temDownloadAtivo 
+            ? Math.max(0, Math.floor((new Date(download.expires_at).getTime() - now.getTime()) / (1000 * 60)))
+            : 0,
+          download_token: download?.token || null,
+          file_base64: download?.file_base64 || null,
+          file_name: download?.file_name || null,
+          file_type: download?.file_type || null,
+        };
+      });
 
       setConsultas(consultasProcessadas);
 

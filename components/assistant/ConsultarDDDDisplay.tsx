@@ -56,9 +56,14 @@ export default function ConsultarDDDDisplay({ data, onClose, theme = 'dark', pla
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
+  // ✅ CORREÇÃO: array de dependências vazio [] em vez de [playText]
+  // Com [playText], o effect disparava novamente toda vez que o componente pai
+  // recriava a função playText (nova referência a cada render), causando
+  // a fala duplicada. O padrão correto (igual ao ConfirmPresenceModal) é
+  // chamar playText apenas uma vez na montagem do modal.
   useEffect(() => {
     playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (stage !== 'result') return;

@@ -7,6 +7,7 @@ import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModal
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
+import { generateConsultaPDF } from '@/lib/generatePDF';
 
 interface ConsultarCnpjModalProps {
   data: {
@@ -42,6 +43,8 @@ export default function ConsultarCnpjModal({
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [downloadToken, setDownloadToken] = useState<string>('');
+  const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]);
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -122,8 +125,15 @@ export default function ConsultarCnpjModal({
 
       const fileName = `consulta-cnpj-${cnpjLimpo}.pdf`;
       setResultado(confirmData.resultado || []);
-      setPdfBase64(confirmData.pdfGerado || null);
-      setPdfFileName(fileName);
+      setResultadoFormatado(confirmData.resultado_formatado || confirmData.resultado || []);
+      setDownloadToken(confirmData.download_token || '');
+
+      // Gerar PDF no frontend
+      const pdfDataUri = generateConsultaPDF('Consultar CNPJ', confirmData.resultado_formatado || confirmData.resultado || []);
+      const name = `cnpj_${Date.now()}.pdf`;
+      setPdfFileName(name);
+      setPdfBase64(pdfDataUri);
+
       setStep('result');
 
       const razaoSocial = confirmData.resultado?.find(
@@ -147,13 +157,18 @@ export default function ConsultarCnpjModal({
 
   const handleDownloadPDF = () => {
     if (!pdfBase64) return;
-    const link = document.createElement('a');
-    link.href = pdfBase64;
-    link.download = pdfFileName || `consulta-cnpj-${cnpj.replace(/\D/g, '')}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    playText?.('PDF baixado com sucesso.').catch(() => {});
+    
+    try {
+      const a = document.createElement('a');
+      a.href = pdfBase64;
+      a.download = pdfFileName || `consulta_${Date.now()}.pdf`;
+      a.click();
+      
+      playText?.('PDF baixado.').catch(() => {});
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error);
+      playText?.('Erro ao gerar PDF.').catch(() => {});
+    }
   };
 
   // ── enviar por e-mail ────────────────────────────────────────────────────

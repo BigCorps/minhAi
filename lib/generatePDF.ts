@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export function generateConsultaPDF(
   tipoConsulta: string,
@@ -9,7 +9,7 @@ export function generateConsultaPDF(
   const MARGEM = 15;
   const LARGURA_PAGINA = doc.internal.pageSize.getWidth();
 
-  // Cabeçalho
+  // Cabeçalho - Azul eAi (#A2D9F7)
   doc.setFillColor(162, 217, 247);
   doc.rect(0, 0, LARGURA_PAGINA, 30, 'F');
   doc.setFontSize(18);
@@ -23,35 +23,47 @@ export function generateConsultaPDF(
     24
   );
 
-  // Título
+  // Título da consulta
   doc.setFontSize(16);
   doc.setTextColor(26, 32, 44);
-  doc.text(`Consulta: ${tipoConsulta.toUpperCase().replace(/_/g, ' ')}`, MARGEM, 45);
+  doc.text(
+    `Consulta: ${tipoConsulta.toUpperCase().replace(/_/g, ' ')}`,
+    MARGEM,
+    45
+  );
   doc.setLineWidth(0.5);
   doc.setDrawColor(226, 232, 240);
   doc.line(MARGEM, 48, LARGURA_PAGINA - MARGEM, 48);
 
-  // Tabela
+  // Tabela de resultados
   if (resultadoFormatado.length > 0) {
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 55,
       head: [['Campo', 'Informação']],
       body: resultadoFormatado,
       theme: 'striped',
       headStyles: {
-        fillColor: [176, 203, 31],
-        textColor: [26, 32, 44],
+        fillColor: [176, 203, 31], // #B0CB1F - Verde limão eAi
+        textColor: [26, 32, 44],    // #1a202c
       },
       margin: { left: MARGEM, right: MARGEM },
-      alternateRowStyles: { fillColor: [247, 250, 252] },
+      alternateRowStyles: { fillColor: [247, 250, 252] }, // #f7fafc
     });
+  } else {
+    doc.setFontSize(12);
+    doc.setTextColor(113, 128, 150);
+    doc.text('Nenhum resultado retornado para esta consulta.', MARGEM, 65);
   }
 
   // Rodapé
   const finalY = (doc as any).lastAutoTable?.finalY || 80;
   doc.setFontSize(8);
   doc.setTextColor(113, 128, 150);
-  doc.text('Documento gerado automaticamente pelo sistema eAi.', MARGEM, finalY + 20);
+  doc.text(
+    'Documento gerado automaticamente pelo sistema eAi.',
+    MARGEM,
+    finalY + 20
+  );
 
   // Retornar data URI completo
   return doc.output('dataurlstring');

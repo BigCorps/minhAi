@@ -8,8 +8,27 @@ import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw, FileText, Downlo
 interface ArquivosCompanyClientProps {
   company: { id: string; name: string; slug: string };
   cupons: any[];
+  consultas: any[]; // ← ADICIONAR
   stats: { totalCupons: number; ativos: number; totalResgates: number };
 }
+
+export default function ArquivosCompanyClient({
+  company: initialCompany,
+  cupons: initialCupons,
+  consultas: initialConsultas, // ← ADICIONAR
+  stats: initialStats,
+}: ArquivosCompanyClientProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>('cupons');
+  const [cupons, setCupons] = useState(initialCupons);
+  const [stats, setStats] = useState(initialStats);
+  const [filtro, setFiltro] = useState<FiltroKey>('todos');
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [consultas, setConsultas] = useState<Consulta[]>(initialConsultas); // ← MODIFICAR (usar prop inicial)
+  const [loadingConsultas, setLoadingConsultas] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company>(initialCompany);
+  const supabase = createClient();
 
 type TabKey = 'cupons' | 'consultas';
 type FiltroKey = 'todos' | 'ativos' | 'expirados' | 'esgotados';
@@ -143,12 +162,16 @@ export default function ArquivosCompanyClient({
     }
   }
 
-  // Buscar consultas quando aba é ativada
   useEffect(() => {
-    if (activeTab === 'consultas' && consultas.length === 0) {
+    // Se já tem consultas iniciais, não busca novamente
+    if (activeTab === 'consultas' && initialConsultas.length > 0 && consultas.length === 0) {
+      setConsultas(initialConsultas);
+    }
+    // Se não tem consultas iniciais, busca via API
+    else if (activeTab === 'consultas' && initialConsultas.length === 0 && consultas.length === 0) {
       fetchConsultas();
     }
-  }, [activeTab]);
+  }, [activeTab, initialConsultas]);
 
   const now = new Date();
   const cuponsFiltered = cupons.filter(c => {

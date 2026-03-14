@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
+import { generateConsultaPDF } from '@/lib/generatePDF';
 
 interface Props {
   data: { companyId: string };
@@ -70,6 +71,8 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
   const [speechText, setSpeechText] = useState<string>('');
   const [fileBase64, setFileBase64] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
+  const [downloadToken, setDownloadToken] = useState<string>('');
+  const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]);
 
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
   const supabase = createClient();
@@ -101,12 +104,14 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
 
       setResultData(res.result);
       setSpeechText(res.speech_text);
+      setResultadoFormatado(res.resultado_formatado);
+      setDownloadToken(res.download_token);
 
-      // Gerar PDF via jsPDF
-      const pdfContent = generatePdfContent(res.result);
-      const name = `cotacao_${selectedCurrency}_${Date.now()}.pdf`;
+      // Gerar PDF no frontend
+      const pdfDataUri = generateConsultaPDF('Cotação de Câmbio', res.resultado_formatado);
+      const name = `cambio_${Date.now()}.pdf`;
       setFileName(name);
-      setFileBase64(pdfContent);
+      setFileBase64(pdfDataUri);
 
       setStage('result');
       playText(res.speech_text).catch(() => {});
@@ -115,12 +120,6 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
       setStage('error');
     }
   }, [data.companyId, selectedCurrency, supabase, playText]);
-
-  const generatePdfContent = (result: any): string => {
-    // Mock - em produção usar jsPDF
-    const text = `COTAÇÃO DE MOEDAS\n\nMoeda: ${result.currency}\nNome: ${result.name}\nCompra: R$ ${result.bid}\nVenda: R$ ${result.ask}\nVariação: ${result.variation}\nData: ${result.timestamp}`;
-    return btoa(unescape(encodeURIComponent(text)));
-  };
 
   const handleCopy = useCallback(async () => {
     if (!resultData) return;
@@ -133,14 +132,18 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
 
   const handleDownloadPdf = useCallback(() => {
     if (!fileBase64) return;
-    const blob = new Blob([Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0))], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName || `cotacao_${Date.now()}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-    playText('PDF de cotação baixado.').catch(() => {});
+    
+    try {
+      const a = document.createElement('a');
+      a.href = fileBase64;
+      a.download = fileName || `consulta_${Date.now()}.pdf`;
+      a.click();
+      
+      playText('PDF baixado.').catch(() => {});
+    } catch (error) {
+      console.error('Erro ao baixar PDF:', error);
+      playText('Erro ao gerar PDF.').catch(() => {});
+    }
   }, [fileBase64, fileName, playText]);
 
   const handleReset = useCallback(() => {
@@ -151,6 +154,8 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
     setSpeechText('');
     setFileBase64('');
     setFileName('');
+    setDownloadToken('');
+    setResultadoFormatado([]);
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);
 

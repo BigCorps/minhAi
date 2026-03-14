@@ -56,9 +56,9 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
   const supabase = createClient();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  useEffect(() => {
-    playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
+useEffect(() => {
+  playText(OPENING_TEXT).catch(() => {});
+}, []);
 
   useEffect(() => {
     if (stage !== 'result') return;

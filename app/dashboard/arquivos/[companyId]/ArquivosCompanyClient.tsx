@@ -5,30 +5,20 @@ import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
 import { ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw, FileText, Download, CheckCircle, XCircle } from 'lucide-react';
 
+// ========================================
+// INTERFACES E TYPES (ANTES DA FUNÇÃO)
+// ========================================
+
 interface ArquivosCompanyClientProps {
   company: { id: string; name: string; slug: string };
   cupons: any[];
-  consultas: any[]; // ← ADICIONAR
-  stats: { totalCupons: number; ativos: number; totalResgates: number };
+  consultas: any[];
+  stats: { 
+    totalCupons: number; 
+    totalConsultas: number; 
+    totalArquivos: number; 
+  };
 }
-
-export default function ArquivosCompanyClient({
-  company: initialCompany,
-  cupons: initialCupons,
-  consultas: initialConsultas, // ← ADICIONAR
-  stats: initialStats,
-}: ArquivosCompanyClientProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>('cupons');
-  const [cupons, setCupons] = useState(initialCupons);
-  const [stats, setStats] = useState(initialStats);
-  const [filtro, setFiltro] = useState<FiltroKey>('todos');
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [consultas, setConsultas] = useState<Consulta[]>(initialConsultas); // ← MODIFICAR (usar prop inicial)
-  const [loadingConsultas, setLoadingConsultas] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company>(initialCompany);
-  const supabase = createClient();
 
 type TabKey = 'cupons' | 'consultas';
 type FiltroKey = 'todos' | 'ativos' | 'expirados' | 'esgotados';
@@ -38,11 +28,10 @@ interface Consulta {
   tipo_consulta: string;
   created_at: string;
   status_pagamento: string;
-  pdf_base64: string | null;
   pdf_disponivel: boolean;
   horas_restantes: number;
-  foi_baixado: boolean;
-  expirado: boolean; // ← ADICIONAR
+  expirado: boolean;
+  download_token: string | null;
 }
 
 interface Company {
@@ -50,6 +39,28 @@ interface Company {
   name: string;
   slug: string;
 }
+
+// ========================================
+// COMPONENTE
+// ========================================
+
+export default function ArquivosCompanyClient({
+  company: initialCompany,
+  cupons: initialCupons,
+  consultas: initialConsultas,
+  stats: initialStats,
+}: ArquivosCompanyClientProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>('cupons');
+  const [cupons, setCupons] = useState(initialCupons);
+  const [stats, setStats] = useState(initialStats);
+  const [filtro, setFiltro] = useState<FiltroKey>('todos');
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [consultas, setConsultas] = useState<Consulta[]>(initialConsultas);
+  const [loadingConsultas, setLoadingConsultas] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company>(initialCompany);
+  const supabase = createClient();
 
   // Buscar todas as empresas do usuário
   useEffect(() => {
@@ -78,6 +89,15 @@ interface Company {
     }
   }, [selectedCompany.id, initialCompany.id]);
 
+  // Buscar consultas quando aba é ativada
+  useEffect(() => {
+    if (activeTab === 'consultas' && initialConsultas.length > 0 && consultas.length === 0) {
+      setConsultas(initialConsultas);
+    } else if (activeTab === 'consultas' && initialConsultas.length === 0 && consultas.length === 0) {
+      fetchConsultas();
+    }
+  }, [activeTab, initialConsultas]);
+
   async function handleToggleAtivo(cupomId: string, current: boolean) {
     setLoadingId(cupomId);
     const { error } = await supabase
@@ -89,10 +109,13 @@ interface Company {
       const updated = cupons.map(c => c.id === cupomId ? { ...c, is_active: !current } : c);
       setCupons(updated);
       const now = new Date();
+      const totalCupons = updated.length;
+      const ativos = updated.filter(c => c.is_active && (!c.expires_at || new Date(c.expires_at) > now)).length;
+      
       setStats({
-        totalCupons: updated.length,
-        ativos: updated.filter(c => c.is_active && (!c.expires_at || new Date(c.expires_at) > now)).length,
-        totalResgates: updated.reduce((sum, c) => sum + (c.times_used || 0), 0),
+        totalCupons,
+        totalConsultas: stats.totalConsultas,
+        totalArquivos: totalCupons + stats.totalConsultas,
       });
     }
     setLoadingId(null);
@@ -118,26 +141,13 @@ interface Company {
     
     try {
       const consulta = consultas.find(c => c.id === consultaId);
-      if (!consulta || !consulta.pdf_base64) {
+      if (!consulta || !consulta.download_token) {
         throw new Error('PDF não disponível');
       }
 
-      // Decodificar base64
-      const base64 = consulta.pdf_base64.split(',')[1] || consulta.pdf_base64;
-      const byteString = atob(base64);
-      const byteArray = new Uint8Array(byteString.length);
-      for (let i = 0; i < byteString.length; i++) {
-        byteArray[i] = byteString.charCodeAt(i);
-      }
-
-      // Criar blob e download
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${consulta.tipo_consulta}_${new Date(consulta.created_at).toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Redirecionar para página de download usando o token
+      window.open(`/d/${consulta.download_token}`, '_blank');
+      
     } catch (error) {
       console.error('Erro ao baixar PDF:', error);
       alert('Erro ao baixar PDF');
@@ -145,17 +155,6 @@ interface Company {
       setDownloadingId(null);
     }
   }
-
-  useEffect(() => {
-    // Se já tem consultas iniciais, não busca novamente
-    if (activeTab === 'consultas' && initialConsultas.length > 0 && consultas.length === 0) {
-      setConsultas(initialConsultas);
-    }
-    // Se não tem consultas iniciais, busca via API
-    else if (activeTab === 'consultas' && initialConsultas.length === 0 && consultas.length === 0) {
-      fetchConsultas();
-    }
-  }, [activeTab, initialConsultas]);
 
   const now = new Date();
   const cuponsFiltered = cupons.filter(c => {
@@ -188,7 +187,6 @@ interface Company {
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-        {/* Header */}
         <div className="mb-8">
           <Link
             href="/dashboard/arquivos"
@@ -208,7 +206,6 @@ interface Company {
               </p>
             </div>
 
-            {/* Seletor de Assistente */}
             {companies.length > 1 && (
               <div className="shrink-0">
                 <select
@@ -230,12 +227,11 @@ interface Company {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Total de Cupons', value: stats.totalCupons, color: 'text-blue-600 dark:text-blue-400' },
-            { label: 'Cupons Ativos', value: stats.ativos, color: 'text-green-600 dark:text-green-400' },
-            { label: 'Total de Resgates', value: stats.totalResgates, color: 'text-purple-600 dark:text-purple-400' },
+            { label: 'Total de Consultas', value: stats.totalConsultas, color: 'text-green-600 dark:text-green-400' },
+            { label: 'Total de Arquivos', value: stats.totalArquivos, color: 'text-purple-600 dark:text-purple-400' },
           ].map(s => (
             <div key={s.label} className="rounded-xl p-5 bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm">
               <p className="text-sm text-gray-500 dark:text-white/50 mb-1">{s.label}</p>
@@ -244,7 +240,6 @@ interface Company {
           ))}
         </div>
 
-        {/* Tabs - estilo Serviços Meta */}
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="flex border-b border-gray-200 dark:border-white/10">
             <button
@@ -272,11 +267,9 @@ interface Company {
           </div>
         </div>
 
-        {/* Aba Cupons */}
         {activeTab === 'cupons' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 
-            {/* Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
               <div className="flex gap-2">
                 {(['todos', 'ativos', 'expirados', 'esgotados'] as FiltroKey[]).map(f => (
@@ -298,7 +291,6 @@ interface Company {
               </span>
             </div>
 
-            {/* Tabela */}
             {cuponsFiltered.length === 0 ? (
               <div className="py-16 text-center">
                 <Ticket className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
@@ -371,11 +363,9 @@ interface Company {
           </div>
         )}
 
-        {/* Aba Consultas */}
         {activeTab === 'consultas' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 
-            {/* Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Histórico de Consultas
@@ -394,7 +384,6 @@ interface Company {
               </div>
             </div>
 
-            {/* Loading */}
             {loadingConsultas && consultas.length === 0 ? (
               <div className="py-16 text-center">
                 <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
@@ -424,14 +413,12 @@ interface Company {
                     {consultas.map(consulta => (
                       <tr key={consulta.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
                         
-                        {/* Tipo */}
                         <td className="px-6 py-4">
                           <span className="font-medium text-gray-900 dark:text-white">
                             {consulta.tipo_consulta.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </span>
                         </td>
 
-                        {/* Data */}
                         <td className="px-6 py-4 text-gray-600 dark:text-white/60">
                           {new Date(consulta.created_at).toLocaleString('pt-BR', {
                             day: '2-digit',
@@ -442,7 +429,6 @@ interface Company {
                           })}
                         </td>
 
-                        {/* Status */}
                         <td className="px-6 py-4">
                           {consulta.status_pagamento === 'PAGO' ? (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
@@ -455,27 +441,25 @@ interface Company {
                           )}
                         </td>
 
-                        {/* Status PDF */}
-<td className="px-6 py-4">
-  {consulta.pdf_disponivel ? (
-    <div className="flex items-center gap-2">
-      <CheckCircle className="w-4 h-4 text-green-500" />
-      <span className="text-xs text-gray-600 dark:text-white/60">
-        Disponível ({Math.floor(consulta.horas_restantes)}h restantes)
-      </span>
-    </div>
-  ) : consulta.expirado ? (
-    <span className="text-xs text-gray-400 dark:text-white/40">
-      Expirado
-    </span>
-  ) : (
-    <span className="text-xs text-yellow-600 dark:text-yellow-400">
-      Processando...
-    </span>
-  )}
-</td>
+                        <td className="px-6 py-4">
+                          {consulta.pdf_disponivel ? (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                              <span className="text-xs text-gray-600 dark:text-white/60">
+                                Disponível ({Math.floor(consulta.horas_restantes)}h restantes)
+                              </span>
+                            </div>
+                          ) : consulta.expirado ? (
+                            <span className="text-xs text-gray-400 dark:text-white/40">
+                              Expirado
+                            </span>
+                          ) : (
+                            <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                              Processando...
+                            </span>
+                          )}
+                        </td>
 
-                        {/* Ações */}
                         <td className="px-6 py-4">
                           {consulta.pdf_disponivel ? (
                             <button

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase-browser'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -11,14 +11,13 @@ type PaymentType = 'debit_card' | 'credit_card'
 
 interface MercadoPagoPointDisplayProps {
   companyId: string
-  userId: string
   paymentType: PaymentType
-  initialAmount?: number       // em centavos, extraído da voz
-  playText?: (text: string) => void
-  onClose: () => void
-  // config da função (vinda do company_function_settings.config)
-  maxInstallments?: number
+  initialAmount?: number          // em centavos, extraído da voz
+  initialInstallments?: number    // parcelas extraídas da voz
+  maxInstallments?: number        // config da empresa
   minInstallmentValueCents?: number
+  playText?: (text: string) => Promise<void>
+  onClose: () => void
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -31,21 +30,22 @@ function formatBRL(cents: number): string {
 
 export default function MercadoPagoPointDisplay({
   companyId,
-  userId,
   paymentType,
   initialAmount,
-  playText,
-  onClose,
+  initialInstallments,
   maxInstallments = 12,
   minInstallmentValueCents = 0,
+  playText,
+  onClose,
 }: MercadoPagoPointDisplayProps) {
   const supabase = createClient()
+  const isCreditCard = paymentType === 'credit_card'
 
   const [stage, setStage] = useState<Stage>('input')
   const [amountInput, setAmountInput] = useState(
     initialAmount ? (initialAmount / 100).toFixed(2) : ''
   )
-  const [installments, setInstallments] = useState(1)
+  const [installments, setInstallments] = useState(initialInstallments ?? 1)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -54,7 +54,6 @@ export default function MercadoPagoPointDisplay({
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const isCreditCard = paymentType === 'credit_card'
 
   // ── Limpeza ────────────────────────────────────────────────────────────────
 
@@ -123,8 +122,23 @@ export default function MercadoPagoPointDisplay({
       } catch (err) {
         console.error('Polling error:', err)
       }
-    }, 5000) // poll a cada 5s
+    }, 5000)
   }, [supabase, clearPolling, playText])
+
+  // ── Parcelas disponíveis com base no valor atual ───────────────────────────
+
+  function getAvailableInstallments(): number[] {
+    const cents = Math.round(parseFloat(amountInput.replace(',', '.') || '0') * 100)
+    const options: number[] = [1]
+    for (let i = 2; i <= maxInstallments; i++) {
+      if (minInstallmentValueCents > 0 && cents > 0) {
+        const installmentValue = Math.ceil(cents / i)
+        if (installmentValue < minInstallmentValueCents) break
+      }
+      options.push(i)
+    }
+    return options
+  }
 
   // ── Gerar cobrança ─────────────────────────────────────────────────────────
 
@@ -135,13 +149,12 @@ export default function MercadoPagoPointDisplay({
       return
     }
 
-    // Validar parcelas
     if (isCreditCard && installments > 1 && minInstallmentValueCents > 0) {
       const installmentValue = Math.ceil(cents / installments)
       if (installmentValue < minInstallmentValueCents) {
         setErrorMsg(
           `Valor mínimo por parcela é ${formatBRL(minInstallmentValueCents)}. ` +
-          `Para ${installments}x o valor mínimo é ${formatBRL(minInstallmentValueCents * installments)}.`
+          `Para ${installments}x o mínimo é ${formatBRL(minInstallmentValueCents * installments)}.`
         )
         return
       }
@@ -199,21 +212,6 @@ export default function MercadoPagoPointDisplay({
     }
   }
 
-  // ── Instalamentos disponíveis com base no valor ────────────────────────────
-
-  function getAvailableInstallments(): number[] {
-    const cents = Math.round(parseFloat(amountInput.replace(',', '.') || '0') * 100)
-    const options: number[] = [1]
-    for (let i = 2; i <= maxInstallments; i++) {
-      if (minInstallmentValueCents > 0) {
-        const installmentValue = Math.ceil(cents / i)
-        if (installmentValue < minInstallmentValueCents) break
-      }
-      options.push(i)
-    }
-    return options
-  }
-
   // ── Fechar ─────────────────────────────────────────────────────────────────
 
   function handleClose() {
@@ -222,23 +220,24 @@ export default function MercadoPagoPointDisplay({
     onClose()
   }
 
-  // ── Labels ─────────────────────────────────────────────────────────────────
+  // ── Valor atual em centavos (para cálculos inline) ────────────────────────
 
-  const typeLabel = isCreditCard ? 'Crédito' : 'Débito'
-  const typeBgClass = 'bg-[#F44336]'
+  const currentCents = Math.round(parseFloat(amountInput.replace(',', '.') || '0') * 100)
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   const content = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
 
         {/* Header */}
-        <div className={`${typeBgClass} px-5 py-4 flex items-center justify-between`}>
+        <div className="bg-[#F44336] px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💳</span>
             <div>
-              <p className="text-white font-bold text-lg leading-tight">TEF {typeLabel}</p>
+              <p className="text-white font-bold text-lg leading-tight">
+                TEF {isCreditCard ? 'Crédito' : 'Débito'}
+              </p>
               <p className="text-white/80 text-xs">Mercado Pago Point</p>
             </div>
           </div>
@@ -283,20 +282,19 @@ export default function MercadoPagoPointDisplay({
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400"
                   >
                     {getAvailableInstallments().map((n) => {
-                      const cents = Math.round(parseFloat(amountInput.replace(',', '.') || '0') * 100)
-                      const installmentValue = cents > 0 ? Math.ceil(cents / n) : 0
+                      const installmentValue = currentCents > 0 ? Math.ceil(currentCents / n) : 0
                       return (
                         <option key={n} value={n}>
                           {n === 1
-                            ? `À vista${cents > 0 ? ` — ${formatBRL(cents)}` : ''}`
-                            : `${n}× de ${cents > 0 ? formatBRL(installmentValue) : '—'}`}
+                            ? `À vista${currentCents > 0 ? ` — ${formatBRL(currentCents)}` : ''}`
+                            : `${n}× de ${currentCents > 0 ? formatBRL(installmentValue) : '—'}`}
                         </option>
                       )
                     })}
                   </select>
                   {isCreditCard && installments > 1 && (
                     <p className="text-xs text-amber-600 mt-1">
-                      ⚠️ Juros do parcelamento são cobrados diretamente pelo Mercado Pago ao lojista.
+                      ⚠️ Juros do parcelamento são cobrados pelo Mercado Pago ao lojista.
                     </p>
                   )}
                 </div>
@@ -339,11 +337,11 @@ export default function MercadoPagoPointDisplay({
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-xs text-gray-500 mb-1">Valor</p>
                 <p className="text-2xl font-bold text-gray-800">
-                  {formatBRL(Math.round(parseFloat(amountInput.replace(',', '.')) * 100))}
+                  {formatBRL(currentCents)}
                 </p>
-                {isCreditCard && installments > 1 && (
+                {isCreditCard && installments > 1 && currentCents > 0 && (
                   <p className="text-sm text-gray-500">
-                    {installments}× de {formatBRL(Math.ceil(Math.round(parseFloat(amountInput.replace(',', '.')) * 100) / installments))}
+                    {installments}× de {formatBRL(Math.ceil(currentCents / installments))}
                   </p>
                 )}
               </div>
@@ -368,7 +366,7 @@ export default function MercadoPagoPointDisplay({
               <div className="text-6xl">✅</div>
               <p className="text-xl font-bold text-green-700">Pagamento Confirmado!</p>
               <p className="text-gray-500 text-sm">
-                {typeLabel} processado com sucesso.
+                {isCreditCard ? 'Crédito' : 'Débito'} processado com sucesso.
               </p>
               <button
                 onClick={handleClose}

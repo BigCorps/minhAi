@@ -25,6 +25,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './handlers/utilitiesHandlers';
 import { useLembreteWatcher } from './hooks/useLembreteWatcher';
 import { handleWifiQRCode, handleCardapio, handleCadastro, handleNossoQRCode } from '@/components/VoiceAssistant/handlers/companyHandlers';
+import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries' // ajuste o caminho
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -394,6 +395,19 @@ function handleGoogleTranscript(text: string, isFinal: boolean) {
       if (!isFinal) return;
       cmd.action();
       return;
+    }
+  }
+
+    // ✅ INTERCEPTAR ESCOLHA DE MÉTODO DE PAGAMENTO (TEF vs NFC)
+  if (isFinal) {
+    const resolved = await resolvePendingPaymentChoice(lowerText, setActiveModal, playText)
+    if (resolved) {
+      processingQuestion.current = false
+      setTimeout(async () => {
+        shouldProcessAudio.current = true
+        await startGoogleSpeech()
+      }, 500)
+      return
     }
   }
 
@@ -787,6 +801,16 @@ case 'ver_agenda':
         case 'alarme':
           await handleAlarme({ companyId, setIsProcessing, setActiveModal, playText });
           break;
+
+case 'cobrar_debito':
+  await stopGoogleSpeech()
+  playText('Pode me dizer o valor para cobrar no débito.').catch(() => {})
+  break
+ 
+case 'cobrar_credito':
+  await stopGoogleSpeech()
+  playText('Pode me dizer o valor para cobrar no crédito.').catch(() => {})
+  break
           
 case 'link_pagamento':
   await stopGoogleSpeech();

@@ -80,29 +80,8 @@ export default function PixQRCodeDisplay({
           </p>
         </div>
 
-        {/* Grid */}
+        {/* Grid — Copia e Cola primeiro, QR Code depois */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          {/* QR Code */}
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col items-center">
-            <div className="flex items-center gap-2 mb-5 w-full">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <QrCode className="w-4 h-4 text-blue-400" />
-              </div>
-              <span className="text-white font-bold text-sm">1. Escaneie o QR Code</span>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl shadow-inner mb-4 w-full max-w-[220px]">
-              <img src={pixData.qr_code_url} alt="QR Code PIX" className="w-full h-auto" />
-            </div>
-
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${
-              timeLeft < 300 ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
-            }`}>
-              <Clock className="w-4 h-4 animate-pulse" />
-              Expira em: {formatTime(timeLeft)}
-            </div>
-          </div>
 
           {/* Copia e Cola + Confirmar */}
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col">
@@ -110,7 +89,7 @@ export default function PixQRCodeDisplay({
               <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                 <Copy className="w-4 h-4 text-blue-400" />
               </div>
-              <span className="text-white font-bold text-sm">2. Copia e Cola</span>
+              <span className="text-white font-bold text-sm">1. Copia e Cola</span>
             </div>
 
             {/* Resumo */}
@@ -125,6 +104,14 @@ export default function PixQRCodeDisplay({
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Empresa</span>
                   <span className="text-white font-medium">{company.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Banco</span>
+                  <span className="text-white font-medium">Banco Inter</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Validade</span>
+                  <span className="text-yellow-400 font-medium">Válido por 30 minutos</span>
                 </div>
                 <div className="pt-3 border-t border-slate-700 flex justify-between items-center">
                   <span className="text-slate-300 font-bold">Total</span>
@@ -167,10 +154,32 @@ export default function PixQRCodeDisplay({
               </button>
             </div>
           </div>
+
+          {/* QR Code */}
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col items-center">
+            <div className="flex items-center gap-2 mb-5 w-full">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <QrCode className="w-4 h-4 text-blue-400" />
+              </div>
+              <span className="text-white font-bold text-sm">2. Escaneie o QR Code</span>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl shadow-inner mb-4 w-full max-w-[220px]">
+              <img src={pixData.qr_code_url} alt="QR Code PIX" className="w-full h-auto" />
+            </div>
+
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${
+              timeLeft < 300 ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
+            }`}>
+              <Clock className="w-4 h-4 animate-pulse" />
+              Expira em: {formatTime(timeLeft)}
+            </div>
+          </div>
+
         </div>
 
         <p className="text-center text-xs text-slate-700 mt-5">
-          Pagamento processado com segurança via Banco Inter
+          Pagamento processado com segurança via Banco Inter e BigCorps
         </p>
       </div>
     </div>

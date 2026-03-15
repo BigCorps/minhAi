@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
@@ -11,39 +11,23 @@ import {
 } from 'lucide-react';
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
-function LoginContent() {
+export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [showPassword, setShowPassword] = useState(false);
-  const [refCode, setRefCode] = useState<string | null>(null);
-
-  // Biometrics states
+  
   const [biometricUserEmail, setBiometricUserEmail] = useState<string | null>(null);
   const [isCheckingBiometrics, setIsCheckingBiometrics] = useState(true);
   const [biometricType, setBiometricType] = useState<'fingerprint' | 'face' | 'unknown'>('unknown');
 
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
-
-    // Ler ?ref= e ?mode= da URL
-    const ref = searchParams.get('ref');
-    const modeParam = searchParams.get('mode');
-    if (ref) {
-      setRefCode(ref);
-      localStorage.setItem('pendingRefCode', ref);
-      // Salvar em cookie também para OAuth (Google/Facebook) pegar no callback
-      document.cookie = `pendingRefCode=${ref}; path=/; max-age=3600; samesite=lax`;
-    }
-    if (modeParam === 'signup') {
-      setMode('signup');
-    }
 
     const checkBiometricAvailability = async () => {
       if (browserSupportsWebAuthn()) {
@@ -90,40 +74,6 @@ function LoginContent() {
         });
 
         if (error) throw error;
-
-        // Registrar indicação se veio de um link
-        const pendingRef = refCode || localStorage.getItem('pendingRefCode');
-        if (pendingRef && data.user) {
-          try {
-            const { data: referrerProfile } = await supabase
-              .from('user_profiles')
-              .select('user_id')
-              .eq('referral_code', pendingRef.toUpperCase())
-              .single();
-
-            if (referrerProfile) {
-              await supabase.from('user_referrals').insert({
-                referrer_id: referrerProfile.user_id,
-                referred_id: data.user.id,
-                referral_code: pendingRef.toUpperCase(),
-                status: 'pending',
-              });
-              localStorage.removeItem('pendingRefCode');
-
-              // Email para o indicado via Gmail sistema
-              await supabase.functions.invoke('enviar-email-indicacao', {
-                body: {
-                  referred_email: email,
-                  referral_code: pendingRef.toUpperCase(),
-                },
-              });
-            }
-          } catch (refError) {
-            console.error('Erro ao registrar indicação:', refError);
-            // Não interrompe o signup
-          }
-        }
-
         alert('Cadastro realizado! Verifique seu email para confirmar.');
         setMode('login');
       } else {
@@ -500,7 +450,6 @@ function LoginContent() {
             </button>
           </div>
 
-          {/* Links de Termos e Privacidade */}
           <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
               <Link 
@@ -531,13 +480,5 @@ function LoginContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
-      <LoginContent />
-    </Suspense>
   );
 }

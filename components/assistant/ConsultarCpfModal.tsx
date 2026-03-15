@@ -2,17 +2,16 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Building, Loader2, AlertCircle, FileText, Download, CheckCircle, Mail } from 'lucide-react';
+import { X, User, Loader2, AlertCircle, Download, CheckCircle, Mail } from 'lucide-react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
-import { generateConsultaPDF } from '@/lib/generatePDF';
 
-interface ConsultarCnpjModalProps {
+interface ConsultarCpfModalProps {
   data: {
     companyId: string;
-    cnpjPrefill?: string;
+    cpfPrefill?: string;
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
@@ -26,25 +25,22 @@ interface ResultadoFormatado {
   value: string;
 }
 
-export default function ConsultarCnpjModal({
+export default function ConsultarCpfModal({
   data,
   onClose,
   theme = 'dark',
   playText,
-}: ConsultarCnpjModalProps) {
-  const { companyId, cnpjPrefill } = data;
+}: ConsultarCpfModalProps) {
+  const { companyId, cpfPrefill } = data;
 
   const [step, setStep] = useState<Step>('input');
-  const [cnpj, setCnpj] = useState(cnpjPrefill || '');
+  const [cpf, setCpf] = useState(cpfPrefill || '');
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<ResultadoFormatado[]>([]);
 
-  // ── novo: dados para QR / download / email ──────────────────────────────
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [downloadToken, setDownloadToken] = useState<string>('');
-  const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]);
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -56,30 +52,29 @@ export default function ConsultarCnpjModal({
 
   // ── helpers ─────────────────────────────────────────────────────────────
 
-  const formatCNPJ = (value: string) => {
+  const formatCPF = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length <= 14) {
+    if (cleaned.length <= 11) {
       return cleaned
-        .replace(/^(\d{2})(\d)/, '$1.$2')
-        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-        .replace(/\.(\d{3})(\d)/, '.$1/$2')
-        .replace(/(\d{4})(\d)/, '$1-$2');
+        .replace(/^(\d{3})(\d)/, '$1.$2')
+        .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1-$2');
     }
     return value;
   };
 
-  const handleCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCnpj(formatCNPJ(e.target.value));
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCpf(formatCPF(e.target.value));
   };
 
   // ── consultar ───────────────────────────────────────────────────────────
 
   const handleConsultar = async () => {
-    const cnpjLimpo = cnpj.replace(/\D/g, '');
+    const cpfLimpo = cpf.replace(/\D/g, '');
 
-    if (!cnpjLimpo || cnpjLimpo.length !== 14) {
-      setError('Por favor, informe um CNPJ válido com 14 dígitos');
-      playText?.('Por favor, informe um CNPJ válido com 14 dígitos').catch(() => {});
+    if (!cpfLimpo || cpfLimpo.length !== 11) {
+      setError('Por favor, informe um CPF válido com 11 dígitos');
+      playText?.('Por favor, informe um CPF válido com 11 dígitos').catch(() => {});
       return;
     }
 
@@ -93,8 +88,8 @@ export default function ConsultarCnpjModal({
       // 1. Executar consulta
       const { data: execData, error: execError } = await supabase.functions.invoke('executar-consulta-eai', {
         body: {
-          consulta: { id: 'cnpj_basico', nome: 'Dados CNPJ', custoOriginal: 2.00 },
-          dadosEntrada: { cnpj: cnpjLimpo },
+          consulta: { id: 'cpf_basico', nome: 'Dados CPF', custoOriginal: 2.00 },
+          dadosEntrada: { cpf: cpfLimpo },
           userId: userData.user?.id,
           companyId,
         },
@@ -123,33 +118,26 @@ export default function ConsultarCnpjModal({
 
       if (confirmError) throw confirmError;
 
-      const fileName = `consulta-cnpj-${cnpjLimpo}.pdf`;
+      const fileName = `consulta-cpf-${cpfLimpo}.pdf`;
       setResultado(confirmData.resultado || []);
-      setResultadoFormatado(confirmData.resultado_formatado || confirmData.resultado || []);
-      setDownloadToken(confirmData.download_token || '');
-
-      // Gerar PDF no frontend
-      const pdfDataUri = generateConsultaPDF('Consultar CNPJ', confirmData.resultado_formatado || confirmData.resultado || []);
-      const name = `cnpj_${Date.now()}.pdf`;
-      setPdfFileName(name);
-      setPdfBase64(pdfDataUri);
-
+      setPdfBase64(confirmData.pdfGerado || null);
+      setPdfFileName(fileName);
       setStep('result');
 
-      const razaoSocial = confirmData.resultado?.find(
-        (r: ResultadoFormatado) => r.label === 'Razão Social'
+      const nome = confirmData.resultado?.find(
+        (r: ResultadoFormatado) => r.label === 'Nome'
       )?.value;
       playText?.(
-        razaoSocial
-          ? `Consulta realizada com sucesso. Razão social: ${razaoSocial}`
+        nome
+          ? `Consulta realizada com sucesso. Nome: ${nome}`
           : 'Consulta realizada com sucesso.'
       ).catch(() => {});
 
     } catch (err: any) {
-      console.error('Erro ao consultar CNPJ:', err);
-      setError(err.message || 'Erro ao consultar CNPJ. Tente novamente.');
+      console.error('Erro ao consultar CPF:', err);
+      setError(err.message || 'Erro ao consultar CPF. Tente novamente.');
       setStep('input');
-      playText?.('Erro ao consultar CNPJ. Tente novamente.').catch(() => {});
+      playText?.('Erro ao consultar CPF. Tente novamente.').catch(() => {});
     }
   };
 
@@ -157,18 +145,13 @@ export default function ConsultarCnpjModal({
 
   const handleDownloadPDF = () => {
     if (!pdfBase64) return;
-    
-    try {
-      const a = document.createElement('a');
-      a.href = pdfBase64;
-      a.download = pdfFileName || `consulta_${Date.now()}.pdf`;
-      a.click();
-      
-      playText?.('PDF baixado.').catch(() => {});
-    } catch (error) {
-      console.error('Erro ao baixar PDF:', error);
-      playText?.('Erro ao gerar PDF.').catch(() => {});
-    }
+    const link = document.createElement('a');
+    link.href = pdfBase64;
+    link.download = pdfFileName || `consulta-cpf-${cpf.replace(/\D/g, '')}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    playText?.('PDF baixado com sucesso.').catch(() => {});
   };
 
   // ── enviar por e-mail ────────────────────────────────────────────────────
@@ -178,7 +161,6 @@ export default function ConsultarCnpjModal({
     setIsSendingEmail(true);
     try {
       const supabase = createClient();
-      // Monta corpo legível do resultado
       const bodyText = resultado
         .map(r => (r.label === '---' ? `\n${r.value}` : `${r.label}: ${r.value}`))
         .join('\n');
@@ -186,7 +168,7 @@ export default function ConsultarCnpjModal({
       const { error } = await supabase.functions.invoke('enviar-email-google', {
         body: {
           company_id: companyId,
-          subject: `Resultado: Consulta CNPJ ${cnpj}`,
+          subject: `Resultado: Consulta CPF ${cpf}`,
           body: bodyText,
         },
       });
@@ -226,7 +208,6 @@ export default function ConsultarCnpjModal({
 
   // ── render ───────────────────────────────────────────────────────────────
 
-  // No step result, modal mais largo para layout 2 colunas (igual ContratoEmTextoDisplay)
   const modalMaxWidth = step === 'result' ? 'max-w-2xl sm:max-w-4xl' : 'max-w-2xl';
 
   return createPortal(
@@ -234,14 +215,14 @@ export default function ConsultarCnpjModal({
       <div className={`relative w-full ${modalMaxWidth} rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col`}>
 
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-yellow-950/40' : 'bg-yellow-50'} flex-shrink-0`}>
+        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
-                <Building className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className={`text-xl font-bold ${textPrimary}`}>Dados CNPJ</h2>
+                <h2 className={`text-xl font-bold ${textPrimary}`}>Dados CPF</h2>
                 <p className={`text-sm ${textMuted}`}>Consulta de dados cadastrais</p>
               </div>
             </div>
@@ -266,29 +247,29 @@ export default function ConsultarCnpjModal({
             <div className="space-y-4">
               <div>
                 <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  CNPJ *
+                  CPF *
                 </label>
                 <input
                   type="text"
-                  value={cnpj}
-                  onChange={handleCnpjChange}
-                  placeholder="00.000.000/0000-00"
-                  maxLength={18}
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-yellow-500 transition`}
+                  value={cpf}
+                  onChange={handleCpfChange}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-blue-500 transition`}
                   autoFocus
                 />
                 <p className={`mt-1 text-xs ${textMuted}`}>
-                  Digite apenas os números ou no formato 00.000.000/0000-00
+                  Digite apenas os números ou no formato 000.000.000-00
                 </p>
               </div>
 
               <button
                 onClick={handleConsultar}
-                disabled={!cnpj || cnpj.replace(/\D/g, '').length !== 14}
-                className="w-full py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                disabled={!cpf || cpf.replace(/\D/g, '').length !== 11}
+                className="w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
               >
-                <Building className="w-5 h-5" />
-                Consultar CNPJ
+                <User className="w-5 h-5" />
+                Consultar CPF
               </button>
             </div>
           )}
@@ -296,8 +277,8 @@ export default function ConsultarCnpjModal({
           {/* ── STEP: LOADING ── */}
           {step === 'loading' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-12 h-12 text-yellow-500 animate-spin mb-4" />
-              <p className={`text-lg font-medium ${textPrimary}`}>Consultando CNPJ...</p>
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+              <p className={`text-lg font-medium ${textPrimary}`}>Consultando CPF...</p>
               <p className={`text-sm ${textMuted} mt-2`}>Aguarde enquanto buscamos os dados</p>
             </div>
           )}
@@ -348,7 +329,7 @@ export default function ConsultarCnpjModal({
                     {pdfBase64 && (
                       <button
                         onClick={handleDownloadPDF}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-white"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white"
                       >
                         <Download className="w-4 h-4" />
                         Baixar PDF
@@ -359,7 +340,7 @@ export default function ConsultarCnpjModal({
                       <button
                         onClick={handleSendByEmail}
                         disabled={isSendingEmail}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
                       >
                         {isSendingEmail
                           ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>

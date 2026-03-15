@@ -100,7 +100,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <Users className="w-4 h-4" />
-                        <span>Indicações</span>
+                        <span>Indique e Ganhe</span>
                       </Link>
                       <Link
                         href="/dashboard/ajuda"

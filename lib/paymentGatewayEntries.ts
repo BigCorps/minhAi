@@ -193,13 +193,16 @@ export const cobrar_debito: FunctionDefinition = {
     }
 
     // ── Ambos habilitados → perguntar ──────────────────────────────────────
+    const amountMsg = amount
+      ? ` de ${(amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+      : ''
     await playText(
-      'Você tem duas opções para débito: ' +
-      'a maquininha Point do Mercado Pago, ou o pagamento por aproximação NFC. ' +
-      'Qual prefere? Diga "maquininha" ou "aproximação".'
+      `Para cobrar${amountMsg} no débito, você tem duas opções: ` +
+      'TEF, pela maquininha Mercado Pago Point, ' +
+      'ou NFC, pelo celular via InfinitePay. ' +
+      'Diga "débito TEF" para a maquininha ou "débito NFC" para o celular.'
     )
 
-    // Registrar contexto para capturar a resposta na próxima fala
     if (typeof window !== 'undefined') {
       (window as any).eAi_pendingPaymentChoice = {
         mode: 'debit',
@@ -351,10 +354,15 @@ export const cobrar_credito: FunctionDefinition = {
     }
 
     // ── Ambos habilitados → perguntar ──────────────────────────────────────
+    const amountMsg = amount
+      ? ` de ${(amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+      : ''
+    const installmentMsg = rawInstallments > 1 ? ` em ${rawInstallments} vezes` : ''
     await playText(
-      'Você tem duas opções para crédito: ' +
-      'a maquininha Point do Mercado Pago, ou o pagamento por aproximação NFC. ' +
-      'Qual prefere? Diga "maquininha" ou "aproximação".'
+      `Para cobrar${amountMsg}${installmentMsg} no crédito, você tem duas opções: ` +
+      'TEF, pela maquininha Mercado Pago Point, ' +
+      'ou NFC, pelo celular via InfinitePay. ' +
+      'Diga "crédito TEF" para a maquininha ou "crédito NFC" para o celular.'
     )
 
     if (typeof window !== 'undefined') {
@@ -396,8 +404,11 @@ export async function resolvePendingPaymentChoice(
   }
 
   const t = transcript.toLowerCase()
-  const wantsTef = /maquininha|point|mercado pago|tef/.test(t)
-  const wantsNfc = /aproxima[çc][aã]o|nfc|tap|celular|infinitepay/.test(t)
+
+  // Casar com as instruções dadas: "débito TEF", "crédito TEF", "débito NFC", "crédito NFC"
+  // e também variações naturais que o usuário pode dizer
+  const wantsTef = /\btef\b|maquininha|point|mercado pago/.test(t)
+  const wantsNfc = /\bnfc\b|celular|infinitepay|tap\b/.test(t)
 
   if (!wantsTef && !wantsNfc) return false   // resposta não reconhecida, não consome o contexto
 

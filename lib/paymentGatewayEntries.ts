@@ -1,36 +1,5 @@
 /**
  * paymentGatewayEntries.ts
- *
- * Cole estas duas entradas no FUNCTIONS_REGISTRY (functions-registry.ts),
- * ANTES das entradas tef_debito / tef_credito / nfc_debito / nfc_credito.
- *
- * Lógica de roteamento:
- *   • Só TEF habilitado   → usa TEF direto (sem perguntar)
- *   • Só NFC habilitado   → usa NFC direto (sem perguntar)
- *   • Ambos habilitados   → pergunta qual o cliente prefere
- *   • Nenhum habilitado   → informa que não está disponível
- *
- * Os triggers genéricos ("débito", "crédito", "cartão", etc.) ficam AQUI.
- * As funções tef_debito / nfc_debito devem manter apenas triggers específicos
- * ("tef débito", "nfc débito", "tap débito", etc.) para não conflitar.
- *
- * ─── CORREÇÃO NECESSÁRIA em detectFunctionFromTranscript (functions-registry.ts) ───
- *
- * O score do sistema exige triggers de 2+ palavras para atingir threshold 1.0.
- * Quando o usuário diz "cobrar 10,00 crédito", o número quebra o trigger "cobrar crédito".
- * Adicione esta normalização NO INÍCIO de detectFunctionFromTranscript, antes do loop:
- *
- *   // Normalizar transcript: remover valores monetários para não quebrar triggers
- *   // Ex: "cobrar 10,00 crédito" → "cobrar crédito"
- *   //     "10 reais no débito"   → "no débito"  (já coberto por trigger "no débito")
- *   const normalizedTranscript = lowerTranscript
- *     .replace(/r\$\s*\d+(?:[.,]\d{1,2})?/g, '')   // remove "R$ 10,00"
- *     .replace(/\d+(?:[.,]\d{1,2})?\s*(?:reais?|real)?/g, '')  // remove "10,00 reais" ou só "10,00"
- *     .replace(/\s+/g, ' ')
- *     .trim()
- *
- *   // Usar normalizedTranscript no lugar de lowerTranscript no loop de triggers:
- *   if (regex.test(normalizedTranscript)) {  // ← era lowerTranscript
  */
 
 import { createClient } from '@/lib/supabase-browser'
@@ -75,6 +44,40 @@ function extractAmountCents(transcript: string): number | null {
   if (!match) return null
   const value = parseFloat(match[1].replace(',', '.'))
   return isNaN(value) || value <= 0 ? null : Math.round(value * 100)
+}
+
+// ─── Helper: extrair número de parcelas do transcript ───────────────────────
+
+function extractInstallments(transcript: string): number {
+  const t = transcript.toLowerCase()
+
+  // Números por extenso de parcelas mais comuns
+  const wordInstallments: Record<string, number> = {
+    'duas vezes': 2, 'dois vezes': 2,
+    'três vezes': 3, 'tres vezes': 3,
+    'quatro vezes': 4,
+    'cinco vezes': 5,
+    'seis vezes': 6,
+    'sete vezes': 7,
+    'oito vezes': 8,
+    'nove vezes': 9,
+    'dez vezes': 10,
+    'duas parcelas': 2, 'dois parcelas': 2,
+    'três parcelas': 3, 'tres parcelas': 3,
+    'quatro parcelas': 4,
+    'cinco parcelas': 5,
+    'seis parcelas': 6,
+    'doze parcelas': 12,
+  }
+  for (const [phrase, n] of Object.entries(wordInstallments)) {
+    if (t.includes(phrase)) return n
+  }
+
+  // Padrão numérico: "2 vezes", "3x", "4 parcelas", "em 6x"
+  const match = t.match(/(\d{1,2})\s*(?:vezes|x\b|parcelas?|×)/)
+  if (match) return Math.min(parseInt(match[1]), 24)
+
+  return 1
 }
 
 // ─── Helper: buscar config de parcelamento TEF crédito ───────────────────────
@@ -275,10 +278,18 @@ export const cobrar_credito: FunctionDefinition = {
     'cartao de credito',
     'passar no crédito',
     'passar no credito',
+    // Parcelamento — casam após normalização preservar "2 vezes", "3x", etc.
     'parcelar em',
     'parcelado em',
     'parcelas no',
-    // Variantes com valor no meio: "cobrar 10 crédito", "10 reais crédito"
+    'em vezes',           // "crédito em 2 vezes" → normalizado "crédito em 2 vezes" → contém "em vezes"? não
+    'crédito em',         // "no crédito em 2 vezes" → contém "crédito em" ✓
+    'credito em',
+    'vezes crédito',
+    'vezes credito',
+    'vezes no',           // "3 vezes no crédito"
+    // Variantes com valor no meio — casam após normalização remover valor
+    // "cobrar 100,00 no crédito em 2 vezes" → "cobrar no crédito em 2 vezes"
     'reais crédito',
     'reais credito',
     'real crédito',
@@ -314,10 +325,9 @@ export const cobrar_credito: FunctionDefinition = {
     const hasTef = enabled.has('tef_credito')
     const hasNfc = enabled.has('nfc_credito')
 
-    // Extrair valor e parcelas
+    // Extrair valor e parcelas do transcript original (antes de qualquer normalização)
     const amount = extractAmountCents(transcript ?? '')
-    const installmentsMatch = (transcript ?? '').match(/(\d{1,2})\s*(?:vezes|x\b|parcelas?)/)
-    const rawInstallments = installmentsMatch ? parseInt(installmentsMatch[1]) : 1
+    const rawInstallments = extractInstallments(transcript ?? '')
 
     // ── Nenhum habilitado ──────────────────────────────────────────────────
     if (!hasTef && !hasNfc) {

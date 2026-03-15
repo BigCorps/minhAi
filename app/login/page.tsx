@@ -38,6 +38,8 @@ function LoginContent() {
     if (ref) {
       setRefCode(ref);
       localStorage.setItem('pendingRefCode', ref);
+      // Salvar em cookie também para OAuth (Google/Facebook) pegar no callback
+      document.cookie = `pendingRefCode=${ref}; path=/; max-age=3600; samesite=lax`;
     }
     if (modeParam === 'signup') {
       setMode('signup');

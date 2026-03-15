@@ -11,6 +11,9 @@ export default function IndicacoesPage() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendMessage, setSendMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -64,6 +67,33 @@ export default function IndicacoesPage() {
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function sendInvite() {
+    if (!inviteEmail || !referralCode) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail)) {
+      setSendMessage({ type: 'error', text: 'Email inválido.' });
+      return;
+    }
+
+    setSending(true);
+    setSendMessage(null);
+    try {
+      const { error } = await supabase.functions.invoke('enviar-email-indicacao', {
+        body: {
+          referred_email: inviteEmail,
+          referral_code: referralCode,
+        },
+      });
+      if (error) throw error;
+      setSendMessage({ type: 'success', text: `Convite enviado para ${inviteEmail}!` });
+      setInviteEmail('');
+    } catch (err: any) {
+      setSendMessage({ type: 'error', text: 'Erro ao enviar. Tente novamente.' });
+    } finally {
+      setSending(false);
+    }
   }
 
   const totalCommissions = commissions
@@ -146,6 +176,62 @@ export default function IndicacoesPage() {
                   ↗
                 </button>
               </div>
+
+              {/* Divisor */}
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200 dark:border-white/10" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="px-3 text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-900">
+                    ou envie o convite diretamente
+                  </span>
+                </div>
+              </div>
+
+              {/* Envio por email */}
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendInvite()}
+                  placeholder="email@do-indicado.com"
+                  className="flex-1 px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={sendInvite}
+                  disabled={sending || !inviteEmail}
+                  className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                >
+                  {sending
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                    : <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        Enviar
+                      </>
+                  }
+                </button>
+              </div>
+
+              {/* Feedback */}
+              {sendMessage && (
+                <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${
+                  sendMessage.type === 'success'
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                }`}>
+                  {sendMessage.type === 'success'
+                    ? <Check className="w-4 h-4 flex-shrink-0" />
+                    : <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                  }
+                  {sendMessage.text}
+                </div>
+              )}
 
               <p className="text-xs text-gray-500 dark:text-gray-500">
                 Código: <span className="font-mono font-bold text-gray-700 dark:text-gray-300">{referralCode}</span>

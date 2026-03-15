@@ -14,6 +14,7 @@ export default function IndicacoesPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sendMessage, setSendMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [userBalance, setUserBalance] = useState<any>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -49,6 +50,14 @@ export default function IndicacoesPage() {
         .eq('referrer_id', authUser.id)
         .order('created_at', { ascending: false });
       setCommissions(commissionData || []);
+
+      // Saldo do usuário (comissões de indicação)
+      const { data: balanceData } = await supabase
+        .from('user_balance')
+        .select('available_balance_cents, total_received_cents')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
+      setUserBalance(balanceData);
 
     } catch (err) {
       console.error(err);
@@ -131,7 +140,7 @@ export default function IndicacoesPage() {
           {[
             { label: 'Total Indicados', value: referrals.length, icon: <Users className="w-5 h-5" />, color: 'blue' },
             { label: 'Ativos', value: activeReferrals, icon: <TrendingUp className="w-5 h-5" />, color: 'green' },
-            { label: 'Total Ganho', value: formatCurrency(totalCommissions), icon: <TrendingUp className="w-5 h-5" />, color: 'purple' },
+            { label: 'Total Ganho', value: formatCurrency(userBalance?.total_received_cents ?? 0), icon: <TrendingUp className="w-5 h-5" />, color: 'purple' },
           ].map(({ label, value, icon, color }) => (
             <div key={label} className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
               <div className={`flex items-center gap-3 mb-3`}>

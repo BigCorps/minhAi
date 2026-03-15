@@ -13,6 +13,24 @@
  * Os triggers genéricos ("débito", "crédito", "cartão", etc.) ficam AQUI.
  * As funções tef_debito / nfc_debito devem manter apenas triggers específicos
  * ("tef débito", "nfc débito", "tap débito", etc.) para não conflitar.
+ *
+ * ─── CORREÇÃO NECESSÁRIA em detectFunctionFromTranscript (functions-registry.ts) ───
+ *
+ * O score do sistema exige triggers de 2+ palavras para atingir threshold 1.0.
+ * Quando o usuário diz "cobrar 10,00 crédito", o número quebra o trigger "cobrar crédito".
+ * Adicione esta normalização NO INÍCIO de detectFunctionFromTranscript, antes do loop:
+ *
+ *   // Normalizar transcript: remover valores monetários para não quebrar triggers
+ *   // Ex: "cobrar 10,00 crédito" → "cobrar crédito"
+ *   //     "10 reais no débito"   → "no débito"  (já coberto por trigger "no débito")
+ *   const normalizedTranscript = lowerTranscript
+ *     .replace(/r\$\s*\d+(?:[.,]\d{1,2})?/g, '')   // remove "R$ 10,00"
+ *     .replace(/\d+(?:[.,]\d{1,2})?\s*(?:reais?|real)?/g, '')  // remove "10,00 reais" ou só "10,00"
+ *     .replace(/\s+/g, ' ')
+ *     .trim()
+ *
+ *   // Usar normalizedTranscript no lugar de lowerTranscript no loop de triggers:
+ *   if (regex.test(normalizedTranscript)) {  // ← era lowerTranscript
  */
 
 import { createClient } from '@/lib/supabase-browser'
@@ -85,19 +103,33 @@ export const cobrar_debito: FunctionDefinition = {
   responseType: 'voice+modal',
 
   // Triggers genéricos — sem "tef", "nfc" ou "tap"
+  // IMPORTANTE: triggers de 1 palavra valem 8pts (score 0.53 < threshold 1.0)
+  // Triggers de 2+ palavras valem 15pts (score 1.0 = threshold) — use sempre 2 palavras
   voiceTriggers: [
+    // Frases completas (mais específicas, score maior)
     'cobrar no débito',
     'cobrar no debito',
+    'cobrar débito',
+    'cobrar debito',
     'cobrança no débito',
     'cobranca no debito',
     'pagar no débito',
     'pagar no debito',
-    'débito',
-    'debito',
+    'no débito',
+    'no debito',
     'cartão de débito',
     'cartao de debito',
     'passar no débito',
     'passar no debito',
+    // Variantes com valor no meio: "cobrar 10 débito", "10 reais débito"
+    'reais débito',
+    'reais debito',
+    'real débito',
+    'real debito',
+    'reais no débito',
+    'reais no debito',
+    'valor débito',
+    'valor debito',
   ],
 
   examplePhrases: [
@@ -225,22 +257,36 @@ export const cobrar_credito: FunctionDefinition = {
   responseType: 'voice+modal',
 
   // Triggers genéricos — sem "tef", "nfc" ou "tap"
+  // IMPORTANTE: triggers de 1 palavra valem 8pts (score 0.53 < threshold 1.0)
+  // Triggers de 2+ palavras valem 15pts (score 1.0 = threshold) — use sempre 2 palavras
   voiceTriggers: [
+    // Frases completas
     'cobrar no crédito',
     'cobrar no credito',
+    'cobrar crédito',
+    'cobrar credito',
     'cobrança no crédito',
     'cobranca no credito',
     'pagar no crédito',
     'pagar no credito',
-    'crédito',
-    'credito',
+    'no crédito',
+    'no credito',
     'cartão de crédito',
     'cartao de credito',
     'passar no crédito',
     'passar no credito',
-    'parcelar',
-    'parcelado',
-    'parcelas',
+    'parcelar em',
+    'parcelado em',
+    'parcelas no',
+    // Variantes com valor no meio: "cobrar 10 crédito", "10 reais crédito"
+    'reais crédito',
+    'reais credito',
+    'real crédito',
+    'real credito',
+    'reais no crédito',
+    'reais no credito',
+    'valor crédito',
+    'valor credito',
   ],
 
   examplePhrases: [

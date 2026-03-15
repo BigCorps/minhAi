@@ -92,7 +92,7 @@ export default function IndicacoesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Minhas Indicações</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Indique amigos e ganhe 50% das mensalidades deles
+            Indique amigos e ganhe 50% das mensalidades deles, todos os meses aqui no seu saldo!
           </p>
         </div>
 

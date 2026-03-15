@@ -62,14 +62,15 @@ export default function PixQRCodeDisplay({
 
         {/* Header */}
         <div className="text-center mb-6">
-          {company.logo_url ? (
-            <img src={company.logo_url} alt={company.name}
-              className="w-16 h-16 rounded-xl object-cover mx-auto mb-3 shadow-lg" />
-          ) : (
-            <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-3">
-              <span className="text-white text-xl font-bold">{company.name.charAt(0)}</span>
-            </div>
-          )}
+{company.logo_url ? (
+  <img src={company.logo_url} alt={company.name}
+    className="max-h-16 max-w-[160px] w-auto h-auto object-contain mx-auto mb-3"
+    style={{ display: 'block' }} />
+) : (
+  <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-3">
+    <span className="text-white text-xl font-bold">{company.name.charAt(0)}</span>
+  </div>
+)}
           <h1 className="text-xl font-bold text-white">{company.name}</h1>
           <p className="text-slate-400 text-sm mt-1">
             Pagamento de{' '}

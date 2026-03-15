@@ -62,15 +62,15 @@ export default function PixQRCodeDisplay({
 
         {/* Header */}
         <div className="text-center mb-6">
-{company.logo_url ? (
-  <img src={company.logo_url} alt={company.name}
-    className="max-h-16 max-w-[160px] w-auto h-auto object-contain mx-auto mb-3"
-    style={{ display: 'block' }} />
-) : (
-  <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-3">
-    <span className="text-white text-xl font-bold">{company.name.charAt(0)}</span>
-  </div>
-)}
+          {company.logo_url ? (
+            <img src={company.logo_url} alt={company.name}
+              className="max-h-16 max-w-[160px] w-auto h-auto object-contain mx-auto mb-3"
+              style={{ display: 'block' }} />
+          ) : (
+            <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-3">
+              <span className="text-white text-xl font-bold">{company.name.charAt(0)}</span>
+            </div>
+          )}
           <h1 className="text-xl font-bold text-white">{company.name}</h1>
           <p className="text-slate-400 text-sm mt-1">
             Pagamento de{' '}
@@ -92,38 +92,8 @@ export default function PixQRCodeDisplay({
               <span className="text-white font-bold text-sm">1. Copia e Cola</span>
             </div>
 
-            {/* Resumo */}
-            <div className="bg-slate-800 rounded-xl p-4 mb-5 flex-1">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Resumo</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/10 text-yellow-400">
-                  Aguardando
-                </span>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Empresa</span>
-                  <span className="text-white font-medium">{company.name}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Banco</span>
-                  <span className="text-white font-medium">Banco Inter</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Validade</span>
-                  <span className="text-yellow-400 font-medium">Válido por 30 minutos</span>
-                </div>
-                <div className="pt-3 border-t border-slate-700 flex justify-between items-center">
-                  <span className="text-slate-300 font-bold">Total</span>
-                  <span className="text-2xl font-bold text-blue-400">
-                    R$ {amount.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Botões */}
-            <div className="space-y-3">
+            <div className="space-y-3 mt-auto">
               <button
                 onClick={copyCode}
                 className={`w-full py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 text-sm ${
@@ -155,7 +125,7 @@ export default function PixQRCodeDisplay({
             </div>
           </div>
 
-          {/* QR Code */}
+          {/* QR Code + Resumo */}
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col items-center">
             <div className="flex items-center gap-2 mb-5 w-full">
               <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -168,11 +138,44 @@ export default function PixQRCodeDisplay({
               <img src={pixData.qr_code_url} alt="QR Code PIX" className="w-full h-auto" />
             </div>
 
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold mb-5 ${
               timeLeft < 300 ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
             }`}>
               <Clock className="w-4 h-4 animate-pulse" />
               Expira em: {formatTime(timeLeft)}
+            </div>
+
+            {/* Resumo */}
+            <div className="bg-slate-800 rounded-xl p-4 w-full">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Resumo</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/10 text-yellow-400">
+                  Aguardando
+                </span>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 pb-1">
+                  INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
+                </p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Empresa</span>
+                  <span className="text-white font-medium">{company.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Banco</span>
+                  <span className="text-white font-medium">Banco Inter</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Validade</span>
+                  <span className="text-yellow-400 font-medium">Válido por 30 minutos</span>
+                </div>
+                <div className="pt-3 border-t border-slate-700 flex justify-between items-center">
+                  <span className="text-slate-300 font-bold">Total</span>
+                  <span className="text-2xl font-bold text-blue-400">
+                    R$ {amount.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 

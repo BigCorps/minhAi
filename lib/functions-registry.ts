@@ -15,6 +15,7 @@
 
 // ✅ ADICIONAR ESTE IMPORT NO TOPO
 import { createClient } from '@/lib/supabase-browser';
+import { cobrar_debito, cobrar_credito } from './paymentGatewayEntries'
 
 export type ResponseType = 'voice' | 'modal' | 'page' | 'voice+modal' | 'voice+page';
 
@@ -79,7 +80,9 @@ export interface FunctionDefinition {
  * ========================================
  */
 export const FUNCTIONS_REGISTRY: Record<string, FunctionDefinition> = {
-
+  cobrar_debito,
+  cobrar_credito,
+  
   link_pagamento: {
     functionKey: 'link_pagamento',
     functionName: 'Link de Pagamento',

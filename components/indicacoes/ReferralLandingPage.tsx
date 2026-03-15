@@ -52,12 +52,15 @@ export default function ReferralLandingPage({ referralCode, referrerName }: Prop
             ))}
           </div>
 
-          <Link
-            href={`/login?ref=${referralCode}&mode=signup`}
+          <button
+            onClick={() => {
+              document.cookie = `pendingRefCode=${referralCode}; path=/; max-age=3600; samesite=lax; secure`;
+              window.location.href = '/login?mode=signup';
+            }}
             className="block w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition-colors"
           >
             Criar minha conta grátis
-          </Link>
+          </button>
 
           <p className="text-slate-600 text-xs mt-4">
             Já tem conta?{' '}

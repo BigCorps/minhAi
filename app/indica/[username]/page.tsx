@@ -9,12 +9,26 @@ export default async function IndicaPage({ params }: PageProps) {
   const { username } = await params;
   const supabase = createClient();
 
-  // Buscar por referral_code OU username
-  const { data: profile } = await supabase
+  // Tentar por referral_code primeiro
+  let profile = null;
+
+  const { data: byCode } = await supabase
     .from('user_profiles')
     .select('user_id, referral_code, username')
-    .or(`referral_code.eq.${username.toUpperCase()},username.eq.${username.toLowerCase()}`)
-    .single();
+    .eq('referral_code', username.toUpperCase())
+    .maybeSingle();
+
+  if (byCode) {
+    profile = byCode;
+  } else {
+    const { data: byUsername } = await supabase
+      .from('user_profiles')
+      .select('user_id, referral_code, username')
+      .eq('username', username.toLowerCase())
+      .maybeSingle();
+
+    profile = byUsername;
+  }
 
   if (!profile) {
     return (
@@ -27,10 +41,9 @@ export default async function IndicaPage({ params }: PageProps) {
     );
   }
 
-  // Buscar nome do referrer
   const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
-  const referrerName = authUser?.user?.user_metadata?.name || 
-                       authUser?.user?.email?.split('@')[0] || 
+  const referrerName = authUser?.user?.user_metadata?.name ||
+                       authUser?.user?.email?.split('@')[0] ||
                        'um usuário eAi';
 
   return (

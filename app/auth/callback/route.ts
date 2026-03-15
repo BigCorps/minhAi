@@ -11,7 +11,6 @@ export async function GET(request: Request) {
     try {
       const cookieStore = await cookies();
       const supabase = createClient();
-
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
@@ -22,7 +21,7 @@ export async function GET(request: Request) {
       if (data.session) {
         console.log('✅ Sessão criada:', data.session.user.email);
         console.log('🔄 Redirecionando para:', next);
-        
+
         const response = NextResponse.redirect(new URL(next, requestUrl.origin));
 
         // Salvar email no cookie para biometria detectar no login
@@ -32,6 +31,32 @@ export async function GET(request: Request) {
           sameSite: 'lax',
           secure: true,
         });
+
+        // Registrar indicação para OAuth (Google/Facebook)
+        try {
+          const pendingRef = cookieStore.get('pendingRefCode')?.value;
+          if (pendingRef && data.session.user) {
+            const { data: referrerProfile } = await supabase
+              .from('user_profiles')
+              .select('user_id')
+              .eq('referral_code', pendingRef.toUpperCase())
+              .single();
+
+            if (referrerProfile) {
+              await supabase.from('user_referrals').insert({
+                referrer_id: referrerProfile.user_id,
+                referred_id: data.session.user.id,
+                referral_code: pendingRef.toUpperCase(),
+                status: 'pending',
+              });
+              console.log('✅ Indicação OAuth registrada:', pendingRef.toUpperCase());
+            }
+
+            response.cookies.delete('pendingRefCode');
+          }
+        } catch (refError) {
+          console.error('Erro ao registrar indicação OAuth:', refError);
+        }
 
         return response;
       }

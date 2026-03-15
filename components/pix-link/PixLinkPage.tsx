@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Check } from 'lucide-react';
@@ -23,6 +22,7 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
   const [pixData, setPixData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [autoChecking, setAutoChecking] = useState(false);
   const supabase = createClient();
 
   // Se veio com valor na URL, gera automático
@@ -31,6 +31,35 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
       generatePix(initialAmount);
     }
   }, []);
+
+  // Aguarda 30s após o PIX ser gerado antes de começar o auto-check
+  useEffect(() => {
+    if (!pixData) return;
+    const startDelay = setTimeout(() => {
+      setAutoChecking(true);
+    }, 30000);
+    return () => clearTimeout(startDelay);
+  }, [pixData]);
+
+  // Polling a cada 5s após o delay inicial
+  useEffect(() => {
+    if (!autoChecking || !pixData) return;
+    const interval = setInterval(async () => {
+      if (!pixData?.transaction_id) return;
+      try {
+        const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
+          body: { transaction_id: pixData.transaction_id },
+        });
+        if (!error && data?.success) {
+          setConfirmed(true);
+          clearInterval(interval);
+        }
+      } catch {
+        // silencioso — não interrompe o fluxo
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [autoChecking, pixData]);
 
   async function generatePix(value: number) {
     setLoading(true);
@@ -109,7 +138,7 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
       pixData={pixData}
       amount={amount!}
       onConfirm={confirmPix}
-      onNewPix={() => { setPixData(null); setAmount(null); }}
+      onNewPix={() => { setPixData(null); setAmount(null); setAutoChecking(false); }}
       loading={loading}
     />
   );

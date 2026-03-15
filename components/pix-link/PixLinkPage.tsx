@@ -11,7 +11,6 @@ interface Company {
   name: string;
   slug: string;
   logo_url: string | null;
-  receiving_pix_key: string;
 }
 
 interface Props {

@@ -133,7 +133,7 @@ export default function ArquivosCompanyPage() {
       company={company}
       cupons={cupons}
       consultas={consultas}
-      enviados={listaEnviados}
+      enviados={enviados}
       stats={stats}
     />
   );

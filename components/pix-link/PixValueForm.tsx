@@ -28,11 +28,12 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
         {/* Logo */}
         <div className="text-center mb-8">
           {company.logo_url ? (
-            <img
-              src={company.logo_url}
-              alt={company.name}
-              className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4 shadow-lg"
-            />
+<img
+  src={company.logo_url}
+  alt={company.name}
+  className="max-h-20 max-w-[180px] w-auto h-auto object-contain mx-auto mb-4"
+  style={{ display: 'block' }}
+/>
           ) : (
             <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-2xl font-bold">

@@ -81,7 +81,7 @@ export default function PixLinkModal({ onClose }: Props) {
                 Link PIX
               </h2>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                Gere um link de pagamento para compartilhar
+                Gere um PIX com ou sem o valor para compartilhar facilmente e já confirmar o pagamento via email e no dashboard
               </p>
             </div>
           </div>

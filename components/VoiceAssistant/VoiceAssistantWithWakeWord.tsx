@@ -369,7 +369,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ── Transcript handler ────────────────────────────────────
-function handleGoogleTranscript(text: string, isFinal: boolean) {
+async function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
 
   const lowerText = text.toLowerCase().trim();

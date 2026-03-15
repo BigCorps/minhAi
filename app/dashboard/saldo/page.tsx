@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Loader2, TrendingUp, RefreshCw, Download, Wallet, AlertCircle, CheckCircle2, Filter } from 'lucide-react';
+import PixLinkModal from '@/components/dashboard/PixLinkModal';
 
 interface CompanyBalance {
   company_id: string;
@@ -42,6 +43,7 @@ export default function SaldoPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pix' | 'withdraw'>('pix');
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [pixLinkModalOpen, setPixLinkModalOpen] = useState(false);
 
   // Formulários
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -309,13 +311,24 @@ export default function SaldoPage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Recebimentos</h1>
             <p className="text-gray-600 dark:text-gray-400">Gerencie seus recebimentos e solicite saque imediato</p>
           </div>
-          <button
-            onClick={loadBalanceData}
-            className="inline-flex items-center px-4 py-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition shadow-sm"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Atualizar
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPixLinkModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-medium text-white transition shadow-sm"
+            >
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Link PIX
+            </button>
+            <button
+              onClick={loadBalanceData}
+              className="inline-flex items-center px-4 py-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition shadow-sm"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
+            </button>
+          </div>
         </div>
 
         {/* Cards de Resumo */}
@@ -359,28 +372,28 @@ export default function SaldoPage() {
 
         {/* Tabs e Conteúdo */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-100 dark:border-white/5 overflow-hidden">
-<div className="flex border-b border-gray-200 dark:border-white/10">
-  <button
-    onClick={() => setActiveTab('pix')}
-    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-      activeTab === 'pix'
-        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-    }`}
-  >
-    Histórico de Transações
-  </button>
-  <button
-    onClick={() => setActiveTab('withdraw')}
-    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-      activeTab === 'withdraw'
-        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-    }`}
-  >
-    Solicitar Saque
-  </button>
-</div>
+          <div className="flex border-b border-gray-200 dark:border-white/10">
+            <button
+              onClick={() => setActiveTab('pix')}
+              className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                activeTab === 'pix'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Histórico de Transações
+            </button>
+            <button
+              onClick={() => setActiveTab('withdraw')}
+              className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                activeTab === 'withdraw'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Solicitar Saque
+            </button>
+          </div>
 
           <div className="p-8">
             {activeTab === 'pix' ? (
@@ -555,6 +568,13 @@ export default function SaldoPage() {
           </div>
         </div>
       </div>
+
+      {pixLinkModalOpen && (
+        <PixLinkModal
+          onClose={() => setPixLinkModalOpen(false)}
+          isDark={true}
+        />
+      )}
     </div>
   );
 }

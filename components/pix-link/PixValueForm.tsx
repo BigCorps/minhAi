@@ -83,7 +83,7 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          Pagamento processado com segurança via Banco Inter
+          Pagamento processado com segurança via Banco Inter e BigCorps
         </p>
       </div>
     </div>

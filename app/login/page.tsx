@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
@@ -11,24 +11,37 @@ import {
 } from 'lucide-react';
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
-export default function LoginPage() {
+function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [showPassword, setShowPassword] = useState(false);
-  
+  const [refCode, setRefCode] = useState<string | null>(null);
+
   // Biometrics states
   const [biometricUserEmail, setBiometricUserEmail] = useState<string | null>(null);
   const [isCheckingBiometrics, setIsCheckingBiometrics] = useState(true);
   const [biometricType, setBiometricType] = useState<'fingerprint' | 'face' | 'unknown'>('unknown');
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
+
+    // Ler ?ref= e ?mode= da URL
+    const ref = searchParams.get('ref');
+    const modeParam = searchParams.get('mode');
+    if (ref) {
+      setRefCode(ref);
+      localStorage.setItem('pendingRefCode', ref);
+    }
+    if (modeParam === 'signup') {
+      setMode('signup');
+    }
 
     const checkBiometricAvailability = async () => {
       if (browserSupportsWebAuthn()) {
@@ -75,6 +88,40 @@ export default function LoginPage() {
         });
 
         if (error) throw error;
+
+        // Registrar indicação se veio de um link
+        const pendingRef = refCode || localStorage.getItem('pendingRefCode');
+        if (pendingRef && data.user) {
+          try {
+            const { data: referrerProfile } = await supabase
+              .from('user_profiles')
+              .select('user_id')
+              .eq('referral_code', pendingRef.toUpperCase())
+              .single();
+
+            if (referrerProfile) {
+              await supabase.from('user_referrals').insert({
+                referrer_id: referrerProfile.user_id,
+                referred_id: data.user.id,
+                referral_code: pendingRef.toUpperCase(),
+                status: 'pending',
+              });
+              localStorage.removeItem('pendingRefCode');
+
+              // Email para o indicado via Gmail sistema
+              await supabase.functions.invoke('enviar-email-indicacao', {
+                body: {
+                  referred_email: email,
+                  referral_code: pendingRef.toUpperCase(),
+                },
+              });
+            }
+          } catch (refError) {
+            console.error('Erro ao registrar indicação:', refError);
+            // Não interrompe o signup
+          }
+        }
+
         alert('Cadastro realizado! Verifique seu email para confirmar.');
         setMode('login');
       } else {
@@ -482,5 +529,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+      <LoginContent />
+    </Suspense>
   );
 }

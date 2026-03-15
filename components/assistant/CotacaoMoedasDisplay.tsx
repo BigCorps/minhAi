@@ -24,20 +24,28 @@ interface CurrencyOption {
   flag: string;
 }
 
+// Todas as moedas confirmadas como disponíveis na AwesomeAPI
+// Endpoint: https://economia.awesomeapi.com.br/json/last/{MOEDA}-BRL
 const CURRENCIES: CurrencyOption[] = [
+  // Moedas tradicionais
   { code: 'USD', name: 'Dólar Americano', flag: '🇺🇸' },
   { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
   { code: 'GBP', name: 'Libra Esterlina', flag: '🇬🇧' },
   { code: 'JPY', name: 'Iene Japonês', flag: '🇯🇵' },
-  { code: 'ARS', name: 'Peso Argentino', flag: '🇦🇷' },
   { code: 'CAD', name: 'Dólar Canadense', flag: '🇨🇦' },
   { code: 'AUD', name: 'Dólar Australiano', flag: '🇦🇺' },
   { code: 'CHF', name: 'Franco Suíço', flag: '🇨🇭' },
+  { code: 'ARS', name: 'Peso Argentino', flag: '🇦🇷' },
   { code: 'CNY', name: 'Yuan Chinês', flag: '🇨🇳' },
+  
+  // Criptomoedas
   { code: 'BTC', name: 'Bitcoin', flag: '₿' },
+  { code: 'ETH', name: 'Ethereum', flag: 'Ξ' },
+  { code: 'LTC', name: 'Litecoin', flag: 'Ł' },
+  { code: 'XRP', name: 'Ripple', flag: '✕' },
 ];
 
-const OPENING_TEXT = 'Consulta de cotação de moedas. Selecione a moeda desejada ou diga: dólar, euro, libra, fechar.';
+const OPENING_TEXT = 'Consulta de cotação de moedas. Selecione a moeda desejada ou diga: dólar, euro, libra, bitcoin, fechar.';
 const AUTO_CLOSE = 60;
 
 const normalize = (text: string) =>
@@ -109,7 +117,7 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
 
       // Gerar PDF no frontend
       const pdfDataUri = generateConsultaPDF('Cotação de Câmbio', res.resultado_formatado);
-      const name = `cambio_${Date.now()}.pdf`;
+      const name = `cambio_${selectedCurrency}_${Date.now()}.pdf`;
       setFileName(name);
       setFileBase64(pdfDataUri);
 
@@ -191,24 +199,28 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
       }
 
       if (stage === 'input') {
-        const VOICE_MAP: Record<string, string> = {
-          dolar: 'USD', 'dolar americano': 'USD',
-          euro: 'EUR',
-          libra: 'GBP',
-          iene: 'JPY', japao: 'JPY',
-          peso: 'ARS', argentina: 'ARS',
-          canada: 'CAD', canadense: 'CAD',
-          australia: 'AUD', australiano: 'AUD',
-          franco: 'CHF', suico: 'CHF',
-          yuan: 'CNY', china: 'CNY',
-          bitcoin: 'BTC', btc: 'BTC',
+        // Detectar moedas por voz
+        const currencyMap: Record<string, string> = {
+          'dolar': 'USD', 'dollar': 'USD',
+          'euro': 'EUR',
+          'libra': 'GBP',
+          'iene': 'JPY',
+          'canadense': 'CAD', 'canada': 'CAD',
+          'australiano': 'AUD', 'australia': 'AUD',
+          'franco': 'CHF', 'suico': 'CHF',
+          'peso': 'ARS', 'argentina': 'ARS', 'argentino': 'ARS',
+          'yuan': 'CNY', 'china': 'CNY', 'chines': 'CNY',
+          'bitcoin': 'BTC', 'btc': 'BTC',
+          'ethereum': 'ETH', 'eth': 'ETH',
+          'litecoin': 'LTC', 'ltc': 'LTC',
+          'ripple': 'XRP', 'xrp': 'XRP',
         };
 
-        for (const [trigger, code] of Object.entries(VOICE_MAP)) {
-          if (t.includes(trigger)) {
+        for (const [key, code] of Object.entries(currencyMap)) {
+          if (t.includes(key)) {
             setSelectedCurrency(code);
-            const curr = CURRENCIES.find(c => c.code === code);
-            playText(`${curr?.name} selecionado.`).catch(() => {});
+            const currName = CURRENCIES.find(c => c.code === code)?.name || code;
+            playText(`${currName} selecionado.`).catch(() => {});
             return;
           }
         }
@@ -219,237 +231,248 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
         }
       }
 
-      if (stage === 'result' && resultData) {
-        if (['copiar', 'copia', 'copie'].some(c => t.includes(c))) {
-          handleCopy(); return;
-        }
-        if (['baixar', 'download', 'salvar', 'pdf'].some(c => t.includes(c))) {
-          handleDownloadPdf(); return;
-        }
-        if (['nova', 'nova consulta', 'novamente'].some(c => t.includes(c))) {
-          handleReset(); return;
-        }
-        if (googleConnected && ['enviar email', 'mandar email', 'enviar por email'].some(c => t.includes(c))) {
-          handleSendByEmail(); return;
-        }
+      if (stage === 'result') {
+        if (['copiar', 'copia'].some(c => t.includes(c))) { handleCopy(); return; }
+        if (['baixar', 'pdf', 'download'].some(c => t.includes(c))) { handleDownloadPdf(); return; }
+        if (['nova', 'outro', 'novamente', 'outra'].some(c => t.includes(c))) { handleReset(); return; }
+        if (googleConnected && ['email', 'enviar'].some(c => t.includes(c))) { handleSendByEmail(); return; }
       }
 
       if (stage === 'error') {
-        if (['tentar', 'novamente', 'tentar novamente'].some(c => t.includes(c))) {
-          handleReset(); return;
+        if (['tentar', 'novamente', 'de novo'].some(c => t.includes(c))) {
+          handleReset();
+          return;
         }
       }
     }
   });
 
-  const modalMaxWidth = stage === 'result' ? 'max-w-lg sm:max-w-3xl' : 'max-w-lg';
-
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-      <div className={`w-full ${modalMaxWidth} rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
-
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className={`relative w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
+        
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Cotação de Moedas</h2>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
-            <X className="w-5 h-5" />
-          </button>
+        <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">💱</span>
+            <div>
+              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Cotação de Moedas
+              </h2>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Consultar câmbio em tempo real
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {stage === 'result' && (
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${isDark ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700'}`}>
+                {timeLeft}s
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/70 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'}`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* ── Input ── */}
-        {stage === 'input' && (
-          <div className="flex flex-col gap-4">
-            <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
-              Selecione a moeda para consultar a cotação atual:
-            </p>
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+          
+          {/* ── Input ── */}
+          {stage === 'input' && (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CURRENCIES.map(curr => (
+                  <button
+                    key={curr.code}
+                    onClick={() => {
+                      setSelectedCurrency(curr.code);
+                      playText(`${curr.name} selecionado.`).catch(() => {});
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      selectedCurrency === curr.code
+                        ? isDark
+                          ? 'bg-red-600 text-white'
+                          : 'bg-red-500 text-white'
+                        : isDark
+                        ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className="text-lg">{curr.flag}</span>
+                    <div className="flex flex-col items-start flex-1 min-w-0">
+                      <span className="font-semibold">{curr.code}</span>
+                      <span className={`text-xs truncate ${selectedCurrency === curr.code ? 'text-white/80' : isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                        {curr.name}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
 
-            {/* Grid de moedas */}
-            <div className="grid grid-cols-2 gap-2">
-              {CURRENCIES.map(curr => (
-                <button
-                  key={curr.code}
-                  onClick={() => {
-                    setSelectedCurrency(curr.code);
-                    playText(`${curr.name} selecionado.`).catch(() => {});
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    selectedCurrency === curr.code
-                      ? isDark
-                        ? 'bg-red-600 text-white'
-                        : 'bg-red-500 text-white'
-                      : isDark
-                      ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <span className="text-lg">{curr.flag}</span>
-                  <div className="flex flex-col items-start flex-1 min-w-0">
-                    <span className="font-semibold">{curr.code}</span>
-                    <span className={`text-xs truncate ${selectedCurrency === curr.code ? 'text-white/80' : isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                      {curr.name}
-                    </span>
-                  </div>
-                </button>
-              ))}
+              <button
+                onClick={handleConsultar}
+                className="w-full py-3 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+              >
+                Consultar Cotação
+              </button>
+
+              <VoiceHint commands={['"dólar"', '"euro"', '"libra"', '"bitcoin"', '"consultar"', '"fechar"']} isDark={isDark} />
             </div>
+          )}
 
-            <button
-              onClick={handleConsultar}
-              className="w-full py-3 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
-            >
-              Consultar Cotação
-            </button>
-
-            <VoiceHint commands={['"dólar"', '"euro"', '"libra"', '"consultar"', '"fechar"']} isDark={isDark} />
-          </div>
-        )}
-
-        {/* ── Processing ── */}
-        {stage === 'processing' && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
-            <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>Consultando cotação...</p>
-          </div>
-        )}
-
-        {/* ── Result ── */}
-        {stage === 'result' && resultData && (
-          <div className="flex flex-col gap-4">
-            {/* Banner de sucesso */}
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
-              <Check className="w-4 h-4 shrink-0" />
-              <span>Cotação consultada!</span>
+          {/* ── Processing ── */}
+          {stage === 'processing' && (
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+              <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>Consultando cotação...</p>
             </div>
+          )}
 
-            {/* Layout responsivo */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Coluna esquerda */}
-              <div className="flex flex-col gap-3 flex-1 min-w-0">
-                {/* Card de resultado */}
-                <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">{CURRENCIES.find(c => c.code === resultData.currency)?.flag}</span>
-                    <div>
-                      <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{resultData.name}</h3>
-                      <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{resultData.currency}</p>
+          {/* ── Result ── */}
+          {stage === 'result' && resultData && (
+            <div className="flex flex-col gap-4">
+              {/* Banner de sucesso */}
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
+                <Check className="w-4 h-4 shrink-0" />
+                <span>Cotação consultada!</span>
+              </div>
+
+              {/* Layout responsivo */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Coluna esquerda */}
+                <div className="flex flex-col gap-3 flex-1 min-w-0">
+                  {/* Card de resultado */}
+                  <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">{CURRENCIES.find(c => c.code === resultData.currency)?.flag}</span>
+                      <div>
+                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{resultData.name}</h3>
+                        <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{resultData.currency}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-                      <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Compra</p>
-                      <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>R$ {resultData.bid}</p>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                        <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Compra</p>
+                        <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>R$ {resultData.bid}</p>
+                      </div>
+                      <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                        <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Venda</p>
+                        <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>R$ {resultData.ask}</p>
+                      </div>
                     </div>
-                    <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-                      <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Venda</p>
-                      <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>R$ {resultData.ask}</p>
-                    </div>
-                  </div>
 
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${resultData.variation?.startsWith('-') ? (isDark ? 'bg-red-900/30' : 'bg-red-50') : (isDark ? 'bg-green-900/30' : 'bg-green-50')}`}>
-                    {resultData.variation?.startsWith('-') 
-                      ? <TrendingDown className="w-4 h-4 text-red-500" />
-                      : <TrendingUp className="w-4 h-4 text-green-500" />
-                    }
-                    <span className={`text-sm font-medium ${resultData.variation?.startsWith('-') ? 'text-red-600' : 'text-green-600'}`}>
-                      {resultData.variation}
-                    </span>
-                  </div>
-
-                  <p className={`text-xs mt-3 text-center ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
-                    Atualizado em {resultData.timestamp}
-                  </p>
-                </div>
-
-                {/* Botões de ação */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                  >
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                    {copied ? 'Copiado!' : 'Copiar'}
-                  </button>
-                  <button
-                    onClick={handleDownloadPdf}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
-                  >
-                    <Download className="w-4 h-4" />Baixar PDF
-                  </button>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleReset}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                  >
-                    <RefreshCw className="w-4 h-4" />Nova consulta
-                  </button>
-
-                  {googleConnected && (
-                    <button
-                      onClick={handleSendByEmail}
-                      disabled={isSendingEmail}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {isSendingEmail
-                        ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
-                        : <><Mail className="w-4 h-4" />Enviar por email</>
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${resultData.variation?.startsWith('-') ? (isDark ? 'bg-red-900/30' : 'bg-red-50') : (isDark ? 'bg-green-900/30' : 'bg-green-50')}`}>
+                      {resultData.variation?.startsWith('-') 
+                        ? <TrendingDown className="w-4 h-4 text-red-500" />
+                        : <TrendingUp className="w-4 h-4 text-green-500" />
                       }
+                      <span className={`text-sm font-medium ${resultData.variation?.startsWith('-') ? 'text-red-600' : 'text-green-600'}`}>
+                        {resultData.variation}
+                      </span>
+                    </div>
+
+                    <p className={`text-xs mt-3 text-center ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
+                      Atualizado em {resultData.timestamp}
+                    </p>
+                  </div>
+
+                  {/* Botões de ação */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCopy}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    >
+                      {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                      {copied ? 'Copiado!' : 'Copiar'}
                     </button>
-                  )}
+                    <button
+                      onClick={handleDownloadPdf}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+                    >
+                      <Download className="w-4 h-4" />Baixar PDF
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleReset}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                      <RefreshCw className="w-4 h-4" />Nova consulta
+                    </button>
+
+                    {googleConnected && (
+                      <button
+                        onClick={handleSendByEmail}
+                        disabled={isSendingEmail}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isSendingEmail
+                          ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                          : <><Mail className="w-4 h-4" />Enviar por email</>
+                        }
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Coluna direita — QR desktop */}
+                <div className="hidden sm:flex flex-col shrink-0 w-56">
+                  <ResultDownloadQR
+                    companyId={data.companyId}
+                    fileName={fileName}
+                    fileType="application/pdf"
+                    fileBase64={fileBase64}
+                    isDark={isDark}
+                    enabled={stage === 'result' && !!fileBase64}
+                  />
+                </div>
+
+                {/* QR mobile */}
+                <div className="sm:hidden">
+                  <ResultDownloadQR
+                    companyId={data.companyId}
+                    fileName={fileName}
+                    fileType="application/pdf"
+                    fileBase64={fileBase64}
+                    isDark={isDark}
+                    enabled={stage === 'result' && !!fileBase64}
+                  />
                 </div>
               </div>
 
-              {/* Coluna direita — QR desktop */}
-              <div className="hidden sm:flex flex-col shrink-0 w-56">
-                <ResultDownloadQR
-                  companyId={data.companyId}
-                  fileName={fileName}
-                  fileType="application/pdf"
-                  fileBase64={fileBase64}
-                  isDark={isDark}
-                  enabled={stage === 'result' && !!fileBase64}
-                />
-              </div>
-
-              {/* QR mobile */}
-              <div className="sm:hidden">
-                <ResultDownloadQR
-                  companyId={data.companyId}
-                  fileName={fileName}
-                  fileType="application/pdf"
-                  fileBase64={fileBase64}
-                  isDark={isDark}
-                  enabled={stage === 'result' && !!fileBase64}
-                />
-              </div>
+              {/* Voice hint */}
+              <VoiceHint
+                commands={['"copiar"', '"baixar pdf"', '"nova consulta"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']}
+                isDark={isDark}
+              />
             </div>
+          )}
 
-            {/* Voice hint */}
-            <VoiceHint
-              commands={['"copiar"', '"baixar pdf"', '"nova consulta"', ...(googleConnected ? ['"enviar email"'] : []), '"fechar"']}
-              isDark={isDark}
-            />
-          </div>
-        )}
-
-        {/* ── Error ── */}
-        {stage === 'error' && (
-          <div className="flex flex-col gap-4">
-            <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
-              {errorMsg}
+          {/* ── Error ── */}
+          {stage === 'error' && (
+            <div className="flex flex-col gap-4">
+              <div className={`px-3 py-3 rounded-xl text-sm ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+                {errorMsg}
+              </div>
+              <button
+                onClick={handleReset}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+              >
+                <RefreshCw className="w-4 h-4" />Tentar novamente
+              </button>
+              <VoiceHint commands={['"tentar novamente"', '"fechar"']} isDark={isDark} />
             </div>
-            <button
-              onClick={handleReset}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700"
-            >
-              <RefreshCw className="w-4 h-4" />Tentar novamente
-            </button>
-            <VoiceHint commands={['"tentar novamente"', '"fechar"']} isDark={isDark} />
-          </div>
-        )}
+          )}
 
+        </div>
       </div>
     </div>,
     document.body

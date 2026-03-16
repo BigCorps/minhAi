@@ -114,7 +114,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
                 por você
               </span>
-              ?
+              !
             </span>
           </h1>
 

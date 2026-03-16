@@ -69,7 +69,7 @@ export default function IndicacoesPage() {
   const referralCode = profile?.referral_code;
   const username = profile?.username;
   const linkSlug = username || referralCode;
-  const referralLink = linkSlug ? `https://eai.app.br/indica/${linkSlug}` : '';
+  const referralLink = linkSlug ? `https://minhai.app/indica/${linkSlug}` : '';
 
   function copyLink() {
     if (!referralLink) return;

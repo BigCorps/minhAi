@@ -139,7 +139,7 @@ export default function RecursoCardsSlide({
         </div>
 
         <p className={`mt-3 text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-          Próximo: Funções do eAi →
+          Próximo: Funções minhAi →
         </p>
       </div>
     </div>

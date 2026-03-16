@@ -18,7 +18,7 @@ export function generateConsultaPDF(
   doc.setFontSize(10);
   doc.setTextColor(74, 85, 104);
   doc.text(
-    `eAi - Assistente Virtual | Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+    `minhAi - Uma IA pra chamar de sua! | Gerado em: ${new Date().toLocaleString('pt-BR')}`,
     MARGEM,
     24
   );
@@ -43,7 +43,7 @@ export function generateConsultaPDF(
       body: resultadoFormatado,
       theme: 'striped',
       headStyles: {
-        fillColor: [176, 203, 31], // #B0CB1F - Verde limão eAi
+        fillColor: [176, 203, 31], // #B0CB1F - Verde limão 
         textColor: [26, 32, 44],    // #1a202c
       },
       margin: { left: MARGEM, right: MARGEM },
@@ -60,7 +60,7 @@ export function generateConsultaPDF(
   doc.setFontSize(8);
   doc.setTextColor(113, 128, 150);
   doc.text(
-    'Documento gerado automaticamente pelo sistema eAi.',
+    'Documento gerado automaticamente por minhAi.',
     MARGEM,
     finalY + 20
   );

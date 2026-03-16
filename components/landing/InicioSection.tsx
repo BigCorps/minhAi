@@ -77,7 +77,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           >
             {/* Linha 1 */}
             <span className="block whitespace-nowrap">
-              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>eAi</span>, pronto para ter
+              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>E ai</span>, pronto para ter
             </span>
 
             {/* Linha 2 - com rolagem vertical */}
@@ -174,7 +174,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           {/* Slogan */}
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             {[
-              { text: 'eAi - Employee Automation Intelligence' },
+              { text: 'minhAi - Uma IA pra chamar de sua!' },
             ].map((item) => (
               <span
                 key={item.text}

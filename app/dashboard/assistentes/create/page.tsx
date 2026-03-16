@@ -265,7 +265,7 @@ export default function NovaEmpresaPage() {
                     {slugStatus === 'available' && slugValue && (
                       <div className="mt-2 flex items-center text-sm text-green-600 dark:text-green-400">
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">eai.app.br/ia/{slugValue}</span>
+                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">minhai.app/ia/{slugValue}</span>
                       </div>
                     )}
                     

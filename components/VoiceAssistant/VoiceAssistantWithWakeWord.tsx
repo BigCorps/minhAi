@@ -554,7 +554,7 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
           // ✅ Abre via ActionModals usando type 'MeuSistemaDisplay'
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
-          playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
+          playText('Sou min I A, uma IA pra chamar de sua! Sou um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
           break;
 
 case 'consultar_cambio':

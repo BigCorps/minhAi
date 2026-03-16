@@ -127,8 +127,8 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
           </div>
 
           <div className="mt-8 pt-6 border-t border-white/5">
-            <a href="https://eai.app.br" className="text-xs text-white/30 hover:text-white/50 transition">
-              eAi - Employee Automation Intelligence
+            <a href="https://minhai.app" className="text-xs text-white/30 hover:text-white/50 transition">
+              minhAi - Uma IA para chamar de sua!
             </a>
           </div>
         </div>
@@ -166,8 +166,8 @@ export async function generateMetadata({ params }: PageProps) {
 
   return {
     title: company
-      ? `${company.name} - eAi - Employee Automation Intelligence`
-      : 'eAi - Employee Automation Intelligence',
+      ? `${company.name} - minhAi - Uma IA pra chamar de sua!`
+      : 'minhAi - Uma IA pra chamar de sua!',
     description: `Converse com o assistente IA da ${company?.name || 'empresa'}`,
   };
 }

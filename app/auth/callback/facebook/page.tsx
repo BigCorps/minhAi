@@ -1,6 +1,5 @@
 'use client';
 // ARQUIVO: app/auth/callback/facebook/page.tsx
-// Adaptado do Poupeja para o eAi (Next.js App Router)
 // Diferença: usa NEXT_PUBLIC_SUPABASE_URL em vez de VITE_SUPABASE_URL
 
 import React, { useEffect, useState } from 'react';
@@ -143,7 +142,7 @@ export default function FacebookCallbackPage() {
       addLog('🎉 Sucesso! Pode fechar esta aba.');
       setTimeout(() => {
         window.close();
-        setTimeout(() => addLog('ℹ️ Feche esta aba e volte para o eAi'), 500);
+        setTimeout(() => addLog('ℹ️ Feche esta aba e volte para minhAi'), 500);
       }, 1500);
     }
   };
@@ -177,7 +176,7 @@ export default function FacebookCallbackPage() {
         {status.type === 'success' && status.canClose && (
           <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-5 text-sm text-blue-700 dark:text-blue-300 text-center">
             💡 <strong>Você pode fechar esta aba agora</strong><br />
-            A conexão foi salva e aparecerá no eAi
+            A conexão foi salva e aparecerá no minhAi
           </div>
         )}
 

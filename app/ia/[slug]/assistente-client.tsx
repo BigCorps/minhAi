@@ -788,7 +788,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 />
               )}
               
-              {/* Botão Fechar + Logo eAi (Direita) */}
+              {/* Botão Fechar + Logo minhAi (Direita) */}
               <div className="relative flex items-center space-x-3">
                 <button
                   onClick={handleTryExitKiosk}
@@ -1107,7 +1107,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   >
                     <Image
                       src="/icon192.png"
-                      alt="eAi logo"
+                      alt="minhAi logo"
                       width={32}
                       height={32}
                       className="rounded-lg"

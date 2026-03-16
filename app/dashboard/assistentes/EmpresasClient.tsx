@@ -28,7 +28,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
   const [showQrModal, setShowQrModal] = useState<any | null>(null);
 
   const handleCopy = (slug: string, id: string) => {
-    const url = `https://eai.app.br/ia/${slug}`;
+    const url = `https://minhai.app/ia/${slug}`;
     navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -36,8 +36,8 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
 
   const generateQrUrl = (slug: string, isPublic: boolean, privateSlug: string) => {
     const baseUrl = isPublic 
-      ? `https://eai.app.br/ia/${slug}` 
-      : `https://eai.app.br/ia/private/${privateSlug}`;
+      ? `https://minhai.app/ia/${slug}` 
+      : `https://minhai.app/ia/private/${privateSlug}`;
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(baseUrl)}`;
   };
 
@@ -191,7 +191,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
 
                     {/* Abrir */}
                     <a
-                      href={assistant.is_public ? `https://eai.app.br/ia/${assistant.slug}` : `https://eai.app.br/ia/private/${assistant.private_slug || assistant.id}`}
+                      href={assistant.is_public ? `https://minhai.app/ia/${assistant.slug}` : `https://minhai.app/ia/private/${assistant.private_slug || assistant.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all

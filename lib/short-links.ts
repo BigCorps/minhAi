@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase-browser';
  * Gera um short link para upload ou download.
  * Usar nos hooks do lado do cliente (browser).
  *
- * Retorna a URL curta: https://eai.app.br/link/xK9mPq
  */
 export async function createShortLink(
   type: 'upload' | 'download',
@@ -32,7 +31,7 @@ export async function createShortLink(
     throw new Error('Erro ao salvar short link: ' + insertError.message);
   }
 
-  return `https://eai.app.br/link/${slug}`;
+  return `https://minhai.app/link/${slug}`;
 }
 
 /**
@@ -61,5 +60,5 @@ export async function createShortLinkServer(
     expires_at: expiresAt,
   });
 
-  return `https://eai.app.br/link/${slug}`;
+  return `https://minhai.app/link/${slug}`;
 }

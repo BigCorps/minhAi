@@ -189,8 +189,8 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
         body: {
           company_id: data.companyId,
           to: email,
-          subject: 'Seu QR Code — eAi',
-          body: `<p>Segue o QR Code gerado pelo assistente eAi.</p><p><strong>Conteúdo:</strong> ${inputText}</p><br><img src="${qrDataUrl}" alt="QR Code" width="250" />`,
+          subject: 'Seu QR Code — minhAi',
+          body: `<p>Segue o QR Code gerado por minhAi.</p><p><strong>Conteúdo:</strong> ${inputText}</p><br><img src="${qrDataUrl}" alt="QR Code" width="250" />`,
           attachments: [
             { filename: 'qrcode.png', content: base64, encoding: 'base64', contentType: 'image/png' },
           ],

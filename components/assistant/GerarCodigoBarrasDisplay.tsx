@@ -223,7 +223,7 @@ export default function GerarCodigoBarrasDisplay({ data, onClose, theme = 'dark'
         body: {
           company_id: data.companyId,
           to: email,
-          subject: 'Seu Código de Barras — eAi',
+          subject: 'Seu Código de Barras — minhAi',
           body: `<p>Segue o código de barras gerado pelo assistente eAi.</p><p><strong>Formato:</strong> ${format}</p><p><strong>Conteúdo:</strong> ${inputText}</p><br><img src="${barcodeUrl}" alt="Código de barras" />`,
           attachments: [
             { filename: `barcode_${format}.png`, content: base64, encoding: 'base64', contentType: 'image/png' },

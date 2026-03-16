@@ -78,12 +78,12 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           >
             {/* Linha 1 */}
             <span className="block whitespace-nowrap">
-              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>Uma IA</span> pra chamar de sua!
+              Uma <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>IA</span> pra chamar de sua!
             </span>
 
             {/* Linha 2 - com rolagem vertical */}
             <span className="block whitespace-nowrap">
-              Posso ser um{' '}
+              Sou um{' '}
               <span 
                 className="inline-block relative overflow-hidden text-center"
                 style={{ height: '1.2em', verticalAlign: '-0.30em' }}
@@ -112,7 +112,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             <span className="block whitespace-nowrap">
               trabalhando{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                24 horas por você!
+                por você
               </span>
               ?
             </span>

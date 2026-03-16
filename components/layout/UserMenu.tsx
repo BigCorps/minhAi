@@ -18,7 +18,7 @@ export function UserMenu({ user, theme }: UserMenuProps) {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = 'https://eai.app.br';
+    window.location.href = 'https://minhai.app';
   }
 
   const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário';

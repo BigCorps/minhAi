@@ -202,7 +202,7 @@ function ArquivosContent() {
       <div className="flex flex-col items-center gap-6 w-full max-w-xs mx-auto">
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-xl font-bold text-white">
-            {companyName || 'eAi - Funcionários de Voz'}
+            {companyName || 'minhAi - Uma IA pra chamar de sua!'}
           </h1>
           <p className="text-slate-400 text-sm">
             Envie um arquivo para o assistente

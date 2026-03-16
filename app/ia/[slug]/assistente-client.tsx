@@ -806,7 +806,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 </button>
 
                 <Link 
-                  href="https://eai.app.br" 
+                  href="https://minhai.app" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="hover:opacity-80 transition-opacity"
@@ -1052,11 +1052,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   }`}></div>
 
                   <Link 
-                    href="https://eai.app.br" 
+                    href="https://minhai.app" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex-shrink-0 hover:opacity-80 transition-opacity"
-                    title="Visite eAi.app.br"
+                    title="Visite minhAi.app"
                   >
                     <Image
                       src="/icon192.png"
@@ -1094,16 +1094,16 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${
                       theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                     }`}>
-                      {company.assistant_role || 'Assistente Virtual de Voz'}
+                      {company.assistant_role || 'Uma IA para chamar de sua!'}
                     </p>
                   </div>
 
                   <Link 
-                    href="https://eai.app.br" 
+                    href="https://minhai.app" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity"
-                    title="Visite eAi.app.br"
+                    title="Visite minhAi.app"
                   >
                     <Image
                       src="/icon192.png"
@@ -1285,13 +1285,13 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 theme === 'dark' ? 'border-white/5' : 'border-gray-200'
               }`}>
                 <div className="flex items-center justify-center space-x-4 mb-2">
-                  <Link href="https://eai.app.br" className={`text-xs font-medium transition-colors ${
+                  <Link href="https://minhai.appr" className={`text-xs font-medium transition-colors ${
                     theme === 'dark' ? 'text-lime-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
                   }`}>
                     Crie seu assistente
                   </Link>
                   <span className={theme === 'dark' ? 'text-white/20' : 'text-gray-400'}>|</span>
-                  <Link href="https://eai.app.br/login" className={`text-xs font-medium transition-colors ${
+                  <Link href="https://minhai.app/login" className={`text-xs font-medium transition-colors ${
                     theme === 'dark' ? 'text-lime-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
                   }`}>
                     Editar Meu Assistente
@@ -1300,7 +1300,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 <Link href="https://bigcorps.com.br" target="_blank" rel="noopener noreferrer" className={`text-[10px] transition-colors ${
                   theme === 'dark' ? 'text-white/30 hover:text-white/50' : 'text-gray-500 hover:text-gray-700'
                 }`}>
-                  eAi App - Desenvolvido por BigCorps
+                  minhAi - Desenvolvido por BigCorps
                 </Link>
               </div>
             </div>

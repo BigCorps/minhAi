@@ -440,12 +440,12 @@ if (contratoTriggers.some(t => lowerTranscript.includes(t))) {
   }
 
   // ── Meu Sistema ───────────────────────────────────────────
-  const meuSistemaTriggers = ['meu sistema', 'sobre o sistema', 'como funciona', 'eai'];
+  const meuSistemaTriggers = ['meu sistema', 'sobre o sistema', 'como funciona'];
   if (meuSistemaTriggers.some(t => lowerTranscript.includes(t))) {
     console.log('💡 Comando Meu Sistema detectado!');
     // ✅ Usa setActiveModal com type 'MeuSistemaDisplay'
     setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
-    playText('E A I, sou um funcionário de Voz com Inteligência Artificial. Escaneie o QR Code para saber mais. eai.app.br').catch(() => {});
+    playText('Sou min Ia, uma IA pra chamar de sua! Um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
     return true;
   }
 

@@ -144,7 +144,7 @@ export default function KioskGuidePage() {
                   <ul>
                     <li>Selecione <strong>Microsoft Edge</strong> como aplicativo</li>
                     <li>Ou escolha <strong>Chrome</strong> (se instalado)</li>
-                    <li>Defina URL: <code>https://eai.app.br/ia/[sua-url]</code></li>
+                    <li>Defina URL: <code>https://minhai.app/ia/[sua-url]</code></li>
                   </ul>
                 </li>
                 <li>
@@ -187,7 +187,7 @@ export default function KioskGuidePage() {
                   <pre className={`p-3 rounded text-xs overflow-x-auto ${
                     theme === 'dark' ? 'bg-slate-900/50' : 'bg-gray-100'
                   }`}>
-{`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk "https://eai.app.br/ia/[sua-url]" --start-fullscreen --disable-pinch --overscroll-history-navigation=0`}
+{`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk "https://minhai.app/ia/[sua-url]" --start-fullscreen --disable-pinch --overscroll-history-navigation=0`}
                   </pre>
                 </li>
                 <li>
@@ -523,7 +523,7 @@ sudo nano /usr/local/bin/kiosk.sh`}
 cage -d chromium-browser --kiosk --no-first-run \\
   --disable-pinch \\
   --overscroll-history-navigation=0 \\
-  "https://eai.app.br/ia/[sua-slug]"`}
+  "https://minhai.app/ia/[sua-slug]"`}
               </pre>
 
               <pre className={`p-3 rounded text-xs overflow-x-auto ${
@@ -796,8 +796,8 @@ sudo systemctl start kiosk.service`}
               <div className={`text-center text-sm ${
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>
-                <p><strong>Criado por:</strong> BigCorps / eAi App</p>
-                <p className="mt-2"><strong>Suporte:</strong> <a href="https://eai.app.br/suporte" className="text-blue-500 underline">https://eai.app.br/suporte</a></p>
+                <p><strong>Criado por:</strong> BigCorps / minhaAi</p>
+                <p className="mt-2"><strong>Suporte:</strong> <a href="https://minhai.app/suporte" className="text-blue-500 underline">https://minhai.app/suporte</a></p>
               </div>
             </div>
           </div>

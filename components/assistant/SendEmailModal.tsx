@@ -427,7 +427,7 @@ export default function SendEmailModal({
         body: {
           company_id: companyId,
           to: recipientEmail,
-          subject: 'Envio de Email pelo Assistente eAi',
+          subject: 'Envio de Email por minhAi',
           body: emailBody.trim(),
         },
       });
@@ -607,7 +607,7 @@ export default function SendEmailModal({
                   placeholder="destinatario@email.com"
                 />
                 <p className={`text-xs ${textMuted} mt-2`}>Assunto:</p>
-                <p className={`text-sm font-medium ${textPrimary}`}>Envio de Email pelo Assistente eAi</p>
+                <p className={`text-sm font-medium ${textPrimary}`}>Envio de Email por minhAi</p>
               </div>
 
               <div>

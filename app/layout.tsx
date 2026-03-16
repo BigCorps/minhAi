@@ -1,11 +1,12 @@
-// app/layout.tsx
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'minhAi - Uma IA pra chamar de sua!',
   description: 'Funcionários de IA',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -30,6 +31,7 @@ export default function RootLayout({
         >
           {children}
         </ThemeProvider>
+        <RegisterSW />
       </body>
     </html>
   );

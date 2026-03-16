@@ -38,7 +38,7 @@ const cardsDeAjuda: AjudaCard[] = [
     titulo: 'Suporte', 
     descricao: 'Precisa de ajuda urgente? Fale com nossa equipe de suporte técnico.', 
     icone: <LifeBuoy className="w-6 h-6" />, 
-    acao: { tipo: 'link', valor: 'https://api.whatsapp.com/send/?phone=11987311425&text=Preciso%20de%20suporte%20URGENTE%20no%20eAi%20App&type=phone_number&app_absent=0' }, 
+    acao: { tipo: 'link', valor: 'https://api.whatsapp.com/send/?phone=11987311425&text=Preciso%20de%20suporte%20URGENTE%20no%20minhAi%20App&type=phone_number&app_absent=0' }, 
     textoBotao: 'Contatar Suporte' 
   },
   { 
@@ -52,7 +52,7 @@ const cardsDeAjuda: AjudaCard[] = [
   { 
     id: 'sugestoes', 
     titulo: 'Sugestões', 
-    descricao: 'Sua opinião é valiosa! Ajude-nos a melhorar o eAi App com suas ideias.', 
+    descricao: 'Precisa de uma função que não encontrou? Ajude-nos a melhorar o minhAi com suas idéias!', 
     icone: <Lightbulb className="w-6 h-6" />, 
     acao: { tipo: 'dialog', valor: 'sugestoes' }, 
     textoBotao: 'Enviar Sugestão' 
@@ -201,7 +201,7 @@ export default function AjudaPage() {
             </div>
             
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              Adoramos ouvir suas ideias! Descreva sua sugestão de melhoria ou nova funcionalidade para o eAi App.
+              Adoramos ouvir suas ideias! Descreva sua sugestão de melhoria ou nova funcionalidade para minhAi.
             </p>
 
             <div className="space-y-4">

@@ -221,7 +221,7 @@ export default function NovaEmpresaPage() {
                     id="name"
                     name="name"
                     required
-                    placeholder="Ex: Suporte eAi"
+                    placeholder="Ex: Suporte minhAi"
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                     onChange={(e) => {
                       if (isPublic) {
@@ -245,7 +245,7 @@ export default function NovaEmpresaPage() {
                         id="slug"
                         name="slug"
                         required={isPublic}
-                        placeholder="suporte-eai"
+                        placeholder="suporte-minhai"
                         value={slugValue}
                         onChange={(e) => setSlugValue(e.target.value)}
                         className={`w-full px-4 py-2.5 pr-12 bg-white dark:bg-slate-900 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition ${

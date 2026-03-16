@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useTheme } from 'next-themes';
 import { useSearchParams } from 'next/navigation';
-import { Mail, Calendar, RefreshCw, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Mail, Calendar, RefreshCw, CheckCircle, XCircle, Loader2, Image, HardDrive, Youtube } from 'lucide-react';
 
 interface GoogleAccount {
   id: string;
@@ -39,7 +39,6 @@ function GoogleConnectPageContent() {
 
   const supabase = createClient();
 
-  // Carregar empresa e conta Google
   useEffect(() => {
     if (companyIdFromUrl) {
       loadCompany(companyIdFromUrl);
@@ -47,7 +46,6 @@ function GoogleConnectPageContent() {
     }
   }, [companyIdFromUrl]);
 
-  // Escutar mensagens do popup OAuth
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.data.type === 'google-auth-success') {
@@ -72,7 +70,6 @@ function GoogleConnectPageContent() {
     return () => window.removeEventListener('message', handleMessage);
   }, [companyIdFromUrl]);
 
-  // Limpar polling ao desmontar
   useEffect(() => {
     return () => {
       if (pollingInterval) {
@@ -98,12 +95,8 @@ function GoogleConnectPageContent() {
 
   async function loadGoogleAccount(companyId: string, forceReload = false) {
     try {
-      if (forceReload) {
-        setLoading(true);
-      } else {
-        setLoading(true);
-      }
-      
+      setLoading(true);
+
       const { data, error } = await supabase
         .from('google_accounts')
         .select('*')
@@ -116,7 +109,7 @@ function GoogleConnectPageContent() {
       }
 
       setGoogleAccount(data);
-      
+
       if (data && forceReload) {
         console.log('✅ Conta Google carregada após conexão');
       }
@@ -168,7 +161,7 @@ function GoogleConnectPageContent() {
             .eq('company_id', companyIdFromUrl)
             .eq('is_active', true)
             .maybeSingle();
-          
+
           if (accountData) {
             popup?.close();
             clearInterval(interval);
@@ -193,7 +186,7 @@ function GoogleConnectPageContent() {
 
     const confirm = window.confirm(
       'Tem certeza que deseja desconectar esta conta Google? ' +
-      'Você não poderá mais enviar emails ou criar eventos no calendário até reconectar.'
+      'Você não poderá mais usar os serviços Google até reconectar.'
     );
 
     if (!confirm) return;
@@ -261,15 +254,14 @@ function GoogleConnectPageContent() {
     const expiry = new Date(googleAccount.expires_at);
     const diff = expiry.getTime() - now.getTime();
     const minutes = Math.floor(diff / 1000 / 60);
-    
+
     if (minutes < 0) return 'Expirado';
     if (minutes < 60) return `${minutes} minutos`;
-    
+
     const hours = Math.floor(minutes / 60);
     return `${hours}h ${minutes % 60}min`;
   }
 
-  // Se não tem company_id na URL
   if (!companyIdFromUrl) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center p-8">
@@ -279,7 +271,7 @@ function GoogleConnectPageContent() {
             Assistente não especificado
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            Acesse esta página a partir do Calendário ou Emails para conectar uma conta Google.
+            Acesse esta página a partir do painel para conectar uma conta Google.
           </p>
         </div>
       </div>
@@ -300,19 +292,18 @@ function GoogleConnectPageContent() {
               {company ? (
                 <>Gerenciar conexão Google para <span className="font-semibold">{company.name}</span></>
               ) : (
-                'Conecte sua conta Google para enviar emails e gerenciar calendário'
+                'Conecte sua conta Google para usar os serviços integrados'
               )}
             </p>
           </div>
 
-          {/* Loading State */}
+          {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           )}
 
-          {/* Status da Conexão */}
           {!loading && (
             <>
               {/* Não Conectado */}
@@ -326,8 +317,7 @@ function GoogleConnectPageContent() {
                       Conta Google Não Conectada
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                      Conecte sua conta Google para habilitar envio de emails e 
-                      gerenciamento de calendário por voz.
+                      Conecte sua conta Google para habilitar emails, calendário, fotos, Drive e YouTube por voz.
                     </p>
 
                     <button
@@ -353,12 +343,12 @@ function GoogleConnectPageContent() {
                       )}
                     </button>
 
-                    {/* Permissões */}
+                    {/* Permissões solicitadas */}
                     <div className="mt-8 pt-6 border-t border-gray-200 dark:border-white/10">
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Permissões que serão solicitadas:
                       </p>
-                      <div className="grid md:grid-cols-2 gap-3 text-left max-w-md mx-auto">
+                      <div className="grid md:grid-cols-2 gap-3 text-left max-w-lg mx-auto">
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
                           <span>Enviar e ler emails (Gmail)</span>
@@ -366,6 +356,18 @@ function GoogleConnectPageContent() {
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" />
                           <span>Gerenciar calendário e eventos</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <Image className="w-4 h-4 mt-0.5 flex-shrink-0 text-pink-500" />
+                          <span>Acessar fotos (Google Photos)</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <HardDrive className="w-4 h-4 mt-0.5 flex-shrink-0 text-yellow-500" />
+                          <span>Ler arquivos (Google Drive)</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <Youtube className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" />
+                          <span>Acessar vídeos (YouTube)</span>
                         </div>
                       </div>
                     </div>
@@ -400,47 +402,27 @@ function GoogleConnectPageContent() {
                       </button>
                     </div>
 
-                    {/* Informações */}
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                          Status do Token
-                        </p>
-                        <p className={`font-semibold ${
-                          isTokenExpired() 
-                            ? 'text-red-600 dark:text-red-400' 
-                            : 'text-green-600 dark:text-green-400'
-                        }`}>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Status do Token</p>
+                        <p className={`font-semibold ${isTokenExpired() ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                           {isTokenExpired() ? 'Expirado' : 'Válido'}
                         </p>
                       </div>
                       <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                          Tempo até expirar
-                        </p>
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          {getTimeUntilExpiry()}
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Tempo até expirar</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{getTimeUntilExpiry()}</p>
                       </div>
                       <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                          Conectado em
-                        </p>
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          {formatDate(googleAccount.created_at)}
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Conectado em</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{formatDate(googleAccount.created_at)}</p>
                       </div>
                       <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                          Última renovação
-                        </p>
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          {formatDate(googleAccount.last_token_refresh)}
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Última renovação</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{formatDate(googleAccount.last_token_refresh)}</p>
                       </div>
                     </div>
 
-                    {/* Botão Renovar Token */}
                     <button
                       onClick={handleRefreshToken}
                       disabled={refreshing}
@@ -451,7 +433,7 @@ function GoogleConnectPageContent() {
                     </button>
                   </div>
 
-                  {/* Permissões Ativas */}
+                  {/* Permissões Autorizadas */}
                   <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                       Permissões Autorizadas
@@ -460,33 +442,43 @@ function GoogleConnectPageContent() {
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/gmail.send') && (
                         <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                           <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            Enviar emails
-                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Enviar emails</span>
                         </div>
                       )}
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/gmail.readonly') && (
                         <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                           <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            Ler emails
-                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Ler emails</span>
                         </div>
                       )}
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/calendar') && (
                         <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                           <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            Acessar calendário
-                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Acessar calendário</span>
                         </div>
                       )}
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/calendar.events') && (
                         <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                           <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            Criar/editar eventos
-                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Criar/editar eventos</span>
+                        </div>
+                      )}
+                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/photoslibrary.readonly') && (
+                        <div className="flex items-center gap-3 p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
+                          <Image className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Google Photos</span>
+                        </div>
+                      )}
+                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/drive.readonly') && (
+                        <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                          <HardDrive className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Google Drive</span>
+                        </div>
+                      )}
+                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/youtube.readonly') && (
+                        <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                          <Youtube className="w-5 h-5 text-red-600 dark:text-red-400" />
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">YouTube</span>
                         </div>
                       )}
                     </div>

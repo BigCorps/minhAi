@@ -185,8 +185,34 @@ export default function ContatoSection({ theme = 'dark' }: ContatoProps) {
             }`}
           >
             Ver Demonstração
-          </a>
+</a>
         </div>
+
+        {/* Termos e Privacidade */}
+        <div className={`mt-4 sm:mt-6 pt-4 sm:pt-6 border-t w-full transition-colors ${
+          isDark ? 'border-white/5' : 'border-gray-100'
+        }`}>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+            
+              href="/termos"
+              className={`transition-colors ${
+                isDark ? 'text-white/60 hover:text-white/80' : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Termos de Uso
+            </a>
+            <span className={`hidden sm:inline ${isDark ? 'text-white/30' : 'text-gray-300'}`}>•</span>
+            
+              href="/aviso"
+              className={`transition-colors ${
+                isDark ? 'text-white/60 hover:text-white/80' : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Aviso de Privacidade
+            </a>
+          </div>
+        </div>
+
       </div>
     </div>
   );

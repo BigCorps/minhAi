@@ -445,7 +445,7 @@ if (contratoTriggers.some(t => lowerTranscript.includes(t))) {
     console.log('💡 Comando Meu Sistema detectado!');
     // ✅ Usa setActiveModal com type 'MeuSistemaDisplay'
     setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
-    playText('Sou min Ia, uma IA pra chamar de sua! Um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
+    playText('Sou min A I, uma IA pra chamar de sua! Um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
     return true;
   }
 

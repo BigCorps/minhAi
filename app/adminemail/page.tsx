@@ -28,11 +28,12 @@ function AdminEmailContent() {
 
   // Verificar auth
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setAuthed(true);
-      else setAuthed(false);
-    });
-  }, []);
+  supabase.auth.getUser().then(({ data }) => {
+    if (data?.user) setAuthed(true);
+    else setAuthed(false);
+    setLoading(false); // ← ADICIONAR esta linha
+  });
+}, []);
 
   // Carregar conta sistema
   useEffect(() => {

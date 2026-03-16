@@ -814,7 +814,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 >
                   <Image
                     src="/icon192.png"
-                    alt="eAi logo"
+                    alt="minhAi logo"
                     width={36}
                     height={36}
                     className="rounded-lg"
@@ -1060,7 +1060,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   >
                     <Image
                       src="/icon192.png"
-                      alt="eAi logo"
+                      alt="minhAi logo"
                       width={40}
                       height={40}
                       className="rounded-lg"

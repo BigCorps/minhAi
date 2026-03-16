@@ -30,16 +30,16 @@ export default function ReferralLandingPage({ referralCode, referrerName }: Prop
             {referrerName} te convidou!
           </h1>
           <p className="text-slate-400 text-sm mb-8 leading-relaxed">
-            Crie sua conta no <span className="text-blue-400 font-semibold">eAi</span> e tenha seu próprio assistente de IA para automatizar seu negócio.
+            Crie sua conta no <span className="text-blue-400 font-semibold">minhAi</span> e tenha seu próprio assistente de IA para automatizar seu negócio.
           </p>
 
           {/* Benefícios */}
           <div className="space-y-3 mb-8 text-left">
             {[
-              'Assistente de voz com IA para seu negócio',
+              'Assistente de voz e texto com IA para seu negócio',
               'Integração com WhatsApp, Instagram e Facebook',
-              'Pagamentos PIX integrados',
-              'Sem necessidade de programação',
+              'Pagamentos PIX com confirmação automática integrados',
+              'Prático e fácil de configurar, sem necessidade de programação',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3">
                 <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -71,7 +71,7 @@ export default function ReferralLandingPage({ referralCode, referrerName }: Prop
         </div>
 
         <p className="text-center text-xs text-slate-700 mt-6">
-          eAi — Employee Automation Intelligence
+          minhAi — Uma IA pra chamar de sua!
         </p>
       </div>
     </div>

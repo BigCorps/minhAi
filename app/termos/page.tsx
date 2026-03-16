@@ -120,13 +120,13 @@ export default function TermsPage() {
                 <strong>Última atualização:</strong> 23 de janeiro de 2026
               </p>
               
-              <p>Bem-vindo ao eAi. Ao utilizar nossos serviços, você concorda com estes Termos de Uso. Leia-os atentamente.</p>
+              <p>Bem-vindo a minhAi. Ao utilizar nossos serviços, você concorda com estes Termos de Uso. Leia-os atentamente.</p>
               
               <h2>1. Aceitação dos Termos</h2>
-              <p>Ao acessar e usar o eAi, você aceita e concorda em cumprir estes Termos de Uso e todas as leis e regulamentos aplicáveis. Se você não concordar com algum destes termos, está proibido de usar ou acessar este serviço.</p>
+              <p>Ao acessar e usar a minhAi, você aceita e concorda em cumprir estes Termos de Uso e todas as leis e regulamentos aplicáveis. Se você não concordar com algum destes termos, está proibido de usar ou acessar este serviço.</p>
 
               <h2>2. Descrição do Serviço</h2>
-              <p>O eAi é uma plataforma de atendimento automatizado que utiliza inteligência artificial para te auxiliar de diversas formas.</p>
+              <p>O minhaAi é uma plataforma de atendimento automatizado que utiliza inteligência artificial para te auxiliar de diversas formas.</p>
               <p>Nossos serviços incluem:</p>
               <ul>
                 <li>Integração com plataformas diversas</li>
@@ -135,12 +135,12 @@ export default function TermsPage() {
               </ul>
 
               <h2>3. Conta de Usuário</h2>
-              <p>Para utilizar o eAi, você deve criar uma conta fornecendo informações precisas e completas. Você é responsável por manter a confidencialidade de sua senha e por todas as atividades que ocorram em sua conta.</p>
+              <p>Para utilizar o minhaAi, você deve criar uma conta fornecendo informações precisas e completas. Você é responsável por manter a confidencialidade de sua senha e por todas as atividades que ocorram em sua conta.</p>
 
               <h2>4. Conexão com Google e outros</h2>
               
               <h3>4.1 Autorização de Acesso</h3>
-              <p>Ao conectar suas contas ao eAi, você nos autoriza a:</p>
+              <p>Ao conectar suas contas ao minhaAi, você nos autoriza a:</p>
               <ul>
                 <li>Acessar e gerenciar suas páginas conexões para o assistente te auxiliar da melhor forma</li>
                 <li>Não temos acesso a nenhum dado, apenas o agente tem acesso, quando solicitado</li>
@@ -149,7 +149,7 @@ export default function TermsPage() {
               <h3>4.2 Responsabilidade pelo Conteúdo</h3>
               <p>Você é totalmente responsável por:</p>
               <ul>
-                <li>Todo o conteúdo enviado através do eAi para suas páginas e perfis</li>
+                <li>Todo o conteúdo enviado através do minhaAi para suas páginas e perfis</li>
                 <li>Garantir que o uso do serviço está em conformidade com os Termos de Serviço da Meta</li>
                 <li>Respeitar as políticas de uso de cada plataforma (Facebook, Instagram, WhatsApp)</li>
                 <li>Obter o consentimento necessário dos destinatários de suas mensagens</li>
@@ -157,9 +157,9 @@ export default function TermsPage() {
               </ul>
 
               <h3>4.3 Revogação de Acesso</h3>
-              <p>Você pode revogar o acesso do eAi às suas contas da Meta a qualquer momento através de:</p>
+              <p>Você pode revogar o acesso do minhaAi às suas contas da Meta a qualquer momento através de:</p>
               <ul>
-                <li>Configurações da sua conta no eAi</li>
+                <li>Configurações da sua conta no minhaAi</li>
                 <li>Configurações de aplicativos nas plataformas da Meta</li>
                 <li>Nossa página de <Link href="/aviso" className="text-blue-500 underline">Aviso de Privacidade</Link></li>
               </ul>
@@ -188,14 +188,14 @@ export default function TermsPage() {
               <p>Ao utilizar o assistente de IA, você reconhece que:</p>
               <ul>
                 <li>As respostas são geradas automaticamente e podem não ser 100% precisas</li>
-                <li>O eAi não se responsabiliza por respostas inadequadas ou imprecisas</li>
+                <li>O minhaAi não se responsabiliza por respostas inadequadas ou imprecisas</li>
                 <li>Você deve revisar periodicamente as conversas automatizadas</li>
                 <li>É sua responsabilidade garantir que o conteúdo gerado esteja correto</li>
                 <li>O assistente não substitui atendimento humano em casos críticos</li>
               </ul>
 
               <h2>6. Conduta do Usuário</h2>
-              <p>Ao usar o eAi, você concorda em NÃO:</p>
+              <p>Ao usar o minhaAi, você concorda em NÃO:</p>
               <ul>
                 <li>Usar o serviço para atividades ilegais ou não autorizadas</li>
                 <li>Enviar spam, mensagens em massa não solicitadas ou conteúdo ofensivo</li>
@@ -206,11 +206,11 @@ export default function TermsPage() {
               </ul>
 
               <h2>7. Propriedade Intelectual</h2>
-              <p>Todo o conteúdo, recursos e funcionalidades do eAi são de propriedade exclusiva da plataforma e estão protegidos por leis de propriedade intelectual. Você não pode copiar, modificar, distribuir ou reproduzir qualquer parte do serviço sem autorização prévia.</p>
+              <p>Todo o conteúdo, recursos e funcionalidades do minhaAi são de propriedade exclusiva da plataforma e estão protegidos por leis de propriedade intelectual. Você não pode copiar, modificar, distribuir ou reproduzir qualquer parte do serviço sem autorização prévia.</p>
 
               <h2>8. Limitação de Responsabilidade</h2>
-              <p>O eAi é fornecido "como está" e "conforme disponível". Não garantimos que o serviço será ininterrupto, seguro ou livre de erros.</p>
-              <p><strong>O eAi não se responsabiliza por:</strong></p>
+              <p>O minhaAi é fornecido "como está" e "conforme disponível". Não garantimos que o serviço será ininterrupto, seguro ou livre de erros.</p>
+              <p><strong>O minhaAi não se responsabiliza por:</strong></p>
               <ul>
                 <li>Perda de dados ou interrupções no serviço</li>
                 <li>Danos diretos ou indiretos resultantes do uso da plataforma</li>
@@ -247,10 +247,10 @@ export default function TermsPage() {
               }`}>
                 <p>Para dúvidas sobre estes Termos de Uso, entre em contato:</p>
                 <p><strong>Email Geral:</strong> contato@bigcorps.com.br</p>
-                <p><strong>Email de Privacidade:</strong> eai@bigcorps.com.br</p>
+                <p><strong>Email de Privacidade:</strong> minhaAi@bigcorps.com.br</p>
                 <p className="!mt-4"><strong>Endereço:</strong></p>
                 <p className="!mt-1">
-                  eAi<br />
+                  minhaAi<br />
                   Rua Saguairu, 925<br />
                   São Paulo - SP - 02514-000<br />
                   Brasil
@@ -261,7 +261,7 @@ export default function TermsPage() {
               <div className={`text-center text-sm ${
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>
-                <p><strong>Ao usar o eAi, você confirma que leu e concorda com estes Termos de Uso.</strong></p>
+                <p><strong>Ao usar o minhaAi, você confirma que leu e concorda com estes Termos de Uso.</strong></p>
                 <p className="mt-2">Este documento está em conformidade com a LGPD e as políticas da Meta.</p>
               </div>
             </div>

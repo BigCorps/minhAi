@@ -44,7 +44,7 @@ export default async function IndicaPage({ params }: PageProps) {
   const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
   const referrerName = authUser?.user?.user_metadata?.name ||
                        authUser?.user?.email?.split('@')[0] ||
-                       'um usuário eAi';
+                       'um usuário minhAi';
 
   return (
     <ReferralLandingPage

@@ -92,7 +92,7 @@ const RECURSO_IMAGE_SLIDES = [
     description:
       'Celulares, computadores, notebooks, TVs, totens, PDVs — qualquer aparelho com um navegador web e uma tela já é suficiente para rodar o seu funcionário IA. Sem instalações, sem hardware especial, sem limites de plataforma. Conecte tambem suas contas Whatsapp, Instagram e Facebook para o assistente responder por você automaticamente.',
     imageSrc: '/dispositivos.png',
-    imageAlt: 'Dispositivos compatíveis com o eAi',
+    imageAlt: 'Dispositivos compatíveis com minhAi',
     color: 'blue' as const,
   },
   {
@@ -102,7 +102,7 @@ const RECURSO_IMAGE_SLIDES = [
     description:
       'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
     imageSrc: '/api.png',
-    imageAlt: 'Integrações e APIs do eAi',
+    imageAlt: 'Integrações e APIs do minhAi',
     color: 'green' as const,
   },
   {
@@ -112,7 +112,7 @@ const RECURSO_IMAGE_SLIDES = [
     description:
       'O assistente automatiza tarefas repetitivas e responde imediatamente às solicitações, liberando a equipe para atividades estratégicas. Com tecnologia de ponta em constante evolução, não há interrupções nem gargalos no atendimento — acelerando processos internos, aumentando a produtividade e auxiliando funcionários ou clientes com a maior efetividade.',
     imageSrc: '/vantagens.png',
-    imageAlt: 'Vantagens do eAi',
+    imageAlt: 'Vantagens do minhAi',
     color: 'blue' as const,
   },
   {

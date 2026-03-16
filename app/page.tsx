@@ -168,7 +168,7 @@ const FUNCAO_PAGES = [
         icon: <Radio />,
         color: 'green' as const,
         description:
-          'Informações atualizadas em tempo real. Apresenta dados sobre o Sistema eAi, sua Marca, Notícias, Feriados Nacionais e tambêm Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
+          'Informações atualizadas em tempo real. Apresenta dados sobre o minhAi, sua Marca, Notícias, Feriados Nacionais e tambêm Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
       },
       {
         title: 'Consultas',

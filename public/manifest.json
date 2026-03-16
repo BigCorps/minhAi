@@ -1,7 +1,7 @@
 {
-  "name": "eAi - Employee Automation Intelligenc",
-  "short_name": "eAi",
-  "description": "Funcionários de IA",
+  "name": "minhAi - Uma IA pra chamar de sua!",
+  "short_name": "minhAi",
+  "description": "Uma IA pra chamar de sua",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#030819",

@@ -3064,6 +3064,216 @@ cardapio: {
     },
   },
 
+  // ──────────────────────────────────────────────────────────
+  // IMPRESSÃO REMOTA (PrintNode) - 3 CRÉDITOS
+  // ──────────────────────────────────────────────────────────
+
+  impressao_remota: {
+    functionKey: 'impressao_remota',
+    functionName: 'Impressão Remota',
+    category: 'services',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'impressão remota',
+      'impressao remota',
+      'imprimir remoto',
+      'imprimir automatico',
+      'imprimir automático',
+      'enviar para impressora',
+      'printnode',
+      'impressão automática',
+      'impressao automatica',
+    ],
+
+    examplePhrases: [
+      'Imprimir este arquivo automaticamente',
+      'Enviar para impressora remota',
+      'Impressão automática deste documento',
+      'PrintNode imprimir arquivo',
+    ],
+
+    requiresInput: false,
+    
+    description: 'Impressão automática via PrintNode para desktop sem touch. Cliente não precisa fazer nada - o documento imprime automaticamente na impressora configurada. Ideal para escritórios com múltiplas impressoras.',
+    shortDescription: 'Impressão automática desktop',
+    icon: '🟠',
+    color: '#D2691E',
+
+    saveToHistory: true,
+    creditsPerUse: 3, // 3 CRÉDITOS (automação total)
+    requiresPayment: false,
+    isPremium: false,
+
+    uiComponent: 'ImpressaoRemotaDisplay',
+    edgeFunction: 'processar-impressao',
+
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      const supabase = createClient();
+
+      // Verificar se PrintNode está configurado
+      const { data: company } = await supabase
+        .from('companies')
+        .select('printnode_api_key, printnode_printer_id')
+        .eq('id', companyId)
+        .single();
+
+      if (!company?.printnode_api_key || !company?.printnode_printer_id) {
+        await playText(
+          'A impressão remota não está configurada. Por favor, configure o PrintNode no painel administrativo.'
+        );
+        return false;
+      }
+
+      await playText(
+        'Abrindo impressão remota. Você pode enviar um arquivo ou tirar uma foto para imprimir automaticamente.'
+      );
+
+      setActiveModal?.({
+        type: 'ImpressaoRemotaDisplay',
+        data: {
+          companyId,
+          functionKey: 'impressao_remota',
+        },
+      });
+
+      return true;
+    },
+  },
+
+  impressao_local: {
+    functionKey: 'impressao_local',
+    functionName: 'Impressão Local',
+    category: 'services',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'impressão local',
+      'impressao local',
+      'imprimir local',
+      'imprimir documento',
+      'imprimir arquivo',
+      'imprimir nativo',
+      'imprimir',
+      'impressão',
+      'impressao',
+    ],
+
+    examplePhrases: [
+      'Imprimir este documento',
+      'Imprimir arquivo',
+      'Enviar para impressão',
+      'Impressão local do arquivo',
+    ],
+
+    requiresInput: false,
+    
+    description: 'Impressão através do sistema nativo do dispositivo. Funciona em qualquer aparelho (desktop, tablet, celular). Cliente escolhe a impressora e confirma manualmente com um toque.',
+    shortDescription: 'Impressão nativa do dispositivo',
+    icon: '🟠',
+    color: '#D2691E',
+
+    saveToHistory: true,
+    creditsPerUse: 1, // 1 CRÉDITO (confirmação manual)
+    requiresPayment: false,
+    isPremium: false,
+
+    uiComponent: 'ImpressaoLocalDisplay',
+    edgeFunction: 'processar-impressao',
+
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      await playText(
+        'Abrindo impressão local. Você pode enviar um arquivo ou tirar uma foto para imprimir usando a impressora do seu dispositivo.'
+      );
+
+      setActiveModal?.({
+        type: 'ImpressaoLocalDisplay',
+        data: {
+          companyId,
+          functionKey: 'impressao_local',
+        },
+      });
+
+      return true;
+    },
+  },
+
+  impressao_recibo: {
+    functionKey: 'impressao_recibo',
+    functionName: 'Impressão Recibo',
+    category: 'services',
+    responseType: 'voice+modal',
+
+    voiceTriggers: [
+      'impressão recibo',
+      'impressao recibo',
+      'imprimir recibo',
+      'imprimir cupom',
+      'cupom fiscal',
+      'nota fiscal',
+      'recibo térmica',
+      'recibo termica',
+      'impressora térmica',
+      'impressora termica',
+      'cupom',
+      'recibo',
+    ],
+
+    examplePhrases: [
+      'Imprimir recibo',
+      'Imprimir cupom fiscal',
+      'Recibo na térmica',
+      'Cupom de venda',
+    ],
+
+    requiresInput: false,
+    
+    description: 'Impressão de recibos/cupons em impressoras térmicas via USB ou Bluetooth. Ideal para PDV, totens e terminais de autoatendimento. Suporta protocolo ESC/POS padrão (Epson, Bematech, Elgin, Daruma).',
+    shortDescription: 'Recibo em impressora térmica',
+    icon: '🟠',
+    color: '#D2691E',
+
+    saveToHistory: true,
+    creditsPerUse: 1, // 1 CRÉDITO (sem custo mensal)
+    requiresPayment: false,
+    isPremium: false,
+
+    uiComponent: 'ImpressaoReciboDisplay',
+    edgeFunction: 'processar-impressao',
+
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      const supabase = createClient();
+
+      // Verificar se impressora térmica está configurada
+      const { data: company } = await supabase
+        .from('companies')
+        .select('thermal_printer_id')
+        .eq('id', companyId)
+        .single();
+
+      if (!company?.thermal_printer_id) {
+        await playText(
+          'A impressora térmica não está configurada. Por favor, conecte uma impressora térmica no painel administrativo.'
+        );
+        return false;
+      }
+
+      await playText(
+        'Abrindo impressão de recibo. Você pode enviar um arquivo ou tirar uma foto para imprimir na impressora térmica.'
+      );
+
+      setActiveModal?.({
+        type: 'ImpressaoReciboDisplay',
+        data: {
+          companyId,
+          functionKey: 'impressao_recibo',
+        },
+      });
+
+      return true;
+    },
+  },
+
 nosso_qrcode: {
     functionKey: 'nosso_qrcode',
     functionName: 'Nosso QR Code',

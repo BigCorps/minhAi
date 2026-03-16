@@ -140,7 +140,7 @@ export default function ExclusionPage() {
             }`}>
               
               <h2>Como Funciona a Exclusão de Dados</h2>
-              <p>Você pode solicitar a exclusão permanente de todos os seus dados pessoais do eAi a qualquer momento, conforme garantido pela Lei Geral de Proteção de Dados (LGPD).</p>
+              <p>Você pode solicitar a exclusão permanente de todos os seus dados pessoais do minhAi a qualquer momento, conforme garantido pela Lei Geral de Proteção de Dados (LGPD).</p>
 
               <div className={`p-4 rounded-lg border my-4 ${
                 theme === 'dark'

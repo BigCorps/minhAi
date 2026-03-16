@@ -9,6 +9,7 @@ interface InicioSectionProps {
 }
 
 const OPCOES = [
+  'Minha',
   'Assistente',
   'Funcionário',
   'Atendente',
@@ -77,12 +78,12 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           >
             {/* Linha 1 */}
             <span className="block whitespace-nowrap">
-              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>E ai</span>, pronto para ter
+              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>Uma IA</span> pra chamar de sua!
             </span>
 
             {/* Linha 2 - com rolagem vertical */}
             <span className="block whitespace-nowrap">
-              um{' '}
+              Posso ser um{' '}
               <span 
                 className="inline-block relative overflow-hidden text-center"
                 style={{ height: '1.2em', verticalAlign: '-0.30em' }}
@@ -111,7 +112,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             <span className="block whitespace-nowrap">
               trabalhando{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                por você
+                24 horas por você!
               </span>
               ?
             </span>

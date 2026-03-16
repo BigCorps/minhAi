@@ -50,7 +50,7 @@ export default function PixLinkModal({ onClose }: Props) {
   }
 
   const baseUrl = selectedCompany
-    ? `https://eai.app.br/pixbigcorps/${selectedCompany.slug}`
+    ? `https://minhai.app/pixbigcorps/${selectedCompany.slug}`
     : '';
   const fullUrl = valor && parseFloat(valor) > 0
     ? `${baseUrl}/${valor}`

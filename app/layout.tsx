@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'eAi - Employee Automation Intelligence',
+  title: 'minhAi - Uma IA pra chamar de sua!',
   description: 'Funcionários de IA',
 };
 

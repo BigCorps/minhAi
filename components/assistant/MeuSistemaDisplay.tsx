@@ -18,7 +18,7 @@ export default function MeuSistemaDisplay({
 }: MeuSistemaDisplayProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(20);
-  const websiteUrl = 'https://eai.app.br';
+  const websiteUrl = 'https://minhai.app';
 
   // ✅ Handler para fechar e interromper a voz
 const handleManualClose = () => {
@@ -73,7 +73,7 @@ useEffect(() => {
           <h2 className={`text-xl font-bold
             ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
           `}>
-            eAi App
+            minhAi
           </h2>
           
           <div className="flex items-center gap-3">
@@ -127,7 +127,7 @@ useEffect(() => {
               <h3 className={`text-3xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                eAi, sou um funcionário de Voz com Inteligência Artificial!
+                minhAi, sou uma IA pra chamar de sua! Um funcionário autônomo de Voz e texto com Inteligência Artificial!
               </h3>
               <p className={`text-lg mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
@@ -137,7 +137,7 @@ useEffect(() => {
               <p className={`text-base mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
               `}>
-                www.eAi.app.br
+                www.minhai.app
               </p>
               
               <a
@@ -193,7 +193,7 @@ useEffect(() => {
               <h3 className={`text-2xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                eAi, sou um funcionário de Voz com Inteligência Artificial!
+                minhAi, uma IA pra chamar de sua! Um funcionário autônomo de Voz e texto com Inteligência Artificial!
               </h3>
               <p className={`text-base mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
@@ -203,7 +203,7 @@ useEffect(() => {
               <p className={`text-sm mb-6
                 ${theme === 'dark' ? 'text-white/70' : 'text-gray-600'}
               `}>
-                www.eai.app.br
+                www.minhai.app
               </p>
             </div>
 

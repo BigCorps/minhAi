@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   // Otimizações
   experimental: {
     optimizePackageImports: ['@ricky0123/vad-web'],

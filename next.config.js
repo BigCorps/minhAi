@@ -38,8 +38,8 @@ const nextConfig = {
     return [
       {
         source: '/:path*',
-        has: [{ type: 'host', value: 'eai.app.br' }],
-        destination: 'https://www.eai.app.br/:path*',
+        has: [{ type: 'host', value: 'minhai.app' }],
+        destination: 'https://www.minhai.app/:path*',
         permanent: true,
       },
     ];

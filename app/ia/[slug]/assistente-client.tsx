@@ -810,7 +810,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="hover:opacity-80 transition-opacity"
-                  title="Visite eAi.app.br"
+                  title="Visite minhaAi.app"
                 >
                   <Image
                     src="/icon192.png"
@@ -961,11 +961,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     }`}>
                       {company.name}
                     </h1>
-                    {/* 🆕 SUBSTITUÍDO "Assistente Virtual de Voz" pela função configurada */}
+
                     <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
                       theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                     }`}>
-                      {company.assistant_role || 'Assistente Virtual de Voz'}
+                      {company.assistant_role || 'Uma IA pra chamar de sua!'}
                     </p>
                   </div>
                 </div>

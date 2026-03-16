@@ -6,7 +6,7 @@ interface CopyLinkButtonProps {
 
 export function CopyLinkButton({ slug }: CopyLinkButtonProps) {
   function handleCopy() {
-    const url = `https://eai.app.br/ia/${slug}`;
+    const url = `https://minhai.app/ia/${slug}`;
     navigator.clipboard.writeText(url);
     alert('Link copiado!');
   }

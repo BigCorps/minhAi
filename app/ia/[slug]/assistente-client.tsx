@@ -813,7 +813,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   title="Visite minhaAi.app"
                 >
                   <Image
-                    src="/icon192.png"
+                    src="logo-circle.png"
                     alt="minhAi logo"
                     width={36}
                     height={36}
@@ -1059,7 +1059,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     title="Visite minhAi.app"
                   >
                     <Image
-                      src="/icon192.png"
+                      src="/logo-circle.png"
                       alt="minhAi logo"
                       width={40}
                       height={40}
@@ -1106,7 +1106,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     title="Visite minhAi.app"
                   >
                     <Image
-                      src="/icon192.png"
+                      src="/logo-circle.png"
                       alt="minhAi logo"
                       width={32}
                       height={32}

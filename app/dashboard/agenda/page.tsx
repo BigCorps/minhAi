@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useTheme } from 'next-themes';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAssistant } from '@/contexts/AssistantContext';
 import { 
   Calendar as CalendarIcon,
   Mail,
@@ -73,13 +74,8 @@ interface Company {
 }
 
 function AgendaPageContent() {
-  const searchParams = useSearchParams();
-  const companyIdFromUrl = searchParams.get('companyId');
-
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(companyIdFromUrl || '');
   const [googleAccount, setGoogleAccount] = useState<GoogleAccount | null>(null);
-  
+  const { selectedAssistantId: selectedCompanyId } = useAssistant();
   // Estados do Calendário
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
@@ -104,25 +100,16 @@ function AgendaPageContent() {
 
   const supabase = createClient();
 
-  // Carregar empresas
-  useEffect(() => {
-    loadCompanies();
-  }, []);
-
-  // Atualizar URL quando mudar empresa
-  useEffect(() => {
-    if (selectedCompanyId) {
-      const params = new URLSearchParams(window.location.search);
-      params.set('companyId', selectedCompanyId);
-      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
-      loadGoogleAccount(selectedCompanyId);
-    } else {
-      setGoogleAccount(null);
-      setEvents([]);
-      setEmails([]);
-      setSentEmails([]);
-    }
-  }, [selectedCompanyId]);
+ useEffect(() => {
+   if (selectedCompanyId) {
+     loadGoogleAccount(selectedCompanyId);
+   } else {
+     setGoogleAccount(null);
+     setEvents([]);
+     setEmails([]);
+     setSentEmails([]);
+   }
+ }, [selectedCompanyId]);
 
   async function loadCompanies() {
     try {
@@ -323,24 +310,6 @@ function AgendaPageContent() {
     <p className="text-gray-600 dark:text-gray-400">
       Gerencie calendário e emails integrados com Google
     </p>
-  </div>
-
-  {/* Lado direito */}
-  <div className="shrink-0 flex justify-end">
-    {companies.length > 0 && (
-      <select
-        value={selectedCompanyId}
-        onChange={(e) => setSelectedCompanyId(e.target.value)}
-        className="w-40 px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-      >
-        <option value="">Selecione...</option>
-        {companies.map(company => (
-          <option key={company.id} value={company.id}>
-            {company.name}
-          </option>
-        ))}
-      </select>
-    )}
   </div>
             </div>
           </div>

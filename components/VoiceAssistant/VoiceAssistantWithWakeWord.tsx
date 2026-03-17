@@ -171,6 +171,14 @@ export function VoiceAssistantWithWakeWord({
     };
   }, [lastTranscript, lastResponse]);
 
+  useEffect(() => {
+    if (isMaximized && externalInput) {
+      setLastTranscript(externalInput);
+      setExternalInput('');
+      handleTextMessage(externalInput);
+    }
+  }, [externalInput, isMaximized]);
+
   // ── Inicialização ─────────────────────────────────────────
   useEffect(() => {
     isActiveRef.current = true;

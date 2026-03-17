@@ -8,6 +8,8 @@ import { usePlayText } from '@/hooks/usePlayText';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 import IngredientesClient from '@/components/dashboard/producao/IngredientesClient';
 import FichaConversacionalDisplay from '@/components/assistant/FichaConversacionalDisplay';
+import { useAssistant } from '@/contexts/AssistantContext';
+import { useRouter } from 'next/navigation';
 
 interface Ingrediente {
   id: string;
@@ -119,6 +121,14 @@ export default function ProducaoCompanyClient({
   const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
   const isDark = pageTheme === 'dark';
   const [showConversacional, setShowConversacional] = useState(false);
+  const { selectedAssistantId } = useAssistant();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (selectedAssistantId && selectedAssistantId !== company.id) {
+      router.replace(`/dashboard/producao/${selectedAssistantId}`);
+    }
+  }, [selectedAssistantId]);
 
   useEffect(() => {
     const detectTheme = () => {
@@ -214,15 +224,8 @@ export default function ProducaoCompanyClient({
 
         {/* Header */}
         <div className="mb-8">
-          <Link
-            href="/dashboard/producao"
-            className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-white/50 hover:text-blue-600 dark:hover:text-blue-400 transition mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar para Producao
-          </Link>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {company.name}
+            Linha de Produção
           </h2>
           <p className="text-gray-600 dark:text-white/60 mt-1">
             Gerencie fichas tecnicas e custos de receitas

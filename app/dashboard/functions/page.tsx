@@ -602,18 +602,18 @@ async function handleSendSuggestion() {
           )}
 
           {/* ── Link de sugestões ── */}
-          <div className="mt-10 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Não encontrou a função que precisa?{' '}
-              <button
-                onClick={() => setIsSuggestionOpen(true)}
-                className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
-              >
-                <Lightbulb className="w-4 h-4" />
-                Envie uma sugestão
-              </button>
-            </p>
-          </div>
+<div className="mt-10 text-center">
+  <div className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+    Não encontrou a função que precisa?
+    <button
+      onClick={() => setIsSuggestionOpen(true)}
+      className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+    >
+      <Lightbulb className="w-4 h-4" />
+      Envie uma sugestão
+    </button>
+  </div>
+</div>
 
           {/* ── Modal de sugestões ── */}
           {isSuggestionOpen && (

@@ -42,7 +42,7 @@ export default function ReferralLandingPage({ referralCode, referrerName }: Prop
       <button
         onClick={toggleTheme}
         style={{
-          position: 'fixed', bottom: '20px', right: '20px', zIndex: 50,
+          position: 'fixed', top: '20px', right: '20px', zIndex: 50,
           width: '44px', height: '44px', borderRadius: '50%',
           background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
           border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.12)',

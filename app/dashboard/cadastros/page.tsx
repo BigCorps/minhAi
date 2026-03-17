@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useSearchParams } from 'next/navigation';
+import { useAssistant } from '@/contexts/AssistantContext';
 import {
   UserPlus,
   Loader2,
@@ -67,11 +68,7 @@ function formatDate(dateString: string) {
 // ── Componente principal ─────────────────────────────────────────────────────
 
 function CadastrosPageContent() {
-  const searchParams = useSearchParams();
-  const companyIdFromUrl = searchParams.get('companyId');
-
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(companyIdFromUrl || '');
+  const { selectedAssistantId: selectedCompanyId } = useAssistant();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,32 +78,12 @@ function CadastrosPageContent() {
 
   const supabase = createClient();
 
-  // Carregar empresas
-  useEffect(() => {
-    async function loadCompanies() {
-      const { data } = await supabase
-        .from('companies')
-        .select('id, name')
-        .order('name');
-      setCompanies(data || []);
-      if (data && data.length === 1 && !selectedCompanyId) {
-        setSelectedCompanyId(data[0].id);
-      }
-    }
-    loadCompanies();
-  }, []);
-
   // Carregar cadastros ao mudar empresa
   useEffect(() => {
     if (!selectedCompanyId) {
       setRegistrations([]);
       return;
     }
-
-    // Sincronizar URL
-    const params = new URLSearchParams(window.location.search);
-    params.set('companyId', selectedCompanyId);
-    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
 
     loadRegistrations(selectedCompanyId);
   }, [selectedCompanyId]);
@@ -192,22 +169,6 @@ function CadastrosPageContent() {
                 <p className="text-gray-600 dark:text-gray-400">
                   Registros coletados pelo assistente de voz
                 </p>
-              </div>
-
-              {/* Lado direito — seletor de empresa */}
-              <div className="shrink-0 flex justify-end">
-                {companies.length > 0 && (
-                  <select
-                    value={selectedCompanyId}
-                    onChange={e => setSelectedCompanyId(e.target.value)}
-                    className="w-40 px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  >
-                    <option value="">Selecione...</option>
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                )}
               </div>
             </div>
           </div>

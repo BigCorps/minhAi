@@ -68,7 +68,7 @@ function formatDate(dateString: string) {
 // ── Componente principal ─────────────────────────────────────────────────────
 
 function CadastrosPageContent() {
-  const { selectedAssistantId: selectedCompanyId } = useAssistant();
+  const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -167,7 +167,7 @@ function CadastrosPageContent() {
                   Cadastros
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Registros coletados pelo assistente {selectedCompany.name} .
+                  Registros coletados pelo assistente {selectedAssistantName} .
                 </p>
               </div>
             </div>

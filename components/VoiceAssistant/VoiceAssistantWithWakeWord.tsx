@@ -377,9 +377,16 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
   const lowerText = text.toLowerCase().trim();
 
   if (isMicButtonPressedRef.current && isFinal && text.trim()) {
-    setExternalInput(text.trim());
     isMicButtonPressedRef.current = false;
+    setExternalInput(text.trim());
     setIsListening(false);
+    await stopGoogleSpeech();
+    setTimeout(async () => {
+      if (isActiveRef.current) {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+      }
+    }, 500);
     return;
   }
 
@@ -485,15 +492,17 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
 
 const handleMicButtonUp = async () => {
   if (!isMicButtonPressedRef.current) return;
-  isMicButtonPressedRef.current = false;
   setIsListening(false);
-  await stopGoogleSpeech();
+  // Aguarda a transcrição final chegar no handleGoogleTranscript
+  // Timeout de segurança caso não chegue nenhuma transcrição
   setTimeout(async () => {
-    if (!isProcessing && isActiveRef.current) {
+    if (isMicButtonPressedRef.current) {
+      isMicButtonPressedRef.current = false;
+      await stopGoogleSpeech();
       shouldProcessAudio.current = true;
       await startGoogleSpeech();
     }
-  }, 1000);
+  }, 3000);
 };
 
   // ── Start assistant ───────────────────────────────────────

@@ -60,7 +60,7 @@ export function AssistantSelectorHeader() {
                 </p>
               </div>
               <Link
-                href="/dashboard/empresas/nova"
+                href="/dashboard/assistentes/create"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors
                   text-blue-600 dark:text-blue-400
@@ -115,7 +115,7 @@ export function AssistantSelectorHeader() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
+            <div className="absolute right-0 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
             bg-white dark:bg-slate-800
             border-gray-300 dark:border-slate-700">
             <div className="max-h-72 overflow-y-auto">
@@ -152,7 +152,7 @@ export function AssistantSelectorHeader() {
             {/* Rodapé com atalho para criar novo assistente */}
             <div className="border-t border-gray-100 dark:border-white/5">
               <Link
-                href="/dashboard/empresas/nova"
+                href="/dashboard/assistentes/create"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors
                   text-blue-600 dark:text-blue-400

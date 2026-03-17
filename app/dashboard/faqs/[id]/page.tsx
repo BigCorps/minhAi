@@ -124,24 +124,6 @@ export default function CompanyFAQsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header com Info da Empresa */}
-      <div className={`rounded-3xl shadow-lg p-8 border transition-all ${
-        isDark
-          ? 'bg-slate-900/40 border-white/10 backdrop-blur-xl'
-          : 'bg-white border-gray-200'
-      }`}>
-        <div className="flex flex-col gap-6">
-          <div>
-            <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {company.name}
-            </h1>
-            <p className={`text-lg ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-              Configure perguntas frequentes e suas respostas automáticas
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Componente de Gerenciamento de FAQs */}
       <FAQManagerClient companyId={companyId} isDark={isDark} />
     </div>

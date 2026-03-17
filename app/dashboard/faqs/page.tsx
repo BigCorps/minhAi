@@ -1,5 +1,5 @@
 // app/dashboard/faqs/page.tsx (Server Component)
-import { createClient, getUser } from '@/lib/supabase-server';
+import { getUser } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
 import FAQsClient from './FAQsClient';
 
@@ -12,15 +12,6 @@ export default async function FAQsPage() {
   if (!user) {
     redirect('/login');
   }
-
-  const supabase = createClient();
-
-  // Buscar empresas do usuário
-  const { data: companies } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('name', { ascending: true });
 
   return <FAQsClient companies={companies || []} user={user} />;
 }

@@ -640,21 +640,21 @@ async function handleSendSuggestion() {
           />
         </div>
         <div className="flex gap-3">
-          <button onClick={() => setIsSuggestionOpen(false)} className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition font-bold">
+          <button onClick={() => setIsSuggestionOpen(false)} ...>
             Cancelar
           </button>
-          <button onClick={handleSendSuggestion} disabled={isSendingsuggestion} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50 shadow-lg shadow-[#b0cb1f]/20">
+          <button onClick={handleSendSuggestion} ...>
             {isSendingsuggestion ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" />Enviar</>}
           </button>
-        </div>        {/* ← fecha botões */}
-      </div>          {/* ← fecha space-y-4 */}
-    </div>            {/* ← fecha modal box (bg-white) */}
-  </div>              {/* ← fecha overlay (fixed inset-0) */}
-)}                    {/* ← fecha {isSuggestionOpen && (...)} */}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
-        </div>        {/* ← fecha max-w-6xl */}
-      </div>          {/* ← fecha container */}
-    </div>            {/* ← fecha min-h-screen */}
+        </div>
+      </div>
+    </div>
   );
 }
 

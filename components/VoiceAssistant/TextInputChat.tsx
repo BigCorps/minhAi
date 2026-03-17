@@ -34,9 +34,9 @@ export default function TextInputChat({
   // ✅ Popula o input quando vem transcrição do microfone push-to-talk
   useEffect(() => {
     if (externalValue) {
-      setMessage(externalValue);
       onExternalValueConsumed?.();
-      inputRef.current?.focus();
+      // Envia direto sem passar pelo input
+      onSendMessage(externalValue).catch(console.error);
     }
   }, [externalValue]);
 

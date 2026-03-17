@@ -22,7 +22,10 @@ export default async function DashboardPage() {
   }
 
   try {
-    const { count } = await supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+    const { count } = await supabase
+     .from('conversations')
+     .select('*, companies!inner(user_id)', { count: 'exact', head: true })
+     .eq('companies.user_id', user.id);
     totalConversations = count || 0;
   } catch (e) {
     console.error('Error loading conversations:', e);

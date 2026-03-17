@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Copy, Check, Clock, QrCode, Loader2, ArrowLeft } from 'lucide-react';
 
 interface PixData {
   transaction_id: string;
@@ -22,6 +21,7 @@ interface Props {
   onConfirm: () => Promise<void>;
   onNewPix: () => void;
   loading: boolean;
+  theme: 'dark' | 'light';
 }
 
 export default function PixQRCodeDisplay({
@@ -31,9 +31,12 @@ export default function PixQRCodeDisplay({
   onConfirm,
   onNewPix,
   loading,
+  theme,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     const update = () => {
@@ -56,134 +59,193 @@ export default function PixQRCodeDisplay({
     return `${m}:${(s % 60).toString().padStart(2, '0')}`;
   }
 
+  const bg = isDark ? '#020617' : '#f1f5f9';
+  const cardBg = isDark ? '#0f172a' : '#ffffff';
+  const cardBorder = isDark ? '#334155' : '#e2e8f0';
+  const innerBg = isDark ? '#1e293b' : '#f8fafc';
+  const innerBorder = isDark ? '#334155' : '#e2e8f0';
+  const textPrimary = isDark ? '#ffffff' : '#0f172a';
+  const textSecondary = isDark ? '#94a3b8' : '#64748b';
+  const textMuted = isDark ? '#475569' : '#94a3b8';
+  const textLabel = isDark ? '#64748b' : '#94a3b8';
+
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
+    <div style={{ minHeight: '100vh', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', transition: 'background 0.3s' }}>
+      <div style={{ width: '100%', maxWidth: '672px' }}>
 
         {/* Header */}
-        <div className="text-center mb-6">
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           {company.logo_url ? (
             <img src={company.logo_url} alt={company.name}
-              className="max-h-16 max-w-[160px] w-auto h-auto object-contain mx-auto mb-3"
-              style={{ display: 'block' }} />
+              style={{ maxHeight: '64px', maxWidth: '160px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto 12px' }} />
           ) : (
-            <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-3">
-              <span className="text-white text-xl font-bold">{company.name.charAt(0)}</span>
+            <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <span style={{ color: '#fff', fontSize: '20px', fontWeight: 700 }}>{company.name.charAt(0)}</span>
             </div>
           )}
-          <h1 className="text-xl font-bold text-white">{company.name}</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: textPrimary, margin: '0 0 4px' }}>{company.name}</h1>
+          <p style={{ color: textSecondary, fontSize: '14px', margin: 0 }}>
             Pagamento de{' '}
-            <span className="text-blue-400 font-bold">
+            <span style={{ color: '#60a5fa', fontWeight: 700 }}>
               R$ {amount.toFixed(2).replace('.', ',')}
             </span>
           </p>
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
 
-          {/* Card 1 — Copia e Cola + Resumo + Botões */}
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Copy className="w-4 h-4 text-blue-400" />
+          {/* Card 1 — Copia e Cola */}
+          <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg style={{ width: '16px', height: '16px', color: '#60a5fa' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
               </div>
-              <span className="text-white font-bold text-sm">1. Copia e Cola</span>
+              <span style={{ color: textPrimary, fontWeight: 700, fontSize: '14px' }}>1. Copia e Cola</span>
             </div>
 
             {/* Resumo */}
-            <div className="bg-slate-800 rounded-xl p-4 mb-5 flex-1">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Resumo</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/10 text-yellow-400">
+            <div style={{ background: innerBg, border: `1px solid ${innerBorder}`, borderRadius: '12px', padding: '16px', marginBottom: '20px', flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel }}>Resumo</span>
+                <span style={{ padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, background: 'rgba(234,179,8,0.1)', color: '#facc15' }}>
                   Aguardando
                 </span>
               </div>
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 pb-1">
-                  INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
-                </p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Empresa</span>
-                  <span className="text-white font-medium">{company.name}</span>
+
+              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel, margin: '0 0 8px' }}>
+                INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
+              </p>
+
+              {[
+                { label: 'Empresa', value: company.name, color: textPrimary },
+                { label: 'Banco', value: 'Banco Inter', color: textPrimary },
+                { label: 'Validade', value: 'Válido por 30 minutos', color: '#facc15' },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+                  <span style={{ color: textSecondary }}>{label}</span>
+                  <span style={{ color, fontWeight: 500 }}>{value}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Banco</span>
-                  <span className="text-white font-medium">Banco Inter</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Validade</span>
-                  <span className="text-yellow-400 font-medium">Válido por 30 minutos</span>
-                </div>
-                <div className="pt-3 border-t border-slate-700 flex justify-between items-center">
-                  <span className="text-slate-300 font-bold">Total</span>
-                  <span className="text-2xl font-bold text-blue-400">
-                    R$ {amount.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
+              ))}
+
+              <div style={{ paddingTop: '12px', borderTop: `1px solid ${innerBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: textPrimary, fontWeight: 700 }}>Total</span>
+                <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '22px' }}>
+                  R$ {amount.toFixed(2).replace('.', ',')}
+                </span>
               </div>
             </div>
 
             {/* Botões */}
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
                 onClick={copyCode}
-                className={`w-full py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 text-sm ${
-                  copied
-                    ? 'bg-green-500 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20'
-                }`}
+                style={{
+                  width: '100%', padding: '12px',
+                  background: copied ? '#22c55e' : '#2563eb',
+                  border: 'none', borderRadius: '12px',
+                  color: '#fff', fontWeight: 700, fontSize: '14px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  transition: 'background 0.2s',
+                }}
               >
-                {copied ? <><Check className="w-4 h-4" /> Copiado!</> : <><Copy className="w-4 h-4" /> Copiar Código PIX</>}
+                {copied ? (
+                  <>
+                    <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Copiado!
+                  </>
+                ) : (
+                  <>
+                    <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copiar Código PIX
+                  </>
+                )}
               </button>
 
               <button
                 onClick={onConfirm}
                 disabled={loading}
-                className="w-full py-3 rounded-xl font-bold border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                style={{
+                  width: '100%', padding: '12px',
+                  background: 'transparent',
+                  border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`,
+                  borderRadius: '12px',
+                  color: isDark ? '#cbd5e1' : '#64748b',
+                  fontWeight: 700, fontSize: '14px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.5 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  transition: 'all 0.2s',
+                }}
               >
-                {loading
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>
-                  : 'Já paguei, verificar agora'
-                }
+                {loading ? (
+                  <>
+                    <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Verificando...
+                  </>
+                ) : 'Já paguei, verificar agora'}
               </button>
 
               <button
                 onClick={onNewPix}
-                className="w-full py-2 text-xs text-slate-500 hover:text-slate-400 flex items-center justify-center gap-1 transition-colors"
+                style={{
+                  width: '100%', padding: '8px',
+                  background: 'transparent', border: 'none',
+                  color: textMuted, fontSize: '12px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  transition: 'color 0.2s',
+                }}
               >
-                <ArrowLeft className="w-3 h-3" /> Novo valor
+                <svg style={{ width: '12px', height: '12px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Novo valor
               </button>
             </div>
           </div>
 
-          {/* Card 2 — QR Code + Timer */}
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col items-center">
-            <div className="flex items-center gap-2 mb-5 w-full">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <QrCode className="w-4 h-4 text-blue-400" />
+          {/* Card 2 — QR Code */}
+          <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', width: '100%' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg style={{ width: '16px', height: '16px', color: '#60a5fa' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
               </div>
-              <span className="text-white font-bold text-sm">2. Escaneie o QR Code</span>
+              <span style={{ color: textPrimary, fontWeight: 700, fontSize: '14px' }}>2. Escaneie o QR Code</span>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl shadow-inner mb-4 w-full max-w-[220px]">
-              <img src={pixData.qr_code_url} alt="QR Code PIX" className="w-full h-auto" />
+            <div style={{ background: '#ffffff', padding: '16px', borderRadius: '16px', marginBottom: '16px', width: '100%', maxWidth: '220px' }}>
+              <img src={pixData.qr_code_url} alt="QR Code PIX" style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
 
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold ${
-              timeLeft < 300 ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
-            }`}>
-              <Clock className="w-4 h-4 animate-pulse" />
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '8px 16px', borderRadius: '12px', fontSize: '14px', fontWeight: 700,
+              background: timeLeft < 300 ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)',
+              color: timeLeft < 300 ? '#f87171' : '#60a5fa',
+            }}>
+              <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               Expira em: {formatTime(timeLeft)}
             </div>
           </div>
-
         </div>
 
-        <p className="text-center text-xs text-slate-700 mt-5">
+        <p style={{ textAlign: 'center', fontSize: '12px', color: textMuted, marginTop: '20px' }}>
           Pagamento processado com segurança via Banco Inter e BigCorps
         </p>
+
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );

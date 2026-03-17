@@ -136,7 +136,7 @@ export default function ArquivosCompanyClient({
   async function fetchConsultas() {
     setLoadingConsultas(true);
     try {
-      const res = await fetch(`/api/historico-consultas?company_id=${selectedCompany.id}`);
+      const res = await fetch(`/api/historico-consultas?company_id=${initialCompany.id}`);
       const data = await res.json();
       if (data.consultas) setConsultas(data.consultas);
     } catch (error) {
@@ -188,7 +188,7 @@ export default function ArquivosCompanyClient({
       const { data } = await supabase
         .from('companion_uploads')
         .select('id, token, storage_path, status, file_name, file_type, file_size, created_at, expires_at')
-        .eq('company_id', selectedCompany.id)
+        .eq('company_id', initialCompany.id)
         .eq('status', 'uploaded')
         .order('created_at', { ascending: false });
       if (data) {
@@ -204,7 +204,7 @@ export default function ArquivosCompanyClient({
     } finally {
       setLoadingEnviados(false);
     }
-  }, [selectedCompany.id, supabase]);
+  }, [initialCompany.id, supabase]);
 
   // ── Enviados: download via signed URL ───────────────────────────────────────
   async function handleBaixarEnviado(enviado: Enviado) {

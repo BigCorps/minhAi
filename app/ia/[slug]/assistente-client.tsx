@@ -1297,10 +1297,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     Editar Meu Assistente
                   </Link>
                 </div>
-                <Link href="https://bigcorps.com.br" target="_blank" rel="noopener noreferrer" className={`text-[10px] transition-colors ${
+                <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer" className={`text-[10px] transition-colors ${
                   theme === 'dark' ? 'text-white/30 hover:text-white/50' : 'text-gray-500 hover:text-gray-700'
                 }`}>
-                  minhAi - Desenvolvido por BigCorps
+                  minhAi - Uma IA pra chamar de sua!
                 </Link>
               </div>
             </div>

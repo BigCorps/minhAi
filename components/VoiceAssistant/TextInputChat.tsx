@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 
@@ -8,13 +7,17 @@ interface TextInputChatProps {
   isProcessing: boolean;
   theme?: 'dark' | 'light';
   disabled?: boolean;
+  externalValue?: string;
+  onExternalValueConsumed?: () => void;
 }
 
 export default function TextInputChat({
   onSendMessage,
   isProcessing,
   theme = 'dark',
-  disabled = false
+  disabled = false,
+  externalValue,
+  onExternalValueConsumed,
 }: TextInputChatProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -22,35 +25,38 @@ export default function TextInputChat({
 
   // Auto-focus no input quando não estiver processando (apenas desktop)
   useEffect(() => {
-    // Detectar se é mobile
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
     if (!isMobile && !isProcessing && !disabled && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isProcessing, disabled]);
 
+  // ✅ Popula o input quando vem transcrição do microfone push-to-talk
+  useEffect(() => {
+    if (externalValue) {
+      setMessage(externalValue);
+      onExternalValueConsumed?.();
+      inputRef.current?.focus();
+    }
+  }, [externalValue]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const trimmedMessage = message.trim();
     if (!trimmedMessage || isSending || isProcessing || disabled) return;
-
     setIsSending(true);
-    setMessage(''); // Limpar input imediatamente
-
+    setMessage('');
     try {
       await onSendMessage(trimmedMessage);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      setMessage(trimmedMessage); // Restaurar mensagem em caso de erro
+      setMessage(trimmedMessage);
     } finally {
       setIsSending(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Enter sem Shift envia
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as any);
@@ -67,7 +73,6 @@ export default function TextInputChat({
           : 'bg-white border-gray-200 shadow-sm'
       } ${isDisabled ? 'opacity-50' : ''}`}>
         
-        {/* Input */}
         <input
           ref={inputRef}
           type="text"
@@ -76,10 +81,10 @@ export default function TextInputChat({
           onKeyDown={handleKeyDown}
           disabled={isDisabled}
           placeholder={
-            isProcessing 
-              ? 'Processando...' 
-              : isSending 
-              ? 'Enviando...' 
+            isProcessing
+              ? 'Processando...'
+              : isSending
+              ? 'Enviando...'
               : 'Ou digite sua mensagem...'
           }
           className={`flex-1 bg-transparent outline-none text-sm placeholder:text-sm ${
@@ -90,16 +95,12 @@ export default function TextInputChat({
           maxLength={500}
         />
 
-        {/* Contador de caracteres */}
         {message.length > 0 && (
-          <span className={`text-xs ${
-            theme === 'dark' ? 'text-slate-500' : 'text-gray-400'
-          }`}>
+          <span className={`text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-gray-400'}`}>
             {message.length}/500
           </span>
         )}
 
-        {/* Botão Enviar */}
         <button
           type="submit"
           disabled={!message.trim() || isDisabled}
@@ -118,10 +119,7 @@ export default function TextInputChat({
         </button>
       </div>
 
-      {/* Dica */}
-      <p className={`text-xs text-center mt-2 ${
-        theme === 'dark' ? 'text-slate-500' : 'text-gray-500'
-      }`}>
+      <p className={`text-xs text-center mt-2 ${theme === 'dark' ? 'text-slate-500' : 'text-gray-500'}`}>
         Pressione Enter para enviar
       </p>
     </form>

@@ -164,6 +164,7 @@ export default function EditarAssistentePage({ params }: PageProps) {
                   defaultValue={assistant.assistant_role || 'Assistente IA'}
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                 >
+                  <option value="Assistente IA">Minha IA</option>
                   <option value="Assistente IA">Assistente IA</option>
                   <option value="Funcionário IA">Funcionário IA</option>
                   <option value="Atendente IA">Atendente IA</option>

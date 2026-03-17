@@ -8,7 +8,7 @@ import { useAssistant } from '@/contexts/AssistantContext';
 import { Loader2 } from 'lucide-react';
 
 export default function ArquivosClient() {
-  const { selectedAssistantId, loadingAssistants } = useAssistant();
+  const { selectedAssistantId: selectedCompanyId, selectedAssistantName } = useAssistant();
   const router = useRouter();
 
   // Redireciona automaticamente para os arquivos do assistente selecionado

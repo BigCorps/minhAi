@@ -185,7 +185,7 @@ function StatusPillSelector({
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 function FunctionsPageContent() {
-  const { selectedAssistantId: companyId } = useAssistant();
+  const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
   const [functions, setFunctions] = useState<AssistantFunction[]>([]);
   const [settings, setSettings] = useState<CompanyFunctionSetting[]>([]);
   const [loading, setLoading] = useState(false);
@@ -399,7 +399,7 @@ function FunctionsPageContent() {
                   Funções do Assistente
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Defina as funções que seu assistente {selectedCompany.name} pode executar
+                  Defina as funções que seu assistente {selectedAssistantName} pode executar
                 </p>
               </div>
             </div>

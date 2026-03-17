@@ -9,6 +9,7 @@ import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { FAQManagerClient } from '@/components/FAQManager';
+import { useAssistant } from '@/contexts/AssistantContext';
 
 interface Company {
   id: string;
@@ -20,6 +21,14 @@ export default function CompanyFAQsPage() {
   const params = useParams();
   const router = useRouter();
   const companyId = params.id as string;
+  const { selectedAssistantId } = useAssistant();
+
+  // Redireciona quando o assistente selecionado no header muda
+  useEffect(() => {
+    if (selectedAssistantId && selectedAssistantId !== companyId) {
+      router.replace(`/dashboard/faqs/${selectedAssistantId}`);
+    }
+  }, [selectedAssistantId]);
   
   const [user, setUser] = useState<User | null>(null);
   const [company, setCompany] = useState<Company | null>(null);

@@ -36,7 +36,7 @@ const cardsDeAjuda: AjudaCard[] = [
   { 
     id: 'suporte', 
     titulo: 'Suporte', 
-    descricao: 'Precisa de ajuda urgente? Fale com nossa equipe de suporte técnico.', 
+    descricao: 'Precisa de ajuda urgente? Nossa equipe de suporte técnico está pronta para te auxiliar.', 
     icone: <LifeBuoy className="w-6 h-6" />, 
     acao: { tipo: 'link', valor: 'https://api.whatsapp.com/send/?phone=11987311425&text=Preciso%20de%20suporte%20URGENTE%20no%20minhAi%20App&type=phone_number&app_absent=0' }, 
     textoBotao: 'Contatar Suporte' 
@@ -44,7 +44,7 @@ const cardsDeAjuda: AjudaCard[] = [
   { 
     id: 'instagram', 
     titulo: 'Nosso Instagram', 
-    descricao: 'Acompanhe nossas dicas, novidades e bastidores em nossa rede social.', 
+    descricao: 'Acompanhe todas as nossas dicas, vídeos, promoções e novidades em nossa rede social.', 
     icone: <Instagram className="w-6 h-6" />, 
     acao: { tipo: 'link', valor: 'https://instagram.com/bigcorps' }, 
     textoBotao: 'Seguir no Instagram' 
@@ -52,7 +52,7 @@ const cardsDeAjuda: AjudaCard[] = [
   { 
     id: 'sugestoes', 
     titulo: 'Sugestões', 
-    descricao: 'Precisa de uma função que não encontrou? Ajude-nos a melhorar o minhAi com suas idéias!', 
+    descricao: 'Precisa de uma função que não encontrou? Ajude-nos a melhorar minhAi com suas idéias!', 
     icone: <Lightbulb className="w-6 h-6" />, 
     acao: { tipo: 'dialog', valor: 'sugestoes' }, 
     textoBotao: 'Enviar Sugestão' 

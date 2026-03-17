@@ -11,6 +11,7 @@ export interface VoiceAssistantProps {
   theme?: 'dark' | 'light';
   isMaximized?: boolean;
   onAssistantStart?: () => void;
+  onExitMaximized?: () => void;  // ← adicionar aqui
   hideDisabledFunctions?: boolean;
   autoScroll?: boolean;
 }

@@ -51,7 +51,7 @@ export function AssistantSelectorHeader() {
         {isOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-            <div className="absolute center-0 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
+            <div className="absolute left-0 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
               bg-white dark:bg-slate-800
               border-gray-300 dark:border-slate-700">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-white/5">
@@ -115,7 +115,7 @@ export function AssistantSelectorHeader() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-            <div className="absolute right-0 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
+            <div className="absolute center-0 mt-2 w-64 rounded-lg border shadow-xl z-50 overflow-hidden
             bg-white dark:bg-slate-800
             border-gray-300 dark:border-slate-700">
             <div className="max-h-72 overflow-y-auto">

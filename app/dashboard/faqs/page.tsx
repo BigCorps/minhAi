@@ -13,5 +13,5 @@ export default async function FAQsPage() {
     redirect('/login');
   }
 
-  return <FAQsClient companies={companies || []} user={user} />;
+  return <FAQsClient />;
 }

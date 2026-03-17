@@ -107,36 +107,36 @@ export default function PixQRCodeDisplay({
             </div>
 
             {/* Resumo */}
-            <div style={{ background: innerBg, border: `1px solid ${innerBorder}`, borderRadius: '12px', padding: '16px', marginBottom: '20px', flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel }}>Resumo</span>
-                <span style={{ padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, background: 'rgba(234,179,8,0.1)', color: '#facc15' }}>
-                  Aguardando
-                </span>
-              </div>
+<div style={{ background: innerBg, border: `1px solid ${innerBorder}`, borderRadius: '12px', padding: '16px', marginBottom: '20px', flex: 1 }}>
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel }}>Resumo</span>
+    <span style={{ padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, background: 'rgba(34,197,94,0.15)', color: '#16a34a' }}>
+      Aguardando
+    </span>
+  </div>
 
-              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel, margin: '0 0 8px' }}>
-                INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
-              </p>
+  <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel, margin: '0 0 8px' }}>
+    INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
+  </p>
 
-              {[
-                { label: 'Empresa', value: company.name, color: textPrimary },
-                { label: 'Banco', value: 'Banco Inter', color: textPrimary },
-                { label: 'Validade', value: 'Válido por 30 minutos', color: '#facc15' },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
-                  <span style={{ color: textSecondary }}>{label}</span>
-                  <span style={{ color, fontWeight: 500 }}>{value}</span>
-                </div>
-              ))}
+  {[
+    { label: 'Empresa', value: company.name, color: textPrimary },
+    { label: 'Banco', value: 'Banco Inter', color: textPrimary },
+    { label: 'Validade', value: 'Válido por 30 minutos', color: '#16a34a' },
+  ].map(({ label, value, color }) => (
+    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
+      <span style={{ color: textSecondary }}>{label}</span>
+      <span style={{ color, fontWeight: 500 }}>{value}</span>
+    </div>
+  ))}
 
-              <div style={{ paddingTop: '12px', borderTop: `1px solid ${innerBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: textPrimary, fontWeight: 700 }}>Total</span>
-                <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '22px' }}>
-                  R$ {amount.toFixed(2).replace('.', ',')}
-                </span>
-              </div>
-            </div>
+  <div style={{ paddingTop: '12px', borderTop: `1px solid ${innerBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <span style={{ color: textPrimary, fontWeight: 700 }}>Total</span>
+    <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '22px' }}>
+      R$ {amount.toFixed(2).replace('.', ',')}
+    </span>
+  </div>
+</div>
 
             {/* Botões */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

@@ -68,7 +68,7 @@ function formatDate(dateString: string) {
 // ── Componente principal ─────────────────────────────────────────────────────
 
 function CadastrosPageContent() {
-  const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
+  const { selectedAssistantId: selectedCompanyId, selectedAssistantName } = useAssistant();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);

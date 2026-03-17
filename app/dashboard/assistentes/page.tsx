@@ -15,6 +15,7 @@ export default async function EmpresasPage() {
   const { data: companies } = await supabase
     .from('companies')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   // Agora passamos o 'user' para o Client Component

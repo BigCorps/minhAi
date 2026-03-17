@@ -313,7 +313,7 @@ export default function ArquivosCompanyClient({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {selectedCompany.name}
+                Arquivos
               </h2>
               <p className="text-gray-600 dark:text-white/60 mt-1">
                 Gerencie arquivos e cupons desta empresa

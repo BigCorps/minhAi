@@ -15,7 +15,7 @@ export default function FAQsClient() {
     if (!loadingAssistants && selectedAssistantId) {
       router.replace(`/dashboard/faqs/${selectedAssistantId}`);
     }
-  }, [selectedAssistantId, loadingAssistants]);
+  }, [selectedAssistantId, loadingAssistants, router]);
 
   if (loadingAssistants) {
     return (

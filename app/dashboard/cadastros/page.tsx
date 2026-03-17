@@ -167,7 +167,7 @@ function CadastrosPageContent() {
                   Cadastros
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Registros coletados pelo assistente de voz
+                  Registros coletados pelo assistente {selectedCompany.name} .
                 </p>
               </div>
             </div>

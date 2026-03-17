@@ -15,21 +15,24 @@ export default async function DashboardPage() {
 
   // Carregamento de dados com tratamento de erro
   try {
-    const { count } = await supabase.from('companies').select('*', { count: 'exact', head: true });
+    const { count } = await supabase.from('companies').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
     totalCompanies = count || 0;
   } catch (e) {
     console.error('Error loading companies:', e);
   }
 
   try {
-    const { count } = await supabase.from('conversations').select('*', { count: 'exact', head: true });
+    const { count } = await supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
     totalConversations = count || 0;
   } catch (e) {
     console.error('Error loading conversations:', e);
   }
 
   try {
-    const { count } = await supabase.from('faq_entries').select('*', { count: 'exact', head: true });
+    const { count } = await supabase
+  .from('faq_entries')
+  .select('*, companies!inner(user_id)', { count: 'exact', head: true })
+  .eq('companies.user_id', user.id);
     totalFAQs = count || 0;
   } catch (e) {
     console.error('Error loading FAQs:', e);

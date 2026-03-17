@@ -399,7 +399,7 @@ function FunctionsPageContent() {
                   Funções do Assistente
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Ative ou desative as funções que seu assistente pode executar
+                  Defina as funções que seu assistente {selectedCompany.name} pode executar
                 </p>
               </div>
             </div>

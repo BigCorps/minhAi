@@ -5,6 +5,7 @@ import { ConnectionManager } from './_components/ConnectionManager';
 import { QuickActionsPanel } from './_components/QuickActionsPanel';
 import { createClient } from '@/lib/supabase-browser';
 import { HelpCircle, X, ExternalLink, Smartphone, Monitor, ChevronRight, Share2, Zap } from 'lucide-react';
+import { useAssistant } from '@/contexts/AssistantContext';
 
 interface Company {
   id: string;
@@ -14,8 +15,7 @@ interface Company {
 
 export default function AtendimentosPage() {
   const supabase = createClient();
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const { selectedAssistantId: selectedCompanyId } = useAssistant();
   const [showHelp, setShowHelp] = useState(false);
   const [activeTab, setActiveTab] = useState<'connections' | 'actions'>('connections');
   const [hasConnections, setHasConnections] = useState(false);
@@ -81,21 +81,6 @@ export default function AtendimentosPage() {
                   <HelpCircle className="w-4 h-4" />
                   Ajuda
                 </button>
-                {/* Seletor de Assistente */}
-                {companies.length > 0 && (
-                  <select
-                    value={selectedCompanyId}
-                    onChange={(e) => setSelectedCompanyId(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  >
-                    <option value="">Selecione...</option>
-                    {companies.map(company => (
-                      <option key={company.id} value={company.id}>
-                        {company.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
               </div>
             </div>
           </div>

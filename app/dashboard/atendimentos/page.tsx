@@ -20,23 +20,6 @@ export default function AtendimentosPage() {
   const [activeTab, setActiveTab] = useState<'connections' | 'actions'>('connections');
   const [hasConnections, setHasConnections] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from('companies')
-        .select('id, name, wake_word')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('name');
-      if (data && data.length > 0) {
-        setCompanies(data);
-      }
-    }
-    load();
-  }, []);
-
   // Verifica se há conexões Meta ativas para o assistente selecionado
   useEffect(() => {
     if (!selectedCompanyId) {
@@ -136,7 +119,7 @@ export default function AtendimentosPage() {
                 {(!hasConnections || activeTab === 'connections') && (
                   <ConnectionManager
                     selectedCompanyId={selectedCompanyId}
-                    onCompanyChange={setSelectedCompanyId}
+                    onCompanyChange={() => {}}
                     onConnectionsChange={setHasConnections}
                   />
                 )}

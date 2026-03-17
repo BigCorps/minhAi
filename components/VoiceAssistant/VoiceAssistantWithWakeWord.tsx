@@ -5,13 +5,11 @@
 // Caminho: components/assistant/VoiceAssistant/VoiceAssistantWithWakeWord.tsx
 //
 // CORREÇÕES desta versão:
-// - activeModal (state unificado) substitui meuSistemaModalOpen,
-//   nossaMarcaData e enderecoModalData
+// - Push-to-talk usa useVoiceRecorder + /api/voice/transcribe
+//   (sem depender do VAD do GoogleSpeechWebSocket)
+// - Wake word continua via GoogleSpeechWebSocket normalmente
+// - activeModal (state unificado) substitui modais individuais
 // - ActionModals.tsx usado no lugar dos condicionais individuais
-// - handleFunctionClick usa setActiveModal
-// - processQuestion e handleTextMessage passam setActiveModal
-// - import dinâmico de checkIfFunctionIsEnabled removido
-//   (agora importado no topo do arquivo)
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react';
@@ -22,10 +20,11 @@ import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './handlers/utilitiesHandlers';
 import { useLembreteWatcher } from './hooks/useLembreteWatcher';
 import { handleWifiQRCode, handleCardapio, handleCadastro, handleNossoQRCode } from '@/components/VoiceAssistant/handlers/companyHandlers';
-import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries' // ajuste o caminho
+import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -57,12 +56,12 @@ import { useWakeWordDetector } from './hooks/useWakeWordDetector';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 
 // ── Utilitários ────────────────────────────────────────────
-import { 
-  unlockAudio, 
-  requestMicrophonePermission, 
+import {
+  unlockAudio,
+  requestMicrophonePermission,
   playProcessingFeedback,
-  requestCameraPermission,    // ← adicionar
-  requestLocationPermission,  // ← adicionar
+  requestCameraPermission,
+  requestLocationPermission,
 } from './utils/audioUtils';
 import { detectStopCommand, extractCommand } from './utils/textUtils';
 
@@ -98,22 +97,20 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const isMicButtonPressedRef = useRef(false);
   const [externalInput, setExternalInput] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
-  // ── States de PIX (mantidos separados pois têm lógica própria) ──
+  // ── States de PIX ────────────────────────────────────────
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
   const [pixConfirmationData, setPixConfirmationData] = useState<PixConfirmationData | null>(null);
 
-  // ✅ State unificado de modal — substitui meuSistemaModalOpen,
-  // nossaMarcaData e enderecoModalData. Alimenta o ActionModals.tsx.
-  // Para abrir qualquer modal: setActiveModal({ type: 'NomeDisplay', data: {...} })
+  // ── State unificado de modal ──────────────────────────────
   const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
 
   // ── Sistema híbrido ───────────────────────────────────────
   const [commandProcessor, setCommandProcessor] = useState<VoiceCommandProcessor | null>(null);
-  const [lastTranscript, setLastTranscript] = useState<string>("");
-  const [lastResponse, setLastResponse] = useState<string>("");
+  const [lastTranscript, setLastTranscript] = useState<string>('');
+  const [lastResponse, setLastResponse] = useState<string>('');
   const [showConversationModal, setShowConversationModal] = useState(false);
   const [showLastConversation, setShowLastConversation] = useState(false);
   const conversationTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -127,7 +124,7 @@ export function VoiceAssistantWithWakeWord({
   const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeFunctionContextRef = useRef<ActiveFunctionContext | null>(null);
 
-  // ── Ref de estado PIX (acesso em callbacks sem closure stale) ──
+  // ── Ref de estado PIX ─────────────────────────────────────
   const pixStateRef = useRef<{ qrCodeData: any; pixConfirmationData: any } | null>(null);
   useEffect(() => {
     pixStateRef.current = { qrCodeData, pixConfirmationData };
@@ -142,6 +139,9 @@ export function VoiceAssistantWithWakeWord({
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
+
+  // ── Push-to-talk: gravação direta via MediaRecorder ────────
+  const voiceRecorder = useVoiceRecorder();
 
   // Wrap de playText para capturar lastResponse automaticamente
   const playText = (text: string) => {
@@ -180,7 +180,7 @@ export function VoiceAssistantWithWakeWord({
       if (!granted) setError('Permissão do microfone negada.');
     });
 
-    requestCameraPermission().catch(() => {});    // ← já adicionado antes
+    requestCameraPermission().catch(() => {});
     requestLocationPermission().catch(() => {});
 
     const handleExternalFunctionClick = (event: any) => {
@@ -213,18 +213,16 @@ export function VoiceAssistantWithWakeWord({
     initCommandProcessor();
   }, [companyId]);
 
-  // ── Google Speech ─────────────────────────────────────────
+  // ── Google Speech (wake word) ─────────────────────────────
   async function startGoogleSpeech() {
     if (!isActiveRef.current || !shouldProcessAudio.current) return;
 
-    // ✅ BLOQUEIO DE CONTEXTO: Se houver um modal de entrada de dados aberto,
-    // não iniciamos o listener global para evitar conflitos de áudio.
-    const isInputModalOpen = 
-      activeModal?.type === 'SendEmailModal' || 
+    const isInputModalOpen =
+      activeModal?.type === 'SendEmailModal' ||
       activeModal?.type === 'CreateEventModal' ||
-      activeModal?.type === 'NossaMarcaDisplay' ||  
-      activeModal?.type === 'EnderecoDisplay' ||   
-      activeModal?.type === 'MeuSistemaDisplay' || 
+      activeModal?.type === 'NossaMarcaDisplay' ||
+      activeModal?.type === 'EnderecoDisplay' ||
+      activeModal?.type === 'MeuSistemaDisplay' ||
       activeModal?.type === 'VideoInstrucoesDisplay' ||
       activeModal?.type === 'MeuCupomDisplay' ||
       activeModal?.type === 'SequenciaVideosDisplay';
@@ -297,21 +295,83 @@ export function VoiceAssistantWithWakeWord({
     stopAudioImmediately();
   }
 
+  // ── Push-to-talk: transcrição via API ─────────────────────
+  const transcribeAndSetInput = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      const base64Audio = await new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+      });
+
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio }),
+      });
+
+      if (!response.ok) throw new Error('Erro na transcrição');
+      const { text } = await response.json();
+
+      if (text && text.trim()) {
+        console.log('🎤 Push-to-talk transcrito:', text);
+        setExternalInput(text.trim());
+      } else {
+        console.log('⚠️ Push-to-talk: nenhuma fala detectada');
+      }
+    } catch (err) {
+      console.error('❌ Erro ao transcrever push-to-talk:', err);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // ── Push-to-talk handlers ─────────────────────────────────
+  const handleMicButtonDown = async () => {
+    if (!permissionGranted || isProcessing || isPlayingAudio || isTranscribing) return;
+    console.log('🎙️ Push-to-talk: iniciando gravação');
+    // Para o Google Speech (wake word) durante a gravação
+    shouldProcessAudio.current = false;
+    await stopGoogleSpeech();
+    setIsListening(true);
+    await voiceRecorder.startRecording();
+  };
+
+  const handleMicButtonUp = async () => {
+    if (!voiceRecorder.isRecording) return;
+    console.log('🎙️ Push-to-talk: parando gravação');
+    setIsListening(false);
+    try {
+      const audioBlob = await voiceRecorder.stopRecording();
+      await transcribeAndSetInput(audioBlob);
+    } catch (err) {
+      console.error('❌ Erro no push-to-talk:', err);
+    } finally {
+      // Reativa o Google Speech (wake word)
+      shouldProcessAudio.current = true;
+      setTimeout(async () => {
+        if (isActiveRef.current) await startGoogleSpeech();
+      }, 300);
+    }
+  };
+
   // ── Handler de fechamento unificado ───────────────────────
-  // Usado pelo ActionModals.tsx ao fechar qualquer modal.
   const handleCloseModal = async () => {
     console.log('🎯 Fechando modal e liberando contexto de voz');
-    
+
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.currentTime = 0;
       currentAudioRef.current = null;
     }
-    
+
     setIsPlayingAudio(false);
     setActiveModal(null);
-    
-    // Garantir que qualquer gravação residual seja parada
+
     if (googleSpeechRef.current) {
       await googleSpeechRef.current.stopRecording();
     }
@@ -356,7 +416,7 @@ export function VoiceAssistantWithWakeWord({
     setIsSpeaking(false);
     setQrCodeData(null);
     setPixConfirmationData(null);
-    setActiveModal(null); // ✅ fecha qualquer modal aberto
+    setActiveModal(null);
     setShowConversationModal(false);
 
     processingQuestion.current = false;
@@ -370,68 +430,53 @@ export function VoiceAssistantWithWakeWord({
     }, 500);
   }
 
-  // ── Transcript handler ────────────────────────────────────
-async function handleGoogleTranscript(text: string, isFinal: boolean) {
-  if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
+  // ── Transcript handler (wake word) ────────────────────────
+  async function handleGoogleTranscript(text: string, isFinal: boolean) {
+    if (!text || !isActiveRef.current || !shouldProcessAudio.current) return;
 
-  const lowerText = text.toLowerCase().trim();
+    const lowerText = text.toLowerCase().trim();
 
-  if (isMicButtonPressedRef.current && isFinal && text.trim()) {
-    isMicButtonPressedRef.current = false;
-    setExternalInput(text.trim());
-    setIsListening(false);
-    await stopGoogleSpeech();
-    setTimeout(async () => {
-      if (isActiveRef.current) {
-        shouldProcessAudio.current = true;
-        await startGoogleSpeech();
+    // ✅ 1. INTERCEPTAR STOPS
+    if (isFinal && detectStopCommand(lowerText)) {
+      if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
+        console.log('🛑 Stop command interceptado antes da wake word:', lowerText);
+        stopEverything();
+        return;
       }
-    }, 500);
-    return;
-  }
-
-  // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
-  if (isFinal && detectStopCommand(lowerText)) {
-    if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
-      console.log('🛑 Stop command interceptado antes da wake word:', lowerText);
-      stopEverything();
-      return;
     }
-  }
 
-  // ✅ 2. INTERCEPTAR CONTROLES DE FUNÇÃO (cronômetro, etc.)
-  const CONTROL_COMMANDS = [
-    {
-      triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
-      action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
-    },
-  ];
-  for (const cmd of CONTROL_COMMANDS) {
-    if (cmd.triggers.some(t => lowerText.includes(t))) {
-      if (!isFinal) return;
-      cmd.action();
-      return;
+    // ✅ 2. INTERCEPTAR CONTROLES DE FUNÇÃO
+    const CONTROL_COMMANDS = [
+      {
+        triggers: ['finalizar cronômetro', 'parar cronômetro', 'finalizar contagem', 'parar contagem'],
+        action: () => window.dispatchEvent(new Event('eai:cronometro:stop')),
+      },
+    ];
+    for (const cmd of CONTROL_COMMANDS) {
+      if (cmd.triggers.some(t => lowerText.includes(t))) {
+        if (!isFinal) return;
+        cmd.action();
+        return;
+      }
     }
-  }
 
-    // ✅ INTERCEPTAR ESCOLHA DE MÉTODO DE PAGAMENTO (TEF vs NFC)
-  if (isFinal) {
-    const resolved = await resolvePendingPaymentChoice(lowerText, setActiveModal, playText)
-    if (resolved) {
-      processingQuestion.current = false
-      setTimeout(async () => {
-        shouldProcessAudio.current = true
-        await startGoogleSpeech()
-      }, 500)
-      return
+    // ✅ INTERCEPTAR ESCOLHA DE MÉTODO DE PAGAMENTO
+    if (isFinal) {
+      const resolved = await resolvePendingPaymentChoice(lowerText, setActiveModal, playText);
+      if (resolved) {
+        processingQuestion.current = false;
+        setTimeout(async () => {
+          shouldProcessAudio.current = true;
+          await startGoogleSpeech();
+        }, 500);
+        return;
+      }
     }
-  }
 
-  // ✅ 3. SÓ AGORA verifica wake word
-  const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
+    // ✅ 3. VERIFICA WAKE WORD
+    const wakeWordResult = wakeWordDetectorRef.current?.detect(lowerText);
 
     if (!wakeWordResult?.detected) {
-      // ✅ Fecha modal aberto mesmo quando áudio já terminou
       if ((isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) && detectStopCommand(lowerText)) {
         stopEverything();
       }
@@ -480,31 +525,6 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
     }
   }
 
-  const handleMicButtonDown = async () => {
-  if (!permissionGranted || isProcessing || isPlayingAudio) return;
-  isMicButtonPressedRef.current = true;
-  await stopGoogleSpeech();
-  await new Promise(resolve => setTimeout(resolve, 300));
-  shouldProcessAudio.current = true;
-  await startGoogleSpeech();
-  setIsListening(true);
-};
-
-const handleMicButtonUp = async () => {
-  if (!isMicButtonPressedRef.current) return;
-  setIsListening(false);
-  // Aguarda a transcrição final chegar no handleGoogleTranscript
-  // Timeout de segurança caso não chegue nenhuma transcrição
-  setTimeout(async () => {
-    if (isMicButtonPressedRef.current) {
-      isMicButtonPressedRef.current = false;
-      await stopGoogleSpeech();
-      shouldProcessAudio.current = true;
-      await startGoogleSpeech();
-    }
-  }, 3000);
-};
-
   // ── Start assistant ───────────────────────────────────────
   async function handleStart() {
     setSessionId(null);
@@ -530,7 +550,6 @@ const handleMicButtonUp = async () => {
   }
 
   // ── Function click (carrossel) ────────────────────────────
-  // ✅ PARA ADICIONAR NOVA FUNÇÃO: adicione um  no switch abaixo.
   async function handleFunctionClick(functionKey: string) {
     console.log('🎯 Função clicada:', functionKey);
 
@@ -558,7 +577,6 @@ const handleMicButtonUp = async () => {
     try {
       switch (functionKey) {
 
-        // ── Funções de texto (só falam) ──────────────────────
         case 'faq':
           await playText('Me faça qualquer pergunta sobre nossos produtos, serviços, horários ou políticas.');
           break;
@@ -575,7 +593,6 @@ const handleMicButtonUp = async () => {
           await playText('Posso calcular orçamentos, prazos e valores totais. O que você precisa?');
           break;
 
-        // ── QR Codes ─────────────────────────────────────────
         case 'qrcode_whatsapp':
         case 'qrcode_instagram':
         case 'qrcode_website':
@@ -590,169 +607,143 @@ const handleMicButtonUp = async () => {
           });
           break;
 
-        // ── Funções com modal (usam setActiveModal) ──────────
         case 'meu_sistema':
-          // ✅ Abre via ActionModals usando type 'MeuSistemaDisplay'
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
           playText('Sou min I A, uma IA pra chamar de sua! Sou um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
           break;
 
-case 'consultar_cambio':
-  setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } }); // SEM company?.id
-  break;
+        case 'consultar_cambio':
+          setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } });
+          break;
 
-case 'consultar_cep':
-  setActiveModal?.({ type: 'ConsultarCEPDisplay', data: { companyId } });
-  break;
+        case 'consultar_cep':
+          setActiveModal?.({ type: 'ConsultarCEPDisplay', data: { companyId } });
+          break;
 
-case 'consultar_cnpj':
-  setActiveModal?.({ type: 'ConsultarCnpjModal', data: { companyId } });
-  break;
+        case 'consultar_cnpj':
+          setActiveModal?.({ type: 'ConsultarCnpjModal', data: { companyId } });
+          break;
 
-case 'consultar_cpf':
-  setActiveModal?.({ type: 'ConsultarCpfModal', data: { companyId } });
-  break;
+        case 'consultar_cpf':
+          setActiveModal?.({ type: 'ConsultarCpfModal', data: { companyId } });
+          break;
 
-case 'restricoes_cpf':
-  setActiveModal?.({ type: 'RestricoesCPFDisplay', data: { companyId } });
-  break;
+        case 'restricoes_cpf':
+          setActiveModal?.({ type: 'RestricoesCPFDisplay', data: { companyId } });
+          break;
 
-case 'restricoes_cnpj':
-  setActiveModal?.({ type: 'RestricoesCNPJDisplay', data: { companyId } });
-  break;
+        case 'restricoes_cnpj':
+          setActiveModal?.({ type: 'RestricoesCNPJDisplay', data: { companyId } });
+          break;
 
-case 'consultar_feriados':
-  setActiveModal?.({ type: 'FeriadosNacionaisDisplay', data: { companyId } });
-  break;
+        case 'consultar_feriados':
+          setActiveModal?.({ type: 'FeriadosNacionaisDisplay', data: { companyId } });
+          break;
 
-case 'consultar_ddd':
-  setActiveModal?.({ type: 'ConsultarDDDDisplay', data: { companyId } });
-  break;
+        case 'consultar_ddd':
+          setActiveModal?.({ type: 'ConsultarDDDDisplay', data: { companyId } });
+          break;
 
-case 'consultar_placa':
-  setActiveModal?.({ type: 'ConsultarPlacaModal', data: { companyId } });
-  break;
+        case 'consultar_placa':
+          setActiveModal?.({ type: 'ConsultarPlacaModal', data: { companyId } });
+          break;
 
-case 'consultar_leilao':
-  setActiveModal?.({ type: 'ConsultarLeilaoModal', data: { companyId } });
-  break;
-          
-case 'cadastro':
-  await handleCadastro({ companyId, setIsProcessing, setActiveModal, playText });
-  break;
+        case 'consultar_leilao':
+          setActiveModal?.({ type: 'ConsultarLeilaoModal', data: { companyId } });
+          break;
 
-case 'enviar_arquivo':
-  await stopGoogleSpeech();
-  setActiveModal({
-    type: 'EnviarArquivoDisplay',
-    data: { companyId },
-  });
-  playText('Você pode enviar um arquivo diretamente para a empresa, que já recebem na hora!').catch(() => {});
-  break;
+        case 'cadastro':
+          await handleCadastro({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
-case 'gerar_qrcode':
-  await stopGoogleSpeech();
-  setActiveModal({
-    type: 'GerarQRCodeDisplay',
-    data: { companyId },
-  });
-  playText('Abrindo gerador de QR Code. Diga ou digite o texto ou link.').catch(() => {});
-  break;
+        case 'enviar_arquivo':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'EnviarArquivoDisplay', data: { companyId } });
+          playText('Você pode enviar um arquivo diretamente para a empresa, que já recebem na hora!').catch(() => {});
+          break;
 
-case 'gerar_codigo_barras':
-  await stopGoogleSpeech();
-  setActiveModal({
-    type: 'GerarCodigoBarrasDisplay',
-    data: { companyId },
-  });
-  playText('Abrindo gerador de código de barras. Escolha o formato e diga o conteúdo.').catch(() => {});
-  break;
+        case 'gerar_qrcode':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'GerarQRCodeDisplay', data: { companyId } });
+          playText('Abrindo gerador de QR Code. Diga ou digite o texto ou link.').catch(() => {});
+          break;
 
-case 'confirmar_presenca':
-  setActiveModal({ 
-    type: 'ConfirmPresenceModal', 
-    data: { companyId }
-  });
-  playText('Vou buscar seu agendamento para confirmar presença.').catch(() => {});
-  break;
+        case 'gerar_codigo_barras':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'GerarCodigoBarrasDisplay', data: { companyId } });
+          playText('Abrindo gerador de código de barras. Escolha o formato e diga o conteúdo.').catch(() => {});
+          break;
 
-case 'reagendar_compromisso':
-  setActiveModal({ 
-    type: 'RescheduleModal', 
-    data: { companyId }
-  });
-  playText('Vou buscar seu agendamento para reagendar.').catch(() => {});
-  break;
+        case 'confirmar_presenca':
+          setActiveModal({ type: 'ConfirmPresenceModal', data: { companyId } });
+          playText('Vou buscar seu agendamento para confirmar presença.').catch(() => {});
+          break;
 
-case 'cancelar_agendamento':
-  setActiveModal({ 
-    type: 'CancelAppointmentModal', 
-    data: { companyId }
-  });
-  playText('Vou buscar seu agendamento para cancelar.').catch(() => {});
-  break;
+        case 'reagendar_compromisso':
+          setActiveModal({ type: 'RescheduleModal', data: { companyId } });
+          playText('Vou buscar seu agendamento para reagendar.').catch(() => {});
+          break;
 
-case 'horarios_disponiveis':
-  // Este é tratado direto no handler do registry
-  break;
+        case 'cancelar_agendamento':
+          setActiveModal({ type: 'CancelAppointmentModal', data: { companyId } });
+          playText('Vou buscar seu agendamento para cancelar.').catch(() => {});
+          break;
 
-case 'meu_cupom': {
-  await stopGoogleSpeech();
-  // Tenta extrair nome do transcript global (se vier de comando de voz)
-  // Se vier do botão do carrossel, prefillName fica vazio e o modal pede
-  setActiveModal({
-    type: 'MeuCupomDisplay',
-    data: { companyId, prefillName: '' },
-  });
-  await playText('Digite seu nome para gerar seu cupom de indicação.');
-  break;
-}
-          
-case 'ler_qrcode':
-  await stopGoogleSpeech(); 
-  await handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText });
-  break;
+        case 'horarios_disponiveis':
+          break;
 
-case 'ler_codigo_barras':
-  await stopGoogleSpeech(); 
-  await handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal, playText });
-  break;
+        case 'meu_cupom': {
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'MeuCupomDisplay', data: { companyId, prefillName: '' } });
+          await playText('Digite seu nome para gerar seu cupom de indicação.');
+          break;
+        }
 
-case 'validar_cupom':
-  await stopGoogleSpeech(); 
-  await handleValidarCupom({ companyId, setIsProcessing, setActiveModal, playText });
-  break;
+        case 'ler_qrcode':
+          await stopGoogleSpeech();
+          await handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
-case 'imagem_em_texto':
-  await stopGoogleSpeech(); 
-  await handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
-  break;
+        case 'ler_codigo_barras':
+          await stopGoogleSpeech();
+          await handleLerCodigoBarras({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
-case 'tabela_em_texto':
-  await stopGoogleSpeech(); 
-  await handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
-  break;
+        case 'validar_cupom':
+          await stopGoogleSpeech();
+          await handleValidarCupom({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
-case 'contrato_em_texto':
-  await stopGoogleSpeech(); 
-  await handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
-  break;          
+        case 'imagem_em_texto':
+          await stopGoogleSpeech();
+          await handleImagemEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
-  case 'wifi_qrcode':
-    await stopGoogleSpeech(); 
-    await handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText });
-    break;
+        case 'tabela_em_texto':
+          await stopGoogleSpeech();
+          await handleTabelaEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
-  case 'cardapio':
-    await stopGoogleSpeech();
-    await handleCardapio({ companyId, setIsProcessing, setActiveModal, playText });
-    break;
+        case 'contrato_em_texto':
+          await stopGoogleSpeech();
+          await handleContratoEmTexto({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
-  case 'nosso_qrcode':
-    await stopGoogleSpeech();
-    await handleNossoQRCode({ companyId, setIsProcessing, setActiveModal, playText });
-    break;
+        case 'wifi_qrcode':
+          await stopGoogleSpeech();
+          await handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
+
+        case 'cardapio':
+          await stopGoogleSpeech();
+          await handleCardapio({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
+
+        case 'nosso_qrcode':
+          await stopGoogleSpeech();
+          await handleNossoQRCode({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
 
         case 'nossa_marca':
           await stopGoogleSpeech();
@@ -766,62 +757,45 @@ case 'contrato_em_texto':
 
         case 'video_instrucoes':
           await stopGoogleSpeech();
-          await handleVideoInstrucoesCommand({ 
-            companyId, setIsProcessing, setActiveModal, playText });
+          await handleVideoInstrucoesCommand({ companyId, setIsProcessing, setActiveModal, playText });
           break;
 
         case 'sequencia_videos':
           await stopGoogleSpeech();
           await handleSequenciaVideosCommand({ companyId, setIsProcessing, setActiveModal, playText });
-          break;  
+          break;
 
         case 'enviar_email':
-          // ✅ Abre modal de envio de email
-          await stopGoogleSpeech(); // Para o listener global
-          setActiveModal({ 
-            type: 'SendEmailModal', 
-            data: { companyId } 
-          });
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'SendEmailModal', data: { companyId } });
           playText('Diga o conteúdo e quando acabar, diga CONCLUIR.').catch(() => {});
           break;
 
-case 'fichas_producao_conversacional':
-  await stopGoogleSpeech();
-  stopAudioImmediately();
-  setActiveModal({
-    type: 'FichaProducaoConversacionalDisplay',
-    data: {
-      companyId,
-      fichaType: 'produto',
-    },
-  });
-  break;
+        case 'fichas_producao_conversacional':
+          await stopGoogleSpeech();
+          stopAudioImmediately();
+          setActiveModal({
+            type: 'FichaProducaoConversacionalDisplay',
+            data: { companyId, fichaType: 'produto' },
+          });
+          break;
 
-case 'agendar_compromisso':
-  // ✅ Abre modal de criar evento no calendário
-  await stopGoogleSpeech(); // Para o listener global
-  setActiveModal({ 
-    type: 'CreateEventModal', 
-    data: { 
-      companyId,
-      prefilledData: {} // Vazio quando vem do botão
-    } 
-  });
-  playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.').catch(() => {});
-  break;
+        case 'agendar_compromisso':
+          await stopGoogleSpeech();
+          setActiveModal({
+            type: 'CreateEventModal',
+            data: { companyId, prefilledData: {} },
+          });
+          playText('Posso te marcar na agenda, basta me dizer qual o dia, mês, hora e seu nome.').catch(() => {});
+          break;
 
-case 'ver_agenda':
-  // ✅ Abre modal de visualizar agenda
-  // Quando vem do botão, abre padrão no mês
-  setActiveModal({ 
-    type: 'ViewAgendaModal', 
-    data: { 
-      companyId,
-      initialView: 'month' // padrão quando vem do botão
-    } 
-  });
-  playText('Abrindo o calendário.').catch(() => {});
-  break;
+        case 'ver_agenda':
+          setActiveModal({
+            type: 'ViewAgendaModal',
+            data: { companyId, initialView: 'month' },
+          });
+          playText('Abrindo o calendário.').catch(() => {});
+          break;
 
         case 'criar_lembrete':
           await handleCriarLembrete({ companyId, setIsProcessing, setActiveModal, playText });
@@ -843,41 +817,40 @@ case 'ver_agenda':
           await handleAlarme({ companyId, setIsProcessing, setActiveModal, playText });
           break;
 
-case 'cobrar_debito':
-  await stopGoogleSpeech()
-  playText('Pode me dizer o valor para cobrar no débito.').catch(() => {})
-  break
- 
-case 'cobrar_credito':
-  await stopGoogleSpeech()
-  playText('Pode me dizer o valor para cobrar no crédito.').catch(() => {})
-  break
-          
-case 'link_pagamento':
-  await stopGoogleSpeech();
-  playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
-  break;
+        case 'cobrar_debito':
+          await stopGoogleSpeech();
+          playText('Pode me dizer o valor para cobrar no débito.').catch(() => {});
+          break;
 
-case 'nfc_credito':
-  await stopGoogleSpeech();
-  playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança NFC crédito e o valor.').catch(() => {});
-  break;
+        case 'cobrar_credito':
+          await stopGoogleSpeech();
+          playText('Pode me dizer o valor para cobrar no crédito.').catch(() => {});
+          break;
 
-case 'nfc_debito':
-  await stopGoogleSpeech();
-  playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança NFC débito e o valor.').catch(() => {});
-  break;
+        case 'link_pagamento':
+          await stopGoogleSpeech();
+          playText('Posso gerar um Link de Pagamento, basta pedir um Link com o valor.').catch(() => {});
+          break;
 
-case 'tef_debito':
-  await stopGoogleSpeech();
-  playText('Posso cobrar no débito direto na maquininha Point. Basta pedir uma cobrança TEF débito com o valor.').catch(() => {});
-  break;
+        case 'nfc_credito':
+          await stopGoogleSpeech();
+          playText('Posso gerar uma Cobrança no Cartão de Crédito via NFC, basta pedir uma cobrança NFC crédito e o valor.').catch(() => {});
+          break;
 
-case 'tef_credito':
-  await stopGoogleSpeech();
-  playText('Posso cobrar no crédito direto na maquininha Point, à vista ou parcelado. Basta pedir uma cobrança TEF crédito com o valor.').catch(() => {});
-  break;
+        case 'nfc_debito':
+          await stopGoogleSpeech();
+          playText('Posso gerar uma Cobrança no Cartão de Débito via NFC, basta pedir uma cobrança NFC débito e o valor.').catch(() => {});
+          break;
 
+        case 'tef_debito':
+          await stopGoogleSpeech();
+          playText('Posso cobrar no débito direto na maquininha Point. Basta pedir uma cobrança TEF débito com o valor.').catch(() => {});
+          break;
+
+        case 'tef_credito':
+          await stopGoogleSpeech();
+          playText('Posso cobrar no crédito direto na maquininha Point, à vista ou parcelado. Basta pedir uma cobrança TEF crédito com o valor.').catch(() => {});
+          break;
 
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
@@ -944,7 +917,6 @@ case 'tef_credito':
     shouldProcessAudio.current = false;
     await stopGoogleSpeech();
 
-    // Verificar contexto de função ativa
     const activeFunction = getActiveFunctionContext();
     if (activeFunction) {
       const func = getFunctionByKey(activeFunction);
@@ -958,7 +930,6 @@ case 'tef_credito':
             playText,
             setIsProcessing,
             sessionId,
-            // ✅ setActiveModal unificado
             setActiveModal,
           });
 
@@ -984,7 +955,6 @@ case 'tef_credito':
       }
     }
 
-    // Detectar comando de voz/texto
     const isCommand = await detectVoiceCommand(questionText, {
       companyId,
       functionSettings,
@@ -995,7 +965,7 @@ case 'tef_credito':
       sessionId,
       commandProcessor,
       pixStateRef,
-      setActiveModal, // ✅ state unificado
+      setActiveModal,
       activeFunctionContextRef,
     });
 
@@ -1008,7 +978,6 @@ case 'tef_credito':
       return;
     }
 
-    // Fallback: API /api/voice/process (ChatGPT/FAQ)
     setIsProcessing(true);
 
     try {
@@ -1035,7 +1004,6 @@ case 'tef_credito':
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionId) setSessionId(newSessionId);
 
-      // Capturar texto da resposta se o servidor enviar no header
       const responseTextHeader = response.headers.get('X-Response-Text');
       if (responseTextHeader) {
         setLastResponse(decodeURIComponent(responseTextHeader));
@@ -1167,7 +1135,7 @@ case 'tef_credito':
         sessionId,
         commandProcessor,
         pixStateRef,
-        setActiveModal, // ✅ state unificado
+        setActiveModal,
         activeFunctionContextRef,
       });
 
@@ -1184,7 +1152,6 @@ case 'tef_credito':
       const newSessionId = response.headers.get('X-Session-Id');
       if (newSessionId && !sessionId) setSessionId(newSessionId);
 
-      // Capturar texto da resposta se o servidor enviar no header
       const responseTextHeader = response.headers.get('X-Response-Text');
       if (responseTextHeader) {
         setLastResponse(decodeURIComponent(responseTextHeader));
@@ -1220,7 +1187,6 @@ case 'tef_credito':
     }, 1000);
   }
 
-  // PIX handlers (mantidos localmente pois acessam pixStateRef)
   const handleConfirmPixLocal = () =>
     handleConfirmPix(pixStateRef.current?.pixConfirmationData ?? null, {
       companyId, setIsProcessing, setPixConfirmationData, playText, functionSettings,
@@ -1235,18 +1201,27 @@ case 'tef_credito':
   const getStatusMessage = () => {
     if (!permissionGranted) return 'Aguardando permissão...';
     if (showStartButton) return 'Clique em "Iniciar"';
+    if (isTranscribing) return 'Transcrevendo...';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
     return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
   };
 
-  const getStatusColor = () => {
+  const getMicButtonColor = () => {
+    if (voiceRecorder.isRecording) return 'bg-red-500 animate-pulse';
+    if (isTranscribing) return 'bg-orange-400 animate-pulse';
     if (!permissionGranted) return 'bg-gray-400';
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
     if (isProcessing) return 'bg-yellow-400 animate-pulse';
     if (isListening) return 'bg-blue-400 animate-pulse';
     return 'bg-green-400 animate-pulse';
+  };
+
+  const getMicHintText = () => {
+    if (voiceRecorder.isRecording) return 'solte para enviar...';
+    if (isTranscribing) return 'transcrevendo...';
+    return 'segure para falar ou';
   };
 
   // ── RENDER: MAXIMIZED ─────────────────────────────────────
@@ -1259,17 +1234,21 @@ case 'tef_credito':
           </button>
         )}
 
-         <div
-   className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 cursor-pointer"
-   onMouseDown={handleMicButtonDown}
-   onMouseUp={handleMicButtonUp}
-   onTouchStart={handleMicButtonDown}
-   onTouchEnd={handleMicButtonUp}
- >
+        <div
+          className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 cursor-pointer select-none"
+          onMouseDown={handleMicButtonDown}
+          onMouseUp={handleMicButtonUp}
+          onTouchStart={handleMicButtonDown}
+          onTouchEnd={handleMicButtonUp}
+        >
+          {/* Anel vermelho pulsante ao gravar */}
+          {voiceRecorder.isRecording && (
+            <div className="absolute inset-0 rounded-full border-4 border-red-500 animate-ping opacity-40 pointer-events-none z-10" />
+          )}
           <AvatarFace
-            isListening={isListening}
+            isListening={isListening || voiceRecorder.isRecording}
             isSpeaking={isPlayingAudio}
-            isProcessing={isProcessing}
+            isProcessing={isProcessing || isTranscribing}
             theme={theme}
             qrCodeData={qrCodeData}
             pixConfirmationData={pixConfirmationData}
@@ -1280,35 +1259,35 @@ case 'tef_credito':
           />
         </div>
 
- {!showStartButton && (
-   <p className={`text-sm font-medium -mt-2 ${
-     theme === 'dark' ? 'text-white/40' : 'text-gray-400'
-   }`}>
-     clique em mim para falar ou
-   </p>
- )}
+        {!showStartButton && (
+          <p className={`text-sm font-medium -mt-2 ${
+            theme === 'dark' ? 'text-white/40' : 'text-gray-400'
+          }`}>
+            {voiceRecorder.isRecording ? 'solte para enviar...' : isTranscribing ? 'transcrevendo...' : 'clique em mim para falar ou'}
+          </p>
+        )}
 
         <div className="text-center px-4 max-w-md">
-  <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 ${
-    theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
-  }`}>
-    {getStatusMessage()}
-  </p>
-  {error && <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
-</div>
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 ${
+            theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
+          }`}>
+            {getStatusMessage()}
+          </p>
+          {error && <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
+        </div>
 
-{/* Avisos — abaixo do status */}
-<div className="min-h-[2.5rem] flex items-center justify-center w-full max-w-sm px-4">
-  {(repromptWarning || noiseWarning) && (
-    <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
-      theme === 'dark'
-        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-        : 'bg-blue-50 border border-blue-200 text-blue-700'
-    }`}>
-      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente ruidoso — fale mais perto do microfone'}
-    </div>
-  )}
-</div>
+        {/* Avisos */}
+        <div className="min-h-[2.5rem] flex items-center justify-center w-full max-w-sm px-4">
+          {(repromptWarning || noiseWarning) && (
+            <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
+              theme === 'dark'
+                ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+                : 'bg-blue-50 border border-blue-200 text-blue-700'
+            }`}>
+              {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente ruidoso — fale mais perto do microfone'}
+            </div>
+          )}
+        </div>
 
         {showStartButton && permissionGranted && (
           <button onClick={handleStart} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
@@ -1316,14 +1295,13 @@ case 'tef_credito':
           </button>
         )}
 
-        {/* ✅ ActionModals — renderiza qualquer modal via state unificado */}
         <ActionModals
           activeModal={activeModal}
           onClose={handleCloseModal}
           theme={theme}
           onConfirmPix={handleConfirmPixLocal}
           onCancelPix={handleCancelPixLocal}
-          playText={playText} 
+          playText={playText}
         />
       </div>
     );
@@ -1360,37 +1338,36 @@ case 'tef_credito':
         </div>
 
         {/* Card direito: Status / Microfone */}
-        {/* h-[384px] = mesma altura que o card esquerdo (h-96 = 384px) + padding p-8 */}
         <div className={`rounded-3xl shadow-2xl p-8 border transition-colors h-[448px] flex flex-col overflow-hidden ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
           <div className="flex flex-col items-center flex-1 min-h-0">
 
-            {/* Ícone de microfone */}
+            {/* Botão de microfone push-to-talk */}
             <div className="relative flex items-center justify-center mt-2">
-  <button
-    onMouseDown={handleMicButtonDown}
-    onMouseUp={handleMicButtonUp}
-    onTouchStart={handleMicButtonDown}
-    onTouchEnd={handleMicButtonUp}
-    disabled={!permissionGranted || showStartButton}
-    className={`w-[102px] h-[102px] rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50`}
-    aria-label="Segurar para falar"
-  >
-    <svg className="w-[51px] h-[51px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-    </svg>
-  </button>
+              <button
+                onMouseDown={handleMicButtonDown}
+                onMouseUp={handleMicButtonUp}
+                onTouchStart={handleMicButtonDown}
+                onTouchEnd={handleMicButtonUp}
+                disabled={!permissionGranted || showStartButton || isTranscribing}
+                className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
+                aria-label="Segurar para falar"
+              >
+                <svg className="w-[51px] h-[51px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </button>
             </div>
 
- {!showStartButton && (
-   <p className={`text-xs font-medium mt-1 ${
-     theme === 'dark' ? 'text-white/40' : 'text-gray-400'
-   }`}>
-     segure para falar ou
-   </p>
- )}
-            
+            {!showStartButton && (
+              <p className={`text-xs font-medium mt-1 ${
+                theme === 'dark' ? 'text-white/40' : 'text-gray-400'
+              }`}>
+                {getMicHintText()}
+              </p>
+            )}
+
             {/* Status */}
             <div className="text-center w-full mt-4">
               <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
@@ -1415,11 +1392,11 @@ case 'tef_credito':
               </button>
             )}
 
-            {/* ── Área inferior fixa: cards + TextInput ── */}
+            {/* Área inferior: cards + TextInput */}
             {!showStartButton && (
               <div className="w-full min-w-0 overflow-hidden mt-auto flex flex-col gap-0.5">
 
-                {/* Card aviso de ruído / reprompt (azul) — sempre reserva espaço */}
+                {/* Card aviso de ruído / reprompt */}
                 <div className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 border transition-all duration-300 ${
                   (repromptWarning || noiseWarning)
                     ? theme === 'dark'
@@ -1435,7 +1412,7 @@ case 'tef_credito':
                   </span>
                 </div>
 
-                {/* Card pergunta + resposta (verde) — clicável, abre modal */}
+                {/* Card pergunta + resposta */}
                 <div
                   onClick={() => {
                     if (showLastConversation && (lastTranscript || lastResponse)) {
@@ -1451,38 +1428,35 @@ case 'tef_credito':
                       : 'opacity-0 pointer-events-none border-transparent bg-transparent'
                   }`}
                 >
-                  {/* Linha: pergunta */}
                   {lastTranscript && (
-<div className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium min-w-0 ${
-  theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
-}`}>
-  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-  </svg>
-  <span className="truncate min-w-0 flex-1">{lastTranscript}</span>
-</div>
+                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium min-w-0 ${
+                      theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
+                    }`}>
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                      <span className="truncate min-w-0 flex-1">{lastTranscript}</span>
+                    </div>
                   )}
-                  {/* Divisor interno quando tem os dois */}
                   {lastTranscript && lastResponse && (
                     <div className={`mx-3 h-px ${theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-200/60'}`} />
                   )}
-                  {/* Linha: resposta */}
                   {lastResponse && (
-<div className={`px-3 py-1.5 flex items-center gap-2 text-xs min-w-0 ${
-  theme === 'dark' ? 'text-emerald-400/80' : 'text-emerald-600/80'
-}`}>
-  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-  </svg>
-  <span className="truncate min-w-0 flex-1">{lastResponse}</span>
-</div>
+                    <div className={`px-3 py-1.5 flex items-center gap-2 text-xs min-w-0 ${
+                      theme === 'dark' ? 'text-emerald-400/80' : 'text-emerald-600/80'
+                    }`}>
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                      <span className="truncate min-w-0 flex-1">{lastResponse}</span>
+                    </div>
                   )}
                 </div>
 
-                {/* TextInput por último */}
+                {/* TextInput */}
                 <TextInputChat
                   onSendMessage={handleTextMessage}
-                  isProcessing={isProcessing || isPlayingAudio}
+                  isProcessing={isProcessing || isPlayingAudio || isTranscribing}
                   theme={theme}
                   disabled={false}
                   externalValue={externalInput}
@@ -1491,7 +1465,7 @@ case 'tef_credito':
               </div>
             )}
 
-            {/* ── Modal de conversa completa ── */}
+            {/* Modal de conversa completa */}
             {showConversationModal && (
               <div
                 className="fixed inset-0 z-[200] flex items-center justify-center p-4"
@@ -1504,7 +1478,6 @@ case 'tef_credito':
                   }`}
                   onClick={e => e.stopPropagation()}
                 >
-                  {/* Header */}
                   <div className={`flex items-center justify-between px-5 py-3 border-b ${
                     theme === 'dark' ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-emerald-100 bg-emerald-50'
                   }`}>
@@ -1516,7 +1489,6 @@ case 'tef_credito':
                       className={`text-lg font-bold leading-none ${theme === 'dark' ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
                     >✕</button>
                   </div>
-                  {/* Pergunta */}
                   {lastTranscript && (
                     <div className={`px-5 py-4 ${theme === 'dark' ? 'bg-emerald-500/5' : 'bg-white'}`}>
                       <div className={`flex items-start gap-2 mb-1 text-xs font-semibold uppercase tracking-wider ${
@@ -1532,11 +1504,9 @@ case 'tef_credito':
                       </p>
                     </div>
                   )}
-                  {/* Divisor */}
                   {lastTranscript && lastResponse && (
                     <div className={`mx-5 h-px ${theme === 'dark' ? 'bg-emerald-500/15' : 'bg-emerald-100'}`} />
                   )}
-                  {/* Resposta */}
                   {lastResponse && (
                     <div className={`px-5 py-4 ${theme === 'dark' ? 'bg-emerald-500/5' : 'bg-white'}`}>
                       <div className={`flex items-start gap-2 mb-1 text-xs font-semibold uppercase tracking-wider ${
@@ -1552,7 +1522,6 @@ case 'tef_credito':
                       </p>
                     </div>
                   )}
-                  {/* Footer countdown */}
                   <div className={`px-5 py-2 text-center text-xs border-t ${
                     theme === 'dark' ? 'border-emerald-500/20 text-white/25' : 'border-emerald-100 text-gray-400'
                   }`}>
@@ -1578,14 +1547,13 @@ case 'tef_credito':
         </div>
       )}
 
-      {/* ✅ ActionModals — UMA linha substitui todos os condicionais de modal */}
       <ActionModals
         activeModal={activeModal}
         onClose={handleCloseModal}
         theme={theme}
         onConfirmPix={handleConfirmPixLocal}
         onCancelPix={handleCancelPixLocal}
-        playText={playText} 
+        playText={playText}
       />
     </div>
   );

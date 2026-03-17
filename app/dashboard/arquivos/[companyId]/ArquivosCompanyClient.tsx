@@ -7,6 +7,8 @@ import {
   ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw,
   FileText, Download, CheckCircle, Upload, File, Image,
 } from 'lucide-react';
+import { useAssistant } from '@/contexts/AssistantContext';
+import { useRouter } from 'next/navigation';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -92,31 +94,14 @@ export default function ArquivosCompanyClient({
   const [loadingEnviados,  setLoadingEnviados]  = useState(false);
   const [downloadingId,    setDownloadingId]    = useState<string | null>(null);
   const [deletingId,       setDeletingId]       = useState<string | null>(null);
-  const [companies,        setCompanies]        = useState<Company[]>([]);
-  const [selectedCompany,  setSelectedCompany]  = useState<Company>(initialCompany);
+  const { selectedAssistantId, selectedAssistantName } = useAssistant();
+  const router = useRouter();
 
-  // ── Buscar empresas do usuário ─────────────────────────────────────────────
   useEffect(() => {
-    async function fetchCompanies() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from('companies')
-        .select('id, name, slug')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('name');
-      if (data) setCompanies(data);
+    if (selectedAssistantId && selectedAssistantId !== initialCompany.id) {
+      router.replace(`/dashboard/arquivos/${selectedAssistantId}`);
     }
-    fetchCompanies();
-  }, []); // eslint-disable-line
-
-  // ── Trocar empresa ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (selectedCompany.id !== initialCompany.id) {
-      window.location.href = `/dashboard/arquivos/${selectedCompany.id}`;
-    }
-  }, [selectedCompany.id, initialCompany.id]);
+  }, [selectedAssistantId]);
 
   // ── Consultas: lazy load ────────────────────────────────────────────────────
   useEffect(() => {

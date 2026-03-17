@@ -125,10 +125,10 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">FAQs</h3>
-                <p className="text-sm text-gray-500 dark:text-white/40">{totalFAQs} respostas</p>
+                <p className="text-sm text-gray-500 dark:text-white/40">Perguntas e Respostas</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-white/60">Respostas automáticas</p>
+            <p className="text-sm text-gray-600 dark:text-white/60">Configure respostas automáticas</p>
           </div>
         </Link>
       </div>

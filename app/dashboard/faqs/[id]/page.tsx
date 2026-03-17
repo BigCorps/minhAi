@@ -122,18 +122,6 @@ export default function CompanyFAQsPage() {
           : 'bg-white border-gray-200'
       }`}>
         <div className="flex flex-col gap-6">
-          <Link
-            href="/dashboard/faqs"
-            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors w-fit ${
-              isDark
-                ? 'text-green-400 hover:text-green-300'
-                : 'text-green-600 hover:text-green-700'
-            }`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar para lista
-          </Link>
-
           <div>
             <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {company.name}

@@ -115,7 +115,7 @@ export default function PixQRCodeDisplay({
     </span>
   </div>
 
-  <p style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel, margin: '0 0 8px' }}>
+  <p style={{ fontSize: '10.2px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: textLabel, margin: '0 0 8px' }}>
     INTERMEDIAÇÕES DE PAGAMENTOS BIGCORPS
   </p>
 

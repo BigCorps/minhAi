@@ -478,6 +478,7 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
   if (!permissionGranted || isProcessing || isPlayingAudio) return;
   setIsMicButtonPressed(true);
   await stopGoogleSpeech();
+  await new Promise(resolve => setTimeout(resolve, 300));
   shouldProcessAudio.current = true;
   await startGoogleSpeech();
   setIsListening(true);

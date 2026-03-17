@@ -316,7 +316,7 @@ export default function ArquivosCompanyClient({
                 Arquivos
               </h2>
               <p className="text-gray-600 dark:text-white/60 mt-1">
-                Gerencie arquivos e cupons desta empresa
+                Gerencie arquivos e cupons do assistente {selectedAssistantName} .
               </p>
             </div>
           </div>

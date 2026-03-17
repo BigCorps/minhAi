@@ -591,7 +591,7 @@ async function handleSendSuggestion() {
             </>
           )}
 
-          {editingFunction && companyId && (
+{editingFunction && companyId && (
             <FunctionConfigModal
               isOpen={!!editingFunction}
               onClose={() => setEditingFunction(null)}
@@ -601,56 +601,71 @@ async function handleSendSuggestion() {
             />
           )}
 
-{/* ── Link de sugestões ── */}
-<div className="mt-10 text-center">
-  <p className="text-sm text-gray-500 dark:text-gray-400">
-    Não encontrou a função que precisa?{' '}
-    <button
-      onClick={() => setIsSuggestionOpen(true)}
-      className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
-    >
-      <Lightbulb className="w-4 h-4" />
-      Envie uma sugestão
-    </button>
-  </p>
-</div>
+          {/* ── Link de sugestões ── */}
+          <div className="mt-10 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Não encontrou a função que precisa?{' '}
+              <button
+                onClick={() => setIsSuggestionOpen(true)}
+                className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
+                <Lightbulb className="w-4 h-4" />
+                Envie uma sugestão
+              </button>
+            </p>
+          </div>
 
-{/* ── Modal de sugestões (mesmo padrão da página de ajuda) ── */}
-{isSuggestionOpen && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-    <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-gray-100 dark:border-white/5 max-w-md w-full">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Enviar Sugestão</h2>
-        <button onClick={() => setIsSuggestionOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Adoramos ouvir suas ideias! Descreva sua sugestão de melhoria ou nova funcionalidade.
-      </p>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sua sugestão</label>
-          <textarea
-            placeholder="Ex: Gostaria de uma função que faça X..."
-            rows={6}
-            value={suggestionText}
-            onChange={e => setSuggestionText(e.target.value)}
-            className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition resize-none"
-          />
-        </div>
-        <div className="flex gap-3">
-          <button onClick={() => setIsSuggestionOpen(false)} ...>
-            Cancelar
-          </button>
-          <button onClick={handleSendSuggestion} ...>
-            {isSendingsuggestion ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" />Enviar</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+          {/* ── Modal de sugestões ── */}
+          {isSuggestionOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-gray-100 dark:border-white/5 max-w-md w-full">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Enviar Sugestão</h2>
+                  <button
+                    onClick={() => setIsSuggestionOpen(false)}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  Adoramos ouvir suas ideias! Descreva sua sugestão de melhoria ou nova funcionalidade.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Sua sugestão
+                    </label>
+                    <textarea
+                      placeholder="Ex: Gostaria de uma função que faça X..."
+                      rows={6}
+                      value={suggestionText}
+                      onChange={e => setSuggestionText(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setIsSuggestionOpen(false)}
+                      className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition font-bold"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSendSuggestion}
+                      disabled={isSendingsuggestion}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#b0cb1f] text-white rounded-xl hover:bg-[#8ca214] transition font-bold disabled:opacity-50 shadow-lg shadow-[#b0cb1f]/20"
+                    >
+                      {isSendingsuggestion
+                        ? <Loader2 className="w-5 h-5 animate-spin" />
+                        : <><Send className="w-5 h-5" />Enviar</>
+                      }
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

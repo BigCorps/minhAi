@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { AssistantProvider } from '@/contexts/AssistantContext'; // ← ADD
 import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
 
@@ -9,11 +10,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
@@ -23,13 +20,10 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <AssistantProvider> {/* ← ADD */}
+            {children}
+          </AssistantProvider> {/* ← ADD */}
         </ThemeProvider>
         <RegisterSW />
       </body>

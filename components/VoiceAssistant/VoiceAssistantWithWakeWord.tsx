@@ -98,6 +98,7 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isMicButtonPressed, setIsMicButtonPressed] = useState(false);
 
   // ── States de PIX (mantidos separados pois têm lógica própria) ──
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
@@ -374,6 +375,15 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
 
   const lowerText = text.toLowerCase().trim();
 
+  if (isMicButtonPressed && isFinal && text.trim()) {
+    if (!processingQuestion.current) {
+      processingQuestion.current = true;
+      setLastTranscript(text.trim());
+      processQuestion(text.trim());
+    }
+    return;
+  }
+
   // ✅ 1. INTERCEPTAR STOPS — antes de qualquer filtro
   if (isFinal && detectStopCommand(lowerText)) {
     if (isPlayingAudio || isSpeaking || isProcessing || activeModal !== null) {
@@ -463,6 +473,28 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
       }
     }
   }
+
+  const handleMicButtonDown = async () => {
+  if (!permissionGranted || isProcessing || isPlayingAudio) return;
+  setIsMicButtonPressed(true);
+  await stopGoogleSpeech();
+  shouldProcessAudio.current = true;
+  await startGoogleSpeech();
+  setIsListening(true);
+};
+
+const handleMicButtonUp = async () => {
+  if (!isMicButtonPressed) return;
+  setIsMicButtonPressed(false);
+  setIsListening(false);
+  await stopGoogleSpeech();
+  setTimeout(async () => {
+    if (!isProcessing && isActiveRef.current) {
+      shouldProcessAudio.current = true;
+      await startGoogleSpeech();
+    }
+  }, 1000);
+};
 
   // ── Start assistant ───────────────────────────────────────
   async function handleStart() {
@@ -1197,7 +1229,7 @@ case 'tef_credito':
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
     const primaryWakeWord = companyWakeWord?.split(',')[0].trim();
-    return primaryWakeWord ? `Diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
+    return primaryWakeWord ? `diga: "${primaryWakeWord}" + sua solicitação` : 'Aguarde...';
   };
 
   const getStatusColor = () => {
@@ -1218,7 +1250,13 @@ case 'tef_credito':
           </button>
         )}
 
-        <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96">
+         <div
+   className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 cursor-pointer"
+   onMouseDown={handleMicButtonDown}
+   onMouseUp={handleMicButtonUp}
+   onTouchStart={handleMicButtonDown}
+   onTouchEnd={handleMicButtonUp}
+ >
           <AvatarFace
             isListening={isListening}
             isSpeaking={isPlayingAudio}
@@ -1232,6 +1270,14 @@ case 'tef_credito':
             onCancelPix={handleCancelPixLocal}
           />
         </div>
+
+ {!showStartButton && (
+   <p className={`text-sm font-medium -mt-2 ${
+     theme === 'dark' ? 'text-white/40' : 'text-gray-400'
+   }`}>
+     clique em mim para falar ou
+   </p>
+ )}
 
         <div className="text-center px-4 max-w-md">
   <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 ${
@@ -1313,20 +1359,36 @@ case 'tef_credito':
 
             {/* Ícone de microfone */}
             <div className="relative flex items-center justify-center mt-2">
-              <div className={`w-32 h-32 rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg`}>
-                <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
+  <button
+    onMouseDown={handleMicButtonDown}
+    onMouseUp={handleMicButtonUp}
+    onTouchStart={handleMicButtonDown}
+    onTouchEnd={handleMicButtonUp}
+    disabled={!permissionGranted || showStartButton}
+    className={`w-[102px] h-[102px] rounded-full ${getStatusColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50`}
+    aria-label="Segurar para falar"
+  >
+    <svg className="w-[51px] h-[51px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+    </svg>
+  </button>
             </div>
 
+ {!showStartButton && (
+   <p className={`text-xs font-medium mt-1 ${
+     theme === 'dark' ? 'text-white/40' : 'text-gray-400'
+   }`}>
+     segure para falar ou
+   </p>
+ )}
+            
             {/* Status */}
             <div className="text-center w-full mt-4">
               <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 {getStatusMessage()}
               </p>
               <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
-                No modo voz, utilize a palavra de ativação
+                Utilize a palavra de ativação apenas no modo voz.
               </p>
             </div>
 

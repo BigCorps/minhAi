@@ -99,6 +99,7 @@ export function VoiceAssistantWithWakeWord({
   const [showStartButton, setShowStartButton] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isMicButtonPressed, setIsMicButtonPressed] = useState(false);
+  const [externalInput, setExternalInput] = useState('');
 
   // ── States de PIX (mantidos separados pois têm lógica própria) ──
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
@@ -376,11 +377,9 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
   const lowerText = text.toLowerCase().trim();
 
   if (isMicButtonPressed && isFinal && text.trim()) {
-    if (!processingQuestion.current) {
-      processingQuestion.current = true;
-      setLastTranscript(text.trim());
-      processQuestion(text.trim());
-    }
+    setExternalInput(text.trim());
+    setIsMicButtonPressed(false);
+    setIsListening(false);
     return;
   }
 
@@ -1477,6 +1476,8 @@ case 'tef_credito':
                   isProcessing={isProcessing || isPlayingAudio}
                   theme={theme}
                   disabled={false}
+                  externalValue={externalInput}
+                  onExternalValueConsumed={() => setExternalInput('')}
                 />
               </div>
             )}

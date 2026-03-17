@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { createClient } from '@/lib/supabase-browser';
 import { User, CreditCard, LogOut, LifeBuoy, Users } from 'lucide-react';
+import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
 
 interface DashboardHeaderProps {
   user: any;
@@ -44,6 +45,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
             {/* Right: Theme Toggle + User Menu */}
             <div className="flex items-center space-x-4">
+              <AssistantSelectorHeader />
               <ThemeToggle />
               
               <div className="relative">

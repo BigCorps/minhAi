@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 
 interface Props {
   company: {
@@ -11,10 +10,22 @@ interface Props {
   initialAmount: number | null;
   onSubmit: (value: number) => void;
   loading: boolean;
+  theme: 'dark' | 'light';
 }
 
-export default function PixValueForm({ company, initialAmount, onSubmit, loading }: Props) {
+export default function PixValueForm({ company, initialAmount, onSubmit, loading, theme }: Props) {
   const [value, setValue] = useState(initialAmount ? initialAmount.toFixed(2) : '');
+
+  const isDark = theme === 'dark';
+
+  const bg = isDark ? '#020617' : '#f1f5f9';
+  const cardBg = isDark ? '#0f172a' : '#ffffff';
+  const cardBorder = isDark ? '#334155' : '#e2e8f0';
+  const inputBg = isDark ? '#1e293b' : '#f8fafc';
+  const inputBorder = isDark ? '#475569' : '#cbd5e1';
+  const textPrimary = isDark ? '#ffffff' : '#0f172a';
+  const textSecondary = isDark ? '#94a3b8' : '#64748b';
+  const textMuted = isDark ? '#475569' : '#94a3b8';
 
   function handleSubmit() {
     const parsed = parseFloat(value.replace(',', '.'));
@@ -23,36 +34,49 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div style={{ minHeight: '100vh', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', transition: 'background 0.3s' }}>
+      <div style={{ width: '100%', maxWidth: '384px' }}>
+
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           {company.logo_url ? (
-<img
-  src={company.logo_url}
-  alt={company.name}
-  className="max-h-20 max-w-[180px] w-auto h-auto object-contain mx-auto mb-4"
-  style={{ display: 'block' }}
-/>
+            <img
+              src={company.logo_url}
+              alt={company.name}
+              style={{ maxHeight: '80px', maxWidth: '180px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto 16px' }}
+            />
           ) : (
-            <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
-              <span className="text-white text-2xl font-bold">
+            <div style={{ width: '80px', height: '80px', borderRadius: '16px', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <span style={{ color: '#fff', fontSize: '24px', fontWeight: 700 }}>
                 {company.name.charAt(0).toUpperCase()}
               </span>
             </div>
           )}
-          <h1 className="text-xl font-bold text-white">{company.name}</h1>
-          <p className="text-slate-400 text-sm mt-1">Pagamento via PIX</p>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: textPrimary, margin: '0 0 4px' }}>
+            {company.name}
+          </h1>
+          <p style={{ color: textSecondary, fontSize: '14px', margin: 0 }}>
+            Pagamento via PIX
+          </p>
         </div>
 
         {/* Card */}
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">
+        <div style={{
+          background: cardBg,
+          border: `1px solid ${cardBorder}`,
+          borderRadius: '16px',
+          padding: '24px',
+          boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.08)',
+        }}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: textSecondary, marginBottom: '8px' }}>
               Valor do pagamento
             </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">
+            <div style={{ position: 'relative' }}>
+              <span style={{
+                position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+                color: textSecondary, fontWeight: 700, fontSize: '18px',
+              }}>
                 R$
               </span>
               <input
@@ -63,8 +87,23 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 placeholder="0,00"
-                className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-600 rounded-xl text-white text-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 autoFocus
+                style={{
+                  width: '100%',
+                  paddingLeft: '48px', paddingRight: '16px',
+                  paddingTop: '16px', paddingBottom: '16px',
+                  background: inputBg,
+                  border: `1px solid ${inputBorder}`,
+                  borderRadius: '12px',
+                  color: textPrimary,
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = inputBorder}
               />
             </div>
           </div>
@@ -72,20 +111,45 @@ export default function PixValueForm({ company, initialAmount, onSubmit, loading
           <button
             onClick={handleSubmit}
             disabled={loading || !value || parseFloat(value) <= 0}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: '#2563eb',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '16px',
+              cursor: loading || !value || parseFloat(value) <= 0 ? 'not-allowed' : 'pointer',
+              opacity: loading || !value || parseFloat(value) <= 0 ? 0.5 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#1d4ed8'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#2563eb'; }}
           >
             {loading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Gerando PIX...</>
+              <>
+                <svg style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Gerando PIX...
+              </>
             ) : (
               'Gerar QR Code PIX'
             )}
           </button>
         </div>
 
-        <p className="text-center text-xs text-slate-600 mt-6">
+        <p style={{ textAlign: 'center', fontSize: '12px', color: textMuted, marginTop: '24px' }}>
           Pagamento processado com segurança via Banco Inter e BigCorps
         </p>
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -319,23 +319,6 @@ export default function ArquivosCompanyClient({
                 Gerencie arquivos e cupons desta empresa
               </p>
             </div>
-
-            {companies.length > 1 && (
-              <div className="shrink-0">
-                <select
-                  value={selectedCompany.id}
-                  onChange={e => {
-                    const company = companies.find(c => c.id === e.target.value);
-                    if (company) setSelectedCompany(company);
-                  }}
-                  className="px-4 py-2 rounded-lg border bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-white dark:border-white/10 focus:ring-2 focus:ring-blue-500 text-sm"
-                >
-                  {companies.map(company => (
-                    <option key={company.id} value={company.id}>{company.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
         </div>
 

@@ -98,7 +98,7 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showStartButton, setShowStartButton] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [isMicButtonPressed, setIsMicButtonPressed] = useState(false);
+  const isMicButtonPressedRef = useRef(false);
   const [externalInput, setExternalInput] = useState('');
 
   // ── States de PIX (mantidos separados pois têm lógica própria) ──
@@ -376,9 +376,9 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
 
   const lowerText = text.toLowerCase().trim();
 
-  if (isMicButtonPressed && isFinal && text.trim()) {
+  if (isMicButtonPressedRef.current && isFinal && text.trim()) {
     setExternalInput(text.trim());
-    setIsMicButtonPressed(false);
+    isMicButtonPressedRef.current = false;
     setIsListening(false);
     return;
   }
@@ -475,7 +475,7 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
 
   const handleMicButtonDown = async () => {
   if (!permissionGranted || isProcessing || isPlayingAudio) return;
-  setIsMicButtonPressed(true);
+  isMicButtonPressedRef.current = true;
   await stopGoogleSpeech();
   await new Promise(resolve => setTimeout(resolve, 300));
   shouldProcessAudio.current = true;
@@ -484,8 +484,8 @@ async function handleGoogleTranscript(text: string, isFinal: boolean) {
 };
 
 const handleMicButtonUp = async () => {
-  if (!isMicButtonPressed) return;
-  setIsMicButtonPressed(false);
+  if (!isMicButtonPressedRef.current) return;
+  isMicButtonPressedRef.current = false;
   setIsListening(false);
   await stopGoogleSpeech();
   setTimeout(async () => {

@@ -9,7 +9,6 @@ export interface VoiceAssistantProps {
   wakeWord: string;
   greetingMessage: string;
   theme?: 'dark' | 'light';
-  isMaximized?: boolean;
   onAssistantStart?: () => void;
   onExitMaximized?: () => void;  // ← adicionar aqui
   hideDisabledFunctions?: boolean;

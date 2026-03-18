@@ -55,8 +55,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Welcome */}
-<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+{/* Welcome */}
+<div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
   <div>
     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
       Olá, {displayName}!
@@ -64,8 +64,14 @@ export default async function DashboardPage() {
     <p className="text-lg text-gray-600 dark:text-white/60">
       Bem-vindo ao seu painel de controle
     </p>
-    {/* ✅ Botão WebApp — visível só para plano Consulting */}
-    <WebAppButton userId={user.id} />
+  </div>
+
+  {/* ✅ Botão alinhado à direita/topo com cor Verde Limão */}
+  <div className="flex-shrink-0">
+    <WebAppButton 
+      userId={user.id} 
+      className="bg-[#ADFF2F] hover:bg-[#96e028] text-black border-none" 
+    />
   </div>
 </div>
 

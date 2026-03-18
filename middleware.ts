@@ -2,14 +2,41 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Rotas que exigem has_active_plan = true
 const PLAN_PROTECTED_ROUTES = [
-  '/dashboard/agenda',       // Serviços Google
-  '/dashboard/atendimentos',         // Serviços Meta
-  '/dashboard/producao',     // Linha de Produção
+  '/dashboard/agenda',
+  '/dashboard/atendimentos',
+  '/dashboard/producao',
 ];
 
+// Subdomínios reservados — nunca tratar como slug de cliente
+const RESERVED_SUBDOMAINS = ['www', 'app', 'api', 'admin', 'dashboard', 'mail', 'smtp'];
+
 export async function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || '';
+  const pathname = request.nextUrl.pathname;
+
+  // ── 1. DETECÇÃO DE SUBDOMÍNIO DE CLIENTE ──────────────────────────────────
+  // Suporta *.minhai.com.br (produção), *.minhai.app e *.localhost (dev)
+  const isMinhaiBr  = hostname.endsWith('.minhai.com.br') && !hostname.startsWith('www.');
+  const isMinhaiApp = hostname.endsWith('.minhai.app') && !hostname.startsWith('www.');
+  const isDev       = hostname.includes('.localhost');
+
+  if (isMinhaiBr || isMinhaiApp || isDev) {
+    const slug = isMinhaiBr
+      ? hostname.replace('.minhai.com.br', '')
+      : isMinhaiApp
+      ? hostname.replace('.minhai.app', '')
+      : hostname.split('.')[0];
+
+    if (slug && !RESERVED_SUBDOMAINS.includes(slug)) {
+      // Reescreve internamente para /ia/[slug] sem mudar a URL visível
+      const url = request.nextUrl.clone();
+      url.pathname = `/ia/${slug}${pathname === '/' ? '' : pathname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  // ── 2. FLUXO NORMAL (www.minhai.app / www.minhai.com.br / eai.app.br) ─────
   let response = NextResponse.next({
     request: { headers: request.headers },
   });
@@ -37,25 +64,23 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
 
   const publicRoutes = ['/', '/login', '/auth/callback', '/auth/confirm', '/termos', '/aviso'];
   const isProtectedRoute = pathname.startsWith('/dashboard');
-  const isPublicRoute = publicRoutes.includes(pathname);
 
-  // 1. Sem login → redireciona para /login
+  // 3. Sem login → redireciona para /login
   if (isProtectedRoute && !user) {
     const redirectUrl = new URL('/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 2. Logado tentando acessar /login → redireciona para /dashboard
+  // 4. Logado tentando acessar /login → redireciona para /dashboard
   if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 3. Rotas que exigem plano ativo
+  // 5. Rotas que exigem plano ativo
   const requiresPlan = PLAN_PROTECTED_ROUTES.some(route =>
     pathname.startsWith(route)
   );
@@ -73,7 +98,6 @@ export async function middleware(request: NextRequest) {
       new Date(credits.plan_expires_at) > new Date();
 
     if (!hasActivePlan) {
-      // Redireciona para créditos com aviso de que precisa de um plano
       const redirectUrl = new URL('/dashboard/credits', request.url);
       redirectUrl.searchParams.set('requires_plan', '1');
       return NextResponse.redirect(redirectUrl);

@@ -38,13 +38,9 @@ export default function ConsultarCnpjModal({
   const [cnpj, setCnpj] = useState(cnpjPrefill || '');
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<ResultadoFormatado[]>([]);
-
-  // ── novo: dados para QR / download / email ──────────────────────────────
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [downloadToken, setDownloadToken] = useState<string>('');
-  const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]);
 
   const { isConnected: googleConnected } = useGoogleConnected(companyId);
 
@@ -88,57 +84,24 @@ export default function ConsultarCnpjModal({
 
     try {
       const supabase = createClient();
-      const { data: userData } = await supabase.auth.getUser();
 
-      // 1. Executar consulta
-      const { data: execData, error: execError } = await supabase.functions.invoke('executar-consulta-eai', {
-        body: {
-          consulta: { id: 'cnpj_basico', nome: 'Dados CNPJ', custoOriginal: 2.00 },
-          dadosEntrada: { cnpj: cnpjLimpo },
-          userId: userData.user?.id,
-          companyId,
-        },
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: companyId, action: 'dados_cnpj', cnpj: cnpjLimpo },
       });
 
-      if (execError) throw execError;
+      if (error) throw new Error(error.message);
+      if (!res.success) throw new Error(res.error ?? 'Falha na consulta');
 
-      if (execData.status === 'SALDO_INSUFICIENTE') {
-        setError('Saldo insuficiente. Recarregue seus créditos.');
-        setStep('input');
-        playText?.('Saldo insuficiente. Recarregue seus créditos.').catch(() => {});
-        return;
-      }
-
-      if (execData.status === 'PENDENTE_PIX') {
-        setError('Esta consulta requer pagamento via PIX. Funcionalidade em desenvolvimento.');
-        setStep('input');
-        playText?.('Esta consulta requer pagamento via PIX. Funcionalidade em desenvolvimento.').catch(() => {});
-        return;
-      }
-
-      // 2. Confirmar e executar
-      const { data: confirmData, error: confirmError } = await supabase.functions.invoke('confirmar-e-executar-consulta-eai', {
-        body: { historicoId: execData.historicoId },
-      });
-
-      if (confirmError) throw confirmError;
-
-      const fileName = `consulta-cnpj-${cnpjLimpo}.pdf`;
-      setResultado(confirmData.resultado || []);
-      setResultadoFormatado(confirmData.resultado_formatado || confirmData.resultado || []);
-      setDownloadToken(confirmData.download_token || '');
-
-      // Gerar PDF no frontend
-      const pdfDataUri = generateConsultaPDF('Consultar CNPJ', confirmData.resultado_formatado || confirmData.resultado || []);
-      const name = `cnpj_${Date.now()}.pdf`;
-      setPdfFileName(name);
-      setPdfBase64(pdfDataUri);
+      const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
+        (r: any) => Array.isArray(r) ? { label: r[0], value: r[1] } : r
+      );
+      setResultado(rows);
+      setPdfFileName(`consulta-cnpj-${cnpjLimpo}.pdf`);
+      setPdfBase64(generateConsultaPDF('Dados CNPJ', res.resultado_formatado || []));
 
       setStep('result');
 
-      const razaoSocial = confirmData.resultado?.find(
-        (r: ResultadoFormatado) => r.label === 'Razão Social'
-      )?.value;
+      const razaoSocial = rows.find((r) => r.label === 'Razão Social')?.value;
       playText?.(
         razaoSocial
           ? `Consulta realizada com sucesso. Razão social: ${razaoSocial}`
@@ -157,13 +120,11 @@ export default function ConsultarCnpjModal({
 
   const handleDownloadPDF = () => {
     if (!pdfBase64) return;
-    
     try {
       const a = document.createElement('a');
       a.href = pdfBase64;
       a.download = pdfFileName || `consulta_${Date.now()}.pdf`;
       a.click();
-      
       playText?.('PDF baixado.').catch(() => {});
     } catch (error) {
       console.error('Erro ao baixar PDF:', error);
@@ -178,7 +139,6 @@ export default function ConsultarCnpjModal({
     setIsSendingEmail(true);
     try {
       const supabase = createClient();
-      // Monta corpo legível do resultado
       const bodyText = resultado
         .map(r => (r.label === '---' ? `\n${r.value}` : `${r.label}: ${r.value}`))
         .join('\n');
@@ -226,7 +186,6 @@ export default function ConsultarCnpjModal({
 
   // ── render ───────────────────────────────────────────────────────────────
 
-  // No step result, modal mais largo para layout 2 colunas (igual ContratoEmTextoDisplay)
   const modalMaxWidth = step === 'result' ? 'max-w-2xl sm:max-w-4xl' : 'max-w-2xl';
 
   return createPortal(
@@ -312,10 +271,8 @@ export default function ConsultarCnpjModal({
                 <span className={`font-semibold ${textPrimary}`}>Consulta realizada com sucesso</span>
               </div>
 
-              {/* Layout responsivo: coluna única mobile / duas colunas desktop */}
               <div className="flex flex-col sm:flex-row gap-4">
 
-                {/* Coluna esquerda — tabela de resultados + botões */}
                 <div className="flex flex-col gap-3 flex-1 min-w-0">
 
                   {/* Tabela de resultados */}
@@ -377,7 +334,7 @@ export default function ConsultarCnpjModal({
                   </button>
                 </div>
 
-                {/* Coluna direita — QR de download (apenas desktop) */}
+                {/* QR desktop */}
                 {pdfBase64 && (
                   <div className="hidden sm:flex flex-col shrink-0 w-56">
                     <ResultDownloadQR
@@ -392,7 +349,7 @@ export default function ConsultarCnpjModal({
                 )}
               </div>
 
-              {/* QR mobile — apenas em telas pequenas, abaixo dos botões */}
+              {/* QR mobile */}
               {pdfBase64 && (
                 <div className="sm:hidden">
                   <ResultDownloadQR

@@ -1,3 +1,4 @@
+// app/ia/[slug]/page.tsx
 import { createClient } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -10,7 +11,7 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Verifica créditos do dono da empresa (lógica existente — sem alteração)
+// Verifica créditos do dono da empresa
 async function checkUserCredits(companyId: string) {
   const supabase = createClient();
 
@@ -47,11 +48,10 @@ async function checkUserCredits(companyId: string) {
   return credits?.available_credits || 0;
 }
 
-// ✅ NOVO: verifica se o webapp Consulting está ativo para este usuário
+// Verifica se o webapp está elegível (Consulting ativo ou Trial)
 async function checkWebappEligibility(companyId: string): Promise<boolean> {
   const supabase = createClient();
 
-  // Buscar user_id do dono
   const { data: adminData } = await supabase
     .from('company_admins')
     .select('user_id')
@@ -72,17 +72,9 @@ async function checkWebappEligibility(companyId: string): Promise<boolean> {
 
   if (!userId) return false;
 
-  // Verificar plano ativo com has_consultoria = true
   const { data: credits } = await supabase
     .from('user_credits')
-    .select(`
-      has_active_plan,
-      plan_expires_at,
-      active_plan_id,
-      credits_packages!active_plan_id (
-        has_consultoria
-      )
-    `)
+    .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
     .eq('user_id', userId)
     .single();
 
@@ -90,18 +82,20 @@ async function checkWebappEligibility(companyId: string): Promise<boolean> {
   if (!credits?.plan_expires_at) return false;
   if (new Date(credits.plan_expires_at) <= new Date()) return false;
 
-  const pkg = credits.credits_packages as any;
-  return pkg?.has_consultoria === true;
-}
+  // Trial tem acesso ao webapp
+  const isTrial = credits.active_plan_name === 'Trial' && !credits.active_plan_id;
+  if (isTrial) return true;
 
-// ✅ NOVO: detecta se o acesso veio de um subdomínio de cliente
-function isSubdomainAccess(): boolean {
-  const headersList = headers();
-  const host = headersList.get('host') || '';
-  // Subdomínio = tem ponto E não é www.minhai.app nem localhost puro
-  const isMinhai = host.endsWith('.minhai.app') && !host.startsWith('www.');
-  const isDevSub  = host.includes('.localhost');
-  return isMinhai || isDevSub;
+  // Não é trial — verificar se o pacote tem has_consultoria
+  if (!credits.active_plan_id) return false;
+
+  const { data: pkg } = await supabase
+    .from('credits_packages')
+    .select('has_consultoria')
+    .eq('id', credits.active_plan_id)
+    .single();
+
+  return pkg?.has_consultoria === true;
 }
 
 export default async function AssistentePublicoPage({ params }: PageProps) {
@@ -116,16 +110,20 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
 
   if (error || !company) notFound();
 
-  const viaSubdomain = isSubdomainAccess();
+  // ✅ Fix Next.js 15 — headers() é assíncrono
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const isMinhaiBr  = host.endsWith('.minhai.com.br') && !host.startsWith('www.');
+  const isMinhaiApp = host.endsWith('.minhai.app') && !host.startsWith('www.');
+  const isDevSub    = host.includes('.localhost');
+  const viaSubdomain = isMinhaiBr || isMinhaiApp || isDevSub;
 
   // ── Verificação de webapp (só se vier pelo subdomínio) ───────────────────
   if (viaSubdomain) {
-    // webapp_enabled precisa estar ligado na empresa
     if (!company.webapp_enabled) {
       return <WebappInativo company={company} motivo="nao_configurado" />;
     }
 
-    // Plano Consulting precisa estar ativo
     const webappOk = await checkWebappEligibility(company.id);
     if (!webappOk) {
       return <WebappInativo company={company} motivo="plano_expirado" />;
@@ -185,7 +183,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
   );
 }
 
-// ✅ NOVO: componente de webapp inativo (plano expirado ou não configurado)
+// Componente de webapp inativo
 function WebappInativo({
   company,
   motivo,
@@ -200,8 +198,6 @@ function WebappInativo({
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
       <div style={{ maxWidth: 400, width: '100%', padding: '2rem', textAlign: 'center' }}>
-
-        {/* Logo da empresa ou ícone padrão */}
         <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
           {company.logo_url ? (
             <img
@@ -217,15 +213,12 @@ function WebappInativo({
             </div>
           )}
         </div>
-
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginBottom: '0.75rem' }}>
           {company.name}
         </h1>
-
         <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '2rem', fontSize: '0.9rem' }}>
           {mensagem}
         </p>
-
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem' }}>
           <a href="https://minhai.app" style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}>
             minhAi — Uma IA para chamar de sua!
@@ -236,14 +229,14 @@ function WebappInativo({
   );
 }
 
-// Metadata dinâmica com branding da empresa
+// Metadata dinâmica — themeColor movido para viewport (fix Next.js 15)
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const supabase = createClient();
 
   const { data: company } = await supabase
     .from('companies')
-    .select('name, logo_url, webapp_theme_color')
+    .select('name, logo_url')
     .eq('slug', slug)
     .single();
 
@@ -254,16 +247,29 @@ export async function generateMetadata({ params }: PageProps) {
   return {
     title: `${company.name} - minhAi`,
     description: `Converse com o assistente IA da ${company.name}`,
-    // ✅ Ícone da empresa como favicon (via Vercel Image Optimization)
     icons: company.logo_url
       ? { icon: company.logo_url, apple: company.logo_url }
       : undefined,
-    // ✅ Theme color para barra do navegador mobile
-    themeColor: company.webapp_theme_color || '#f97316',
     openGraph: {
       title: `${company.name} - Assistente IA`,
       description: `Converse com o assistente IA da ${company.name}`,
       images: company.logo_url ? [{ url: company.logo_url }] : [],
     },
+  };
+}
+
+// ✅ Fix Next.js 15 — themeColor deve estar em generateViewport, não generateMetadata
+export async function generateViewport({ params }: PageProps) {
+  const { slug } = await params;
+  const supabase = createClient();
+
+  const { data: company } = await supabase
+    .from('companies')
+    .select('webapp_theme_color')
+    .eq('slug', slug)
+    .single();
+
+  return {
+    themeColor: company?.webapp_theme_color || '#f97316',
   };
 }

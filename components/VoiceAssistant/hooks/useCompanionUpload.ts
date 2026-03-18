@@ -104,7 +104,8 @@ export function useCompanionUpload({
       if (dbError || !data) throw new Error('Erro ao gerar token de upload.');
 
       const newToken = data.token as string;
-      const url = `${window.location.origin}/arquivos?token=${newToken}`;
+      const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.minhai.app';
+      const url = `${BASE_URL}/arquivos?token=${newToken}`;
 
       // 2. Gerar QR Code
       const qr = await QRCode.toDataURL(url, {

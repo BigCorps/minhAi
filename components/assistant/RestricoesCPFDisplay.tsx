@@ -99,11 +99,24 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
       setResultData(res.result);
       setSpeechText(res.speech_text);
 
-      // ✅ Gerar PDF no frontend com resultado_formatado da edge
-      const pdfDataUri = generateConsultaPDF('Restrições CPF', res.resultado_formatado);
+      // ✅ Usar PDF da API (Quod) se disponível, senão gerar localmente
       const name = `restricoes_cpf_${cleanCpf}_${Date.now()}.pdf`;
       setFileName(name);
-      setFileBase64(pdfDataUri);
+
+      const pdfUrl = res.result?.pdf_url;
+      if (pdfUrl) {
+        try {
+          const pdfRes = await fetch(pdfUrl);
+          const arrayBuffer = await pdfRes.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+          setFileBase64(`data:application/pdf;base64,${base64}`);
+        } catch {
+          // fallback para PDF gerado localmente
+          setFileBase64(generateConsultaPDF('Restrições CPF', res.resultado_formatado));
+        }
+      } else {
+        setFileBase64(generateConsultaPDF('Restrições CPF', res.resultado_formatado));
+      }
 
       setStage('result');
       playText(res.speech_text).catch(() => {});

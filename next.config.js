@@ -3,11 +3,19 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Otimizações
   experimental: {
     optimizePackageImports: ['@ricky0123/vad-web'],
   },
-  // Webpack necessário para .onnx e .wasm
+  // Permitir imagens do Supabase Storage para logos
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -28,18 +36,31 @@ const nextConfig = {
     }
     return config;
   },
-  // Redirecionar domínio sem www para www
   async redirects() {
     return [
+      // minhai.app sem www → www.minhai.app
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'minhai.app' }],
         destination: 'https://www.minhai.app/:path*',
         permanent: true,
       },
+      // minhai.com.br → www.minhai.app
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'minhai.com.br' }],
+        destination: 'https://www.minhai.app/:path*',
+        permanent: true,
+      },
+      // www.minhai.com.br → www.minhai.app
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.minhai.com.br' }],
+        destination: 'https://www.minhai.app/:path*',
+        permanent: true,
+      },
     ];
   },
-  // Headers para assets
   async headers() {
     return [
       {
@@ -67,7 +88,6 @@ const nextConfig = {
       },
     ];
   },
-  // Transpile packages
   transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
 };
 module.exports = nextConfig;

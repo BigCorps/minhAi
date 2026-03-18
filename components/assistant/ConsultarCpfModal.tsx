@@ -84,59 +84,26 @@ export default function ConsultarCpfModal({
 
     try {
       const supabase = createClient();
-      const { data: userData } = await supabase.auth.getUser();
 
-      // 1. Executar consulta
-      const { data: execData, error: execError } = await supabase.functions.invoke('executar-consulta-eai', {
-        body: {
-          consulta: { id: 'cpf_basico', nome: 'Dados CPF', custoOriginal: 2.00 },
-          dadosEntrada: { cpf: cpfLimpo },
-          userId: userData.user?.id,
-          companyId,
-        },
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: companyId, action: 'dados_cpf', cpf: cpfLimpo },
       });
 
-      if (execError) throw execError;
+      if (error) throw new Error(error.message);
+      if (!res.success) throw new Error(res.error ?? 'Falha na consulta');
 
-      if (execData.status === 'SALDO_INSUFICIENTE') {
-        setError('Saldo insuficiente. Recarregue seus créditos.');
-        setStep('input');
-        playText?.('Saldo insuficiente. Recarregue seus créditos.').catch(() => {});
-        return;
-      }
-
-      if (execData.status === 'PENDENTE_PIX') {
-        setError('Esta consulta requer pagamento via PIX. Funcionalidade em desenvolvimento.');
-        setStep('input');
-        playText?.('Esta consulta requer pagamento via PIX. Funcionalidade em desenvolvimento.').catch(() => {});
-        return;
-      }
-
-      // 2. Confirmar e executar
-      const { data: confirmData, error: confirmError } = await supabase.functions.invoke('confirmar-e-executar-consulta-eai', {
-        body: { historicoId: execData.historicoId },
-      });
-
-      if (confirmError) throw confirmError;
-
-      const fileName = `consulta-cpf-${cpfLimpo}.pdf`;
-      const rows: ResultadoFormatado[] = (confirmData.resultado ?? []).map(
+      const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
         (r: any) => Array.isArray(r) ? { label: r[0], value: r[1] } : r
       );
       setResultado(rows);
-      setPdfFileName(fileName);
-
-      // ✅ Gerar PDF no frontend com resultado_formatado da edge
-      const pdfDataUri = generateConsultaPDF('Dados CPF', confirmData.resultado_formatado || []);
-      setPdfBase64(pdfDataUri);
+      setPdfFileName(`consulta-cpf-${cpfLimpo}.pdf`);
+      setPdfBase64(generateConsultaPDF('Dados CPF', res.resultado_formatado || []));
 
       setStep('result');
 
       const nome = rows.find((r) => r.label === 'Nome')?.value;
       playText?.(
-        nome
-          ? `Consulta realizada com sucesso. Nome: ${nome}`
-          : 'Consulta realizada com sucesso.'
+        nome ? `Consulta realizada com sucesso. Nome: ${nome}` : 'Consulta realizada com sucesso.'
       ).catch(() => {});
 
     } catch (err: any) {

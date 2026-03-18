@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import AssistenteClient from './assistente-client';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export const revalidate = 0;
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ interface PageProps {
 
 // Verifica acesso: plano ativo OU créditos disponíveis
 async function checkUserAccess(companyId: string): Promise<boolean> {
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data: adminData } = await supabase
     .from('company_admins')
@@ -61,7 +62,7 @@ async function checkUserAccess(companyId: string): Promise<boolean> {
 
 // Verifica se o webapp está elegível (Consulting ativo ou Trial)
 async function checkWebappEligibility(companyId: string): Promise<boolean> {
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data: adminData } = await supabase
     .from('company_admins')
@@ -111,7 +112,7 @@ async function checkWebappEligibility(companyId: string): Promise<boolean> {
 
 export default async function AssistentePublicoPage({ params }: PageProps) {
   const { slug } = await params;
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data: company, error } = await supabase
     .from('companies')
@@ -241,7 +242,7 @@ function WebappInativo({
 // Metadata dinâmica — themeColor movido para viewport (fix Next.js 15)
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data: company } = await supabase
     .from('companies')
@@ -270,7 +271,7 @@ export async function generateMetadata({ params }: PageProps) {
 // ✅ Fix Next.js 15 — themeColor deve estar em generateViewport, não generateMetadata
 export async function generateViewport({ params }: PageProps) {
   const { slug } = await params;
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const { data: company } = await supabase
     .from('companies')

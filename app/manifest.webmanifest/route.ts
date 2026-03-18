@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
     .single();
 
   return NextResponse.json({
-    name: company?.name || 'minhAi',
-    short_name: company?.name || 'minhAi',
+    name: company?.name ? `minhAi - ${company.name}` : 'minhAi',
+    short_name: 'minhAi' || company?.name,
     start_url: '/',
     display: 'standalone',
     background_color: '#0f172a',

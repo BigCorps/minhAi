@@ -100,24 +100,13 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
       setResultData(res.result);
       setSpeechText(res.speech_text);
 
-      // ✅ Usar PDF da API (Quod) se disponível, senão gerar localmente
+      // ✅ PDF já vem como data URI da edge (buscado server-side, sem CORS)
       const name = `restricoes_cnpj_${cleanCnpj}_${Date.now()}.pdf`;
       setFileName(name);
-
-      const pdfUrl = res.result?.pdf_url;
-      if (pdfUrl) {
-        try {
-          const pdfRes = await fetch(pdfUrl);
-          const arrayBuffer = await pdfRes.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-          setFileBase64(`data:application/pdf;base64,${base64}`);
-        } catch {
-          // fallback para PDF gerado localmente
-          setFileBase64(generateConsultaPDF('Restrições CNPJ', res.resultado_formatado));
-        }
-      } else {
-        setFileBase64(generateConsultaPDF('Restrições CNPJ', res.resultado_formatado));
-      }
+      setFileBase64(
+        res.result?.pdf_base64 ||
+        generateConsultaPDF('Restrições CNPJ', res.resultado_formatado)
+      );
 
       setStage('result');
       playText(res.speech_text).catch(() => {});

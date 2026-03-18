@@ -11,8 +11,8 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Verifica créditos do dono da empresa
-async function checkUserCredits(companyId: string) {
+// Substituir checkUserCredits por checkUserAccess
+async function checkUserAccess(companyId: string): Promise<boolean> {
   const supabase = createClient();
 
   const { data: adminData } = await supabase
@@ -25,7 +25,6 @@ async function checkUserCredits(companyId: string) {
   let userId = adminData?.user_id;
 
   if (!userId) {
-    console.log('⚠️ Empresa sem admin em company_admins — tentando fallback via companies.user_id');
     const { data: companyData } = await supabase
       .from('companies')
       .select('user_id')
@@ -34,18 +33,26 @@ async function checkUserCredits(companyId: string) {
     userId = companyData?.user_id;
   }
 
-  if (!userId) {
-    console.log('⚠️ Empresa sem proprietário definido — companyId:', companyId);
-    return 0;
-  }
+  if (!userId) return false;
 
   const { data: credits } = await supabase
     .from('user_credits')
-    .select('available_credits')
+    .select('available_credits, has_active_plan, plan_expires_at')
     .eq('user_id', userId)
     .single();
 
-  return credits?.available_credits || 0;
+  if (!credits) return false;
+
+  // ✅ Plano ativo dentro da validade → acesso liberado independente de créditos
+  const hasActivePlan =
+    credits.has_active_plan === true &&
+    credits.plan_expires_at != null &&
+    new Date(credits.plan_expires_at) > new Date();
+
+  if (hasActivePlan) return true;
+
+  // Sem plano → verificar créditos disponíveis
+  return (credits.available_credits || 0) > 0;
 }
 
 // Verifica se o webapp está elegível (Consulting ativo ou Trial)

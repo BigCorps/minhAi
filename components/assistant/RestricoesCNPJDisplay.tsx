@@ -118,8 +118,7 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
 
   const handleCopy = useCallback(async () => {
     if (!resultData) return;
-    const restrictionsList = resultData.restricoes?.map((r: any) => `${r.tipo}: ${r.descricao}`).join('\n') || 'Nenhuma';
-    const text = `CNPJ: ${resultData.cnpj}\nRazão Social: ${resultData.razao_social}\nStatus: ${resultData.status}\n\nRestrições:\n${restrictionsList}`;
+    const text = `CNPJ: ${resultData.cnpj}\nStatus: ${resultData.status}\nTotal de restrições: ${resultData.total_restricoes}`;
     await navigator.clipboard.writeText(text);
     setCopied(true);
     playText('Dados copiados.').catch(() => {});
@@ -151,10 +150,9 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
     if (!resultData) return;
     setIsSendingEmail(true);
     try {
-      const restrictionsList = resultData.restricoes?.map((r: any) => `${r.tipo}: ${r.descricao} (${r.data})`).join('\n') || 'Nenhuma restrição encontrada';
-      const emailBody = `Consulta de Restrições CNPJ: ${resultData.cnpj}\n\nRazão Social: ${resultData.razao_social}\nStatus: ${resultData.status}\n\nRestrições:\n${restrictionsList}\n\nTotal: ${resultData.total_restricoes} pendência(s)`;
+      const emailBody = `Consulta de Restrições CNPJ: ${resultData.cnpj}\n\nStatus: ${resultData.status}\nTotal de pendências: ${resultData.total_restricoes}`;
       const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: `Restrições CNPJ: ${resultData.razao_social}`, body: emailBody },
+        body: { company_id: data.companyId, subject: `Restrições CNPJ: ${resultData.cnpj}`, body: emailBody },
       });
       if (error) throw error;
       playText('Consulta enviada por email.').catch(() => {});
@@ -304,12 +302,12 @@ export default function RestricoesCNPJDisplay({ data, onClose, theme = 'dark', p
                       <Building2 className="w-5 h-5 text-red-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className={`font-bold text-base mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {resultData.razao_social}
-                      </h3>
-                      <p className={`text-sm mb-2 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                        CNPJ: {resultData.cnpj}
+                      <p className={`text-sm font-medium mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                        CNPJ Consultado
                       </p>
+                      <h3 className={`font-bold text-base mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {resultData.cnpj}
+                      </h3>
                       <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                         resultData.status === 'LIMPO' 
                           ? isDark ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-700'

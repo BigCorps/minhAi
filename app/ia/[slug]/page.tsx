@@ -138,10 +138,9 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
   }
 
   // ── Verificação de créditos (fluxo normal existente) ────────────────────
-  const remainingCredits = await checkUserCredits(company.id);
-  const hasCredits = remainingCredits > 0;
-
-  console.log('🔍 Verificação:', { companyId: company.id, remainingCredits, viaSubdomain });
+const hasAccess = await checkUserAccess(company.id);
+console.log('🔍 Verificação:', { companyId: company.id, hasAccess, viaSubdomain });
+if (!hasAccess) {
 
   if (!hasCredits) {
     return (

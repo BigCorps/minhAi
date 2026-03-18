@@ -152,14 +152,6 @@ if (!isTrial) {
 
 // Se chegou aqui: é trial OU tem plano Consulting ativo ✅
 
-      const { data: pkg } = await supabase
-        .from('credits_packages')
-        .select('has_consultoria')
-        .eq('id', credits.active_plan_id)
-        .single();
-
-      if (!pkg?.has_consultoria) { setMotivo('ineligible'); return; }
-
       const { data: comps } = await supabase
         .from('companies')
         .select('id, name, slug, logo_url, webapp_enabled, webapp_theme_color')

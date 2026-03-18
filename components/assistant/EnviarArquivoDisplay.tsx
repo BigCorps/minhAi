@@ -136,7 +136,8 @@ export default function EnviarArquivoDisplay({ data, onClose, theme = 'dark', pl
       if (dbError || !row) throw new Error('Erro ao gerar QR Code.');
 
       const newToken = row.token as string;
-      const url = `${window.location.origin}/arquivos?token=${newToken}`;
+      const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.minhai.app';
+      const url = `${BASE_URL}/arquivos?token=${newToken}`;
 
       const QRCode = (await import('qrcode')).default;
       const qr = await QRCode.toDataURL(url, {

@@ -79,7 +79,6 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
   const [speechText, setSpeechText] = useState<string>('');
   const [fileBase64, setFileBase64] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
-  const [downloadToken, setDownloadToken] = useState<string>('');
   const [resultadoFormatado, setResultadoFormatado] = useState<[string, string][]>([]);
 
   const { isConnected: googleConnected } = useGoogleConnected(data.companyId);
@@ -113,7 +112,6 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
       setResultData(res.result);
       setSpeechText(res.speech_text);
       setResultadoFormatado(res.resultado_formatado);
-      setDownloadToken(res.download_token);
 
       // Gerar PDF no frontend
       const pdfDataUri = generateConsultaPDF('Cotação de Câmbio', res.resultado_formatado);
@@ -162,7 +160,6 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
     setSpeechText('');
     setFileBase64('');
     setFileName('');
-    setDownloadToken('');
     setResultadoFormatado([]);
     playText(OPENING_TEXT).catch(() => {});
   }, [playText]);

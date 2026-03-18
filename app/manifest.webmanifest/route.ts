@@ -47,21 +47,21 @@ export async function GET(request: NextRequest) {
     display: 'standalone',
     background_color: '#0f172a',
     theme_color: company?.webapp_theme_color || '#f97316',
-    icons: company?.webapp_logo_url
-      ? [
-          {
-            src: `/_next/image?url=${encodeURIComponent(company.webapp_logo_url)}&w=192&q=90`,
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-          {
-            src: `/_next/image?url=${encodeURIComponent(company.webapp_logo_url)}&w=512&q=90`,
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-        ]
+icons: company?.webapp_logo_url
+  ? [
+      {
+        src: company.webapp_logo_url, // ← URL direta, sem /_next/image
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any maskable',
+      },
+      {
+        src: company.webapp_logo_url, // ← mesma URL para 512 também
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable',
+      },
+    ]
       : [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

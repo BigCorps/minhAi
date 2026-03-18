@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
       background_color: '#0f172a',
       theme_color: '#f97316',
       icons: [
-        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-      ],
+    { src: 'https://www.minhai.app/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    { src: 'https://www.minhai.app/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+  ],
     }, {
       headers: { 'Content-Type': 'application/manifest+json' }
     });

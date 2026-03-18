@@ -16,7 +16,6 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // ── 1. DETECÇÃO DE SUBDOMÍNIO DE CLIENTE ──────────────────────────────────
-  // Suporta *.minhai.com.br (produção), *.minhai.app e *.localhost (dev)
   const isMinhaiBr  = hostname.endsWith('.minhai.com.br') && !hostname.startsWith('www.');
   const isMinhaiApp = hostname.endsWith('.minhai.app') && !hostname.startsWith('www.');
   const isDev       = hostname.includes('.localhost');
@@ -28,18 +27,33 @@ export async function middleware(request: NextRequest) {
       ? hostname.replace('.minhai.app', '')
       : hostname.split('.')[0];
 
-    // ── Favicon dinâmico para subdomínios ─────────────────────────────────────
-if ((isMinhaiBr || isMinhaiApp || isDev) && slug && !RESERVED_SUBDOMAINS.includes(slug)) {
-  if (pathname === '/favicon.ico') {
-    const url = request.nextUrl.clone();
-    url.pathname = `/api/favicon`;
-    url.searchParams.set('slug', slug);
-    return NextResponse.rewrite(url);
-  }
-}
-
     if (slug && !RESERVED_SUBDOMAINS.includes(slug)) {
-      // Reescreve internamente para /ia/[slug] sem mudar a URL visível
+
+      // ── Favicon dinâmico ──────────────────────────────────────────────────
+      if (pathname === '/favicon.ico') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/api/favicon';
+        url.searchParams.set('slug', slug);
+        return NextResponse.rewrite(url);
+      }
+
+      // ── Manifest (browsers pedem tanto .json quanto .webmanifest) ─────────
+      if (pathname === '/manifest.json' || pathname === '/manifest.webmanifest') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/manifest.webmanifest';
+        url.searchParams.set('slug', slug);
+        return NextResponse.rewrite(url);
+      }
+
+      // ── Service Worker ────────────────────────────────────────────────────
+      if (pathname === '/sw.js') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/sw.js';
+        url.searchParams.set('slug', slug);
+        return NextResponse.rewrite(url);
+      }
+
+      // ── Rewrite normal do slug ────────────────────────────────────────────
       const url = request.nextUrl.clone();
       url.pathname = `/ia/${slug}${pathname === '/' ? '' : pathname}`;
       return NextResponse.rewrite(url);
@@ -75,7 +89,6 @@ if ((isMinhaiBr || isMinhaiApp || isDev) && slug && !RESERVED_SUBDOMAINS.include
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const publicRoutes = ['/', '/login', '/auth/callback', '/auth/confirm', '/termos', '/aviso'];
   const isProtectedRoute = pathname.startsWith('/dashboard');
 
   // 3. Sem login → redireciona para /login
@@ -119,6 +132,6 @@ if ((isMinhaiBr || isMinhaiApp || isDev) && slug && !RESERVED_SUBDOMAINS.include
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
+    '/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
   ],
 };

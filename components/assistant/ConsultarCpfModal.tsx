@@ -7,6 +7,7 @@ import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModal
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
+import { generateConsultaPDF } from '@/lib/generatePDF';
 
 interface ConsultarCpfModalProps {
   data: {
@@ -119,14 +120,19 @@ export default function ConsultarCpfModal({
       if (confirmError) throw confirmError;
 
       const fileName = `consulta-cpf-${cpfLimpo}.pdf`;
-      setResultado(confirmData.resultado || []);
-      setPdfBase64(confirmData.pdfGerado || null);
+      const rows: ResultadoFormatado[] = (confirmData.resultado ?? []).map(
+        (r: any) => Array.isArray(r) ? { label: r[0], value: r[1] } : r
+      );
+      setResultado(rows);
       setPdfFileName(fileName);
+
+      // ✅ Gerar PDF no frontend com resultado_formatado da edge
+      const pdfDataUri = generateConsultaPDF('Dados CPF', confirmData.resultado_formatado || []);
+      setPdfBase64(pdfDataUri);
+
       setStep('result');
 
-      const nome = confirmData.resultado?.find(
-        (r: ResultadoFormatado) => r.label === 'Nome'
-      )?.value;
+      const nome = rows.find((r) => r.label === 'Nome')?.value;
       playText?.(
         nome
           ? `Consulta realizada com sucesso. Nome: ${nome}`

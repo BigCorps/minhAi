@@ -34,6 +34,7 @@ const CURRENCIES: CurrencyOption[] = [
   { code: 'AUD', name: 'Dólar Australiano', flag: '🇦🇺' },
   { code: 'CHF', name: 'Franco Suíço', flag: '🇨🇭' },
   { code: 'CNY', name: 'Yuan Chinês', flag: '🇨🇳' },
+  { code: 'MXN', name: 'Peso Mexicano', flag: '🇲🇽' },
   { code: 'BTC', name: 'Bitcoin', flag: '₿' },
 ];
 
@@ -198,6 +199,7 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
           'australiano': 'AUD', 'australia': 'AUD',
           'franco': 'CHF', 'suico': 'CHF',
           'yuan': 'CNY', 'china': 'CNY', 'chines': 'CNY',
+          'mexicano': 'MXN', 'mexico': 'MXN',
           'bitcoin': 'BTC', 'btc': 'BTC',
         };
 

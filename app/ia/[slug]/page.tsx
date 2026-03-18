@@ -11,7 +11,7 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Substituir checkUserCredits por checkUserAccess
+// Verifica acesso: plano ativo OU créditos disponíveis
 async function checkUserAccess(companyId: string): Promise<boolean> {
   const supabase = createClient();
 
@@ -25,6 +25,7 @@ async function checkUserAccess(companyId: string): Promise<boolean> {
   let userId = adminData?.user_id;
 
   if (!userId) {
+    console.log('⚠️ Empresa sem admin em company_admins — tentando fallback via companies.user_id');
     const { data: companyData } = await supabase
       .from('companies')
       .select('user_id')
@@ -33,7 +34,10 @@ async function checkUserAccess(companyId: string): Promise<boolean> {
     userId = companyData?.user_id;
   }
 
-  if (!userId) return false;
+  if (!userId) {
+    console.log('⚠️ Empresa sem proprietário definido — companyId:', companyId);
+    return false;
+  }
 
   const { data: credits } = await supabase
     .from('user_credits')
@@ -137,12 +141,11 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
     }
   }
 
-  // ── Verificação de créditos (fluxo normal existente) ────────────────────
-const hasAccess = await checkUserAccess(company.id);
-console.log('🔍 Verificação:', { companyId: company.id, hasAccess, viaSubdomain });
-if (!hasAccess) {
+  // ── Verificação de acesso (créditos ou plano ativo) ──────────────────────
+  const hasAccess = await checkUserAccess(company.id);
+  console.log('🔍 Verificação:', { companyId: company.id, hasAccess, viaSubdomain });
 
-  if (!hasCredits) {
+  if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="max-w-md mx-auto p-8 text-center">

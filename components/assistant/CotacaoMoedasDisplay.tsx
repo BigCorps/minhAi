@@ -24,7 +24,7 @@ interface CurrencyOption {
   flag: string;
 }
 
-// Moedas disponíveis no Frankfurter (Banco Central Europeu)
+// Moedas disponíveis no Frankfurter (BCE) + Bitcoin via CoinGecko
 const CURRENCIES: CurrencyOption[] = [
   { code: 'USD', name: 'Dólar Americano', flag: '🇺🇸' },
   { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
@@ -33,11 +33,8 @@ const CURRENCIES: CurrencyOption[] = [
   { code: 'CAD', name: 'Dólar Canadense', flag: '🇨🇦' },
   { code: 'AUD', name: 'Dólar Australiano', flag: '🇦🇺' },
   { code: 'CHF', name: 'Franco Suíço', flag: '🇨🇭' },
-  { code: 'ARS', name: 'Peso Argentino', flag: '🇦🇷' },
   { code: 'CNY', name: 'Yuan Chinês', flag: '🇨🇳' },
-  { code: 'MXN', name: 'Peso Mexicano', flag: '🇲🇽' },
-  { code: 'CLP', name: 'Peso Chileno', flag: '🇨🇱' },
-  { code: 'UYU', name: 'Peso Uruguaio', flag: '🇺🇾' },
+  { code: 'BTC', name: 'Bitcoin', flag: '₿' },
 ];
 
 const OPENING_TEXT = 'Consulta de cotação de moedas. Selecione a moeda desejada ou diga: dólar, euro, libra, bitcoin, fechar.';
@@ -200,11 +197,8 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
           'canadense': 'CAD', 'canada': 'CAD',
           'australiano': 'AUD', 'australia': 'AUD',
           'franco': 'CHF', 'suico': 'CHF',
-          'peso': 'ARS', 'argentina': 'ARS', 'argentino': 'ARS',
           'yuan': 'CNY', 'china': 'CNY', 'chines': 'CNY',
-          'mexicano': 'MXN', 'mexico': 'MXN',
-          'chileno': 'CLP', 'chile': 'CLP',
-          'uruguaio': 'UYU', 'uruguai': 'UYU',
+          'bitcoin': 'BTC', 'btc': 'BTC',
         };
 
         for (const [key, code] of Object.entries(currencyMap)) {
@@ -313,7 +307,7 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
                 Consultar Cotação
               </button>
 
-              <VoiceHint commands={['"dólar"', '"euro"', '"libra"', '"peso"', '"consultar"', '"fechar"']} isDark={isDark} />
+              <VoiceHint commands={['"dólar"', '"euro"', '"libra"', '"bitcoin"', '"consultar"', '"fechar"']} isDark={isDark} />
             </div>
           )}
 

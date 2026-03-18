@@ -117,8 +117,7 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
 
   const handleCopy = useCallback(async () => {
     if (!resultData) return;
-    const restrictionsList = resultData.restricoes?.map((r: any) => `${r.tipo}: ${r.descricao}`).join('\n') || 'Nenhuma';
-    const text = `CPF: ${resultData.cpf}\nNome: ${resultData.nome}\nStatus: ${resultData.status}\n\nRestrições:\n${restrictionsList}`;
+    const text = `CPF: ${resultData.cpf}\nStatus: ${resultData.status}\nTotal de restrições: ${resultData.total_restricoes}`;
     await navigator.clipboard.writeText(text);
     setCopied(true);
     playText('Dados copiados.').catch(() => {});
@@ -150,10 +149,9 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
     if (!resultData) return;
     setIsSendingEmail(true);
     try {
-      const restrictionsList = resultData.restricoes?.map((r: any) => `${r.tipo}: ${r.descricao} (${r.data})`).join('\n') || 'Nenhuma restrição encontrada';
-      const emailBody = `Consulta de Restrições CPF: ${resultData.cpf}\n\nNome: ${resultData.nome}\nStatus: ${resultData.status}\n\nRestrições:\n${restrictionsList}\n\nTotal: ${resultData.total_restricoes} pendência(s)`;
+      const emailBody = `Consulta de Restrições CPF: ${resultData.cpf}\n\nStatus: ${resultData.status}\nTotal de pendências: ${resultData.total_restricoes}`;
       const { error } = await supabase.functions.invoke('enviar-email-google', {
-        body: { company_id: data.companyId, subject: `Restrições CPF: ${resultData.nome}`, body: emailBody },
+        body: { company_id: data.companyId, subject: `Restrições CPF: ${resultData.cpf}`, body: emailBody },
       });
       if (error) throw error;
       playText('Consulta enviada por email.').catch(() => {});
@@ -298,13 +296,13 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
                 {/* Card de informações */}
                 <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
                   <div className="mb-4">
-                    <h3 className={`font-bold text-base mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {resultData.nome}
-                    </h3>
-                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                      CPF: {resultData.cpf}
+                    <p className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                      CPF Consultado
                     </p>
-                    <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-medium ${
+                    <h3 className={`font-bold text-base mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {resultData.cpf}
+                    </h3>
+                    <span className={`inline-block mt-0 px-2 py-1 rounded text-xs font-medium ${
                       resultData.status === 'LIMPO' 
                         ? isDark ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-700'
                         : isDark ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-red-700'

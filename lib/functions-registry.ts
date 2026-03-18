@@ -1813,20 +1813,42 @@ consultar_cambio: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'câmbio', 'cambio', 'dólar', 'dolar', 'cotação', 'cotacao', 'consultar cambio', 'consultar câmbio', 
-    'moeda', 'euro', 'bitcoin', 'cripto', 'libra', 'peso argentino', 'cotacao de cambio', 'cotacao de câmbio',  
-    'cotação do dólar', 'cotacao do dolar', 'preço do euro', 'preco do euro'
+    // Genérico
+    'câmbio', 'cambio', 'cotação', 'cotacao', 'consultar cambio', 'consultar câmbio',
+    'moeda', 'cotacao de cambio', 'cotacao de câmbio',
+    // Dólar
+    'dólar', 'dolar', 'dólar americano', 'dolar americano', 'cotação do dólar',
+    'cotacao do dolar', 'preço do dólar', 'preco do dolar', 'valor do dólar', 'usd',
+    // Euro
+    'euro', 'preço do euro', 'preco do euro', 'cotação do euro', 'cotacao do euro', 'eur',
+    // Libra
+    'libra', 'libra esterlina', 'cotação da libra', 'cotacao da libra', 'gbp',
+    // Iene
+    'iene', 'iene japonês', 'iene japones', 'cotação do iene', 'jpy',
+    // Dólar Canadense
+    'dólar canadense', 'dolar canadense', 'canadense', 'cad',
+    // Dólar Australiano
+    'dólar australiano', 'dolar australiano', 'australiano', 'aud',
+    // Franco Suíço
+    'franco suíço', 'franco suico', 'franco', 'chf',
+    // Yuan
+    'yuan', 'yuan chinês', 'yuan chines', 'renminbi', 'cny',
+    // Peso Mexicano
+    'peso mexicano', 'peso do méxico', 'peso do mexico', 'mxn',
+    // Bitcoin
+    'bitcoin', 'btc', 'cripto', 'criptomoeda',
   ],
 
   examplePhrases: [
     'Qual a cotação do dólar',
     'Preço do euro hoje',
     'Quanto está o bitcoin',
-    'Cotação USD'
+    'Cotação da libra esterlina',
+    'Quanto está o yuan',
   ],
 
   requiresInput: false,
-  description: 'Consulta cotações atualizadas de moedas em tempo real. Retorna valores de compra e venda, variação do dia, porcentagem de mudança, máxima e mínima do dia para moedas como Dólar (USD), Euro (EUR), Libra (GBP), Peso Argentino (ARS), Bitcoin (BTC) e Ethereum (ETH).',
+  description: 'Consulta cotações atualizadas de moedas em tempo real via Frankfurter (BCE) para moedas fiat e CoinGecko para Bitcoin. Disponível: Dólar (USD), Euro (EUR), Libra (GBP), Iene (JPY), Dólar Canadense (CAD), Dólar Australiano (AUD), Franco Suíço (CHF), Yuan (CNY), Peso Mexicano (MXN) e Bitcoin (BTC).',
   shortDescription: 'Cotações de moedas em tempo real',
   icon: '🧊',
   color: '#00FFF7',
@@ -1838,13 +1860,18 @@ consultar_cambio: {
 
   handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     try {
-      const lowerTranscript = transcript?.toLowerCase() || '';
+      const t = transcript?.toLowerCase() || '';
       let moedaSelecionada = 'USD'; // Padrão: Dólar
 
-      if (lowerTranscript.includes('euro')) moedaSelecionada = 'EUR';
-      else if (lowerTranscript.includes('libra')) moedaSelecionada = 'GBP';
-      else if (lowerTranscript.includes('peso') || lowerTranscript.includes('argentino')) moedaSelecionada = 'ARS';
-      else if (lowerTranscript.includes('bitcoin') || lowerTranscript.includes('btc')) moedaSelecionada = 'BTC';
+      if (t.includes('euro') || t.includes('eur')) moedaSelecionada = 'EUR';
+      else if (t.includes('libra') || t.includes('gbp')) moedaSelecionada = 'GBP';
+      else if (t.includes('iene') || t.includes('jpy')) moedaSelecionada = 'JPY';
+      else if (t.includes('canadense') || t.includes('cad')) moedaSelecionada = 'CAD';
+      else if (t.includes('australiano') || t.includes('aud')) moedaSelecionada = 'AUD';
+      else if (t.includes('franco') || t.includes('suíço') || t.includes('suico') || t.includes('chf')) moedaSelecionada = 'CHF';
+      else if (t.includes('yuan') || t.includes('renminbi') || t.includes('cny')) moedaSelecionada = 'CNY';
+      else if (t.includes('mexicano') || t.includes('méxico') || t.includes('mexico') || t.includes('mxn')) moedaSelecionada = 'MXN';
+      else if (t.includes('bitcoin') || t.includes('btc') || t.includes('cripto')) moedaSelecionada = 'BTC';
 
       setActiveModal?.({
         type: 'CotacaoMoedasDisplay',
@@ -1914,18 +1941,21 @@ consultar_cnpj: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'cnpj', 'dados da empresa', 'consultar empresa', 'razão social', 'consultar cnpj', 'consulta cnpj', 'consulte o cnpj',
-    'receita federal', 'dados do cnpj', 'informações do cnpj', 'buscar empresa'
+    // Dados cadastrais — NÃO incluir palavras de restrição/score
+    'dados da empresa', 'consultar empresa', 'razão social', 'razao social',
+    'consultar cnpj', 'consulta cnpj', 'consulte o cnpj',
+    'receita federal', 'dados do cnpj', 'informações do cnpj', 'informacoes do cnpj',
+    'buscar empresa', 'cadastro da empresa', 'cnpj na receita',
   ],
 
   examplePhrases: [
     'Consultar CNPJ 12.345.678/0001-90',
     'Dados da empresa',
-    'Informações do CNPJ'
+    'Informações do CNPJ na Receita Federal',
   ],
 
   requiresInput: false,
-  description: 'Consulta dados cadastrais completos de empresas na Receita Federal. Retorna razão social, nome fantasia, CNAE, capital social, endereço completo, situação cadastral, data de início das atividades, contatos e sócios.',
+  description: 'Consulta dados cadastrais completos de empresas na Receita Federal via ReceitaWS. Retorna razão social, nome fantasia, CNAE, capital social, endereço completo, situação cadastral, data de início das atividades e contatos.',
   shortDescription: 'Dados cadastrais de CNPJ',
   icon: '🟡',
   color: '#FFFF00',
@@ -1945,7 +1975,7 @@ consultar_cnpj: {
         data: { companyId, cnpjPrefill }
       });
 
-      await playText(cnpjPrefill ? `Digite ou confirme o CNPJ ${cnpjPrefill}.` : 'Digite o CNPJ.');
+      await playText(cnpjPrefill ? `Consultando dados do CNPJ ${cnpjPrefill}.` : 'Digite o CNPJ para consultar os dados cadastrais.');
       return true;
     } catch {
       return false;
@@ -1961,18 +1991,21 @@ consultar_cpf: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'cpf', 'dados pessoais', 'consultar cpf', 'pessoa física', 'consulta cpf','consulte meu cpf',
-    'dados do cpf', 'informações de pessoa física', 'buscar cpf'
+    // Dados cadastrais — NÃO incluir palavras de restrição/score/serasa/spc
+    'dados pessoais', 'consultar cpf', 'consulta cpf', 'consulte o cpf',
+    'dados do cpf', 'informações de pessoa física', 'informacoes de pessoa fisica',
+    'buscar cpf', 'cadastro do cpf', 'cpf na receita',
+    'nome do cpf', 'titular do cpf',
   ],
 
   examplePhrases: [
     'Consultar CPF 123.456.789-00',
     'Dados do CPF',
-    'Informações de pessoa física'
+    'Informações de pessoa física',
   ],
 
   requiresInput: false,
-  description: 'Consulta informações cadastrais de pessoa física. Retorna nome completo, nome da mãe, data de nascimento, idade, sexo e situação cadastral na Receita Federal.',
+  description: 'Consulta informações cadastrais de pessoa física via API Brasil. Retorna nome completo, nome da mãe, data de nascimento, idade e sexo.',
   shortDescription: 'Dados cadastrais de CPF',
   icon: '🟡',
   color: '#FFFF00',
@@ -1992,7 +2025,7 @@ consultar_cpf: {
         data: { companyId, cpfPrefill }
       });
 
-      await playText(cpfPrefill ? `Digite ou confirme o CPF ${cpfPrefill}.` : 'Digite o CPF.');
+      await playText(cpfPrefill ? `Consultando dados do CPF ${cpfPrefill}.` : 'Digite o CPF para consultar os dados cadastrais.');
       return true;
     } catch {
       return false;
@@ -2008,20 +2041,32 @@ restricoes_cpf: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'restrições cpf', 'restricoes cpf', 'score', 'quod', 'serasa',
-    'análise de crédito', 'analise de credito', 'inadimplência',
-    'inadimplencia', 'score de crédito', 'consultar quod'
+    // Restrições e score — palavras exclusivas desta função
+    'restrições cpf', 'restricoes cpf',
+    'score cpf', 'score de crédito', 'score de credito',
+    'quod cpf', 'consultar quod', 'quod',
+    'serasa cpf', 'serasa', 'consultar serasa',
+    'spc cpf', 'spc', 'consultar spc',
+    'análise de crédito', 'analise de credito',
+    'inadimplência', 'inadimplencia',
+    'pendências cpf', 'pendencias cpf',
+    'negativado', 'nome sujo', 'nome no spc', 'nome no serasa',
+    'dívidas cpf', 'dividas cpf', 'protestos cpf',
+    'restrição financeira', 'restricao financeira',
+    'crédito cpf', 'credito cpf',
   ],
 
   examplePhrases: [
     'Restrições do CPF 123.456.789-00',
     'Score de crédito',
-    'Consultar Quod CPF'
+    'Consultar Serasa CPF',
+    'Nome no SPC',
+    'CPF negativado',
   ],
 
   requiresInput: false,
-  description: 'Consulta completa de restrições financeiras e score de crédito de CPF via Quod. Retorna score, probabilidade de inadimplência, nível de risco, histórico de protestos, restrições, pendências financeiras e análise de crédito detalhada.',
-  shortDescription: 'Score e restrições de CPF',
+  description: 'Consulta completa de restrições financeiras e score de crédito de CPF via Quod (SPC/Serasa). Retorna score, probabilidade de inadimplência, nível de risco, histórico de protestos, pendências financeiras, cheques sem fundos e ações cíveis.',
+  shortDescription: 'Score e restrições de CPF (SPC/Serasa)',
   icon: '🟡',
   color: '#FFFF00',
 
@@ -2040,7 +2085,7 @@ restricoes_cpf: {
         data: { companyId, cpfPrefill }
       });
 
-      await playText(cpfPrefill ? `Consultando restrições do CPF ${cpfPrefill}.` : 'Digite o CPF.');
+      await playText(cpfPrefill ? `Consultando restrições do CPF ${cpfPrefill}.` : 'Digite o CPF para consultar restrições e score.');
       return true;
     } catch {
       return false;
@@ -2056,20 +2101,30 @@ restricoes_cnpj: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'restrições cnpj', 'restricoes cnpj', 'score empresa', 'quod cnpj',
+    // Restrições e score — palavras exclusivas desta função
+    'restrições cnpj', 'restricoes cnpj',
+    'score empresa', 'score empresarial', 'score do cnpj',
+    'quod cnpj', 'serasa cnpj', 'spc cnpj',
     'análise crédito empresa', 'analise credito empresa',
-    'inadimplência empresa', 'inadimplencia empresa', 'score empresarial'
+    'inadimplência empresa', 'inadimplencia empresa',
+    'pendências cnpj', 'pendencias cnpj',
+    'empresa negativada', 'cnpj negativado',
+    'empresa no spc', 'empresa no serasa', 'cnpj no spc', 'cnpj no serasa',
+    'dívidas empresa', 'dividas empresa', 'protestos cnpj',
+    'restrição financeira empresa', 'restricao financeira empresa',
+    'crédito empresa', 'credito empresa',
   ],
 
   examplePhrases: [
     'Restrições do CNPJ 12.345.678/0001-90',
     'Score da empresa',
-    'Consultar Quod CNPJ'
+    'CNPJ no Serasa',
+    'Empresa negativada',
   ],
 
   requiresInput: false,
-  description: 'Consulta completa de restrições financeiras e score de crédito de CNPJ via Quod. Retorna score empresarial, probabilidade de inadimplência, nível de risco, histórico de protestos, pendências financeiras e análise de crédito.',
-  shortDescription: 'Score e restrições de CNPJ',
+  description: 'Consulta completa de restrições financeiras e score de crédito de CNPJ via Quod (SPC/Serasa). Retorna score empresarial, probabilidade de inadimplência, nível de risco, histórico de protestos e pendências financeiras.',
+  shortDescription: 'Score e restrições de CNPJ (SPC/Serasa)',
   icon: '🟡',
   color: '#FFFF00',
 
@@ -2088,7 +2143,7 @@ restricoes_cnpj: {
         data: { companyId, cnpjPrefill }
       });
 
-      await playText(cnpjPrefill ? `Consultando restrições do CNPJ ${cnpjPrefill}.` : 'Digite o CNPJ.');
+      await playText(cnpjPrefill ? `Consultando restrições do CNPJ ${cnpjPrefill}.` : 'Digite o CNPJ para consultar restrições e score.');
       return true;
     } catch {
       return false;

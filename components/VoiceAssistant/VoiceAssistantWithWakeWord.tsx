@@ -662,7 +662,7 @@ export function VoiceAssistantWithWakeWord({
           break;
 
         case 'cadastro':
-          await handleCadastro({ companyId, setIsProcessing, setActiveModal, playText });
+          await handleCadastro({ companyId, setIsProcessing, setActiveModal });
           break;
 
         case 'enviar_arquivo':

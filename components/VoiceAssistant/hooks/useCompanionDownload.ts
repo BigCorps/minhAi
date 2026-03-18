@@ -80,7 +80,8 @@ export function useCompanionDownload({
       if (dbError || !data) throw new Error('Erro ao gerar token de download.');
 
       const newToken = data.token as string;
-      const url = `${window.location.origin}/download/${newToken}`;
+      const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.minhai.app';
+      const url = `${BASE_URL}/download/${newToken}`;
 
       // 2. Gerar QR Code
       const qr = await QRCode.toDataURL(url, {

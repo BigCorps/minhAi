@@ -24,10 +24,8 @@ interface CurrencyOption {
   flag: string;
 }
 
-// Todas as moedas confirmadas como disponíveis na AwesomeAPI
-// Endpoint: https://economia.awesomeapi.com.br/json/last/{MOEDA}-BRL
+// Moedas disponíveis no Frankfurter (Banco Central Europeu)
 const CURRENCIES: CurrencyOption[] = [
-  // Moedas tradicionais
   { code: 'USD', name: 'Dólar Americano', flag: '🇺🇸' },
   { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
   { code: 'GBP', name: 'Libra Esterlina', flag: '🇬🇧' },
@@ -37,12 +35,9 @@ const CURRENCIES: CurrencyOption[] = [
   { code: 'CHF', name: 'Franco Suíço', flag: '🇨🇭' },
   { code: 'ARS', name: 'Peso Argentino', flag: '🇦🇷' },
   { code: 'CNY', name: 'Yuan Chinês', flag: '🇨🇳' },
-  
-  // Criptomoedas
-  { code: 'BTC', name: 'Bitcoin', flag: '₿' },
-  { code: 'ETH', name: 'Ethereum', flag: 'Ξ' },
-  { code: 'LTC', name: 'Litecoin', flag: 'Ł' },
-  { code: 'XRP', name: 'Ripple', flag: '✕' },
+  { code: 'MXN', name: 'Peso Mexicano', flag: '🇲🇽' },
+  { code: 'CLP', name: 'Peso Chileno', flag: '🇨🇱' },
+  { code: 'UYU', name: 'Peso Uruguaio', flag: '🇺🇾' },
 ];
 
 const OPENING_TEXT = 'Consulta de cotação de moedas. Selecione a moeda desejada ou diga: dólar, euro, libra, bitcoin, fechar.';
@@ -207,10 +202,9 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
           'franco': 'CHF', 'suico': 'CHF',
           'peso': 'ARS', 'argentina': 'ARS', 'argentino': 'ARS',
           'yuan': 'CNY', 'china': 'CNY', 'chines': 'CNY',
-          'bitcoin': 'BTC', 'btc': 'BTC',
-          'ethereum': 'ETH', 'eth': 'ETH',
-          'litecoin': 'LTC', 'ltc': 'LTC',
-          'ripple': 'XRP', 'xrp': 'XRP',
+          'mexicano': 'MXN', 'mexico': 'MXN',
+          'chileno': 'CLP', 'chile': 'CLP',
+          'uruguaio': 'UYU', 'uruguai': 'UYU',
         };
 
         for (const [key, code] of Object.entries(currencyMap)) {
@@ -319,7 +313,7 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
                 Consultar Cotação
               </button>
 
-              <VoiceHint commands={['"dólar"', '"euro"', '"libra"', '"bitcoin"', '"consultar"', '"fechar"']} isDark={isDark} />
+              <VoiceHint commands={['"dólar"', '"euro"', '"libra"', '"peso"', '"consultar"', '"fechar"']} isDark={isDark} />
             </div>
           )}
 
@@ -354,14 +348,10 @@ export default function CotacaoMoedasDisplay({ data, onClose, theme = 'dark', pl
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="grid grid-cols-1 gap-3 mb-3">
                       <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-                        <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Compra</p>
-                        <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>R$ {resultData.bid}</p>
-                      </div>
-                      <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-                        <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Venda</p>
-                        <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>R$ {resultData.ask}</p>
+                        <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Cotação em BRL</p>
+                        <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>R$ {resultData.bid}</p>
                       </div>
                     </div>
 

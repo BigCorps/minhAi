@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Company {
   id: string;
   name: string;
@@ -19,7 +18,6 @@ interface Company {
 type Step = 1 | 2 | 3;
 type Motivo = 'ineligible' | 'loading' | 'ok';
 
-// ─── Paleta ───────────────────────────────────────────────────────────────────
 const DARK   = '#0f172a';
 const MID    = '#1e293b';
 const CARD   = '#162032';
@@ -28,11 +26,8 @@ const ORANGE = '#f97316';
 const GREEN  = '#10b981';
 const WHITE  = '#f8fafc';
 const MUTED  = 'rgba(248,250,252,0.45)';
-
-// Domínio dos WebApps
 const WEBAPP_DOMAIN = 'minhai.com.br';
 
-// ─── Cores disponíveis para tema ──────────────────────────────────────────────
 const THEME_COLORS = [
   { label: 'Laranja',  value: '#f97316' },
   { label: 'Azul',     value: '#3b82f6' },
@@ -44,7 +39,6 @@ const THEME_COLORS = [
   { label: 'Ciano',    value: '#06b6d4' },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function Dot({ active, done }: { active: boolean; done: boolean }) {
   return (
     <div style={{
@@ -53,8 +47,7 @@ function Dot({ active, done }: { active: boolean; done: boolean }) {
       background: done ? GREEN : active ? ORANGE : 'rgba(255,255,255,0.07)',
       border: `2px solid ${done ? GREEN : active ? ORANGE : 'rgba(255,255,255,0.12)'}`,
       color: WHITE, fontWeight: 700, fontSize: 13,
-      transition: 'all 0.3s',
-      flexShrink: 0,
+      transition: 'all 0.3s', flexShrink: 0,
     }}>
       {done
         ? <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -90,7 +83,6 @@ function StepBar({ step }: { step: Step }) {
   );
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
 export default function WebAppPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -100,58 +92,55 @@ export default function WebAppPage() {
   const [companies, setCompanies]   = useState<Company[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [step, setStep]             = useState<Step>(1);
-
-  const [logoFile, setLogoFile]       = useState<File | null>(null);
+  const [logoFile, setLogoFile]     = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [themeColor, setThemeColor]   = useState('#f97316');
-  const [saving, setSaving]           = useState(false);
-  const [error, setError]             = useState('');
-  const [published, setPublished]     = useState(false);
-  const [finalSlug, setFinalSlug]     = useState('');
+  const [themeColor, setThemeColor] = useState('#f97316');
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState('');
+  const [published, setPublished]   = useState(false);
+  const [finalSlug, setFinalSlug]   = useState('');
 
-  // ── Verificação de elegibilidade ────────────────────────────────────────────
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
+      // 1. Buscar créditos e plano
       const { data: credits } = await supabase
         .from('user_credits')
-        .select('has_active_plan, plan_expires_at, active_plan_id')
+        .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
         .eq('user_id', user.id)
         .single();
 
-// Verificar plano ativo
-const planOk =
-  credits?.has_active_plan &&
-  credits?.plan_expires_at &&
-  new Date(credits.plan_expires_at) > new Date();
+      // 2. Verificar validade do plano
+      const planOk =
+        credits?.has_active_plan &&
+        credits?.plan_expires_at &&
+        new Date(credits.plan_expires_at) > new Date();
 
-if (!planOk) { setState('ineligible'); return; } // WebAppButton
-// if (!planOk) { setMotivo('ineligible'); return; } // webapp/page.tsx
+      if (!planOk) { setMotivo('ineligible'); return; }
 
-// ✅ Trial tem acesso ao webapp (active_plan_id é null mas active_plan_name = 'Trial')
-const isTrial = credits.active_plan_name === 'Trial' && !credits.active_plan_id;
+      // 3. Trial tem acesso ao webapp
+      const isTrial = credits.active_plan_name === 'Trial' && !credits.active_plan_id;
 
-if (!isTrial) {
-  // Não é trial — verificar se o pacote tem has_consultoria
-  if (!credits.active_plan_id) {
-    setState('ineligible'); return;
-  }
+      if (!isTrial) {
+        // Não é trial — verificar se o pacote tem has_consultoria
+        if (!credits.active_plan_id) {
+          setMotivo('ineligible'); return;
+        }
 
-  const { data: pkg } = await supabase
-    .from('credits_packages')
-    .select('has_consultoria')
-    .eq('id', credits.active_plan_id)
-    .single();
+        const { data: pkg } = await supabase
+          .from('credits_packages')
+          .select('has_consultoria')
+          .eq('id', credits.active_plan_id)
+          .single();
 
-  if (!pkg?.has_consultoria) {
-    setState('ineligible'); return;
-  }
-}
+        if (!pkg?.has_consultoria) {
+          setMotivo('ineligible'); return;
+        }
+      }
 
-// Se chegou aqui: é trial OU tem plano Consulting ativo ✅
-
+      // 4. Buscar empresas do usuário
       const { data: comps } = await supabase
         .from('companies')
         .select('id, name, slug, logo_url, webapp_enabled, webapp_theme_color')
@@ -181,7 +170,6 @@ if (!isTrial) {
 
   const selectedCompany = companies.find(c => c.id === selectedId);
 
-  // ── Upload de logo ──────────────────────────────────────────────────────────
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -191,7 +179,6 @@ if (!isTrial) {
     setError('');
   }
 
-  // ── Salvar e publicar ───────────────────────────────────────────────────────
   async function publish() {
     if (!selectedCompany) return;
     setSaving(true);
@@ -223,7 +210,6 @@ if (!isTrial) {
         logo_url = publicUrl;
       }
 
-      // Desativar webapp de outras empresas deste usuário (1 por usuário)
       const others = companies.filter(c => c.id !== selectedId && c.webapp_enabled);
       if (others.length > 0) {
         await supabase
@@ -232,7 +218,6 @@ if (!isTrial) {
           .in('id', others.map(c => c.id));
       }
 
-      // Ativar webapp na empresa selecionada
       const { error: updErr } = await supabase
         .from('companies')
         .update({
@@ -255,7 +240,7 @@ if (!isTrial) {
     }
   }
 
-  // ── Tela de loading ─────────────────────────────────────────────────────────
+  // ── Tela de loading ──────────────────────────────────────────────────────────
   if (motivo === 'loading') {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -265,7 +250,7 @@ if (!isTrial) {
     );
   }
 
-  // ── Tela de inelegível ──────────────────────────────────────────────────────
+  // ── Tela de inelegível ───────────────────────────────────────────────────────
   if (motivo === 'ineligible') {
     return (
       <div style={{ maxWidth: 480, margin: '60px auto', padding: '0 16px' }}>
@@ -287,7 +272,7 @@ if (!isTrial) {
     );
   }
 
-  // ── Tela de sucesso ─────────────────────────────────────────────────────────
+  // ── Tela de sucesso ──────────────────────────────────────────────────────────
   if (published && step === 3) {
     return (
       <div style={{ maxWidth: 560, margin: '40px auto', padding: '0 16px' }}>
@@ -297,13 +282,8 @@ if (!isTrial) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-
-          <h2 style={{ color: WHITE, fontWeight: 800, fontSize: 26, marginBottom: 8 }}>
-            Seu WebApp está no ar! 🎉
-          </h2>
-          <p style={{ color: MUTED, fontSize: 15, marginBottom: 32 }}>
-            Compartilhe o link abaixo com seus clientes
-          </p>
+          <h2 style={{ color: WHITE, fontWeight: 800, fontSize: 26, marginBottom: 8 }}>Seu WebApp está no ar! 🎉</h2>
+          <p style={{ color: MUTED, fontSize: 15, marginBottom: 32 }}>Compartilhe o link abaixo com seus clientes</p>
 
           <div style={{ background: 'rgba(16,185,129,0.08)', border: `1px solid rgba(16,185,129,0.2)`, borderRadius: 14, padding: '16px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between' }}>
             <span style={{ color: GREEN, fontWeight: 700, fontSize: 17, letterSpacing: '-0.02em' }}>
@@ -318,19 +298,13 @@ if (!isTrial) {
           </div>
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a
-              href={`https://${finalSlug}.${WEBAPP_DOMAIN}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: `linear-gradient(135deg, ${GREEN}, #059669)`, color: WHITE, borderRadius: 12, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}
-            >
+            <a href={`https://${finalSlug}.${WEBAPP_DOMAIN}`} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: `linear-gradient(135deg, ${GREEN}, #059669)`, color: WHITE, borderRadius: 12, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
               Abrir WebApp
             </a>
-            <button
-              onClick={() => { setPublished(false); setStep(1); }}
-              style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 12, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}
-            >
+            <button onClick={() => { setPublished(false); setStep(1); }}
+              style={{ padding: '12px 24px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 12, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>
               Editar configurações
             </button>
           </div>
@@ -340,28 +314,23 @@ if (!isTrial) {
     );
   }
 
-  // ── Wizard ──────────────────────────────────────────────────────────────────
+  // ── Wizard ───────────────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 16px 60px' }}>
-      {/* Header */}
       <div style={{ marginBottom: 36 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(249,115,22,0.1)', border: `1px solid rgba(249,115,22,0.2)`, borderRadius: 100, padding: '4px 14px', marginBottom: 16 }}>
           <svg width="12" height="12" fill={ORANGE} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
           <span style={{ color: ORANGE, fontWeight: 600, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Plano Consulting</span>
         </div>
-        <h1 style={{ color: WHITE, fontWeight: 800, fontSize: 28, marginBottom: 6, letterSpacing: '-0.02em' }}>
-          Configure seu WebApp
-        </h1>
-        <p style={{ color: MUTED, fontSize: 15 }}>
-          Seu assistente IA com endereço e visual próprios
-        </p>
+        <h1 style={{ color: WHITE, fontWeight: 800, fontSize: 28, marginBottom: 6, letterSpacing: '-0.02em' }}>Configure seu WebApp</h1>
+        <p style={{ color: MUTED, fontSize: 15 }}>Seu assistente IA com endereço e visual próprios</p>
       </div>
 
       <StepBar step={step} />
 
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
 
-        {/* ── PASSO 1: Logo + Cor ──────────────────────────────────────────── */}
+        {/* PASSO 1 */}
         {step === 1 && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Identidade visual</h2>
@@ -370,34 +339,22 @@ if (!isTrial) {
             {companies.length > 1 && (
               <div style={{ marginBottom: 28 }}>
                 <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Assistente</label>
-                <select
-                  value={selectedId}
+                <select value={selectedId}
                   onChange={e => {
                     setSelectedId(e.target.value);
                     const c = companies.find(x => x.id === e.target.value);
-                    if (c) {
-                      setThemeColor(c.webapp_theme_color || '#f97316');
-                      setLogoPreview(c.logo_url || null);
-                      setLogoFile(null);
-                    }
+                    if (c) { setThemeColor(c.webapp_theme_color || '#f97316'); setLogoPreview(c.logo_url || null); setLogoFile(null); }
                   }}
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', color: WHITE, fontSize: 15, outline: 'none' }}
-                >
-                  {companies.map(c => (
-                    <option key={c.id} value={c.id} style={{ background: MID }}>{c.name}</option>
-                  ))}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 16px', color: WHITE, fontSize: 15, outline: 'none' }}>
+                  {companies.map(c => <option key={c.id} value={c.id} style={{ background: MID }}>{c.name}</option>)}
                 </select>
-                <p style={{ color: 'rgba(249,115,22,0.7)', fontSize: 12, marginTop: 8 }}>
-                  ⚠️ Apenas 1 webapp por conta. Ativar aqui desativa o anterior.
-                </p>
+                <p style={{ color: 'rgba(249,115,22,0.7)', fontSize: 12, marginTop: 8 }}>⚠️ Apenas 1 webapp por conta. Ativar aqui desativa o anterior.</p>
               </div>
             )}
 
             <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Logo</label>
-            <div
-              onClick={() => fileRef.current?.click()}
-              style={{ border: `2px dashed ${logoPreview ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)'}`, borderRadius: 16, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 28, background: logoPreview ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}
-            >
+            <div onClick={() => fileRef.current?.click()}
+              style={{ border: `2px dashed ${logoPreview ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)'}`, borderRadius: 16, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 28, background: logoPreview ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}>
               {logoPreview ? (
                 <>
                   <img src={logoPreview} alt="Logo" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `2px solid rgba(16,185,129,0.4)` }} />
@@ -419,20 +376,18 @@ if (!isTrial) {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
               {THEME_COLORS.map(c => (
                 <button key={c.value} title={c.label} onClick={() => setThemeColor(c.value)}
-                  style={{ width: 36, height: 36, borderRadius: '50%', background: c.value, border: `3px solid ${themeColor === c.value ? WHITE : 'transparent'}`, boxShadow: themeColor === c.value ? `0 0 0 2px ${c.value}` : 'none', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' }}
-                />
+                  style={{ width: 36, height: 36, borderRadius: '50%', background: c.value, border: `3px solid ${themeColor === c.value ? WHITE : 'transparent'}`, boxShadow: themeColor === c.value ? `0 0 0 2px ${c.value}` : 'none', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' }} />
               ))}
             </div>
 
             {error && <p style={{ color: '#f87171', fontSize: 13, marginTop: 12 }}>{error}</p>}
-
             <button onClick={() => setStep(2)} style={{ marginTop: 28, width: '100%', padding: '14px', background: `linear-gradient(135deg, ${ORANGE}, #ea580c)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>
               Continuar →
             </button>
           </div>
         )}
 
-        {/* ── PASSO 2: Subdomínio ──────────────────────────────────────────── */}
+        {/* PASSO 2 */}
         {step === 2 && selectedCompany && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Seu endereço</h2>
@@ -448,7 +403,6 @@ if (!isTrial) {
               <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, marginTop: 12 }}>O slug é o mesmo já configurado para o seu assistente</p>
             </div>
 
-            {/* Mini mockup */}
             <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${BORDER}`, borderRadius: 16, padding: '20px', marginBottom: 28 }}>
               <p style={{ color: MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Preview do seu app</p>
               <div style={{ background: DARK, borderRadius: 12, padding: '16px', border: `1px solid ${BORDER}` }}>
@@ -483,7 +437,7 @@ if (!isTrial) {
           </div>
         )}
 
-        {/* ── PASSO 3: Confirmar ───────────────────────────────────────────── */}
+        {/* PASSO 3 */}
         {step === 3 && !published && selectedCompany && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Tudo pronto!</h2>
@@ -513,8 +467,7 @@ if (!isTrial) {
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setStep(2)} disabled={saving} style={{ flex: 1, padding: '14px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, borderRadius: 14, color: MUTED, fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>← Voltar</button>
               <button onClick={publish} disabled={saving}
-                style={{ flex: 2, padding: '14px', background: saving ? 'rgba(16,185,129,0.3)' : `linear-gradient(135deg, ${GREEN}, #059669)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              >
+                style={{ flex: 2, padding: '14px', background: saving ? 'rgba(16,185,129,0.3)' : `linear-gradient(135deg, ${GREEN}, #059669)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 {saving
                   ? <><div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: WHITE, borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Publicando...</>
                   : <><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Publicar WebApp</>

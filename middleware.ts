@@ -28,6 +28,16 @@ export async function middleware(request: NextRequest) {
       ? hostname.replace('.minhai.app', '')
       : hostname.split('.')[0];
 
+    // ── Favicon dinâmico para subdomínios ─────────────────────────────────────
+if ((isMinhaiBr || isMinhaiApp || isDev) && slug && !RESERVED_SUBDOMAINS.includes(slug)) {
+  if (pathname === '/favicon.ico') {
+    const url = request.nextUrl.clone();
+    url.pathname = `/api/favicon`;
+    url.searchParams.set('slug', slug);
+    return NextResponse.rewrite(url);
+  }
+}
+
     if (slug && !RESERVED_SUBDOMAINS.includes(slug)) {
       // Reescreve internamente para /ia/[slug] sem mudar a URL visível
       const url = request.nextUrl.clone();

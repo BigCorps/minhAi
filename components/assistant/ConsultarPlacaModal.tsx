@@ -7,12 +7,7 @@ import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModal
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { createClient } from '@/lib/supabase-browser';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
-
-// =================================================================================
-// ARQUIVO: components/assistant/ConsultarPlacaModal.tsx
-// DESCRIÇÃO: Modal para consulta de dados de veículos por placa
-// PADRÃO: Padrão 10 (read-only result) - eAi
-// =================================================================================
+import { generateConsultaPDF } from '@/lib/generatePDF';
 
 interface ConsultarPlacaModalProps {
   data: {
@@ -96,53 +91,20 @@ export default function ConsultarPlacaModal({
 
     try {
       const supabase = createClient();
-      const { data: userData } = await supabase.auth.getUser();
 
-      // 1. Executar consulta
-      const { data: execData, error: execError } = await supabase.functions.invoke(
-        'executar-consulta-eai',
-        {
-          body: {
-            consulta: { id: 'placa', nome: 'Consultar Placa', custoOriginal: 2.0 },
-            dadosEntrada: { placa: placaLimpa },
-            userId: userData.user?.id,
-            companyId,
-          },
-        }
-      );
+      const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
+        body: { company_id: companyId, action: 'consultar_placa', placa: placaLimpa },
+      });
 
-      if (execError) throw execError;
+      if (error) throw new Error(error.message);
+      if (!res.success) throw new Error(res.speech_text || res.error || 'Falha na consulta');
 
-      if (execData.status === 'SALDO_INSUFICIENTE') {
-        setError('Saldo de créditos insuficiente.');
-        setStep('input');
-        playText('Saldo de créditos insuficiente para realizar a consulta.').catch(() => {});
-        return;
-      }
-
-      if (execData.status === 'PENDENTE_PIX') {
-        setError('Pagamento via PIX necessário. Funcionalidade não disponível neste modal.');
-        setStep('input');
-        playText('Pagamento via PIX necessário.').catch(() => {});
-        return;
-      }
-
-      // 2. Confirmar e executar
-      const { data: confirmData, error: confirmError } = await supabase.functions.invoke(
-        'confirmar-e-executar-consulta-eai',
-        { body: { historicoId: execData.historicoId } }
-      );
-
-      if (confirmError) throw confirmError;
-
-      const fileName = `consulta-placa-${placaLimpa}.pdf`;
-      // normaliza resultado: aceita [label, value][] ou {label, value}[]
-      const rows: ResultadoFormatado[] = (confirmData.resultado ?? []).map(
+      const rows: ResultadoFormatado[] = (res.resultado_formatado ?? []).map(
         (r: any) => Array.isArray(r) ? { label: r[0], value: r[1] } : r
       );
       setResultado(rows);
-      setPdfBase64(confirmData.pdfGerado || null);
-      setPdfFileName(fileName);
+      setPdfFileName(`consulta-placa-${placaLimpa}.pdf`);
+      setPdfBase64(generateConsultaPDF('Consultar Placa', res.resultado_formatado || []));
       setStep('result');
 
       playText('Consulta realizada com sucesso. Dados do veículo exibidos.').catch(() => {});
@@ -207,7 +169,6 @@ export default function ConsultarPlacaModal({
         onClose(); return;
       }
 
-      // Detecta placa ditada durante o step de input
       if (step === 'input') {
         const match = transcript.replace(/\s/g, '').match(/[A-Z]{3}\d[A-Z0-9]\d{2}|[A-Z]{3}\d{4}/i);
         if (match) {
@@ -290,7 +251,7 @@ export default function ConsultarPlacaModal({
                   <div>
                     <p className={`text-sm font-medium ${textPrimary}`}>Custo da consulta</p>
                     <p className={`text-xs ${textMuted} mt-1`}>
-                      2 créditos serão consumidos ao realizar esta consulta
+                      2 créditos + R$ 3,00 do saldo serão consumidos ao realizar esta consulta
                     </p>
                   </div>
                 </div>
@@ -320,19 +281,15 @@ export default function ConsultarPlacaModal({
           {step === 'result' && (
             <div className="flex flex-col gap-4">
 
-              {/* Banner sucesso */}
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
                 <span className={`font-semibold ${textPrimary}`}>Consulta realizada com sucesso</span>
               </div>
 
-              {/* Layout responsivo: coluna única mobile / duas colunas desktop */}
               <div className="flex flex-col sm:flex-row gap-4">
 
-                {/* Coluna esquerda — tabela + botões */}
                 <div className="flex flex-col gap-3 flex-1 min-w-0">
 
-                  {/* Tabela de resultados */}
                   <div className={`border ${border} rounded-xl overflow-hidden`}>
                     <div className="max-h-[360px] overflow-y-auto">
                       {resultado.map((item, index) => (
@@ -357,7 +314,6 @@ export default function ConsultarPlacaModal({
                     </div>
                   </div>
 
-                  {/* Botões de ação */}
                   <div className="flex gap-2">
                     {pdfBase64 && (
                       <button
@@ -391,7 +347,6 @@ export default function ConsultarPlacaModal({
                   </button>
                 </div>
 
-                {/* Coluna direita — QR de download (apenas desktop) */}
                 {pdfBase64 && (
                   <div className="hidden sm:flex flex-col shrink-0 w-56">
                     <ResultDownloadQR
@@ -406,7 +361,6 @@ export default function ConsultarPlacaModal({
                 )}
               </div>
 
-              {/* QR mobile — apenas em telas pequenas */}
               {pdfBase64 && (
                 <div className="sm:hidden">
                   <ResultDownloadQR

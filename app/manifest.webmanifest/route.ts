@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const { data: company } = await supabase
     .from('companies')
-    .select('name, logo_url, webapp_theme_color')
+    .select('name, webapp_logo_url, webapp_theme_color')
     .eq('slug', slug)
     .single();
 
@@ -35,10 +35,10 @@ export async function GET(request: NextRequest) {
     display: 'standalone',
     background_color: '#0f172a',
     theme_color: company?.webapp_theme_color || '#f97316',
-    icons: company?.logo_url
+    icons: company?.webapp_logo_url
       ? [
-          { src: `/_next/image?url=${encodeURIComponent(company.logo_url)}&w=192&q=90`, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: `/_next/image?url=${encodeURIComponent(company.logo_url)}&w=512&q=90`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: `/_next/image?url=${encodeURIComponent(company.webapp_logo_url)}&w=192&q=90`, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: `/_next/image?url=${encodeURIComponent(company.webapp_logo_url)}&w=512&q=90`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ]
       : [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

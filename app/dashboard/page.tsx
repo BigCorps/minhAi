@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { Settings, Wallet } from 'lucide-react';
 import { CreditsCard } from '@/components/CreditsCard';
+import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 
 export default async function DashboardPage() {
@@ -55,16 +56,18 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Welcome */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Olá, {displayName}!
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-white/60">
-            Bem-vindo ao seu painel de controle
-          </p>
-        </div>
-      </div>
+<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div>
+    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      Olá, {displayName}!
+    </h1>
+    <p className="text-lg text-gray-600 dark:text-white/60">
+      Bem-vindo ao seu painel de controle
+    </p>
+    {/* ✅ Botão WebApp — visível só para plano Consulting */}
+    <WebAppButton userId={user.id} />
+  </div>
+</div>
 
       {/* Credit Card */}
       {user && (

@@ -15,38 +15,42 @@ export function WebAppButton({ userId }: WebAppButtonProps) {
     async function check() {
       const supabase = createClient();
 
-// Verificar plano ativo
-const planOk =
-  credits?.has_active_plan &&
-  credits?.plan_expires_at &&
-  new Date(credits.plan_expires_at) > new Date();
+      // 1. Buscar créditos e plano do usuário
+      const { data: credits } = await supabase
+        .from('user_credits')
+        .select('has_active_plan, plan_expires_at, active_plan_id, active_plan_name')
+        .eq('user_id', userId)
+        .single();
 
-if (!planOk) { setState('ineligible'); return; } // WebAppButton
-// if (!planOk) { setMotivo('ineligible'); return; } // webapp/page.tsx
+      // 2. Verificar se tem plano ativo e dentro da validade
+      const planOk =
+        credits?.has_active_plan &&
+        credits?.plan_expires_at &&
+        new Date(credits.plan_expires_at) > new Date();
 
-// ✅ Trial tem acesso ao webapp (active_plan_id é null mas active_plan_name = 'Trial')
-const isTrial = credits.active_plan_name === 'Trial' && !credits.active_plan_id;
+      if (!planOk) { setState('ineligible'); return; }
 
-if (!isTrial) {
-  // Não é trial — verificar se o pacote tem has_consultoria
-  if (!credits.active_plan_id) {
-    setState('ineligible'); return;
-  }
+      // 3. Trial tem acesso ao webapp
+      const isTrial = credits.active_plan_name === 'Trial' && !credits.active_plan_id;
 
-  const { data: pkg } = await supabase
-    .from('credits_packages')
-    .select('has_consultoria')
-    .eq('id', credits.active_plan_id)
-    .single();
+      if (!isTrial) {
+        // Não é trial — verificar se o pacote tem has_consultoria
+        if (!credits.active_plan_id) {
+          setState('ineligible'); return;
+        }
 
-  if (!pkg?.has_consultoria) {
-    setState('ineligible'); return;
-  }
-}
+        const { data: pkg } = await supabase
+          .from('credits_packages')
+          .select('has_consultoria')
+          .eq('id', credits.active_plan_id)
+          .single();
 
-// Se chegou aqui: é trial OU tem plano Consulting ativo ✅
+        if (!pkg?.has_consultoria) {
+          setState('ineligible'); return;
+        }
+      }
 
-      // 2. Verificar se já tem webapp configurado
+      // 4. Verificar se já tem webapp configurado
       const { data: company } = await supabase
         .from('companies')
         .select('slug, webapp_enabled')
@@ -70,7 +74,7 @@ if (!isTrial) {
   if (state === 'active' && webappSlug) {
     return (
       <a
-        href={`https://${webappSlug}.minhai.app`}
+        href={`https://${webappSlug}.minhai.com.br`}
         target="_blank"
         rel="noopener noreferrer"
         style={{
@@ -91,13 +95,11 @@ if (!isTrial) {
         onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
         onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
       >
-        {/* Globe SVG */}
         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
         </svg>
-        {webappSlug}.minhai.app
-        {/* External link SVG */}
+        {webappSlug}.minhai.com.br
         <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -128,7 +130,6 @@ if (!isTrial) {
       onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
     >
-      {/* Sparkle SVG */}
       <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />

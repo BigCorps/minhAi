@@ -224,7 +224,7 @@ export default function WebAppPage() {
           webapp_enabled: true,
           webapp_theme_color: themeColor,
           webapp_configured_at: new Date().toISOString(),
-          ...(logo_url ? { logo_url } : {}),
+          ...(logo_url ? { webapp_logo_url: logo_url } : {}),
         })
         .eq('id', selectedId);
 

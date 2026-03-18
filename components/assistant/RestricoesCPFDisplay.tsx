@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { ResultDownloadQR } from '@/components/assistant/ResultDownloadQR';
+import { generateConsultaPDF } from '@/lib/generatePDF';
 
 interface Props {
   data: { companyId: string };
@@ -98,11 +99,11 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
       setResultData(res.result);
       setSpeechText(res.speech_text);
 
-      // Gerar PDF via jsPDF
-      const pdfContent = generatePdfContent(res.result);
+      // ✅ Gerar PDF no frontend com resultado_formatado da edge
+      const pdfDataUri = generateConsultaPDF('Restrições CPF', res.resultado_formatado);
       const name = `restricoes_cpf_${cleanCpf}_${Date.now()}.pdf`;
       setFileName(name);
-      setFileBase64(pdfContent);
+      setFileBase64(pdfDataUri);
 
       setStage('result');
       playText(res.speech_text).catch(() => {});
@@ -111,13 +112,6 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
       setStage('error');
     }
   }, [cpf, data.companyId, supabase, playText]);
-
-  const generatePdfContent = (result: any): string => {
-    // Mock - em produção usar jsPDF
-    const restrictionsList = result.restricoes?.map((r: any) => `- ${r.tipo}: ${r.descricao} (${r.data})`).join('\n') || 'Nenhuma restrição encontrada';
-    const text = `RESTRIÇÕES CPF\n\nCPF: ${result.cpf}\nNome: ${result.nome}\nStatus: ${result.status}\n\nRestrições:\n${restrictionsList}\n\nTotal de Pendências: ${result.total_restricoes}`;
-    return btoa(unescape(encodeURIComponent(text)));
-  };
 
   const handleCopy = useCallback(async () => {
     if (!resultData) return;
@@ -131,13 +125,10 @@ export default function RestricoesCPFDisplay({ data, onClose, theme = 'dark', pl
 
   const handleDownloadPdf = useCallback(() => {
     if (!fileBase64) return;
-    const blob = new Blob([Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0))], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = fileBase64; // data URI direto (data:application/pdf;base64,...)
     a.download = fileName || `restricoes_cpf_${Date.now()}.pdf`;
     a.click();
-    URL.revokeObjectURL(url);
     playText('PDF de restrições baixado.').catch(() => {});
   }, [fileBase64, fileName, playText]);
 

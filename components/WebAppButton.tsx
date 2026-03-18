@@ -15,29 +15,36 @@ export function WebAppButton({ userId }: WebAppButtonProps) {
     async function check() {
       const supabase = createClient();
 
-      // 1. Verificar plano Consulting ativo
-      const { data: credits } = await supabase
-        .from('user_credits')
-        .select('has_active_plan, plan_expires_at, active_plan_id')
-        .eq('user_id', userId)
-        .single();
+// Verificar plano ativo
+const planOk =
+  credits?.has_active_plan &&
+  credits?.plan_expires_at &&
+  new Date(credits.plan_expires_at) > new Date();
 
-      if (!credits?.has_active_plan || !credits?.plan_expires_at) {
-        setState('ineligible'); return;
-      }
-      if (new Date(credits.plan_expires_at) <= new Date()) {
-        setState('ineligible'); return;
-      }
+if (!planOk) { setState('ineligible'); return; } // WebAppButton
+// if (!planOk) { setMotivo('ineligible'); return; } // webapp/page.tsx
 
-      const { data: pkg } = await supabase
-        .from('credits_packages')
-        .select('has_consultoria')
-        .eq('id', credits.active_plan_id)
-        .single();
+// ✅ Trial tem acesso ao webapp (active_plan_id é null mas active_plan_name = 'Trial')
+const isTrial = credits.active_plan_name === 'Trial' && !credits.active_plan_id;
 
-      if (!pkg?.has_consultoria) {
-        setState('ineligible'); return;
-      }
+if (!isTrial) {
+  // Não é trial — verificar se o pacote tem has_consultoria
+  if (!credits.active_plan_id) {
+    setState('ineligible'); return;
+  }
+
+  const { data: pkg } = await supabase
+    .from('credits_packages')
+    .select('has_consultoria')
+    .eq('id', credits.active_plan_id)
+    .single();
+
+  if (!pkg?.has_consultoria) {
+    setState('ineligible'); return;
+  }
+}
+
+// Se chegou aqui: é trial OU tem plano Consulting ativo ✅
 
       // 2. Verificar se já tem webapp configurado
       const { data: company } = await supabase

@@ -1,16 +1,19 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v5
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v6
 //
-// - Fundo sólido (sem backdrop-blur translúcido)
-// - Sem barra de título — X de fechar fica no card do avatar
-// - isMaximized: fixed inset-0 no kiosk, absolute inset-0 rounded-2xl no normal
-// - Layout responsivo por orientação:
-//     landscape → produtos esquerda / avatar+carrinho direita (coluna)
-//     portrait  → produtos em cima / avatar+carrinho em linha abaixo
-// - Detecção de orientação via screen.orientation + resize (confiável no kiosk/fullscreen)
+// CORREÇÃO PRINCIPAL: usa createPortal para renderizar direto no document.body
+// quando isMaximized=true, escapando do transform:scale() do container pai no kiosk.
+// position:fixed é quebrado por transform — portal é a única solução real.
+//
+// - isMaximized=false → absolute inset-0 z-40 rounded-2xl (modo normal, dentro do container)
+// - isMaximized=true  → portal no body, fixed inset-0 z-[200] (kiosk, tela toda)
+// Layout por orientação:
+//   landscape → produtos esquerda / avatar+carrinho direita
+//   portrait  → produtos em cima / avatar+carrinho em linha abaixo
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { CartProvider, useCart } from '@/hooks/useCart';
 import ProductGrid from './SaleModeModal/ProductGrid';
 import CartPanel from './SaleModeModal/CartPanel';
@@ -37,7 +40,6 @@ export interface SaleModeModalProps {
 }
 
 function getIsPortrait() {
-  // screen.orientation é mais confiável que window.innerWidth/Height no fullscreen
   if (typeof screen !== 'undefined' && screen.orientation?.type) {
     return screen.orientation.type.startsWith('portrait');
   }
@@ -70,32 +72,28 @@ function SaleModeInner({
   );
   const [showCheckout, setShowCheckout] = useState(false);
   const [isPortrait, setIsPortrait] = useState(false);
+  // Garante que o portal só monta no cliente (evita erro de hidratação)
+  const [mounted, setMounted] = useState(false);
 
-  // Detecção de orientação robusta (funciona em kiosk/fullscreen)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const update = () => setIsPortrait(getIsPortrait());
     update();
-
-    // Escuta tanto resize quanto orientationchange
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
-
-    // screen.orientation API (mais moderna)
-    if (screen.orientation) {
-      screen.orientation.addEventListener('change', update);
-    }
-
+    if (screen.orientation) screen.orientation.addEventListener('change', update);
     return () => {
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
-      if (screen.orientation) {
-        screen.orientation.removeEventListener('change', update);
-      }
+      if (screen.orientation) screen.orientation.removeEventListener('change', update);
     };
   }, []);
 
   useEffect(() => {
-    let mounted = true;
+    let m = true;
     async function load() {
       setLoadingProdutos(true);
       try {
@@ -103,17 +101,17 @@ function SaleModeInner({
           listarProdutos(companyId),
           listarCategorias(companyId),
         ]);
-        if (!mounted) return;
+        if (!m) return;
         setProdutos(prods);
         setCategorias(cats);
       } catch (err) {
         console.error('Erro ao carregar produtos:', err);
       } finally {
-        if (mounted) setLoadingProdutos(false);
+        if (m) setLoadingProdutos(false);
       }
     }
     load();
-    return () => { mounted = false; };
+    return () => { m = false; };
   }, [companyId]);
 
   useEffect(() => {
@@ -129,12 +127,14 @@ function SaleModeInner({
     setShowCheckout(true);
   }, [totalItens]);
 
-  const rootClass = isMaximized
-    ? `fixed inset-0 z-[200] flex overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`
-    : `absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-white'}`;
-
-  return (
-    <div className={rootClass}>
+  const content = (
+    <div className={
+      isMaximized
+        // Portal: fixed inset-0 diretamente no body — escapa do transform:scale()
+        ? `fixed inset-0 z-[200] flex overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`
+        // Normal: absolute relativo ao container do VoiceAssistant
+        : `absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-white'}`
+    }>
       <div className={`flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3 ${
         isPortrait ? 'flex-col' : 'flex-row'
       }`}>
@@ -142,9 +142,7 @@ function SaleModeInner({
         {showCheckout ? (
           <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4">
             <div className={`w-full max-w-sm rounded-2xl border p-5 ${
-              isDark
-                ? 'bg-slate-800 border-white/10'
-                : 'bg-white border-gray-200 shadow-xl'
+              isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
             }`}>
               <CheckoutFlow
                 companyId={companyId}
@@ -164,9 +162,7 @@ function SaleModeInner({
           </div>
         ) : (
           <>
-            {/* ── GRADE DE PRODUTOS ────────────────────────────────
-                landscape: flex-[7] em linha
-                portrait:  flex-1 em cima (ocupa o máximo disponível) */}
+            {/* Produtos: landscape=flex-[7] | portrait=flex-1 topo */}
             <div className={`flex flex-col min-w-0 overflow-hidden ${
               isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
             }`}>
@@ -181,25 +177,17 @@ function SaleModeInner({
               />
             </div>
 
-            {/* ── CONTROLES (avatar + carrinho) ────────────────────
-                landscape: flex-[3] coluna, ocupa 30% da linha
-                portrait:  linha fixa h-[200px] na parte de baixo  */}
+            {/* Avatar + carrinho: landscape=flex-[3] coluna | portrait=linha h-[200px] */}
             <div className={`flex min-w-0 overflow-hidden gap-2 ${
-              isPortrait
-                ? 'flex-row flex-shrink-0 h-[200px]'
-                : 'flex-col flex-[3]'
+              isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[3]'
             }`}>
 
               {/* Card do avatar */}
               <div className={`rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 relative ${
                 isPortrait ? 'w-[160px] flex-shrink-0' : 'flex-shrink-0'
               } ${
-                isDark
-                  ? 'bg-white/3 border-white/8'
-                  : 'bg-gray-50 border-gray-200'
+                isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
               }`}>
-
-                {/* Botão X de fechar */}
                 <button
                   onClick={onClose}
                   className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 ${
@@ -213,7 +201,6 @@ function SaleModeInner({
                   </svg>
                 </button>
 
-                {/* Avatar push-to-talk */}
                 <div
                   className="relative cursor-pointer select-none mt-1"
                   style={{ width: 80, height: 80 }}
@@ -249,7 +236,6 @@ function SaleModeInner({
                   </div>
                 </div>
 
-                {/* Estado do avatar */}
                 <p className={`text-[9px] text-center leading-tight ${
                   isDark ? 'text-white/35' : 'text-gray-400'
                 }`}>
@@ -259,7 +245,6 @@ function SaleModeInner({
                     : 'Segure para falar'}
                 </p>
 
-                {/* TextInput fino */}
                 {onTextMessage && (
                   <div className="w-full mt-0.5">
                     <TextInputChat
@@ -273,7 +258,7 @@ function SaleModeInner({
                 )}
               </div>
 
-              {/* CartPanel — ocupa o restante ao lado do avatar no portrait */}
+              {/* CartPanel */}
               <div className="flex-1 min-h-0 overflow-hidden">
                 <CartPanel theme={theme} onCheckout={handleCheckout} />
               </div>
@@ -283,6 +268,15 @@ function SaleModeInner({
       </div>
     </div>
   );
+
+  // No modo kiosk: renderiza via portal diretamente no body,
+  // escapando do transform:scale() que quebra position:fixed
+  if (isMaximized && mounted) {
+    return createPortal(content, document.body);
+  }
+
+  // Modo normal: renderiza inline dentro do container do VoiceAssistant
+  return content;
 }
 
 export default function SaleModeModal(props: SaleModeModalProps) {

@@ -116,13 +116,20 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ClimaTempoDisplay': ClimaTempoDisplay,
   'TocarVideoDisplay': TocarVideoDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
-    <SaleModeModal
-      companyId={data.companyId}
-      theme={theme}
-      onClose={onClose}
-      playText={playText}
-      produtoDestaque={data.produtoDestaque ?? null}
-    />
+  <SaleModeModal
+    companyId={activeModal.data.companyId}
+    theme={theme}
+    onClose={onClose}
+    playText={playText}
+    produtoDestaque={activeModal.data.produtoDestaque}
+    isListening={activeModal.data.isListening}
+    isProcessing={activeModal.data.isProcessing}
+    isPlayingAudio={activeModal.data.isPlayingAudio}
+    isTranscribing={activeModal.data.isTranscribing}
+    onMicDown={activeModal.data.onMicDown}
+    onMicUp={activeModal.data.onMicUp}
+    onTextMessage={activeModal.data.onTextMessage}
+  />
   ),
   'MercadoPagoPointDisplay': ({ data, onClose, playText }: any) => (
   <MercadoPagoPointDisplay

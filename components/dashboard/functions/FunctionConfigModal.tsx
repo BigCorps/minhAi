@@ -1895,6 +1895,150 @@ const TocarVideoForm = () => (
   </div>
 );
 
+const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
+  const router = useRouter();
+
+  const FUNCOES_INFO: Record<string, {
+    titulo: string;
+    descricao: string;
+    comoUsar: string[];
+    comandos: string[];
+    destino: string;
+  }> = {
+    modo_venda: {
+      titulo: 'Modo Venda',
+      descricao: 'Abre a loja virtual com catálogo de produtos e carrinho de compras no kiosk.',
+      comoUsar: [
+        'O cliente fala "quero comprar" ou clica no botão no header',
+        'A loja abre mostrando os produtos cadastrados',
+        'O assistente de voz continua disponível para ajudar',
+      ],
+      comandos: ['Quero comprar', 'Abrir modo venda', 'Escolher produtos', 'Comprar agora'],
+      destino: '/dashboard/vendas',
+    },
+    ver_produtos: {
+      titulo: 'Ver Produtos',
+      descricao: 'Cliente pede um produto específico e o assistente abre a loja destacando o item.',
+      comoUsar: [
+        'Cliente fala o nome de um produto',
+        'Assistente abre a loja e destaca o produto encontrado',
+        'Cliente adiciona ao carrinho com um clique',
+      ],
+      comandos: ['Tem coca-cola?', 'Ver produtos', 'O que vocês vendem?', 'Tem algum suco?'],
+      destino: '/dashboard/vendas',
+    },
+    fazer_pedido: {
+      titulo: 'Fazer Pedido',
+      descricao: 'Cliente monta o pedido por voz, adicionando itens ao carrinho e finalizando com pagamento.',
+      comoUsar: [
+        'Cliente diz o que quer comprar e a quantidade',
+        'Assistente abre a loja já com o item destacado',
+        'Cliente finaliza o pedido com pagamento via PIX, NFC ou TEF',
+      ],
+      comandos: ['Quero 2 sucos', 'Pedir uma pizza', 'Adicionar ao carrinho', 'Fazer pedido'],
+      destino: '/dashboard/vendas',
+    },
+    consultar_estoque: {
+      titulo: 'Consultar Estoque',
+      descricao: 'Consulta o estoque atual de um produto e avisa se estiver abaixo do mínimo.',
+      comoUsar: [
+        'Operador pergunta sobre o estoque de um produto',
+        'Assistente responde com a quantidade atual',
+        'Alerta automático se estiver abaixo do mínimo configurado',
+      ],
+      comandos: ['Quantos pães tem?', 'Estoque de refrigerante', 'Verificar estoque do café'],
+      destino: '/dashboard/vendas/produtos',
+    },
+    cadastrar_produto: {
+      titulo: 'Cadastrar Produto',
+      descricao: 'Cadastre novos produtos na loja pelo painel de administração.',
+      comoUsar: [
+        'Acesse o painel de produtos para cadastrar itens',
+        'Defina nome, preço, estoque, categoria e imagem',
+        'Produtos da Linha de Produção podem ser importados automaticamente',
+      ],
+      comandos: ['Cadastrar produto', 'Novo produto', 'Adicionar item na loja'],
+      destino: '/dashboard/vendas/produtos',
+    },
+  };
+
+  const info = FUNCOES_INFO[functionKey];
+  if (!info) return null;
+
+  return (
+    <div className="space-y-4">
+      {/* Header visual */}
+      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-2xl">{info.icon}</span>
+          <div>
+            <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">
+              {info.titulo}
+            </h4>
+            <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+              {info.descricao}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Como usar */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+        <h5 className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-1.5">
+          <Info size={13} />
+          Como funciona
+        </h5>
+        <ul className="space-y-1">
+          {info.comoUsar.map((passo, i) => (
+            <li key={i} className="flex items-start gap-1.5 text-xs text-blue-800 dark:text-blue-200">
+              <span className="text-blue-500 font-bold mt-0.5">·</span>
+              {passo}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Comandos de voz */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+        <h5 className="text-xs font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
+          <Mic size={13} />
+          Comandos de voz
+        </h5>
+        <div className="flex flex-wrap gap-1.5">
+          {info.comandos.map((cmd, i) => (
+            <code key={i} className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300">
+              "{cmd}"
+            </code>
+          ))}
+        </div>
+      </div>
+
+      {/* Destaque integração Linha de Produção (só para produtos) */}
+      {(functionKey === 'modo_venda' || functionKey === 'ver_produtos' || functionKey === 'fazer_pedido' || functionKey === 'cadastrar_produto') && (
+        <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-xl border border-purple-200 dark:border-purple-800">
+          <p className="text-xs text-purple-800 dark:text-purple-200">
+            <span className="font-semibold">Integrado com Linha de Produção:</span>{' '}
+            Produtos criados nas fichas técnicas podem ser importados diretamente para a loja.
+          </p>
+        </div>
+      )}
+
+      {/* Botão ir para a seção */}
+      <button
+        type="button"
+        onClick={() => router.push(`${info.destino}?company=${companyId}`)}
+        className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2"
+      >
+        <ExternalLink size={16} />
+        {functionKey === 'consultar_estoque' || functionKey === 'cadastrar_produto'
+          ? 'Gerenciar Produtos'
+          : 'Gerenciar Loja Virtual'
+        }
+      </button>
+    </div>
+  );
+};
+
 // ===== MAPEAMENTO: function_key → componente =====
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_whatsapp': WhatsappForm,
@@ -1941,6 +2085,11 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'cadastro': RegistrationConfigForm,
   'clima_tempo': ClimaTempoForm,
   'tocar_video': TocarVideoForm,
+  'modo_venda':        VendasForm,
+  'ver_produtos':      VendasForm,
+  'fazer_pedido':      VendasForm,
+  'consultar_estoque': VendasForm,
+  'cadastrar_produto': VendasForm,
 };
 
 // ===== INTERFACE =====

@@ -94,9 +94,9 @@ const CONFIGURABLE_FUNCTIONS = [
   'meu_cupom',
   'cadastro',
   'clima_tempo',
+  'tocar_video',
   'tef_debito',
   'tef_credito'
-  
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

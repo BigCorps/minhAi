@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     name: company?.name ? `minhAi - ${company.name}` : 'minhAi',
-    short_name: '${company.name}` || company?.name,
+    short_name: company?.name ? `${company.name}`,
     start_url: '/',
     display: 'standalone',
     background_color: '#0f172a',

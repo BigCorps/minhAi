@@ -529,6 +529,41 @@ if (climaTriggers.some(t => lowerTranscript.includes(t))) {
   return true;
 }
 
+// ── Tocar Vídeo ───────────────────────────────────────────
+const tocarVideoTriggers = [
+  'tocar video', 'tocar vídeo',
+  'assistir video', 'assistir vídeo',
+  'reproduzir video', 'reproduzir vídeo',
+  'buscar video', 'buscar vídeo',
+  'me mostra um video', 'me mostra um vídeo',
+  'quero ver um video', 'quero ver um vídeo',
+];
+if (tocarVideoTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'tocar_video');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+
+  // Extrair tema do vídeo do transcript
+  const queryMatch = lowerTranscript.match(
+    /(?:tocar|assistir|reproduzir|buscar|ver|mostra|quero ver)\s+(?:video|vídeo)\s+(?:de|do|da|sobre)?\s*(.+)/i
+  ) || lowerTranscript.match(
+    /(?:me mostra|quero ver)\s+(?:um\s+)?(?:video|vídeo)\s+(?:de|do|da|sobre)?\s*(.+)/i
+  );
+  const query = queryMatch ? queryMatch[1].trim() : '';
+
+  setActiveModal({
+    type: 'TocarVideoDisplay',
+    data: { companyId, query },
+  });
+
+  playText(query
+    ? `Buscando vídeo sobre ${query}...`
+    : 'Qual vídeo você quer assistir? Me diga o assunto.'
+  ).catch(() => {});
+
+  await registerFunctionUsage(companyId, 'tocar_video', 1);
+  return true;
+}
+
   // ── PIX: Confirmar ────────────────────────────────────────
   const confirmTriggers = ['confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'];
   if (confirmTriggers.some(t => lowerTranscript.includes(t))) {

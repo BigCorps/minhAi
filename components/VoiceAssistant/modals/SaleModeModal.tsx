@@ -3,8 +3,9 @@
 // Mudanças desta versão:
 // - Fundo sólido (sem backdrop-blur translúcido)
 // - Sem barra de título "Modo Venda" — X de fechar fica no card do avatar
-// - Cantos arredondados (rounded-2xl) igual aos outros modais
+// - Cantos arredondados (rounded-2xl) igual aos outros modais (apenas no modo normal)
 // - Sem busca — cliente usa o TextInput para isso
+// - isMaximized: usa fixed inset-0 no kiosk para escapar do transform:scale()
 
 'use client';
 
@@ -31,6 +32,10 @@ export interface SaleModeModalProps {
   onMicDown?: () => void;
   onMicUp?: () => void;
   onTextMessage?: (msg: string) => Promise<void>;
+  // Quando true (modo kiosk/maximizado), usa fixed inset-0 para escapar do
+  // transform:scale() do container pai. Quando false (modo normal), mantém
+  // absolute inset-0 relativo ao container do VoiceAssistant.
+  isMaximized?: boolean;
 }
 
 function SaleModeInner({
@@ -46,6 +51,7 @@ function SaleModeInner({
   onMicDown,
   onMicUp,
   onTextMessage,
+  isMaximized = false,
 }: SaleModeModalProps) {
   const isDark = theme === 'dark';
   const { totalItens } = useCart();
@@ -93,12 +99,14 @@ function SaleModeInner({
     setShowCheckout(true);
   }, [totalItens]);
 
+  // No modo kiosk/maximizado: fixed inset-0 z-[200] escapa do transform:scale()
+  // No modo normal: absolute inset-0 z-40 rounded-2xl se encaixa no container
+  const rootClass = isMaximized
+    ? `fixed inset-0 z-[200] flex overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`
+    : `absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-white'}`;
+
   return (
-    // absolute inset-0 relativo ao container pai com position: relative
-    // Fundo sólido — sem translucidez
-    <div className={`absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${
-      isDark ? 'bg-slate-900' : 'bg-white'
-    }`}>
+    <div className={rootClass}>
 
       {/* Área principal: sem padding top, ocupa tudo */}
       <div className="flex-1 flex gap-3 overflow-hidden px-3 py-3 min-h-0 w-full">

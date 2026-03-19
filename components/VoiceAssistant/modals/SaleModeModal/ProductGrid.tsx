@@ -195,7 +195,7 @@ export default function ProductGrid({
                     isDark ? 'bg-white/4' : 'bg-gray-50'
                   }`}>
                     {produto.imagem_url ? (
-                      <Image
+                      <img
                         src={produto.imagem_url}
                         alt={produto.nome}
                         fill

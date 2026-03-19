@@ -3583,6 +3583,72 @@ nosso_qrcode: {
     },
   },
 
+  clima_tempo: {
+  functionKey: 'clima_tempo',
+  functionName: 'Clima e Tempo',
+  category: 'ai_assistant',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'clima',
+    'tempo',
+    'temperatura',
+    'previsao do tempo',
+    'previsão do tempo',
+    'vai chover',
+    'vai fazer sol',
+    'como esta o tempo',
+    'como está o tempo',
+    'que tempo faz',
+    'tempo em',
+    'clima em',
+  ],
+
+  examplePhrases: [
+    'Como está o tempo?',
+    'Vai chover hoje?',
+    'Temperatura em São Paulo',
+    'Previsão para esta semana',
+  ],
+
+  edgeFunction: 'clima-tempo',
+  requiresInput: false,
+
+  description: 'Informa as condições climáticas atuais e a previsão do tempo para qualquer cidade.',
+  shortDescription: 'Mostra clima atual e previsão do tempo.',
+  icon: '🔵',
+  color: '#0000ff',
+
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      // Tenta extrair cidade do transcript
+      const cityMatch = transcript?.match(/(?:tempo em|clima em|temperatura em|previsao em|previsão em)\s+([a-záéíóúãõâêîôûç\s]+)/i);
+      const city = cityMatch ? cityMatch[1].trim() : null;
+
+      setActiveModal?.({
+        type: 'ClimaTempoDisplay',
+        data: { companyId, city },
+      });
+
+      await playText(
+        city
+          ? `Consultando o clima em ${city}...`
+          : 'Consultando o clima agora...'
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Erro clima_tempo:', error);
+      return false;
+    }
+  },
+},
+
   // ========================================
   // ✅ CORREÇÃO PRINCIPAL: requiresInput: false
   // O orçamento usa o transcript completo como pergunta para o GPT.

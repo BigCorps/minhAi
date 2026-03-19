@@ -900,7 +900,16 @@ export function VoiceAssistantWithWakeWord({
           await stopGoogleSpeech();
           setActiveModal({
             type: 'SaleModeModal',
-            data: { companyId },
+            data: {
+              companyId,
+              isListening,
+              isProcessing,
+              isPlayingAudio,
+              isTranscribing,
+              onMicDown: handleMicButtonDown,
+              onMicUp: handleMicButtonUp,
+              onTextMessage: handleTextMessage,
+            },
           });
           playText('Abrindo o catálogo de produtos.').catch(() => {});
           break;

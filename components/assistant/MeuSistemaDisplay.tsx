@@ -127,7 +127,7 @@ useEffect(() => {
               <h3 className={`text-3xl font-bold mb-2
                 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}
               `}>
-                minhAi, sou uma IA pra chamar de sua! Um funcionário autônomo de Voz e texto com Inteligência Artificial!
+                minhAi, sou uma I A pra chamar de sua! Um funcionário autônomo de Voz e texto com Inteligência Artificial!
               </h3>
               <p className={`text-lg mb-4
                 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}

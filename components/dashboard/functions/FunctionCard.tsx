@@ -93,8 +93,10 @@ const CONFIGURABLE_FUNCTIONS = [
   'horarios_disponiveis',
   'meu_cupom',
   'cadastro',
+  'clima_tempo',
   'tef_debito',
   'tef_credito'
+  
 ];
 
 const SYSTEM_FUNCTIONS = ['meu_sistema'];

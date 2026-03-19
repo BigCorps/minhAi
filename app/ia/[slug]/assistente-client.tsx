@@ -824,27 +824,28 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           </div>
 
-          {/* Orbe + Status (com Zoom aplicado) */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pb-24">
-            <div 
-              style={{ 
-                transform: `scale(${zoomLevel / 100})`,
-                transition: 'transform 0.2s ease-out'
-              }}
-            >
-<VoiceAssistantWithWakeWord 
-  companyId={company.id} 
-  companyName={company.name}
-  wakeWord={company.wake_word || 'olá assistente'}
-  greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
-  theme={theme}
-  isMaximized={true}
-  onAssistantStart={() => setAssistantStarted(true)}
-  hideDisabledFunctions={company.hide_disabled_functions_carousel}
-  autoScroll={company.carousel_auto_scroll}
-/>
-            </div>
-          </div>
+{/* Orbe + Status (com Zoom aplicado) */}
+<div className="absolute inset-0 flex flex-col items-center justify-center pb-24">
+  <div
+    className="relative"
+    style={{ 
+      transform: `scale(${zoomLevel / 100})`,
+      transition: 'transform 0.2s ease-out'
+    }}
+  >
+    <VoiceAssistantWithWakeWord 
+      companyId={company.id} 
+      companyName={company.name}
+      wakeWord={company.wake_word || 'olá assistente'}
+      greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
+      theme={theme}
+      isMaximized={true}
+      onAssistantStart={() => setAssistantStarted(true)}
+      hideDisabledFunctions={company.hide_disabled_functions_carousel}
+      autoScroll={company.carousel_auto_scroll}
+    />
+  </div>
+</div>
 
           {/* Toast */}
           {showToast && (
@@ -1254,7 +1255,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
           {/* Orbe + Carrossel */}
           <div className="flex-1 flex flex-col items-center justify-center py-8">
-            <div className="w-full max-w-5xl px-4">
+            <div className="relative w-full max-w-5xl px-4">
 <VoiceAssistantWithWakeWord 
   companyId={company.id} 
   companyName={company.name}

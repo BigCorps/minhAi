@@ -42,12 +42,12 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     name: company?.name ? `minhAi - ${company.name}` : 'minhAi',
-    short_name: 'minhAi' || company?.name,
+    short_name: '${company.name}` || company?.name,
     start_url: '/',
     display: 'standalone',
     background_color: '#0f172a',
     theme_color: company?.webapp_theme_color || '#f97316',
-icons: company?.webapp_logo_url
+    icons: company?.webapp_logo_url
   ? [
       {
         src: company.webapp_logo_url, // ← URL direta, sem /_next/image

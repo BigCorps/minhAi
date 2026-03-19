@@ -145,6 +145,71 @@ if (cadastroTriggers.some(t => lowerTranscript.includes(t))) {
   return true;
 }
 
+// ── Vendas ────────────────────────────────────────────────────
+const modoVendaTriggers = [
+  'modo venda', 'modo de venda', 'abrir loja', 'abrir modo venda',
+  'quero comprar', 'comprar agora', 'escolher produtos', 'fazer pedido',
+];
+if (modoVendaTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'modo_venda');
+  if (!isEnabled) { await playText('A função de vendas está desativada.'); return true; }
+  setActiveModal({ type: 'SaleModeModal', data: { companyId } });
+  playText('Modo venda aberto! Escolha os produtos.').catch(() => {});
+  await registerFunctionUsage(companyId, 'modo_venda', 0);
+  return true;
+}
+
+const verProdutosTriggers = [
+  'ver produtos', 'mostrar produtos', 'ver o cardápio', 'ver o catalogo',
+  'o que vocês vendem', 'o que voces vendem', 'tem', 'você tem', 'voce tem',
+];
+// "tem" e "você tem" só ativam com complemento (ex: "tem coca-cola")
+const verProdutosMatch =
+  verProdutosTriggers.slice(0, 5).some(t => lowerTranscript.includes(t)) ||
+  (lowerTranscript.startsWith('tem ') && lowerTranscript.length > 6) ||
+  (lowerTranscript.includes('você tem ') || lowerTranscript.includes('voce tem '));
+
+if (verProdutosMatch) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'ver_produtos');
+  if (!isEnabled) { await playText('A função de produtos está desativada.'); return true; }
+  // Extrai o termo de busca se houver (ex: "tem coca-cola" → "coca-cola")
+  const termoBusca = lowerTranscript
+    .replace(/tem |você tem |voce tem |ver produtos?|mostrar produtos?/gi, '')
+    .trim();
+  setActiveModal({ type: 'SaleModeModal', data: { companyId, termoBusca: termoBusca || undefined } });
+  playText(termoBusca ? `Buscando ${termoBusca}...` : 'Abrindo catálogo de produtos.').catch(() => {});
+  await registerFunctionUsage(companyId, 'ver_produtos', 0);
+  return true;
+}
+
+const consultarEstoqueTriggers = [
+  'estoque de', 'quantos tem', 'quanto tem', 'verificar estoque', 'consultar estoque',
+  'quantos restam', 'quanto resta', 'tem em estoque',
+];
+if (consultarEstoqueTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'consultar_estoque');
+  if (!isEnabled) { await playText('Função desativada.'); return true; }
+  // Extrai nome do produto do transcript
+  const nomeProduto = lowerTranscript
+    .replace(/estoque de|quantos tem|quanto tem|verificar estoque|consultar estoque|quantos restam|quanto resta|tem em estoque/gi, '')
+    .trim();
+  // Delega ao handler do registry que faz a query no Supabase
+  const fn = (await import('@/lib/functions-registry')).getFunctionByKey('consultar_estoque');
+  if (fn?.handler) {
+    await fn.handler({
+      transcript: lowerTranscript,
+      companyId,
+      functionSettings,
+      playText,
+      setIsProcessing,
+      sessionId,
+      setActiveModal,
+    });
+  }
+  await registerFunctionUsage(companyId, 'consultar_estoque', 0);
+  return true;
+}
+
   // 1. PRIMEIRO: Verificar se é um comando de ABERTURA de função (via Registry)
   // Isso evita que comandos como "enviar email" caiam na confirmação antes do modal abrir.
   if (commandProcessor) {

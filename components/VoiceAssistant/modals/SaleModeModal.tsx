@@ -1,12 +1,10 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v3
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v4
 //
-// Estratégia correta: NÃO usa portal, NÃO usa fixed inset-0.
-// O componente é renderizado pelo ActionModals diretamente no DOM,
-// e usa position absolute relativo ao container pai que já respeita
-// header e carrossel. Assim header e carrossel continuam visíveis.
-//
-// Para isso funcionar, o container pai no assistente-client.tsx
-// precisa ter position: relative (ver instrução abaixo).
+// Mudanças desta versão:
+// - Fundo sólido (sem backdrop-blur translúcido)
+// - Sem barra de título "Modo Venda" — X de fechar fica no card do avatar
+// - Cantos arredondados (rounded-2xl) igual aos outros modais
+// - Sem busca — cliente usa o TextInput para isso
 
 'use client';
 
@@ -19,8 +17,6 @@ import { AvatarFace } from '@/components/AvatarFace';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 export interface SaleModeModalProps {
   companyId: string;
@@ -36,8 +32,6 @@ export interface SaleModeModalProps {
   onMicUp?: () => void;
   onTextMessage?: (msg: string) => Promise<void>;
 }
-
-// ─── Inner ────────────────────────────────────────────────────────────────────
 
 function SaleModeInner({
   companyId,
@@ -100,64 +94,20 @@ function SaleModeInner({
   }, [totalItens]);
 
   return (
-    /*
-      absolute inset-0 relativo ao container pai que tem position: relative.
-      No assistente-client.tsx, o <div> que envolve o VoiceAssistantWithWakeWord
-      precisa ter a classe "relative" — ver instrução no DIFFS_FASE2.md.
-    */
-    <div className={`absolute inset-0 z-40 flex flex-col overflow-hidden ${
-      isDark
-        ? 'bg-slate-900/98 backdrop-blur-xl'
-        : 'bg-white/98 backdrop-blur-xl'
+    // absolute inset-0 relativo ao container pai com position: relative
+    // Fundo sólido — sem translucidez
+    <div className={`absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${
+      isDark ? 'bg-slate-900' : 'bg-white'
     }`}>
 
-      {/* Barra de título */}
-      <div className={`flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b ${
-        isDark ? 'border-white/8' : 'border-gray-200'
-      }`}>
-        <div className="flex items-center gap-2">
-          <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-            isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'
-          }`}>
-            <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <span className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Modo Venda
-          </span>
-          {produtos.length > 0 && (
-            <span className={`text-xs px-2 py-0.5 rounded-full ${
-              isDark ? 'bg-white/8 text-white/40' : 'bg-gray-100 text-gray-500'
-            }`}>
-              {produtos.length} produtos
-            </span>
-          )}
-        </div>
-
-        <button
-          onClick={onClose}
-          className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-            isDark
-              ? 'text-white/40 hover:text-white hover:bg-white/10'
-              : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Área principal */}
-      <div className="flex-1 flex gap-3 overflow-hidden px-3 py-3 min-h-0">
+      {/* Área principal: sem padding top, ocupa tudo */}
+      <div className="flex-1 flex gap-3 overflow-hidden px-3 py-3 min-h-0 w-full">
 
         {showCheckout ? (
           <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4">
             <div className={`w-full max-w-sm rounded-2xl border p-5 ${
               isDark
-                ? 'bg-slate-900/80 border-white/10 backdrop-blur-xl'
+                ? 'bg-slate-800 border-white/10'
                 : 'bg-white border-gray-200 shadow-xl'
             }`}>
               <CheckoutFlow
@@ -178,7 +128,7 @@ function SaleModeInner({
           </div>
         ) : (
           <>
-            {/* Esquerdo: produtos com scroll próprio (70%) */}
+            {/* Esquerdo: produtos (70%) */}
             <div className="flex-[7] flex flex-col min-w-0 overflow-hidden">
               <ProductGrid
                 produtos={produtos}
@@ -187,22 +137,38 @@ function SaleModeInner({
                 theme={theme}
                 produtoDestaque={produtoDestaque}
                 onProdutoDestaqueClear={() => setProdutoDestaque(null)}
+                // sem busca aqui — cliente usa o TextInput
+                hideBusca
               />
             </div>
 
-            {/* Direito: avatar + carrinho fixos (30%) */}
+            {/* Direito: avatar + carrinho (30%) */}
             <div className="flex-[3] flex flex-col gap-2 min-w-0 overflow-hidden">
 
-              {/* Card do avatar */}
-              <div className={`flex-shrink-0 rounded-2xl border flex flex-col items-center gap-1 pt-3 pb-2 px-2 ${
+              {/* Card do avatar — X de fechar no canto superior direito */}
+              <div className={`flex-shrink-0 rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 relative ${
                 isDark
                   ? 'bg-white/3 border-white/8'
-                  : 'bg-white border-gray-200 shadow-sm'
+                  : 'bg-gray-50 border-gray-200'
               }`}>
 
-                {/* Avatar clicável push-to-talk */}
+                {/* Botão X de fechar */}
+                <button
+                  onClick={onClose}
+                  className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 ${
+                    isDark
+                      ? 'text-white/30 hover:text-white hover:bg-white/10'
+                      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                {/* Avatar push-to-talk */}
                 <div
-                  className="relative cursor-pointer select-none"
+                  className="relative cursor-pointer select-none mt-1"
                   style={{ width: 80, height: 80 }}
                   onMouseDown={onMicDown}
                   onMouseUp={onMicUp}
@@ -212,8 +178,6 @@ function SaleModeInner({
                   {isListening && (
                     <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
                   )}
-
-                  {/* AvatarFace comprimido de 192px para 80px via scale */}
                   <div className="w-full h-full overflow-hidden rounded-full">
                     <div style={{
                       transform: 'scale(0.417)',
@@ -238,6 +202,7 @@ function SaleModeInner({
                   </div>
                 </div>
 
+                {/* Estado do avatar */}
                 <p className={`text-[9px] text-center leading-tight ${
                   isDark ? 'text-white/35' : 'text-gray-400'
                 }`}>
@@ -247,13 +212,15 @@ function SaleModeInner({
                     : 'Segure para falar'}
                 </p>
 
+                {/* TextInput fino */}
                 {onTextMessage && (
-                  <div className="w-full">
+                  <div className="w-full mt-0.5">
                     <TextInputChat
                       onSendMessage={onTextMessage}
                       isProcessing={isProcessing || isPlayingAudio || isTranscribing}
                       theme={theme}
                       disabled={false}
+                      compact
                     />
                   </div>
                 )}
@@ -270,8 +237,6 @@ function SaleModeInner({
     </div>
   );
 }
-
-// ─── Export com CartProvider (sem portal) ────────────────────────────────────
 
 export default function SaleModeModal(props: SaleModeModalProps) {
   return (

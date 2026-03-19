@@ -137,10 +137,26 @@ export default function ClimaTempoDisplay({
     }
   };
 
-  // ── Busca inicial: tenta geolocalização, depois cidade, depois São Paulo ──
-  useEffect(() => {
-    if (initialCity) {
-      fetchWeather(initialCity);
+useEffect(() => {
+  async function init() {
+    // Se o handler já passou uma cidade via prop, usa ela
+    if (initialCity) { fetchWeather(initialCity); return; }
+
+    // Buscar config salva no banco
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/company_function_settings?company_id=eq.${companyId}&function_key=eq.clima_tempo&select=config`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      }
+    );
+    const rows = await res.json();
+    const config = rows?.[0]?.config;
+
+    if (config?.mode === 'fixed' && config?.default_city) {
+      fetchWeather(config.default_city);
     } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchWeather(undefined, pos.coords.latitude, pos.coords.longitude),
@@ -149,7 +165,9 @@ export default function ClimaTempoDisplay({
     } else {
       fetchWeather('São Paulo');
     }
-  }, []);
+  }
+  init();
+}, []);
 
   // ── Auto-close ───────────────────────────────────────────────
   useEffect(() => {

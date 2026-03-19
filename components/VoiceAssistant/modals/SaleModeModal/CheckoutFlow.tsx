@@ -4,9 +4,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import {
+  Zap, Smartphone, CreditCard, Banknote,
+  ArrowLeft, Check, Copy, CheckCheck,
+  QrCode, Clock, X,
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useCart } from '@/hooks/useCart';
 import { criarPedido, atualizarStatusPedido, formatarPreco } from '@/lib/produtos-venda';
+import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
 
 type Step = 'cliente' | 'pagamento' | 'aguardando' | 'confirmado' | 'erro';
 type MetodoPagamento = 'pix' | 'nfc' | 'tef' | 'dinheiro';
@@ -62,6 +68,28 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
   const [erro, setErro] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
 
+  // Total salvo antes do clear() para exibir na tela de confirmado
+  const [totalConfirmado, setTotalConfirmado] = useState(0);
+
+  // Cadastro configurável
+  const [showRegistration, setShowRegistration] = useState(false);
+  const [registrationFields, setRegistrationFields] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function checkRegistration() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('registration_configs')
+        .select('fields')
+        .eq('company_id', companyId)
+        .maybeSingle();
+      const fields = data?.fields ?? [];
+      const extras = fields.filter((f: string) => f !== 'nome' && f !== 'telefone' && f !== 'sobrenome');
+      if (extras.length > 0) setRegistrationFields(fields);
+    }
+    checkRegistration();
+  }, [companyId]);
+
   // Auto-check PIX: delay 30s após QR gerado, depois verifica a cada 5s
   const [autoChecking, setAutoChecking] = useState(false);
   const pixTimeLeft = usePixTimer(pixExpiresAt);
@@ -85,6 +113,7 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
         if (tx?.status === 'confirmed') {
           clearInterval(interval);
           setAutoChecking(false);
+          setTotalConfirmado(total);
           setStep('confirmado');
           playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
           clear();
@@ -108,7 +137,9 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
           if (cob?.status === 'PAGA') {
             const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
             if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
-            clearInterval(interval); setPolling(false); setStep('confirmado');
+            clearInterval(interval); setPolling(false);
+            setTotalConfirmado(total);
+            setStep('confirmado');
             playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
           }
         } else if (metodo === 'tef') {
@@ -119,7 +150,9 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
           if (od?.status === 'paid' || od?.status === 'processed') {
             const { data: p } = await supabase.from('pedidos').select('status').eq('id', pedidoId).single();
             if (p?.status !== 'pago') await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
-            clearInterval(interval); setPolling(false); setStep('confirmado');
+            clearInterval(interval); setPolling(false);
+            setTotalConfirmado(total);
+            setStep('confirmado');
             playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
           }
         }
@@ -139,6 +172,7 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
         body: { transaction_id: pixTransactionId },
       });
       if (!error && data?.success) {
+        setTotalConfirmado(total);
         setStep('confirmado'); setAutoChecking(false);
         playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {}); clear();
       } else {
@@ -164,6 +198,7 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
 
       if (metodo === 'dinheiro') {
         await atualizarStatusPedido(pedido.id, 'pago');
+        setTotalConfirmado(total);
         setStep('confirmado');
         playText?.('Pedido registrado! Valor a receber: ' + formatarPreco(total)).catch(() => {});
         clear(); return;
@@ -229,39 +264,81 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
 
   // ── STEP: CLIENTE ─────────────────────────────────────────────────────────
   if (step === 'cliente') return (
-    <div className="w-full flex flex-col gap-4">
-      <div>
-        <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>Dados do cliente</p>
-        <p className={`text-xs ${textMuted}`}>Opcional — preencha para histórico</p>
-      </div>
-      <div>
-        <label className={labelCls}>Nome</label>
-        <input type="text" value={clienteNome} onChange={e => setClienteNome(e.target.value)} placeholder="Nome do cliente" className={inputCls} />
-      </div>
-      <div>
-        <label className={labelCls}>Telefone</label>
-        <input type="tel" value={clienteTel} onChange={e => setClienteTel(e.target.value)} placeholder="(00) 00000-0000" className={inputCls} />
-      </div>
-      <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
-        <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
-          <span>Total a pagar</span>
-          <span className="text-emerald-500">{formatarPreco(total)}</span>
+    <>
+      <div className="w-full flex flex-col gap-4">
+        <div>
+          <p className={`text-base font-bold mb-0.5 ${textPrimary}`}>Dados do cliente</p>
+          <p className={`text-xs ${textMuted}`}>Opcional — preencha para histórico</p>
+        </div>
+
+        {registrationFields.length > 0 ? (
+          <>
+            <div>
+              <label className={labelCls}>Nome</label>
+              <input type="text" value={clienteNome} onChange={e => setClienteNome(e.target.value)}
+                placeholder="Nome do cliente" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Telefone</label>
+              <input type="tel" value={clienteTel} onChange={e => setClienteTel(e.target.value)}
+                placeholder="(00) 00000-0000" className={inputCls} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRegistration(true)}
+              className={`w-full py-2 rounded-xl text-xs border transition-all ${
+                isDark ? 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
+                       : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+              }`}
+            >
+              + Cadastro completo (campos adicionais)
+            </button>
+          </>
+        ) : (
+          <>
+            <div>
+              <label className={labelCls}>Nome</label>
+              <input type="text" value={clienteNome} onChange={e => setClienteNome(e.target.value)}
+                placeholder="Nome do cliente" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Telefone</label>
+              <input type="tel" value={clienteTel} onChange={e => setClienteTel(e.target.value)}
+                placeholder="(00) 00000-0000" className={inputCls} />
+            </div>
+          </>
+        )}
+
+        <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+          <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
+            <span>Total a pagar</span>
+            <span className="text-emerald-500">{formatarPreco(total)}</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className={btnSecondary}>Cancelar</button>
+          <button onClick={() => setStep('pagamento')} className={btnPrimary}>Continuar →</button>
         </div>
       </div>
-      <div className="flex gap-2">
-        <button onClick={onClose} className={btnSecondary}>Cancelar</button>
-        <button onClick={() => setStep('pagamento')} className={btnPrimary}>Continuar →</button>
-      </div>
-    </div>
+
+      {showRegistration && (
+        <RegistrationDisplay
+          data={{ companyId }}
+          onClose={() => setShowRegistration(false)}
+          theme={theme}
+          playText={playText}
+        />
+      )}
+    </>
   );
 
   // ── STEP: PAGAMENTO ───────────────────────────────────────────────────────
   if (step === 'pagamento') {
-    const metodos: { key: MetodoPagamento; label: string; icon: string; desc: string }[] = [
-      { key: 'pix',      label: 'PIX',           icon: '⚡', desc: 'QR Code instantâneo' },
-      { key: 'nfc',      label: 'Cartão NFC',     icon: '📱', desc: 'Aproximar cartão' },
-      { key: 'tef',      label: 'TEF Maquininha', icon: '💳', desc: 'Inserir na maquininha' },
-      { key: 'dinheiro', label: 'Dinheiro',       icon: '💵', desc: 'Pagamento em espécie' },
+    const metodos: { key: MetodoPagamento; label: string; Icon: React.ElementType; desc: string }[] = [
+      { key: 'pix',      label: 'PIX',           Icon: Zap,        desc: 'QR Code instantâneo' },
+      { key: 'nfc',      label: 'Cartão NFC',     Icon: Smartphone, desc: 'Aproximar cartão' },
+      { key: 'tef',      label: 'TEF Maquininha', Icon: CreditCard, desc: 'Inserir na maquininha' },
+      { key: 'dinheiro', label: 'Dinheiro',       Icon: Banknote,   desc: 'Pagamento em espécie' },
     ];
     return (
       <div className="w-full flex flex-col gap-4">
@@ -276,14 +353,16 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
                 metodo === m.key
                   ? isDark ? 'border-emerald-500 bg-emerald-500/10' : 'border-emerald-500 bg-emerald-50'
                   : isDark ? 'border-white/10 hover:border-white/20' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <div className="text-xl mb-1">{m.icon}</div>
+              <m.Icon className={`w-5 h-5 mb-1.5 ${metodo === m.key ? 'text-emerald-500' : textSecondary}`} />
               <div className={`text-xs font-semibold ${textPrimary}`}>{m.label}</div>
               <div className={`text-[10px] ${textMuted}`}>{m.desc}</div>
             </button>
           ))}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setStep('cliente')} className={btnSecondary}>← Voltar</button>
+          <button onClick={() => setStep('cliente')} className={btnSecondary}>
+            <span className="flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" />Voltar</span>
+          </button>
           <button onClick={handleConfirmarPagamento} disabled={loading}
             className={btnPrimary + (loading ? ' opacity-70 cursor-not-allowed' : '')}>
             {loading
@@ -341,8 +420,10 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
 
             <button
               onClick={() => { if (pixCode) { navigator.clipboard.writeText(pixCode); setPixCopied(true); setTimeout(() => setPixCopied(false), 2000); }}}
-              className={`w-full py-2 rounded-lg text-xs font-bold transition-colors ${pixCopied ? 'bg-emerald-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-              {pixCopied ? '✓ Copiado!' : 'Copiar Código PIX'}
+              className={`w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${pixCopied ? 'bg-emerald-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+              {pixCopied
+                ? <><CheckCheck className="w-3.5 h-3.5" />Copiado!</>
+                : <><Copy className="w-3.5 h-3.5" />Copiar Código PIX</>}
             </button>
 
             <button onClick={handleVerificarManual} disabled={confirmLoading} className={btnOutline}>
@@ -354,8 +435,8 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
             </button>
 
             <button onClick={() => { setAutoChecking(false); setStep('pagamento'); }}
-              className={`text-[10px] text-center transition-colors ${textMuted} hover:${textSecondary}`}>
-              ← Cancelar
+              className={`text-[10px] flex items-center justify-center gap-1 transition-colors ${textMuted} hover:${textSecondary}`}>
+              <ArrowLeft className="w-3 h-3" />Cancelar
             </button>
           </div>
 
@@ -393,8 +474,10 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
             {metodo === 'nfc' ? 'Aproxime na maquininha para pagar' : 'Insira ou aproxime o cartão na maquininha Point'}
           </p>
         </div>
-        <div className={`w-24 h-24 rounded-2xl flex items-center justify-center text-5xl ${isDark ? 'bg-white/5' : 'bg-gray-50 border border-gray-200'}`}>
-          {metodo === 'nfc' ? '📱' : '💳'}
+        <div className={`w-24 h-24 rounded-2xl flex items-center justify-center ${isDark ? 'bg-white/5' : 'bg-gray-50 border border-gray-200'}`}>
+          {metodo === 'nfc'
+            ? <Smartphone className={`w-10 h-10 ${textSecondary}`} />
+            : <CreditCard className={`w-10 h-10 ${textSecondary}`} />}
         </div>
         <p className="text-2xl font-bold text-emerald-500">{formatarPreco(total)}</p>
         <div className="flex items-center gap-2">
@@ -410,16 +493,16 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
   if (step === 'confirmado') return (
     <div className="w-full flex flex-col items-center gap-4">
       <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
-        <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-        </svg>
+        <Check className="w-10 h-10 text-emerald-500" strokeWidth={2.5} />
       </div>
       <div className="text-center">
         <p className={`text-xl font-bold mb-1 ${textPrimary}`}>Pagamento confirmado!</p>
         {clienteNome && <p className={`text-sm ${textSecondary}`}>Obrigado, {clienteNome}!</p>}
-        <p className="text-lg font-bold mt-2 text-emerald-500">{formatarPreco(total)}</p>
+        <p className="text-lg font-bold mt-2 text-emerald-500">{formatarPreco(totalConfirmado)}</p>
       </div>
-      <button onClick={handleFinalizar} className={btnPrimary}>Fechar ✓</button>
+      <button onClick={handleFinalizar} className={`${btnPrimary} flex items-center justify-center gap-2`}>
+        <Check className="w-4 h-4" />Fechar
+      </button>
     </div>
   );
 
@@ -427,9 +510,7 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
   return (
     <div className="w-full flex flex-col items-center gap-4">
       <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
-        <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <X className="w-8 h-8 text-red-500" />
       </div>
       <p className={`text-sm text-center ${textSecondary}`}>{erro}</p>
       <div className="flex gap-2 w-full">

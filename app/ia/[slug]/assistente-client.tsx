@@ -933,7 +933,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         }`}>
           
           {/* Header */}
-          <header className={`w-full border-b transition-colors ${
+          <header data-role="header" className={`w-full border-b transition-colors ${
             theme === 'dark'
               ? 'bg-slate-900/50 border-white/5 backdrop-blur-xl'
               : 'bg-white/80 border-gray-200 backdrop-blur-xl'

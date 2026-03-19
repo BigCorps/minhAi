@@ -503,6 +503,32 @@ if (nfcCreditoTriggers.some(t => lowerTranscript.includes(t))) {
   return true;
 }
 
+// ── Clima e Tempo ─────────────────────────────────────────
+const climaTriggers = [
+  'clima', 'tempo', 'temperatura',
+  'previsao do tempo', 'previsão do tempo',
+  'vai chover', 'vai fazer sol',
+  'como esta o tempo', 'como está o tempo',
+  'que tempo faz', 'tempo em', 'clima em',
+];
+if (climaTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'clima_tempo');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+
+  const cityMatch = lowerTranscript.match(
+    /(?:tempo em|clima em|temperatura em|previsao em|previsão em)\s+([a-záéíóúãõâêîôûç\s]+)/i
+  );
+  const city = cityMatch ? cityMatch[1].trim() : null;
+
+  setActiveModal({
+    type: 'ClimaTempoDisplay',
+    data: { companyId, city },
+  });
+  playText(city ? `Consultando o clima em ${city}...` : 'Consultando o clima agora...').catch(() => {});
+  await registerFunctionUsage(companyId, 'clima_tempo', 0);
+  return true;
+}
+
   // ── PIX: Confirmar ────────────────────────────────────────
   const confirmTriggers = ['confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'];
   if (confirmTriggers.some(t => lowerTranscript.includes(t))) {

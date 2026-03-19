@@ -878,6 +878,15 @@ export function VoiceAssistantWithWakeWord({
           playText('Consultando o clima agora...').catch(() => {});
           break;
 
+case 'cadastrar_produto':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'CadastrarProdutoDisplay',
+    data: { companyId },
+  });
+  playText('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
+  return; // pula o registerFunctionUsage — cobrado só quando salvar
+
         case 'modo_venda':
           await stopGoogleSpeech();
           setActiveModal({

@@ -1867,6 +1867,34 @@ const RegistrationConfigForm = ({ companyId }: any) => {
   );
 };
 
+const TocarVideoForm = () => (
+  <div className="space-y-4">
+    <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+      <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2 flex items-center gap-2">
+        Como funciona o Tocar Vídeo
+      </h4>
+      <ul className="space-y-1 text-sm text-red-800 dark:text-red-200">
+        <li>✓ Busca vídeos automaticamente no YouTube por voz</li>
+        <li>✓ Reproduz o resultado mais relevante em tela cheia</li>
+        <li>✓ Fecha automaticamente quando o vídeo termina</li>
+        <li>✓ O cliente pode buscar outro vídeo direto no player</li>
+      </ul>
+    </div>
+
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center gap-2">
+        Comandos de Voz
+      </h5>
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+        <li>• "Tocar vídeo de yoga"</li>
+        <li>• "Assistir receita de bolo"</li>
+        <li>• "Me mostra um vídeo de meditação"</li>
+        <li>• "Reproduzir vídeo sobre finanças"</li>
+      </ul>
+    </div>
+  </div>
+);
+
 // ===== MAPEAMENTO: function_key → componente =====
 const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'qrcode_whatsapp': WhatsappForm,
@@ -1912,6 +1940,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'meu_cupom': MeuCupomForm,
   'cadastro': RegistrationConfigForm,
   'clima_tempo': ClimaTempoForm,
+  'tocar_video': TocarVideoForm,
 };
 
 // ===== INTERFACE =====

@@ -860,6 +860,15 @@ export function VoiceAssistantWithWakeWord({
           playText('Posso cobrar no crédito direto na maquininha Point, à vista ou parcelado. Basta pedir uma cobrança TEF crédito com o valor.').catch(() => {});
           break;
 
+        case 'clima_tempo':
+          await stopGoogleSpeech();
+          setActiveModal({
+            type: 'ClimaTempoDisplay',
+            data: { companyId, city: null },
+          });
+          playText('Consultando o clima agora...').catch(() => {});
+          break;
+
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

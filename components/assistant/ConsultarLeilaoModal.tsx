@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Car, Loader2, AlertCircle, FileText, Download, CheckCircle, Mail, ShieldCheck } from 'lucide-react';
+import { X, User, Loader2, AlertCircle, FileText, Download, CheckCircle, Mail, ShieldCheck } from 'lucide-react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { useGoogleConnected } from '@/components/VoiceAssistant/hooks/useGoogleConnected';
 import { createClient } from '@/lib/supabase-browser';
@@ -12,7 +12,7 @@ import { generateConsultaPDF } from '@/lib/generatePDF';
 interface ConsultarLeilaoModalProps {
   data: {
     companyId: string;
-    placaPrefill?: string;
+    cpfPrefill?: string;
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
@@ -37,13 +37,13 @@ export default function ConsultarLeilaoModal({
   theme = 'dark',
   playText,
 }: ConsultarLeilaoModalProps) {
-  const { companyId, placaPrefill = '' } = data;
+  const { companyId, cpfPrefill = '' } = data;
 
   const [step, setStep] = useState<Step>('input');
-  const [placa, setPlaca] = useState(placaPrefill);
+  const [cpf, setCpf] = useState(cpfPrefill);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<ResultadoFormatado[]>([]);
-  const [semHistorico, setSemHistorico] = useState(false);
+  const [semProtestos, setSemProtestos] = useState(false);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -56,32 +56,29 @@ export default function ConsultarLeilaoModal({
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
 
-  // ── formatação / validação ───────────────────────────────────────────────
+  // ── formatação ───────────────────────────────────────────────
 
-  const formatarPlaca = (valor: string) => {
-    const limpo = valor.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 7);
-    if (limpo.length <= 3) return limpo;
-    return `${limpo.slice(0, 3)}-${limpo.slice(3, 7)}`;
+  const formatCPF = (value: string) => {
+    const cleaned = value.replace(/\D/g, '');
+    return cleaned
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1-$2')
+      .slice(0, 14);
   };
 
-  const handlePlacaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPlaca(formatarPlaca(e.target.value));
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCpf(formatCPF(e.target.value));
   };
 
-  const validarPlaca = (placaStr: string): boolean => {
-    const p = placaStr.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    if (p.length !== 7) return false;
-    return /^[A-Z]{3}\d{4}$/.test(p) || /^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(p);
-  };
-
-  // ── consultar ───────────────────────────────────────────────────────────
+  // ── consultar ───────────────────────────────────────────────
 
   const handleConsultar = async () => {
-    const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    const cleanCpf = cpf.replace(/\D/g, '');
 
-    if (!validarPlaca(placaLimpa)) {
-      setError('Placa inválida. Formato: ABC1234 ou ABC1D23.');
-      playText('Placa inválida. Por favor, informe uma placa válida.').catch(() => {});
+    if (cleanCpf.length !== 11) {
+      setError('CPF inválido. Informe os 11 dígitos.');
+      playText('CPF inválido. Por favor, informe um CPF válido.').catch(() => {});
       return;
     }
 
@@ -89,13 +86,13 @@ export default function ConsultarLeilaoModal({
     setError(null);
     setResultado([]);
     setPdfBase64(null);
-    setSemHistorico(false);
+    setSemProtestos(false);
 
     try {
       const supabase = createClient();
 
       const { data: res, error } = await supabase.functions.invoke('ferramentas-consultas', {
-        body: { company_id: companyId, action: 'consultar_leilao', placa: placaLimpa },
+        body: { company_id: companyId, action: 'consultar_protestos', cpf: cleanCpf },
       });
 
       if (error) throw new Error(error.message);
@@ -105,39 +102,36 @@ export default function ConsultarLeilaoModal({
         (r: any) => Array.isArray(r) ? { label: r[0], value: r[1] } : r
       );
 
-      setSemHistorico(!res.result?.em_leilao);
+      setSemProtestos(!res.result?.consta_protestos && !res.result?.possui_pendencias);
       setResultado(rows);
-      setPdfFileName(`consulta-leilao-${placaLimpa}.pdf`);
-      setPdfBase64(generateConsultaPDF('Consultar Leilão', res.resultado_formatado || []));
+      setPdfFileName(`protestos-${cleanCpf}.pdf`);
+      setPdfBase64(generateConsultaPDF('Consulta de Protestos', res.resultado_formatado || []));
       setStep('result');
 
-      playText(res.speech_text || (rows.length > 0
-        ? 'Consulta realizada. Histórico de leilão encontrado.'
-        : 'Consulta realizada. Nenhum leilão encontrado para este veículo.'
-      )).catch(() => {});
+      playText(res.speech_text || 'Consulta realizada com sucesso.').catch(() => {});
 
     } catch (err: any) {
-      console.error('Erro ao consultar leilão:', err);
-      setError(err.message || 'Erro ao consultar leilão.');
+      console.error('Erro ao consultar protestos:', err);
+      setError(err.message || 'Erro ao consultar protestos.');
       setStep('input');
-      playText('Erro ao consultar leilão. Tente novamente.').catch(() => {});
+      playText('Erro ao consultar protestos. Tente novamente.').catch(() => {});
     }
   };
 
-  // ── download PDF ─────────────────────────────────────────────────────────
+  // ── download PDF ─────────────────────────────────────────────
 
   const handleDownloadPdf = () => {
     if (!pdfBase64) return;
     const link = document.createElement('a');
     link.href = pdfBase64;
-    link.download = pdfFileName || `consulta_leilao_${placa.replace(/[^A-Z0-9]/gi, '')}.pdf`;
+    link.download = pdfFileName || `protestos_${cpf.replace(/\D/g, '')}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     playText('PDF baixado com sucesso.').catch(() => {});
   };
 
-  // ── enviar por e-mail ────────────────────────────────────────────────────
+  // ── enviar por e-mail ────────────────────────────────────────
 
   const handleSendByEmail = async () => {
     if (!resultado.length) return;
@@ -151,7 +145,7 @@ export default function ConsultarLeilaoModal({
       const { error } = await supabase.functions.invoke('enviar-email-google', {
         body: {
           company_id: companyId,
-          subject: `Resultado: Consulta Leilão ${placa}`,
+          subject: `Consulta de Protestos — CPF ${cpf}`,
           body: bodyText,
         },
       });
@@ -165,7 +159,7 @@ export default function ConsultarLeilaoModal({
     }
   };
 
-  // ── voz ──────────────────────────────────────────────────────────────────
+  // ── voz ──────────────────────────────────────────────────────
 
   useModalVoiceCommand({
     active: true,
@@ -174,14 +168,6 @@ export default function ConsultarLeilaoModal({
 
       if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
         onClose(); return;
-      }
-
-      if (step === 'input') {
-        const match = transcript.replace(/\s/g, '').match(/[A-Z]{3}\d[A-Z0-9]\d{2}|[A-Z]{3}\d{4}/i);
-        if (match) {
-          setPlaca(formatarPlaca(match[0]));
-          return;
-        }
       }
 
       if (step === 'result') {
@@ -195,7 +181,7 @@ export default function ConsultarLeilaoModal({
     },
   });
 
-  // ── render ───────────────────────────────────────────────────────────────
+  // ── render ───────────────────────────────────────────────────
 
   const modalMaxWidth = step === 'result' ? 'max-w-lg sm:max-w-3xl' : 'max-w-lg';
 
@@ -204,15 +190,15 @@ export default function ConsultarLeilaoModal({
       <div className={`relative w-full ${modalMaxWidth} rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border} animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col`}>
 
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-orange-950/40' : 'bg-orange-50'} flex-shrink-0`}>
+        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-purple-950/40' : 'bg-purple-50'} flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                <Car className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className={`text-xl font-bold ${textPrimary}`}>Consultar Leilão</h2>
-                <p className={`text-sm ${textMuted}`}>Histórico de leilão do veículo</p>
+                <h2 className={`text-xl font-bold ${textPrimary}`}>Consulta de Protestos</h2>
+                <p className={`text-sm ${textMuted}`}>Protestos e pendências em cartório</p>
               </div>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition">
@@ -236,29 +222,29 @@ export default function ConsultarLeilaoModal({
             <div className="space-y-4">
               <div>
                 <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
-                  Placa do Veículo *
+                  CPF do Titular *
                 </label>
                 <input
                   type="text"
-                  value={placa}
-                  onChange={handlePlacaChange}
-                  placeholder="ABC-1234 ou ABC-1D23"
-                  maxLength={8}
-                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-orange-500 transition uppercase`}
+                  value={cpf}
+                  onChange={handleCpfChange}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} placeholder-slate-500 focus:ring-2 focus:ring-purple-500 transition`}
                   autoFocus
                 />
                 <p className={`mt-1 text-xs ${textMuted}`}>
-                  Formatos aceitos: ABC1234 (antigo) ou ABC1D23 (Mercosul)
+                  Verifique protestos em cartório e pendências tributárias em âmbito nacional
                 </p>
               </div>
 
-              <div className={`p-4 rounded-lg border ${border} ${isDark ? 'bg-blue-950/20' : 'bg-blue-50'}`}>
+              <div className={`p-4 rounded-lg border ${border} ${isDark ? 'bg-purple-950/20' : 'bg-purple-50'}`}>
                 <div className="flex items-start gap-2">
-                  <FileText className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <FileText className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className={`text-sm font-medium ${textPrimary}`}>Custo da consulta</p>
                     <p className={`text-xs ${textMuted} mt-1`}>
-                      2 créditos + R$ 25,00 do saldo serão consumidos ao realizar esta consulta
+                      2 créditos + R$ 10,00 do saldo serão consumidos ao realizar esta consulta
                     </p>
                   </div>
                 </div>
@@ -266,11 +252,11 @@ export default function ConsultarLeilaoModal({
 
               <button
                 onClick={handleConsultar}
-                disabled={!placa || placa.replace(/[^A-Z0-9]/gi, '').length < 7}
-                className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                disabled={!cpf || cpf.replace(/\D/g, '').length !== 11}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
               >
-                <Car className="w-5 h-5" />
-                Consultar Leilão
+                <User className="w-5 h-5" />
+                Consultar Protestos
               </button>
             </div>
           )}
@@ -278,9 +264,9 @@ export default function ConsultarLeilaoModal({
           {/* ── STEP: LOADING ── */}
           {step === 'loading' && (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-              <p className={`text-lg font-medium ${textPrimary}`}>Consultando leilão...</p>
-              <p className={`text-sm ${textMuted} mt-2`}>Aguarde enquanto buscamos os dados</p>
+              <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
+              <p className={`text-lg font-medium ${textPrimary}`}>Consultando protestos...</p>
+              <p className={`text-sm ${textMuted} mt-2`}>Verificando cartórios e pendências nacionais</p>
             </div>
           )}
 
@@ -288,16 +274,16 @@ export default function ConsultarLeilaoModal({
           {step === 'result' && (
             <div className="flex flex-col gap-4">
 
-              {/* Banner sucesso ou sem histórico */}
-              {semHistorico ? (
+              {/* Banner status */}
+              {semProtestos ? (
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-green-900/30 border border-green-700 text-green-300' : 'bg-green-50 border border-green-200 text-green-700'}`}>
                   <ShieldCheck className="w-5 h-5 shrink-0" />
-                  <span>Nenhum registro de leilão encontrado para este veículo.</span>
+                  <span>Nenhum protesto ou pendência encontrado para este CPF.</span>
                 </div>
               ) : (
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-orange-900/30 border border-orange-700 text-orange-300' : 'bg-orange-50 border border-orange-200 text-orange-700'}`}>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-700'}`}>
                   <AlertCircle className="w-5 h-5 shrink-0" />
-                  <span>Histórico de leilão encontrado para este veículo.</span>
+                  <span>Protestos e/ou pendências encontrados para este CPF.</span>
                 </div>
               )}
 
@@ -318,7 +304,7 @@ export default function ConsultarLeilaoModal({
                           }`}
                         >
                           {item.label === '---' ? (
-                            <div className="font-semibold text-orange-400 text-sm">{item.value}</div>
+                            <div className="font-semibold text-purple-400 text-sm">{item.value}</div>
                           ) : (
                             <div className="grid grid-cols-3 gap-4">
                               <div className={`text-sm font-medium ${textMuted}`}>{item.label}</div>
@@ -335,7 +321,7 @@ export default function ConsultarLeilaoModal({
                     {pdfBase64 && (
                       <button
                         onClick={handleDownloadPdf}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white"
                       >
                         <Download className="w-4 h-4" />
                         Baixar PDF

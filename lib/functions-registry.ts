@@ -4074,7 +4074,7 @@ cadastrar_produto: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'cadastrar produto', 'adicionar produto', 'novo produto',
+    'cadastro de produto', 'adicionar produto', 'novo produto',
     'criar produto', 'cadastrar item', 'adicionar item na loja',
   ],
 

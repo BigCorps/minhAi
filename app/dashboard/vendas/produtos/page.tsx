@@ -1,9 +1,6 @@
 'use client';
 
 // app/dashboard/vendas/produtos/page.tsx
-// CRUD completo de produtos_venda
-// Acessível via /dashboard/vendas → botão "Novo produto" ou "Editar"
-// Também pode abrir direto com ?edit=<id> para edição rápida
 
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
@@ -23,8 +20,6 @@ import {
 import type { ProdutoVenda, ProdutoVendaInput } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
 interface IngredienteImportavel {
   id: string;
   nome: string;
@@ -33,11 +28,9 @@ interface IngredienteImportavel {
   categoria: string | null;
 }
 
-// ─── Modal de criar/editar produto ───────────────────────────────────────────
-
 interface ProdutoModalProps {
   companyId: string;
-  produto: ProdutoVenda | null; // null = criar novo
+  produto: ProdutoVenda | null;
   onClose: () => void;
   onSalvo: () => void;
 }
@@ -71,6 +64,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // ✅ CORREÇÃO 2: saving=false explícito antes de fechar, sem depender do finally
   async function handleSalvar() {
     if (!form.nome?.trim()) { setErro('Nome é obrigatório'); return; }
     if ((form.preco_venda ?? 0) <= 0) { setErro('Preço de venda deve ser maior que zero'); return; }
@@ -85,14 +79,19 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
           .eq('id', produto.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('produtos_venda').insert({ ...form, company_id: companyId });
+        const { error } = await supabase
+          .from('produtos_venda')
+          .insert({ ...form, company_id: companyId });
         if (error) throw error;
       }
+
       setSucesso(true);
-      setTimeout(() => { onSalvo(); onClose(); }, 800);
+      setSaving(false); // garante saving=false antes de fechar
+
+      onSalvo();
+      setTimeout(() => onClose(), 600); // fecha após breve feedback visual
     } catch (e: any) {
       setErro(e.message ?? 'Erro ao salvar');
-    } finally {
       setSaving(false);
     }
   }
@@ -140,7 +139,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
 
         {/* Corpo */}
         <div className="p-6 space-y-5">
-          {/* Feedback */}
           {erro && (
             <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-500/10 rounded-xl text-red-700 dark:text-red-400 text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -154,7 +152,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
             </div>
           )}
 
-          {/* Imagem — apenas URL externa */}
+          {/* Imagem */}
           <div className="flex items-start gap-4">
             <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center flex-shrink-0">
               {form.imagem_url ? (
@@ -297,7 +295,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
             </div>
           </div>
 
-          {/* Markup info */}
           {markup !== null && (
             <p className={`text-xs font-medium ${
               Number(markup) >= 30
@@ -314,11 +311,12 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Controle de Estoque
               </label>
+              {/* ✅ CORREÇÃO 1: bg-gray-400 dark:bg-slate-600 para contraste no dark mode */}
               <button
                 type="button"
                 onClick={() => set('controla_estoque', !form.controla_estoque)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  form.controla_estoque ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-white/20'
+                  form.controla_estoque ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-slate-600'
                 }`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -363,11 +361,12 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
                 Produtos inativos não aparecem na loja do kiosk
               </p>
             </div>
+            {/* ✅ CORREÇÃO 1: bg-gray-400 dark:bg-slate-600 para contraste no dark mode */}
             <button
               type="button"
               onClick={() => set('is_active', !form.is_active)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                form.is_active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-white/20'
+                form.is_active ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-slate-600'
               }`}
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -379,7 +378,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-between sticky bottom-0 bg-white dark:bg-slate-900">
-          {/* Excluir */}
           {produto && (
             <div>
               {confirmarDelete ? (
@@ -438,8 +436,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
   );
 }
 
-// ─── Modal de importar da Linha de Produção ───────────────────────────────────
-
 function ImportarModal({
   companyId,
   onClose,
@@ -457,7 +453,6 @@ function ImportarModal({
 
   useEffect(() => {
     async function load() {
-      // Ingredientes que ainda não foram importados
       const { data: jaImportados } = await supabase
         .from('produtos_venda')
         .select('ingrediente_id')
@@ -500,7 +495,7 @@ function ImportarModal({
           nome: i.nome,
           unidade: i.unidade,
           preco_custo: i.preco_por_unidade,
-          preco_venda: i.preco_por_unidade * 2, // markup 2x sugerido
+          preco_venda: i.preco_por_unidade * 2,
           categoria: i.categoria ?? undefined,
           estoque_atual: 0,
           controla_estoque: true,
@@ -607,8 +602,6 @@ function ImportarModal({
   );
 }
 
-// ─── Página ───────────────────────────────────────────────────────────────────
-
 function ProdutosPageContent() {
   const { selectedAssistantId: companyId } = useAssistant();
   const router = useRouter();
@@ -621,14 +614,12 @@ function ProdutosPageContent() {
   const [modalAberto, setModalAberto] = useState<'novo' | 'editar' | null>(null);
   const [produtoEditando, setProdutoEditando] = useState<ProdutoVenda | null>(null);
   const [importarAberto, setImportarAberto] = useState(false);
-  // ── Mudança 1: estado de visualização ──
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     if (companyId) load();
   }, [companyId]);
 
-  // Abrir edição direto via ?edit=id
   useEffect(() => {
     if (editId && produtos.length > 0) {
       const p = produtos.find((pr) => pr.id === editId);
@@ -657,20 +648,9 @@ function ProdutosPageContent() {
     );
   }
 
-  function abrirNovo() {
-    setProdutoEditando(null);
-    setModalAberto('novo');
-  }
-
-  function abrirEditar(p: ProdutoVenda) {
-    setProdutoEditando(p);
-    setModalAberto('editar');
-  }
-
-  function fecharModal() {
-    setModalAberto(null);
-    setProdutoEditando(null);
-  }
+  function abrirNovo() { setProdutoEditando(null); setModalAberto('novo'); }
+  function abrirEditar(p: ProdutoVenda) { setProdutoEditando(p); setModalAberto('editar'); }
+  function fecharModal() { setModalAberto(null); setProdutoEditando(null); }
 
   if (!companyId) {
     return (
@@ -704,7 +684,6 @@ function ProdutosPageContent() {
             </div>
           </div>
 
-          {/* Botões */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setImportarAberto(true)}
@@ -723,7 +702,7 @@ function ProdutosPageContent() {
           </div>
         </div>
 
-        {/* Barra persistente — toggle sempre visível */}
+        {/* Toggle lista/grid */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs text-gray-400 dark:text-gray-500">
             {!loading && produtos.length > 0 && `${produtos.length} produto${produtos.length !== 1 ? 's' : ''}`}
@@ -757,6 +736,7 @@ function ProdutosPageContent() {
             </button>
           </div>
         </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
@@ -788,9 +768,8 @@ function ProdutosPageContent() {
             </div>
           </div>
         ) : (
-          // ── Mudança 3: condicional lista/grid ──
           <>
-            {/* ── VISUALIZAÇÃO LISTA ── */}
+            {/* LISTA */}
             {view === 'list' && (
               <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -871,7 +850,7 @@ function ProdutosPageContent() {
               </div>
             )}
 
-            {/* ── VISUALIZAÇÃO GRID ── */}
+            {/* GRID */}
             {view === 'grid' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {produtos.map((p) => (
@@ -884,7 +863,6 @@ function ProdutosPageContent() {
                     }`}
                     onClick={() => abrirEditar(p)}
                   >
-                    {/* Imagem */}
                     <div className="aspect-square bg-gray-50 dark:bg-white/5 relative overflow-hidden">
                       {p.imagem_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -894,8 +872,6 @@ function ProdutosPageContent() {
                           <Package className="w-10 h-10 text-gray-200 dark:text-gray-700" />
                         </div>
                       )}
-
-                      {/* Badge ativo/inativo */}
                       <div className="absolute top-2 right-2">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                           p.is_active
@@ -905,8 +881,6 @@ function ProdutosPageContent() {
                           {p.is_active ? 'Ativo' : 'Inativo'}
                         </span>
                       </div>
-
-                      {/* Estoque baixo */}
                       {p.controla_estoque && p.estoque_atual <= p.estoque_minimo && p.estoque_atual >= 0 && (
                         <div className="absolute top-2 left-2">
                           <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
@@ -915,8 +889,6 @@ function ProdutosPageContent() {
                         </div>
                       )}
                     </div>
-
-                    {/* Info */}
                     <div className="p-3">
                       <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{p.nome}</p>
                       {p.categoria && (
@@ -936,7 +908,6 @@ function ProdutosPageContent() {
                   </div>
                 ))}
 
-                {/* Card + novo */}
                 <div
                   onClick={abrirNovo}
                   className="bg-white/50 dark:bg-white/5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 p-8 min-h-[180px]"
@@ -950,7 +921,6 @@ function ProdutosPageContent() {
         )}
       </div>
 
-      {/* Modais */}
       {(modalAberto === 'novo' || modalAberto === 'editar') && companyId && (
         <ProdutoModal
           companyId={companyId}

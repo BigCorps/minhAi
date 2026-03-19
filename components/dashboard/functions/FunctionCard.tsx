@@ -95,6 +95,11 @@ const CONFIGURABLE_FUNCTIONS = [
   'cadastro',
   'clima_tempo',
   'tocar_video',
+  'modo_venda',
+  'ver_produtos',
+  'fazer_pedido',
+  'consultar_estoque',
+  'cadastrar_produto',
   'tef_debito',
   'tef_credito'
 ];

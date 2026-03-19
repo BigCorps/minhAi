@@ -5,7 +5,7 @@
 // Acessível via /dashboard/vendas → botão "Novo produto" ou "Editar"
 // Também pode abrir direto com ?edit=<id> para edição rápida
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -15,8 +15,6 @@ import {
   X,
   Save,
   Loader2,
-  Upload,
-  RefreshCw,
   AlertCircle,
   CheckCircle2,
   Trash2,
@@ -46,7 +44,6 @@ interface ProdutoModalProps {
 
 function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProps) {
   const supabase = createClient();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<Partial<ProdutoVendaInput>>({
     company_id: companyId,
@@ -65,7 +62,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
   });
 
   const [saving, setSaving] = useState(false);
-  const [uploadingImg, setUploadingImg] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [deletando, setDeletando] = useState(false);
@@ -73,24 +69,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
 
   function set(key: keyof ProdutoVendaInput, value: any) {
     setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function uploadImagem(file: File) {
-    setUploadingImg(true);
-    try {
-      const ext = file.name.split('.').pop();
-      const path = `produtos/${companyId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('company-assets')
-        .upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from('company-assets').getPublicUrl(path);
-      set('imagem_url', data.publicUrl);
-    } catch (e: any) {
-      setErro('Erro ao enviar imagem: ' + e.message);
-    } finally {
-      setUploadingImg(false);
-    }
   }
 
   async function handleSalvar() {
@@ -176,62 +154,43 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
             </div>
           )}
 
-          {/* Imagem */}
+          {/* Imagem — apenas URL externa */}
           <div className="flex items-start gap-4">
-            <div
-              className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center flex-shrink-0 cursor-pointer hover:opacity-80 transition"
-              onClick={() => fileRef.current?.click()}
-            >
-              {uploadingImg ? (
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-              ) : form.imagem_url ? (
+            <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center flex-shrink-0">
+              {form.imagem_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={form.imagem_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <Upload className="w-6 h-6 text-gray-300 dark:text-gray-600" />
+                <svg className="w-8 h-8 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
               )}
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Imagem do produto</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition"
-                >
-                  {form.imagem_url ? 'Trocar imagem' : 'Enviar imagem'}
-                </button>
-                {form.imagem_url && (
-                  <button
-                    type="button"
-                    onClick={() => set('imagem_url', '')}
-                    className="text-xs px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
-                  >
-                    Remover
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Ou cole uma URL:
-              </p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                URL da imagem
+              </label>
               <input
                 type="url"
-                placeholder="https://..."
+                placeholder="https://exemplo.com/imagem.jpg"
                 value={form.imagem_url ?? ''}
                 onChange={(e) => set('imagem_url', e.target.value)}
-                className="mt-1 w-full text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Cole o link de qualquer imagem pública (Google, site próprio, etc.)
+              </p>
+              {form.imagem_url && (
+                <button
+                  type="button"
+                  onClick={() => set('imagem_url', '')}
+                  className="text-xs text-red-400 hover:text-red-500 mt-1 transition"
+                >
+                  Remover imagem
+                </button>
+              )}
             </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) uploadImagem(f);
-              }}
-            />
           </div>
 
           {/* Nome + Categoria */}
@@ -349,24 +308,23 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
             </p>
           )}
 
-          {/* Estoque */}
+          {/* Controle de Estoque */}
           <div className="p-4 bg-gray-50 dark:bg-white/3 rounded-xl border border-gray-200 dark:border-white/10 space-y-4">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Controle de Estoque
               </label>
-              <div
+              <button
+                type="button"
                 onClick={() => set('controla_estoque', !form.controla_estoque)}
-                className={`w-10 h-5.5 rounded-full cursor-pointer transition-colors flex items-center ${
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                   form.controla_estoque ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-white/20'
                 }`}
-                style={{ height: '22px' }}
               >
-                <div
-                  className="w-4 h-4 rounded-full bg-white shadow transition-all"
-                  style={{ marginLeft: form.controla_estoque ? '22px' : '2px' }}
-                />
-              </div>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  form.controla_estoque ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
             </div>
 
             {form.controla_estoque && (
@@ -376,9 +334,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
                     Estoque atual
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="number" min="0" step="1"
                     value={form.estoque_atual ?? 0}
                     onChange={(e) => set('estoque_atual', parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -389,9 +345,7 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
                     Estoque mínimo (alerta)
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="number" min="0" step="1"
                     value={form.estoque_minimo ?? 0}
                     onChange={(e) => set('estoque_minimo', parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -409,18 +363,17 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
                 Produtos inativos não aparecem na loja do kiosk
               </p>
             </div>
-            <div
+            <button
+              type="button"
               onClick={() => set('is_active', !form.is_active)}
-              className={`w-10 rounded-full cursor-pointer transition-colors flex items-center ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                 form.is_active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-white/20'
               }`}
-              style={{ height: '22px' }}
             >
-              <div
-                className="w-4 h-4 rounded-full bg-white shadow transition-all"
-                style={{ marginLeft: form.is_active ? '22px' : '2px' }}
-              />
-            </div>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                form.is_active ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
           </div>
         </div>
 
@@ -668,6 +621,8 @@ function ProdutosPageContent() {
   const [modalAberto, setModalAberto] = useState<'novo' | 'editar' | null>(null);
   const [produtoEditando, setProdutoEditando] = useState<ProdutoVenda | null>(null);
   const [importarAberto, setImportarAberto] = useState(false);
+  // ── Mudança 1: estado de visualização ──
+  const [view, setView] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     if (companyId) load();
@@ -690,6 +645,16 @@ function ProdutosPageContent() {
       .order('display_order', { ascending: true });
     setProdutos(data ?? []);
     setLoading(false);
+  }
+
+  async function toggleAtivo(id: string, currentValue: boolean) {
+    await supabase
+      .from('produtos_venda')
+      .update({ is_active: !currentValue, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    setProdutos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, is_active: !currentValue } : p)),
+    );
   }
 
   function abrirNovo() {
@@ -739,7 +704,38 @@ function ProdutosPageContent() {
             </div>
           </div>
 
+          {/* ── Mudança 2: botões com toggle lista/grid ── */}
           <div className="flex items-center gap-2">
+            {/* Toggle lista/grid */}
+            <div className={`flex rounded-lg border overflow-hidden ${'border-gray-200 dark:border-white/10'}`}>
+              <button
+                onClick={() => setView('list')}
+                className={`p-2 transition-colors ${
+                  view === 'list'
+                    ? 'bg-gray-900 dark:bg-white/15 text-white'
+                    : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                }`}
+                title="Visualização em lista"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setView('grid')}
+                className={`p-2 transition-colors ${
+                  view === 'grid'
+                    ? 'bg-gray-900 dark:bg-white/15 text-white'
+                    : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                }`}
+                title="Visualização em grade"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </button>
+            </div>
+
             <button
               onClick={() => setImportarAberto(true)}
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition"
@@ -757,7 +753,7 @@ function ProdutosPageContent() {
           </div>
         </div>
 
-        {/* Lista */}
+        {/* ── Lista ── */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
@@ -789,78 +785,168 @@ function ProdutosPageContent() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {produtos.map((p) => (
-              <div
-                key={p.id}
-                className={`bg-white dark:bg-slate-900 rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer ${
-                  p.is_active
-                    ? 'border-gray-100 dark:border-white/5'
-                    : 'border-gray-200 dark:border-white/10 opacity-60'
-                }`}
-                onClick={() => abrirEditar(p)}
-              >
-                {/* Imagem */}
-                <div className="aspect-square bg-gray-50 dark:bg-white/5 relative overflow-hidden">
-                  {p.imagem_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imagem_url} alt={p.nome} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Package className="w-10 h-10 text-gray-200 dark:text-gray-700" />
-                    </div>
-                  )}
-
-                  {/* Badge ativo/inativo */}
-                  <div className="absolute top-2 right-2">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                      p.is_active
-                        ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
-                        : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400'
-                    }`}>
-                      {p.is_active ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </div>
-
-                  {/* Estoque baixo */}
-                  {p.controla_estoque && p.estoque_atual <= p.estoque_minimo && p.estoque_atual >= 0 && (
-                    <div className="absolute top-2 left-2">
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
-                        {p.estoque_atual <= 0 ? 'Sem estoque' : 'Estoque baixo'}
-                      </span>
-                    </div>
-                  )}
+          // ── Mudança 3: condicional lista/grid ──
+          <>
+            {/* ── VISUALIZAÇÃO LISTA ── */}
+            {view === 'list' && (
+              <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 w-14">Foto</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Nome</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Categoria</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Preço</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Estoque</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
+                        <th className="text-right px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {produtos.map((p) => (
+                        <tr key={p.id} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                          <td className="px-4 py-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
+                              {p.imagem_url
+                                // eslint-disable-next-line @next/next/no-img-element
+                                ? <img src={p.imagem_url} alt={p.nome} className="w-full h-full object-cover" />
+                                : <Package className="w-5 h-5 text-gray-300 dark:text-gray-600" />}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-gray-900 dark:text-white">{p.nome}</p>
+                            {p.ean && <p className="text-xs text-gray-400 font-mono">{p.ean}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
+                            {p.categoria ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-emerald-600 dark:text-emerald-400">{formatarPreco(p.preco_venda)}</p>
+                            {p.preco_custo > 0 && <p className="text-xs text-gray-400">Custo: {formatarPreco(p.preco_custo)}</p>}
+                          </td>
+                          <td className="px-4 py-3">
+                            {p.controla_estoque ? (
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                p.estoque_atual <= 0
+                                  ? 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                                  : p.estoque_atual <= p.estoque_minimo
+                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'
+                              }`}>
+                                {p.estoque_atual <= 0 ? '⚠ Sem estoque' : `${p.estoque_atual} ${p.unidade}`}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">Não controlado</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => toggleAtivo(p.id, p.is_active)}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight transition-colors ${
+                                p.is_active
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 hover:bg-green-200'
+                                  : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400 hover:bg-gray-200'
+                              }`}
+                            >
+                              {p.is_active ? 'Ativo' : 'Inativo'}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => abrirEditar(p)}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition"
+                            >
+                              Editar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-
-                {/* Info */}
-                <div className="p-3">
-                  <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{p.nome}</p>
-                  {p.categoria && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{p.categoria}</p>
-                  )}
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                      {formatarPreco(p.preco_venda)}
-                    </span>
-                    {p.controla_estoque && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
-                        {p.estoque_atual} {p.unidade}
-                      </span>
-                    )}
-                  </div>
+                <div className="px-4 py-3 border-t border-gray-100 dark:border-white/5">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{produtos.length} produto{produtos.length !== 1 ? 's' : ''}</p>
                 </div>
               </div>
-            ))}
+            )}
 
-            {/* Card + novo */}
-            <div
-              onClick={abrirNovo}
-              className="bg-white/50 dark:bg-white/5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 p-8 min-h-[180px]"
-            >
-              <Plus className="w-8 h-8 text-gray-300 dark:text-gray-600" />
-              <span className="text-sm text-gray-400 dark:text-gray-500">Novo produto</span>
-            </div>
-          </div>
+            {/* ── VISUALIZAÇÃO GRID ── */}
+            {view === 'grid' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {produtos.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`bg-white dark:bg-slate-900 rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer ${
+                      p.is_active
+                        ? 'border-gray-100 dark:border-white/5'
+                        : 'border-gray-200 dark:border-white/10 opacity-60'
+                    }`}
+                    onClick={() => abrirEditar(p)}
+                  >
+                    {/* Imagem */}
+                    <div className="aspect-square bg-gray-50 dark:bg-white/5 relative overflow-hidden">
+                      {p.imagem_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.imagem_url} alt={p.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Package className="w-10 h-10 text-gray-200 dark:text-gray-700" />
+                        </div>
+                      )}
+
+                      {/* Badge ativo/inativo */}
+                      <div className="absolute top-2 right-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                          p.is_active
+                            ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400'
+                        }`}>
+                          {p.is_active ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </div>
+
+                      {/* Estoque baixo */}
+                      {p.controla_estoque && p.estoque_atual <= p.estoque_minimo && p.estoque_atual >= 0 && (
+                        <div className="absolute top-2 left-2">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                            {p.estoque_atual <= 0 ? 'Sem estoque' : 'Estoque baixo'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-3">
+                      <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{p.nome}</p>
+                      {p.categoria && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{p.categoria}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatarPreco(p.preco_venda)}
+                        </span>
+                        {p.controla_estoque && (
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            {p.estoque_atual} {p.unidade}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Card + novo */}
+                <div
+                  onClick={abrirNovo}
+                  className="bg-white/50 dark:bg-white/5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 p-8 min-h-[180px]"
+                >
+                  <Plus className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+                  <span className="text-sm text-gray-400 dark:text-gray-500">Novo produto</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

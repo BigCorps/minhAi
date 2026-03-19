@@ -893,6 +893,7 @@ case 'cadastrar_produto':
             type: 'SaleModeModal',
             data: {
               companyId,
+              sMaximized,
               isListening,
               isProcessing,
               isPlayingAudio,
@@ -911,6 +912,7 @@ case 'cadastrar_produto':
             type: 'SaleModeModal',
             data: {
               companyId,
+              sMaximized,
               isListening,
               isProcessing,
               isPlayingAudio,

@@ -1,11 +1,11 @@
 // components/VoiceAssistant/modals/SaleModeModal/ProductGrid.tsx
 // Grid de produtos — sem barra de busca quando hideBusca=true
 // Filtro por categoria permanece (pills compactos no topo)
+// Usa <img> nativo (não Next.js Image) pois clientes usam URLs de domínios externos variados
 
 'use client';
 
 import { useState, useMemo } from 'react';
-import Image from 'next/image';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
 import { useCart } from '@/hooks/useCart';
@@ -81,7 +81,7 @@ export default function ProductGrid({
   return (
     <div className="flex flex-col h-full gap-2">
 
-      {/* Pills de categoria — compactos, só aparecem se houver categorias */}
+      {/* Pills de categoria */}
       {categorias.length > 0 && (
         <div className="flex-shrink-0 flex gap-1.5 flex-wrap">
           <button
@@ -118,7 +118,7 @@ export default function ProductGrid({
         </div>
       )}
 
-      {/* Card destaque (sugestão do voice assistant) */}
+      {/* Card destaque */}
       {produtoDestaque && (
         <div className={`flex-shrink-0 rounded-xl border-2 p-2.5 flex items-center gap-2.5 ${
           isDark
@@ -190,18 +190,16 @@ export default function ProductGrid({
                     </div>
                   )}
 
-                  {/* Imagem */}
+                  {/* Imagem — usa <img> nativo pois URLs são de domínios externos variados */}
                   <div className={`w-full aspect-square relative overflow-hidden ${
                     isDark ? 'bg-white/4' : 'bg-gray-50'
                   }`}>
                     {produto.imagem_url ? (
-                      // ✅ CORRIGIDO: usar <Image> do Next.js (não <img>) para suportar fill + sizes
-                      <Image
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
                         src={produto.imagem_url}
                         alt={produto.nome}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 50vw, 33vw"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">

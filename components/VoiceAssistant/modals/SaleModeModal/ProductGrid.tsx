@@ -17,9 +17,7 @@ interface ProductGridProps {
   theme: 'dark' | 'light';
   produtoDestaque?: ProdutoVenda | null;
   onProdutoDestaqueClear?: () => void;
-  /** Remove a barra de busca (cliente usa o TextInput do avatar) */
   hideBusca?: boolean;
-  /** Termo de busca externo vindo do TextInput */
   termoBusca?: string;
 }
 
@@ -166,7 +164,8 @@ export default function ProductGrid({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto pr-1 -mr-1">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pb-2">
+          {/* ✅ CORRIGIDO: 3 colunas base, 4 em telas médias, 5 em telas grandes */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 pb-2">
             {produtosFiltrados.map((produto) => {
               const qtdCarrinho = getQtdNoCarrinho(produto.id);
               const semEstoque = produto.controla_estoque && produto.estoque_atual <= 0;
@@ -185,13 +184,13 @@ export default function ProductGrid({
                 >
                   {/* Badge qtd no carrinho */}
                   {qtdCarrinho > 0 && (
-                    <div className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center shadow">
+                    <div className="absolute top-1 right-1 z-10 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center shadow">
                       {qtdCarrinho}
                     </div>
                   )}
 
-                  {/* Imagem — usa <img> nativo pois URLs são de domínios externos variados */}
-                  <div className={`w-full aspect-square relative overflow-hidden ${
+                  {/* ✅ CORRIGIDO: aspect-[4/3] em vez de aspect-square — imagem ~25% menos alta */}
+                  <div className={`w-full aspect-[4/3] relative overflow-hidden ${
                     isDark ? 'bg-white/4' : 'bg-gray-50'
                   }`}>
                     {produto.imagem_url ? (
@@ -203,7 +202,7 @@ export default function ProductGrid({
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <svg className={`w-8 h-8 ${isDark ? 'text-white/12' : 'text-gray-300'}`}
+                        <svg className={`w-6 h-6 ${isDark ? 'text-white/12' : 'text-gray-300'}`}
                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -220,8 +219,8 @@ export default function ProductGrid({
                   </div>
 
                   {/* Info */}
-                  <div className="p-2">
-                    <p className={`text-[11px] font-semibold truncate mb-0.5 ${
+                  <div className="p-1.5">
+                    <p className={`text-[10px] font-semibold truncate mb-0.5 ${
                       isDark ? 'text-white' : 'text-gray-900'
                     }`}>
                       {produto.nome}
@@ -234,7 +233,7 @@ export default function ProductGrid({
                       </p>
                     )}
                     <div className="flex items-center justify-between gap-1">
-                      <span className={`text-xs font-bold ${
+                      <span className={`text-[10px] font-bold ${
                         isDark ? 'text-emerald-400' : 'text-emerald-600'
                       }`}>
                         {formatarPreco(produto.preco_venda)}
@@ -242,7 +241,7 @@ export default function ProductGrid({
                       <button
                         onClick={() => handleAdd(produto)}
                         disabled={semEstoque}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${
+                        className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${
                           feedback
                             ? 'bg-emerald-500 scale-110'
                             : semEstoque
@@ -253,11 +252,11 @@ export default function ProductGrid({
                         }`}
                       >
                         {feedback ? (
-                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                           </svg>
                         ) : (
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                           </svg>
                         )}

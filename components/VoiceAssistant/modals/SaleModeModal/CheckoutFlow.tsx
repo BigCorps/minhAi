@@ -105,12 +105,17 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
     const supabase = createClient();
     const interval = setInterval(async () => {
       try {
-        const { data: tx } = await supabase
-          .from('pix_transactions')
-          .select('status')
-          .eq('id', pixTransactionId)
-          .single();
-        if (tx?.status === 'confirmed') {
+const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
+  body: { transaction_id: pixTransactionId },
+});
+if (!error && data?.success) {
+  clearInterval(interval);
+  setAutoChecking(false);
+  setTotalConfirmado(total);
+  setStep('confirmado');
+  playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
+  clear();
+}
           clearInterval(interval);
           setAutoChecking(false);
           setTotalConfirmado(total);

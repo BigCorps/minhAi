@@ -1,6 +1,5 @@
 // lib/produtos-venda.ts
 // Queries Supabase para o Modo Venda
-// Usa createClient de @/lib/supabase-browser (padrão do projeto)
 
 import { createClient } from '@/lib/supabase-browser';
 
@@ -160,7 +159,24 @@ export async function buscarProdutoPorNome(
   return data || [];
 }
 
-/** Cria produto (admin) */
+/** Busca produto por EAN */
+export async function buscarProdutoPorEan(
+  companyId: string,
+  ean: string,
+): Promise<ProdutoVenda | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('produtos_venda')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('ean', ean)
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+/** Cria produto */
 export async function criarProduto(input: ProdutoVendaInput): Promise<ProdutoVenda> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -173,7 +189,7 @@ export async function criarProduto(input: ProdutoVendaInput): Promise<ProdutoVen
   return data;
 }
 
-/** Atualiza produto (admin) */
+/** Atualiza produto */
 export async function atualizarProduto(
   id: string,
   input: Partial<ProdutoVendaInput>,
@@ -181,13 +197,24 @@ export async function atualizarProduto(
   const supabase = createClient();
   const { data, error } = await supabase
     .from('produtos_venda')
-    .update(input)
+    .update({ ...input, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
 
   if (error) throw error;
   return data;
+}
+
+/** Exclui produto */
+export async function excluirProduto(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('produtos_venda')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 }
 
 /** Importa ingrediente da linha de produção como produto de venda */
@@ -197,7 +224,6 @@ export async function importarDeProducao(
 ): Promise<ProdutoVenda> {
   const supabase = createClient();
 
-  // Busca o ingrediente
   const { data: ing, error: ingErr } = await supabase
     .from('producao_ingredientes')
     .select('*')
@@ -206,23 +232,23 @@ export async function importarDeProducao(
 
   if (ingErr || !ing) throw new Error('Ingrediente não encontrado');
 
-  // Cria produto de venda vinculado
   return criarProduto({
     company_id: companyId,
     ingrediente_id: ingredienteId,
     nome: ing.nome,
     unidade: ing.unidade,
     preco_custo: ing.preco_por_unidade,
-    preco_venda: ing.preco_por_unidade * 2, // sugestão inicial de markup 2x
+    preco_venda: ing.preco_por_unidade * 2,
     categoria: ing.categoria || undefined,
     estoque_atual: 0,
     controla_estoque: true,
+    is_active: false,
   });
 }
 
 // ─── Pedidos ──────────────────────────────────────────────────────────────────
 
-/** Cria pedido + itens em transação (insert sequencial) */
+/** Cria pedido + itens */
 export async function criarPedido(input: CriarPedidoInput): Promise<Pedido> {
   const supabase = createClient();
 
@@ -230,7 +256,6 @@ export async function criarPedido(input: CriarPedidoInput): Promise<Pedido> {
   const desconto = input.desconto || 0;
   const total = Math.max(0, subtotal - desconto);
 
-  // 1. Inserir cabeçalho do pedido
   const { data: pedido, error: pedidoErr } = await supabase
     .from('pedidos')
     .insert({
@@ -250,7 +275,6 @@ export async function criarPedido(input: CriarPedidoInput): Promise<Pedido> {
 
   if (pedidoErr) throw pedidoErr;
 
-  // 2. Inserir itens
   const itensInsert = input.itens.map((i) => ({
     pedido_id: pedido.id,
     produto_id: i.produto.id,
@@ -276,7 +300,10 @@ export async function atualizarStatusPedido(
   cobrancaId?: string,
 ): Promise<void> {
   const supabase = createClient();
-  const update: Record<string, unknown> = { status };
+  const update: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
   if (cobrancaId) update.cobranca_id = cobrancaId;
   if (status === 'pago') update.paid_at = new Date().toISOString();
   if (status === 'cancelado') update.cancelled_at = new Date().toISOString();
@@ -289,21 +316,66 @@ export async function atualizarStatusPedido(
   if (error) throw error;
 }
 
-/** Consulta estoque atual de um produto */
+// ─── Estoque ──────────────────────────────────────────────────────────────────
+
+/**
+ * Consulta estoque atual de um produto por nome.
+ * Tenta busca fuzzy completa, depois fallback com primeira palavra relevante.
+ */
 export async function consultarEstoque(
   companyId: string,
   nomeProduto: string,
 ): Promise<{ produto: ProdutoVenda | null; abaixoMinimo: boolean }> {
-  const produtos = await buscarProdutoPorNome(companyId, nomeProduto);
-  if (!produtos.length) return { produto: null, abaixoMinimo: false };
-  const p = produtos[0];
-  return {
-    produto: p,
-    abaixoMinimo: p.controla_estoque && p.estoque_atual <= p.estoque_minimo,
-  };
+  const resultados = await buscarProdutoPorNome(companyId, nomeProduto);
+
+  if (resultados.length > 0) {
+    const p = resultados[0];
+    return {
+      produto: p,
+      abaixoMinimo: p.controla_estoque && p.estoque_atual <= p.estoque_minimo,
+    };
+  }
+
+  // Fallback: primeira palavra com 3+ caracteres
+  const primeiraPalavra = nomeProduto
+    .split(' ')
+    .find((w) => w.length >= 3);
+
+  if (primeiraPalavra && primeiraPalavra !== nomeProduto) {
+    const fallback = await buscarProdutoPorNome(companyId, primeiraPalavra);
+    if (fallback.length > 0) {
+      const p = fallback[0];
+      return {
+        produto: p,
+        abaixoMinimo: p.controla_estoque && p.estoque_atual <= p.estoque_minimo,
+      };
+    }
+  }
+
+  return { produto: null, abaixoMinimo: false };
 }
+
+/**
+ * Baixa estoque de um pedido após confirmação de pagamento.
+ * Chama a função SQL baixar_estoque_pedido via RPC.
+ */
+export async function baixarEstoquePedido(pedidoId: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('baixar_estoque_pedido', {
+    p_pedido_id: pedidoId,
+  });
+  if (error) throw error;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Formata preço em BRL */
 export function formatarPreco(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+/** Calcula markup percentual entre custo e venda */
+export function calcularMarkup(precoCusto: number, precoVenda: number): number {
+  if (!precoCusto || precoCusto <= 0) return 0;
+  return ((precoVenda / precoCusto) - 1) * 100;
 }

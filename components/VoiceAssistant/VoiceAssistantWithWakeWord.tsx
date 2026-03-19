@@ -615,6 +615,15 @@ export function VoiceAssistantWithWakeWord({
           });
           break;
 
+        case 'tocar_video':
+          await stopGoogleSpeech();
+          setActiveModal({
+            type: 'TocarVideoDisplay',
+            data: { companyId, query: '' },
+          });
+          playText('Qual vídeo você quer assistir? Me diga o assunto.').catch(() => {});
+          break; 
+
         case 'meu_sistema':
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });

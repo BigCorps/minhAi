@@ -3839,6 +3839,280 @@ nosso_qrcode: {
   
 };
 
+// ============================================================
+// CATEGORIA: VENDAS
+// ============================================================
+
+modo_venda: {
+  functionKey: 'modo_venda',
+  functionName: 'Modo Venda',
+  category: 'products',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'modo venda', 'modo de venda', 'abrir loja',
+    'quero comprar', 'comprar agora', 'escolher produtos',
+    'fazer pedido', 'abrir modo venda',
+  ],
+
+  examplePhrases: [
+    'Quero comprar',
+    'Abrir modo de venda',
+    'Escolher produtos',
+    'Comprar agora',
+  ],
+
+  requiresInput: false,
+  description: 'Abre o modo de venda com catálogo de produtos e carrinho de compras.',
+  shortDescription: 'Abrir loja virtual',
+  icon: '🛒',
+  color: '#10b981',
+
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'SaleModeModal', data: { companyId } });
+      await playText('Modo venda aberto! Escolha os produtos.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+ver_produtos: {
+  functionKey: 'ver_produtos',
+  functionName: 'Ver Produtos',
+  category: 'products',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'ver produtos', 'mostrar produtos', 'ver catalogo', 'ver catálogo',
+    'o que vocês vendem', 'o que voces vendem',
+    'tem algum produto', 'quero ver os produtos',
+  ],
+
+  examplePhrases: [
+    'Ver produtos disponíveis',
+    'O que vocês vendem?',
+    'Quero ver o catálogo',
+    'Tem algum produto?',
+  ],
+
+  requiresInput: false,
+  description: 'Abre o catálogo de produtos. Pode receber um termo de busca para filtrar.',
+  shortDescription: 'Ver catálogo de produtos',
+  icon: '🛍️',
+  color: '#10b981',
+
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      const termoBusca = transcript
+        ?.replace(/ver produtos?|mostrar produtos?|ver catalogo|ver catálogo|o que vocês vendem|o que voces vendem|tem|você tem|voce tem/gi, '')
+        .trim() || undefined;
+
+      setActiveModal?.({
+        type: 'SaleModeModal',
+        data: { companyId, termoBusca },
+      });
+      await playText(termoBusca ? `Buscando ${termoBusca}...` : 'Abrindo catálogo de produtos.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+consultar_estoque: {
+  functionKey: 'consultar_estoque',
+  functionName: 'Consultar Estoque',
+  category: 'products',
+  responseType: 'voice',
+
+  voiceTriggers: [
+    'estoque de', 'quantos tem', 'quanto tem',
+    'verificar estoque', 'consultar estoque',
+    'quantos restam', 'quanto resta', 'tem em estoque',
+  ],
+
+  examplePhrases: [
+    'Quantos pães tem?',
+    'Estoque de refrigerante',
+    'Quanto resta de frango?',
+    'Verificar estoque do café',
+  ],
+
+  requiresInput: true,
+  inputType: 'text',
+  inputPrompt: 'Qual produto você quer consultar?',
+  description: 'Consulta o estoque atual de um produto específico.',
+  shortDescription: 'Ver estoque de produto',
+  icon: '📦',
+  color: '#f59e0b',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, companyId }) => {
+    try {
+      // Extrai nome do produto do transcript
+      const nomeProduto = transcript
+        ?.replace(/estoque de|quantos tem|quanto tem|verificar estoque|consultar estoque|quantos restam|quanto resta|tem em estoque/gi, '')
+        .trim();
+
+      if (!nomeProduto) {
+        await playText('Qual produto você quer consultar?');
+        return false;
+      }
+
+      const { consultarEstoque, formatarPreco } = await import('@/lib/produtos-venda');
+      const { produto, abaixoMinimo } = await consultarEstoque(companyId, nomeProduto);
+
+      if (!produto) {
+        await playText(`Não encontrei nenhum produto chamado ${nomeProduto} no cadastro.`);
+        return true;
+      }
+
+      if (!produto.controla_estoque) {
+        await playText(`${produto.nome}: estoque não controlado neste produto.`);
+        return true;
+      }
+
+      const qtd = produto.estoque_atual;
+      const unid = produto.unidade;
+
+      if (qtd <= 0) {
+        await playText(`${produto.nome} está sem estoque no momento.`);
+      } else if (abaixoMinimo) {
+        await playText(`${produto.nome} tem ${qtd} ${unid} em estoque — abaixo do mínimo. Necessário repor.`);
+      } else {
+        await playText(`${produto.nome} tem ${qtd} ${unid} em estoque.`);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Erro consultar_estoque:', err);
+      await playText('Não consegui consultar o estoque. Tente novamente.');
+      return false;
+    }
+  },
+},
+
+fazer_pedido: {
+  functionKey: 'fazer_pedido',
+  functionName: 'Fazer Pedido',
+  category: 'products',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'quero pedir', 'fazer pedido', 'pedir agora',
+    'adicionar ao carrinho', 'quero comprar',
+    'adiciona', 'coloca no carrinho',
+  ],
+
+  examplePhrases: [
+    'Quero 2 sucos de laranja',
+    'Adicionar uma pizza ao pedido',
+    'Pedir agora',
+    'Coloca no carrinho',
+  ],
+
+  requiresInput: false,
+  description: 'Abre o modo venda e conduz o cliente pelo pedido por voz.',
+  shortDescription: 'Fazer pedido por voz',
+  icon: '📋',
+  color: '#f97316',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      // Tenta extrair quantidade e produto do transcript
+      // Padrão: "quero 2 sucos" / "adicionar uma pizza" / "3 cafés"
+      const match = transcript?.match(
+        /(?:quero|pedir?|adicionar?|coloca[r]?)\s+(\d+|um|uma|dois|duas|três|tres|quatro|cinco)\s+(.+)/i,
+      );
+
+      setActiveModal?.({
+        type: 'SaleModeModal',
+        data: {
+          companyId,
+          // Se achou produto específico, passa como destaque
+          termoBusca: match ? match[2].trim() : undefined,
+        },
+      });
+
+      if (match) {
+        await playText(`Abrindo o modo venda com ${match[1]} ${match[2]}. Confirme no carrinho.`);
+      } else {
+        await playText('Abrindo o modo venda. Escolha os produtos e finalize o pedido.');
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
+cadastrar_produto: {
+  functionKey: 'cadastrar_produto',
+  functionName: 'Cadastrar Produto',
+  category: 'products',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'cadastrar produto', 'adicionar produto', 'novo produto',
+    'criar produto', 'cadastrar item', 'adicionar item na loja',
+  ],
+
+  examplePhrases: [
+    'Cadastrar novo produto',
+    'Adicionar produto na loja',
+    'Criar produto',
+  ],
+
+  requiresInput: false,
+  description: 'Fluxo guiado por voz para cadastrar um novo produto na loja.',
+  shortDescription: 'Cadastrar produto por voz',
+  icon: '📦',
+  color: '#6366f1',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      // Por enquanto abre o SaleModeModal — na Fase 3 teremos o modal dedicado
+      // de cadastro que será adicionado aqui
+      setActiveModal?.({
+        type: 'SaleModeModal',
+        data: { companyId },
+      });
+      await playText('Para cadastrar produtos, acesse o painel de administração em Dashboard, seção Vendas.');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
+
 /**
  * ========================================
  * FUNÇÕES UTILITÁRIAS

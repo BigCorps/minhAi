@@ -94,40 +94,43 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
   const [autoChecking, setAutoChecking] = useState(false);
   const pixTimeLeft = usePixTimer(pixExpiresAt);
 
-  useEffect(() => {
-    if (!pixTransactionId) return;
-    const delay = setTimeout(() => setAutoChecking(true), 30_000);
-    return () => clearTimeout(delay);
-  }, [pixTransactionId]);
+useEffect(() => {
+  if (!pixTransactionId) return;
+  const delay = setTimeout(() => setAutoChecking(true), 30_000);
+  return () => clearTimeout(delay);
+}, [pixTransactionId]);
 
-  useEffect(() => {
-    if (!autoChecking || !pixTransactionId || !pedidoId) return;
-    const supabase = createClient();
-    const interval = setInterval(async () => {
-      try {
-const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
-  body: { transaction_id: pixTransactionId },
-});
-if (!error && data?.success) {
-  clearInterval(interval);
-  setAutoChecking(false);
-  setTotalConfirmado(total);
-  setStep('confirmado');
-  playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
-  clear();
-}
-          clearInterval(interval);
-          setAutoChecking(false);
-          setTotalConfirmado(total);
-          setStep('confirmado');
-          playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
-          clear();
-        }
-      } catch { /* erro pontual */ }
-    }, 5_000);
-    const timeout = setTimeout(() => { clearInterval(interval); setAutoChecking(false); }, 10 * 60 * 1000);
-    return () => { clearInterval(interval); clearTimeout(timeout); };
-  }, [autoChecking, pixTransactionId, pedidoId, playText, clear]);
+useEffect(() => {
+  if (!autoChecking || !pixTransactionId || !pedidoId) return;
+  const supabase = createClient();
+
+  const interval = setInterval(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
+        body: { transaction_id: pixTransactionId },
+      });
+      if (!error && data?.success) {
+        clearInterval(interval);
+        setAutoChecking(false);
+        setTotalConfirmado(total);
+        setStep('confirmado');
+        playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
+        clear();
+      }
+      // data?.success === false = PIX ainda não pago, continua tentando silenciosamente
+    } catch { /* erro pontual — continua tentando */ }
+  }, 5_000);
+
+  const timeout = setTimeout(() => {
+    clearInterval(interval);
+    setAutoChecking(false);
+  }, 10 * 60 * 1000);
+
+  return () => {
+    clearInterval(interval);
+    clearTimeout(timeout);
+  };
+}, [autoChecking, pixTransactionId, pedidoId, total, playText, clear]);
 
   // Polling NFC / TEF
   useEffect(() => {

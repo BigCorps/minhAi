@@ -10,7 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
-import { criarProduto, formatarPreco } from '@/lib/produtos-venda';
+import { formatarPreco, type ProdutoVenda } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
@@ -285,37 +285,52 @@ export default function CadastrarProdutoDisplay({
   };
 
   // ── Save ───────────────────────────────────────────────────────────────────
-  const save = useCallback(async () => {
-    setStage('saving'); setError(null);
-    try {
-      const pv = parseFloat(form.preco_venda || '0');
-      if (!form.nome.trim()) throw new Error('Nome é obrigatório');
-      if (pv <= 0) throw new Error('Preço de venda inválido');
+const save = useCallback(async () => {
+  setStage('saving'); setError(null);
+  try {
+    const pv = parseFloat(form.preco_venda || '0');
+    if (!form.nome.trim()) throw new Error('Nome é obrigatório');
+    if (pv <= 0) throw new Error('Preço de venda inválido');
 
-      const produto = await criarProduto({
-        company_id:       companyId,
-        nome:             form.nome.trim(),
-        categoria:        form.categoria.trim() || undefined,
-        preco_venda:      pv,
-        preco_custo:      parseFloat(form.preco_custo || '0') || 0,
-        unidade:          form.unidade.trim() || 'un',
-        estoque_atual:    parseFloat(form.estoque_atual || '0') || 0,
-        estoque_minimo:   0,
-        controla_estoque: true,
-        is_active:        true,
-      });
+    // Usa edge function (service_role) — kiosk não tem sessão autenticada
+    const resp = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cadastrar-produto`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          company_id:       companyId,
+          nome:             form.nome.trim(),
+          categoria:        form.categoria.trim() || null,
+          preco_venda:      pv,
+          preco_custo:      parseFloat(form.preco_custo || '0') || 0,
+          unidade:          form.unidade.trim() || 'un',
+          estoque_atual:    parseFloat(form.estoque_atual || '0') || 0,
+          estoque_minimo:   0,
+          controla_estoque: true,
+          is_active:        true,
+        }),
+      }
+    );
 
-      setProdutoSalvo(produto);
-      setStage('success');
-      await playText?.(`Produto ${produto.nome} cadastrado com sucesso por ${formatarPreco(produto.preco_venda)}!`);
-      onSalvo?.(produto);
-      setTimeout(() => onClose(), 3000);
-    } catch (e: any) {
-      setError(e.message || 'Erro ao salvar. Tente novamente.');
-      setStage('confirming');
-      playText?.('Erro ao salvar. Tente novamente.').catch(() => {});
-    }
-  }, [form, companyId, playText, onSalvo, onClose]);
+    const result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Erro ao salvar');
+
+    const produto = result.produto as ProdutoVenda;
+    setProdutoSalvo(produto);
+    setStage('success');
+    await playText?.(`Produto ${produto.nome} cadastrado com sucesso por ${formatarPreco(produto.preco_venda)}!`);
+    onSalvo?.(produto);
+    setTimeout(() => onClose(), 3000);
+  } catch (e: any) {
+    setError(e.message || 'Erro ao salvar. Tente novamente.');
+    setStage('confirming');
+    playText?.('Erro ao salvar. Tente novamente.').catch(() => {});
+  }
+}, [form, companyId, playText, onSalvo, onClose]);
 
   // ── Markup ─────────────────────────────────────────────────────────────────
   const markup = (() => {

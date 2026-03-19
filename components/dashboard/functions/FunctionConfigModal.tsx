@@ -1313,6 +1313,153 @@ const FichasProducaoForm = ({ companyId }: any) => {
   );
 };
 
+const ClimaTempoForm = ({ companyId }: any) => {
+  const [config, setConfig] = useState<any>({ mode: 'auto', default_city: '' });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchConfig() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('company_function_settings')
+        .select('config')
+        .eq('company_id', companyId)
+        .eq('function_key', 'clima_tempo')
+        .maybeSingle();
+      if (data?.config) setConfig(data.config);
+      setLoading(false);
+    }
+    fetchConfig();
+  }, [companyId]);
+
+  async function handleSave() {
+    setSaving(true);
+    const { error } = await supabase
+      .from('company_function_settings')
+      .update({ config, updated_at: new Date().toISOString() })
+      .eq('company_id', companyId)
+      .eq('function_key', 'clima_tempo');
+
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } else {
+      alert('Erro ao salvar. Tente novamente.');
+    }
+    setSaving(false);
+  }
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          🌤️ Como funciona o Clima e Tempo
+        </h4>
+        <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+          <li>✓ Localização automática: usa o GPS do dispositivo do cliente</li>
+          <li>✓ Cidade fixa: sempre mostra o clima dessa cidade</li>
+          <li>✓ O cliente pode perguntar "tempo em [cidade]" a qualquer momento</li>
+        </ul>
+      </div>
+
+      {/* Modo */}
+      <div>
+        <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
+          Modo de Localização
+        </label>
+        <div className="space-y-2">
+          <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all border-gray-200 dark:border-white/10 hover:border-blue-400">
+            <input
+              type="radio"
+              name="clima_mode"
+              checked={config.mode === 'auto'}
+              onChange={() => setConfig((p: any) => ({ ...p, mode: 'auto', default_city: '' }))}
+              className="mt-0.5"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                📍 Localização automática do cliente
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Usa o GPS do dispositivo. Se negado, usa São Paulo como fallback.
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all border-gray-200 dark:border-white/10 hover:border-blue-400">
+            <input
+              type="radio"
+              name="clima_mode"
+              checked={config.mode === 'fixed'}
+              onChange={() => setConfig((p: any) => ({ ...p, mode: 'fixed', default_city: p.default_city || 'São Paulo' }))}
+              className="mt-0.5"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                🏙️ Cidade fixa do estabelecimento
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Sempre mostra o clima da cidade configurada abaixo.
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Campo cidade — só aparece no modo fixo */}
+      {config.mode === 'fixed' && (
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+            Cidade Padrão <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Ex: São Paulo, Rio de Janeiro, Curitiba..."
+            value={config.default_city || ''}
+            onChange={e => setConfig((p: any) => ({ ...p, default_city: e.target.value }))}
+            className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Use o nome em português. Ex: "Belo Horizonte", "Porto Alegre".
+          </p>
+        </div>
+      )}
+
+      {/* Preview */}
+      <div className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-white/10">
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          💡 O cliente sempre pode perguntar{' '}
+          <span className="font-mono bg-gray-200 dark:bg-slate-700 px-1 rounded">
+            "tempo em Florianópolis"
+          </span>{' '}
+          para consultar qualquer cidade, independente da configuração.
+        </p>
+      </div>
+
+      {/* Botão salvar */}
+      <button
+        onClick={handleSave}
+        disabled={saving || (config.mode === 'fixed' && !config.default_city?.trim())}
+        className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
+      >
+        {saving
+          ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /><span>Salvando...</span></>
+          : saved ? '✓ Salvo!' : 'Salvar Configurações'
+        }
+      </button>
+    </div>
+  );
+};
+
 const MeuCupomForm = ({ companyId }: any) => {
   const [config, setConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
@@ -1764,6 +1911,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'fichas_producao_conversacional': FichasProducaoForm,
   'meu_cupom': MeuCupomForm,
   'cadastro': RegistrationConfigForm,
+  'clima_tempo': ClimaTempoForm,
 };
 
 // ===== INTERFACE =====
@@ -2154,9 +2302,3 @@ export default function FunctionConfigModal({
     </div>
   );
 }
-
-
-
-
-
-

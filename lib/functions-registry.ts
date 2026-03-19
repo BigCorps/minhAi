@@ -2292,27 +2292,37 @@ consultar_placa: {
   },
 },
 
-// ── Consultar Leilão ─────────────────────────────────────────
+// ── Consultar Protestos ──────────────────────────────────────
 consultar_leilao: {
   functionKey: 'consultar_leilao',
-  functionName: 'Consultar Leilão',
+  functionName: 'Consulta de Protestos',
   category: 'knowledge',
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'leilão', 'leilao', 'veículo leiloado', 'veiculo leiloado',
-    'consultar leilão', 'histórico leilão', 'carro de leilão'
+    'protestos', 'protesto', 'consultar protestos', 'consulta de protestos',
+    'protesto em cartório', 'protesto em cartorio',
+    'título protestado', 'titulo protestado',
+    'nome protestado', 'cpf protestado',
+    'pendências tributárias', 'pendencias tributarias',
+    'dívida tributária', 'divida tributaria',
+    'débito das', 'debito das',
+    'simples nacional', 'simei',
+    'cartório', 'cartorio',
+    'pendências em cartório', 'pendencias em cartorio',
+    'checar protestos', 'verificar protestos',
   ],
 
   examplePhrases: [
-    'Consultar leilão da placa ABC1D23',
-    'Veículo tem leilão',
-    'Histórico de leilão'
+    'Consultar protestos do CPF 123.456.789-00',
+    'Verificar protestos em cartório',
+    'CPF tem protestos?',
+    'Pendências tributárias do CPF',
   ],
 
   requiresInput: false,
-  description: 'Verifica o histórico de leilão de veículos pela placa. Retorna informações sobre leilões anteriores, data, pátio e condição do veículo.',
-  shortDescription: 'Histórico de leilão de veículos',
+  description: 'Consulta protestos em cartório e pendências tributárias de CPF em âmbito nacional. Retorna nome, protestos ativos (cartório, data, valor, situação), pendências tributárias, situação no Simples Nacional e SIMEI.',
+  shortDescription: 'Protestos e pendências em cartório',
   icon: '🟡',
   color: '#FFFF00',
 
@@ -2323,15 +2333,15 @@ consultar_leilao: {
 
   handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     try {
-      const placaMatch = transcript?.match(/[A-Z]{3}[\s-]?\d[A-Z\d]\d{2}/i);
-      const placaPrefill = placaMatch ? placaMatch[0].replace(/[\s-]/g, '').toUpperCase() : '';
+      const cpfMatch = transcript?.match(/\d{11}|\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}/);
+      const cpfPrefill = cpfMatch ? cpfMatch[0].replace(/\D/g, '') : '';
 
       setActiveModal?.({
         type: 'ConsultarLeilaoModal',
-        data: { companyId, placaPrefill }
+        data: { companyId, cpfPrefill }
       });
 
-      await playText(placaPrefill ? `Consultando leilão da placa ${placaPrefill}.` : 'Digite a placa.');
+      await playText(cpfPrefill ? `Consultando protestos do CPF ${cpfPrefill}.` : 'Digite o CPF para consultar protestos em cartório.');
       return true;
     } catch {
       return false;

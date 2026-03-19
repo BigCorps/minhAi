@@ -249,6 +249,7 @@ function AbaProducts({ companyId }: { companyId: string }) {
   const [apenasAtivos, setApenasAtivos] = useState(false);
   const [sortField, setSortField] = useState<'nome' | 'preco_venda' | 'estoque_atual'>('nome');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [view, setView] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     load();
@@ -326,6 +327,38 @@ function AbaProducts({ companyId }: { companyId: string }) {
     return sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />;
   }
 
+  // ── Toggle lista/grid ──────────────────────────────────────────────────────
+  const ViewToggle = () => (
+    <div className="flex rounded-lg border overflow-hidden border-gray-200 dark:border-white/10">
+      <button
+        onClick={() => setView('list')}
+        className={`p-2 transition-colors ${
+          view === 'list'
+            ? 'bg-gray-900 dark:bg-white/15 text-white'
+            : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+        }`}
+        title="Visualização em lista"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+      </button>
+      <button
+        onClick={() => setView('grid')}
+        className={`p-2 transition-colors ${
+          view === 'grid'
+            ? 'bg-gray-900 dark:bg-white/15 text-white'
+            : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+        }`}
+        title="Visualização em grade"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -390,6 +423,9 @@ function AbaProducts({ companyId }: { companyId: string }) {
             CSV
           </button>
 
+          {/* Toggle lista/grid */}
+          <ViewToggle />
+
           {/* Botão novo produto */}
           <button
             onClick={() => router.push(`/dashboard/vendas/produtos?company=${companyId}`)}
@@ -432,8 +468,8 @@ function AbaProducts({ companyId }: { companyId: string }) {
         </div>
       )}
 
-      {/* Tabela */}
-      {!loading && filtered.length > 0 && (
+      {/* ── VISUALIZAÇÃO LISTA ── */}
+      {!loading && filtered.length > 0 && view === 'list' && (
         <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -483,7 +519,6 @@ function AbaProducts({ companyId }: { companyId: string }) {
                     key={p.id}
                     className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition"
                   >
-                    {/* Imagem */}
                     <td className="px-4 py-3">
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
                         {p.imagem_url ? (
@@ -494,21 +529,15 @@ function AbaProducts({ companyId }: { companyId: string }) {
                         )}
                       </div>
                     </td>
-
-                    {/* Nome */}
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900 dark:text-white">{p.nome}</p>
                       {p.ean && (
                         <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">{p.ean}</p>
                       )}
                     </td>
-
-                    {/* Categoria */}
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                       {p.categoria ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
                     </td>
-
-                    {/* Preço */}
                     <td className="px-4 py-3">
                       <p className="font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatarPreco(p.preco_venda)}
@@ -519,8 +548,6 @@ function AbaProducts({ companyId }: { companyId: string }) {
                         </p>
                       )}
                     </td>
-
-                    {/* Estoque */}
                     <td className="px-4 py-3">
                       {p.controla_estoque ? (
                         <span
@@ -542,8 +569,6 @@ function AbaProducts({ companyId }: { companyId: string }) {
                         <span className="text-xs text-gray-400 dark:text-gray-500">Não controlado</span>
                       )}
                     </td>
-
-                    {/* Status */}
                     <td className="px-4 py-3">
                       <button
                         onClick={() => toggleAtivo(p.id, p.is_active)}
@@ -556,8 +581,6 @@ function AbaProducts({ companyId }: { companyId: string }) {
                         {p.is_active ? 'Ativo' : 'Inativo'}
                       </button>
                     </td>
-
-                    {/* Ações */}
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() =>
@@ -573,13 +596,83 @@ function AbaProducts({ companyId }: { companyId: string }) {
               </tbody>
             </table>
           </div>
-
-          {/* Rodapé */}
           <div className="px-4 py-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
             <p className="text-xs text-gray-400 dark:text-gray-500">
               {filtered.length} de {produtos.length} produto{produtos.length !== 1 ? 's' : ''}
               {(search || categoriaFiltro) && ` · filtrado`}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── VISUALIZAÇÃO GRID ── */}
+      {!loading && filtered.length > 0 && view === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((p) => (
+            <div
+              key={p.id}
+              className={`bg-white dark:bg-slate-900 rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer ${
+                p.is_active
+                  ? 'border-gray-100 dark:border-white/5'
+                  : 'border-gray-200 dark:border-white/10 opacity-60'
+              }`}
+              onClick={() => router.push(`/dashboard/vendas/produtos?company=${companyId}&edit=${p.id}`)}
+            >
+              {/* Imagem */}
+              <div className="aspect-square bg-gray-50 dark:bg-white/5 relative overflow-hidden">
+                {p.imagem_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imagem_url} alt={p.nome} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Package className="w-10 h-10 text-gray-200 dark:text-gray-700" />
+                  </div>
+                )}
+                {/* Badge ativo/inativo */}
+                <div className="absolute top-2 right-2">
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                    p.is_active
+                      ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400'
+                  }`}>
+                    {p.is_active ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                {/* Estoque baixo */}
+                {p.controla_estoque && p.estoque_atual <= p.estoque_minimo && p.estoque_atual >= 0 && (
+                  <div className="absolute top-2 left-2">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                      {p.estoque_atual <= 0 ? 'Sem estoque' : 'Estoque baixo'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {/* Info */}
+              <div className="p-3">
+                <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{p.nome}</p>
+                {p.categoria && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{p.categoria}</p>
+                )}
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatarPreco(p.preco_venda)}
+                  </span>
+                  {p.controla_estoque && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {p.estoque_atual} {p.unidade}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+          {/* Card + novo */}
+          <div
+            onClick={() => router.push(`/dashboard/vendas/produtos?company=${companyId}`)}
+            className="bg-white/50 dark:bg-white/5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 p-8 min-h-[180px]"
+          >
+            <Plus className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+            <span className="text-sm text-gray-400 dark:text-gray-500">Novo produto</span>
           </div>
         </div>
       )}
@@ -898,7 +991,7 @@ function VendasPageContent() {
           {/* Conteúdo principal */}
           {companyId && (
             <>
-              {/* Tabs — padrão Saldo */}
+              {/* Tabs */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-100 dark:border-white/5 overflow-hidden">
                 <div className="flex border-b border-gray-200 dark:border-white/10">
                   {abas.map(({ key, label, icon: Icon }) => (

@@ -878,6 +878,24 @@ export function VoiceAssistantWithWakeWord({
           playText('Consultando o clima agora...').catch(() => {});
           break;
 
+        case 'modo_venda':
+          await stopGoogleSpeech();
+          setActiveModal({
+            type: 'SaleModeModal',
+            data: { companyId },
+          });
+          playText('Modo venda aberto! Escolha os produtos.').catch(() => {});
+          break;
+
+        case 'ver_produtos':
+          await stopGoogleSpeech();
+          setActiveModal({
+            type: 'SaleModeModal',
+            data: { companyId },
+          });
+          playText('Abrindo o catálogo de produtos.').catch(() => {});
+          break;
+
         // ────────────────────────────────────────────────────
         // ✅ MODELO PARA NOVA FUNÇÃO COM MODAL:
         // case 'minha_nova_funcao':

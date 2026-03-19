@@ -195,7 +195,8 @@ export default function ProductGrid({
                     isDark ? 'bg-white/4' : 'bg-gray-50'
                   }`}>
                     {produto.imagem_url ? (
-                      <img
+                      // ✅ CORRIGIDO: usar <Image> do Next.js (não <img>) para suportar fill + sizes
+                      <Image
                         src={produto.imagem_url}
                         alt={produto.nome}
                         fill

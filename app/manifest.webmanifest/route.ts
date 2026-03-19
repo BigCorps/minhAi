@@ -41,27 +41,31 @@ export async function GET(request: NextRequest) {
     .single();
 
   return NextResponse.json({
-    name: company?.name ? `minhAi - ${company.name}` : 'minhAi',
-    short_name: company?.name ? `${company.name}`,
+    // 1. Coloque o nome da empresa primeiro no 'name' (ou deixe apenas company.name)
+    name: company?.name ? `${company.name} - minhAi` : 'minhAi', 
+    
+    // 2. Inverta a ordem lógica do 'short_name' para priorizar a empresa
+    short_name: company?.name || 'minhAi', 
+    
     start_url: '/',
     display: 'standalone',
     background_color: '#0f172a',
     theme_color: company?.webapp_theme_color || '#f97316',
     icons: company?.webapp_logo_url
-  ? [
-      {
-        src: company.webapp_logo_url, // ← URL direta, sem /_next/image
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'any maskable',
-      },
-      {
-        src: company.webapp_logo_url, // ← mesma URL para 512 também
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any maskable',
-      },
-    ]
+      ? [
+          {
+            src: company.webapp_logo_url,
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+          {
+            src: company.webapp_logo_url,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ]
       : [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

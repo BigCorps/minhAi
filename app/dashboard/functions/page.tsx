@@ -317,6 +317,14 @@ async function handleSendSuggestion() {
     };
   }
 
+function getFunctionCredits(functionKey: string): number {
+  const setting = settings.find(s => s.function_key === functionKey);
+  // Prioriza o valor customizado da empresa, cai no global se não existir
+  if (setting?.custom_credits_per_use != null) return setting.custom_credits_per_use;
+  const func = functions.find(f => f.function_key === functionKey);
+  return func?.credits_per_use ?? 0;
+}
+
   function handleEdit(fn: AssistantFunction) {
     setEditingFunction(fn);
   }
@@ -362,7 +370,7 @@ async function handleSendSuggestion() {
         return (
           <FunctionCard
             key={fn.id}
-            function={fn}
+            function={{ ...fn, credits_per_use: getFunctionCredits(fn.function_key) }}
             isEnabled={enabled}
             stats={stats}
             onToggle={() => toggleFunction(fn.function_key, enabled)}
@@ -397,7 +405,7 @@ async function handleSendSuggestion() {
             return (
               <FunctionCard
                 key={fn.id}
-                function={fn}
+                function={{ ...fn, credits_per_use: getFunctionCredits(fn.function_key) }}
                 isEnabled={enabled}
                 stats={stats}
                 onToggle={() => toggleFunction(fn.function_key, enabled)}
@@ -567,7 +575,7 @@ async function handleSendSuggestion() {
                       return (
                         <FunctionCard
                           key={fn.id}
-                          function={fn}
+                          function={{ ...fn, credits_per_use: getFunctionCredits(fn.function_key) }}
                           isEnabled={enabled}
                           stats={stats}
                           onToggle={() => toggleFunction(fn.function_key, enabled)}

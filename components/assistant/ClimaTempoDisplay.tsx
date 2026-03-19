@@ -246,161 +246,163 @@ useEffect(() => {
         </div>
       )}
 
-      <div className={`relative w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
-        animate-in zoom-in-95 duration-300 flex flex-col`}>
+<div className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border ${bg} ${border}
+  animate-in zoom-in-95 duration-300 flex flex-col`}>
 
-        {/* Header */}
-        <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'} flex-shrink-0`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-xl">
-                🌤️
-              </div>
-              <div>
-                <h2 className={`text-xl font-bold ${textPrimary}`}>Clima e Tempo</h2>
-                <p className={`text-sm ${textMuted}`}>
-                  {weatherData ? weatherData.city : 'Buscando localização...'}
-                </p>
-              </div>
-            </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition">
-              <X className={`w-5 h-5 ${textMuted}`} />
-            </button>
-          </div>
+  {/* Header */}
+  <div className={`px-6 py-4 border-b ${border} ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'} flex-shrink-0`}>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-xl">
+          🌤️
         </div>
-
-        {/* Conteúdo */}
-        <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
-
-          {/* Busca por cidade */}
-          <div className="flex gap-2">
-            <div className={`flex items-center gap-2 flex-1 px-3 py-2 rounded-xl border ${border} ${cardBg}`}>
-              <MapPin className={`w-4 h-4 flex-shrink-0 ${textMuted}`} />
-              <input
-                type="text"
-                value={searchCity}
-                onChange={(e) => setSearchCity(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder='Ex: "Rio de Janeiro"'
-                className={`flex-1 bg-transparent text-sm outline-none ${textPrimary} placeholder:${textMuted}`}
-              />
-            </div>
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition"
-            >
-              Buscar
-            </button>
-          </div>
-
-          {/* Loading */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <p className={`text-sm ${textMuted}`}>Buscando clima...</p>
-            </div>
-          )}
-
-          {/* Erro */}
-          {!loading && error && (
-            <div className={`p-4 rounded-xl border ${isDark ? 'bg-red-900/20 border-red-800 text-red-300' : 'bg-red-50 border-red-200 text-red-700'} text-sm text-center`}>
-              {error}
-            </div>
-          )}
-
-          {/* Clima atual */}
-          {!loading && weatherData && (
-            <>
-              <div className={`p-5 rounded-2xl ${isDark ? 'bg-blue-900/30 border border-blue-800/50' : 'bg-blue-50 border border-blue-100'}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className={`text-6xl font-bold ${textPrimary}`}>
-                      {weatherData.current.temp}°
-                    </div>
-                    <div className={`text-sm capitalize mt-1 ${textMuted}`}>
-                      {weatherData.current.description}
-                    </div>
-                    <div className={`text-xs mt-1 ${textMuted}`}>
-                      Sensação: {weatherData.current.feels_like}°
-                    </div>
-                  </div>
-                  <div className="text-7xl">
-                    {getWeatherEmoji(weatherData.current.icon)}
-                  </div>
-                </div>
-
-                {/* Detalhes */}
-                <div className="grid grid-cols-3 gap-3 mt-4">
-                  <div className={`flex flex-col items-center gap-1 p-2 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white/60'}`}>
-                    <Droplets className="w-4 h-4 text-blue-400" />
-                    <span className={`text-xs ${textMuted}`}>Umidade</span>
-                    <span className={`text-sm font-semibold ${textPrimary}`}>{weatherData.current.humidity}%</span>
-                  </div>
-                  <div className={`flex flex-col items-center gap-1 p-2 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white/60'}`}>
-                    <Wind className="w-4 h-4 text-cyan-400" />
-                    <span className={`text-xs ${textMuted}`}>Vento</span>
-                    <span className={`text-sm font-semibold ${textPrimary}`}>{weatherData.current.wind_speed} km/h</span>
-                  </div>
-                  <div className={`flex flex-col items-center gap-1 p-2 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white/60'}`}>
-                    <Thermometer className="w-4 h-4 text-orange-400" />
-                    <span className={`text-xs ${textMuted}`}>Chuva</span>
-                    <span className={`text-sm font-semibold ${textPrimary}`}>{weatherData.current.rain_chance}%</span>
-                  </div>
-                </div>
-
-                {/* Min/Máx */}
-                <div className={`flex justify-center gap-4 mt-3 text-sm ${textMuted}`}>
-                  <span>↓ {weatherData.current.temp_min}°</span>
-                  <span>↑ {weatherData.current.temp_max}°</span>
-                </div>
-              </div>
-
-              {/* Previsão dos próximos dias */}
-              {weatherData.forecast.length > 0 && (
-                <div className={`rounded-2xl border ${border} ${cardBg} overflow-hidden`}>
-                  <p className={`px-4 pt-3 pb-2 text-xs font-semibold uppercase tracking-wider ${textMuted}`}>
-                    Próximos dias
-                  </p>
-                  <div className="divide-y divide-white/5">
-                    {weatherData.forecast.map((day) => (
-                      <div key={day.date} className="flex items-center justify-between px-4 py-3">
-                        <span className={`text-sm font-medium w-10 ${textPrimary}`}>
-                          {formatWeekday(day.date)}
-                        </span>
-                        <span className="text-xl">{getWeatherEmoji(day.icon)}</span>
-                        <span className={`text-xs capitalize flex-1 mx-3 truncate ${textMuted}`}>
-                          {day.description}
-                        </span>
-                        {day.rain_chance > 20 && (
-                          <span className="text-xs text-blue-400 mr-2">{day.rain_chance}% 💧</span>
-                        )}
-                        <span className={`text-sm font-medium ${textPrimary}`}>
-                          {day.temp_min}° / {day.temp_max}°
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Hint de voz */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>
-                <span>🎤</span>
-                <span>Diga <strong>"clima em [cidade]"</strong>, <strong>"repetir"</strong> ou <strong>"fechar"</strong></span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Barra de auto-close */}
-        <div className={`h-1 ${isDark ? 'bg-slate-800' : 'bg-gray-200'}`}>
-          <div
-            className="h-full bg-blue-500 transition-all duration-1000"
-            style={{ width: `${(timeLeft / AUTO_CLOSE_SECONDS) * 100}%` }}
-          />
+        <div>
+          <h2 className={`text-xl font-bold ${textPrimary}`}>Clima e Tempo</h2>
+          <p className={`text-sm ${textMuted}`}>
+            {weatherData ? weatherData.city : 'Buscando localização...'}
+          </p>
         </div>
       </div>
+      <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition">
+        <X className={`w-5 h-5 ${textMuted}`} />
+      </button>
+    </div>
+  </div>
+
+  {/* Busca */}
+  <div className={`px-6 pt-4 pb-2 flex-shrink-0`}>
+    <div className="flex gap-2">
+      <div className={`flex items-center gap-2 flex-1 px-3 py-2 rounded-xl border ${border} ${cardBg}`}>
+        <MapPin className={`w-4 h-4 flex-shrink-0 ${textMuted}`} />
+        <input
+          type="text"
+          value={searchCity}
+          onChange={(e) => setSearchCity(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          placeholder='Ex: "Rio de Janeiro"'
+          className={`flex-1 bg-transparent text-sm outline-none ${textPrimary}`}
+        />
+      </div>
+      <button
+        onClick={handleSearch}
+        disabled={loading}
+        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition"
+      >
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  {/* Loading */}
+  {loading && (
+    <div className="flex flex-col items-center justify-center py-12 gap-4">
+      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className={`text-sm ${textMuted}`}>Buscando clima...</p>
+    </div>
+  )}
+
+  {/* Erro */}
+  {!loading && error && (
+    <div className={`mx-6 my-4 p-4 rounded-xl border ${isDark ? 'bg-red-900/20 border-red-800 text-red-300' : 'bg-red-50 border-red-200 text-red-700'} text-sm text-center`}>
+      {error}
+    </div>
+  )}
+
+  {/* Conteúdo em 2 colunas no desktop */}
+  {!loading && weatherData && (
+    <div className="px-6 pb-4 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4 flex-shrink-0">
+
+      {/* Coluna esquerda: clima atual */}
+      <div className={`p-5 rounded-2xl ${isDark ? 'bg-blue-900/30 border border-blue-800/50' : 'bg-blue-50 border border-blue-100'}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className={`text-6xl font-bold ${textPrimary}`}>
+              {weatherData.current.temp}°
+            </div>
+            <div className={`text-sm capitalize mt-1 ${textMuted}`}>
+              {weatherData.current.description}
+            </div>
+            <div className={`text-xs mt-0.5 ${textMuted}`}>
+              Sensação: {weatherData.current.feels_like}°
+            </div>
+          </div>
+          <div className="text-7xl">
+            {getWeatherEmoji(weatherData.current.icon)}
+          </div>
+        </div>
+
+        {/* Min/Máx */}
+        <div className={`flex justify-center gap-4 text-sm ${textMuted} mb-3`}>
+          <span>↓ {weatherData.current.temp_min}°</span>
+          <span>↑ {weatherData.current.temp_max}°</span>
+        </div>
+
+        {/* Detalhes */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white/60'}`}>
+            <Droplets className="w-4 h-4 text-blue-400" />
+            <span className={`text-xs ${textMuted}`}>Umidade</span>
+            <span className={`text-sm font-semibold ${textPrimary}`}>{weatherData.current.humidity}%</span>
+          </div>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white/60'}`}>
+            <Wind className="w-4 h-4 text-cyan-400" />
+            <span className={`text-xs ${textMuted}`}>Vento</span>
+            <span className={`text-sm font-semibold ${textPrimary}`}>{weatherData.current.wind_speed} km/h</span>
+          </div>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white/60'}`}>
+            <Thermometer className="w-4 h-4 text-orange-400" />
+            <span className={`text-xs ${textMuted}`}>Chuva</span>
+            <span className={`text-sm font-semibold ${textPrimary}`}>{weatherData.current.rain_chance}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Coluna direita: previsão + hint */}
+      <div className="flex flex-col gap-3">
+        {weatherData.forecast.length > 0 && (
+          <div className={`rounded-2xl border ${border} ${cardBg} overflow-hidden flex-1`}>
+            <p className={`px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider ${textMuted}`}>
+              Próximos dias
+            </p>
+            <div className="divide-y divide-white/5">
+              {weatherData.forecast.map((day) => (
+                <div key={day.date} className="flex items-center justify-between px-4 py-2">
+                  <span className={`text-sm font-medium w-10 ${textPrimary}`}>
+                    {formatWeekday(day.date)}
+                  </span>
+                  <span className="text-lg">{getWeatherEmoji(day.icon)}</span>
+                  <span className={`text-xs capitalize flex-1 mx-2 truncate ${textMuted}`}>
+                    {day.description}
+                  </span>
+                  {day.rain_chance > 20 && (
+                    <span className="text-xs text-blue-400 mr-1">{day.rain_chance}%💧</span>
+                  )}
+                  <span className={`text-sm font-medium ${textPrimary}`}>
+                    {day.temp_min}°/{day.temp_max}°
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Hint de voz */}
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>
+          <span>🎤</span>
+          <span>Diga <strong>"clima em [cidade]"</strong>, <strong>"repetir"</strong> ou <strong>"fechar"</strong></span>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Barra de auto-close */}
+  <div className={`h-1 flex-shrink-0 ${isDark ? 'bg-slate-800' : 'bg-gray-200'}`}>
+    <div
+      className="h-full bg-blue-500 transition-all duration-1000"
+      style={{ width: `${(timeLeft / AUTO_CLOSE_SECONDS) * 100}%` }}
+    />
+  </div>
+</div>
     </div>,
     document.body
   );

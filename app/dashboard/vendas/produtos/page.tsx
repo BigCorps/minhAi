@@ -704,38 +704,8 @@ function ProdutosPageContent() {
             </div>
           </div>
 
-          {/* ── Mudança 2: botões com toggle lista/grid ── */}
+          {/* Botões */}
           <div className="flex items-center gap-2">
-            {/* Toggle lista/grid */}
-            <div className={`flex rounded-lg border overflow-hidden ${'border-gray-200 dark:border-white/10'}`}>
-              <button
-                onClick={() => setView('list')}
-                className={`p-2 transition-colors ${
-                  view === 'list'
-                    ? 'bg-gray-900 dark:bg-white/15 text-white'
-                    : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-                }`}
-                title="Visualização em lista"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setView('grid')}
-                className={`p-2 transition-colors ${
-                  view === 'grid'
-                    ? 'bg-gray-900 dark:bg-white/15 text-white'
-                    : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-                }`}
-                title="Visualização em grade"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
-            </div>
-
             <button
               onClick={() => setImportarAberto(true)}
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition"
@@ -753,7 +723,40 @@ function ProdutosPageContent() {
           </div>
         </div>
 
-        {/* ── Lista ── */}
+        {/* Barra persistente — toggle sempre visível */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {!loading && produtos.length > 0 && `${produtos.length} produto${produtos.length !== 1 ? 's' : ''}`}
+          </p>
+          <div className="flex rounded-lg border overflow-hidden border-gray-200 dark:border-white/10">
+            <button
+              onClick={() => setView('list')}
+              className={`p-2 transition-colors ${
+                view === 'list'
+                  ? 'bg-gray-900 dark:bg-white/15 text-white'
+                  : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+              }`}
+              title="Visualização em lista"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setView('grid')}
+              className={`p-2 transition-colors ${
+                view === 'grid'
+                  ? 'bg-gray-900 dark:bg-white/15 text-white'
+                  : 'bg-white dark:bg-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+              }`}
+              title="Visualização em grade"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
@@ -864,9 +867,6 @@ function ProdutosPageContent() {
                       ))}
                     </tbody>
                   </table>
-                </div>
-                <div className="px-4 py-3 border-t border-gray-100 dark:border-white/5">
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{produtos.length} produto{produtos.length !== 1 ? 's' : ''}</p>
                 </div>
               </div>
             )}

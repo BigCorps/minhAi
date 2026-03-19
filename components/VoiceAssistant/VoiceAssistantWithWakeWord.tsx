@@ -893,7 +893,7 @@ case 'cadastrar_produto':
             type: 'SaleModeModal',
             data: {
               companyId,
-              sMaximized,
+              isMaximized,
               isListening,
               isProcessing,
               isPlayingAudio,

@@ -1,13 +1,12 @@
 // components/VoiceAssistant/modals/SaleModeModal.tsx — v5
 //
-// Mudanças desta versão:
 // - Fundo sólido (sem backdrop-blur translúcido)
-// - Sem barra de título "Modo Venda" — X de fechar fica no card do avatar
-// - Cantos arredondados (rounded-2xl) no modo normal, sem arredondamento no kiosk
-// - Sem busca — cliente usa o TextInput para isso
-// - isMaximized: usa fixed inset-0 no kiosk para escapar do transform:scale()
-// - Layout responsivo: deitado = produtos esquerda / avatar+carrinho direita
-//                      em pé    = produtos em cima / avatar+carrinho em linha abaixo
+// - Sem barra de título — X de fechar fica no card do avatar
+// - isMaximized: fixed inset-0 no kiosk, absolute inset-0 rounded-2xl no normal
+// - Layout responsivo por orientação:
+//     landscape → produtos esquerda / avatar+carrinho direita (coluna)
+//     portrait  → produtos em cima / avatar+carrinho em linha abaixo
+// - Detecção de orientação via screen.orientation + resize (confiável no kiosk/fullscreen)
 
 'use client';
 
@@ -34,10 +33,15 @@ export interface SaleModeModalProps {
   onMicDown?: () => void;
   onMicUp?: () => void;
   onTextMessage?: (msg: string) => Promise<void>;
-  // Quando true (modo kiosk/maximizado), usa fixed inset-0 para escapar do
-  // transform:scale() do container pai. Quando false (modo normal), mantém
-  // absolute inset-0 relativo ao container do VoiceAssistant.
   isMaximized?: boolean;
+}
+
+function getIsPortrait() {
+  // screen.orientation é mais confiável que window.innerWidth/Height no fullscreen
+  if (typeof screen !== 'undefined' && screen.orientation?.type) {
+    return screen.orientation.type.startsWith('portrait');
+  }
+  return window.innerHeight > window.innerWidth;
 }
 
 function SaleModeInner({
@@ -65,14 +69,29 @@ function SaleModeInner({
     produtoDestaqueInicial ?? null,
   );
   const [showCheckout, setShowCheckout] = useState(false);
-
-  // Detecta orientação portrait
   const [isPortrait, setIsPortrait] = useState(false);
+
+  // Detecção de orientação robusta (funciona em kiosk/fullscreen)
   useEffect(() => {
-    const check = () => setIsPortrait(window.innerHeight > window.innerWidth);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    const update = () => setIsPortrait(getIsPortrait());
+    update();
+
+    // Escuta tanto resize quanto orientationchange
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+
+    // screen.orientation API (mais moderna)
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', update);
+    }
+
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+      if (screen.orientation) {
+        screen.orientation.removeEventListener('change', update);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -110,19 +129,13 @@ function SaleModeInner({
     setShowCheckout(true);
   }, [totalItens]);
 
-  // No modo kiosk/maximizado: fixed inset-0 z-[200] escapa do transform:scale()
-  // No modo normal: absolute inset-0 z-40 rounded-2xl se encaixa no container
   const rootClass = isMaximized
     ? `fixed inset-0 z-[200] flex overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`
     : `absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-white'}`;
 
   return (
     <div className={rootClass}>
-
-      {/* Área principal */}
       <div className={`flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3 ${
-        // Portrait: coluna (produtos cima, controles baixo)
-        // Landscape: linha (produtos esquerda, controles direita)
         isPortrait ? 'flex-col' : 'flex-row'
       }`}>
 
@@ -151,9 +164,9 @@ function SaleModeInner({
           </div>
         ) : (
           <>
-            {/* ── GRADE DE PRODUTOS ─────────────────────────────
-                Landscape: flex-[7] (70% da linha)
-                Portrait:  flex-1 (ocupa o espaço disponível acima) */}
+            {/* ── GRADE DE PRODUTOS ────────────────────────────────
+                landscape: flex-[7] em linha
+                portrait:  flex-1 em cima (ocupa o máximo disponível) */}
             <div className={`flex flex-col min-w-0 overflow-hidden ${
               isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
             }`}>
@@ -168,9 +181,9 @@ function SaleModeInner({
               />
             </div>
 
-            {/* ── CONTROLES (avatar + carrinho) ─────────────────
-                Landscape: flex-[3] coluna  (30% da linha)
-                Portrait:  linha horizontal com altura fixa     */}
+            {/* ── CONTROLES (avatar + carrinho) ────────────────────
+                landscape: flex-[3] coluna, ocupa 30% da linha
+                portrait:  linha fixa h-[200px] na parte de baixo  */}
             <div className={`flex min-w-0 overflow-hidden gap-2 ${
               isPortrait
                 ? 'flex-row flex-shrink-0 h-[200px]'
@@ -261,9 +274,7 @@ function SaleModeInner({
               </div>
 
               {/* CartPanel — ocupa o restante ao lado do avatar no portrait */}
-              <div className={`min-h-0 overflow-hidden ${
-                isPortrait ? 'flex-1' : 'flex-1'
-              }`}>
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <CartPanel theme={theme} onCheckout={handleCheckout} />
               </div>
             </div>

@@ -3850,7 +3850,7 @@ modo_venda: {
   voiceTriggers: [
     'modo venda', 'modo de venda', 'abrir loja',
     'quero comprar', 'comprar agora', 'escolher produtos',
-    'fazer pedido', 'abrir modo venda',
+    'fazer compras', 'abrir modo venda', 'loja virtual',
   ],
 
   examplePhrases: [
@@ -4033,7 +4033,7 @@ fazer_pedido: {
   color: '#f97316',
 
   saveToHistory: true,
-  creditsPerUse: 1,
+  creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
 

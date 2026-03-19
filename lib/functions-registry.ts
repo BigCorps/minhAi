@@ -456,6 +456,83 @@ voiceTriggers: [
     },
   },
 
+tocar_video: {
+  functionKey: 'tocar_video',
+  functionName: 'Tocar Vídeo',
+  category: 'video',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'tocar video',
+    'tocar vídeo',
+    'assistir video',
+    'assistir vídeo',
+    'reproduzir video',
+    'reproduzir vídeo',
+    'buscar video',
+    'buscar vídeo',
+    'tocar video de',
+    'tocar vídeo de',
+    'assistir video de',
+    'assistir vídeo de',
+    'me mostra um video',
+    'me mostra um vídeo',
+    'quero ver um video',
+    'quero ver um vídeo',
+  ],
+
+  examplePhrases: [
+    'Tocar vídeo de yoga',
+    'Assistir receita de bolo',
+    'Me mostra um vídeo de meditação',
+  ],
+
+  edgeFunction: 'tocar-video',
+  requiresInput: true,
+  inputType: 'text',
+  inputPrompt: 'Qual vídeo você quer assistir?',
+
+  description: 'Busca e reproduz vídeos do YouTube por comando de voz.',
+  shortDescription: 'Reproduz vídeos do YouTube por voz.',
+  icon: '🎥',
+  color: '#FF0000',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      // Extrair o tema do vídeo do transcript
+      const queryMatch = transcript?.match(
+        /(?:tocar|assistir|reproduzir|buscar|ver|mostra|quero ver)\s+(?:video|vídeo)\s+(?:de|do|da|sobre)?\s*(.+)/i
+      ) || transcript?.match(
+        /(?:me mostra|quero ver)\s+(?:um\s+)?(?:video|vídeo)\s+(?:de|do|da|sobre)?\s*(.+)/i
+      );
+
+      const query = queryMatch ? queryMatch[1].trim() : transcript?.trim() || '';
+
+      if (!query) {
+        await playText('Qual vídeo você quer assistir? Me diga o assunto.');
+        return false;
+      }
+
+      setActiveModal?.({
+        type: 'TocarVideoDisplay',
+        data: { companyId, query },
+      });
+
+      await playText(`Buscando vídeo sobre ${query}...`);
+      return true;
+    } catch (error) {
+      console.error('Erro tocar_video:', error);
+      await playText('Não consegui buscar o vídeo. Tente novamente.');
+      return false;
+    }
+  },
+},
+  
 fichas_producao_conversacional: {
   functionKey: 'fichas_producao_conversacional',
   functionName: 'Fichas de Produção Conversacional',

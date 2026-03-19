@@ -55,6 +55,7 @@ import RestricoesCNPJDisplay from '@/components/assistant/RestricoesCNPJDisplay'
 import FeriadosNacionaisDisplay from '@/components/assistant/FeriadosNacionaisDisplay';
 import ConsultarDDDDisplay from '@/components/assistant/ConsultarDDDDisplay';
 import MercadoPagoPointDisplay from '@/components/assistant/MercadoPagoPointDisplay';
+import ClimaTempoDisplay from '@/components/assistant/ClimaTempoDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -110,6 +111,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'RestricoesCNPJDisplay': RestricoesCNPJDisplay,
   'FeriadosNacionaisDisplay': FeriadosNacionaisDisplay,
   'ConsultarDDDDisplay': ConsultarDDDDisplay,
+  'ClimaTempoDisplay': ClimaTempoDisplay,
   'MercadoPagoPointDisplay': ({ data, onClose, playText }: any) => (
   <MercadoPagoPointDisplay
     companyId={data.companyId}

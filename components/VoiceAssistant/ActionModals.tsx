@@ -130,7 +130,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     onMicDown={data.onMicDown}
     onMicUp={data.onMicUp}
     onTextMessage={data.onTextMessage}
-    isMaximized={isMaximized}
+    isMaximized={data.isMaximized}
   />
 ),
 'CadastrarProdutoDisplay': ({ data, onClose, theme, playText }: any) => (

@@ -1861,7 +1861,7 @@ cadastro: {
   examplePhrases: ['Fazer cadastro', 'Cadastrar cliente', 'Novo cadastro'],
   voiceTriggers: [
     'fazer cadastro', 'fazer o cadastro',
-    'cadastrar', 'novo cadastro',
+    'novo cadastro',
     'cadastrar cliente', 'cadastrar funcionario', 'cadastrar funcionário',
     'cadastrar morador', 'cadastrar empresa',
     'iniciar cadastro', 'quero me cadastrar',
@@ -2022,7 +2022,7 @@ consultar_cnpj: {
     'dados da empresa', 'consultar empresa', 'razão social', 'razao social',
     'consultar cnpj', 'consulta cnpj', 'consulte o cnpj',
     'receita federal', 'dados do cnpj', 'informações do cnpj', 'informacoes do cnpj',
-    'buscar empresa', 'cadastro da empresa', 'cnpj na receita',
+    'buscar empresa', 'cnpj na receita',
   ],
 
   examplePhrases: [
@@ -2071,7 +2071,7 @@ consultar_cpf: {
     // Dados cadastrais — NÃO incluir palavras de restrição/score/serasa/spc
     'dados pessoais', 'consultar cpf', 'consulta cpf', 'consulte o cpf',
     'dados do cpf', 'informações de pessoa física', 'informacoes de pessoa fisica',
-    'buscar cpf', 'cadastro do cpf', 'cpf na receita',
+    'buscar cpf', 'cpf na receita',
     'nome do cpf', 'titular do cpf',
   ],
 
@@ -4095,20 +4095,18 @@ cadastrar_produto: {
   requiresPayment: false,
   isPremium: false,
 
-  handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      // Por enquanto abre o SaleModeModal — na Fase 3 teremos o modal dedicado
-      // de cadastro que será adicionado aqui
-      setActiveModal?.({
-        type: 'SaleModeModal',
-        data: { companyId },
-      });
-      await playText('Para cadastrar produtos, acesse o painel de administração em Dashboard, seção Vendas.');
-      return true;
-    } catch {
-      return false;
-    }
-  },
+handler: async ({ playText, setActiveModal, companyId }) => {
+  try {
+    setActiveModal?.({
+      type: 'CadastrarProdutoDisplay',
+      data: { companyId },
+    });
+    await playText('Vou te guiar no cadastro do produto. Qual o nome?');
+    return true;
+  } catch {
+    return false;
+  }
+},
 },
 
 };

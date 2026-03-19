@@ -58,7 +58,7 @@ import MercadoPagoPointDisplay from '@/components/assistant/MercadoPagoPointDisp
 import ClimaTempoDisplay from '@/components/assistant/ClimaTempoDisplay';
 import TocarVideoDisplay from '@/components/assistant/TocarVideoDisplay';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
-import CadastrarProdutoDisplay from '@/components/VoiceAssistant/CadastrarProdutoDisplay';
+import CadastrarProdutoDisplay from '@/components/assistant/CadastrarProdutoDisplay';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 

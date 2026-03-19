@@ -77,7 +77,7 @@ export default function TocarVideoDisplay({
       }
 
       setVideo(json.videos[0]);
-      playText(`Reproduzindo: ${json.videos[0].title}`).catch(() => {});
+      playText('Vídeo encontrado.').catch(() => {});
 
     } catch (err: any) {
       setError(err.message);
@@ -150,36 +150,76 @@ export default function TocarVideoDisplay({
         isDark ? 'bg-slate-900' : 'bg-white'
       }`}>
 
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
-          <div className="flex items-center justify-between gap-3">
-            {/* Busca */}
-            <div className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20">
-              <Search className="w-4 h-4 text-white/60 flex-shrink-0" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="Buscar outro vídeo..."
-                className="flex-1 bg-transparent text-sm text-white placeholder:text-white/40 outline-none"
-              />
-              <button
-                onClick={handleSearch}
-                disabled={loading}
-                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-full disabled:opacity-50 transition"
-              >
-                Buscar
-              </button>
-            </div>
+{/* Header com auto-hide */}
+{(() => {
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    if (!video) return;
+    hideTimerRef.current = setTimeout(() => setHeaderVisible(false), 2000);
+    return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); };
+  }, [video]);
+
+  const showHeader = () => {
+    setHeaderVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+  };
+
+  const hideHeader = () => {
+    hideTimerRef.current = setTimeout(() => setHeaderVisible(false), 2000);
+  };
+
+  return (
+    <div
+      className="absolute top-0 left-0 right-0 z-10"
+      onMouseEnter={showHeader}
+      onMouseLeave={hideHeader}
+      onClick={showHeader}
+    >
+      {/* Zona de hover invisível sempre presente */}
+      <div className="h-16 w-full absolute top-0" />
+
+      {/* Conteúdo do header */}
+      <div className={`p-4 bg-gradient-to-b from-black/80 to-transparent transition-all duration-300 ${
+        headerVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+      }`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20">
+            <Search className="w-4 h-4 text-white/60 flex-shrink-0" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Buscar outro vídeo..."
+              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/40 outline-none"
+            />
             <button
-              onClick={handleClose}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 transition-all flex-shrink-0"
+              onClick={handleSearch}
+              disabled={loading}
+              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-full disabled:opacity-50 transition"
             >
-              <X className="w-5 h-5 text-white" />
+              Buscar
             </button>
           </div>
+          <button
+            onClick={handleClose}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 transition-all flex-shrink-0"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+        </div>
+        {video && (
+          <div className="mt-2 px-1">
+            <p className="text-white text-sm font-medium truncate">{video.title}</p>
+            <p className="text-white/50 text-xs">{video.channel}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+})()}
 
           {/* Título do vídeo */}
           {video && (

@@ -94,8 +94,9 @@ function SaleModeInner({
   }, [totalItens]);
 
   return (
-    // fixed inset-0 para não ser afetado pelo transform: scale() do container pai no modo kiosk
-    <div className={`fixed inset-0 z-[200] flex overflow-hidden ${
+    // absolute inset-0 relativo ao container pai com position: relative
+    // Fundo sólido — sem translucidez
+    <div className={`absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${
       isDark ? 'bg-slate-900' : 'bg-white'
     }`}>
 

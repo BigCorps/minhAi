@@ -1,11 +1,13 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v4
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v5
 //
 // Mudanças desta versão:
 // - Fundo sólido (sem backdrop-blur translúcido)
 // - Sem barra de título "Modo Venda" — X de fechar fica no card do avatar
-// - Cantos arredondados (rounded-2xl) igual aos outros modais (apenas no modo normal)
+// - Cantos arredondados (rounded-2xl) no modo normal, sem arredondamento no kiosk
 // - Sem busca — cliente usa o TextInput para isso
 // - isMaximized: usa fixed inset-0 no kiosk para escapar do transform:scale()
+// - Layout responsivo: deitado = produtos esquerda / avatar+carrinho direita
+//                      em pé    = produtos em cima / avatar+carrinho em linha abaixo
 
 'use client';
 
@@ -64,6 +66,15 @@ function SaleModeInner({
   );
   const [showCheckout, setShowCheckout] = useState(false);
 
+  // Detecta orientação portrait
+  const [isPortrait, setIsPortrait] = useState(false);
+  useEffect(() => {
+    const check = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -108,8 +119,12 @@ function SaleModeInner({
   return (
     <div className={rootClass}>
 
-      {/* Área principal: sem padding top, ocupa tudo */}
-      <div className="flex-1 flex gap-3 overflow-hidden px-3 py-3 min-h-0 w-full">
+      {/* Área principal */}
+      <div className={`flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3 ${
+        // Portrait: coluna (produtos cima, controles baixo)
+        // Landscape: linha (produtos esquerda, controles direita)
+        isPortrait ? 'flex-col' : 'flex-row'
+      }`}>
 
         {showCheckout ? (
           <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4">
@@ -136,8 +151,12 @@ function SaleModeInner({
           </div>
         ) : (
           <>
-            {/* Esquerdo: produtos (70%) */}
-            <div className="flex-[7] flex flex-col min-w-0 overflow-hidden">
+            {/* ── GRADE DE PRODUTOS ─────────────────────────────
+                Landscape: flex-[7] (70% da linha)
+                Portrait:  flex-1 (ocupa o espaço disponível acima) */}
+            <div className={`flex flex-col min-w-0 overflow-hidden ${
+              isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
+            }`}>
               <ProductGrid
                 produtos={produtos}
                 categorias={categorias}
@@ -145,16 +164,23 @@ function SaleModeInner({
                 theme={theme}
                 produtoDestaque={produtoDestaque}
                 onProdutoDestaqueClear={() => setProdutoDestaque(null)}
-                // sem busca aqui — cliente usa o TextInput
                 hideBusca
               />
             </div>
 
-            {/* Direito: avatar + carrinho (30%) */}
-            <div className="flex-[3] flex flex-col gap-2 min-w-0 overflow-hidden">
+            {/* ── CONTROLES (avatar + carrinho) ─────────────────
+                Landscape: flex-[3] coluna  (30% da linha)
+                Portrait:  linha horizontal com altura fixa     */}
+            <div className={`flex min-w-0 overflow-hidden gap-2 ${
+              isPortrait
+                ? 'flex-row flex-shrink-0 h-[200px]'
+                : 'flex-col flex-[3]'
+            }`}>
 
-              {/* Card do avatar — X de fechar no canto superior direito */}
-              <div className={`flex-shrink-0 rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 relative ${
+              {/* Card do avatar */}
+              <div className={`rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 relative ${
+                isPortrait ? 'w-[160px] flex-shrink-0' : 'flex-shrink-0'
+              } ${
                 isDark
                   ? 'bg-white/3 border-white/8'
                   : 'bg-gray-50 border-gray-200'
@@ -234,8 +260,10 @@ function SaleModeInner({
                 )}
               </div>
 
-              {/* CartPanel */}
-              <div className="flex-1 min-h-0 overflow-hidden">
+              {/* CartPanel — ocupa o restante ao lado do avatar no portrait */}
+              <div className={`min-h-0 overflow-hidden ${
+                isPortrait ? 'flex-1' : 'flex-1'
+              }`}>
                 <CartPanel theme={theme} onCheckout={handleCheckout} />
               </div>
             </div>

@@ -9,6 +9,8 @@ interface TextInputChatProps {
   disabled?: boolean;
   externalValue?: string;
   onExternalValueConsumed?: () => void;
+  /** Modo compacto: fonte menor, sem hint "Pressione Enter", padding reduzido */
+  compact?: boolean;
 }
 
 export default function TextInputChat({
@@ -18,6 +20,7 @@ export default function TextInputChat({
   disabled = false,
   externalValue,
   onExternalValueConsumed,
+  compact = false,
 }: TextInputChatProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -31,11 +34,10 @@ export default function TextInputChat({
     }
   }, [isProcessing, disabled]);
 
-  // ✅ Popula o input quando vem transcrição do microfone push-to-talk
+  // Popula o input quando vem transcrição do microfone push-to-talk
   useEffect(() => {
     if (externalValue) {
       onExternalValueConsumed?.();
-      // Envia direto sem passar pelo input
       onSendMessage(externalValue).catch(console.error);
     }
   }, [externalValue]);
@@ -67,12 +69,14 @@ export default function TextInputChat({
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${
+      <div className={`flex items-center gap-1.5 rounded-xl border transition-all ${
+        compact ? 'p-1.5' : 'p-3'
+      } ${
         theme === 'dark'
           ? 'bg-slate-800/50 border-slate-700/50 backdrop-blur-sm'
           : 'bg-white border-gray-200 shadow-sm'
       } ${isDisabled ? 'opacity-50' : ''}`}>
-        
+
         <input
           ref={inputRef}
           type="text"
@@ -85,9 +89,15 @@ export default function TextInputChat({
               ? 'Processando...'
               : isSending
               ? 'Enviando...'
+              : compact
+              ? 'Digite...'
               : 'Ou digite sua mensagem...'
           }
-          className={`flex-1 bg-transparent outline-none text-sm placeholder:text-sm ${
+          className={`flex-1 min-w-0 bg-transparent outline-none ${
+            compact
+              ? 'text-[11px] placeholder:text-[11px]'
+              : 'text-sm placeholder:text-sm'
+          } ${
             theme === 'dark'
               ? 'text-white placeholder:text-slate-400'
               : 'text-gray-900 placeholder:text-gray-400'
@@ -95,8 +105,11 @@ export default function TextInputChat({
           maxLength={500}
         />
 
-        {message.length > 0 && (
-          <span className={`text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-gray-400'}`}>
+        {/* Contador de caracteres — só no modo normal */}
+        {!compact && message.length > 0 && (
+          <span className={`text-xs flex-shrink-0 ${
+            theme === 'dark' ? 'text-slate-500' : 'text-gray-400'
+          }`}>
             {message.length}/500
           </span>
         )}
@@ -104,7 +117,9 @@ export default function TextInputChat({
         <button
           type="submit"
           disabled={!message.trim() || isDisabled}
-          className={`p-2 rounded-lg transition-all ${
+          className={`flex-shrink-0 rounded-lg transition-all ${
+            compact ? 'p-1' : 'p-2'
+          } ${
             theme === 'dark'
               ? 'bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-500'
               : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400'
@@ -112,16 +127,21 @@ export default function TextInputChat({
           aria-label="Enviar mensagem"
         >
           {isSending || isProcessing ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className={compact ? 'w-3 h-3 animate-spin' : 'w-4 h-4 animate-spin'} />
           ) : (
-            <Send className="w-4 h-4" />
+            <Send className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
           )}
         </button>
       </div>
 
-      <p className={`text-xs text-center mt-2 ${theme === 'dark' ? 'text-slate-500' : 'text-gray-500'}`}>
-        Pressione Enter para enviar
-      </p>
+      {/* Hint "Pressione Enter" — oculto no modo compacto */}
+      {!compact && (
+        <p className={`text-xs text-center mt-2 ${
+          theme === 'dark' ? 'text-slate-500' : 'text-gray-500'
+        }`}>
+          Pressione Enter para enviar
+        </p>
+      )}
     </form>
   );
 }

@@ -876,7 +876,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
           {/* Carrossel FIXO no rodapé - 🆕 COM NOVAS PROPS */}
 {assistantStarted && (
-  <div className="fixed bottom-0 left-0 right-0 w-full z-30">
+  <div data-role="carousel" className="fixed bottom-0 left-0 right-0 w-full z-30">
     <FunctionCarousel
       companyId={company.id}
       onFunctionClick={(functionKey) => {

@@ -57,6 +57,7 @@ import ConsultarDDDDisplay from '@/components/assistant/ConsultarDDDDisplay';
 import MercadoPagoPointDisplay from '@/components/assistant/MercadoPagoPointDisplay';
 import ClimaTempoDisplay from '@/components/assistant/ClimaTempoDisplay';
 import TocarVideoDisplay from '@/components/assistant/TocarVideoDisplay';
+import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -114,6 +115,15 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ConsultarDDDDisplay': ConsultarDDDDisplay,
   'ClimaTempoDisplay': ClimaTempoDisplay,
   'TocarVideoDisplay': TocarVideoDisplay,
+  'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
+    <SaleModeModal
+      companyId={data.companyId}
+      theme={theme}
+      onClose={onClose}
+      playText={playText}
+      produtoDestaque={data.produtoDestaque ?? null}
+    />
+  ),
   'MercadoPagoPointDisplay': ({ data, onClose, playText }: any) => (
   <MercadoPagoPointDisplay
     companyId={data.companyId}

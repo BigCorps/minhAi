@@ -1325,7 +1325,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 theme === 'dark' ? 'border-white/5' : 'border-gray-200'
               }`}>
                 <div className="flex items-center justify-center space-x-4 mb-2">
-                  <Link href="https://minhai.appr" className={`text-xs font-medium transition-colors ${
+                  <Link href="https://minhai.app" className={`text-xs font-medium transition-colors ${
                     theme === 'dark' ? 'text-lime-400 hover:text-blue-300' : 'text-green-600 hover:text-orange-700'
                   }`}>
                     Crie seu assistente

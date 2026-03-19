@@ -131,6 +131,20 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     onTextMessage={data.onTextMessage}
   />
 ),
+'CadastrarProdutoDisplay': ({ data, onClose, theme, playText }: any) => (
+  <CadastrarProdutoDisplay
+    data={data}
+    onClose={onClose}
+    theme={theme}
+    playText={playText}
+    onSalvo={(produto) => {
+      // Crédito cobrado aqui, após salvar com sucesso
+      import('@/components/VoiceAssistant/handlers/functionUsage').then(({ registerFunctionUsage }) => {
+        registerFunctionUsage(data.companyId, 'cadastrar_produto', 1);
+      });
+    }}
+  />
+),
   'MercadoPagoPointDisplay': ({ data, onClose, playText }: any) => (
   <MercadoPagoPointDisplay
     companyId={data.companyId}

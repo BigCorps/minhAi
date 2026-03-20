@@ -2,15 +2,28 @@
 // Rota API: Processar Conversação com ChatGPT
 // Arquivo: app/api/voice/process-conversation/route.ts
 // =========================================================
-// Processa mensagens da conversa e chama OpenAI API server-side
+// ✅ MUDANÇAS v2:
+// - Recebe selectedTags do body
+// - Prompt da IA atualizado para entender tags
+// - isFichaPreparo derivado das tags (compatibilidade mantida)
+// - Validação de ciclo via CicloDetector (avisos ao frontend)
 // =========================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getDetector } from '@/lib/producao/ciclo-detector'; // ✅ v2
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, fichaAtual, isFichaPreparo } = body;
+
+    // ✅ v2: recebe selectedTags; mantém isFichaPreparo como fallback legado
+    const {
+      messages,
+      fichaAtual,
+      selectedTags = [],
+      isFichaPreparo: isFichaPreparoLegado,
+      companyId,
+    } = body;
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -19,9 +32,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obter API key do ambiente
+    // ✅ v2: isFichaPreparo derivado das tags; fallback para o campo legado
+    const isFichaPreparo =
+      selectedTags.length > 0
+        ? selectedTags.includes('função:preparo')
+        : isFichaPreparoLegado ?? false;
+
+    const isVendavel  = selectedTags.includes('vendável:sim');
+    const isCombo     = selectedTags.includes('função:combo');
+    const isProduto   = selectedTags.includes('função:produto');
+    const origemTag   = (selectedTags as string[]).find((t: string) => t.startsWith('origem:')) ?? null;
+
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-    
+
     if (!OPENAI_API_KEY) {
       console.error('❌ OPENAI_API_KEY não configurada');
       return NextResponse.json(
@@ -30,17 +53,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Montar contexto da conversa
     const conversaAtual = messages
       .map((m: any) => `${m.role === 'user' ? 'Usuário' : 'Assistente'}: ${m.content}`)
       .join('\n');
 
     const fichaAtualStr = JSON.stringify(fichaAtual || {}, null, 2);
 
-    // Prompt para o ChatGPT
+    // ✅ v2: Prompt atualizado para entender tags
     const systemPrompt = `Você é um assistente especializado em criar fichas de produção para restaurantes e lanchonetes no Brasil.
 
-TIPO DE FICHA: ${isFichaPreparo ? 'Ficha de Preparo (produz um ingrediente)' : 'Produto Final (será vendido)'}
+CARACTERÍSTICAS DO ITEM (tags selecionadas pelo usuário):
+- Tags: ${selectedTags.length > 0 ? selectedTags.join(', ') : 'nenhuma tag selecionada'}
+- Tipo: ${isFichaPreparo ? 'Ficha de Preparo (produz um ingrediente, não é vendida diretamente)' : isProduto ? 'Produto Final' : isCombo ? 'Combo (agrupa outros produtos)' : 'Item de produção'}
+- Vendável ao cliente final: ${isVendavel ? 'Sim' : 'Não'}
+${isCombo ? '- É um combo: agrupa produtos já existentes, peça os itens que o compõem' : ''}
+${origemTag ? `- Origem: ${origemTag.split(':')[1]}` : ''}
 
 INSTRUÇÕES:
 1. Extraia informações do que o usuário disse
@@ -49,6 +76,8 @@ INSTRUÇÕES:
 4. Normalize unidades (kg, g, L, ml, unidade, dúzia)
 5. Responda de forma natural e amigável
 6. Se algo não estiver claro, pergunte
+${isFichaPreparo ? '7. Como é uma ficha de preparo, o campo preco_venda deve ser null' : ''}
+${!isVendavel ? '7. Como não é vendável, o campo preco_venda deve ser null' : ''}
 
 IMPORTANTE: Sempre estime preços brasileiros realistas. Exemplos:
 - Farinha de trigo: R$ 5,00/kg
@@ -83,7 +112,7 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`):
     ]
   },
   "resposta": "string - mensagem amigável ao usuário",
-  "completo": boolean - true se a ficha está pronta para salvar
+  "completo": boolean
 }`;
 
     const userPrompt = `CONTEXTO DA CONVERSA:
@@ -94,7 +123,6 @@ ${fichaAtualStr}`;
 
     console.log('📡 Chamando OpenAI API...');
 
-    // Chamar API da OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -102,20 +130,14 @@ ${fichaAtualStr}`;
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // ou 'gpt-4-turbo' se preferir
+        model: 'gpt-4o',
         messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: userPrompt,
-          },
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
         ],
         temperature: 0.7,
         max_tokens: 2000,
-        response_format: { type: 'json_object' }, // ✅ Force JSON response
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -133,25 +155,45 @@ ${fichaAtualStr}`;
 
     console.log('✅ Resposta recebida');
 
-    // Tentar parsear o JSON
     let resultado;
     try {
-      // Limpar possíveis backticks se houver
       const jsonLimpo = conteudo.replace(/```json\n?|\n?```/g, '').trim();
       resultado = JSON.parse(jsonLimpo);
     } catch (parseError) {
       console.error('❌ Erro ao parsear JSON:', conteudo);
       return NextResponse.json(
-        { 
-          error: 'Invalid JSON response', 
-          rawResponse: conteudo 
-        },
+        { error: 'Invalid JSON response', rawResponse: conteudo },
         { status: 500 }
       );
     }
 
-    // Retornar resultado
-    return NextResponse.json(resultado);
+    // ✅ v2: Validação de ciclos (apenas se companyId disponível e ficha tem itens)
+    const avisos: string[] = [];
+
+    if (companyId && resultado.ficha?.itens?.length > 0) {
+      try {
+        const detector = await getDetector(companyId);
+
+        // fichaId temporário para checagem — usamos o nome como chave provisória
+        // A validação real de ID acontece no trigger do banco ao salvar
+        for (const item of resultado.ficha.itens) {
+          if (item.ingrediente_id) {
+            const temCiclo = detector.detectarCiclo(
+              resultado.ficha.id ?? '__nova__',
+              item.ingrediente_id
+            );
+            if (temCiclo) {
+              avisos.push(`⚠️ Ingrediente "${item.nome}" criaria uma dependência circular e não pode ser adicionado.`);
+            }
+          }
+        }
+      } catch (cicloErr) {
+        // Falha silenciosa: o banco ainda vai bloquear via trigger
+        console.warn('⚠️ Detector de ciclo indisponível (banco vai validar):', cicloErr);
+      }
+    }
+
+    return NextResponse.json({ ...resultado, avisos });
 
   } catch (error: any) {
     console.error('❌ Erro ao processar conversação:', error);
@@ -162,5 +204,4 @@ ${fichaAtualStr}`;
   }
 }
 
-// Runtime padrão do Next.js (funciona tanto em Node quanto Edge)
 export const runtime = 'nodejs';

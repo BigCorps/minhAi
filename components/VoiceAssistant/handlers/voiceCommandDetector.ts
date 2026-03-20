@@ -784,5 +784,12 @@ const pixPatterns = [
   }
 
   console.log('❌ Nenhum comando detectado');
+
+  // ✅ Salvar hint não reconhecido para revisão manual no Supabase
+  // Fire-and-forget — não bloqueia a resposta
+  if (commandProcessor) {
+    commandProcessor.saveUnrecognizedHint(transcript);
+  }
+
   return false;
 }

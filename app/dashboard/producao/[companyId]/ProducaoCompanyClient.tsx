@@ -9,8 +9,8 @@ import IngredientesClient from '@/components/dashboard/producao/IngredientesClie
 import FichaConversacionalDisplay from '@/components/assistant/FichaConversacionalDisplay';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
-import { ProducaoTag } from '@/lib/types/producao'; // ✅ v2
-import TagSelector from '@/components/producao/TagSelector'; // ✅ v2
+import { ProducaoTag } from '@/lib/types/producao';
+import TagSelector from '@/components/producao/TagSelector';
 
 interface Ingrediente {
   id: string;
@@ -33,7 +33,7 @@ interface Ficha {
   is_active: boolean;
   is_ficha_preparo: boolean;
   created_at: string;
-  tags: ProducaoTag[]; // ✅ v2
+  tags: ProducaoTag[];
   producao_ingredientes: Ingrediente[];
 }
 
@@ -43,7 +43,6 @@ interface ProducaoCompanyClientProps {
   stats: { totalFichas: number; ativas: number; comCusto: number };
 }
 
-// ✅ v2: Cores por grupo de tag
 function getTagColor(tag: ProducaoTag): { bg: string; text: string } {
   if (tag.startsWith('função:')) {
     const map: Record<string, { bg: string; text: string }> = {
@@ -65,14 +64,13 @@ function getTagColor(tag: ProducaoTag): { bg: string; text: string } {
   return { bg: 'rgba(100,116,139,0.1)', text: '#64748b' };
 }
 
-// ✅ v2: Opções de filtro por tag (apenas as mais relevantes para o dashboard)
 const FILTRO_TAG_OPTIONS = [
-  { tag: 'função:produto'  as ProducaoTag, label: 'Produto',   icon: ClipboardList, group: 'função'   as const },
-  { tag: 'função:preparo'  as ProducaoTag, label: 'Preparo',   icon: ClipboardList, group: 'função'   as const },
-  { tag: 'função:combo'    as ProducaoTag, label: 'Combo',     icon: ClipboardList, group: 'função'   as const },
-  { tag: 'vendável:sim'    as ProducaoTag, label: 'Vendável',  icon: ClipboardList, group: 'vendável' as const },
-  { tag: 'origem:comprado' as ProducaoTag, label: 'Comprado',  icon: ClipboardList, group: 'origem'   as const },
-  { tag: 'origem:produzido'as ProducaoTag, label: 'Produzido', icon: ClipboardList, group: 'origem'   as const },
+  { tag: 'função:produto'   as ProducaoTag, label: 'Produto',   icon: ClipboardList, group: 'função'   as const },
+  { tag: 'função:preparo'   as ProducaoTag, label: 'Preparo',   icon: ClipboardList, group: 'função'   as const },
+  { tag: 'função:combo'     as ProducaoTag, label: 'Combo',     icon: ClipboardList, group: 'função'   as const },
+  { tag: 'vendável:sim'     as ProducaoTag, label: 'Vendável',  icon: ClipboardList, group: 'vendável' as const },
+  { tag: 'origem:comprado'  as ProducaoTag, label: 'Comprado',  icon: ClipboardList, group: 'origem'   as const },
+  { tag: 'origem:produzido' as ProducaoTag, label: 'Produzido', icon: ClipboardList, group: 'origem'   as const },
 ];
 
 function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boolean }) {
@@ -146,7 +144,7 @@ export default function ProducaoCompanyClient({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'ativas' | 'inativas'>('todas');
-  const [filtroTags, setFiltroTags] = useState<ProducaoTag[]>([]); // ✅ v2
+  const [filtroTags, setFiltroTags] = useState<ProducaoTag[]>([]);
   const [activeTab, setActiveTab] = useState<'fichas' | 'ingredientes'>('fichas');
   const [tipoFicha, setTipoFicha] = useState<'produtos' | 'preparos'>('produtos');
   const [novaFichaTipo, setNovaFichaTipo] = useState<'produto' | 'preparo'>('produto');
@@ -189,7 +187,7 @@ export default function ProducaoCompanyClient({
       setStats({
         totalFichas: updated.length,
         ativas: updated.filter(f => f.is_active).length,
-        comCusto: updated.filter(f => f.custo_total !== null).length,
+        comCusto: updated.filter(f => f.custo_total !== null && (f.custo_total as number) > 0).length,
       });
     }
     setLoadingId(null);
@@ -209,7 +207,7 @@ export default function ProducaoCompanyClient({
       setStats({
         totalFichas: updated.length,
         ativas: updated.filter(f => f.is_active).length,
-        comCusto: updated.filter(f => f.custo_total !== null).length,
+        comCusto: updated.filter(f => f.custo_total !== null && (f.custo_total as number) > 0).length,
       });
     }
     setLoadingId(null);
@@ -219,7 +217,6 @@ export default function ProducaoCompanyClient({
     tipoFicha === 'preparos' ? f.is_ficha_preparo : !f.is_ficha_preparo
   );
 
-  // ✅ v2: filtro de status + filtro de tags combinados
   const fichasFiltradas = fichasPorTipo.filter(f => {
     const passaStatus =
       filtro === 'ativas'   ? f.is_active :
@@ -289,7 +286,7 @@ export default function ProducaoCompanyClient({
           ))}
         </div>
 
-        {/* Abas unificadas */}
+        {/* Abas */}
         <div className="flex gap-0 mb-6 border-b border-gray-200 dark:border-white/10">
           <button
             onClick={() => { setActiveTab('fichas'); setTipoFicha('produtos'); }}
@@ -349,8 +346,6 @@ export default function ProducaoCompanyClient({
           <>
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
-
-              {/* Filtros de status + contador */}
               <div className="flex items-center gap-2 flex-1">
                 {(['todas', 'ativas', 'inativas'] as const).map(f => (
                   <button
@@ -370,7 +365,6 @@ export default function ProducaoCompanyClient({
                 </span>
               </div>
 
-              {/* Botões de ação */}
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowConversacional(true)}
@@ -394,7 +388,7 @@ export default function ProducaoCompanyClient({
               </div>
             </div>
 
-            {/* ✅ v2: Filtro por tags — linha separada abaixo da toolbar */}
+            {/* Filtro por tags */}
             <div className="mb-4">
               <TagSelector
                 tags={filtroTags}
@@ -464,7 +458,6 @@ export default function ProducaoCompanyClient({
                               )}
                             </div>
 
-                            {/* ✅ v2: Badges de tags */}
                             {(ficha.tags ?? []).length > 0 && (
                               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '4px' }}>
                                 {(ficha.tags ?? []).map(tag => {
@@ -495,33 +488,33 @@ export default function ProducaoCompanyClient({
                             </p>
                           </div>
 
-{/* Custo e margem */}
-<div className="hidden sm:flex flex-col items-end gap-1 min-w-[110px]">
-  {ficha.is_ficha_preparo ? (
-    <>
-      <span className="text-sm font-semibold text-gray-900 dark:text-white">
-        {formatCusto(ficha.custo_total)}
-      </span>
-      {ficha.custo_total !== null && ficha.rendimento > 0 && (
-        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-          {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
-        </span>
-      )}
-    </>
-  ) : (
-    <>
-      <span className="text-sm font-semibold text-gray-900 dark:text-white">
-        {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
-      </span>
-      <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
-        Margem: {formatMargem(ficha.margem_lucro)}
-      </span>
-      <span className="text-xs text-gray-400 dark:text-white/40">
-        Custo: {formatCusto(ficha.custo_total)}
-      </span>
-    </>
-  )}
-</div>
+                          {/* Custo e margem — desktop */}
+                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[110px]">
+                            {ficha.is_ficha_preparo ? (
+                              <>
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {formatCusto(ficha.custo_total)}
+                                </span>
+                                {ficha.custo_total !== null && ficha.rendimento > 0 && (
+                                  <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                                    {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
+                                </span>
+                                <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
+                                  Margem: {formatMargem(ficha.margem_lucro)}
+                                </span>
+                                <span className="text-xs text-gray-400 dark:text-white/40">
+                                  Custo: {formatCusto(ficha.custo_total)}
+                                </span>
+                              </>
+                            )}
+                          </div>
 
                           {/* Ações */}
                           <div className="flex items-center gap-1">
@@ -565,38 +558,38 @@ export default function ProducaoCompanyClient({
                           </div>
                         </div>
 
-{/* Custo mobile */}
-<div className="sm:hidden mt-2 flex items-center gap-4 text-xs">
-  {ficha.is_ficha_preparo ? (
-    <>
-      <span className="font-semibold text-gray-900 dark:text-white">
-        Custo: {formatCusto(ficha.custo_total)}
-      </span>
-      {ficha.custo_total !== null && ficha.rendimento > 0 && (
-        <span className="text-blue-600 dark:text-blue-400">
-          {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
-        </span>
-      )}
-    </>
-  ) : (
-    <>
-      <span className="font-semibold text-gray-900 dark:text-white">
-        {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
-      </span>
-      <span className={getMargemColor(ficha.margem_lucro)}>
-        Margem: {formatMargem(ficha.margem_lucro)}
-      </span>
-      <span className="text-gray-400 dark:text-white/40">
-        Custo: {formatCusto(ficha.custo_total)}
-      </span>
-    </>
-  )}
-</div>
+                        {/* Custo mobile */}
+                        <div className="sm:hidden mt-2 flex items-center gap-4 text-xs">
+                          {ficha.is_ficha_preparo ? (
+                            <>
+                              <span className="font-semibold text-gray-900 dark:text-white">
+                                Custo: {formatCusto(ficha.custo_total)}
+                              </span>
+                              {ficha.custo_total !== null && ficha.rendimento > 0 && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-semibold text-gray-900 dark:text-white">
+                                {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
+                              </span>
+                              <span className={getMargemColor(ficha.margem_lucro)}>
+                                Margem: {formatMargem(ficha.margem_lucro)}
+                              </span>
+                              <span className="text-gray-400 dark:text-white/40">
+                                Custo: {formatCusto(ficha.custo_total)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
 
                       {/* Expandido */}
                       {expandedId === ficha.id && (
                         <div className="px-6 pb-4 bg-gray-50 dark:bg-slate-900">
-
                           {ficha.is_ficha_preparo && (
                             <div className="mb-4 mt-3">
                               <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">

@@ -243,18 +243,13 @@ Extraia as informações e retorne SOMENTE o JSON.`;
 
     // ✅ v3: sanitizar preços zerados que a IA possa ter retornado por engano
     if (resultado.ficha?.itens) {
-      resultado.ficha.itens = resultado.ficha.itens.map((item: any) => {
-        if (!item.preco_unitario || item.preco_unitario === 0) {
-          item.preco_unitario = 0.001;
-          return { ...item, preco_estimado: true };
-        }
-          console.warn(`⚠️ IA retornou preco_unitario zerado para "${item.nome}" — mantendo como estimado`);
-          // Não bloqueamos aqui; o frontend vai validar antes de salvar
-          // mas marcamos como estimado para o usuário corrigir se quiser
-          return { ...item, preco_estimado: true };
-        }
-        return item;
-      });
+resultado.ficha.itens = resultado.ficha.itens.map((item: any) => {
+  if (!item.preco_unitario || item.preco_unitario === 0) {
+    console.warn(`⚠️ preco_unitario zerado para "${item.nome}" — aplicando 0.001`);
+    return { ...item, preco_unitario: 0.001, preco_estimado: true };
+  }
+  return item;
+});
     }
 
     // ✅ v2: Validação de ciclos (apenas se companyId disponível)

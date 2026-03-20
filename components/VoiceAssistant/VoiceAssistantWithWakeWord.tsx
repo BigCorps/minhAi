@@ -233,6 +233,7 @@ export function VoiceAssistantWithWakeWord({
       activeModal?.type === 'MeuSistemaDisplay' ||
       activeModal?.type === 'VideoInstrucoesDisplay' ||
       activeModal?.type === 'MeuCupomDisplay' ||
+      activeModal?.type === 'TocarMusicaDisplay' ||
       activeModal?.type === 'SequenciaVideosDisplay';
     if (isInputModalOpen) {
       console.log(`🚫 Bloqueio de Contexto: Modal ${activeModal?.type} aberto. Listener global suspenso.`);
@@ -693,12 +694,12 @@ export function VoiceAssistantWithWakeWord({
           break;
 
 case 'tocar_musica':
-  await stopGoogleSpeech();
   setActiveModal({
     type: 'TocarMusicaDisplay',
     data: { companyId, query: '' },
   });
   playText('Qual música você quer ouvir?').catch(() => {});
+  // ✅ NÃO para o Google Speech — música toca em segundo plano
   break;
 
         case 'confirmar_presenca':

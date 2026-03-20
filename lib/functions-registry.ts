@@ -456,6 +456,74 @@ voiceTriggers: [
     },
   },
 
+tocar_musica: {
+  functionKey: 'tocar_musica',
+  functionName: 'Tocar Música',
+  category: 'video',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'tocar musica', 'tocar música',
+    'tocar uma musica', 'tocar uma música',
+    'reproduzir musica', 'reproduzir música',
+    'ouvir musica', 'ouvir música',
+    'tocar musica de', 'tocar música de',
+    'toca uma musica', 'toca uma música',
+    'quero ouvir', 'quero escutar',
+    'coloca uma musica', 'coloca uma música',
+  ],
+
+  examplePhrases: [
+    'Tocar música de jazz',
+    'Ouvir lofi',
+    'Coloca uma música relaxante',
+  ],
+
+  edgeFunction: 'tocar-musica',
+  requiresInput: true,
+  inputType: 'text',
+  inputPrompt: 'Qual música você quer ouvir?',
+
+  description: 'Busca e reproduz músicas do YouTube em um mini player por voz.',
+  shortDescription: 'Reproduz músicas do YouTube por voz.',
+  icon: '🎵',
+  color: '#1DB954',
+
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      const queryMatch = transcript?.match(
+        /(?:tocar|reproduzir|ouvir|escutar|coloca|toca)\s+(?:uma\s+)?(?:musica|música)\s+(?:de|do|da|sobre)?\s*(.+)/i
+      ) || transcript?.match(
+        /(?:quero ouvir|quero escutar)\s+(.+)/i
+      );
+
+      const query = queryMatch ? queryMatch[1].trim() : transcript?.trim() || '';
+
+      if (!query) {
+        await playText('Qual música você quer ouvir? Me diga o estilo ou artista.');
+        return false;
+      }
+
+      setActiveModal?.({
+        type: 'TocarMusicaDisplay',
+        data: { companyId, query },
+      });
+
+      await playText(`Buscando música...`);
+      return true;
+    } catch (error) {
+      console.error('Erro tocar_musica:', error);
+      await playText('Não consegui buscar a música. Tente novamente.');
+      return false;
+    }
+  },
+},
+
 tocar_video: {
   functionKey: 'tocar_video',
   functionName: 'Tocar Vídeo',

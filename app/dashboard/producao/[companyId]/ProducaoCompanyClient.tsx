@@ -27,6 +27,7 @@ interface Ficha {
   descricao: string | null;
   rendimento: number;
   unidade_rendimento: string;
+  preco_venda: number | null;
   preco_venda_sugerido: number | null;
   custo_total: number | null;
   margem_lucro: number | null;
@@ -132,11 +133,9 @@ export default function ProducaoCompanyClient({
   const { selectedAssistantId } = useAssistant();
   const router = useRouter();
 
-  // ── Estado de edição inline ──────────────────────────────────────
-  // Edição de preço de venda por ficha
+  // ── Edição inline ────────────────────────────────────────────────
   const [editandoPreco, setEditandoPreco] = useState<string | null>(null);
   const [precoEditando, setPrecoEditando] = useState<string>('');
-  // Edição de custo de ingrediente por item
   const [editandoIngrediente, setEditandoIngrediente] = useState<string | null>(null);
   const [custoEditando, setCustoEditando] = useState<string>('');
 
@@ -188,37 +187,47 @@ export default function ProducaoCompanyClient({
     setLoadingId(null);
   }
 
-  // ── Salvar preço de venda editado ────────────────────────────────
+  // ── Salvar preço de venda ────────────────────────────────────────
   async function salvarPrecoVenda(fichaId: string) {
     const novoPreco = parseFloat(precoEditando.replace(',', '.'));
     if (isNaN(novoPreco) || novoPreco <= 0) {
       alert('Informe um valor válido maior que zero.');
       return;
     }
+
     const { error } = await supabase
       .from('producao_fichas')
       .update({ preco_venda: novoPreco })
       .eq('id', fichaId);
 
-    if (!error) {
-      // Buscar preco_venda_sugerido e margem recalculados pela trigger
-      await new Promise(r => setTimeout(r, 600));
-      const { data } = await supabase
-        .from('producao_fichas')
-        .select('preco_venda_sugerido, margem_lucro')
-        .eq('id', fichaId)
-        .single();
-
-      setFichas(prev => prev.map(f =>
-        f.id === fichaId
-          ? { ...f, preco_venda_sugerido: data?.preco_venda_sugerido ?? novoPreco, margem_lucro: data?.margem_lucro ?? null }
-          : f
-      ));
+    if (error) {
+      console.error('Erro ao salvar preço:', error);
+      alert('Erro ao salvar preço. Tente novamente.');
+      return;
     }
+
+    // Aguardar trigger recalcular margem
+    await new Promise(r => setTimeout(r, 600));
+    const { data } = await supabase
+      .from('producao_fichas')
+      .select('preco_venda, preco_venda_sugerido, margem_lucro')
+      .eq('id', fichaId)
+      .single();
+
+    setFichas(prev => prev.map(f =>
+      f.id === fichaId
+        ? {
+            ...f,
+            preco_venda: data?.preco_venda ?? novoPreco,
+            preco_venda_sugerido: data?.preco_venda_sugerido ?? null,
+            margem_lucro: data?.margem_lucro ?? null,
+          }
+        : f
+    ));
     setEditandoPreco(null);
   }
 
-  // ── Salvar custo de ingrediente editado ──────────────────────────
+  // ── Salvar custo de ingrediente ──────────────────────────────────
   async function salvarCustoIngrediente(fichaId: string, itemId: string) {
     const novoCusto = parseFloat(custoEditando.replace(',', '.'));
     if (isNaN(novoCusto) || novoCusto < 0) {
@@ -226,7 +235,6 @@ export default function ProducaoCompanyClient({
       return;
     }
 
-    // Buscar o ingrediente_id do item para atualizar producao_ingredientes
     const { data: item } = await supabase
       .from('producao_ficha_itens')
       .select('ingrediente_id')
@@ -234,20 +242,17 @@ export default function ProducaoCompanyClient({
       .single();
 
     if (item?.ingrediente_id) {
-      // Atualizar preço na tabela de ingredientes
       await supabase
         .from('producao_ingredientes')
         .update({ preco_por_unidade: novoCusto })
         .eq('id', item.ingrediente_id);
     } else {
-      // Sem vínculo — atualizar preco_temp no item
       await supabase
         .from('producao_ficha_itens')
         .update({ preco_temp: novoCusto })
         .eq('id', itemId);
     }
 
-    // Aguardar trigger recalcular
     await new Promise(r => setTimeout(r, 600));
     const { data: fichaAtualizada } = await supabase
       .from('producao_fichas')
@@ -307,6 +312,11 @@ export default function ProducaoCompanyClient({
     if (!ficha.is_active)
       return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-white/50">Inativa</span>;
     return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Ativa</span>;
+  }
+
+  // Valor a exibir como preço principal: preco_venda (editado) > preco_venda_sugerido (trigger) > custo_total
+  function getPrecoDisplay(ficha: Ficha): number | null {
+    return ficha.preco_venda ?? ficha.preco_venda_sugerido ?? ficha.custo_total;
   }
 
   function abrirNovaFicha(tipo: 'produto' | 'preparo') {
@@ -494,7 +504,7 @@ export default function ProducaoCompanyClient({
                           </div>
 
                           {/* Custo e margem — desktop */}
-                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[140px]">
+                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[150px]">
                             {ficha.is_ficha_preparo ? (
                               <>
                                 <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCusto(ficha.custo_total)}</span>
@@ -509,32 +519,38 @@ export default function ProducaoCompanyClient({
                                 {/* Preço de venda editável */}
                                 {editandoPreco === ficha.id ? (
                                   <div className="flex items-center gap-1">
-                                    <span className="text-xs text-gray-400 dark:text-white/40">R$</span>
+                                    <span className="text-xs text-gray-500 dark:text-white/50">R$</span>
                                     <input
                                       type="number"
                                       step="0.01"
                                       min="0"
                                       value={precoEditando}
                                       onChange={e => setPrecoEditando(e.target.value)}
-                                      onKeyDown={e => { if (e.key === 'Enter') salvarPrecoVenda(ficha.id); if (e.key === 'Escape') setEditandoPreco(null); }}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter') salvarPrecoVenda(ficha.id);
+                                        if (e.key === 'Escape') setEditandoPreco(null);
+                                      }}
                                       autoFocus
                                       className="w-20 px-2 py-0.5 text-sm font-semibold border rounded bg-white dark:bg-slate-700 border-blue-400 text-gray-900 dark:text-white focus:outline-none"
                                     />
-                                    <button onClick={() => salvarPrecoVenda(ficha.id)} className="text-green-500 hover:text-green-600">
+                                    <button onClick={() => salvarPrecoVenda(ficha.id)} className="text-green-500 hover:text-green-600 transition-colors">
                                       <Check className="w-3.5 h-3.5" />
                                     </button>
-                                    <button onClick={() => setEditandoPreco(null)} className="text-gray-400 hover:text-red-500">
+                                    <button onClick={() => setEditandoPreco(null)} className="text-gray-400 hover:text-red-500 transition-colors">
                                       <XIcon className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center gap-1 group">
+                                  <div className="flex items-center gap-1.5">
                                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                      {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
+                                      {formatCusto(getPrecoDisplay(ficha))}
                                     </span>
                                     <button
-                                      onClick={() => { setEditandoPreco(ficha.id); setPrecoEditando(String(ficha.preco_venda_sugerido ?? '')); }}
-                                      className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-500"
+                                      onClick={() => {
+                                        setEditandoPreco(ficha.id);
+                                        setPrecoEditando(String(ficha.preco_venda ?? ficha.preco_venda_sugerido ?? ''));
+                                      }}
+                                      className="text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                                       title="Editar preço de venda"
                                     >
                                       <Pencil className="w-3 h-3" />
@@ -589,7 +605,7 @@ export default function ProducaoCompanyClient({
                           ) : (
                             <>
                               <span className="font-semibold text-gray-900 dark:text-white">
-                                {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
+                                {formatCusto(getPrecoDisplay(ficha))}
                               </span>
                               <span className={getMargemColor(ficha.margem_lucro)}>Margem: {formatMargem(ficha.margem_lucro)}</span>
                               <span className="text-gray-400 dark:text-white/40">Custo: {formatCusto(ficha.custo_total)}</span>
@@ -612,7 +628,7 @@ export default function ProducaoCompanyClient({
                             <>
                               <p className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3 mt-3">
                                 Ingredientes
-                                <span className="ml-2 normal-case font-normal text-gray-400 dark:text-white/30">(clique no lápis para editar o custo)</span>
+                                <span className="ml-2 normal-case font-normal text-gray-400 dark:text-white/30">(clique no lápis para editar o custo unitário)</span>
                               </p>
                               <div className="grid sm:grid-cols-2 gap-2">
                                 {ficha.producao_ingredientes.map(ing => (
@@ -637,19 +653,22 @@ export default function ProducaoCompanyClient({
                                             min="0"
                                             value={custoEditando}
                                             onChange={e => setCustoEditando(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') salvarCustoIngrediente(ficha.id, ing.id); if (e.key === 'Escape') setEditandoIngrediente(null); }}
+                                            onKeyDown={e => {
+                                              if (e.key === 'Enter') salvarCustoIngrediente(ficha.id, ing.id);
+                                              if (e.key === 'Escape') setEditandoIngrediente(null);
+                                            }}
                                             autoFocus
                                             className="w-16 px-1.5 py-0.5 text-xs border rounded bg-white dark:bg-slate-600 border-blue-400 text-gray-900 dark:text-white focus:outline-none"
                                           />
-                                          <button onClick={() => salvarCustoIngrediente(ficha.id, ing.id)} className="text-green-500 hover:text-green-600">
+                                          <button onClick={() => salvarCustoIngrediente(ficha.id, ing.id)} className="text-green-500 hover:text-green-600 transition-colors">
                                             <Check className="w-3 h-3" />
                                           </button>
-                                          <button onClick={() => setEditandoIngrediente(null)} className="text-gray-400 hover:text-red-500">
+                                          <button onClick={() => setEditandoIngrediente(null)} className="text-gray-400 hover:text-red-500 transition-colors">
                                             <XIcon className="w-3 h-3" />
                                           </button>
                                         </>
                                       ) : (
-                                        <div className="flex items-center gap-1 group">
+                                        <div className="flex items-center gap-1.5">
                                           <span className="text-gray-600 dark:text-white/60 font-mono text-xs">
                                             {ing.custo_unitario !== null
                                               ? `R$ ${(ing.custo_unitario * ing.quantidade).toFixed(2).replace('.', ',')}`
@@ -657,8 +676,11 @@ export default function ProducaoCompanyClient({
                                             }
                                           </span>
                                           <button
-                                            onClick={() => { setEditandoIngrediente(ing.id); setCustoEditando(String(ing.custo_unitario ?? '')); }}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-500"
+                                            onClick={() => {
+                                              setEditandoIngrediente(ing.id);
+                                              setCustoEditando(String(ing.custo_unitario ?? ''));
+                                            }}
+                                            className="text-blue-400 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                                             title="Editar custo unitário"
                                           >
                                             <Pencil className="w-3 h-3" />
@@ -689,7 +711,7 @@ export default function ProducaoCompanyClient({
             ) : (
               <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Passe o mouse sobre os valores para editar preço de venda e custo dos ingredientes.
+                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Clique no lápis azul para editar preço de venda e custo dos ingredientes.
                 </p>
               </div>
             )}

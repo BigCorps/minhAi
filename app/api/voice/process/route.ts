@@ -7,7 +7,6 @@ import { randomUUID } from 'crypto';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// Funções auxiliares para FAQ matching
 function similarity(s1: string, s2: string): number {
   const longer = s1.length > s2.length ? s1 : s2;
   const shorter = s1.length > s2.length ? s2 : s1;
@@ -70,31 +69,26 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   for (const faq of faqs) {
     const faqQuestionNormalized = normalizeText(faq.question);
     
-    // Match exato
     if (questionNormalized === faqQuestionNormalized) {
       bestScore = 1.0;
       bestMatch = faq;
       break;
     }
     
-    // Similaridade 85%
     const score = similarity(questionNormalized, faqQuestionNormalized);
     if (score > bestScore && score > 0.85) {
       bestScore = score;
       bestMatch = faq;
     }
     
-    // Variações
     if (faq.variations && Array.isArray(faq.variations)) {
       for (const variation of faq.variations) {
         const variationNormalized = normalizeText(variation);
-        
         if (questionNormalized === variationNormalized) {
           bestScore = 1.0;
           bestMatch = faq;
           break;
         }
-        
         const varScore = similarity(questionNormalized, variationNormalized);
         if (varScore > bestScore && varScore > 0.85) {
           bestScore = varScore;
@@ -103,7 +97,6 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
       }
     }
     
-    // Keywords 70%
     const faqWords = faqQuestionNormalized.split(' ').filter((w: string) => w.length > 2);
     const commonWords = questionWords.filter((w: string) => faqWords.includes(w));
     const keywordScore = commonWords.length / Math.max(questionWords.length, faqWords.length);
@@ -123,9 +116,48 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
   return bestMatch;
 }
 
+// ✅ Verificar hints confirmados — roda antes do FAQ e ChatGPT
+// Retorna function_key se bater com ≥60% das palavras do transcript salvo
+async function findMatchingHint(
+  supabase: any,
+  companyId: string,
+  userMessage: string
+): Promise<string | null> {
+  try {
+    const { data: hints, error } = await supabase
+      .from('function_hints')
+      .select('transcript, function_key')
+      .eq('company_id', companyId)
+      .eq('confirmed', true)
+      .not('function_key', 'is', null);
+
+    if (error || !hints || hints.length === 0) return null;
+
+    const lowerMsg = normalizeText(userMessage);
+
+    for (const hint of hints) {
+      const hintNorm = normalizeText(hint.transcript);
+      const hintWords = hintNorm.split(/\s+/).filter((w: string) => w.length > 2);
+      if (hintWords.length === 0) continue;
+
+      const matches = hintWords.filter((w: string) => lowerMsg.includes(w));
+      const score = matches.length / hintWords.length;
+
+      if (score >= 0.6) {
+        console.log(`🎯 Hint matched: "${hint.transcript}" → ${hint.function_key} (${Math.round(score * 100)}%)`);
+        return hint.function_key;
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('⚠️ Erro ao verificar hints:', err);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
   console.log('\n=== 🎯 NOVA REQUISIÇÃO ===');
   
   try {
@@ -137,26 +169,19 @@ export async function POST(request: NextRequest) {
     const returnText = formData.get('returnText') === 'true';
 
     if (!audioFile || !companyId) {
-      return NextResponse.json(
-        { error: 'Áudio e ID obrigatórios' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Áudio e ID obrigatórios' }, { status: 400 });
     }
 
     const supabase = createClient();
     
-    // Buscar company
     const { data: company } = await supabase
       .from('companies')
       .select('id, name, system_prompt, orcamento_prompt, greeting_message, welcome_message')
       .eq('id', companyId)
       .single();
 
-    if (!company) {
-      throw new Error('Company not found');
-    }
+    if (!company) throw new Error('Company not found');
 
-    // Gerenciar sessão de contexto
     const sessionId = formData.get('sessionId') as string | null;
     let currentSession: any = null;
     let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
@@ -187,7 +212,6 @@ export async function POST(request: NextRequest) {
 
       if (sessionError || !newSession) {
         console.error('❌ Erro ao criar sessão:', sessionError);
-        // Sessão temporária em memória — não bloqueia o fluxo principal
         currentSession = { id: randomUUID(), messages: [] };
         console.log('⚠️ Usando sessão temporária (sem persistência)');
       } else {
@@ -205,24 +229,44 @@ export async function POST(request: NextRequest) {
         speakingRate: 1.0,
         audioEncoding: 'MP3',
       });
-      
       return new Response(new Uint8Array(errorAudio), {
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'X-Used-FAQ': 'false',
-        },
+        headers: { 'Content-Type': 'audio/mpeg', 'X-Used-FAQ': 'false' },
       });
     }
 
     console.log(`👂 "${userMessage}"`);
 
-    // ✅ CORRIGIDO: useOrcamentoPrompt lido ANTES do findMatchingFAQ
-    // Quando for orçamento, pula o FAQ completamente e vai direto para o GPT
-    // com o prompt de orçamento configurado pela empresa.
     const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
     console.log('📋 useOrcamentoPrompt:', useOrcamentoPrompt);
 
-    // ✅ CORRIGIDO: FAQ só roda quando NÃO for orçamento
+    // ✅ HINTS: Verificar antes do FAQ e ChatGPT (não roda para orçamento)
+    if (!useOrcamentoPrompt) {
+      const matchedFunctionKey = await findMatchingHint(supabase, companyId, userMessage);
+      if (matchedFunctionKey) {
+        console.log(`🎯 Hint ativou função: ${matchedFunctionKey}`);
+        const totalTime = Date.now() - startTime;
+
+        // Retornar áudio curto + header X-Function-Key para o frontend executar a função
+        const hintAudio = await synthesizeSpeech({
+          text: 'Um momento...',
+          voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+          speakingRate: 1.5,
+          audioEncoding: 'MP3',
+        });
+
+        return new Response(new Uint8Array(hintAudio), {
+          headers: {
+            'Content-Type': 'audio/mpeg',
+            'X-Function-Key': matchedFunctionKey,
+            'X-Session-Id': currentSession.id,
+            'X-Processing-Time': String(totalTime),
+            'X-Transcription': encodeURIComponent(userMessage),
+          },
+        });
+      }
+    }
+
+    // FAQ só roda quando NÃO for orçamento
     const matchingFAQ = useOrcamentoPrompt
       ? null
       : await findMatchingFAQ(supabase, companyId, userMessage);
@@ -235,25 +279,19 @@ export async function POST(request: NextRequest) {
       usedFAQ = true;
       console.log('⚡ Usando FAQ');
       
-      // Incrementar contador
       supabase
         .from('faq_entries')
         .update({ usage_count: (matchingFAQ.usage_count || 0) + 1 })
         .eq('id', matchingFAQ.id)
         .then(() => console.log('📊 +1'));
 
-      // ✅ Insert direto com metadata — alimenta o histórico de conversas
       await supabase.from('assistant_function_logs').insert({
         company_id: companyId,
         function_key: 'faq',
         credits_consumed: 1,
-        metadata: {
-          user_input: userMessage,
-          assistant_response: responseText,
-        },
+        metadata: { user_input: userMessage, assistant_response: responseText },
       });
     } else {
-      // Usar OpenAI (GPT-4o-mini)
       console.log('🤖 Usando OpenAI GPT-4o-mini');
 
       const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
@@ -272,25 +310,18 @@ Pergunta: ${userMessage}`;
 
       responseText = await processWithGPT(userMessage, systemPrompt, conversationHistory);
       console.log(`🧠 Usando contexto de ${conversationHistory.length} mensagens`);
-      
       console.log('✅ OpenAI respondeu');
 
       const functionKey = useOrcamentoPrompt ? 'orcamento' : 'chatgpt';
-      const creditsConsumed = 2;
 
-      // ✅ Insert direto com metadata — alimenta o histórico de conversas
       await supabase.from('assistant_function_logs').insert({
         company_id: companyId,
         function_key: functionKey,
-        credits_consumed: creditsConsumed,
-        metadata: {
-          user_input: userMessage,
-          assistant_response: responseText,
-        },
+        credits_consumed: 2,
+        metadata: { user_input: userMessage, assistant_response: responseText },
       });
     }
 
-    // Atualizar histórico da sessão
     conversationHistory.push(
       { role: 'user', content: userMessage },
       { role: 'assistant', content: responseText }
@@ -315,41 +346,27 @@ Pergunta: ${userMessage}`;
       console.warn('⚠️ Erro ao atualizar sessão (não crítico):', sessionUpdateError);
     }
 
-    // Retornar texto se solicitado (orçamento usa este caminho)
     if (returnText) {
       console.log('📄 Retornando texto (sem áudio)');
-      
       let finalConversationId = conversationId || randomUUID();
-      
       if (!conversationId || conversationId === 'new') {
-        await supabase.from('conversations').insert({
-          id: finalConversationId,
-          company_id: companyId,
-        });
+        await supabase.from('conversations').insert({ id: finalConversationId, company_id: companyId });
       }
-
       await supabase.from('messages').insert([
         { conversation_id: finalConversationId, role: 'user', content: userMessage },
         { conversation_id: finalConversationId, role: 'assistant', content: responseText },
       ]);
-
       const totalTime = Date.now() - startTime;
       console.log(`⏱️ Total: ${totalTime}ms\n`);
-
       return NextResponse.json({
         response: responseText,
         sessionId: currentSession.id,
         conversationId: finalConversationId,
         usedFAQ,
         processingTime: totalTime,
-      }, {
-        headers: {
-          'X-Used-FAQ': String(usedFAQ),
-        },
-      });
+      }, { headers: { 'X-Used-FAQ': String(usedFAQ) } });
     }
 
-    // TTS (comportamento padrão — perguntas gerais e FAQ)
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
       voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
@@ -358,14 +375,10 @@ Pergunta: ${userMessage}`;
     });
     
     const audioData = new Uint8Array(audioBuffer);
-
     let finalConversationId = conversationId || randomUUID();
     
     if (!conversationId || conversationId === 'new') {
-      await supabase.from('conversations').insert({
-        id: finalConversationId,
-        company_id: companyId,
-      });
+      await supabase.from('conversations').insert({ id: finalConversationId, company_id: companyId });
     }
 
     await supabase.from('messages').insert([
@@ -389,7 +402,6 @@ Pergunta: ${userMessage}`;
     });
   } catch (error: any) {
     console.error('❌ Erro:', error.message);
-    
     try {
       const errorAudio = await synthesizeSpeech({
         text: 'Desculpe, ocorreu um erro.',
@@ -397,12 +409,8 @@ Pergunta: ${userMessage}`;
         speakingRate: 1.5,
         audioEncoding: 'MP3',
       });
-      
       return new Response(new Uint8Array(errorAudio), {
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'X-Error': 'true',
-        },
+        headers: { 'Content-Type': 'audio/mpeg', 'X-Error': 'true' },
       });
     } catch {
       return NextResponse.json({ error: 'Erro interno' }, { status: 500 });

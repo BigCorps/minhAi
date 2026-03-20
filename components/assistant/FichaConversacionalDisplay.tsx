@@ -474,15 +474,15 @@ if (item.unidade === 'g') {
 
           console.log(`✅ Criando ingrediente: ${item.nome} - R$ ${precoBase.toFixed(2)}/${unidadeBase}`);
 
-          const { error: ingError } = await supabase
-            .from('producao_ingredientes')
-            .insert({
-              company_id: companyId,
-              nome: item.nome,
-              preco_por_unidade: precoBase,
-              unidade: unidadeBase,
-              tipo: 'direto',
-            });
+const { error: ingError } = await supabase
+  .from('producao_ingredientes')
+  .insert({
+    company_id: companyId,
+    nome: item.nome,
+    preco_por_unidade: precoBase,
+    unidade: unidadeBase.toLowerCase(), // ✅ garantir minúsculo
+    tipo: 'direto',
+  });
 
           if (ingError) console.error(`❌ Erro ao criar ingrediente ${item.nome}:`, ingError);
         }

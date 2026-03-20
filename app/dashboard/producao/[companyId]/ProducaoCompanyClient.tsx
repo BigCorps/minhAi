@@ -610,7 +610,7 @@ export default function ProducaoCompanyClient({
                                 {ficha.producao_ingredientes.map(ing => (
                                   <div
                                     key={ing.id}
-                                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm"
+                                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white"
                                   >
                                     <div className="flex items-center gap-2">
                                       {ing.custo_estimado && (

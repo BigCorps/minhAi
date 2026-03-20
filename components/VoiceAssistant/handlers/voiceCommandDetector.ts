@@ -342,6 +342,32 @@ if (barcodeTriggers.some(t => lowerTranscript.includes(t))) {
   return true;
 }
 
+const tocarMusicaTriggers = [
+  'tocar musica', 'tocar música',
+  'ouvir musica', 'ouvir música',
+  'reproduzir musica', 'reproduzir música',
+  'quero ouvir', 'quero escutar',
+  'coloca uma musica', 'coloca uma música',
+  'toca uma musica', 'toca uma música',
+];
+if (tocarMusicaTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'tocar_musica');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+
+  const queryMatch = lowerTranscript.match(
+    /(?:tocar|reproduzir|ouvir|escutar|coloca|toca)\s+(?:uma\s+)?(?:musica|música)\s+(?:de|do|da|sobre)?\s*(.+)/i
+  ) || lowerTranscript.match(/(?:quero ouvir|quero escutar)\s+(.+)/i);
+  const query = queryMatch ? queryMatch[1].trim() : '';
+
+  setActiveModal({
+    type: 'TocarMusicaDisplay',
+    data: { companyId, query },
+  });
+  playText(query ? `Buscando música...` : 'Qual música você quer ouvir?').catch(() => {});
+  await registerFunctionUsage(companyId, 'tocar_musica', 1);
+  return true;
+}
+
 // ── Validar Cupom ─────────────────────────────────────────────
 const cupomTriggers = ['validar cupom', 'valida cupom', 'validar voucher', 'verifica cupom', 'verificar cupom'];
 if (cupomTriggers.some(t => lowerTranscript.includes(t))) {

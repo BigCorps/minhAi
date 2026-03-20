@@ -1,5 +1,5 @@
 // =========================================================
-// FASE H - CONVERSAÇÃO IA FULL (v7 - Fix foco + mute)
+// FASE H - CONVERSAÇÃO IA FULL (v8 - Fix tags sanitization)
 // Arquivo: components/assistant/FichaConversacionalDisplay.tsx
 // =========================================================
 // ✅ v5: selectedTags, TagSelector, compatibilidade tags
@@ -9,6 +9,8 @@
 //        perda de foco a cada keystroke por remount do input)
 //        audioMutadoRef para mute funcionar em callbacks
 //        playTextComMute garante que prop playText tbm respeita mute
+// ✅ v8: Sanitização de tags antes de salvar — remove vendável:não
+//        e qualquer tag inválida gerada pela IA no process-conversation
 // =========================================================
 
 'use client';
@@ -66,6 +68,14 @@ function getInitialTags(type: 'produto' | 'preparo'): ProducaoTag[] {
   if (type === 'preparo') return ['função:preparo', 'origem:produzido'];
   return ['função:produto', 'vendável:sim', 'origem:produzido'];
 }
+
+// ✅ v8: Lista canônica de tags válidas — usada para sanitizar antes de salvar
+const TAGS_VALIDAS: ProducaoTag[] = [
+  'função:produto', 'função:preparo', 'função:combo', 'função:insumo',
+  'origem:comprado', 'origem:produzido', 'origem:beneficiado',
+  'vendável:sim',
+  // Nota: 'vendável:não' NÃO está aqui intencionalmente — não é uma tag válida
+];
 
 const TAG_OPTIONS = [
   { tag: 'função:produto' as ProducaoTag, label: 'Produto',  icon: ChefHat,    group: 'função'   as const },
@@ -161,14 +171,12 @@ export default function FichaConversacionalDisplay({
   };
 
   // ✅ v7: playTextComMute — wrapper da prop playText que respeita o mute via ref
-  // Necessário porque o playText (Google TTS) é externo e não sabe do audioMutado
   const playTextComMute = useCallback(async (text: string) => {
     if (audioMutadoRef.current) return;
     return playText(text);
   }, [playText]);
 
-  // ✅ v6/v7: playTextSafe — fila anti-duplicação, usa playTextComMute internamente
-  // Usa audioMutadoRef.current (ref) em vez de audioMutado (state) para evitar stale closure
+  // ✅ v6/v7: playTextSafe — fila anti-duplicação
   const playTextSafe = useCallback(async (text: string) => {
     if (audioMutadoRef.current) return;
 
@@ -388,6 +396,16 @@ export default function FichaConversacionalDisplay({
   // SALVAR FICHA
   // ══════════════════════════════════════════════════════
   const salvarFicha = async () => {
+    // ✅ v8: Sanitizar tags antes de salvar — remove vendável:não e qualquer
+    // tag inválida que possa ter vindo do process-conversation da IA
+    const tagsParaSalvar = selectedTags.filter(t => TAGS_VALIDAS.includes(t));
+    if (tagsParaSalvar.length !== selectedTags.length) {
+      console.warn(
+        '⚠️ Tags inválidas removidas antes de salvar:',
+        selectedTags.filter(t => !TAGS_VALIDAS.includes(t))
+      );
+    }
+
     // ✅ v6: Validar preços antes de salvar
     const itensSemPreco = fichaPreview.itens.filter(
       item => !item.preco_unitario || item.preco_unitario === 0
@@ -416,8 +434,9 @@ export default function FichaConversacionalDisplay({
           rendimento_qtd: fichaPreview.rendimento_qtd,
           rendimento_unid: fichaPreview.rendimento_unid,
           is_ficha_preparo: isFichaPreparo,
-          preco_venda: selectedTags.includes('vendável:sim') ? fichaPreview.preco_venda : null,
-          tags: selectedTags,
+          // ✅ v8: usar tagsParaSalvar (sanitizadas) em vez de selectedTags diretamente
+          preco_venda: tagsParaSalvar.includes('vendável:sim') ? fichaPreview.preco_venda : null,
+          tags: tagsParaSalvar,
         })
         .select()
         .single();
@@ -427,7 +446,6 @@ export default function FichaConversacionalDisplay({
       // ✅ v6: Criar ingredientes novos COM conversão de unidade correta
       const ingredientesNovos = fichaPreview.itens.filter(item => item.preco_estimado).map(item => ({
         ...item,
-        // Se nome for genérico, tentar inferir pela unidade
         nome: (!item.nome || item.nome.toLowerCase() === 'ingrediente')
           ? (item.unidade === 'L' || item.unidade === 'ml' ? 'Água' : 'Ingrediente sem nome')
           : item.nome,
@@ -447,10 +465,10 @@ export default function FichaConversacionalDisplay({
           let unidadeBase = item.unidade;
 
           if (item.unidade === 'g') {
-            precoBase = precoBase * 1000; // R$/g → R$/kg
+            precoBase = precoBase * 1000;
             unidadeBase = 'kg';
           } else if (item.unidade === 'ml') {
-            precoBase = precoBase * 1000; // R$/ml → R$/L
+            precoBase = precoBase * 1000;
             unidadeBase = 'L';
           }
 
@@ -473,34 +491,34 @@ export default function FichaConversacionalDisplay({
       // ✅ v6: aguardar criação antes de vincular itens
       await new Promise(resolve => setTimeout(resolve, 800));
 
-// ✅ substituir o setTimeout por busca com retry
-const itensParaInserir = await Promise.all(
-  fichaPreview.itens.map(async (item) => {
-    let ing = null;
-    
-    // Tentar até 3 vezes com 500ms entre tentativas
-    for (let tentativa = 0; tentativa < 3; tentativa++) {
-      const { data } = await supabase
-        .from('producao_ingredientes')
-        .select('id, preco_por_unidade')
-        .eq('company_id', companyId)
-        .ilike('nome', item.nome)
-        .single();
-      
-      if (data) { ing = data; break; }
-      await new Promise(r => setTimeout(r, 500));
-    }
+      // ✅ v7: substituir o setTimeout por busca com retry
+      const itensParaInserir = await Promise.all(
+        fichaPreview.itens.map(async (item) => {
+          let ing = null;
 
-    return {
-      ficha_id: fichaData.id,
-      ingrediente_id: ing?.id || null,
-      quantidade: item.quantidade,
-      unidade: item.unidade,
-      perda_percentual: item.perda_percentual || 0,
-      preco_temp: ing ? null : Math.max(item.preco_unitario || 0, 0.001),
-    };
-  })
-);
+          // Tentar até 3 vezes com 500ms entre tentativas
+          for (let tentativa = 0; tentativa < 3; tentativa++) {
+            const { data } = await supabase
+              .from('producao_ingredientes')
+              .select('id, preco_por_unidade')
+              .eq('company_id', companyId)
+              .ilike('nome', item.nome)
+              .single();
+
+            if (data) { ing = data; break; }
+            await new Promise(r => setTimeout(r, 500));
+          }
+
+          return {
+            ficha_id: fichaData.id,
+            ingrediente_id: ing?.id || null,
+            quantidade: item.quantidade,
+            unidade: item.unidade,
+            perda_percentual: item.perda_percentual || 0,
+            preco_temp: ing ? null : Math.max(item.preco_unitario || 0, 0.001),
+          };
+        })
+      );
 
       const { error: itensError } = await supabase
         .from('producao_ficha_itens')
@@ -596,8 +614,9 @@ const itensParaInserir = await Promise.all(
       {selectedTags.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
           <div style={{ fontSize: '11px', color: C.textMuted, marginBottom: '6px' }}>Tags</div>
+          {/* ✅ v8: exibir apenas tags válidas no preview também */}
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {selectedTags.map(tag => (
+            {selectedTags.filter(t => TAGS_VALIDAS.includes(t)).map(tag => (
               <span key={tag} style={{
                 padding: '2px 8px',
                 background: C.accent + '33',
@@ -630,40 +649,40 @@ const itensParaInserir = await Promise.all(
               }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '13px', fontWeight: '500', color: C.text }}>{item.nome}</div>
-<div style={{ fontSize: '11px', color: C.textMuted, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-  {item.quantidade}{item.unidade} • R$
-  <input
-    type="number"
-    step="0.01"
-    min="0.001"
-    value={item.preco_unitario ?? ''}
-    onChange={(e) => {
-      const novoPreco = parseFloat(e.target.value);
-      if (isNaN(novoPreco)) return;
-      setFichaPreview(prev => ({
-        ...prev,
-        itens: prev.itens.map(i =>
-          i.id === item.id
-            ? { ...i, preco_unitario: novoPreco, preco_estimado: false }
-            : i
-        ),
-      }));
-    }}
-    style={{
-      width: '64px',
-      padding: '1px 4px',
-      background: item.preco_estimado ? C.accent + '22' : C.bgSecondary,
-      border: `1px solid ${item.preco_estimado ? C.accent : C.border}`,
-      borderRadius: '4px',
-      color: C.text,
-      fontSize: '11px',
-    }}
-  />
-  /{item.unidade}
-  {item.preco_estimado && (
-    <span style={{ color: C.accent }}>(estimado)</span>
-  )}
-</div>
+                  <div style={{ fontSize: '11px', color: C.textMuted, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {item.quantidade}{item.unidade} • R$
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.001"
+                      value={item.preco_unitario ?? ''}
+                      onChange={(e) => {
+                        const novoPreco = parseFloat(e.target.value);
+                        if (isNaN(novoPreco)) return;
+                        setFichaPreview(prev => ({
+                          ...prev,
+                          itens: prev.itens.map(i =>
+                            i.id === item.id
+                              ? { ...i, preco_unitario: novoPreco, preco_estimado: false }
+                              : i
+                          ),
+                        }));
+                      }}
+                      style={{
+                        width: '64px',
+                        padding: '1px 4px',
+                        background: item.preco_estimado ? C.accent + '22' : C.bgSecondary,
+                        border: `1px solid ${item.preco_estimado ? C.accent : C.border}`,
+                        borderRadius: '4px',
+                        color: C.text,
+                        fontSize: '11px',
+                      }}
+                    />
+                    /{item.unidade}
+                    {item.preco_estimado && (
+                      <span style={{ color: C.accent }}>(estimado)</span>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => removerIngrediente(item.id)}
@@ -724,11 +743,6 @@ const itensParaInserir = await Promise.all(
     </>
   );
 
-  // ── Input area: JSX inlined diretamente nos renders (mobile e desktop)
-  // ✅ v7: NÃO definir como inner component aqui — causaria remount do <input>
-  //        a cada keystroke (inputText muda → pai re-renderiza → novo componente
-  //        → React desmonta/remonta o input → foco perdido)
-
   // ══════════════════════════════════════════════════════
   // RENDER MOBILE
   // ══════════════════════════════════════════════════════
@@ -761,7 +775,6 @@ const itensParaInserir = await Promise.all(
               {isFichaPreparo ? 'Ficha de Preparo' : 'Ficha de Produção'}
             </h2>
           </div>
-          {/* ✅ v6: botões mutar + fechar agrupados */}
           <div style={{ display: 'flex', gap: '4px' }}>
             <BotaoMutar />
             <button
@@ -778,7 +791,7 @@ const itensParaInserir = await Promise.all(
           <TagSelector tags={selectedTags} onChange={setSelectedTags} options={TAG_OPTIONS} theme={theme} />
         </div>
 
-        {/* ✅ v6: Lista completa de mensagens com scroll (substitui "última mensagem" fixo) */}
+        {/* Lista de mensagens */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
@@ -786,7 +799,7 @@ const itensParaInserir = await Promise.all(
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
-          minHeight: 0, // ✅ essencial para flex+scroll funcionar
+          minHeight: 0,
         }}>
           {messages.map((msg) => (
             <div
@@ -825,7 +838,7 @@ const itensParaInserir = await Promise.all(
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Preview colapsável com scroll próprio */}
+        {/* Preview colapsável */}
         <div ref={previewRef} style={{
           maxHeight: '35vh',
           overflowY: 'auto',
@@ -841,7 +854,7 @@ const itensParaInserir = await Promise.all(
           <FichaPreviewContent />
         </div>
 
-        {/* ✅ v7: Input inlined diretamente — NÃO extrair como inner component */}
+        {/* Input inlined */}
         <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {!inputText.trim() && (
@@ -948,7 +961,6 @@ const itensParaInserir = await Promise.all(
             <TagSelector tags={selectedTags} onChange={setSelectedTags} options={TAG_OPTIONS} theme={theme} />
           </div>
 
-          {/* ✅ v6: botões mutar + fechar agrupados */}
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             <BotaoMutar />
             <button
@@ -972,7 +984,6 @@ const itensParaInserir = await Promise.all(
 
           {/* COLUNA ESQUERDA — CHAT */}
           <div style={{ background: C.bgChat, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* ✅ v6: minHeight: 0 para scroll funcionar */}
             <div style={{
               flex: 1,
               overflowY: 'auto',
@@ -1018,7 +1029,7 @@ const itensParaInserir = await Promise.all(
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ✅ v7: Input inlined diretamente — NÃO extrair como inner component */}
+            {/* Input inlined */}
             <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 {!inputText.trim() && (

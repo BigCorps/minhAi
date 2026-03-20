@@ -2,15 +2,15 @@
 // Rota API: Processar Conversação com ChatGPT
 // Arquivo: app/api/voice/process-conversation/route.ts
 // =========================================================
-// ✅ MUDANÇAS v2:
-// - Recebe selectedTags do body
-// - Prompt da IA atualizado para entender tags
-// - isFichaPreparo derivado das tags (compatibilidade mantida)
-// - Validação de ciclo via CicloDetector (avisos ao frontend)
+// ✅ v2: recebe selectedTags, prompt atualizado para tags,
+//        isFichaPreparo derivado das tags, validação de ciclos
+// ✅ v3: prompt com tabela de preços completa (mercado BR 2025)
+//        regra explícita: nunca retornar preco_unitario 0/null
+//        contexto de conversa formatado de forma mais clara para IA
 // =========================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getDetector } from '@/lib/producao/ciclo-detector'; // ✅ v2
+import { getDetector } from '@/lib/producao/ciclo-detector';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,16 +32,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ v2: isFichaPreparo derivado das tags; fallback para o campo legado
+    // ✅ v2: isFichaPreparo derivado das tags; fallback para campo legado
     const isFichaPreparo =
       selectedTags.length > 0
         ? selectedTags.includes('função:preparo')
         : isFichaPreparoLegado ?? false;
 
-    const isVendavel  = selectedTags.includes('vendável:sim');
-    const isCombo     = selectedTags.includes('função:combo');
-    const isProduto   = selectedTags.includes('função:produto');
-    const origemTag   = (selectedTags as string[]).find((t: string) => t.startsWith('origem:')) ?? null;
+    const isVendavel = selectedTags.includes('vendável:sim');
+    const isCombo    = selectedTags.includes('função:combo');
+    const isProduto  = selectedTags.includes('função:produto');
+    const origemTag  = (selectedTags as string[]).find((t: string) => t.startsWith('origem:')) ?? null;
 
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -59,67 +59,141 @@ export async function POST(request: NextRequest) {
 
     const fichaAtualStr = JSON.stringify(fichaAtual || {}, null, 2);
 
-    // ✅ v2: Prompt atualizado para entender tags
-    const systemPrompt = `Você é um assistente especializado em criar fichas de produção para restaurantes e lanchonetes no Brasil.
+    // ✅ v3: prompt com regras anti-zero e tabela de preços completa
+    const systemPrompt = `Você é um assistente especializado em fichas técnicas de produção para restaurantes e negócios alimentícios brasileiros.
 
-CARACTERÍSTICAS DO ITEM (tags selecionadas pelo usuário):
-- Tags: ${selectedTags.length > 0 ? selectedTags.join(', ') : 'nenhuma tag selecionada'}
+CARACTERÍSTICAS DO ITEM (definidas pelo usuário):
+- Tags: ${selectedTags.length > 0 ? selectedTags.join(', ') : 'nenhuma'}
 - Tipo: ${isFichaPreparo ? 'Ficha de Preparo (produz um ingrediente, não é vendida diretamente)' : isProduto ? 'Produto Final' : isCombo ? 'Combo (agrupa outros produtos)' : 'Item de produção'}
 - Vendável ao cliente final: ${isVendavel ? 'Sim' : 'Não'}
-${isCombo ? '- É um combo: agrupa produtos já existentes, peça os itens que o compõem' : ''}
-${origemTag ? `- Origem: ${origemTag.split(':')[1]}` : ''}
+${isCombo    ? '- É um COMBO: agrupa produtos já existentes. Pergunte quais itens o compõem.' : ''}
+${origemTag  ? `- Origem: ${origemTag.split(':')[1]}` : ''}
 
-INSTRUÇÕES:
-1. Extraia informações do que o usuário disse
-2. Atualize a ficha com as novas informações
-3. Estime preços de ingredientes brasileiros se necessário (em R$/kg ou R$/L)
+REGRAS CRÍTICAS — LEIA COM ATENÇÃO:
+1. ✅ TODOS os ingredientes DEVEM ter "preco_unitario" preenchido e maior que zero
+2. ✅ Se o usuário NÃO informou o preço, ESTIME um valor realista do mercado brasileiro 2025
+3. ✅ Preços em R$ (Reais) por unidade base: kg, L, unidade ou dúzia
+4. ❌ NUNCA retornar preco_unitario: 0, null ou undefined — isso causa custo zerado na ficha
+5. ✅ A ÚNICA exceção é água: preco_unitario: 0.00
+${isFichaPreparo || !isVendavel ? '6. ✅ preco_venda deve ser null neste tipo de ficha' : ''}
+
+TABELA DE PREÇOS ESTIMADOS (Mercado Brasileiro 2025):
+
+FARINHAS E GRÃOS:
+- Farinha de trigo: R$ 5.00/kg
+- Farinha de trigo integral: R$ 6.50/kg
+- Farinha de rosca: R$ 7.00/kg
+- Polvilho doce/azedo: R$ 8.00/kg
+- Amido de milho (Maizena): R$ 9.00/kg
+- Fubá: R$ 4.00/kg
+- Aveia: R$ 8.00/kg
+
+AÇÚCARES E ADOÇANTES:
+- Açúcar refinado: R$ 3.50/kg
+- Açúcar mascavo: R$ 6.00/kg
+- Mel: R$ 30.00/kg
+
+LATICÍNIOS:
+- Leite integral: R$ 4.00/L
+- Manteiga: R$ 35.00/kg
+- Creme de leite: R$ 12.00/kg
+- Requeijão/Catupiry: R$ 35.00/kg
+- Queijo mussarela: R$ 40.00/kg
+- Queijo parmesão ralado: R$ 60.00/kg
+- Queijo prato: R$ 38.00/kg
+- Iogurte natural: R$ 8.00/kg
+
+OVOS:
+- Ovo de galinha: R$ 0.50/unidade (R$ 6.00/dúzia)
+
+CARNES E PROTEÍNAS:
+- Frango inteiro: R$ 12.00/kg
+- Peito de frango: R$ 18.00/kg
+- Coxa/sobrecoxa: R$ 10.00/kg
+- Carne moída bovina: R$ 25.00/kg
+- Alcatra/patinho: R$ 35.00/kg
+- Linguiça calabresa: R$ 22.00/kg
+- Presunto fatiado: R$ 30.00/kg
+- Bacon: R$ 28.00/kg
+- Atum em lata: R$ 12.00/unidade (180g)
+- Camarão limpo: R$ 60.00/kg
+
+VEGETAIS E LEGUMES:
+- Tomate: R$ 4.00/kg
+- Cebola: R$ 3.00/kg
+- Alho: R$ 25.00/kg
+- Pimentão: R$ 6.00/kg
+- Batata: R$ 4.00/kg
+- Cenoura: R$ 3.50/kg
+- Brócolis: R$ 6.00/kg
+- Milho verde (lata): R$ 4.00/unidade
+- Azeitona: R$ 30.00/kg
+- Champignon: R$ 35.00/kg
+- Palmito: R$ 25.00/kg
+
+TEMPEROS E CONDIMENTOS:
+- Sal refinado: R$ 2.00/kg
+- Azeite de oliva: R$ 25.00/L
+- Óleo de soja: R$ 8.00/L
+- Vinagre: R$ 5.00/L
+- Molho de tomate: R$ 6.00/kg
+- Extrato de tomate: R$ 8.00/kg
+- Molho shoyu: R$ 10.00/L
+- Orégano: R$ 15.00/kg
+- Pimenta-do-reino: R$ 40.00/kg
+- Canela em pó: R$ 20.00/kg
+
+FERMENTOS:
+- Fermento biológico seco: R$ 30.00/kg
+- Fermento químico em pó: R$ 12.00/kg
+
+OUTROS:
+- Água: R$ 0.00/L (gratuito)
+- Chocolate em pó: R$ 15.00/kg
+- Cacau em pó: R$ 25.00/kg
+- Leite condensado: R$ 6.00/unidade (395g)
+- Farinha láctea: R$ 12.00/kg
+
+INSTRUÇÕES DE COMPORTAMENTO:
+1. Extraia informações do que o usuário disse e atualize a ficha
+2. Se não souber um preço, use a tabela acima como referência
+3. Para ingredientes não listados, estime com base em similares
 4. Normalize unidades (kg, g, L, ml, unidade, dúzia)
-5. Responda de forma natural e amigável
-6. Se algo não estiver claro, pergunte
-${isFichaPreparo ? '7. Como é uma ficha de preparo, o campo preco_venda deve ser null' : ''}
-${!isVendavel ? '7. Como não é vendável, o campo preco_venda deve ser null' : ''}
+5. Responda de forma natural, amigável e em português
+6. Se algo não estiver claro, pergunte de forma objetiva
+7. Calcule perda percentual realista (5-15% para a maioria dos ingredientes)
 
-IMPORTANTE: Sempre estime preços brasileiros realistas. Exemplos:
-- Farinha de trigo: R$ 5,00/kg
-- Frango: R$ 15,00/kg
-- Açúcar: R$ 3,50/kg
-- Leite: R$ 4,00/L
-- Ovos: R$ 0,50/unidade
-- Óleo: R$ 8,00/L
-- Sal: R$ 2,00/kg
-- Manteiga: R$ 35,00/kg
-- Queijo: R$ 40,00/kg
-- Presunto: R$ 30,00/kg
-
-Retorne APENAS um JSON válido (sem markdown, sem \`\`\`):
+FORMATO DE SAÍDA — retorne APENAS JSON válido, sem markdown, sem backticks:
 {
   "ficha": {
     "nome": "string",
     "categoria": "string",
     "rendimento_qtd": number,
     "rendimento_unid": "string",
-    "preco_venda": number ou null,
+    "preco_venda": number | null,
     "itens": [
       {
-        "id": "temp-timestamp",
+        "id": "temp-001",
         "nome": "string",
         "quantidade": number,
-        "unidade": "kg|g|L|ml|unidade|dúzia",
+        "unidade": "kg" | "g" | "L" | "ml" | "unidade" | "dúzia",
         "preco_unitario": number,
         "perda_percentual": number,
         "preco_estimado": boolean
       }
     ]
   },
-  "resposta": "string - mensagem amigável ao usuário",
+  "resposta": "string",
   "completo": boolean
 }`;
 
-    const userPrompt = `CONTEXTO DA CONVERSA:
+    const userPrompt = `CONVERSA ATUAL:
 ${conversaAtual}
 
 FICHA ATUAL:
-${fichaAtualStr}`;
+${fichaAtualStr}
+
+Extraia as informações e retorne SOMENTE o JSON.`;
 
     console.log('📡 Chamando OpenAI API...');
 
@@ -167,15 +241,27 @@ ${fichaAtualStr}`;
       );
     }
 
-    // ✅ v2: Validação de ciclos (apenas se companyId disponível e ficha tem itens)
+    // ✅ v3: sanitizar preços zerados que a IA possa ter retornado por engano
+    if (resultado.ficha?.itens) {
+      resultado.ficha.itens = resultado.ficha.itens.map((item: any) => {
+        if (item.nome?.toLowerCase() === 'água') return item; // exceção: água
+        if (!item.preco_unitario || item.preco_unitario === 0) {
+          console.warn(`⚠️ IA retornou preco_unitario zerado para "${item.nome}" — mantendo como estimado`);
+          // Não bloqueamos aqui; o frontend vai validar antes de salvar
+          // mas marcamos como estimado para o usuário corrigir se quiser
+          return { ...item, preco_estimado: true };
+        }
+        return item;
+      });
+    }
+
+    // ✅ v2: Validação de ciclos (apenas se companyId disponível)
     const avisos: string[] = [];
 
     if (companyId && resultado.ficha?.itens?.length > 0) {
       try {
         const detector = await getDetector(companyId);
 
-        // fichaId temporário para checagem — usamos o nome como chave provisória
-        // A validação real de ID acontece no trigger do banco ao salvar
         for (const item of resultado.ficha.itens) {
           if (item.ingrediente_id) {
             const temCiclo = detector.detectarCiclo(
@@ -188,7 +274,7 @@ ${fichaAtualStr}`;
           }
         }
       } catch (cicloErr) {
-        // Falha silenciosa: o banco ainda vai bloquear via trigger
+        // Falha silenciosa — o trigger do banco ainda bloqueia no save
         console.warn('⚠️ Detector de ciclo indisponível (banco vai validar):', cicloErr);
       }
     }

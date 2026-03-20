@@ -247,8 +247,11 @@ INSTRUÇÃO: Se o usuário informou o nome do produto mas a ficha ainda não tem
     // ✅ v3: sanitizar preços zerados que a IA possa ter retornado por engano
     if (resultado.ficha?.itens) {
 resultado.ficha.itens = resultado.ficha.itens.map((item: any) => {
+  // ✅ corrigir nome genérico
+  if (!item.nome || item.nome.toLowerCase() === 'ingrediente') {
+    item.nome = 'Água';
+  }
   if (!item.preco_unitario || item.preco_unitario === 0) {
-    console.warn(`⚠️ preco_unitario zerado para "${item.nome}" — aplicando 0.001`);
     return { ...item, preco_unitario: 0.001, preco_estimado: true };
   }
   return item;

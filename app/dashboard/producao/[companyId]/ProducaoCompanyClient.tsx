@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import Link from 'next/link';
-import { ArrowLeft, ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePlayText } from '@/hooks/usePlayText';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 import IngredientesClient from '@/components/dashboard/producao/IngredientesClient';
 import FichaConversacionalDisplay from '@/components/assistant/FichaConversacionalDisplay';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
+import { ProducaoTag } from '@/lib/types/producao'; // ✅ v2
+import TagSelector from '@/components/producao/TagSelector'; // ✅ v2
 
 interface Ingrediente {
   id: string;
@@ -32,6 +33,7 @@ interface Ficha {
   is_active: boolean;
   is_ficha_preparo: boolean;
   created_at: string;
+  tags: ProducaoTag[]; // ✅ v2
   producao_ingredientes: Ingrediente[];
 }
 
@@ -40,6 +42,38 @@ interface ProducaoCompanyClientProps {
   fichas: Ficha[];
   stats: { totalFichas: number; ativas: number; comCusto: number };
 }
+
+// ✅ v2: Cores por grupo de tag
+function getTagColor(tag: ProducaoTag): { bg: string; text: string } {
+  if (tag.startsWith('função:')) {
+    const map: Record<string, { bg: string; text: string }> = {
+      'função:produto':    { bg: 'rgba(37,99,235,0.15)',   text: '#2563eb' },
+      'função:preparo':    { bg: 'rgba(124,58,237,0.15)',  text: '#7c3aed' },
+      'função:combo':      { bg: 'rgba(234,88,12,0.15)',   text: '#ea580c' },
+      'função:insumo':     { bg: 'rgba(71,85,105,0.15)',   text: '#475569' },
+    };
+    return map[tag] ?? { bg: 'rgba(37,99,235,0.1)', text: '#2563eb' };
+  }
+  if (tag.startsWith('origem:')) {
+    return { bg: 'rgba(22,163,74,0.12)', text: '#16a34a' };
+  }
+  if (tag.startsWith('vendável:')) {
+    return tag === 'vendável:sim'
+      ? { bg: 'rgba(234,179,8,0.15)',  text: '#b45309' }
+      : { bg: 'rgba(100,116,139,0.15)', text: '#64748b' };
+  }
+  return { bg: 'rgba(100,116,139,0.1)', text: '#64748b' };
+}
+
+// ✅ v2: Opções de filtro por tag (apenas as mais relevantes para o dashboard)
+const FILTRO_TAG_OPTIONS = [
+  { tag: 'função:produto'  as ProducaoTag, label: 'Produto',   icon: ClipboardList, group: 'função'   as const },
+  { tag: 'função:preparo'  as ProducaoTag, label: 'Preparo',   icon: ClipboardList, group: 'função'   as const },
+  { tag: 'função:combo'    as ProducaoTag, label: 'Combo',     icon: ClipboardList, group: 'função'   as const },
+  { tag: 'vendável:sim'    as ProducaoTag, label: 'Vendável',  icon: ClipboardList, group: 'vendável' as const },
+  { tag: 'origem:comprado' as ProducaoTag, label: 'Comprado',  icon: ClipboardList, group: 'origem'   as const },
+  { tag: 'origem:produzido'as ProducaoTag, label: 'Produzido', icon: ClipboardList, group: 'origem'   as const },
+];
 
 function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boolean }) {
   const supabase = createClient();
@@ -112,6 +146,7 @@ export default function ProducaoCompanyClient({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'ativas' | 'inativas'>('todas');
+  const [filtroTags, setFiltroTags] = useState<ProducaoTag[]>([]); // ✅ v2
   const [activeTab, setActiveTab] = useState<'fichas' | 'ingredientes'>('fichas');
   const [tipoFicha, setTipoFicha] = useState<'produtos' | 'preparos'>('produtos');
   const [novaFichaTipo, setNovaFichaTipo] = useState<'produto' | 'preparo'>('produto');
@@ -184,10 +219,18 @@ export default function ProducaoCompanyClient({
     tipoFicha === 'preparos' ? f.is_ficha_preparo : !f.is_ficha_preparo
   );
 
+  // ✅ v2: filtro de status + filtro de tags combinados
   const fichasFiltradas = fichasPorTipo.filter(f => {
-    if (filtro === 'ativas') return f.is_active;
-    if (filtro === 'inativas') return !f.is_active;
-    return true;
+    const passaStatus =
+      filtro === 'ativas'   ? f.is_active :
+      filtro === 'inativas' ? !f.is_active :
+      true;
+
+    const passaTags =
+      filtroTags.length === 0 ||
+      filtroTags.every(tag => (f.tags ?? []).includes(tag));
+
+    return passaStatus && passaTags;
   });
 
   function formatCusto(valor: number | null): string {
@@ -304,55 +347,70 @@ export default function ProducaoCompanyClient({
         {/* Aba: Fichas */}
         {activeTab === 'fichas' && (
           <>
-{/* Toolbar */}
-{/* Mobile: duas linhas | Desktop: uma linha */}
-<div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
 
-  {/* Filtros + contador */}
-  <div className="flex items-center gap-2 flex-1">
-    {(['todas', 'ativas', 'inativas'] as const).map(f => (
-      <button
-        key={f}
-        onClick={() => setFiltro(f)}
-        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-          filtro === f
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
-        }`}
-      >
-        {f}
-      </button>
-    ))}
-    <span className="text-xs text-gray-400 dark:text-white/40 ml-auto sm:ml-2 whitespace-nowrap">
-      {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
-    </span>
-  </div>
+              {/* Filtros de status + contador */}
+              <div className="flex items-center gap-2 flex-1">
+                {(['todas', 'ativas', 'inativas'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFiltro(f)}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                      filtro === f
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+                <span className="text-xs text-gray-400 dark:text-white/40 ml-auto sm:ml-2 whitespace-nowrap">
+                  {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
+                </span>
+              </div>
 
-  {/* Botões de ação */}
-  <div className="flex gap-2">
-    {/* Auxiliar de Produção — verde */}
-    <button
-      onClick={() => setShowConversacional(true)}
-      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
-      style={{ background: '#16a34a' }}
-    >
-      <span className="text-sm leading-none">🔘</span>
-      Auxiliar de Produção
-    </button>
+              {/* Botões de ação */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowConversacional(true)}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
+                  style={{ background: '#16a34a' }}
+                >
+                  <span className="text-sm leading-none">🔘</span>
+                  Auxiliar de Produção
+                </button>
 
-    {/* Nova Guia / Nova Ficha — azul sempre */}
-    <button
-      onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
-      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
-      style={{ background: '#2563eb' }}
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 12h14"/><path d="M12 5v14"/>
-      </svg>
-      {tipoFicha === 'preparos' ? 'Nova Ficha de Preparo' : 'Nova Guia'}
-    </button>
-  </div>
-</div>
+                <button
+                  onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
+                  style={{ background: '#2563eb' }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14"/><path d="M12 5v14"/>
+                  </svg>
+                  {tipoFicha === 'preparos' ? 'Nova Ficha de Preparo' : 'Nova Guia'}
+                </button>
+              </div>
+            </div>
+
+            {/* ✅ v2: Filtro por tags — linha separada abaixo da toolbar */}
+            <div className="mb-4">
+              <TagSelector
+                tags={filtroTags}
+                onChange={setFiltroTags}
+                options={FILTRO_TAG_OPTIONS}
+                theme={pageTheme}
+              />
+              {filtroTags.length > 0 && (
+                <button
+                  onClick={() => setFiltroTags([])}
+                  className="mt-2 text-xs text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
+                >
+                  Limpar filtros de tag
+                </button>
+              )}
+            </div>
 
             {/* Lista de fichas */}
             <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
@@ -363,9 +421,11 @@ export default function ProducaoCompanyClient({
                     {tipoFicha === 'preparos' ? 'Nenhuma ficha de preparo encontrada' : 'Nenhuma guia encontrada'}
                   </p>
                   <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                    {tipoFicha === 'preparos'
-                      ? 'Crie fichas de preparo para ingredientes semielaborados como molhos, massas e recheios'
-                      : 'As guias sao criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"'
+                    {filtroTags.length > 0
+                      ? 'Tente remover alguns filtros de tag'
+                      : tipoFicha === 'preparos'
+                        ? 'Crie fichas de preparo para ingredientes semielaborados como molhos, massas e recheios'
+                        : 'As guias sao criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"'
                     }
                   </p>
                 </div>
@@ -378,7 +438,7 @@ export default function ProducaoCompanyClient({
                       <div className="px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
                         <div className="flex items-center gap-4">
 
-                          {/* Nome + status */}
+                          {/* Nome + status + tags */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className="font-semibold text-gray-900 dark:text-white truncate">
@@ -403,6 +463,29 @@ export default function ProducaoCompanyClient({
                                 </span>
                               )}
                             </div>
+
+                            {/* ✅ v2: Badges de tags */}
+                            {(ficha.tags ?? []).length > 0 && (
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                                {(ficha.tags ?? []).map(tag => {
+                                  const colors = getTagColor(tag);
+                                  return (
+                                    <span key={tag} style={{
+                                      padding: '1px 6px',
+                                      background: colors.bg,
+                                      color: colors.text,
+                                      borderRadius: 4,
+                                      fontSize: 10,
+                                      fontWeight: 600,
+                                      letterSpacing: '0.02em',
+                                    }}>
+                                      {tag.split(':')[1]}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+
                             {ficha.descricao && (
                               <p className="text-xs text-gray-500 dark:text-white/40 truncate">{ficha.descricao}</p>
                             )}
@@ -437,7 +520,7 @@ export default function ProducaoCompanyClient({
                             )}
                           </div>
 
-                          {/* Acoes */}
+                          {/* Ações */}
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => setExpandedId(expandedId === ficha.id ? null : ficha.id)}
@@ -580,20 +663,20 @@ export default function ProducaoCompanyClient({
       </div>
 
       {showConversacional && (
-  <FichaConversacionalDisplay
-    data={{
-      companyId: company.id,
-      fichaType: tipoFicha === 'preparos' ? 'preparo' : 'produto',
-    }}
-    onClose={() => {
-      stopAudio();
-      setShowConversacional(false);
-      window.location.reload();
-    }}
-    playText={playText}
-    theme={pageTheme}
-  />
-)}
+        <FichaConversacionalDisplay
+          data={{
+            companyId: company.id,
+            fichaType: tipoFicha === 'preparos' ? 'preparo' : 'produto',
+          }}
+          onClose={() => {
+            stopAudio();
+            setShowConversacional(false);
+            window.location.reload();
+          }}
+          playText={playText}
+          theme={pageTheme}
+        />
+      )}
 
       {showNovaFicha && (
         <FichaProducaoDisplay

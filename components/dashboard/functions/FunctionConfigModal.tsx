@@ -1895,6 +1895,31 @@ const TocarVideoForm = () => (
   </div>
 );
 
+const TocarMusicaForm = () => (
+  <div className="space-y-4">
+    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+        Como funciona o Tocar Música
+      </h4>
+      <ul className="space-y-1 text-sm text-green-800 dark:text-green-200">
+        <li>✓ Busca músicas no YouTube por voz</li>
+        <li>✓ Mini player no canto da tela — não interrompe o assistente</li>
+        <li>✓ Pode minimizar e continuar ouvindo em segundo plano</li>
+        <li>✓ Cliente pode buscar outra música direto no player</li>
+      </ul>
+    </div>
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">Comandos de Voz</h5>
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+        <li>• "Tocar música de jazz"</li>
+        <li>• "Ouvir lofi"</li>
+        <li>• "Coloca uma música relaxante"</li>
+        <li>• "Quero ouvir rock clássico"</li>
+      </ul>
+    </div>
+  </div>
+);
+
 const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
   const router = useRouter();
 
@@ -2090,6 +2115,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'fazer_pedido':      VendasForm,
   'consultar_estoque': VendasForm,
   'cadastrar_produto': VendasForm,
+  'tocar_musica': TocarMusicaForm,
 };
 
 // ===== INTERFACE =====

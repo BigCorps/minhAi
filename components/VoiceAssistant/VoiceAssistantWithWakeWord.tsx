@@ -1236,11 +1236,26 @@ case 'cadastrar_produto':
       if (newSessionId && !sessionId) setSessionId(newSessionId);
 
       const responseTextHeader = response.headers.get('X-Response-Text');
-      if (responseTextHeader) {
-        setLastResponse(decodeURIComponent(responseTextHeader));
-      }
+if (responseTextHeader) {
+  setLastResponse(decodeURIComponent(responseTextHeader));
+}
 
-      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+// ✅ ADICIONAR AQUI — antes do if (!response.ok)
+const hintFunctionKey = response.headers.get('X-Function-Key');
+if (hintFunctionKey) {
+  console.log('🎯 Hint ativou função via header:', hintFunctionKey);
+  clearTimeout(feedbackTimeout);
+  setIsProcessing(false);
+  processingQuestion.current = false;
+  handleFunctionClick(hintFunctionKey);
+  setTimeout(async () => {
+    shouldProcessAudio.current = true;
+    await startGoogleSpeech();
+  }, 500);
+  return;
+}
+
+if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);

@@ -148,7 +148,7 @@ FERMENTOS:
 - Fermento químico em pó: R$ 12.00/kg
 
 OUTROS:
-- Água: R$ 0.00/L (gratuito)
+- Água: R$ 0.001/L
 - Chocolate em pó: R$ 15.00/kg
 - Cacau em pó: R$ 25.00/kg
 - Leite condensado: R$ 6.00/unidade (395g)
@@ -244,8 +244,10 @@ Extraia as informações e retorne SOMENTE o JSON.`;
     // ✅ v3: sanitizar preços zerados que a IA possa ter retornado por engano
     if (resultado.ficha?.itens) {
       resultado.ficha.itens = resultado.ficha.itens.map((item: any) => {
-        if (item.nome?.toLowerCase() === 'água') return item; // exceção: água
         if (!item.preco_unitario || item.preco_unitario === 0) {
+          item.preco_unitario = 0.001;
+          return { ...item, preco_estimado: true };
+        }
           console.warn(`⚠️ IA retornou preco_unitario zerado para "${item.nome}" — mantendo como estimado`);
           // Não bloqueamos aqui; o frontend vai validar antes de salvar
           // mas marcamos como estimado para o usuário corrigir se quiser

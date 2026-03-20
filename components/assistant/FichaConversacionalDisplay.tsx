@@ -1,11 +1,13 @@
 // =========================================================
-// FASE H - CONVERSAÇÃO IA FULL (v4 - Corrigido)
+// FASE H - CONVERSAÇÃO IA FULL (v5 - Tags)
 // Arquivo: components/assistant/FichaConversacionalDisplay.tsx
 // =========================================================
-// ✅ CORREÇÕES v4:
-// - Usa useVoiceRecorder (hook existente) ao invés de GoogleSpeechWebSocket
-// - Corrigido áudio duplicado (removido playText extra)
-// - Transcrição via API do Google Speech
+// ✅ MUDANÇAS v5:
+// - Substituído fichaType (binário) por selectedTags (flexível)
+// - Toggle Produto/Preparo substituído por TagSelector
+// - Lógica de save atualiza campo `tags` + mantém campos legados
+// - API recebe selectedTags no body
+// - isFichaPreparo agora derivado das tags (100% compatível)
 // =========================================================
 
 'use client';
@@ -13,12 +15,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'; // ✅ Hook existente
-import { 
-  Loader2, Send, Mic, X, Plus, Trash2, 
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import {
+  Loader2, Send, Mic, X, Plus, Trash2,
   ChefHat, Beaker, MessageSquare, ClipboardList,
+  Package, DollarSign, // ✅ v5: novos ícones para TagSelector
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { ProducaoTag } from '@/lib/types/producao'; // ✅ v5
+import TagSelector from '@/components/producao/TagSelector'; // ✅ v5
 
 interface Message {
   id: string;
@@ -47,7 +52,7 @@ interface FichaPreview {
 }
 
 interface FichaConversacionalDisplayProps {
-  data: { 
+  data: {
     companyId: string;
     fichaType?: 'produto' | 'preparo';
   };
@@ -55,6 +60,22 @@ interface FichaConversacionalDisplayProps {
   theme?: 'dark' | 'light';
   playText: (text: string) => Promise<void>;
 }
+
+// ✅ v5: Converte o fichaType legado para tags iniciais
+function getInitialTags(type: 'produto' | 'preparo'): ProducaoTag[] {
+  if (type === 'preparo') {
+    return ['função:preparo', 'origem:produzido'];
+  }
+  return ['função:produto', 'vendável:sim', 'origem:produzido'];
+}
+
+// ✅ v5: Opções do TagSelector (definidas fora para reutilizar em mobile e desktop)
+const TAG_OPTIONS = [
+  { tag: 'função:produto' as ProducaoTag, label: 'Produto',  icon: ChefHat,     group: 'função'   as const },
+  { tag: 'função:preparo' as ProducaoTag, label: 'Preparo',  icon: Beaker,      group: 'função'   as const },
+  { tag: 'função:combo'   as ProducaoTag, label: 'Combo',    icon: Package,     group: 'função'   as const },
+  { tag: 'vendável:sim'   as ProducaoTag, label: 'Vendável', icon: DollarSign,  group: 'vendável' as const },
+];
 
 export default function FichaConversacionalDisplay({
   data,
@@ -67,13 +88,16 @@ export default function FichaConversacionalDisplay({
   const isMobile = useIsMobile();
   const supabase = createClient();
 
-  // ✅ Usar hook de gravação existente
   const voiceRecorder = useVoiceRecorder();
 
-  // Estados
-  const [fichaType, setFichaType] = useState<'produto' | 'preparo'>(initialFichaType);
-  const isFichaPreparo = fichaType === 'preparo';
-  
+  // ✅ v5: selectedTags substitui fichaType
+  const [selectedTags, setSelectedTags] = useState<ProducaoTag[]>(
+    getInitialTags(initialFichaType)
+  );
+
+  // ✅ v5: isFichaPreparo derivado das tags (compatibilidade total)
+  const isFichaPreparo = selectedTags.includes('função:preparo');
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -86,15 +110,13 @@ export default function FichaConversacionalDisplay({
     rendimento_unid: 'unidades',
     itens: [],
   });
-  
-  // Refs
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isActiveRef = useRef(true);
   const previewRef = useRef<HTMLDivElement>(null);
-  const hasSpokenInitialRef = useRef(false); // ✅ Evitar duplicação
+  const hasSpokenInitialRef = useRef(false);
 
-  // Cores
   const C = {
     bg: isDark ? '#1e293b' : '#ffffff',
     bgSecondary: isDark ? '#334155' : '#f8fafc',
@@ -112,7 +134,6 @@ export default function FichaConversacionalDisplay({
   // MENSAGEM INICIAL (SEM DUPLICAÇÃO)
   // ══════════════════════════════════════════════════════
   useEffect(() => {
-    // ✅ Prevenir duplicação
     if (hasSpokenInitialRef.current) return;
     hasSpokenInitialRef.current = true;
 
@@ -128,8 +149,6 @@ export default function FichaConversacionalDisplay({
     };
 
     setMessages([msg]);
-    
-    // ✅ Falar apenas uma vez
     playText(mensagemInicial).catch(() => {});
 
     return () => {
@@ -137,25 +156,23 @@ export default function FichaConversacionalDisplay({
     };
   }, []);
 
-  // Atualizar mensagem ao trocar tipo (SEM falar de novo)
+  // ✅ v5: Atualizar mensagem ao trocar a tag de função (equivalente ao fichaType anterior)
   useEffect(() => {
-    if (!hasSpokenInitialRef.current) return; // Não rodar na primeira vez
+    if (!hasSpokenInitialRef.current) return;
 
     const novaMensagem = isFichaPreparo
       ? 'Vamos criar uma ficha de preparo. Me diga o ingrediente que você quer produzir.'
       : 'Vamos criar um produto final. Me diga o nome do produto.';
-    
+
     const msg: Message = {
       id: Date.now().toString(),
       role: 'assistant',
       content: novaMensagem,
       timestamp: new Date(),
     };
-    
+
     setMessages(prev => [...prev, msg]);
-    // ✅ Não falar ao trocar de aba (opcional - você decide)
-    // playText(novaMensagem).catch(() => {});
-  }, [fichaType]);
+  }, [isFichaPreparo]);
 
   // Auto-scroll
   useEffect(() => {
@@ -165,11 +182,10 @@ export default function FichaConversacionalDisplay({
   }, [messages, isMobile]);
 
   // ══════════════════════════════════════════════════════
-  // GRAVAÇÃO DE VOZ (usando useVoiceRecorder)
+  // GRAVAÇÃO DE VOZ
   // ══════════════════════════════════════════════════════
   const handleMicPress = async () => {
     if (voiceRecorder.isRecording) {
-      // Parar gravação e transcrever
       setIsTranscribing(true);
       try {
         const audioBlob = await voiceRecorder.stopRecording();
@@ -180,7 +196,6 @@ export default function FichaConversacionalDisplay({
         setIsTranscribing(false);
       }
     } else {
-      // Iniciar gravação
       await voiceRecorder.startRecording();
     }
   };
@@ -190,20 +205,16 @@ export default function FichaConversacionalDisplay({
   // ══════════════════════════════════════════════════════
   const transcreverAudio = async (audioBlob: Blob) => {
     try {
-      // Converter blob para base64
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
-      
+
       const base64Audio = await new Promise<string>((resolve) => {
         reader.onloadend = () => {
           const result = reader.result as string;
-          const base64 = result.split(',')[1];
-          resolve(base64);
+          resolve(result.split(',')[1]);
         };
       });
 
-      // Chamar API de transcrição (você já deve ter uma rota para isso)
-      // Se não tiver, podemos criar
       const response = await fetch('/api/voice/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -213,9 +224,7 @@ export default function FichaConversacionalDisplay({
       if (!response.ok) throw new Error('Erro na transcrição');
 
       const { text } = await response.json();
-      
       if (text && text.trim()) {
-        // Processar texto transcrito
         processarMensagem(text.trim());
       }
     } catch (error) {
@@ -225,7 +234,7 @@ export default function FichaConversacionalDisplay({
   };
 
   // ══════════════════════════════════════════════════════
-  // PROCESSAR MENSAGEM VIA CHATGPT
+  // PROCESSAR MENSAGEM VIA IA
   // ══════════════════════════════════════════════════════
   const processarMensagem = async (textoUsuario: string) => {
     const userMsg: Message = {
@@ -245,6 +254,7 @@ export default function FichaConversacionalDisplay({
           messages: [...messages, userMsg],
           fichaAtual: fichaPreview,
           isFichaPreparo,
+          selectedTags, // ✅ v5: envia tags para a API
         }),
       });
 
@@ -256,10 +266,8 @@ export default function FichaConversacionalDisplay({
 
       const resultado = await response.json();
 
-      // Atualizar ficha preview
       setFichaPreview(resultado.ficha);
 
-      // Adicionar resposta do assistente
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -267,15 +275,23 @@ export default function FichaConversacionalDisplay({
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMsg]);
-
-      // ✅ Falar apenas uma vez
       playText(resultado.resposta).catch(() => {});
 
-      // Se completo, oferecer salvar
+      // ✅ v5: Exibir avisos de ciclo se a API retornar
+      if (resultado.avisos?.length > 0) {
+        const avisoMsg: Message = {
+          id: (Date.now() + 2).toString(),
+          role: 'assistant',
+          content: resultado.avisos.join('\n'),
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, avisoMsg]);
+      }
+
       if (resultado.completo && resultado.ficha.nome && resultado.ficha.itens.length > 0) {
         setTimeout(() => {
           const msgSalvar: Message = {
-            id: (Date.now() + 2).toString(),
+            id: (Date.now() + 3).toString(),
             role: 'assistant',
             content: 'A ficha está pronta! Quer salvar agora ou fazer algum ajuste?',
             timestamp: new Date(),
@@ -309,7 +325,7 @@ export default function FichaConversacionalDisplay({
   };
 
   // ══════════════════════════════════════════════════════
-  // SALVAR FICHA (mesmo código anterior)
+  // SALVAR FICHA
   // ══════════════════════════════════════════════════════
   const salvarFicha = async () => {
     if (!fichaPreview.nome || fichaPreview.itens.length === 0) {
@@ -328,8 +344,11 @@ export default function FichaConversacionalDisplay({
           categoria: fichaPreview.categoria || 'Geral',
           rendimento_qtd: fichaPreview.rendimento_qtd,
           rendimento_unid: fichaPreview.rendimento_unid,
-          preco_venda: isFichaPreparo ? null : fichaPreview.preco_venda,
+          // ✅ v5: campos legados derivados das tags (compatibilidade)
           is_ficha_preparo: isFichaPreparo,
+          preco_venda: selectedTags.includes('vendável:sim') ? fichaPreview.preco_venda : null,
+          // ✅ v5: novo campo tags
+          tags: selectedTags,
         })
         .select()
         .single();
@@ -337,7 +356,7 @@ export default function FichaConversacionalDisplay({
       if (fichaError) throw fichaError;
 
       const ingredientesNovos = fichaPreview.itens.filter(item => item.preco_estimado);
-      
+
       for (const item of ingredientesNovos) {
         const { data: existente } = await supabase
           .from('producao_ingredientes')
@@ -400,7 +419,6 @@ export default function FichaConversacionalDisplay({
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, msgSucesso]);
-      
       playText(msgSucesso.content).catch(() => {});
 
       setFichaPreview({
@@ -441,7 +459,7 @@ export default function FichaConversacionalDisplay({
         display: 'flex',
         flexDirection: 'column',
       }}>
-        
+
         {/* Header Mobile */}
         <div style={{
           padding: '12px 16px',
@@ -452,58 +470,34 @@ export default function FichaConversacionalDisplay({
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isFichaPreparo ? <Beaker className="w-5 h-5" style={{ color: C.accent }} /> : <ChefHat className="w-5 h-5" style={{ color: C.accent }} />}
+            {isFichaPreparo
+              ? <Beaker className="w-5 h-5" style={{ color: C.accent }} />
+              : <ChefHat className="w-5 h-5" style={{ color: C.accent }} />
+            }
             <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: C.text }}>
               {isFichaPreparo ? 'Ficha de Preparo' : 'Ficha de Produção'}
             </h2>
           </div>
-          <button onClick={onClose} style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Toggle Produto/Preparo */}
-        <div style={{ padding: '8px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: '8px', flexShrink: 0 }}>
-          <button
-            onClick={() => setFichaType('produto')}
-            style={{
-              flex: 1,
-              padding: '8px',
-              background: !isFichaPreparo ? C.accent : C.bgSecondary,
-              color: !isFichaPreparo ? 'white' : C.textMuted,
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-            }}
-          >
-            <ChefHat className="w-4 h-4" />
-            Produto
-          </button>
-          <button
-            onClick={() => setFichaType('preparo')}
-            style={{
-              flex: 1,
-              padding: '8px',
-              background: isFichaPreparo ? C.accent : C.bgSecondary,
-              color: isFichaPreparo ? 'white' : C.textMuted,
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-            }}
-          >
-            <Beaker className="w-4 h-4" />
-            Preparo
-          </button>
+        {/* ✅ v5: TagSelector substitui toggle binário (Mobile) */}
+        <div style={{
+          padding: '10px 16px',
+          borderBottom: `1px solid ${C.border}`,
+          flexShrink: 0,
+        }}>
+          <TagSelector
+            tags={selectedTags}
+            onChange={setSelectedTags}
+            options={TAG_OPTIONS}
+            theme={theme}
+          />
         </div>
 
         {/* Preview (Scrollable) */}
@@ -536,6 +530,27 @@ export default function FichaConversacionalDisplay({
             </div>
           )}
 
+          {/* ✅ v5: Badges de tags no preview */}
+          {selectedTags.length > 0 && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', color: C.textMuted, marginBottom: '6px' }}>Tags</div>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {selectedTags.map(tag => (
+                  <span key={tag} style={{
+                    padding: '2px 8px',
+                    background: C.accent + '33',
+                    color: C.accent,
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '500',
+                  }}>
+                    {tag.split(':')[1]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {fichaPreview.itens.length > 0 && (
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontSize: '11px', color: C.textMuted, marginBottom: '8px' }}>
@@ -551,7 +566,10 @@ export default function FichaConversacionalDisplay({
                         {item.preco_estimado && <span style={{ color: C.accent, marginLeft: '4px' }}>(estimado)</span>}
                       </div>
                     </div>
-                    <button onClick={() => removerIngrediente(item.id)} style={{ padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}>
+                    <button
+                      onClick={() => removerIngrediente(item.id)}
+                      style={{ padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -560,16 +578,41 @@ export default function FichaConversacionalDisplay({
             </div>
           )}
 
-          {!isFichaPreparo && fichaPreview.preco_venda && (
+          {selectedTags.includes('vendável:sim') && fichaPreview.preco_venda && (
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontSize: '11px', color: C.textMuted, marginBottom: '4px' }}>Preço de Venda</div>
-              <div style={{ fontSize: '13px', color: C.text, fontFamily: 'monospace' }}>R$ {fichaPreview.preco_venda.toFixed(2)}</div>
+              <div style={{ fontSize: '13px', color: C.text, fontFamily: 'monospace' }}>
+                R$ {fichaPreview.preco_venda.toFixed(2)}
+              </div>
             </div>
           )}
 
           {fichaPreview.nome && fichaPreview.itens.length > 0 && (
-            <button onClick={salvarFicha} disabled={isSaving} style={{ width: '100%', padding: '12px', background: C.success, color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
-              {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</> : <><Plus className="w-4 h-4" />Salvar Ficha</>}
+            <button
+              onClick={salvarFicha}
+              disabled={isSaving}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: C.success,
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                opacity: isSaving ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                marginTop: '16px',
+              }}
+            >
+              {isSaving
+                ? <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
+                : <><Plus className="w-4 h-4" />Salvar Ficha</>
+              }
             </button>
           )}
 
@@ -583,7 +626,12 @@ export default function FichaConversacionalDisplay({
 
         {/* Última Resposta (Fixo) */}
         {ultimaMensagemAssistente && (
-          <div style={{ padding: '12px 16px', background: C.assistantBubble, borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div style={{
+            padding: '12px 16px',
+            background: C.assistantBubble,
+            borderTop: `1px solid ${C.border}`,
+            flexShrink: 0,
+          }}>
             <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
               <MessageSquare className="w-4 h-4 mt-0.5" style={{ color: C.accent, flexShrink: 0 }} />
               <div style={{ fontSize: '13px', color: C.text, lineHeight: '1.4' }}>
@@ -633,11 +681,35 @@ export default function FichaConversacionalDisplay({
               }}
               placeholder="Digite ou toque no microfone..."
               disabled={isProcessing || voiceRecorder.isRecording || isTranscribing}
-              style={{ flex: 1, padding: '12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '22px', color: C.text, fontSize: '14px' }}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: C.bgSecondary,
+                border: `1px solid ${C.border}`,
+                borderRadius: '22px',
+                color: C.text,
+                fontSize: '14px',
+              }}
             />
 
             {inputText.trim() && (
-              <button onClick={enviarMensagem} disabled={isProcessing} style={{ width: '44px', height: '44px', borderRadius: '50%', background: C.accent, border: 'none', cursor: isProcessing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', opacity: isProcessing ? 0.5 : 1 }}>
+              <button
+                onClick={enviarMensagem}
+                disabled={isProcessing}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: C.accent,
+                  border: 'none',
+                  cursor: isProcessing ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  opacity: isProcessing ? 0.5 : 1,
+                }}
+              >
                 <Send className="w-5 h-5" />
               </button>
             )}
@@ -648,13 +720,11 @@ export default function FichaConversacionalDisplay({
               Gravando... Solte para enviar ({voiceRecorder.duration}s)
             </div>
           )}
-
           {isTranscribing && (
             <div style={{ marginTop: '8px', fontSize: '11px', color: C.accent, textAlign: 'center' }}>
               Transcrevendo áudio...
             </div>
           )}
-
           {voiceRecorder.error && (
             <div style={{ marginTop: '8px', fontSize: '11px', color: '#ef4444', textAlign: 'center' }}>
               {voiceRecorder.error}
@@ -670,13 +740,41 @@ export default function FichaConversacionalDisplay({
   // RENDER DESKTOP
   // ══════════════════════════════════════════════════════
   return createPortal(
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0, 0, 0, 0.7)', padding: '20px' }}>
-      <div style={{ width: '100%', maxWidth: '1200px', height: '90vh', background: C.bg, borderRadius: '16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'rgba(0, 0, 0, 0.7)',
+      padding: '20px',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '1200px',
+        height: '90vh',
+        background: C.bg,
+        borderRadius: '16px',
+        border: `1px solid ${C.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+
         {/* Header Desktop */}
-        <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{
+          padding: '20px',
+          borderBottom: `1px solid ${C.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {isFichaPreparo ? <Beaker className="w-6 h-6" style={{ color: C.accent }} /> : <ChefHat className="w-6 h-6" style={{ color: C.accent }} />}
+            {isFichaPreparo
+              ? <Beaker className="w-6 h-6" style={{ color: C.accent }} />
+              : <ChefHat className="w-6 h-6" style={{ color: C.accent }} />
+            }
             <div>
               <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: C.text, marginBottom: '4px' }}>
                 {isFichaPreparo ? 'Nova Ficha de Preparo' : 'Nova Ficha de Produção'}
@@ -684,44 +782,70 @@ export default function FichaConversacionalDisplay({
               <p style={{ fontSize: '13px', color: C.textMuted }}>Converse comigo para criar sua ficha</p>
             </div>
           </div>
-          
-          {/* Toggle Desktop */}
-          <div style={{ display: 'flex', gap: '8px', marginRight: '12px' }}>
-            <button onClick={() => setFichaType('produto')} style={{ padding: '8px 16px', background: !isFichaPreparo ? C.accent : C.bgSecondary, color: !isFichaPreparo ? 'white' : C.textMuted, border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ChefHat className="w-4 h-4" />Produto
-            </button>
-            <button onClick={() => setFichaType('preparo')} style={{ padding: '8px 16px', background: isFichaPreparo ? C.accent : C.bgSecondary, color: isFichaPreparo ? 'white' : C.textMuted, border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Beaker className="w-4 h-4" />Preparo
-            </button>
+
+          {/* ✅ v5: TagSelector substitui toggle binário (Desktop) */}
+          <div style={{ marginRight: '12px' }}>
+            <TagSelector
+              tags={selectedTags}
+              onChange={setSelectedTags}
+              options={TAG_OPTIONS}
+              theme={theme}
+            />
           </div>
 
-          <button onClick={onClose} style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Conteúdo - 2 colunas */}
-        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 400px', gap: '1px', background: C.border, overflow: 'hidden' }}>
-          
+        <div style={{
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: '1fr 400px',
+          gap: '1px',
+          background: C.border,
+          overflow: 'hidden',
+        }}>
+
           {/* COLUNA ESQUERDA - CHAT */}
           <div style={{ background: C.bgChat, display: 'flex', flexDirection: 'column' }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {messages.map((msg) => (
                 <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ maxWidth: '70%', padding: '12px 16px', borderRadius: '12px', background: msg.role === 'user' ? C.userBubble : C.assistantBubble, color: msg.role === 'user' ? 'white' : C.text, fontSize: '14px', lineHeight: '1.5' }}>
+                  <div style={{
+                    maxWidth: '70%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: msg.role === 'user' ? C.userBubble : C.assistantBubble,
+                    color: msg.role === 'user' ? 'white' : C.text,
+                    fontSize: '14px',
+                    lineHeight: '1.5',
+                  }}>
                     {msg.content}
                   </div>
                 </div>
               ))}
-              
+
               {isProcessing && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                  <div style={{ padding: '12px 16px', borderRadius: '12px', background: C.assistantBubble, color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: C.assistantBubble,
+                    color: C.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}>
                     <Loader2 className="w-4 h-4 animate-spin" /><span>Processando...</span>
                   </div>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -751,10 +875,48 @@ export default function FichaConversacionalDisplay({
                   </button>
                 )}
 
-                <input ref={inputRef} type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(); }}} placeholder="Digite sua mensagem ou clique no microfone..." disabled={isProcessing || voiceRecorder.isRecording || isTranscribing} style={{ flex: 1, padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '24px', color: C.text, fontSize: '14px' }} />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      enviarMensagem();
+                    }
+                  }}
+                  placeholder="Digite sua mensagem ou clique no microfone..."
+                  disabled={isProcessing || voiceRecorder.isRecording || isTranscribing}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    background: C.bgSecondary,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: '24px',
+                    color: C.text,
+                    fontSize: '14px',
+                  }}
+                />
 
                 {inputText.trim() && (
-                  <button onClick={enviarMensagem} disabled={isProcessing} style={{ width: '48px', height: '48px', borderRadius: '50%', background: C.accent, border: 'none', cursor: isProcessing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', opacity: isProcessing ? 0.5 : 1 }}>
+                  <button
+                    onClick={enviarMensagem}
+                    disabled={isProcessing}
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      background: C.accent,
+                      border: 'none',
+                      cursor: isProcessing ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      opacity: isProcessing ? 0.5 : 1,
+                    }}
+                  >
                     <Send className="w-5 h-5" />
                   </button>
                 )}
@@ -765,7 +927,6 @@ export default function FichaConversacionalDisplay({
                   Gravando... Clique novamente para enviar ({voiceRecorder.duration}s)
                 </div>
               )}
-
               {isTranscribing && (
                 <div style={{ marginTop: '8px', fontSize: '12px', color: C.accent, textAlign: 'center' }}>
                   Transcrevendo áudio...
@@ -774,36 +935,119 @@ export default function FichaConversacionalDisplay({
             </div>
           </div>
 
-          {/* COLUNA DIREITA - PREVIEW (mesmo código mobile) */}
+          {/* COLUNA DIREITA - PREVIEW */}
           <div style={{ background: C.bg, overflowY: 'auto', padding: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <ClipboardList className="w-5 h-5" style={{ color: C.accent }} />
               <h3 style={{ fontSize: '16px', fontWeight: '600', color: C.text }}>Preview da Ficha</h3>
             </div>
 
-            {fichaPreview.nome && (<div style={{ marginBottom: '16px' }}><div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Nome</div><div style={{ fontSize: '16px', fontWeight: '600', color: C.text }}>{fichaPreview.nome}</div></div>)}
-            {fichaPreview.categoria && (<div style={{ marginBottom: '16px' }}><div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Categoria</div><div style={{ fontSize: '14px', color: C.text }}>{fichaPreview.categoria}</div></div>)}
-            {fichaPreview.rendimento_qtd > 0 && (<div style={{ marginBottom: '16px' }}><div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Rendimento</div><div style={{ fontSize: '14px', color: C.text }}>{fichaPreview.rendimento_qtd} {fichaPreview.rendimento_unid}</div></div>)}
+            {fichaPreview.nome && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Nome</div>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: C.text }}>{fichaPreview.nome}</div>
+              </div>
+            )}
+
+            {fichaPreview.categoria && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Categoria</div>
+                <div style={{ fontSize: '14px', color: C.text }}>{fichaPreview.categoria}</div>
+              </div>
+            )}
+
+            {fichaPreview.rendimento_qtd > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Rendimento</div>
+                <div style={{ fontSize: '14px', color: C.text }}>
+                  {fichaPreview.rendimento_qtd} {fichaPreview.rendimento_unid}
+                </div>
+              </div>
+            )}
+
+            {/* ✅ v5: Badges de tags no preview (Desktop) */}
+            {selectedTags.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '6px' }}>Tags</div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {selectedTags.map(tag => (
+                    <span key={tag} style={{
+                      padding: '2px 8px',
+                      background: C.accent + '33',
+                      color: C.accent,
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                    }}>
+                      {tag.split(':')[1]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {fichaPreview.itens.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '8px' }}>Ingredientes ({fichaPreview.itens.length})</div>
+                <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '8px' }}>
+                  Ingredientes ({fichaPreview.itens.length})
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {fichaPreview.itens.map((item) => (
                     <div key={item.id} style={{ padding: '12px', background: C.bgSecondary, borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}><div style={{ fontSize: '14px', fontWeight: '500', color: C.text }}>{item.nome}</div><div style={{ fontSize: '12px', color: C.textMuted, marginTop: '4px' }}>{item.quantidade}{item.unidade} • R$ {item.preco_unitario?.toFixed(2)}/{item.unidade}{item.preco_estimado && <span style={{ color: C.accent, marginLeft: '4px' }}>(estimado)</span>}</div></div>
-                      <button onClick={() => removerIngrediente(item.id)} style={{ padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}><Trash2 className="w-4 h-4" /></button>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: C.text }}>{item.nome}</div>
+                        <div style={{ fontSize: '12px', color: C.textMuted, marginTop: '4px' }}>
+                          {item.quantidade}{item.unidade} • R$ {item.preco_unitario?.toFixed(2)}/{item.unidade}
+                          {item.preco_estimado && <span style={{ color: C.accent, marginLeft: '4px' }}>(estimado)</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removerIngrediente(item.id)}
+                        style={{ padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {!isFichaPreparo && fichaPreview.preco_venda && (<div style={{ marginBottom: '16px' }}><div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Preço de Venda</div><div style={{ fontSize: '14px', color: C.text, fontFamily: 'monospace' }}>R$ {fichaPreview.preco_venda.toFixed(2)}</div></div>)}
+            {selectedTags.includes('vendável:sim') && fichaPreview.preco_venda && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>Preço de Venda</div>
+                <div style={{ fontSize: '14px', color: C.text, fontFamily: 'monospace' }}>
+                  R$ {fichaPreview.preco_venda.toFixed(2)}
+                </div>
+              </div>
+            )}
 
             {fichaPreview.nome && fichaPreview.itens.length > 0 && (
-              <button onClick={salvarFicha} disabled={isSaving} style={{ width: '100%', padding: '12px', background: C.success, color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
-                {isSaving ? <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</> : <><Plus className="w-4 h-4" />Salvar Ficha</>}
+              <button
+                onClick={salvarFicha}
+                disabled={isSaving}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: C.success,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginTop: '20px',
+                }}
+              >
+                {isSaving
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
+                  : <><Plus className="w-4 h-4" />Salvar Ficha</>
+                }
               </button>
             )}
 

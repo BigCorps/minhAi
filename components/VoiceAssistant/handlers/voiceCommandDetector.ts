@@ -342,6 +342,19 @@ if (barcodeTriggers.some(t => lowerTranscript.includes(t))) {
   return true;
 }
 
+const pararMusicaTriggers = [
+  'parar musica', 'parar música',
+  'pausa musica', 'pausa música',
+  'para musica', 'para música',
+  'silencio', 'silêncio',
+  'fechar musica', 'fechar música',
+];
+if (pararMusicaTriggers.some(t => lowerTranscript.includes(t))) {
+  setActiveModal(null);
+  await playText('Música pausada.');
+  return true;
+}
+
 const tocarMusicaTriggers = [
   'tocar musica', 'tocar música',
   'ouvir musica', 'ouvir música',

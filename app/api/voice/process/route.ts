@@ -394,7 +394,7 @@ Pergunta: ${userMessage}`;
       const errorAudio = await synthesizeSpeech({
         text: 'Desculpe, ocorreu um erro.',
         voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-        speakingRate: 1.0,
+        speakingRate: 1.5,
         audioEncoding: 'MP3',
       });
       

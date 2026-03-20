@@ -282,7 +282,7 @@ export default function ProducaoCompanyClient({
             { label: 'Guias Ativas',   value: stats.ativas,      color: 'text-green-600 dark:text-green-400' },
             { label: 'Com Custo',      value: stats.comCusto,    color: 'text-blue-600 dark:text-blue-400' },
           ].map(s => (
-            <div key={s.label} className="rounded-xl p-5 bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm">
+            <div key={s.label} className="rounded-xl p-5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 shadow-sm">
               <p className="text-sm text-gray-500 dark:text-white/50 mb-1">{s.label}</p>
               <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
             </div>
@@ -413,7 +413,7 @@ export default function ProducaoCompanyClient({
             </div>
 
             {/* Lista de fichas */}
-            <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 shadow-sm overflow-hidden">
               {fichasFiltradas.length === 0 ? (
                 <div className="py-16 text-center">
                   <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
@@ -435,7 +435,7 @@ export default function ProducaoCompanyClient({
                     <div key={ficha.id}>
 
                       {/* Linha principal */}
-                      <div className="px-6 py-4 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                      <div className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                         <div className="flex items-center gap-4">
 
                           {/* Nome + status + tags */}
@@ -590,7 +590,7 @@ export default function ProducaoCompanyClient({
 
                       {/* Expandido */}
                       {expandedId === ficha.id && (
-                        <div className="px-6 pb-4 bg-gray-50/80 dark:bg-white/3">
+                        <div className="px-6 pb-4 bg-gray-50 dark:bg-slate-900">
 
                           {ficha.is_ficha_preparo && (
                             <div className="mb-4 mt-3">
@@ -610,7 +610,7 @@ export default function ProducaoCompanyClient({
                                 {ficha.producao_ingredientes.map(ing => (
                                   <div
                                     key={ing.id}
-                                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white"
+                                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-700 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white"
                                   >
                                     <div className="flex items-center gap-2">
                                       {ing.custo_estimado && (

@@ -47,6 +47,7 @@ export default function ProducaoCompanyPage() {
         tags: ficha.tags ?? [],
         rendimento: ficha.rendimento_qtd,
         unidade_rendimento: ficha.rendimento_unid,
+        preco_venda: ficha.preco_venda ?? null,
         // ✅ Fix: preco_venda_sugerido é calculado pelo banco; preco_venda é o preço manual
         preco_venda_sugerido: ficha.preco_venda_sugerido ?? ficha.preco_venda,
         custo_total: ficha.custo_total ?? null,

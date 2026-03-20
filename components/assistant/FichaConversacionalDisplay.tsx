@@ -425,7 +425,13 @@ export default function FichaConversacionalDisplay({
       if (fichaError) throw fichaError;
 
       // ✅ v6: Criar ingredientes novos COM conversão de unidade correta
-      const ingredientesNovos = fichaPreview.itens.filter(item => item.preco_estimado);
+      const ingredientesNovos = fichaPreview.itens.filter(item => item.preco_estimado).map(item => ({
+        ...item,
+        // Se nome for genérico, tentar inferir pela unidade
+        nome: (!item.nome || item.nome.toLowerCase() === 'ingrediente')
+          ? (item.unidade === 'L' || item.unidade === 'ml' ? 'Água' : 'Ingrediente sem nome')
+          : item.nome,
+      }));
 
       for (const item of ingredientesNovos) {
         const { data: existente } = await supabase

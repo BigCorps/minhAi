@@ -512,6 +512,7 @@ const { error: ingError } = await supabase
           return {
             ficha_id: fichaData.id,
             ingrediente_id: ing?.id || null,
+            ingrediente_nome_temp: item.nome,
             quantidade: item.quantidade,
             unidade: item.unidade,
             perda_percentual: item.perda_percentual || 0,

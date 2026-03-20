@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Loader2, Plus, Trash2, Search, AlertCircle } from 'lucide-react';
+import { ProducaoTag } from '@/lib/types/producao'; // ✅ v2
+import TagSelector from '@/components/producao/TagSelector'; // ✅ v2
 
 type TipoIngrediente = 'direto' | 'beneficiado' | 'produzido';
 
@@ -13,6 +15,7 @@ interface Ingrediente {
   unidade: string;
   categoria?: string;
   tipo: TipoIngrediente;
+  tags: ProducaoTag[]; // ✅ v2
   fichas_usando?: number;
 }
 
@@ -45,6 +48,40 @@ function TipoBadge({ tipo }: { tipo: TipoIngrediente }) {
   );
 }
 
+// ✅ v2: Badge individual de tag
+function TagBadge({ tag }: { tag: ProducaoTag }) {
+  const group = tag.split(':')[0];
+  const colorMap: Record<string, { bg: string; color: string }> = {
+    origem:   { bg: 'rgba(22,163,74,0.12)',   color: '#16a34a' },
+    função:   { bg: 'rgba(37,99,235,0.12)',   color: '#2563eb' },
+    vendável: { bg: 'rgba(234,179,8,0.12)',   color: '#b45309' },
+  };
+  const c = colorMap[group] ?? { bg: 'rgba(100,116,139,0.1)', color: '#64748b' };
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 6px',
+      background: c.bg,
+      color: c.color,
+      borderRadius: '4px',
+      fontSize: '10px',
+      fontWeight: '600',
+      letterSpacing: '0.02em',
+      whiteSpace: 'nowrap',
+    }}>
+      {tag.split(':')[1]}
+    </span>
+  );
+}
+
+// ✅ v2: Opções de filtro por tag para ingredientes
+const FILTRO_TAG_OPTIONS_ING = [
+  { tag: 'origem:comprado'   as ProducaoTag, label: 'Comprado',   icon: Search, group: 'origem' as const },
+  { tag: 'origem:produzido'  as ProducaoTag, label: 'Produzido',  icon: Search, group: 'origem' as const },
+  { tag: 'origem:beneficiado'as ProducaoTag, label: 'Beneficiado',icon: Search, group: 'origem' as const },
+  { tag: 'função:insumo'     as ProducaoTag, label: 'Insumo',     icon: Search, group: 'função' as const },
+];
+
 export default function IngredientesClient({ companyId, theme = 'dark' }: IngredientesClientProps) {
   const isDark = theme === 'dark';
   const supabase = createClient();
@@ -53,6 +90,7 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<TipoIngrediente | 'todos'>('todos');
+  const [filtroTags, setFiltroTags] = useState<ProducaoTag[]>([]); // ✅ v2
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -84,7 +122,7 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
 
       const { data: ings, error } = await supabase
         .from('producao_ingredientes')
-        .select('id, nome, preco_por_unidade, unidade, categoria, tipo')
+        .select('id, nome, preco_por_unidade, unidade, categoria, tipo, tags') // ✅ v2: inclui tags
         .eq('company_id', companyId)
         .order('nome');
 
@@ -96,7 +134,12 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
             .from('producao_ficha_itens')
             .select('id', { count: 'exact', head: true })
             .eq('ingrediente_id', ing.id);
-          return { ...ing, tipo: (ing.tipo ?? 'direto') as TipoIngrediente, fichas_usando: count || 0 };
+          return {
+            ...ing,
+            tipo: (ing.tipo ?? 'direto') as TipoIngrediente,
+            tags: (ing.tags ?? []) as ProducaoTag[], // ✅ v2: fallback para array vazio
+            fichas_usando: count || 0,
+          };
         })
       );
 
@@ -185,6 +228,8 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
           preco_por_unidade: preco,
           unidade: novoIngrediente.unidade,
           tipo: novoIngrediente.tipo,
+          // ✅ v2: trigger do banco auto-preenche tags com base no tipo,
+          // mas não precisamos enviar aqui — o trigger cuida disso
         });
       if (error) throw error;
 
@@ -219,15 +264,19 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
   const ingredientesFiltrados = ingredientes.filter(ing => {
     const matchNome = ing.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchTipo = filtroTipo === 'todos' || ing.tipo === filtroTipo;
-    return matchNome && matchTipo;
+    // ✅ v2: filtro de tags combinado
+    const matchTags =
+      filtroTags.length === 0 ||
+      filtroTags.every(tag => (ing.tags ?? []).includes(tag));
+    return matchNome && matchTipo && matchTags;
   });
 
   // ── Contadores por tipo ───────────────────────────────────────────────────────
   const contadores = {
-    todos:      ingredientes.length,
-    direto:     ingredientes.filter(i => i.tipo === 'direto').length,
-    beneficiado:ingredientes.filter(i => i.tipo === 'beneficiado').length,
-    produzido:  ingredientes.filter(i => i.tipo === 'produzido').length,
+    todos:       ingredientes.length,
+    direto:      ingredientes.filter(i => i.tipo === 'direto').length,
+    beneficiado: ingredientes.filter(i => i.tipo === 'beneficiado').length,
+    produzido:   ingredientes.filter(i => i.tipo === 'produzido').length,
   };
 
   if (loading) {
@@ -239,7 +288,6 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
     );
   }
 
-  // ── Estilos compartilhados ────────────────────────────────────────────────────
   const selectStyle: React.CSSProperties = {
     padding: '6px 10px',
     background: C.bgSecondary,
@@ -308,12 +356,29 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
             Novo Ingrediente
           </button>
         </div>
+
+        {/* ✅ v2: Linha 3 — filtro por tags */}
+        <div>
+          <TagSelector
+            tags={filtroTags}
+            onChange={setFiltroTags}
+            options={FILTRO_TAG_OPTIONS_ING}
+            theme={theme}
+          />
+          {filtroTags.length > 0 && (
+            <button
+              onClick={() => setFiltroTags([])}
+              className="mt-2 text-xs text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
+            >
+              Limpar filtros de tag
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Formulário de adicionar */}
       {showAddForm && (
         <div className="rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 mb-4">
-          {/* Mobile: empilhado / Desktop: grid */}
           <div className="flex flex-col sm:grid sm:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-end">
             <div>
               <label className="block mb-1.5 text-xs text-gray-500 dark:text-white/50">Nome</label>
@@ -378,22 +443,35 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
         <div className="py-16 text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
           <p className="text-gray-500 dark:text-white/40 font-medium">
-            {searchTerm || filtroTipo !== 'todos' ? 'Nenhum ingrediente encontrado' : 'Nenhum ingrediente cadastrado'}
+            {searchTerm || filtroTipo !== 'todos' || filtroTags.length > 0
+              ? 'Nenhum ingrediente encontrado'
+              : 'Nenhum ingrediente cadastrado'}
           </p>
           <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-            {!searchTerm && filtroTipo === 'todos' && 'Adicione ingredientes para começar a criar fichas de produção'}
+            {filtroTags.length > 0
+              ? 'Tente remover alguns filtros de tag'
+              : !searchTerm && filtroTipo === 'todos'
+                ? 'Adicione ingredientes para começar a criar fichas de produção'
+                : ''
+            }
           </p>
         </div>
       ) : (
         <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 
-          {/* Header da tabela — só desktop */}
-          <div className="hidden sm:grid sm:grid-cols-[2fr_1fr_80px_130px_120px_60px] gap-3 px-4 py-3 border-b border-gray-100 dark:border-white/10 text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wider"
-            style={{ background: C.bgSecondary }}>
+          {/* ✅ v2: cabeçalho desktop agora tem coluna Tags */}
+          <div
+            className="hidden sm:grid gap-3 px-4 py-3 border-b border-gray-100 dark:border-white/10 text-xs font-semibold text-gray-400 dark:text-white/40 uppercase tracking-wider"
+            style={{
+              background: C.bgSecondary,
+              gridTemplateColumns: '2fr 1fr 80px 130px 140px 120px 60px',
+            }}
+          >
             <div>Ingrediente</div>
             <div>Preço</div>
             <div>Unidade</div>
             <div>Tipo</div>
+            <div>Tags</div>
             <div>Fichas</div>
             <div></div>
           </div>
@@ -409,8 +487,11 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                   className="transition-colors"
                   style={{ background: isUpdating ? 'rgba(34,197,94,0.08)' : 'transparent', transition: 'background 0.3s ease' }}
                 >
-                  {/* Desktop: grid de uma linha */}
-                  <div className="hidden sm:grid sm:grid-cols-[2fr_1fr_80px_130px_120px_60px] gap-3 px-4 py-3.5 items-center">
+                  {/* Desktop */}
+                  <div
+                    className="hidden sm:grid gap-3 px-4 py-3.5 items-center"
+                    style={{ gridTemplateColumns: '2fr 1fr 80px 130px 140px 120px 60px' }}
+                  >
                     <div className="text-sm font-medium text-gray-900 dark:text-white">{ing.nome}</div>
 
                     <div>
@@ -446,12 +527,24 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                       {ing.tipo === 'produzido' ? (
                         <TipoBadge tipo={ing.tipo} />
                       ) : (
-                        <select value={ing.tipo} onChange={(e) => salvarTipo(ing.id, e.target.value as TipoIngrediente)} style={selectStyle}>
+                        <select
+                          value={ing.tipo}
+                          onChange={(e) => salvarTipo(ing.id, e.target.value as TipoIngrediente)}
+                          style={selectStyle}
+                        >
                           <option value="direto">Direto</option>
                           <option value="beneficiado">Beneficiado</option>
                           <option value="produzido">Produzido</option>
                         </select>
                       )}
+                    </div>
+
+                    {/* ✅ v2: Coluna Tags — desktop */}
+                    <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                      {(ing.tags ?? []).length > 0
+                        ? (ing.tags ?? []).map(tag => <TagBadge key={tag} tag={tag} />)
+                        : <span style={{ fontSize: '11px', color: C.textMuted }}>—</span>
+                      }
                     </div>
 
                     <div>
@@ -486,6 +579,8 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                         <span className="font-semibold text-gray-900 dark:text-white text-sm">{ing.nome}</span>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <TipoBadge tipo={ing.tipo} />
+                          {/* ✅ v2: Tags no card mobile */}
+                          {(ing.tags ?? []).map(tag => <TagBadge key={tag} tag={tag} />)}
                           {(ing.fichas_usando ?? 0) > 0 && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.1)', color: C.accent }}>
                               {ing.fichas_usando} {ing.fichas_usando === 1 ? 'ficha' : 'fichas'}
@@ -503,7 +598,6 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                     </div>
 
                     <div className="flex items-center gap-3 mt-2">
-                      {/* Preço editável mobile */}
                       <div className="flex-1">
                         {isEditing ? (
                           <input
@@ -532,7 +626,6 @@ export default function IngredientesClient({ companyId, theme = 'dark' }: Ingred
                         )}
                       </div>
 
-                      {/* Tipo select mobile (apenas não-produzido) */}
                       {ing.tipo !== 'produzido' && (
                         <select
                           value={ing.tipo}

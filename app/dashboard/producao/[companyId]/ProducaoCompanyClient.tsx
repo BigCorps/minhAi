@@ -495,30 +495,33 @@ export default function ProducaoCompanyClient({
                             </p>
                           </div>
 
-                          {/* Custo e margem */}
-                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[110px]">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {formatCusto(ficha.custo_total)}
-                            </span>
-                            {ficha.is_ficha_preparo ? (
-                              ficha.custo_total !== null && ficha.rendimento > 0 && (
-                                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                                  {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
-                                </span>
-                              )
-                            ) : (
-                              <>
-                                <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
-                                  Margem: {formatMargem(ficha.margem_lucro)}
-                                </span>
-                                {ficha.preco_venda_sugerido && (
-                                  <span className="text-xs text-blue-600 dark:text-blue-400">
-                                    Venda: {formatCusto(ficha.preco_venda_sugerido)}
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </div>
+{/* Custo e margem */}
+<div className="hidden sm:flex flex-col items-end gap-1 min-w-[110px]">
+  {ficha.is_ficha_preparo ? (
+    <>
+      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+        {formatCusto(ficha.custo_total)}
+      </span>
+      {ficha.custo_total !== null && ficha.rendimento > 0 && (
+        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+          {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
+        </span>
+      )}
+    </>
+  ) : (
+    <>
+      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+        {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
+      </span>
+      <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
+        Margem: {formatMargem(ficha.margem_lucro)}
+      </span>
+      <span className="text-xs text-gray-400 dark:text-white/40">
+        Custo: {formatCusto(ficha.custo_total)}
+      </span>
+    </>
+  )}
+</div>
 
                           {/* Ações */}
                           <div className="flex items-center gap-1">
@@ -562,31 +565,33 @@ export default function ProducaoCompanyClient({
                           </div>
                         </div>
 
-                        {/* Custo mobile */}
-                        <div className="sm:hidden mt-2 flex items-center gap-4 text-xs">
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            Custo: {formatCusto(ficha.custo_total)}
-                          </span>
-                          {ficha.is_ficha_preparo ? (
-                            ficha.custo_total !== null && ficha.rendimento > 0 && (
-                              <span className="text-blue-600 dark:text-blue-400">
-                                {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
-                              </span>
-                            )
-                          ) : (
-                            <>
-                              <span className={getMargemColor(ficha.margem_lucro)}>
-                                Margem: {formatMargem(ficha.margem_lucro)}
-                              </span>
-                              {ficha.preco_venda_sugerido && (
-                                <span className="text-blue-600 dark:text-blue-400">
-                                  Venda: {formatCusto(ficha.preco_venda_sugerido)}
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
+{/* Custo mobile */}
+<div className="sm:hidden mt-2 flex items-center gap-4 text-xs">
+  {ficha.is_ficha_preparo ? (
+    <>
+      <span className="font-semibold text-gray-900 dark:text-white">
+        Custo: {formatCusto(ficha.custo_total)}
+      </span>
+      {ficha.custo_total !== null && ficha.rendimento > 0 && (
+        <span className="text-blue-600 dark:text-blue-400">
+          {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
+        </span>
+      )}
+    </>
+  ) : (
+    <>
+      <span className="font-semibold text-gray-900 dark:text-white">
+        {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
+      </span>
+      <span className={getMargemColor(ficha.margem_lucro)}>
+        Margem: {formatMargem(ficha.margem_lucro)}
+      </span>
+      <span className="text-gray-400 dark:text-white/40">
+        Custo: {formatCusto(ficha.custo_total)}
+      </span>
+    </>
+  )}
+</div>
 
                       {/* Expandido */}
                       {expandedId === ficha.id && (

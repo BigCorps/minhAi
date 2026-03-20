@@ -1,14 +1,14 @@
 // =========================================================
-// FASE H - CONVERSAÇÃO IA FULL (v6 - Correções)
+// FASE H - CONVERSAÇÃO IA FULL (v7 - Fix foco + mute)
 // Arquivo: components/assistant/FichaConversacionalDisplay.tsx
 // =========================================================
 // ✅ v5: selectedTags, TagSelector, compatibilidade tags
-// ✅ v6: playTextSafe (fila anti-duplicação)
-//        audioMutado (botão mutar mobile + desktop)
-//        Comando "salvar" por voz automático
-//        Scroll mobile: lista completa ao invés de última mensagem
-//        minHeight: 0 no scroll desktop
-//        Fix custo zerado: conversão g→kg / ml→L + validação de preços
+// ✅ v6: playTextSafe (fila anti-duplicação), audioMutado,
+//        comando salvar por voz, scroll, fix custo zerado
+// ✅ v7: InputArea removido como inner component (causava
+//        perda de foco a cada keystroke por remount do input)
+//        audioMutadoRef para mute funcionar em callbacks
+//        playTextComMute garante que prop playText tbm respeita mute
 // =========================================================
 
 'use client';
@@ -119,6 +119,16 @@ export default function FichaConversacionalDisplay({
   const [isSaving, setIsSaving] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [audioMutado, setAudioMutado] = useState(false); // ✅ v6
+  // ✅ v7: ref espelha o state para callbacks sempre terem o valor atual
+  const audioMutadoRef = useRef(false);
+
+  const toggleMute = useCallback(() => {
+    setAudioMutado(prev => {
+      audioMutadoRef.current = !prev;
+      return !prev;
+    });
+  }, []);
+
   const [fichaPreview, setFichaPreview] = useState<FichaPreview>({
     nome: '',
     categoria: '',
@@ -150,9 +160,17 @@ export default function FichaConversacionalDisplay({
     assistantBubble: isDark ? '#334155' : '#e2e8f0',
   };
 
-  // ✅ v6: playTextSafe — fila, anti-duplicação, respeita mute
+  // ✅ v7: playTextComMute — wrapper da prop playText que respeita o mute via ref
+  // Necessário porque o playText (Google TTS) é externo e não sabe do audioMutado
+  const playTextComMute = useCallback(async (text: string) => {
+    if (audioMutadoRef.current) return;
+    return playText(text);
+  }, [playText]);
+
+  // ✅ v6/v7: playTextSafe — fila anti-duplicação, usa playTextComMute internamente
+  // Usa audioMutadoRef.current (ref) em vez de audioMutado (state) para evitar stale closure
   const playTextSafe = useCallback(async (text: string) => {
-    if (audioMutado) return;
+    if (audioMutadoRef.current) return;
 
     audioQueueRef.current.push(text);
     if (isPlayingRef.current) return;
@@ -162,7 +180,7 @@ export default function FichaConversacionalDisplay({
       const next = audioQueueRef.current.shift();
       if (next) {
         try {
-          await playText(next);
+          await playTextComMute(next);
           await new Promise(resolve => setTimeout(resolve, 300));
         } catch (err) {
           console.error('Erro ao falar:', err);
@@ -170,7 +188,7 @@ export default function FichaConversacionalDisplay({
       }
     }
     isPlayingRef.current = false;
-  }, [playText, audioMutado]);
+  }, [playTextComMute]);
 
   // ══════════════════════════════════════════════════════
   // MENSAGEM INICIAL
@@ -520,7 +538,7 @@ export default function FichaConversacionalDisplay({
   // ── Botão Mutar reutilizável ──────────────────────────────────────────────
   const BotaoMutar = () => (
     <button
-      onClick={() => setAudioMutado(m => !m)}
+      onClick={toggleMute}
       title={audioMutado ? 'Ativar áudio' : 'Desativar áudio'}
       style={{
         padding: '8px',
@@ -665,101 +683,10 @@ export default function FichaConversacionalDisplay({
     </>
   );
 
-  // ── Input Area reutilizável ───────────────────────────────────────────────
-  const InputArea = ({ mobile = false }: { mobile?: boolean }) => (
-    <div style={{
-      padding: mobile ? '12px 16px' : '16px',
-      borderTop: `1px solid ${C.border}`,
-      background: C.bg,
-      flexShrink: 0,
-    }}>
-      <div style={{ display: 'flex', gap: mobile ? '8px' : '12px', alignItems: 'center' }}>
-        {!inputText.trim() && (
-          <button
-            onTouchStart={mobile ? handleMicPress : undefined}
-            onMouseDown={mobile ? handleMicPress : undefined}
-            onClick={!mobile ? handleMicPress : undefined}
-            disabled={isProcessing || isTranscribing}
-            style={{
-              width: mobile ? '44px' : '48px',
-              height: mobile ? '44px' : '48px',
-              borderRadius: '50%',
-              background: voiceRecorder.isRecording ? '#ef4444' : C.accent,
-              border: 'none',
-              cursor: (isProcessing || isTranscribing) ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              transition: 'all 0.1s ease',
-              transform: voiceRecorder.isRecording ? 'scale(1.1)' : 'scale(1)',
-            }}
-          >
-            <Mic className={`w-5 h-5 ${voiceRecorder.isRecording ? 'animate-pulse' : ''}`} />
-          </button>
-        )}
-
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(); }
-          }}
-          placeholder={mobile ? 'Digite ou toque no microfone...' : 'Digite sua mensagem ou clique no microfone...'}
-          disabled={isProcessing || voiceRecorder.isRecording || isTranscribing}
-          style={{
-            flex: 1,
-            padding: mobile ? '12px' : '12px 16px',
-            background: C.bgSecondary,
-            border: `1px solid ${C.border}`,
-            borderRadius: mobile ? '22px' : '24px',
-            color: C.text,
-            fontSize: '14px',
-          }}
-        />
-
-        {inputText.trim() && (
-          <button
-            onClick={enviarMensagem}
-            disabled={isProcessing}
-            style={{
-              width: mobile ? '44px' : '48px',
-              height: mobile ? '44px' : '48px',
-              borderRadius: '50%',
-              background: C.accent,
-              border: 'none',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              opacity: isProcessing ? 0.5 : 1,
-            }}
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-
-      {voiceRecorder.isRecording && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: '#ef4444', textAlign: 'center' }}>
-          Gravando... {mobile ? 'Solte' : 'Clique novamente'} para enviar ({voiceRecorder.duration}s)
-        </div>
-      )}
-      {isTranscribing && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: C.accent, textAlign: 'center' }}>
-          Transcrevendo áudio...
-        </div>
-      )}
-      {voiceRecorder.error && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: '#ef4444', textAlign: 'center' }}>
-          {voiceRecorder.error}
-        </div>
-      )}
-    </div>
-  );
+  // ── Input area: JSX inlined diretamente nos renders (mobile e desktop)
+  // ✅ v7: NÃO definir como inner component aqui — causaria remount do <input>
+  //        a cada keystroke (inputText muda → pai re-renderiza → novo componente
+  //        → React desmonta/remonta o input → foco perdido)
 
   // ══════════════════════════════════════════════════════
   // RENDER MOBILE
@@ -873,7 +800,55 @@ export default function FichaConversacionalDisplay({
           <FichaPreviewContent />
         </div>
 
-        <InputArea mobile />
+        {/* ✅ v7: Input inlined diretamente — NÃO extrair como inner component */}
+        <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {!inputText.trim() && (
+              <button
+                onTouchStart={handleMicPress}
+                onMouseDown={handleMicPress}
+                disabled={isProcessing || isTranscribing}
+                style={{
+                  width: '44px', height: '44px', borderRadius: '50%',
+                  background: voiceRecorder.isRecording ? '#ef4444' : C.accent,
+                  border: 'none', cursor: (isProcessing || isTranscribing) ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'white', transition: 'all 0.1s ease',
+                  transform: voiceRecorder.isRecording ? 'scale(1.1)' : 'scale(1)',
+                }}
+              >
+                <Mic className={`w-5 h-5 ${voiceRecorder.isRecording ? 'animate-pulse' : ''}`} />
+              </button>
+            )}
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(); } }}
+              placeholder="Digite ou toque no microfone..."
+              disabled={isProcessing || voiceRecorder.isRecording || isTranscribing}
+              style={{ flex: 1, padding: '12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '22px', color: C.text, fontSize: '14px' }}
+            />
+            {inputText.trim() && (
+              <button onClick={enviarMensagem} disabled={isProcessing}
+                style={{ width: '44px', height: '44px', borderRadius: '50%', background: C.accent, border: 'none', cursor: isProcessing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', opacity: isProcessing ? 0.5 : 1 }}>
+                <Send className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          {voiceRecorder.isRecording && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#ef4444', textAlign: 'center' }}>
+              Gravando... Solte para enviar ({voiceRecorder.duration}s)
+            </div>
+          )}
+          {isTranscribing && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: C.accent, textAlign: 'center' }}>Transcrevendo áudio...</div>
+          )}
+          {voiceRecorder.error && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#ef4444', textAlign: 'center' }}>{voiceRecorder.error}</div>
+          )}
+        </div>
       </div>,
       document.body
     );
@@ -1002,7 +977,54 @@ export default function FichaConversacionalDisplay({
               <div ref={messagesEndRef} />
             </div>
 
-            <InputArea />
+            {/* ✅ v7: Input inlined diretamente — NÃO extrair como inner component */}
+            <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                {!inputText.trim() && (
+                  <button
+                    onClick={handleMicPress}
+                    disabled={isProcessing || isTranscribing}
+                    style={{
+                      width: '48px', height: '48px', borderRadius: '50%',
+                      background: voiceRecorder.isRecording ? '#ef4444' : C.accent,
+                      border: 'none', cursor: (isProcessing || isTranscribing) ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'white', transition: 'all 0.1s ease',
+                      transform: voiceRecorder.isRecording ? 'scale(1.1)' : 'scale(1)',
+                    }}
+                  >
+                    <Mic className={`w-5 h-5 ${voiceRecorder.isRecording ? 'animate-pulse' : ''}`} />
+                  </button>
+                )}
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(); } }}
+                  placeholder="Digite sua mensagem ou clique no microfone..."
+                  disabled={isProcessing || voiceRecorder.isRecording || isTranscribing}
+                  style={{ flex: 1, padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '24px', color: C.text, fontSize: '14px' }}
+                />
+                {inputText.trim() && (
+                  <button onClick={enviarMensagem} disabled={isProcessing}
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', background: C.accent, border: 'none', cursor: isProcessing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', opacity: isProcessing ? 0.5 : 1 }}>
+                    <Send className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+              {voiceRecorder.isRecording && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#ef4444', textAlign: 'center' }}>
+                  Gravando... Clique novamente para enviar ({voiceRecorder.duration}s)
+                </div>
+              )}
+              {isTranscribing && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: C.accent, textAlign: 'center' }}>Transcrevendo áudio...</div>
+              )}
+              {voiceRecorder.error && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#ef4444', textAlign: 'center' }}>{voiceRecorder.error}</div>
+              )}
+            </div>
           </div>
 
           {/* COLUNA DIREITA — PREVIEW */}

@@ -491,7 +491,7 @@ const itensParaInserir = await Promise.all(
       quantidade: item.quantidade,
       unidade: item.unidade,
       perda_percentual: item.perda_percentual || 0,
-      preco_temp: ing ? null : item.preco_unitario,
+      preco_temp: ing ? null : Math.max(item.preco_unitario || 0, 0.001),
     };
   })
 );

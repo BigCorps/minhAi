@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardList, RefreshCw, Trash2, ChevronDown, ChevronUp, Pencil, Check, X as XIcon } from 'lucide-react';
 import { usePlayText } from '@/hooks/usePlayText';
 import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
 import IngredientesClient from '@/components/dashboard/producao/IngredientesClient';
@@ -46,19 +46,17 @@ interface ProducaoCompanyClientProps {
 function getTagColor(tag: ProducaoTag): { bg: string; text: string } {
   if (tag.startsWith('função:')) {
     const map: Record<string, { bg: string; text: string }> = {
-      'função:produto':    { bg: 'rgba(37,99,235,0.15)',   text: '#2563eb' },
-      'função:preparo':    { bg: 'rgba(124,58,237,0.15)',  text: '#7c3aed' },
-      'função:combo':      { bg: 'rgba(234,88,12,0.15)',   text: '#ea580c' },
-      'função:insumo':     { bg: 'rgba(71,85,105,0.15)',   text: '#475569' },
+      'função:produto': { bg: 'rgba(37,99,235,0.15)',  text: '#2563eb' },
+      'função:preparo': { bg: 'rgba(124,58,237,0.15)', text: '#7c3aed' },
+      'função:combo':   { bg: 'rgba(234,88,12,0.15)',  text: '#ea580c' },
+      'função:insumo':  { bg: 'rgba(71,85,105,0.15)',  text: '#475569' },
     };
     return map[tag] ?? { bg: 'rgba(37,99,235,0.1)', text: '#2563eb' };
   }
-  if (tag.startsWith('origem:')) {
-    return { bg: 'rgba(22,163,74,0.12)', text: '#16a34a' };
-  }
+  if (tag.startsWith('origem:')) return { bg: 'rgba(22,163,74,0.12)', text: '#16a34a' };
   if (tag.startsWith('vendável:')) {
     return tag === 'vendável:sim'
-      ? { bg: 'rgba(234,179,8,0.15)',  text: '#b45309' }
+      ? { bg: 'rgba(234,179,8,0.15)',   text: '#b45309' }
       : { bg: 'rgba(100,116,139,0.15)', text: '#64748b' };
   }
   return { bg: 'rgba(100,116,139,0.1)', text: '#64748b' };
@@ -75,11 +73,7 @@ const FILTRO_TAG_OPTIONS = [
 
 function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boolean }) {
   const supabase = createClient();
-  const [ingrediente, setIngrediente] = useState<{
-    nome: string;
-    preco_por_unidade: number;
-    unidade: string;
-  } | null>(null);
+  const [ingrediente, setIngrediente] = useState<{ nome: string; preco_por_unidade: number; unidade: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,45 +83,26 @@ function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boole
       .eq('ficha_id', fichaId)
       .eq('tipo', 'produzido')
       .maybeSingle()
-      .then(({ data }) => {
-        setIngrediente(data);
-        setLoading(false);
-      });
+      .then(({ data }) => { setIngrediente(data); setLoading(false); });
   }, [fichaId]);
 
-  if (loading) return (
-    <p className="text-xs text-gray-400 dark:text-white/30 py-1">Carregando ingrediente...</p>
-  );
-  if (!ingrediente) return (
-    <p className="text-xs text-gray-400 dark:text-white/30 py-1">Ingrediente ainda não gerado.</p>
-  );
+  if (loading) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Carregando ingrediente...</p>;
+  if (!ingrediente) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Ingrediente ainda não gerado.</p>;
 
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '10px 12px',
+      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
       background: isDark ? 'rgba(37,99,235,0.1)' : 'rgba(37,99,235,0.05)',
       border: `1px solid ${isDark ? 'rgba(37,99,235,0.25)' : 'rgba(37,99,235,0.15)'}`,
       borderRadius: 8,
     }}>
       <div style={{ flex: 1 }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#2563eb' }}>
-          {ingrediente.nome}
-        </p>
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#2563eb' }}>{ingrediente.nome}</p>
         <p style={{ margin: 0, fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', marginTop: 2 }}>
           R$ {ingrediente.preco_por_unidade.toFixed(2).replace('.', ',')}/{ingrediente.unidade}
         </p>
       </div>
-      <span style={{
-        padding: '4px 8px',
-        background: 'rgba(37,99,235,0.2)',
-        color: '#2563eb',
-        borderRadius: 12,
-        fontSize: 11,
-        fontWeight: 600,
-      }}>
+      <span style={{ padding: '4px 8px', background: 'rgba(37,99,235,0.2)', color: '#2563eb', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
         PRODUZIDO
       </span>
     </div>
@@ -157,6 +132,14 @@ export default function ProducaoCompanyClient({
   const { selectedAssistantId } = useAssistant();
   const router = useRouter();
 
+  // ── Estado de edição inline ──────────────────────────────────────
+  // Edição de preço de venda por ficha
+  const [editandoPreco, setEditandoPreco] = useState<string | null>(null);
+  const [precoEditando, setPrecoEditando] = useState<string>('');
+  // Edição de custo de ingrediente por item
+  const [editandoIngrediente, setEditandoIngrediente] = useState<string | null>(null);
+  const [custoEditando, setCustoEditando] = useState<string>('');
+
   useEffect(() => {
     if (selectedAssistantId && selectedAssistantId !== company.id) {
       router.replace(`/dashboard/producao/${selectedAssistantId}`);
@@ -176,11 +159,7 @@ export default function ProducaoCompanyClient({
 
   async function handleToggleAtivo(fichaId: string, current: boolean) {
     setLoadingId(fichaId);
-    const { error } = await supabase
-      .from('producao_fichas')
-      .update({ is_active: !current })
-      .eq('id', fichaId);
-
+    const { error } = await supabase.from('producao_fichas').update({ is_active: !current }).eq('id', fichaId);
     if (!error) {
       const updated = fichas.map(f => f.id === fichaId ? { ...f, is_active: !current } : f);
       setFichas(updated);
@@ -196,11 +175,7 @@ export default function ProducaoCompanyClient({
   async function handleDelete(fichaId: string) {
     if (!confirm('Tem certeza que deseja excluir esta ficha? Esta ação não pode ser desfeita.')) return;
     setLoadingId(fichaId);
-    const { error } = await supabase
-      .from('producao_fichas')
-      .delete()
-      .eq('id', fichaId);
-
+    const { error } = await supabase.from('producao_fichas').delete().eq('id', fichaId);
     if (!error) {
       const updated = fichas.filter(f => f.id !== fichaId);
       setFichas(updated);
@@ -213,6 +188,89 @@ export default function ProducaoCompanyClient({
     setLoadingId(null);
   }
 
+  // ── Salvar preço de venda editado ────────────────────────────────
+  async function salvarPrecoVenda(fichaId: string) {
+    const novoPreco = parseFloat(precoEditando.replace(',', '.'));
+    if (isNaN(novoPreco) || novoPreco <= 0) {
+      alert('Informe um valor válido maior que zero.');
+      return;
+    }
+    const { error } = await supabase
+      .from('producao_fichas')
+      .update({ preco_venda: novoPreco })
+      .eq('id', fichaId);
+
+    if (!error) {
+      // Buscar preco_venda_sugerido e margem recalculados pela trigger
+      await new Promise(r => setTimeout(r, 600));
+      const { data } = await supabase
+        .from('producao_fichas')
+        .select('preco_venda_sugerido, margem_lucro')
+        .eq('id', fichaId)
+        .single();
+
+      setFichas(prev => prev.map(f =>
+        f.id === fichaId
+          ? { ...f, preco_venda_sugerido: data?.preco_venda_sugerido ?? novoPreco, margem_lucro: data?.margem_lucro ?? null }
+          : f
+      ));
+    }
+    setEditandoPreco(null);
+  }
+
+  // ── Salvar custo de ingrediente editado ──────────────────────────
+  async function salvarCustoIngrediente(fichaId: string, itemId: string) {
+    const novoCusto = parseFloat(custoEditando.replace(',', '.'));
+    if (isNaN(novoCusto) || novoCusto < 0) {
+      alert('Informe um valor válido.');
+      return;
+    }
+
+    // Buscar o ingrediente_id do item para atualizar producao_ingredientes
+    const { data: item } = await supabase
+      .from('producao_ficha_itens')
+      .select('ingrediente_id')
+      .eq('id', itemId)
+      .single();
+
+    if (item?.ingrediente_id) {
+      // Atualizar preço na tabela de ingredientes
+      await supabase
+        .from('producao_ingredientes')
+        .update({ preco_por_unidade: novoCusto })
+        .eq('id', item.ingrediente_id);
+    } else {
+      // Sem vínculo — atualizar preco_temp no item
+      await supabase
+        .from('producao_ficha_itens')
+        .update({ preco_temp: novoCusto })
+        .eq('id', itemId);
+    }
+
+    // Aguardar trigger recalcular
+    await new Promise(r => setTimeout(r, 600));
+    const { data: fichaAtualizada } = await supabase
+      .from('producao_fichas')
+      .select('custo_total, margem_lucro, preco_venda_sugerido')
+      .eq('id', fichaId)
+      .single();
+
+    setFichas(prev => prev.map(f => {
+      if (f.id !== fichaId) return f;
+      return {
+        ...f,
+        custo_total: fichaAtualizada?.custo_total ?? f.custo_total,
+        margem_lucro: fichaAtualizada?.margem_lucro ?? f.margem_lucro,
+        preco_venda_sugerido: fichaAtualizada?.preco_venda_sugerido ?? f.preco_venda_sugerido,
+        producao_ingredientes: f.producao_ingredientes.map(ing =>
+          ing.id === itemId ? { ...ing, custo_unitario: novoCusto } : ing
+        ),
+      };
+    }));
+
+    setEditandoIngrediente(null);
+  }
+
   const fichasPorTipo = fichas.filter(f =>
     tipoFicha === 'preparos' ? f.is_ficha_preparo : !f.is_ficha_preparo
   );
@@ -222,11 +280,9 @@ export default function ProducaoCompanyClient({
       filtro === 'ativas'   ? f.is_active :
       filtro === 'inativas' ? !f.is_active :
       true;
-
     const passaTags =
       filtroTags.length === 0 ||
       filtroTags.every(tag => (f.tags ?? []).includes(tag));
-
     return passaStatus && passaTags;
   });
 
@@ -264,12 +320,8 @@ export default function ProducaoCompanyClient({
 
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Linha de Produção
-          </h2>
-          <p className="text-gray-600 dark:text-white/60 mt-1">
-            Gerencie fichas tecnicas e custos de receitas
-          </p>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Linha de Produção</h2>
+          <p className="text-gray-600 dark:text-white/60 mt-1">Gerencie fichas tecnicas e custos de receitas</p>
         </div>
 
         {/* Stats */}
@@ -336,27 +388,20 @@ export default function ProducaoCompanyClient({
           </button>
         </div>
 
-        {/* Aba: Ingredientes */}
         {activeTab === 'ingredientes' && (
           <IngredientesClient companyId={company.id} theme={pageTheme} />
         )}
 
-        {/* Aba: Fichas */}
         {activeTab === 'fichas' && (
           <>
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
               <div className="flex items-center gap-2 flex-1">
                 {(['todas', 'ativas', 'inativas'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFiltro(f)}
+                  <button key={f} onClick={() => setFiltro(f)}
                     className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                      filtro === f
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
-                    }`}
-                  >
+                      filtro === f ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
+                    }`}>
                     {f}
                   </button>
                 ))}
@@ -364,22 +409,16 @@ export default function ProducaoCompanyClient({
                   {fichasFiltradas.length} ficha{fichasFiltradas.length !== 1 ? 's' : ''}
                 </span>
               </div>
-
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowConversacional(true)}
+                <button onClick={() => setShowConversacional(true)}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
-                  style={{ background: '#16a34a' }}
-                >
+                  style={{ background: '#16a34a' }}>
                   <span className="text-sm leading-none">🔘</span>
                   Auxiliar de Produção
                 </button>
-
-                <button
-                  onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
+                <button onClick={() => abrirNovaFicha(tipoFicha === 'preparos' ? 'preparo' : 'produto')}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all whitespace-nowrap"
-                  style={{ background: '#2563eb' }}
-                >
+                  style={{ background: '#2563eb' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14"/><path d="M12 5v14"/>
                   </svg>
@@ -390,17 +429,10 @@ export default function ProducaoCompanyClient({
 
             {/* Filtro por tags */}
             <div className="mb-4">
-              <TagSelector
-                tags={filtroTags}
-                onChange={setFiltroTags}
-                options={FILTRO_TAG_OPTIONS}
-                theme={pageTheme}
-              />
+              <TagSelector tags={filtroTags} onChange={setFiltroTags} options={FILTRO_TAG_OPTIONS} theme={pageTheme} />
               {filtroTags.length > 0 && (
-                <button
-                  onClick={() => setFiltroTags([])}
-                  className="mt-2 text-xs text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
-                >
+                <button onClick={() => setFiltroTags([])}
+                  className="mt-2 text-xs text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60 transition-colors">
                   Limpar filtros de tag
                 </button>
               )}
@@ -415,12 +447,7 @@ export default function ProducaoCompanyClient({
                     {tipoFicha === 'preparos' ? 'Nenhuma ficha de preparo encontrada' : 'Nenhuma guia encontrada'}
                   </p>
                   <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                    {filtroTags.length > 0
-                      ? 'Tente remover alguns filtros de tag'
-                      : tipoFicha === 'preparos'
-                        ? 'Crie fichas de preparo para ingredientes semielaborados como molhos, massas e recheios'
-                        : 'As guias sao criadas pelo assistente de voz dizendo "criar guia" ou "nova receita"'
-                    }
+                    {filtroTags.length > 0 ? 'Tente remover alguns filtros de tag' : 'Use o Auxiliar de Produção para criar fichas'}
                   </p>
                 </div>
               ) : (
@@ -435,19 +462,10 @@ export default function ProducaoCompanyClient({
                           {/* Nome + status + tags */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="font-semibold text-gray-900 dark:text-white truncate">
-                                {ficha.nome}
-                              </span>
+                              <span className="font-semibold text-gray-900 dark:text-white truncate">{ficha.nome}</span>
                               {getStatusBadge(ficha)}
                               {ficha.is_ficha_preparo && (
-                                <span style={{
-                                  padding: '2px 8px',
-                                  background: 'rgba(37,99,235,0.15)',
-                                  color: '#2563eb',
-                                  borderRadius: 20,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                }}>
+                                <span style={{ padding: '2px 8px', background: 'rgba(37,99,235,0.15)', color: '#2563eb', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
                                   PREPARO
                                 </span>
                               )}
@@ -457,44 +475,29 @@ export default function ProducaoCompanyClient({
                                 </span>
                               )}
                             </div>
-
                             {(ficha.tags ?? []).length > 0 && (
                               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '4px' }}>
                                 {(ficha.tags ?? []).map(tag => {
                                   const colors = getTagColor(tag);
                                   return (
-                                    <span key={tag} style={{
-                                      padding: '1px 6px',
-                                      background: colors.bg,
-                                      color: colors.text,
-                                      borderRadius: 4,
-                                      fontSize: 10,
-                                      fontWeight: 600,
-                                      letterSpacing: '0.02em',
-                                    }}>
+                                    <span key={tag} style={{ padding: '1px 6px', background: colors.bg, color: colors.text, borderRadius: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.02em' }}>
                                       {tag.split(':')[1]}
                                     </span>
                                   );
                                 })}
                               </div>
                             )}
-
-                            {ficha.descricao && (
-                              <p className="text-xs text-gray-500 dark:text-white/40 truncate">{ficha.descricao}</p>
-                            )}
+                            {ficha.descricao && <p className="text-xs text-gray-500 dark:text-white/40 truncate">{ficha.descricao}</p>}
                             <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">
-                              Rendimento: {ficha.rendimento} {ficha.unidade_rendimento} ·{' '}
-                              {ficha.producao_ingredientes?.length ?? 0} ingrediente{(ficha.producao_ingredientes?.length ?? 0) !== 1 ? 's' : ''}
+                              Rendimento: {ficha.rendimento} {ficha.unidade_rendimento} · {ficha.producao_ingredientes?.length ?? 0} ingrediente{(ficha.producao_ingredientes?.length ?? 0) !== 1 ? 's' : ''}
                             </p>
                           </div>
 
                           {/* Custo e margem — desktop */}
-                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[110px]">
+                          <div className="hidden sm:flex flex-col items-end gap-1 min-w-[140px]">
                             {ficha.is_ficha_preparo ? (
                               <>
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {formatCusto(ficha.custo_total)}
-                                </span>
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCusto(ficha.custo_total)}</span>
                                 {ficha.custo_total !== null && ficha.rendimento > 0 && (
                                   <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
                                     {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
@@ -503,9 +506,41 @@ export default function ProducaoCompanyClient({
                               </>
                             ) : (
                               <>
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
-                                </span>
+                                {/* Preço de venda editável */}
+                                {editandoPreco === ficha.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-gray-400 dark:text-white/40">R$</span>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={precoEditando}
+                                      onChange={e => setPrecoEditando(e.target.value)}
+                                      onKeyDown={e => { if (e.key === 'Enter') salvarPrecoVenda(ficha.id); if (e.key === 'Escape') setEditandoPreco(null); }}
+                                      autoFocus
+                                      className="w-20 px-2 py-0.5 text-sm font-semibold border rounded bg-white dark:bg-slate-700 border-blue-400 text-gray-900 dark:text-white focus:outline-none"
+                                    />
+                                    <button onClick={() => salvarPrecoVenda(ficha.id)} className="text-green-500 hover:text-green-600">
+                                      <Check className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => setEditandoPreco(null)} className="text-gray-400 hover:text-red-500">
+                                      <XIcon className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 group">
+                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                      {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
+                                    </span>
+                                    <button
+                                      onClick={() => { setEditandoPreco(ficha.id); setPrecoEditando(String(ficha.preco_venda_sugerido ?? '')); }}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-500"
+                                      title="Editar preço de venda"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
                                 <span className={`text-xs font-medium ${getMargemColor(ficha.margem_lucro)}`}>
                                   Margem: {formatMargem(ficha.margem_lucro)}
                                 </span>
@@ -518,41 +553,23 @@ export default function ProducaoCompanyClient({
 
                           {/* Ações */}
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setExpandedId(expandedId === ficha.id ? null : ficha.id)}
+                            <button onClick={() => setExpandedId(expandedId === ficha.id ? null : ficha.id)}
                               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400 dark:text-white/40"
-                              title="Ver ingredientes"
-                            >
-                              {expandedId === ficha.id
-                                ? <ChevronUp className="w-4 h-4" />
-                                : <ChevronDown className="w-4 h-4" />
-                              }
+                              title="Ver ingredientes">
+                              {expandedId === ficha.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
-
-                            <button
-                              onClick={() => handleToggleAtivo(ficha.id, ficha.is_active)}
-                              disabled={loadingId === ficha.id}
+                            <button onClick={() => handleToggleAtivo(ficha.id, ficha.is_active)} disabled={loadingId === ficha.id}
                               title={ficha.is_active ? 'Desativar ficha' : 'Ativar ficha'}
                               className={`p-1.5 rounded-lg transition-all text-xs font-medium px-2 py-1 ${
-                                loadingId === ficha.id
-                                  ? 'opacity-50 cursor-not-allowed'
-                                  : ficha.is_active
-                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-400'
-                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-white/40'
-                              }`}
-                            >
-                              {loadingId === ficha.id
-                                ? <RefreshCw className="w-3 h-3 animate-spin" />
-                                : ficha.is_active ? 'Ativa' : 'Inativa'
-                              }
+                                loadingId === ficha.id ? 'opacity-50 cursor-not-allowed'
+                                  : ficha.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-400'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-white/40'
+                              }`}>
+                              {loadingId === ficha.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : ficha.is_active ? 'Ativa' : 'Inativa'}
                             </button>
-
-                            <button
-                              onClick={() => handleDelete(ficha.id)}
-                              disabled={loadingId === ficha.id}
+                            <button onClick={() => handleDelete(ficha.id)} disabled={loadingId === ficha.id}
                               title="Excluir ficha"
-                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition"
-                            >
+                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -562,9 +579,7 @@ export default function ProducaoCompanyClient({
                         <div className="sm:hidden mt-2 flex items-center gap-4 text-xs">
                           {ficha.is_ficha_preparo ? (
                             <>
-                              <span className="font-semibold text-gray-900 dark:text-white">
-                                Custo: {formatCusto(ficha.custo_total)}
-                              </span>
+                              <span className="font-semibold text-gray-900 dark:text-white">Custo: {formatCusto(ficha.custo_total)}</span>
                               {ficha.custo_total !== null && ficha.rendimento > 0 && (
                                 <span className="text-blue-600 dark:text-blue-400">
                                   {formatCusto(ficha.custo_total / ficha.rendimento)}/{ficha.unidade_rendimento}
@@ -576,12 +591,8 @@ export default function ProducaoCompanyClient({
                               <span className="font-semibold text-gray-900 dark:text-white">
                                 {formatCusto(ficha.preco_venda_sugerido || ficha.custo_total)}
                               </span>
-                              <span className={getMargemColor(ficha.margem_lucro)}>
-                                Margem: {formatMargem(ficha.margem_lucro)}
-                              </span>
-                              <span className="text-gray-400 dark:text-white/40">
-                                Custo: {formatCusto(ficha.custo_total)}
-                              </span>
+                              <span className={getMargemColor(ficha.margem_lucro)}>Margem: {formatMargem(ficha.margem_lucro)}</span>
+                              <span className="text-gray-400 dark:text-white/40">Custo: {formatCusto(ficha.custo_total)}</span>
                             </>
                           )}
                         </div>
@@ -592,9 +603,7 @@ export default function ProducaoCompanyClient({
                         <div className="px-6 pb-4 bg-gray-50 dark:bg-slate-900">
                           {ficha.is_ficha_preparo && (
                             <div className="mb-4 mt-3">
-                              <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">
-                                Ingrediente Gerado
-                              </p>
+                              <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">Ingrediente Gerado</p>
                               <IngredienteGerado fichaId={ficha.id} isDark={isDark} />
                             </div>
                           )}
@@ -603,28 +612,60 @@ export default function ProducaoCompanyClient({
                             <>
                               <p className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3 mt-3">
                                 Ingredientes
+                                <span className="ml-2 normal-case font-normal text-gray-400 dark:text-white/30">(clique no lápis para editar o custo)</span>
                               </p>
                               <div className="grid sm:grid-cols-2 gap-2">
                                 {ficha.producao_ingredientes.map(ing => (
-                                  <div
-                                    key={ing.id}
-                                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-700 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white"
-                                  >
-                                    <div className="flex items-center gap-2">
+                                  <div key={ing.id}
+                                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-700 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
                                       {ing.custo_estimado && (
-                                        <span title="Preco estimado pela IA" className="text-yellow-500 text-xs">!</span>
+                                        <span title="Preco estimado pela IA" className="text-yellow-500 text-xs flex-shrink-0">!</span>
                                       )}
-                                      <span className="text-gray-900 dark:text-white font-medium">{ing.nome}</span>
-                                      <span className="text-gray-400 dark:text-white/40">
-                                        {ing.quantidade} {ing.unidade}
-                                      </span>
+                                      <span className="text-gray-900 dark:text-white font-medium truncate">{ing.nome}</span>
+                                      <span className="text-gray-400 dark:text-white/40 flex-shrink-0">{ing.quantidade} {ing.unidade}</span>
                                     </div>
-                                    <span className="text-gray-600 dark:text-white/60 font-mono text-xs">
-                                      {ing.custo_unitario !== null
-                                        ? `R$ ${(ing.custo_unitario * ing.quantidade).toFixed(2).replace('.', ',')}`
-                                        : '—'
-                                      }
-                                    </span>
+
+                                    {/* Custo editável */}
+                                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                                      {editandoIngrediente === ing.id ? (
+                                        <>
+                                          <span className="text-xs text-gray-400 dark:text-white/40">R$</span>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={custoEditando}
+                                            onChange={e => setCustoEditando(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') salvarCustoIngrediente(ficha.id, ing.id); if (e.key === 'Escape') setEditandoIngrediente(null); }}
+                                            autoFocus
+                                            className="w-16 px-1.5 py-0.5 text-xs border rounded bg-white dark:bg-slate-600 border-blue-400 text-gray-900 dark:text-white focus:outline-none"
+                                          />
+                                          <button onClick={() => salvarCustoIngrediente(ficha.id, ing.id)} className="text-green-500 hover:text-green-600">
+                                            <Check className="w-3 h-3" />
+                                          </button>
+                                          <button onClick={() => setEditandoIngrediente(null)} className="text-gray-400 hover:text-red-500">
+                                            <XIcon className="w-3 h-3" />
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center gap-1 group">
+                                          <span className="text-gray-600 dark:text-white/60 font-mono text-xs">
+                                            {ing.custo_unitario !== null
+                                              ? `R$ ${(ing.custo_unitario * ing.quantidade).toFixed(2).replace('.', ',')}`
+                                              : '—'
+                                            }
+                                          </span>
+                                          <button
+                                            onClick={() => { setEditandoIngrediente(ing.id); setCustoEditando(String(ing.custo_unitario ?? '')); }}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-500"
+                                            title="Editar custo unitário"
+                                          >
+                                            <Pencil className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -638,39 +679,28 @@ export default function ProducaoCompanyClient({
               )}
             </div>
 
-            {/* Footer contextual */}
+            {/* Footer */}
             {tipoFicha === 'preparos' ? (
               <div className="mt-6 p-4 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente.
-                  O custo por unidade e calculado e alimenta o cadastro de ingredientes,
-                  propagando para todas as fichas que os utilizam.
+                  <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente. O custo por unidade é calculado e alimenta o cadastro de ingredientes, propagando para todas as fichas que os utilizam.
                 </p>
               </div>
             ) : (
               <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>.
-                  Guias com preço estimado possuem valores aproximados pela IA — confirme com seus fornecedores.
+                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Passe o mouse sobre os valores para editar preço de venda e custo dos ingredientes.
                 </p>
               </div>
             )}
           </>
         )}
-
       </div>
 
       {showConversacional && (
         <FichaConversacionalDisplay
-          data={{
-            companyId: company.id,
-            fichaType: tipoFicha === 'preparos' ? 'preparo' : 'produto',
-          }}
-          onClose={() => {
-            stopAudio();
-            setShowConversacional(false);
-            window.location.reload();
-          }}
+          data={{ companyId: company.id, fichaType: tipoFicha === 'preparos' ? 'preparo' : 'produto' }}
+          onClose={() => { stopAudio(); setShowConversacional(false); window.location.reload(); }}
           playText={playText}
           theme={pageTheme}
         />
@@ -679,11 +709,7 @@ export default function ProducaoCompanyClient({
       {showNovaFicha && (
         <FichaProducaoDisplay
           data={{ companyId: company.id, fichaType: novaFichaTipo }}
-          onClose={() => {
-            stopAudio();
-            setShowNovaFicha(false);
-            window.location.reload();
-          }}
+          onClose={() => { stopAudio(); setShowNovaFicha(false); window.location.reload(); }}
           playText={playText}
           theme={pageTheme}
         />

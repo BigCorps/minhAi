@@ -45,7 +45,7 @@ export default function TocarMusicaDisplay({
     return () => { window.speechSynthesis.cancel(); };
   }, []);
 
-  // Listener fim de música
+  // Listener fim de música (YouTube playerState 0 = ended)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (hasClosedRef.current) return;
@@ -130,15 +130,12 @@ export default function TocarMusicaDisplay({
   const isDark = theme === 'dark';
 
   return (
-    // Mini player fixo no canto inferior direito
     <div className="fixed bottom-6 right-6 z-[9999]">
       <div className={`rounded-2xl shadow-2xl border overflow-hidden transition-all duration-300 ${
-        isDark
-          ? 'bg-slate-900 border-white/10'
-          : 'bg-white border-gray-200'
+        isDark ? 'bg-slate-900 border-white/10' : 'bg-white border-gray-200'
       } ${minimized ? 'w-64' : 'w-80'}`}>
 
-        {/* Barra de controle superior */}
+        {/* Barra superior */}
         <div className={`flex items-center justify-between px-4 py-3 ${
           isDark ? 'bg-green-900/30 border-b border-white/5' : 'bg-green-50 border-b border-gray-100'
         }`}>
@@ -158,7 +155,9 @@ export default function TocarMusicaDisplay({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setMinimized(p => !p)}
-              className={`p-1.5 rounded-lg transition ${isDark ? 'hover:bg-white/10 text-white/60' : 'hover:bg-gray-100 text-gray-400'}`}
+              className={`p-1.5 rounded-lg transition ${
+                isDark ? 'hover:bg-white/10 text-white/60' : 'hover:bg-gray-100 text-gray-400'
+              }`}
               title={minimized ? 'Expandir' : 'Minimizar'}
             >
               {minimized
@@ -168,7 +167,9 @@ export default function TocarMusicaDisplay({
             </button>
             <button
               onClick={handleClose}
-              className={`p-1.5 rounded-lg transition ${isDark ? 'hover:bg-white/10 text-white/60' : 'hover:bg-gray-100 text-gray-400'}`}
+              className={`p-1.5 rounded-lg transition ${
+                isDark ? 'hover:bg-white/10 text-white/60' : 'hover:bg-gray-100 text-gray-400'
+              }`}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -196,23 +197,22 @@ export default function TocarMusicaDisplay({
               <p className="text-xs text-red-400 text-center">{error}</p>
             )}
 
-            {/* Player YouTube oculto — só áudio */}
+            {/* Player YouTube — apenas barra de controles visível */}
             {musica && (
-              <div className="relative overflow-hidden rounded-xl" style={{ height: '40px' }}>
-                {/* Máscara que esconde o vídeo e mostra só a barra de controles */}
-                <div
-                  className="absolute inset-0 z-10 pointer-events-none"
-                  style={{
-                    background: isDark
-                      ? 'linear-gradient(to bottom, #0f172a 0%, #0f172a 85%, transparent 85%)'
-                      : 'linear-gradient(to bottom, #ffffff 0%, #ffffff 85%, transparent 85%)',
-                  }}
-                />
+              <div
+                className="relative w-full overflow-hidden rounded-xl"
+                style={{ height: '48px' }}
+              >
                 <iframe
                   ref={iframeRef}
-                  src={musica.embed_url}
-                  className="w-full"
-                  style={{ height: '200px', marginTop: '-160px' }}
+                  src={musica.embed_url + '&controls=1'}
+                  className="absolute w-full"
+                  style={{
+                    height: '300px',
+                    bottom: 0,
+                    left: 0,
+                    border: 'none',
+                  }}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   frameBorder="0"
                 />
@@ -254,26 +254,39 @@ export default function TocarMusicaDisplay({
                 </button>
               </div>
             )}
+
+            {/* Dica de voz */}
+            <p className={`text-xs text-center ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+              Diga "parar música" para encerrar
+            </p>
           </div>
         )}
 
-        {/* Versão minimizada — só mostra título */}
-        {minimized && musica && !loading && (
+        {/* Versão minimizada */}
+        {minimized && (
           <div className="px-4 py-2">
-            <p className={`text-xs truncate ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-              🎵 {musica.title}
-            </p>
-            {/* Player oculto continua rodando */}
-            <div className="hidden">
-              <iframe
-                ref={iframeRef}
-                src={musica.embed_url}
-                allow="autoplay"
-                frameBorder="0"
-              />
-            </div>
+            {loading
+              ? <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Buscando...</p>
+              : musica
+                ? <p className={`text-xs truncate ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                    🎵 {musica.title}
+                  </p>
+                : <p className={`text-xs ${isDark ? 'text-red-400' : 'text-red-500'}`}>Erro ao buscar</p>
+            }
+            {/* Player continua rodando quando minimizado */}
+            {musica && (
+              <div className="hidden">
+                <iframe
+                  ref={iframeRef}
+                  src={musica.embed_url + '&controls=1'}
+                  allow="autoplay"
+                  frameBorder="0"
+                />
+              </div>
+            )}
           </div>
         )}
+
       </div>
     </div>
   );

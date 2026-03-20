@@ -70,11 +70,14 @@ ${isCombo    ? '- É um COMBO: agrupa produtos já existentes. Pergunte quais it
 ${origemTag  ? `- Origem: ${origemTag.split(':')[1]}` : ''}
 
 REGRAS CRÍTICAS — LEIA COM ATENÇÃO:
-1. ✅ TODOS os ingredientes DEVEM ter "preco_unitario" preenchido e maior que zero
-2. ✅ Se o usuário NÃO informou o preço, ESTIME um valor realista do mercado brasileiro 2025
-3. ✅ Preços em R$ (Reais) por unidade base: kg, L, unidade ou dúzia
-4. ❌ NUNCA retornar preco_unitario: 0, null ou undefined — isso causa custo zerado na ficha
-5. ✅ A ÚNICA exceção é água: preco_unitario: 0.00
+1. Quando o usuário informar apenas o nome do produto, ESTIME AUTOMATICAMENTE todos os ingredientes típicos com quantidades e preços realistas — não peça ao usuário para informar os ingredientes
+2. Após estimar, apresente a ficha completa e pergunte se quer ajustar algo
+3. Extraia informações do que o usuário disse e atualize a ficha
+4. ✅ TODOS os ingredientes DEVEM ter "preco_unitario" preenchido e maior que zero
+5. ✅ Se o usuário NÃO informou o preço, ESTIME um valor realista do mercado brasileiro 2025
+6. ✅ Preços em R$ (Reais) por unidade base: kg, L, unidade ou dúzia
+7. ❌ NUNCA retornar preco_unitario: 0, null ou undefined — isso causa custo zerado na ficha
+8. ✅ A ÚNICA exceção é água: preco_unitario: 0.00
 ${isFichaPreparo || !isVendavel ? '6. ✅ preco_venda deve ser null neste tipo de ficha' : ''}
 
 TABELA DE PREÇOS ESTIMADOS (Mercado Brasileiro 2025):
@@ -187,13 +190,13 @@ FORMATO DE SAÍDA — retorne APENAS JSON válido, sem markdown, sem backticks:
   "completo": boolean
 }`;
 
-    const userPrompt = `CONVERSA ATUAL:
+const userPrompt = `CONVERSA ATUAL:
 ${conversaAtual}
 
 FICHA ATUAL:
 ${fichaAtualStr}
 
-Extraia as informações e retorne SOMENTE o JSON.`;
+INSTRUÇÃO: Se o usuário informou o nome do produto mas a ficha ainda não tem ingredientes, estime AUTOMATICAMENTE todos os ingredientes típicos com quantidades, unidades e preços de mercado. Não peça ao usuário para informar os ingredientes — esse é o seu trabalho. Retorne SOMENTE o JSON.`;
 
     console.log('📡 Chamando OpenAI API...');
 

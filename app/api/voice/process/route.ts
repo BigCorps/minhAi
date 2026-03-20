@@ -353,7 +353,7 @@ Pergunta: ${userMessage}`;
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
       voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-      speakingRate: 1.0,
+      speakingRate: 1.3,
       audioEncoding: 'MP3',
     });
     

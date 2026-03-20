@@ -26,17 +26,19 @@ export default function ProducaoCompanyPage() {
       setCompany(companyData);
       const { data: fichasData } = await supabase
         .from('producao_fichas')
-        .select(`
-          id, nome, categoria, descricao,
-          rendimento_qtd, rendimento_unid,
-          preco_venda, markup_base,
-          tem_estimativas, criado_por_voz,
-          created_at,
-          producao_ficha_itens(
-            id, ingrediente_nome_temp, quantidade, unidade, preco_temp, source,
-            producao_ingredientes(id, nome)
-          )
-        `)
+.select(`
+  id, nome, categoria, descricao,
+  rendimento_qtd, rendimento_unid,
+  preco_venda, markup_base,
+  tem_estimativas, criado_por_voz,
+  is_ficha_preparo, tags,
+  custo_total, margem_lucro,
+  created_at,
+  producao_ficha_itens(
+    id, ingrediente_nome_temp, quantidade, unidade, preco_temp, source,
+    producao_ingredientes(id, nome)
+  )
+`)
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
       const lista = (fichasData || []).map((ficha: any) => ({
@@ -45,9 +47,10 @@ export default function ProducaoCompanyPage() {
         rendimento: ficha.rendimento_qtd,
         unidade_rendimento: ficha.rendimento_unid,
         preco_venda_sugerido: ficha.preco_venda,
-        custo_total: null,
-        margem_lucro: null,
-        is_active: true,
+        custo_total: ficha.custo_total ?? null,
+        margem_lucro: ficha.margem_lucro ?? null,
+        is_active: ficha.is_active ?? true,
+        tags: ficha.tags ?? [],
         producao_ingredientes: (ficha.producao_ficha_itens ?? []).map((item: any) => ({
           id: item.id,
           // ✅ Fix: evitar nome genérico "Ingrediente" vindo do banco

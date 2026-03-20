@@ -7,6 +7,10 @@
  * 
  * Este processador é chamado como FALLBACK quando nenhuma função
  * legada foi detectada.
+ * 
+ * ✅ v2: Sistema de hints dinâmicos via tabela function_hints no Supabase.
+ *        Hints confirmados são carregados em memória (cache 5min) e
+ *        verificados de forma síncrona antes de qualquer chamada de rede.
  */
 
 import { createClient } from '@/lib/supabase-browser';
@@ -39,6 +43,14 @@ export interface CommandProcessResult {
 }
 
 /**
+ * Interface de um hint confirmado
+ */
+interface FunctionHint {
+  transcript: string;
+  function_key: string;
+}
+
+/**
  * Processador de Comandos para Novas Funções
  */
 export class VoiceCommandProcessor {
@@ -48,17 +60,108 @@ export class VoiceCommandProcessor {
     creditsPerUse: number;
     isEnabled: boolean;
   }> = {};
+
+  // ✅ v2: Cache de hints em memória
+  private hintsCache: FunctionHint[] = [];
+  private hintsCacheLoadedAt: number = 0;
+  private readonly HINTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
   
   constructor(companyId: string) {
     this.companyId = companyId;
   }
   
   /**
-   * Inicializa carregando as configurações das funções
+   * Inicializa carregando as configurações das funções e os hints
    */
   async initialize() {
-    await this.loadFunctionSettings();
+    await Promise.all([
+      this.loadFunctionSettings(),
+      this.loadHints(),
+    ]);
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // ✅ v2: SISTEMA DE HINTS
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Carrega hints confirmados do banco para o cache em memória.
+   * Só recarrega se o cache estiver expirado (TTL 5min).
+   */
+  async loadHints() {
+    const now = Date.now();
+    if (now - this.hintsCacheLoadedAt < this.HINTS_CACHE_TTL) return;
+
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('function_hints')
+        .select('transcript, function_key')
+        .eq('company_id', this.companyId)
+        .eq('confirmed', true)
+        .not('function_key', 'is', null);
+
+      if (error) {
+        console.warn('⚠️ Erro ao carregar hints:', error.message);
+        return;
+      }
+
+      this.hintsCache = (data || []) as FunctionHint[];
+      this.hintsCacheLoadedAt = now;
+      console.log(`✅ Hints carregados: ${this.hintsCache.length} hints confirmados`);
+    } catch (err) {
+      console.error('❌ Erro ao carregar hints:', err);
+    }
+  }
+
+  /**
+   * Verifica se o transcript bate com algum hint confirmado.
+   * Operação síncrona — zero latência.
+   * Usa similaridade por palavras-chave (mínimo 60% de match).
+   */
+  checkHints(transcript: string): string | null {
+    if (this.hintsCache.length === 0) return null;
+
+    const lower = transcript.toLowerCase();
+    const inputWords = lower.split(/\s+/).filter(w => w.length > 2);
+
+    for (const hint of this.hintsCache) {
+      const hintWords = hint.transcript.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      if (hintWords.length === 0) continue;
+
+      const matches = hintWords.filter(w => lower.includes(w));
+      const score = matches.length / hintWords.length;
+
+      if (score >= 0.6) {
+        console.log(`✅ Hint encontrado: "${hint.transcript}" → ${hint.function_key} (${Math.round(score * 100)}%)`);
+        return hint.function_key;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Salva um transcript não reconhecido para revisão manual no Supabase.
+   * Fire-and-forget — não bloqueia o fluxo principal.
+   */
+  saveUnrecognizedHint(transcript: string) {
+    const supabase = createClient();
+    supabase
+      .from('function_hints')
+      .insert({
+        company_id: this.companyId,
+        transcript,
+        function_key: null,
+        confirmed: false,
+      })
+      .then(({ error }) => {
+        if (error) console.warn('⚠️ Erro ao salvar hint não reconhecido:', error.message);
+        else console.log('📝 Hint não reconhecido salvo para revisão:', transcript);
+      });
+  }
+
+  // ─────────────────────────────────────────────────────────────
   
   /**
    * Carrega configurações de funções do banco
@@ -121,6 +224,19 @@ export class VoiceCommandProcessor {
    */
   async processCommand(transcript: string): Promise<CommandProcessResult> {
     console.log('🔍 Processando comando (novas funções):', transcript);
+
+    // ✅ v2: Recarregar hints se cache expirou
+    await this.loadHints();
+
+    // ✅ v2: Verificar hints ANTES da detecção por triggers
+    const hintFunctionKey = this.checkHints(transcript);
+    if (hintFunctionKey) {
+      const func = getFunctionByKey(hintFunctionKey);
+      if (func) {
+        console.log(`🎯 Hint ativou função: ${hintFunctionKey}`);
+        return await this.executeFunction(func);
+      }
+    }
     
     // 1. Detectar qual função deve ser ativada
     const detection = detectFunctionFromTranscript(transcript);
@@ -150,9 +266,6 @@ export class VoiceCommandProcessor {
     }
     
     // 3. Verificar se precisa de input numérico extraído
-    // ✅ CORRIGIDO: só bloqueia se a função exige número extraído do transcript
-    // (ex: NFC, Link de Pagamento que precisam de valor em reais).
-    // Funções como 'orcamento' usam o transcript completo como pergunta — não bloqueiam aqui.
     const needsExtractedNumber = func.requiresInput &&
       func.inputType === 'number' &&
       !detection.extractedValue;
@@ -180,11 +293,8 @@ export class VoiceCommandProcessor {
     try {
       console.log(`⚡ [Processor] Executando função: ${func.functionKey}`);
       
-      // Verificar se tem handler customizado
       if (func.handler) {
         console.log(`🎯 [Processor] Função tem handler customizado, delegando...`);
-        
-        // Retornar sem executar aqui - será executado no VoiceAssistant
         return {
           success: true,
           functionKey: func.functionKey,
@@ -195,7 +305,6 @@ export class VoiceCommandProcessor {
         };
       }
       
-      // Executar baseado no tipo de resposta (funções sem handler)
       switch (func.responseType) {
         case 'voice':
           return await this.handleVoiceOnly(func, extractedValue);
@@ -209,7 +318,6 @@ export class VoiceCommandProcessor {
       
     } catch (error: any) {
       console.error('❌ [Processor] Erro ao executar função:', error);
-      
       return {
         success: false,
         action: 'voice',
@@ -228,7 +336,6 @@ export class VoiceCommandProcessor {
   ): Promise<CommandProcessResult> {
     if (func.edgeFunction) {
       const result = await this.callEdgeFunction(func.edgeFunction, func.functionKey, value);
-      
       return {
         success: true,
         functionKey: func.functionKey,
@@ -261,7 +368,6 @@ export class VoiceCommandProcessor {
     }
     
     const result = await this.callEdgeFunction(func.edgeFunction, func.functionKey, value);
-    
     return {
       success: true,
       functionKey: func.functionKey,
@@ -280,9 +386,7 @@ export class VoiceCommandProcessor {
   private async callEdgeFunction(functionName: string, functionKey: string, value?: any) {
     const supabase = createClient();
     
-    const payload: any = {
-      company_id: this.companyId,
-    };
+    const payload: any = { company_id: this.companyId };
 
     if (functionKey.startsWith('qrcode_')) {
       payload.qr_type = functionKey.replace('qrcode_', '');
@@ -294,16 +398,13 @@ export class VoiceCommandProcessor {
     
     console.log(`📤 Chamando Edge Function: ${functionName}`, payload);
     
-    const response = await supabase.functions.invoke(functionName, {
-      body: payload,
-    });
+    const response = await supabase.functions.invoke(functionName, { body: payload });
     
     if (response.error) {
       throw new Error(response.error.message || 'Erro na Edge Function');
     }
     
     console.log('✅ Edge Function executada com sucesso');
-    
     return response.data;
   }
   

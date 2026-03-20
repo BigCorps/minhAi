@@ -617,12 +617,40 @@ export default function FichaConversacionalDisplay({
               }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '13px', fontWeight: '500', color: C.text }}>{item.nome}</div>
-                  <div style={{ fontSize: '11px', color: C.textMuted, marginTop: '4px' }}>
-                    {item.quantidade}{item.unidade} • R$ {item.preco_unitario?.toFixed(2)}/{item.unidade}
-                    {item.preco_estimado && (
-                      <span style={{ color: C.accent, marginLeft: '4px' }}>(estimado)</span>
-                    )}
-                  </div>
+<div style={{ fontSize: '11px', color: C.textMuted, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+  {item.quantidade}{item.unidade} • R$
+  <input
+    type="number"
+    step="0.01"
+    min="0.001"
+    value={item.preco_unitario ?? ''}
+    onChange={(e) => {
+      const novoPreco = parseFloat(e.target.value);
+      if (isNaN(novoPreco)) return;
+      setFichaPreview(prev => ({
+        ...prev,
+        itens: prev.itens.map(i =>
+          i.id === item.id
+            ? { ...i, preco_unitario: novoPreco, preco_estimado: false }
+            : i
+        ),
+      }));
+    }}
+    style={{
+      width: '64px',
+      padding: '1px 4px',
+      background: item.preco_estimado ? C.accent + '22' : C.bgSecondary,
+      border: `1px solid ${item.preco_estimado ? C.accent : C.border}`,
+      borderRadius: '4px',
+      color: C.text,
+      fontSize: '11px',
+    }}
+  />
+  /{item.unidade}
+  {item.preco_estimado && (
+    <span style={{ color: C.accent }}>(estimado)</span>
+  )}
+</div>
                 </div>
                 <button
                   onClick={() => removerIngrediente(item.id)}

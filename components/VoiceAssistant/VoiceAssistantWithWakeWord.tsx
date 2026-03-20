@@ -692,6 +692,15 @@ export function VoiceAssistantWithWakeWord({
           playText('Abrindo gerador de código de barras. Escolha o formato e diga o conteúdo.').catch(() => {});
           break;
 
+case 'tocar_musica':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'TocarMusicaDisplay',
+    data: { companyId, query: '' },
+  });
+  playText('Qual música você quer ouvir?').catch(() => {});
+  break;
+
         case 'confirmar_presenca':
           setActiveModal({ type: 'ConfirmPresenceModal', data: { companyId } });
           playText('Vou buscar seu agendamento para confirmar presença.').catch(() => {});

@@ -467,27 +467,34 @@ export default function FichaConversacionalDisplay({
       // ✅ v6: aguardar criação antes de vincular itens
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const itensParaInserir = await Promise.all(
-        fichaPreview.itens.map(async (item) => {
-          const { data: ing } = await supabase
-            .from('producao_ingredientes')
-            .select('id, preco_por_unidade')
-            .eq('company_id', companyId)
-            .ilike('nome', item.nome)
-            .single();
+// ✅ substituir o setTimeout por busca com retry
+const itensParaInserir = await Promise.all(
+  fichaPreview.itens.map(async (item) => {
+    let ing = null;
+    
+    // Tentar até 3 vezes com 500ms entre tentativas
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      const { data } = await supabase
+        .from('producao_ingredientes')
+        .select('id, preco_por_unidade')
+        .eq('company_id', companyId)
+        .ilike('nome', item.nome)
+        .single();
+      
+      if (data) { ing = data; break; }
+      await new Promise(r => setTimeout(r, 500));
+    }
 
-          console.log(`Ingrediente ${item.nome}: ${ing ? `ID ${ing.id}, R$ ${ing.preco_por_unidade}` : 'NÃO ENCONTRADO'}`);
-
-          return {
-            ficha_id: fichaData.id,
-            ingrediente_id: ing?.id || null,
-            quantidade: item.quantidade,
-            unidade: item.unidade,
-            perda_percentual: item.perda_percentual || 0,
-            preco_temp: ing ? null : item.preco_unitario,
-          };
-        })
-      );
+    return {
+      ficha_id: fichaData.id,
+      ingrediente_id: ing?.id || null,
+      quantidade: item.quantidade,
+      unidade: item.unidade,
+      perda_percentual: item.perda_percentual || 0,
+      preco_temp: ing ? null : item.preco_unitario,
+    };
+  })
+);
 
       const { error: itensError } = await supabase
         .from('producao_ficha_itens')

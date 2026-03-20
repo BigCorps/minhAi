@@ -452,25 +452,25 @@ export default function FichaConversacionalDisplay({
       }));
 
       for (const item of ingredientesNovos) {
-        const { data: existente } = await supabase
-          .from('producao_ingredientes')
-          .select('id')
-          .eq('company_id', companyId)
-          .ilike('nome', item.nome)
-          .single();
+const { data: existente } = await supabase
+  .from('producao_ingredientes')
+  .select('id')
+  .eq('company_id', companyId)
+  .ilike('nome', item.nome)
+  .maybeSingle();  // ← null quando não encontra
 
         if (!existente) {
           // ✅ v6: converter g→kg e ml→L para preço base correto
           let precoBase = item.preco_unitario || 0;
           let unidadeBase = item.unidade;
 
-          if (item.unidade === 'g') {
-            precoBase = precoBase * 1000;
-            unidadeBase = 'kg';
-          } else if (item.unidade === 'ml') {
-            precoBase = precoBase * 1000;
-            unidadeBase = 'L';
-          }
+if (item.unidade === 'g') {
+  precoBase = precoBase * 1000;
+  unidadeBase = 'kg';
+} else if (item.unidade === 'ml') {
+  precoBase = precoBase * 1000;
+  unidadeBase = 'l';  // ← minúsculo
+}
 
           console.log(`✅ Criando ingrediente: ${item.nome} - R$ ${precoBase.toFixed(2)}/${unidadeBase}`);
 

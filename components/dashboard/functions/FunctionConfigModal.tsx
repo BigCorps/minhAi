@@ -2256,7 +2256,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
         <label className="flex items-center justify-between cursor-pointer">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrar do Cliente via PIX
+              Cobrar do Cliente?
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {chargeEnabled

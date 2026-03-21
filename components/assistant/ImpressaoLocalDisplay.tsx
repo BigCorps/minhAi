@@ -90,9 +90,11 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
   const [chargeEnabled, setChargeEnabled] = useState(false);
   const [pricePerPage, setPricePerPage] = useState(0.50);
+  const [printFileUrl, setPrintFileUrl] = useState<string | null>(null);
 
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // ── Buscar configurações ────────────────────────────────
   useEffect(() => {
@@ -238,23 +240,17 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         throw new Error(result.error ?? 'Falha ao processar impressão');
       }
 
-      // Abrir impressão nativa do sistema
+      // Buscar URL pública e salvar no state para renderizar no modal
       const { data: fileData } = supabase.storage
         .from('print-files')
         .getPublicUrl(fileUrl);
 
       if (fileData?.publicUrl) {
-        const printWindow = window.open(fileData.publicUrl, '_blank');
-        if (printWindow) {
-          printWindow.focus();
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        }
+        setPrintFileUrl(fileData.publicUrl);
       }
 
       setStage('success');
-      await playText('Impressão enviada! Escolha sua impressora e confirme.');
+      await playText('Arquivo pronto! Clique em imprimir ou aguarde.');
 
     } catch (err: any) {
       console.error('❌ Erro ao processar impressão:', err);
@@ -380,21 +376,41 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
 
             {/* ── STAGE: SUCCESS ── */}
             {stage === 'success' && (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-500" />
-                </div>
+              <div className="flex flex-col gap-4">
+
+                {/* Preview inline do PDF */}
+                {printFileUrl && (
+                  <iframe
+                    ref={iframeRef}
+                    src={printFileUrl}
+                    className={`w-full h-72 rounded-xl border ${isDark ? 'border-white/10' : 'border-gray-200'}`}
+                    onLoad={() => {
+                      // Aciona impressão automaticamente quando o PDF carrega
+                      iframeRef.current?.contentWindow?.print();
+                    }}
+                  />
+                )}
+
                 <div className="text-center">
-                  <p className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    Impressão Enviada!
+                  <p className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Arquivo pronto para impressão
                   </p>
-                  <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                    Escolha sua impressora e confirme
+                  <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                    A janela de impressão deve abrir automaticamente
                   </p>
                 </div>
+
+                <button
+                  onClick={() => iframeRef.current?.contentWindow?.print()}
+                  className={`w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white`}
+                >
+                  <Printer className="w-5 h-5" />
+                  Imprimir agora
+                </button>
+
                 <button
                   onClick={onClose}
-                  className="px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium"
+                  className={`w-full py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
                 >
                   Concluir
                 </button>

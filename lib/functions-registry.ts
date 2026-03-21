@@ -3336,8 +3336,8 @@ cardapio: {
         return false;
       }
 
-      await playText(
-        'Abrindo impressão remota. Você pode enviar um arquivo ou tirar uma foto para imprimir automaticamente.'
+      playText(
+        'Abrindo impressão remota. Envie um arquivo para imprimir automaticamente.'
       );
 
       setActiveModal?.({
@@ -3393,8 +3393,8 @@ cardapio: {
     edgeFunction: 'processar-impressao',
 
     handler: async ({ playText, setActiveModal, companyId }) => {
-      await playText(
-        'Abrindo impressão local. Você pode enviar um arquivo ou tirar uma foto para imprimir usando a impressora do seu dispositivo.'
+      playText(
+        'Abrindo impressão local. Ennvie um arquivo para imprimir diretamente do seu dispositivo.'
       );
 
       setActiveModal?.({
@@ -3469,8 +3469,8 @@ cardapio: {
         return false;
       }
 
-      await playText(
-        'Abrindo impressão de recibo. Você pode enviar um arquivo ou tirar uma foto para imprimir na impressora térmica.'
+      playText(
+        'Abrindo impressão de recibo. Envie o arquivo para impressora térmicas.'
       );
 
       setActiveModal?.({

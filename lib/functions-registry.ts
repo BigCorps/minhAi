@@ -522,6 +522,8 @@ tocar_musica: {
     console.error('Erro tocar_musica:', error);
     return false;
   }
+ },
+},
 
 tocar_video: {
   functionKey: 'tocar_video',

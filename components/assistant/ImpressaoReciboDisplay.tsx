@@ -20,7 +20,7 @@ import {
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
-import PIXConfirmationModal from '@/components/ui/PixConfirmationModal';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 import { thermalPrinterService } from '@/lib/thermal-printer-service';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';

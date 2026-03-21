@@ -100,24 +100,34 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
   // ── Buscar configurações ────────────────────────────────
   useEffect(() => {
     (async () => {
-      const { data: company } = await supabase
-        .from('companies')
-        .select('print_charge_enabled, print_price_per_page, printnode_api_key, printnode_printer_id')
-        .eq('id', data.companyId)
-        .single();
+const { data: company } = await supabase
+  .from('companies')
+  .select('print_charge_enabled, print_price_per_page, printnode_computer_id, printnode_printer_id')  // ✅ CORRETO
+  .eq('id', data.companyId)
+  .single();
 
-      if (company) {
-        setChargeEnabled(company.print_charge_enabled ?? false);
-        setPricePerPage(company.print_price_per_page ?? 0.50);
+if (company) {
+  setChargeEnabled(company.print_charge_enabled ?? false);
+  setPricePerPage(company.print_price_per_page ?? 0.50);
 
-        // Buscar nome da impressora via PrintNode
-        if (company.printnode_api_key && company.printnode_printer_id) {
-          try {
-            const response = await fetch(`https://api.printnode.com/printers/${company.printnode_printer_id}`, {
-              headers: {
-                'Authorization': `Basic ${btoa(company.printnode_api_key + ':')}`,
-              },
-            });
+  // Buscar nome da impressora via Edge Function (sem expor API key)
+  if (company.printnode_computer_id && company.printnode_printer_id) {
+    try {
+      const { data: printerInfo } = await supabase.functions.invoke('test-printnode-computer', {
+        body: { computerId: company.printnode_computer_id },
+      });
+
+      if (printerInfo?.success && printerInfo.printers) {
+        const printer = printerInfo.printers.find((p: any) => p.id === parseInt(company.printnode_printer_id));
+        if (printer) {
+          setPrinterName(printer.name || 'Impressora Remota');
+        }
+      }
+    } catch {
+      setPrinterName('Impressora Remota');
+    }
+  }
+}
             if (response.ok) {
               const printer = await response.json();
               setPrinterName(printer.name || 'Impressora Remota');

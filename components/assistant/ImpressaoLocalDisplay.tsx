@@ -19,7 +19,7 @@ import {
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
-import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 // ✅ CORREÇÃO: Adicionado 'waiting_attendant' aos stages

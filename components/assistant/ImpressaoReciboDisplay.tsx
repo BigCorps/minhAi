@@ -189,15 +189,15 @@ if (uploadError || !uploadResult?.success) {
 const filePath = uploadResult.filePath;
 console.log('✅ Upload concluído:', filePath);
 
-// Upload via Edge Function (faz upload + cria print_job)
+// Upload + criar job via Edge Function (bypassa RLS)
 const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
   body: {
     base64: base64,
     companyId: data.companyId,
     fileName: fileName,
-    functionKey: data.functionKey,           // ← ADICIONAR
-    pricePerPage: pricePerPage,              // ← ADICIONAR
-    paymentMethod: chargeEnabled ? 'pix' : 'credits',  // ← ADICIONAR
+    functionKey: data.functionKey,  // 'impressao_remota', 'impressao_local', ou 'impressao_recibo'
+    pricePerPage: pricePerPage,
+    paymentMethod: chargeEnabled ? 'pix' : 'credits',
   },
 });
 
@@ -205,11 +205,12 @@ if (uploadError || !uploadResult?.success) {
   throw new Error(uploadResult?.error || 'Erro ao processar arquivo');
 }
 
-const job = uploadResult.job;  // ← Job já vem pronto
+// Dados retornados pela Edge Function
+const job = uploadResult.job;
 const filePath = uploadResult.filePath;
 const estimatedPages = uploadResult.pagesCount;
 
-console.log('✅ Arquivo processado:', job.id);
+console.log('✅ Arquivo processado. Job ID:', job.id);
 
       setFilePreview({
         name: fileName,

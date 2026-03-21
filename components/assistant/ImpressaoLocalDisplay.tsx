@@ -137,22 +137,6 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         estimatedPages = Math.max(1, Math.ceil(sizeKB / 50));
       }
 
-// Upload via Edge Function (bypassa RLS)
-const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
-  body: {
-    base64: base64,
-    companyId: data.companyId,
-    fileName: fileName,
-  },
-});
-
-if (uploadError || !uploadResult?.success) {
-  throw new Error(uploadResult?.error || 'Erro ao fazer upload do arquivo');
-}
-
-const filePath = uploadResult.filePath;
-console.log('✅ Upload concluído:', filePath);
-
 // Upload + criar job via Edge Function (bypassa RLS)
 const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
   body: {

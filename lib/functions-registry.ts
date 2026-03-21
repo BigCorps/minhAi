@@ -3337,7 +3337,7 @@ cardapio: {
       }
 
       playText(
-        'Abrindo impressão remota. Envie um arquivo para imprimir automaticamente.'
+        'Envie seu arquivo para imprimir automaticamente.'
       );
 
       setActiveModal?.({
@@ -3394,7 +3394,7 @@ cardapio: {
 
     handler: async ({ playText, setActiveModal, companyId }) => {
       playText(
-        'Abrindo impressão local. Ennvie um arquivo para imprimir diretamente do seu dispositivo.'
+        'Ennvie seu arquivo para imprimir na sua impressora local.'
       );
 
       setActiveModal?.({
@@ -3470,7 +3470,7 @@ cardapio: {
       }
 
       playText(
-        'Abrindo impressão de recibo. Envie o arquivo para impressora térmicas.'
+        'Envie seu arquivo, como cupons e recibos, para impressora térmicas dedicadas.'
       );
 
       setActiveModal?.({

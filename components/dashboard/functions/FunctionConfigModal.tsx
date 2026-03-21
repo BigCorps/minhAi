@@ -2041,58 +2041,61 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
 // ============================================================
 
 const PrintNodeConfigForm = ({ settings, onChange }: any) => {
-  const [showApiKey, setShowApiKey] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [printerName, setPrinterName] = useState('');
+  const [printersList, setPrintersList] = useState<any[]>([]);
+  const [computerInfo, setComputerInfo] = useState<any>(null);
 
   const chargeEnabled = settings.print_charge_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;
-  const apiKey = settings.printnode_api_key ?? '';
+  const computerId = settings.printnode_computer_id ?? '';
   const printerId = settings.printnode_printer_id ?? '';
 
   const handleTestConnection = async () => {
-    if (!apiKey) {
+    if (!computerId) {
+      alert('Por favor, insira o Computer ID primeiro');
       setConnectionStatus('error');
       return;
     }
 
     setTestingConnection(true);
     setConnectionStatus('idle');
+    setPrintersList([]);
+    setComputerInfo(null);
 
     try {
-      // Testar API Key
-      const response = await fetch('https://api.printnode.com/whoami', {
-        headers: {
-          'Authorization': `Basic ${btoa(apiKey + ':')}`,
-        },
+      // Chamar edge function que usa SUA API key
+      const response = await fetch('/api/edge/test-printnode-computer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ computerId }),
       });
 
-      if (response.ok) {
+      if (!response.ok) {
+        throw new Error('Erro ao conectar com PrintNode');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
         setConnectionStatus('success');
-        
-        // Se tiver printer ID, buscar nome
-        if (printerId) {
-          const printerResponse = await fetch(`https://api.printnode.com/printers/${printerId}`, {
-            headers: {
-              'Authorization': `Basic ${btoa(apiKey + ':')}`,
-            },
-          });
-          
-          if (printerResponse.ok) {
-            const printer = await printerResponse.json();
-            setPrinterName(printer.name || 'Impressora PrintNode');
-          }
-        }
+        setComputerInfo(data.computer);
+        setPrintersList(data.printers || []);
       } else {
         setConnectionStatus('error');
+        alert(data.error || 'Computer ID não encontrado');
       }
-    } catch {
+    } catch (error: any) {
       setConnectionStatus('error');
+      alert('Erro ao testar conexão: ' + error.message);
     } finally {
       setTestingConnection(false);
     }
+  };
+
+  const handleSelectPrinter = (printer: any) => {
+    onChange('printnode_printer_id', printer.id.toString());
   };
 
   return (
@@ -2105,68 +2108,54 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
         <ul className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
           <li>• Cliente não precisa fazer nada - imprime automaticamente</li>
           <li>• Ideal para desktop sem touch</li>
-          <li>• Requer conta PrintNode (R$ 95-495/mês)</li>
+          <li>• <strong>Você paga PrintNode, cliente só instala o app (grátis)</strong></li>
           <li>• Custo: 3 créditos por impressão</li>
         </ul>
       </div>
 
-      {/* Como obter */}
+      {/* Instruções de Instalação */}
       <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
         <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-2">
-          📌 Como obter suas credenciais PrintNode:
+          📌 Instalação PrintNode Client (grátis):
         </p>
-        <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
-          <li>Acesse <a href="https://app.printnode.com" target="_blank" rel="noopener" className="underline font-medium">app.printnode.com</a></li>
-          <li>Faça login ou crie uma conta</li>
-          <li>Vá em "API Keys" → Copie sua chave</li>
-          <li>Vá em "Printers" → Copie o ID da impressora</li>
+        <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1.5 list-decimal list-inside">
+          <li>
+            Baixe o PrintNode Client:{' '}
+            <a 
+              href="https://www.printnode.com/en/download" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline font-medium hover:text-blue-900"
+            >
+              printnode.com/download
+            </a>
+          </li>
+          <li>Instale no computador que tem a impressora</li>
+          <li>Abra o PrintNode Client → aba "Account"</li>
+          <li>Copie o <strong>"Computer ID"</strong> (ex: abc123def456)</li>
+          <li>Cole aqui abaixo</li>
         </ol>
       </div>
 
-      {/* API Key */}
+      {/* Computer ID */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          PrintNode API Key <span className="text-red-500">*</span>
-        </label>
-        <div className="relative">
-          <input
-            type={showApiKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={e => onChange('printnode_api_key', e.target.value)}
-            placeholder="Cole sua API Key do PrintNode"
-            className="w-full px-4 py-2 pr-12 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => setShowApiKey(!showApiKey)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10"
-          >
-            {showApiKey ? '👁️' : '👁️‍🗨️'}
-          </button>
-        </div>
-      </div>
-
-      {/* Printer ID */}
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          ID da Impressora <span className="text-red-500">*</span>
+          Computer ID <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
-          value={printerId}
-          onChange={e => onChange('printnode_printer_id', e.target.value)}
-          placeholder="Ex: 12345"
+          value={computerId}
+          onChange={e => onChange('printnode_computer_id', e.target.value)}
+          placeholder="Ex: abc123def456"
           className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
         />
-        {printerName && (
-          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-            ✓ {printerName}
-          </p>
-        )}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Encontre no PrintNode Client → aba "Account"
+        </p>
       </div>
 
       {/* Botão Testar */}
-      {apiKey && (
+      {computerId && (
         <button
           type="button"
           onClick={handleTestConnection}
@@ -2189,9 +2178,76 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
           ) : connectionStatus === 'error' ? (
             <>✗ Erro na Conexão</>
           ) : (
-            'Testar Conexão'
+            '🔍 Detectar Impressoras'
           )}
         </button>
+      )}
+
+      {/* Info do Computador */}
+      {computerInfo && (
+        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <p className="text-xs font-medium text-green-800 dark:text-green-200 mb-1">
+            ✅ Computador conectado:
+          </p>
+          <p className="text-xs text-green-700 dark:text-green-300">
+            <strong>{computerInfo.name}</strong> · {computerInfo.inet || 'IP não disponível'}
+          </p>
+        </div>
+      )}
+
+      {/* Lista de Impressoras */}
+      {printersList.length > 0 && (
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
+            Impressoras Disponíveis:
+          </label>
+          {printersList.map((printer) => (
+            <div
+              key={printer.id}
+              onClick={() => handleSelectPrinter(printer)}
+              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                printerId === printer.id.toString()
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                  : 'border-gray-200 dark:border-white/10 hover:border-indigo-300'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {printer.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {printer.description || 'Sem descrição'}
+                  </p>
+                </div>
+                {printer.state === 'online' && (
+                  <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                    Online
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Printer ID Manual (caso não encontre) */}
+      {connectionStatus === 'success' && printersList.length === 0 && (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-900 dark:text-white">
+            ID da Impressora (manual)
+          </label>
+          <input
+            type="text"
+            value={printerId}
+            onChange={e => onChange('printnode_printer_id', e.target.value)}
+            placeholder="Ex: 12345"
+            className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Nenhuma impressora detectada. Informe o ID manualmente.
+          </p>
+        </div>
       )}
 
       {/* Divisor */}
@@ -2258,20 +2314,10 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
           className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
         />
       </div>
-
-      {/* Custo PrintNode */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-        <p className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-1">
-          Custo PrintNode (mensal):
-        </p>
-        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-          <li>• Starter: R$ ~95/mês (até 1.000 impressões)</li>
-          <li>• Business: R$ ~495/mês (até 5.000 impressões)</li>
-        </ul>
-      </div>
     </div>
   );
 };
+
 
 // ============================================================
 // Formulário de configuração para Impressão Recibo (Térmica)

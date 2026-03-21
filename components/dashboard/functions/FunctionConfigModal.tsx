@@ -1979,7 +1979,7 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
       {/* Preço por Página */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Preço por Página {chargeEnabled ? '(cobrado do consumidor via PIX)' : '(informativo)'}
+          Preço por Página {chargeEnabled ? '(cobrado do consumidor via PIX)'}
         </label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
@@ -2593,7 +2593,8 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
     </div>
   );
 };
-
+
+
 const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
   const router = useRouter();
 

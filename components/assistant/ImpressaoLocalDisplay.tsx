@@ -19,10 +19,11 @@ import {
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
-import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
+import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
-type Stage = 'upload' | 'processing' | 'payment' | 'printing' | 'success' | 'error';
+// ✅ CORREÇÃO: Adicionado 'waiting_attendant' aos stages
+type Stage = 'upload' | 'processing' | 'payment' | 'waiting_attendant' | 'printing' | 'success' | 'error';
 
 interface Props {
   data: { 
@@ -47,7 +48,8 @@ interface PrintJob {
   file_url: string;
   pages_count: number;
   total_amount: number;
-  payment_method: 'pix' | 'credits';
+  // ✅ CORREÇÃO: Adicionado 'manual' ao tipo
+  payment_method: 'pix' | 'credits' | 'manual';
 }
 
 interface PixData {
@@ -89,7 +91,8 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
-  const [chargeEnabled, setChargeEnabled] = useState(false);
+  // ✅ CORREÇÃO: Renomeado chargeEnabled → manualPaymentEnabled
+  const [manualPaymentEnabled, setManualPaymentEnabled] = useState(false);
   const [pricePerPage, setPricePerPage] = useState(0.50);
   const [printFileUrl, setPrintFileUrl] = useState<string | null>(null);
 
@@ -102,12 +105,14 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
     (async () => {
       const { data: company } = await supabase
         .from('companies')
-        .select('print_charge_enabled, print_price_per_page')
+        // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
+        .select('manual_payment_enabled, print_price_per_page')
         .eq('id', data.companyId)
         .single();
 
       if (company) {
-        setChargeEnabled(company.print_charge_enabled ?? false);
+        // ✅ CORREÇÃO: Renomeado setChargeEnabled → setManualPaymentEnabled
+        setManualPaymentEnabled(company.manual_payment_enabled ?? false);
         setPricePerPage(company.print_price_per_page ?? 0.50);
       }
     })();
@@ -150,7 +155,8 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
           fileName,
           functionKey: data.functionKey,
           pricePerPage,
-          paymentMethod: chargeEnabled ? 'pix' : 'credits',
+          // ✅ CORREÇÃO: Renomeado chargeEnabled → manualPaymentEnabled, 'pix'/'credits' → 'manual'/'pix'
+          paymentMethod: manualPaymentEnabled ? 'manual' : 'pix',
         },
       });
 
@@ -174,12 +180,13 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         base64,
       });
 
+      // ✅ CORREÇÃO: payment_method usa 'manual' | 'pix'
       setPrintJob({
         id: job.id,
         file_url: filePath,
         pages_count: estimatedPages,
         total_amount: totalAmount,
-        payment_method: chargeEnabled ? 'pix' : 'credits',
+        payment_method: manualPaymentEnabled ? 'manual' : 'pix',
       });
 
       console.log('🔍 Debug preço:', {
@@ -189,14 +196,14 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         pagesCountRaw: uploadResult.pagesCount,
       });
 
-      // ── Determinar fluxo: PIX ou créditos ──────────────
-      if (chargeEnabled) {
+      // ✅ CORREÇÃO: Fluxo manual vs PIX automático
+      if (manualPaymentEnabled) {
+        // Modo manual: mostra mensagem para atendente processar
+        setStage('waiting_attendant');
+      } else {
+        // Modo autoatendimento: gera PIX automático
         setStage('payment');
         await generatePix(job.id, totalAmount);
-      } else {
-        setStage('printing');
-        // Passa paymentMethod diretamente da variável local (não do state)
-        await processPrint(job.id, filePath, 'credits');
       }
 
     } catch (err: any) {
@@ -204,7 +211,7 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
       setErrorMsg(err.message ?? 'Erro ao processar arquivo.');
       setStage('error');
     }
-  }, [data.companyId, chargeEnabled, pricePerPage, supabase]);
+  }, [data.companyId, manualPaymentEnabled, pricePerPage, supabase]);
 
   // ── Gerar PIX ───────────────────────────────────────────
   const generatePix = async (jobId: string, amount: number) => {
@@ -241,7 +248,8 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
 
   // ── Processar impressão ─────────────────────────────────
   // paymentMethod é passado como parâmetro para evitar leitura de state desatualizado
-  const processPrint = async (jobId: string, fileUrl: string, paymentMethod: 'pix' | 'credits') => {
+  // ✅ CORREÇÃO: Adicionado 'manual' ao tipo do parâmetro
+  const processPrint = async (jobId: string, fileUrl: string, paymentMethod: 'pix' | 'credits' | 'manual') => {
     try {
       if (!jobId) throw new Error('Job de impressão não foi criado');
 
@@ -413,6 +421,41 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
                 <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
                   Preparando impressão...
                 </p>
+              </div>
+            )}
+
+            {/* ── STAGE: WAITING_ATTENDANT ── */}
+            {stage === 'waiting_attendant' && (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                  isDark ? 'bg-yellow-500/20' : 'bg-yellow-100'
+                }`}>
+                  <AlertCircle className={`w-8 h-8 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                </div>
+                
+                <div className="text-center">
+                  <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Aguarde o Atendente
+                  </h3>
+                  <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>
+                    O valor da impressão é: {printJob?.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>
+                    ({printJob?.pages_count} página{printJob && printJob.pages_count > 1 ? 's' : ''} × {pricePerPage.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
+                  </p>
+                  <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>
+                    O atendente irá processar o pagamento e liberar a impressão
+                  </p>
+                </div>
+
+                <button
+                  onClick={onClose}
+                  className={`px-6 py-2 rounded-lg font-medium ${
+                    isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                  }`}
+                >
+                  Cancelar
+                </button>
               </div>
             )}
 

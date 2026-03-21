@@ -197,9 +197,8 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
       });
 
 if (manualPaymentEnabled) {
-  // Cobrança manual: libera impressão direto, atendente cobra fora do sistema
   setStage('printing');
-  await processPrint(job.id, 'manual');
+  await processPrint(job.id, filePath, 'manual');
 } else {
   setStage('payment');
   await generatePix(job.id, totalAmount);

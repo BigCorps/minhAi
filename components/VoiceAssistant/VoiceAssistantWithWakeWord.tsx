@@ -699,7 +699,6 @@ case 'tocar_musica':
     data: { companyId, query: '' },
   });
   playText('Qual música você quer ouvir?').catch(() => {});
-  // ✅ NÃO para o Google Speech — música toca em segundo plano
   break;
 
         case 'confirmar_presenca':

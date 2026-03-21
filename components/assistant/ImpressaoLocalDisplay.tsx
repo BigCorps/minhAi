@@ -19,7 +19,7 @@ import {
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
-import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
+import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'upload' | 'processing' | 'payment' | 'printing' | 'success' | 'error';
@@ -240,13 +240,21 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         throw new Error(result.error ?? 'Falha ao processar impressão');
       }
 
-      // Buscar URL pública e salvar no state para renderizar no modal
+      // Baixar arquivo como blob para evitar erro cross-origin no iframe
       const { data: fileData } = supabase.storage
         .from('print-files')
         .getPublicUrl(fileUrl);
 
       if (fileData?.publicUrl) {
-        setPrintFileUrl(fileData.publicUrl);
+        try {
+          const response = await fetch(fileData.publicUrl);
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          setPrintFileUrl(blobUrl);
+        } catch {
+          // Fallback: usar URL pública diretamente (sem print automático)
+          setPrintFileUrl(fileData.publicUrl);
+        }
       }
 
       setStage('success');

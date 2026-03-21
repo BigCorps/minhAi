@@ -4,7 +4,7 @@
 //
 // Modal para Impressão Remota (PrintNode) - 3 créditos
 // - Upload de arquivo ou foto via CameraCapture
-// - Opção de cobrança via PIX ou desconto de créditos
+// - Seletor P&B / Colorida com preços dinâmicos
 // - Envio automático para PrintNode (sem interação do cliente)
 // ============================================================
 
@@ -22,7 +22,7 @@ import CameraCapture from '@/components/assistant/CameraCapture';
 import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
-// ✅ CORREÇÃO: Adicionado 'waiting_attendant' aos stages
+// waiting_attendant só é usado quando manualPaymentEnabled = true
 type Stage = 'upload' | 'processing' | 'payment' | 'waiting_attendant' | 'printing' | 'success' | 'error';
 
 interface Props {
@@ -48,7 +48,6 @@ interface PrintJob {
   file_url: string;
   pages_count: number;
   total_amount: number;
-  // ✅ CORREÇÃO: Adicionado 'manual' ao tipo
   payment_method: 'pix' | 'credits' | 'manual';
   printnode_job_id?: string;
 }
@@ -92,10 +91,16 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
-  // ✅ CORREÇÃO: Renomeado chargeEnabled → manualPaymentEnabled
+
   const [manualPaymentEnabled, setManualPaymentEnabled] = useState(false);
-  const [pricePerPage, setPricePerPage] = useState(0.50);
-  const [printerName, setPrinterName] = useState<string>('');
+
+  // ✅ NOVO: Estados de cor e preços separados
+  const [printMode, setPrintMode] = useState<'bw' | 'color'>('bw');
+  const [colorEnabled, setColorEnabled] = useState(false);
+  const [priceBW, setPriceBW] = useState(0.30);
+  const [priceColor, setPriceColor] = useState(0.80);
+  const [printerNameBW, setPrinterNameBW] = useState<string>('');
+  const [printerNameColor, setPrinterNameColor] = useState<string>('');
 
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -105,29 +110,46 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
     (async () => {
       const { data: company } = await supabase
         .from('companies')
-        // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
-        .select('manual_payment_enabled, print_price_per_page, printnode_api_key, printnode_printer_id')
+        // ✅ NOVO: Busca campos de cor e IDs separados
+        .select('manual_payment_enabled, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color')
         .eq('id', data.companyId)
         .single();
 
       if (company) {
-        // ✅ CORREÇÃO: Renomeado setChargeEnabled → setManualPaymentEnabled
         setManualPaymentEnabled(company.manual_payment_enabled ?? false);
-        setPricePerPage(company.print_price_per_page ?? 0.50);
+        setColorEnabled(company.print_color_enabled ?? false);
+        setPriceBW(company.print_price_bw ?? 0.30);
+        setPriceColor(company.print_price_color ?? 0.80);
 
-        if (company.printnode_api_key && company.printnode_printer_id) {
+        // Se colorida não habilitada, força P&B
+        if (!company.print_color_enabled) {
+          setPrintMode('bw');
+        }
+
+        // ✅ NOVO: Buscar nomes das impressoras via edge function
+        if (company.printnode_computer_id) {
           try {
-            const response = await fetch(`https://api.printnode.com/printers/${company.printnode_printer_id}`, {
-              headers: {
-                'Authorization': `Basic ${btoa(company.printnode_api_key + ':')}`,
-              },
+            const { data: printerInfo } = await supabase.functions.invoke('test-printnode-computer', {
+              body: { computerId: company.printnode_computer_id },
             });
-            if (response.ok) {
-              const printer = await response.json();
-              setPrinterName(printer.name || 'Impressora Remota');
+
+            if (printerInfo?.success && printerInfo.printers) {
+              if (company.printnode_printer_id_bw) {
+                const printerBW = printerInfo.printers.find(
+                  (p: any) => p.id === parseInt(company.printnode_printer_id_bw)
+                );
+                if (printerBW) setPrinterNameBW(printerBW.name || 'Impressora P&B');
+              }
+
+              if (company.printnode_printer_id_color) {
+                const printerColor = printerInfo.printers.find(
+                  (p: any) => p.id === parseInt(company.printnode_printer_id_color)
+                );
+                if (printerColor) setPrinterNameColor(printerColor.name || 'Impressora Colorida');
+              }
             }
-          } catch {
-            setPrinterName('Impressora Remota');
+          } catch (err) {
+            console.error('Erro ao buscar impressoras:', err);
           }
         }
       }
@@ -155,15 +177,18 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         fileName = `remota_${Date.now()}.pdf`;
       }
 
+      // ✅ NOVO: Preço dinâmico baseado no modo selecionado
+      const currentPricePerPage = printMode === 'bw' ? priceBW : priceColor;
+
       const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
         body: {
           base64,
           companyId: data.companyId,
           fileName,
           functionKey: data.functionKey,
-          pricePerPage,
-          // ✅ CORREÇÃO: Renomeado chargeEnabled → manualPaymentEnabled, 'pix'/'credits' → 'manual'/'pix'
+          pricePerPage: currentPricePerPage,
           paymentMethod: manualPaymentEnabled ? 'manual' : 'pix',
+          printMode,  // ✅ NOVO: envia modo para salvar no job
         },
       });
 
@@ -174,10 +199,10 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
       const job = uploadResult.job;
       const filePath = uploadResult.filePath;
       const estimatedPages = uploadResult.pagesCount;
-      const totalAmount = estimatedPages * pricePerPage;
+      const totalAmount = estimatedPages * currentPricePerPage;
       const sizeBytes = Math.round((base64.length * 3) / 4);
 
-      console.log('✅ Arquivo processado. Job ID:', job.id);
+      console.log('✅ Arquivo processado. Job ID:', job.id, '| modo:', printMode);
 
       setFilePreview({
         name: fileName,
@@ -187,7 +212,6 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         base64,
       });
 
-      // ✅ CORREÇÃO: payment_method usa 'manual' | 'pix'
       setPrintJob({
         id: job.id,
         file_url: filePath,
@@ -196,12 +220,12 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         payment_method: manualPaymentEnabled ? 'manual' : 'pix',
       });
 
-      // ✅ CORREÇÃO: Fluxo manual vs PIX automático
+      // ✅ FLUXO CORRETO:
+      // - manualPaymentEnabled = true  → waiting_attendant
+      // - manualPaymentEnabled = false → PIX automático (NUNCA waiting_attendant)
       if (manualPaymentEnabled) {
-        // Modo manual: mostra mensagem para atendente processar
         setStage('waiting_attendant');
       } else {
-        // Modo autoatendimento: gera PIX automático
         setStage('payment');
         await generatePix(job.id, totalAmount);
       }
@@ -211,7 +235,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
       setErrorMsg(err.message ?? 'Erro ao processar arquivo.');
       setStage('error');
     }
-  }, [data.companyId, manualPaymentEnabled, pricePerPage, supabase]);
+  }, [data.companyId, manualPaymentEnabled, printMode, priceBW, priceColor, supabase]);
 
   // ── Gerar PIX ───────────────────────────────────────────
   const generatePix = async (jobId: string, amount: number) => {
@@ -222,7 +246,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         body: {
           company_id: data.companyId,
           amount_cents: Math.round(amount * 100),
-          description: `Impressão Remota - ${filePreview?.pages ?? 1} pág`,
+          description: `Impressão Remota ${printMode === 'bw' ? 'P&B' : 'Colorida'} - ${filePreview?.pages ?? 1} pág`,
           print_job_id: jobId,
         },
       });
@@ -230,7 +254,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
       if (error) throw error;
 
       setPixData({
-        qr_code: pixResult.pix_code,        // ← edge retorna pix_code, não qr_code
+        qr_code: pixResult.pix_code,
         qr_code_url: pixResult.qr_code_url,
         transaction_id: pixResult.transaction_id,
         company_name: pixResult.company_name,
@@ -246,8 +270,6 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
   };
 
   // ── Processar impressão (PrintNode) ─────────────────────
-  // paymentMethod é parâmetro — nunca lido do state desatualizado
-  // ✅ CORREÇÃO: Adicionado 'manual' ao tipo do parâmetro
   const processPrint = async (jobId: string, paymentMethod: 'pix' | 'credits' | 'manual') => {
     try {
       if (!jobId) throw new Error('Job de impressão não foi criado');
@@ -258,7 +280,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         body: {
           jobId,
           companyId: data.companyId,
-          paymentMethod, // ← vem do parâmetro, nunca do state
+          paymentMethod,
         },
       });
 
@@ -268,13 +290,13 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         throw new Error(result.error ?? 'Falha ao processar impressão');
       }
 
-      // Sucesso — PrintNode recebeu o job
       setPrintJob(prev => prev ? { ...prev, printnode_job_id: result.printNodeJobId } : null);
       setStage('success');
 
+      const activePrinter = printMode === 'bw' ? printerNameBW : printerNameColor;
       await playText(
         result.hasPrintNode
-          ? `Documento enviado para ${printerName}. A impressão será feita automaticamente.`
+          ? `Documento enviado para ${activePrinter || 'impressora remota'}. A impressão será feita automaticamente.`
           : 'Impressão processada com sucesso.'
       );
 
@@ -288,7 +310,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
   // ── Comandos de voz ─────────────────────────────────────
   useModalVoiceCommand({
     active: true,
-    onTranscript: (transcript) => {
+    onTranscript: async (transcript) => {
       const t = normalize(transcript);
 
       if (['fechar', 'cancelar', 'sair', 'voltar'].some(c => t.includes(c))) {
@@ -310,6 +332,23 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
             return;
           }
         }
+
+        // ✅ NOVO: Comandos de voz para modo de impressão
+        if (['preto', 'branco', 'cinza', 'monocromatico'].some(c => t.includes(c))) {
+          setPrintMode('bw');
+          await playText('Modo preto e branco selecionado.');
+          return;
+        }
+
+        if (['colorido', 'colorida', 'cor', 'cores'].some(c => t.includes(c))) {
+          if (colorEnabled) {
+            setPrintMode('color');
+            await playText('Modo colorido selecionado.');
+          } else {
+            await playText('Impressão colorida não disponível.');
+          }
+          return;
+        }
       }
 
       if (stage === 'success') {
@@ -320,6 +359,9 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
       }
     }
   });
+
+  // Nome da impressora ativa
+  const activePrinterName = printMode === 'bw' ? printerNameBW : printerNameColor;
 
   // ── Renderização ────────────────────────────────────────
   return createPortal(
@@ -338,7 +380,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         </div>
       )}
 
-      {/* ── STAGE: PAYMENT — delegado ao PIXConfirmationModal ── */}
+      {/* ── STAGE: PAYMENT — PIXConfirmationModal ── */}
       {stage === 'payment' && pixData?.qr_code && pixData?.qr_code_url && printJob && (
         <PIXConfirmationModal
           transactionId={pixData.transaction_id}
@@ -385,12 +427,69 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
             {/* ── STAGE: UPLOAD ── */}
             {stage === 'upload' && (
               <div className="flex flex-col gap-3">
+
+                {/* Banner informativo */}
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${isDark ? 'bg-indigo-900/30 border border-indigo-700 text-indigo-300' : 'bg-indigo-50 border border-indigo-200 text-indigo-700'}`}>
                   <Zap className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    <strong>Impressão 100% automática.</strong> O documento será enviado para {printerName || 'a impressora configurada'} sem nenhuma interação do cliente.
+                    <strong>Impressão 100% automática.</strong> O documento será enviado para {activePrinterName || 'a impressora configurada'} sem nenhuma interação do cliente.
                   </span>
                 </div>
+
+                {/* ✅ NOVO: Seletor P&B / Colorida (só aparece se colorida habilitada) */}
+                {colorEnabled && (
+                  <div className={`flex gap-2 p-1 rounded-xl ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
+                    <button
+                      onClick={() => setPrintMode('bw')}
+                      className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all ${
+                        printMode === 'bw'
+                          ? isDark
+                            ? 'bg-slate-600 text-white shadow-md'
+                            : 'bg-white text-gray-900 shadow-md'
+                          : isDark
+                          ? 'text-slate-400 hover:text-slate-200'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1.5">
+                        <span className="text-2xl">⚫</span>
+                        <span>Preto e Branco</span>
+                        <span className={`text-xs ${printMode === 'bw' ? (isDark ? 'text-slate-300' : 'text-gray-700') : 'text-slate-500'}`}>
+                          {priceBW.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/pág
+                        </span>
+                        {printerNameBW && (
+                          <span className={`text-xs truncate max-w-full ${printMode === 'bw' ? (isDark ? 'text-slate-400' : 'text-gray-500') : 'text-slate-600'}`}>
+                            → {printerNameBW}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setPrintMode('color')}
+                      className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all ${
+                        printMode === 'color'
+                          ? 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 text-white shadow-md'
+                          : isDark
+                          ? 'text-slate-400 hover:text-slate-200'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1.5">
+                        <span className="text-2xl">🌈</span>
+                        <span>Colorida</span>
+                        <span className={`text-xs ${printMode === 'color' ? 'text-white/90' : 'text-slate-500'}`}>
+                          {priceColor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/pág
+                        </span>
+                        {printerNameColor && (
+                          <span className={`text-xs truncate max-w-full ${printMode === 'color' ? 'text-white/80' : 'text-slate-600'}`}>
+                            → {printerNameColor}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                )}
 
                 <CameraCapture
                   onCapture={handleCapture}
@@ -403,7 +502,14 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
                   onTabChange={setCameraTab}
                   enabledTabs={['companion', 'upload']}
                 />
-                <VoiceHint commands={['"celular"', '"arquivo"', '"fechar"']} isDark={isDark} />
+
+                <VoiceHint
+                  commands={colorEnabled
+                    ? ['"preto e branco"', '"colorida"', '"celular"', '"arquivo"', '"fechar"']
+                    : ['"celular"', '"arquivo"', '"fechar"']
+                  }
+                  isDark={isDark}
+                />
               </div>
             )}
 
@@ -425,7 +531,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
                   <Cloud className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${isDark ? 'text-indigo-300' : 'text-indigo-500'}`} />
                 </div>
                 <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
-                  Enviando para {printerName || 'impressora remota'}...
+                  Enviando para {activePrinterName || 'impressora remota'}...
                 </p>
                 <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
                   A impressão será automática
@@ -433,7 +539,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
               </div>
             )}
 
-            {/* ── STAGE: WAITING_ATTENDANT ── */}
+            {/* ── STAGE: WAITING_ATTENDANT (apenas quando manualPaymentEnabled = true) ── */}
             {stage === 'waiting_attendant' && (
               <div className="flex flex-col items-center gap-4 py-8">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
@@ -450,7 +556,10 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
                     O valor da impressão é: {printJob?.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </p>
                   <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>
-                    ({printJob?.pages_count} página{printJob && printJob.pages_count > 1 ? 's' : ''} × {pricePerPage.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
+                    ({printJob?.pages_count} página{printJob && printJob.pages_count > 1 ? 's' : ''} × {(printMode === 'bw' ? priceBW : priceColor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
+                  </p>
+                  <p className={`text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>
+                    Modo: {printMode === 'bw' ? 'Preto e Branco' : 'Colorida'}
                   </p>
                   <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-gray-500'}`}>
                     O atendente irá processar o pagamento e liberar a impressão
@@ -479,7 +588,10 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
                     Impressão Enviada!
                   </p>
                   <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                    O documento será impresso automaticamente em {printerName || 'impressora remota'}
+                    O documento será impresso automaticamente em {activePrinterName || 'impressora remota'}
+                  </p>
+                  <p className={`text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
+                    {printMode === 'bw' ? '⚫ Preto e Branco' : '🌈 Colorida'}
                   </p>
                   {printJob?.printnode_job_id && (
                     <p className={`text-xs mt-2 font-mono ${isDark ? 'text-slate-600' : 'text-gray-400'}`}>

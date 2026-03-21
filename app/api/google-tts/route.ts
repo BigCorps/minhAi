@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const audioBuffer = await synthesizeSpeech({
       text,
       voiceName: voice ?? BRAZILIAN_VOICES.NEURAL_MALE,
-      speakingRate: speed ?? 1.05, // 5% mais rápido por padrão
+      speakingRate: speed ?? 1.2, // 5% mais rápido por padrão
       audioEncoding: 'MP3',
     });
     
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     const audioBuffer = await synthesizeSpeech({
       text,
       voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-      speakingRate: 1.05,
+      speakingRate: 1.2,
       audioEncoding: 'MP3',
     });
     

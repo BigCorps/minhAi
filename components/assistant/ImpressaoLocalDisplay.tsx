@@ -54,6 +54,7 @@ interface PixData {
   qr_code: string;
   qr_code_url: string;
   transaction_id: string;
+  company_name?: string;
 }
 
 const AUTO_CLOSE_DURATION = 30000; // 30s
@@ -179,6 +180,13 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         pages_count: estimatedPages,
         total_amount: totalAmount,
         payment_method: chargeEnabled ? 'pix' : 'credits',
+      });
+
+      console.log('🔍 Debug preço:', {
+        estimatedPages,
+        pricePerPage,
+        totalAmount,
+        pagesCountRaw: uploadResult.pagesCount,
       });
 
       // ── Determinar fluxo: PIX ou créditos ──────────────

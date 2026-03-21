@@ -56,6 +56,7 @@ interface PixData {
   qr_code: string;
   qr_code_url: string;
   transaction_id: string;
+  company_name?: string;
 }
 
 const AUTO_CLOSE_DURATION = 30000; // 30s
@@ -237,9 +238,10 @@ export default function ImpressaoReciboDisplay({ data, onClose, theme = 'dark', 
       if (error) throw error;
 
       setPixData({
-        qr_code: pixResult.qr_code,
+        qr_code: pixResult.pix_code,        // ← edge retorna pix_code, não qr_code
         qr_code_url: pixResult.qr_code_url,
         transaction_id: pixResult.transaction_id,
+        company_name: pixResult.company_name,
       });
 
       await playText('QR Code gerado. Escaneie para pagar ou diga: copiar para copiar o código PIX.');
@@ -361,18 +363,32 @@ export default function ImpressaoReciboDisplay({ data, onClose, theme = 'dark', 
   // ── Renderização ────────────────────────────────────────
   return createPortal(
     <>
+      {/* ── STAGE: PAYMENT aguardando pixData ── */}
+      {stage === 'payment' && (!pixData?.qr_code || !pixData?.qr_code_url) && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
+                Gerando QR Code PIX...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── STAGE: PAYMENT — delegado ao PIXConfirmationModal ── */}
-      {stage === 'payment' && pixData && printJob && (
+      {stage === 'payment' && pixData?.qr_code && pixData?.qr_code_url && printJob && (
         <PIXConfirmationModal
           transactionId={pixData.transaction_id}
           amount={printJob.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           qrCodeUrl={pixData.qr_code_url}
           pixCode={pixData.qr_code}
+          companyName={pixData.company_name}
           theme={theme}
           onConfirm={async () => {
             await playText('Pagamento confirmado! Preparando impressão térmica...');
             setStage('printing');
-            // filePreview.base64 e 'pix' passados diretamente — não depende do state printJob
             await processPrint(printJob.id, filePreview?.base64 ?? '', 'pix');
           }}
           onCancel={async () => {

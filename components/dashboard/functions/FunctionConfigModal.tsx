@@ -2103,20 +2103,18 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
       {/* Info */}
       <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800">
         <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-2">
-          <strong>Impressão Remota:</strong> Impressão 100% automática via PrintNode (3 créditos).
+          <strong>Impressão Remota:</strong> Impressão 100% automática via PrintNode.
         </p>
         <ul className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
           <li>• Cliente não precisa fazer nada - imprime automaticamente</li>
           <li>• Ideal para desktop sem touch</li>
-          <li>• <strong>Você paga PrintNode, cliente só instala o app (grátis)</strong></li>
-          <li>• Custo: 3 créditos por impressão</li>
         </ul>
       </div>
 
       {/* Instruções de Instalação */}
       <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
         <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-2">
-          📌 Instalação PrintNode Client (grátis):
+          Instalação PrintNode Client (grátis):
         </p>
         <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1.5 list-decimal list-inside">
           <li>
@@ -2263,7 +2261,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {chargeEnabled
                 ? 'Cliente paga via PIX antes de imprimir'
-                : 'Desconta créditos do cliente automaticamente'}
+                : 'Desconta do seu saldo.'}
             </p>
           </div>
           <div className="relative">

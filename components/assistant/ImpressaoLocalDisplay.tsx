@@ -119,24 +119,6 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
     }
   }, [stage, onClose]);
 
-  // ── Upload de arquivo ───────────────────────────────────
-  const handleCapture = useCallback(async (base64: string) => {
-    setStage('processing');
-
-    try {
-      // Detectar tipo
-      let fileType = 'image/jpeg';
-      let fileName = `impressao_${Date.now()}.jpg`;
-      let estimatedPages = 1;
-
-      if (base64.startsWith('JVBERi')) {
-        fileType = 'application/pdf';
-        fileName = `impressao_${Date.now()}.pdf`;
-        // Estimar páginas (1 página ≈ 50KB)
-        const sizeKB = (base64.length * 0.75) / 1024;
-        estimatedPages = Math.max(1, Math.ceil(sizeKB / 50));
-      }
-
 // Upload + criar job via Edge Function (bypassa RLS)
 const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
   body: {

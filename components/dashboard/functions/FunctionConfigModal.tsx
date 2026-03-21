@@ -1,6 +1,6 @@
 // components/dashboard/functions/FunctionConfigModal.tsx
 'use client';
-
+ 
 import { useState, useEffect } from 'react';
 import { CheckCircle, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -1923,16 +1923,14 @@ const TocarMusicaForm = () => (
 // ============================================================
 // Formulário de configuração para Impressão Local (Nativa)
 // ============================================================
-
+ 
 const NativeConfigForm = ({ settings, onChange }: any) => {
-  // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
   const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;
-
+ 
   return (
     <div className="space-y-4">
-      {/* Info */}
       <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
         <p className="text-sm text-purple-800 dark:text-purple-200 mb-2">
           <strong>Impressão Local:</strong> Usa a impressora nativa do dispositivo.
@@ -1943,45 +1941,40 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
           <li>• Sem custo mensal</li>
         </ul>
       </div>
-
-      {/* ✅ CORREÇÃO: Toggle Cobrança Manual */}
+ 
+      {/* Toggle Cobrança */}
       <div className="space-y-3">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrança Manual (com atendente)
+              Cobrança Manual (dinheiro/cartão)
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {manualPaymentEnabled
-                ? 'Atendente cobra (dinheiro/cartão) e libera manualmente'
+                ? 'Atendente cobra no caixa — impressão liberada automaticamente'
                 : 'Sistema gera PIX automático para o cliente pagar sozinho'}
             </p>
           </div>
           <div className="relative">
-            <input
-              type="checkbox"
-              checked={manualPaymentEnabled}
-              onChange={e => onChange('manual_payment_enabled', e.target.checked)}
-              className="sr-only peer"
-            />
+            <input type="checkbox" checked={manualPaymentEnabled} onChange={e => onChange('manual_payment_enabled', e.target.checked)} className="sr-only peer" />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
           </div>
         </label>
-
-        {/* ✅ CORREÇÃO: Descrição atualizada */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          ✅ Ativado: Atendente cobra (dinheiro/cartão) e libera impressão manualmente<br/>
+ 
+        {/* ✅ Descrição sem mencionar "atendente libera" */}
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          ✅ Ativado: Cliente paga no caixa (dinheiro/cartão) — a impressão é liberada automaticamente<br/>
           ❌ Desativado: Sistema gera PIX automático para o cliente pagar sozinho
         </p>
-
+ 
         {manualPaymentEnabled && (
-          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-            <p className="text-xs text-yellow-800 dark:text-yellow-200">
-              O cliente verá uma tela pedindo para aguardar o atendente processar o pagamento.
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-xs text-blue-800 dark:text-blue-200">
+              O sistema libera a impressão automaticamente. O pagamento é cobrado pelo atendente no caixa.
             </p>
           </div>
         )}
-
+ 
         {!manualPaymentEnabled && (
           <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-xs text-green-800 dark:text-green-200">
@@ -1990,119 +1983,57 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
           </div>
         )}
       </div>
-
+ 
       {/* Preço por Página */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Preço por Página
-        </label>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Preço por Página</label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-            R$
-          </span>
-          <input
-            type="number"
-            step="0.10"
-            min="0"
-            max="10"
-            value={pricePerPage}
-            onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
-          />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">R$</span>
+          <input type="number" step="0.10" min="0" max="10" value={pricePerPage} onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)} className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500" />
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Preço sugerido: R$ 0,30 a R$ 0,80 por página
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Preço sugerido: R$ 0,30 a R$ 0,80 por página</p>
       </div>
-
+ 
       {/* Máximo de Páginas */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Máximo de Páginas por Trabalho
-        </label>
-        <input
-          type="number"
-          step="1"
-          min="1"
-          max="200"
-          value={maxPages}
-          onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)}
-          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
-        />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Limite de páginas para evitar abusos
-        </p>
-      </div>
-
-      {/* Dicas */}
-      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
-        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-          <strong>Como funciona:</strong>
-        </p>
-        <ol className="text-xs text-gray-500 dark:text-gray-400 space-y-1 list-decimal list-inside">
-          <li>Cliente envia arquivo ou tira foto</li>
-          <li>Sistema prepara documento para impressão</li>
-          <li>Cliente escolhe impressora (toque)</li>
-          <li>Confirma impressão</li>
-        </ol>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Máximo de Páginas por Trabalho</label>
+        <input type="number" step="1" min="1" max="200" value={maxPages} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500" />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Limite de páginas para evitar abusos</p>
       </div>
     </div>
   );
 };
-
+ 
 // ============================================================
 // Formulário de configuração para Impressão Remota (PrintNode)
 // ============================================================
-
+ 
 const PrintNodeConfigForm = ({ settings, onChange }: any) => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [printersList, setPrintersList] = useState<any[]>([]);
   const [computerInfo, setComputerInfo] = useState<any>(null);
-
+ 
   const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
-  // ✅ NOVO: Campos de cor e preços separados
-  const colorEnabled = settings.print_color_enabled ?? true;
+  const colorEnabled = settings.print_color_enabled ?? false;
   const priceBW = settings.print_price_bw ?? 0.30;
   const priceColor = settings.print_price_color ?? 0.80;
   const computerId = settings.printnode_computer_id ?? '';
-  // ✅ NOVO: IDs separados por modo
   const printerIdBW = settings.printnode_printer_id_bw ?? '';
   const printerIdColor = settings.printnode_printer_id_color ?? '';
-
+ 
   const handleTestConnection = async () => {
-    if (!computerId) {
-      alert('Por favor, insira o Computer ID primeiro');
-      setConnectionStatus('error');
-      return;
-    }
-
+    if (!computerId) { alert('Por favor, insira o Computer ID primeiro'); setConnectionStatus('error'); return; }
     setTestingConnection(true);
     setConnectionStatus('idle');
     setPrintersList([]);
     setComputerInfo(null);
-
     try {
-      const response = await fetch('/api/edge/test-printnode-computer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ computerId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao conectar com PrintNode');
-      }
-
+      const response = await fetch('/api/edge/test-printnode-computer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ computerId }) });
+      if (!response.ok) throw new Error('Erro ao conectar com PrintNode');
       const data = await response.json();
-
-      if (data.success) {
-        setConnectionStatus('success');
-        setComputerInfo(data.computer);
-        setPrintersList(data.printers || []);
-      } else {
-        setConnectionStatus('error');
-        alert(data.error || 'Computer ID não encontrado');
-      }
+      if (data.success) { setConnectionStatus('success'); setComputerInfo(data.computer); setPrintersList(data.printers || []); }
+      else { setConnectionStatus('error'); alert(data.error || 'Computer ID não encontrado'); }
     } catch (error: any) {
       setConnectionStatus('error');
       alert('Erro ao testar conexão: ' + error.message);
@@ -2110,347 +2041,175 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
       setTestingConnection(false);
     }
   };
-
+ 
   return (
     <div className="space-y-4">
-      {/* Info */}
       <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800">
-        <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-2">
-          <strong>Impressão Remota:</strong> Impressão 100% automática via PrintNode.
-        </p>
+        <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-2"><strong>Impressão Remota:</strong> Impressão 100% automática via PrintNode.</p>
         <ul className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
-          <li>• Cliente não precisa fazer nada - imprime automaticamente</li>
+          <li>• Documento enviado automaticamente para a impressora</li>
           <li>• Ideal para desktop sem touch</li>
           <li>• Suporta filas separadas para P&B e Colorida</li>
         </ul>
       </div>
-
-      {/* Instruções de Instalação */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-        <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-2">
-          Instalação PrintNode Client (grátis):
-        </p>
-        <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1.5 list-decimal list-inside">
-          <li>
-            Baixe o PrintNode Client:{' '}
-            <a
-              href="https://www.printnode.com/en/download"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-medium hover:text-blue-900"
-            >
-              printnode.com/download
-            </a>
-          </li>
-          <li>Instale no computador que tem a impressora</li>
-          <li>Abra o PrintNode Client → aba "Account"</li>
-          <li>Copie o <strong>"Computer ID"</strong> (ex: abc123def456)</li>
-          <li>Cole aqui abaixo e clique em Detectar</li>
-        </ol>
-      </div>
-
+ 
       {/* Computer ID */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Computer ID <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={computerId}
-          onChange={e => onChange('printnode_computer_id', e.target.value)}
-          placeholder="Ex: abc123def456"
-          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
-        />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Encontre no PrintNode Client → aba "Account"
-        </p>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Computer ID <span className="text-red-500">*</span></label>
+        <input type="text" value={computerId} onChange={e => onChange('printnode_computer_id', e.target.value)} placeholder="Ex: abc123def456" className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm" />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Encontre no PrintNode Client → aba "Account"</p>
       </div>
-
+ 
       {/* Botão Detectar */}
       {computerId && (
-        <button
-          type="button"
-          onClick={handleTestConnection}
-          disabled={testingConnection}
-          className={`w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-            connectionStatus === 'success'
-              ? 'bg-green-600 text-white'
-              : connectionStatus === 'error'
-              ? 'bg-red-600 text-white'
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-          } disabled:opacity-50`}
-        >
-          {testingConnection ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Testando...
-            </>
-          ) : connectionStatus === 'success' ? (
-            <>✓ Conexão OK!</>
-          ) : connectionStatus === 'error' ? (
-            <>✗ Erro na Conexão</>
-          ) : (
-            '🔍 Detectar Impressoras'
-          )}
+        <button type="button" onClick={handleTestConnection} disabled={testingConnection} className={`w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${connectionStatus === 'success' ? 'bg-green-600 text-white' : connectionStatus === 'error' ? 'bg-red-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} disabled:opacity-50`}>
+          {testingConnection ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Testando...</> : connectionStatus === 'success' ? <>✓ Conexão OK!</> : connectionStatus === 'error' ? <>✗ Erro na Conexão</> : '🔍 Detectar Impressoras'}
         </button>
       )}
-
-      {/* Info do Computador */}
+ 
       {computerInfo && (
         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <p className="text-xs font-medium text-green-800 dark:text-green-200 mb-1">
-            ✅ Computador conectado:
-          </p>
-          <p className="text-xs text-green-700 dark:text-green-300">
-            <strong>{computerInfo.name}</strong> · {computerInfo.inet || 'IP não disponível'}
-          </p>
+          <p className="text-xs font-medium text-green-800 dark:text-green-200 mb-1">✅ Computador conectado:</p>
+          <p className="text-xs text-green-700 dark:text-green-300"><strong>{computerInfo.name}</strong> · {computerInfo.inet || 'IP não disponível'}</p>
         </div>
       )}
-
-      {/* ✅ NOVO: Seleção separada P&B e Colorida */}
+ 
+      {/* Seleção de Impressoras */}
       {printersList.length > 0 && (
         <>
-          {/* Impressora P&B */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-              Impressora Preto e Branco <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={printerIdBW}
-              onChange={e => onChange('printnode_printer_id_bw', e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
-            >
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Impressora Preto e Branco <span className="text-red-500">*</span></label>
+            <select value={printerIdBW} onChange={e => onChange('printnode_printer_id_bw', e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500">
               <option value="">Selecione a impressora P&B...</option>
-              {printersList.map(p => (
-                <option key={p.id} value={p.id.toString()}>
-                  {p.name} (ID: {p.id}){p.state === 'online' ? ' ✓' : ''}
-                </option>
-              ))}
+              {printersList.map(p => <option key={p.id} value={p.id.toString()}>{p.name} (ID: {p.id}){p.state === 'online' ? ' ✓' : ''}</option>)}
             </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Fila configurada para impressão monocromática
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Fila configurada para impressão monocromática</p>
           </div>
-
-          {/* Toggle Colorida */}
+ 
           <div>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={colorEnabled}
-                onChange={e => onChange('print_color_enabled', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-              />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                Oferecer impressão colorida
-              </span>
+              <input type="checkbox" checked={colorEnabled} onChange={e => onChange('print_color_enabled', e.target.checked)} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Oferecer impressão colorida</span>
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-              Se desativado, apenas P&B estará disponível para o cliente
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">Se desativado, apenas P&B estará disponível para o cliente</p>
           </div>
-
-          {/* Impressora Colorida (só aparece se colorida habilitada) */}
+ 
           {colorEnabled && (
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-                Impressora Colorida
-              </label>
-              <select
-                value={printerIdColor}
-                onChange={e => onChange('printnode_printer_id_color', e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
-              >
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Impressora Colorida</label>
+              <select value={printerIdColor} onChange={e => onChange('printnode_printer_id_color', e.target.value)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500">
                 <option value="">Selecione a impressora colorida...</option>
-                {printersList.map(p => (
-                  <option key={p.id} value={p.id.toString()}>
-                    {p.name} (ID: {p.id}){p.state === 'online' ? ' ✓' : ''}
-                  </option>
-                ))}
+                {printersList.map(p => <option key={p.id} value={p.id.toString()}>{p.name} (ID: {p.id}){p.state === 'online' ? ' ✓' : ''}</option>)}
               </select>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Fila configurada para impressão colorida (CMYK)
-              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Fila configurada para impressão colorida (CMYK)</p>
             </div>
           )}
         </>
       )}
-
-      {/* Divisor */}
+ 
       <div className="border-t border-gray-200 dark:border-white/10 my-4"></div>
-
-      {/* Toggle Cobrança Manual */}
+ 
+      {/* Toggle Cobrança */}
       <div className="space-y-3">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrança Manual (com atendente)
-            </p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Cobrança Manual (dinheiro/cartão)</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {manualPaymentEnabled
-                ? 'Atendente cobra (dinheiro/cartão) e libera manualmente'
+                ? 'Atendente cobra no caixa — impressão liberada automaticamente'
                 : 'Sistema gera PIX automático para o cliente pagar sozinho'}
             </p>
           </div>
           <div className="relative">
-            <input
-              type="checkbox"
-              checked={manualPaymentEnabled}
-              onChange={e => onChange('manual_payment_enabled', e.target.checked)}
-              className="sr-only peer"
-            />
+            <input type="checkbox" checked={manualPaymentEnabled} onChange={e => onChange('manual_payment_enabled', e.target.checked)} className="sr-only peer" />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
           </div>
         </label>
+        {/* ✅ Descrição sem mencionar "atendente libera" */}
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          ✅ Ativado: Atendente cobra (dinheiro/cartão) e libera impressão manualmente<br/>
+          ✅ Ativado: Cliente paga no caixa (dinheiro/cartão) — a impressão é liberada automaticamente<br/>
           ❌ Desativado: Sistema gera PIX automático para o cliente pagar sozinho
         </p>
       </div>
-
-      {/* ✅ NOVO: Preço P&B */}
+ 
+      {/* Preço P&B */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Preço por Página — Preto e Branco
-        </label>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Preço por Página — Preto e Branco</label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-            R$
-          </span>
-          <input
-            type="number"
-            step="0.10"
-            min="0"
-            max="10"
-            value={priceBW}
-            onChange={e => onChange('print_price_bw', parseFloat(e.target.value) || 0)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
-          />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">R$</span>
+          <input type="number" step="0.10" min="0" max="10" value={priceBW} onChange={e => onChange('print_price_bw', parseFloat(e.target.value) || 0)} className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500" />
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Preço sugerido: R$ 0,20 a R$ 0,50 por página
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Preço sugerido: R$ 0,20 a R$ 0,50 por página</p>
       </div>
-
-      {/* ✅ NOVO: Preço Colorida (só aparece se colorida habilitada) */}
+ 
+      {/* Preço Colorida */}
       {colorEnabled && (
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-            Preço por Página — Colorida
-          </label>
+          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Preço por Página — Colorida</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-              R$
-            </span>
-            <input
-              type="number"
-              step="0.10"
-              min="0"
-              max="10"
-              value={priceColor}
-              onChange={e => onChange('print_price_color', parseFloat(e.target.value) || 0)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
-            />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">R$</span>
+            <input type="number" step="0.10" min="0" max="10" value={priceColor} onChange={e => onChange('print_price_color', parseFloat(e.target.value) || 0)} className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500" />
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Preço sugerido: R$ 0,60 a R$ 1,50 por página
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Preço sugerido: R$ 0,60 a R$ 1,50 por página</p>
         </div>
       )}
-
-      {/* Máximo de Páginas */}
+ 
+      {/* Máximo */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Máximo de Páginas
-        </label>
-        <input
-          type="number"
-          step="1"
-          min="1"
-          max="200"
-          value={settings.print_max_pages_per_job ?? 50}
-          onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)}
-          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
-        />
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Máximo de Páginas</label>
+        <input type="number" step="1" min="1" max="200" value={settings.print_max_pages_per_job ?? 50} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500" />
       </div>
     </div>
   );
 };
+ 
 // ============================================================
 // Formulário de configuração para Impressão Recibo (Térmica)
 // ============================================================
-
+ 
 const ThermalConfigForm = ({ settings, onChange }: any) => {
   const [detectingPrinters, setDetectingPrinters] = useState(false);
   const [thermalPrinters, setThermalPrinters] = useState<any[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
   const [testingPrint, setTestingPrint] = useState(false);
-
-  // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
+ 
   const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;
   const thermalPrinterId = settings.thermal_printer_id ?? '';
-
+ 
   const handleDetectPrinters = async () => {
     setDetectingPrinters(true);
     try {
       const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
       const printers = await thermalPrinterService.detectPrinters();
       setThermalPrinters(printers);
-
-      if (printers.length === 0) {
-        alert('Nenhuma impressora térmica detectada. Conecte uma impressora USB ou Bluetooth e tente novamente.');
-      }
+      if (printers.length === 0) alert('Nenhuma impressora térmica detectada.');
     } catch (error: any) {
-      console.error('Erro ao detectar impressoras:', error);
       alert('Erro ao detectar impressoras: ' + error.message);
     } finally {
       setDetectingPrinters(false);
     }
   };
-
+ 
   const handleRequestUSB = async () => {
     try {
       const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
       const printer = await thermalPrinterService.requestUSBPrinter();
-
-      if (printer) {
-        setThermalPrinters(prev => [...prev, printer]);
-        setSelectedPrinter(printer);
-        onChange('thermal_printer_id', printer.id);
-        onChange('thermal_connection_type', 'usb');
-      }
+      if (printer) { setThermalPrinters(prev => [...prev, printer]); setSelectedPrinter(printer); onChange('thermal_printer_id', printer.id); onChange('thermal_connection_type', 'usb'); }
     } catch (error: any) {
       alert('Erro ao conectar impressora USB: ' + error.message);
     }
   };
-
-  const handleSelectPrinter = (printer: any) => {
-    setSelectedPrinter(printer);
-    onChange('thermal_printer_id', printer.id);
-    onChange('thermal_connection_type', printer.type);
-  };
-
+ 
+  const handleSelectPrinter = (printer: any) => { setSelectedPrinter(printer); onChange('thermal_printer_id', printer.id); onChange('thermal_connection_type', printer.type); };
+ 
   const handleTestPrint = async () => {
-    if (!selectedPrinter) {
-      alert('Selecione uma impressora primeiro');
-      return;
-    }
-
+    if (!selectedPrinter) { alert('Selecione uma impressora primeiro'); return; }
     setTestingPrint(true);
     try {
       const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
-
-      await thermalPrinterService.printText(
-        '──── TESTE ────\n\neAi Assistente\nImpressão Térmica\n\n' + new Date().toLocaleString('pt-BR') + '\n\n────────────────\n',
-        {
-          align: 'center',
-          bold: true,
-          cut: true,
-        }
-      );
-
+      await thermalPrinterService.printText('──── TESTE ────\n\neAi Assistente\nImpressão Térmica\n\n' + new Date().toLocaleString('pt-BR') + '\n\n────────────────\n', { align: 'center', bold: true, cut: true });
       alert('✅ Teste de impressão enviado com sucesso!');
     } catch (error: any) {
       alert('❌ Erro no teste: ' + error.message);
@@ -2458,207 +2217,102 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
       setTestingPrint(false);
     }
   };
-
+ 
   return (
     <div className="space-y-4">
-      {/* Info */}
       <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-        <p className="text-sm text-green-800 dark:text-green-200 mb-2">
-          <strong>Impressão Térmica:</strong> Para PDV, Totens e TEF.
-        </p>
+        <p className="text-sm text-green-800 dark:text-green-200 mb-2"><strong>Impressão Térmica:</strong> Para PDV, Totens e TEF.</p>
         <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
           <li>• Conecta via USB ou Bluetooth diretamente</li>
-          <li>• Sem custo mensal</li>
           <li>• Ideal para recibos e cupons fiscais</li>
         </ul>
       </div>
-
-      {/* Impressoras Compatíveis */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-        <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-2">
-          🖨️ Marcas compatíveis (ESC/POS):
-        </p>
-        <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-          <li>✓ Epson TM-T20, TM-T88</li>
-          <li>✓ Bematech MP-4200, MP-2800</li>
-          <li>✓ Elgin i9, i7, L42 PRO</li>
-          <li>✓ Daruma DR-800, DR-700</li>
-          <li>✓ Citizen, Custom, e outras ESC/POS</li>
-        </ul>
-      </div>
-
-      {/* Botões Detectar */}
+ 
       <div className="space-y-2">
-        <button
-          type="button"
-          onClick={handleDetectPrinters}
-          disabled={detectingPrinters}
-          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
-        >
-          {detectingPrinters ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Detectando...
-            </>
-          ) : (
-            <>📡 Detectar Impressoras Bluetooth</>
-          )}
+        <button type="button" onClick={handleDetectPrinters} disabled={detectingPrinters} className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2">
+          {detectingPrinters ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Detectando...</> : <>📡 Detectar Impressoras Bluetooth</>}
         </button>
-
-        <button
-          type="button"
-          onClick={handleRequestUSB}
-          className="w-full px-4 py-2 border-2 border-green-600 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/10 font-medium flex items-center justify-center gap-2"
-        >
-          🔌 Conectar Impressora USB
-        </button>
+        <button type="button" onClick={handleRequestUSB} className="w-full px-4 py-2 border-2 border-green-600 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-50 font-medium flex items-center justify-center gap-2">🔌 Conectar Impressora USB</button>
       </div>
-
-      {/* Lista de Impressoras */}
+ 
       {thermalPrinters.length > 0 && (
         <div className="space-y-2">
-          <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            Impressoras Encontradas:
-          </label>
           {thermalPrinters.map((printer, index) => (
-            <div
-              key={index}
-              onClick={() => handleSelectPrinter(printer)}
-              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                selectedPrinter?.id === printer.id || thermalPrinterId === printer.id
-                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                  : 'border-gray-200 dark:border-white/10 hover:border-green-300'
-              }`}
-            >
+            <div key={index} onClick={() => handleSelectPrinter(printer)} className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedPrinter?.id === printer.id || thermalPrinterId === printer.id ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-white/10 hover:border-green-300'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">
-                    {printer.type === 'usb' ? '🔌' : '📡'}
-                  </span>
+                  <span className="text-lg">{printer.type === 'usb' ? '🔌' : '📡'}</span>
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {printer.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {printer.type === 'usb' ? 'USB' : 'Bluetooth'}
-                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{printer.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{printer.type === 'usb' ? 'USB' : 'Bluetooth'}</p>
                   </div>
                 </div>
-                {printer.connected && (
-                  <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-                    Conectada
-                  </span>
-                )}
+                {printer.connected && <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">Conectada</span>}
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {/* Botão Testar */}
+ 
       {selectedPrinter && (
-        <button
-          type="button"
-          onClick={handleTestPrint}
-          disabled={testingPrint}
-          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
-        >
-          {testingPrint ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Imprimindo...
-            </>
-          ) : (
-            <>✓ Imprimir Teste</>
-          )}
+        <button type="button" onClick={handleTestPrint} disabled={testingPrint} className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2">
+          {testingPrint ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Imprimindo...</> : <>✓ Imprimir Teste</>}
         </button>
       )}
-
-      {/* Divisor */}
+ 
       <div className="border-t border-gray-200 dark:border-white/10 my-4"></div>
-
-      {/* ✅ CORREÇÃO: Toggle Cobrança Manual */}
+ 
+      {/* Toggle Cobrança */}
       <div className="space-y-3">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrança Manual (com atendente)
-            </p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Cobrança Manual (dinheiro/cartão)</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {manualPaymentEnabled
-                ? 'Atendente cobra (dinheiro/cartão) e libera manualmente'
+                ? 'Atendente cobra no caixa — impressão liberada automaticamente'
                 : 'Sistema gera PIX automático para o cliente pagar sozinho'}
             </p>
           </div>
           <div className="relative">
-            <input
-              type="checkbox"
-              checked={manualPaymentEnabled}
-              onChange={e => onChange('manual_payment_enabled', e.target.checked)}
-              className="sr-only peer"
-            />
+            <input type="checkbox" checked={manualPaymentEnabled} onChange={e => onChange('manual_payment_enabled', e.target.checked)} className="sr-only peer" />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
           </div>
         </label>
-
-        {/* ✅ CORREÇÃO: Descrição atualizada */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          ✅ Ativado: Atendente cobra (dinheiro/cartão) e libera impressão manualmente<br/>
+        {/* ✅ Descrição sem mencionar "atendente libera" */}
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          ✅ Ativado: Cliente paga no caixa (dinheiro/cartão) — a impressão é liberada automaticamente<br/>
           ❌ Desativado: Sistema gera PIX automático para o cliente pagar sozinho
         </p>
       </div>
-
+ 
       {/* Preço por Página */}
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Preço por Página
-        </label>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Preço por Página</label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-            R$
-          </span>
-          <input
-            type="number"
-            step="0.10"
-            min="0"
-            max="10"
-            value={pricePerPage}
-            onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
-          />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">R$</span>
+          <input type="number" step="0.10" min="0" max="10" value={pricePerPage} onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)} className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500" />
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Preço sugerido: R$ 0,30 a R$ 0,80 por página
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Preço sugerido: R$ 0,30 a R$ 0,80 por página</p>
       </div>
-
-      {/* Máximo */}
+ 
       <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Máximo de Páginas
-        </label>
-        <input
-          type="number"
-          step="1"
-          min="1"
-          max="200"
-          value={maxPages}
-          onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)}
-          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500"
-        />
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Máximo de Páginas</label>
+        <input type="number" step="1" min="1" max="200" value={maxPages} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500" />
       </div>
-
-      {/* Vantagens */}
-      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
-        <p className="text-xs font-medium text-gray-900 dark:text-white mb-2">
-          Vantagens da Impressora Térmica:
-        </p>
-        <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-          <li>• Conexão direta USB ou Bluetooth</li>
-          <li>• Funciona offline (não depende de internet)</li>
-          <li>• Impressão instantânea (ideal para PDV/TEF)</li>
-        </ul>
+    </div>
+  );
+};
+ 
+const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
+  const router = useRouter();
+  return (
+    <div className="space-y-4">
+      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800">
+        <p className="text-sm text-emerald-800 dark:text-emerald-200">Configure seus produtos e loja virtual no painel de vendas.</p>
       </div>
+      <button type="button" onClick={() => router.push(`/dashboard/vendas?company=${companyId}`)} className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+        <ExternalLink size={16} />Gerenciar Loja Virtual
+      </button>
     </div>
   );
 };

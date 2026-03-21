@@ -46,19 +46,18 @@ export default function TocarMusicaDisplay({
     return () => { window.speechSynthesis.cancel(); };
   }, []);
 
-  // Listener de eventos do YouTube IFrame API
+  // Listener de eventos YouTube IFrame API
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (hasClosedRef.current) return;
       if (event.data && typeof event.data === 'string') {
         try {
           const msg = JSON.parse(event.data);
-          // playerState: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering
           if (msg.event === 'infoDelivery' && msg.info?.playerState !== undefined) {
             const state = msg.info.playerState;
-            if (state === 0) handleClose();           // terminou
-            if (state === 1) setIsPlaying(true);      // tocando
-            if (state === 2) setIsPlaying(false);     // pausado
+            if (state === 0) handleClose();
+            if (state === 1) setIsPlaying(true);
+            if (state === 2) setIsPlaying(false);
           }
         } catch (e) {}
       }
@@ -67,7 +66,7 @@ export default function TocarMusicaDisplay({
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Registrar listener assim que iframe carregar
+  // Registrar listener quando iframe carrega
   useEffect(() => {
     if (!musica || !iframeRef.current) return;
     const timer = setTimeout(() => {
@@ -78,10 +77,9 @@ export default function TocarMusicaDisplay({
     return () => clearTimeout(timer);
   }, [musica]);
 
-  const sendCommand = (command: string, args?: any) => {
+  const sendCommand = (command: string) => {
     iframeRef.current?.contentWindow?.postMessage(
-      JSON.stringify({ event: 'command', func: command, args: args ?? [] }),
-      '*'
+      JSON.stringify({ event: 'command', func: command, args: [] }), '*'
     );
   };
 
@@ -121,11 +119,11 @@ export default function TocarMusicaDisplay({
       if (!res.ok || json.error) throw new Error(json.error || 'Erro ao buscar música');
       if (!json.musicas || json.musicas.length === 0) throw new Error('Nenhuma música encontrada');
 
-      // controls=0 — sem barra do YouTube, enablejsapi=1 — permite postMessage
       const m = json.musicas[0];
       m.embed_url = `https://www.youtube.com/embed/${m.video_id}?autoplay=1&controls=0&rel=0&modestbranding=1&enablejsapi=1`;
       setMusica(m);
       setShowSearch(false);
+      // ✅ fire-and-forget — não bloqueia o estado do assistente
       playText('Música encontrada.').catch(() => {});
 
     } catch (err: any) {
@@ -162,7 +160,7 @@ export default function TocarMusicaDisplay({
         isDark ? 'bg-slate-900 border-white/10' : 'bg-white border-gray-200'
       } ${minimized ? 'w-64' : 'w-80'}`}>
 
-        {/* Barra superior */}
+        {/* Barra superior — sempre visível */}
         <div className={`flex items-center justify-between px-4 py-3 ${
           isDark ? 'bg-green-900/30 border-b border-white/5' : 'bg-green-50 border-b border-gray-100'
         }`}>
@@ -199,6 +197,19 @@ export default function TocarMusicaDisplay({
           </div>
         </div>
 
+        {/* ✅ iframe SEMPRE renderizado aqui — fora dos condicionais
+            Isso garante que não é destruído ao minimizar/expandir */}
+        {musica && (
+          <div className="hidden">
+            <iframe
+              ref={iframeRef}
+              src={musica.embed_url}
+              allow="autoplay"
+              frameBorder="0"
+            />
+          </div>
+        )}
+
         {/* Conteúdo expandido */}
         {!minimized && (
           <div className="p-4 space-y-3">
@@ -206,7 +217,6 @@ export default function TocarMusicaDisplay({
             {/* Info + Play/Pause */}
             {musica && !loading && (
               <div className="flex items-center gap-3">
-                {/* Botão Play/Pause */}
                 <button
                   onClick={togglePlay}
                   className="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center flex-shrink-0 transition shadow-lg"
@@ -216,8 +226,6 @@ export default function TocarMusicaDisplay({
                     : <Play className="w-4 h-4 text-white ml-0.5" />
                   }
                 </button>
-
-                {/* Título e canal */}
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
                     {musica.title}
@@ -229,7 +237,7 @@ export default function TocarMusicaDisplay({
               </div>
             )}
 
-            {/* Loading state */}
+            {/* Loading */}
             {loading && (
               <div className="flex items-center gap-3 py-1">
                 <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
@@ -244,18 +252,6 @@ export default function TocarMusicaDisplay({
             {/* Erro */}
             {error && !loading && (
               <p className="text-xs text-red-400 text-center py-1">{error}</p>
-            )}
-
-            {/* iframe oculto — apenas para reprodução */}
-            {musica && (
-              <div className="hidden">
-                <iframe
-                  ref={iframeRef}
-                  src={musica.embed_url}
-                  allow="autoplay"
-                  frameBorder="0"
-                />
-              </div>
             )}
 
             {/* Buscar outra música */}
@@ -294,7 +290,6 @@ export default function TocarMusicaDisplay({
               </div>
             )}
 
-            {/* Dica de voz */}
             <p className={`text-xs text-center ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
               Diga "parar música" para encerrar
             </p>
@@ -323,17 +318,6 @@ export default function TocarMusicaDisplay({
                   </p>
                 : <p className={`text-xs ${isDark ? 'text-red-400' : 'text-red-500'}`}>Erro ao buscar</p>
             }
-            {/* iframe continua rodando minimizado */}
-            {musica && (
-              <div className="hidden">
-                <iframe
-                  ref={iframeRef}
-                  src={musica.embed_url}
-                  allow="autoplay"
-                  frameBorder="0"
-                />
-              </div>
-            )}
           </div>
         )}
 

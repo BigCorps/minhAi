@@ -1976,10 +1976,10 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
         )}
       </div>
 
-      {/* Preço por Página */}
+{/* Preço por Página */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Preço por Página {chargeEnabled ? '(cobrado do consumidor via PIX)'}
+          Preço por Página
         </label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
@@ -2275,7 +2275,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
         </label>
       </div>
 
-      {/* Preço */}
+{/* Preço por Página */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Preço por Página
@@ -2291,9 +2291,12 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
             max="10"
             value={pricePerPage}
             onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
           />
         </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Preço sugerido: R$ 0,30 a R$ 0,80 por página
+        </p>
       </div>
 
       {/* Máximo */}
@@ -2542,7 +2545,7 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
         </label>
       </div>
 
-      {/* Preço */}
+{/* Preço por Página */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Preço por Página
@@ -2558,9 +2561,12 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
             max="10"
             value={pricePerPage}
             onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
           />
         </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Preço sugerido: R$ 0,30 a R$ 0,80 por página
+        </p>
       </div>
 
       {/* Máximo */}
@@ -2593,7 +2599,6 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
     </div>
   );
 };
-
 
 const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
   const router = useRouter();

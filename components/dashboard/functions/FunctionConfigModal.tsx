@@ -1925,7 +1925,8 @@ const TocarMusicaForm = () => (
 // ============================================================
 
 const NativeConfigForm = ({ settings, onChange }: any) => {
-  const chargeEnabled = settings.print_charge_enabled ?? false;
+  // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
+  const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;
 
@@ -1943,31 +1944,45 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
         </ul>
       </div>
 
-      {/* Toggle: Cobrar via PIX */}
+      {/* ✅ CORREÇÃO: Toggle Cobrança Manual */}
       <div className="space-y-3">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrar do Cliente?
+              Cobrança Manual (com atendente)
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {chargeEnabled
-                ? 'Cliente paga via PIX antes de imprimir'
-                : 'Desconta do seu saldo.'}
+              {manualPaymentEnabled
+                ? 'Atendente cobra (dinheiro/cartão) e libera manualmente'
+                : 'Sistema gera PIX automático para o cliente pagar sozinho'}
             </p>
           </div>
           <div className="relative">
             <input
               type="checkbox"
-              checked={chargeEnabled}
-              onChange={e => onChange('print_charge_enabled', e.target.checked)}
+              checked={manualPaymentEnabled}
+              onChange={e => onChange('manual_payment_enabled', e.target.checked)}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
           </div>
         </label>
 
-        {chargeEnabled && (
+        {/* ✅ CORREÇÃO: Descrição atualizada */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          ✅ Ativado: Atendente cobra (dinheiro/cartão) e libera impressão manualmente<br/>
+          ❌ Desativado: Sistema gera PIX automático para o cliente pagar sozinho
+        </p>
+
+        {manualPaymentEnabled && (
+          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <p className="text-xs text-yellow-800 dark:text-yellow-200">
+              O cliente verá uma tela pedindo para aguardar o atendente processar o pagamento.
+            </p>
+          </div>
+        )}
+
+        {!manualPaymentEnabled && (
           <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-xs text-green-800 dark:text-green-200">
               Você receberá os pagamentos no <strong>seu Saldo</strong> aqui no dashboard.
@@ -1976,7 +1991,7 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
         )}
       </div>
 
-{/* Preço por Página */}
+      {/* Preço por Página */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Preço por Página
@@ -2045,7 +2060,8 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
   const [printersList, setPrintersList] = useState<any[]>([]);
   const [computerInfo, setComputerInfo] = useState<any>(null);
 
-  const chargeEnabled = settings.print_charge_enabled ?? false;
+  // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
+  const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;
   const computerId = settings.printnode_computer_id ?? '';
@@ -2064,7 +2080,6 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
     setComputerInfo(null);
 
     try {
-      // Chamar edge function que usa SUA API key
       const response = await fetch('/api/edge/test-printnode-computer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2118,9 +2133,9 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
         <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1.5 list-decimal list-inside">
           <li>
             Baixe o PrintNode Client:{' '}
-            <a 
-              href="https://www.printnode.com/en/download" 
-              target="_blank" 
+            <a
+              href="https://www.printnode.com/en/download"
+              target="_blank"
               rel="noopener noreferrer"
               className="underline font-medium hover:text-blue-900"
             >
@@ -2250,32 +2265,38 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
       {/* Divisor */}
       <div className="border-t border-gray-200 dark:border-white/10 my-4"></div>
 
-      {/* Toggle PIX */}
+      {/* ✅ CORREÇÃO: Toggle Cobrança Manual */}
       <div className="space-y-3">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrar do Cliente?
+              Cobrança Manual (com atendente)
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {chargeEnabled
-                ? 'Cliente paga via PIX antes de imprimir'
-                : 'Desconta do seu saldo.'}
+              {manualPaymentEnabled
+                ? 'Atendente cobra (dinheiro/cartão) e libera manualmente'
+                : 'Sistema gera PIX automático para o cliente pagar sozinho'}
             </p>
           </div>
           <div className="relative">
             <input
               type="checkbox"
-              checked={chargeEnabled}
-              onChange={e => onChange('print_charge_enabled', e.target.checked)}
+              checked={manualPaymentEnabled}
+              onChange={e => onChange('manual_payment_enabled', e.target.checked)}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
           </div>
         </label>
+
+        {/* ✅ CORREÇÃO: Descrição atualizada */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          ✅ Ativado: Atendente cobra (dinheiro/cartão) e libera impressão manualmente<br/>
+          ❌ Desativado: Sistema gera PIX automático para o cliente pagar sozinho
+        </p>
       </div>
 
-{/* Preço por Página */}
+      {/* Preço por Página */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Preço por Página
@@ -2329,7 +2350,8 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
   const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
   const [testingPrint, setTestingPrint] = useState(false);
 
-  const chargeEnabled = settings.print_charge_enabled ?? false;
+  // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
+  const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;
   const thermalPrinterId = settings.thermal_printer_id ?? '';
@@ -2337,11 +2359,10 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
   const handleDetectPrinters = async () => {
     setDetectingPrinters(true);
     try {
-      // Importar dinamicamente para evitar erro no servidor
       const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
       const printers = await thermalPrinterService.detectPrinters();
       setThermalPrinters(printers);
-      
+
       if (printers.length === 0) {
         alert('Nenhuma impressora térmica detectada. Conecte uma impressora USB ou Bluetooth e tente novamente.');
       }
@@ -2357,7 +2378,7 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
     try {
       const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
       const printer = await thermalPrinterService.requestUSBPrinter();
-      
+
       if (printer) {
         setThermalPrinters(prev => [...prev, printer]);
         setSelectedPrinter(printer);
@@ -2384,7 +2405,7 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
     setTestingPrint(true);
     try {
       const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
-      
+
       await thermalPrinterService.printText(
         '──── TESTE ────\n\neAi Assistente\nImpressão Térmica\n\n' + new Date().toLocaleString('pt-BR') + '\n\n────────────────\n',
         {
@@ -2393,7 +2414,7 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
           cut: true,
         }
       );
-      
+
       alert('✅ Teste de impressão enviado com sucesso!');
     } catch (error: any) {
       alert('❌ Erro no teste: ' + error.message);
@@ -2520,32 +2541,38 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
       {/* Divisor */}
       <div className="border-t border-gray-200 dark:border-white/10 my-4"></div>
 
-      {/* Toggle PIX */}
+      {/* ✅ CORREÇÃO: Toggle Cobrança Manual */}
       <div className="space-y-3">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrar do Cliente?
+              Cobrança Manual (com atendente)
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {chargeEnabled
-                ? 'Cliente paga via PIX antes de imprimir'
-                : 'Desconta do seu saldo.'}
+              {manualPaymentEnabled
+                ? 'Atendente cobra (dinheiro/cartão) e libera manualmente'
+                : 'Sistema gera PIX automático para o cliente pagar sozinho'}
             </p>
           </div>
           <div className="relative">
             <input
               type="checkbox"
-              checked={chargeEnabled}
-              onChange={e => onChange('print_charge_enabled', e.target.checked)}
+              checked={manualPaymentEnabled}
+              onChange={e => onChange('manual_payment_enabled', e.target.checked)}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
           </div>
         </label>
+
+        {/* ✅ CORREÇÃO: Descrição atualizada */}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          ✅ Ativado: Atendente cobra (dinheiro/cartão) e libera impressão manualmente<br/>
+          ❌ Desativado: Sistema gera PIX automático para o cliente pagar sozinho
+        </p>
       </div>
 
-{/* Preço por Página */}
+      {/* Preço por Página */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Preço por Página

@@ -197,16 +197,12 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
       });
 
 if (manualPaymentEnabled) {
-  // Com cobrança manual: aguarda atendente
-  setStage('waiting_attendant');
-} else if (totalAmount > 0) {
-  // Com cobrança PIX: gera QR Code
+  // Cobrança manual: libera impressão direto, atendente cobra fora do sistema
+  setStage('printing');
+  await processPrint(job.id, /* fileUrl ou base64 */, 'manual');
+} else {
   setStage('payment');
   await generatePix(job.id, totalAmount);
-} else {
-  // Sem cobrança configurada: vai direto para impressão
-  setStage('printing');
-  await processPrint(job.id, filePath, 'manual');
 }
 
     } catch (err: any) {

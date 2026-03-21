@@ -220,15 +220,14 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
         payment_method: manualPaymentEnabled ? 'manual' : 'pix',
       });
 
-      // ✅ FLUXO CORRETO:
-      // - manualPaymentEnabled = true  → waiting_attendant
-      // - manualPaymentEnabled = false → PIX automático (NUNCA waiting_attendant)
-      if (manualPaymentEnabled) {
-        setStage('waiting_attendant');
-      } else {
-        setStage('payment');
-        await generatePix(job.id, totalAmount);
-      }
+if (manualPaymentEnabled) {
+  // Cobrança manual: libera impressão direto, atendente cobra fora do sistema
+  setStage('printing');
+  await processPrint(job.id, /* fileUrl ou base64 */, 'manual');
+} else {
+  setStage('payment');
+  await generatePix(job.id, totalAmount);
+}
 
     } catch (err: any) {
       console.error('❌ Erro no upload:', err);

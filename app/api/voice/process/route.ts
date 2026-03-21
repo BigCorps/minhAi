@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
       const errorAudio = await synthesizeSpeech({
         text: 'Não consegui te ouvir. Pode repetir?',
         voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-        speakingRate: 1.3,
+        speakingRate: 1.2,
         audioEncoding: 'MP3',
       });
       return new Response(new Uint8Array(errorAudio), {
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         const hintAudio = await synthesizeSpeech({
           text: 'Um momento...',
           voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-          speakingRate: 1.3,
+          speakingRate: 1.2,
           audioEncoding: 'MP3',
         });
 
@@ -370,7 +370,7 @@ Pergunta: ${userMessage}`;
     const audioBuffer = await synthesizeSpeech({
       text: responseText,
       voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-      speakingRate: 1.3,
+      speakingRate: 1.2,
       audioEncoding: 'MP3',
     });
     
@@ -406,7 +406,7 @@ Pergunta: ${userMessage}`;
       const errorAudio = await synthesizeSpeech({
         text: 'Desculpe, ocorreu um erro.',
         voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-        speakingRate: 1.3,
+        speakingRate: 1.2,
         audioEncoding: 'MP3',
       });
       return new Response(new Uint8Array(errorAudio), {

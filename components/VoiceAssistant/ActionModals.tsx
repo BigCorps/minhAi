@@ -60,6 +60,10 @@ import TocarVideoDisplay from '@/components/assistant/TocarVideoDisplay';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 import CadastrarProdutoDisplay from '@/components/assistant/CadastrarProdutoDisplay';
 import TocarMusicaDisplay from '@/components/assistant/TocarMusicaDisplay';
+import ImpressaoLocalDisplay from '@/components/assistant/ImpressaoLocalDisplay';
+import ImpressaoRemotaDisplay from '@/components/assistant/ImpressaoRemotaDisplay';
+import ImpressaoReciboDisplay from '@/components/assistant/ImpressaoReciboDisplay';
+
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -119,6 +123,9 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ClimaTempoDisplay': ClimaTempoDisplay,
   'TocarVideoDisplay': TocarVideoDisplay,
   'TocarMusicaDisplay': TocarMusicaDisplay,
+  'ImpressaoLocalDisplay': ImpressaoLocalDisplay,
+  'ImpressaoRemotaDisplay': ImpressaoRemotaDisplay,
+  'ImpressaoReciboDisplay': ImpressaoReciboDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

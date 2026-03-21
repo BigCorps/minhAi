@@ -212,15 +212,14 @@ export default function ImpressaoReciboDisplay({ data, onClose, theme = 'dark', 
         payment_method: manualPaymentEnabled ? 'manual' : 'pix',
       });
 
-      // ✅ CORREÇÃO: Fluxo manual vs PIX automático
-      if (manualPaymentEnabled) {
-        // Modo manual: mostra mensagem para atendente processar
-        setStage('waiting_attendant');
-      } else {
-        // Modo autoatendimento: gera PIX automático
-        setStage('payment');
-        await generatePix(job.id, totalAmount);
-      }
+if (manualPaymentEnabled) {
+  // Cobrança manual: libera impressão direto, atendente cobra fora do sistema
+  setStage('printing');
+  await processPrint(job.id, /* fileUrl ou base64 */, 'manual');
+} else {
+  setStage('payment');
+  await generatePix(job.id, totalAmount);
+}
 
     } catch (err: any) {
       console.error('❌ Erro no upload:', err);

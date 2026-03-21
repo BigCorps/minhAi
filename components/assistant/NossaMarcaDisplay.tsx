@@ -27,7 +27,7 @@ export default function NossaMarcaDisplay({
   theme = 'dark'
 }: NossaMarcaDisplayProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(20);
+  const [timeLeft, setTimeLeft] = useState(30);
   const [copied, setCopied] = useState(false);
 
   // ✅ Handler específico para fechar manualmente e parar a voz
@@ -414,7 +414,7 @@ useEffect(() => {
         <div className={`h-1 ${theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'}`}>
           <div
             className="h-full bg-green-600 transition-all duration-1000 ease-linear"
-            style={{ width: `${(timeLeft / 20) * 100}%` }}
+            style={{ width: `${(timeLeft / 30) * 100}%` }}
           />
         </div>
       </div>

@@ -223,7 +223,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
 if (manualPaymentEnabled) {
   // Cobrança manual: libera impressão direto, atendente cobra fora do sistema
   setStage('printing');
-  await processPrint(job.id, /* fileUrl ou base64 */, 'manual');
+  await processPrint(job.id, 'manual');
 } else {
   setStage('payment');
   await generatePix(job.id, totalAmount);

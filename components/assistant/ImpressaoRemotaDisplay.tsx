@@ -13,12 +13,13 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  X, Copy, Check, AlertCircle, Printer, Cloud, 
+  X, Check, AlertCircle, Cloud, 
   Loader2, Mic, Zap
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
+import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'upload' | 'processing' | 'payment' | 'printing' | 'success' | 'error';
@@ -56,7 +57,6 @@ interface PixData {
   transaction_id: string;
 }
 
-const OPENING_TEXT = 'Envie um arquivo ou tire uma foto para impressão automática via PrintNode. Você pode dizer: celular, webcam, câmera, arquivo ou fechar.';
 const AUTO_CLOSE_DURATION = 30000; // 30s
 
 const normalize = (text: string) =>
@@ -88,7 +88,6 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
   const [printJob, setPrintJob] = useState<PrintJob | null>(null);
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [cameraTab, setCameraTab] = useState<Tab>('companion');
   const [chargeEnabled, setChargeEnabled] = useState(false);
   const [pricePerPage, setPricePerPage] = useState(0.50);
@@ -100,34 +99,23 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
   // ── Buscar configurações ────────────────────────────────
   useEffect(() => {
     (async () => {
-const { data: company } = await supabase
-  .from('companies')
-  .select('print_charge_enabled, print_price_per_page, printnode_computer_id, printnode_printer_id')  // ✅ CORRETO
-  .eq('id', data.companyId)
-  .single();
+      const { data: company } = await supabase
+        .from('companies')
+        .select('print_charge_enabled, print_price_per_page, printnode_api_key, printnode_printer_id')
+        .eq('id', data.companyId)
+        .single();
 
-if (company) {
-  setChargeEnabled(company.print_charge_enabled ?? false);
-  setPricePerPage(company.print_price_per_page ?? 0.50);
+      if (company) {
+        setChargeEnabled(company.print_charge_enabled ?? false);
+        setPricePerPage(company.print_price_per_page ?? 0.50);
 
-  // Buscar nome da impressora via Edge Function (sem expor API key)
-  if (company.printnode_computer_id && company.printnode_printer_id) {
-    try {
-      const { data: printerInfo } = await supabase.functions.invoke('test-printnode-computer', {
-        body: { computerId: company.printnode_computer_id },
-      });
-
-      if (printerInfo?.success && printerInfo.printers) {
-        const printer = printerInfo.printers.find((p: any) => p.id === parseInt(company.printnode_printer_id));
-        if (printer) {
-          setPrinterName(printer.name || 'Impressora Remota');
-        }
-      }
-    } catch {
-      setPrinterName('Impressora Remota');
-    }
-  }
-}
+        if (company.printnode_api_key && company.printnode_printer_id) {
+          try {
+            const response = await fetch(`https://api.printnode.com/printers/${company.printnode_printer_id}`, {
+              headers: {
+                'Authorization': `Basic ${btoa(company.printnode_api_key + ':')}`,
+              },
+            });
             if (response.ok) {
               const printer = await response.json();
               setPrinterName(printer.name || 'Impressora Remota');
@@ -148,75 +136,73 @@ if (company) {
     }
   }, [stage, onClose]);
 
-const handleCapture = useCallback(async (base64: string) => {
-  setStage('processing');
+  // ── Upload de arquivo ───────────────────────────────────
+  const handleCapture = useCallback(async (base64: string) => {
+    setStage('processing');
 
-  try {
-    // Detectar tipo e nome do arquivo
-    let fileType = 'image/jpeg';
-    let fileName = `impressao_${Date.now()}.jpg`;
+    try {
+      let fileType = 'image/jpeg';
+      let fileName = `remota_${Date.now()}.jpg`;
 
-    if (base64.startsWith('JVBERi')) {
-      fileType = 'application/pdf';
-      fileName = `impressao_${Date.now()}.pdf`;
-    }
+      if (base64.startsWith('JVBERi')) {
+        fileType = 'application/pdf';
+        fileName = `remota_${Date.now()}.pdf`;
+      }
 
-    // Upload + criar job via Edge Function (bypassa RLS)
-    const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
-      body: {
+      const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
+        body: {
+          base64,
+          companyId: data.companyId,
+          fileName,
+          functionKey: data.functionKey,
+          pricePerPage,
+          paymentMethod: chargeEnabled ? 'pix' : 'credits',
+        },
+      });
+
+      if (uploadError || !uploadResult?.success) {
+        throw new Error(uploadResult?.error || 'Erro ao processar arquivo');
+      }
+
+      const job = uploadResult.job;
+      const filePath = uploadResult.filePath;
+      const estimatedPages = uploadResult.pagesCount;
+      const totalAmount = estimatedPages * pricePerPage;
+      const sizeBytes = Math.round((base64.length * 3) / 4);
+
+      console.log('✅ Arquivo processado. Job ID:', job.id);
+
+      setFilePreview({
+        name: fileName,
+        type: fileType,
+        size: sizeBytes,
+        pages: estimatedPages,
         base64,
-        companyId: data.companyId,
-        fileName,
-        functionKey: data.functionKey,
-        pricePerPage,
-        paymentMethod: chargeEnabled ? 'pix' : 'credits',
-      },
-    });
+      });
 
-    if (uploadError || !uploadResult?.success) {
-      throw new Error(uploadResult?.error || 'Erro ao processar arquivo');
+      setPrintJob({
+        id: job.id,
+        file_url: filePath,
+        pages_count: estimatedPages,
+        total_amount: totalAmount,
+        payment_method: chargeEnabled ? 'pix' : 'credits',
+      });
+
+      if (chargeEnabled) {
+        setStage('payment');
+        await generatePix(job.id, totalAmount);
+      } else {
+        setStage('printing');
+        // Passa paymentMethod diretamente — não depende do state
+        await processPrint(job.id, 'credits');
+      }
+
+    } catch (err: any) {
+      console.error('❌ Erro no upload:', err);
+      setErrorMsg(err.message ?? 'Erro ao processar arquivo.');
+      setStage('error');
     }
-
-    // Dados retornados pela Edge Function
-    const job = uploadResult.job;
-    const filePath = uploadResult.filePath;
-    const estimatedPages = uploadResult.pagesCount;  // ← única declaração
-    const totalAmount = estimatedPages * pricePerPage;
-
-    console.log('✅ Arquivo processado. Job ID:', job.id);
-
-    const sizeBytes = Math.round((base64.length * 3) / 4); // estimativa do tamanho
-
-    setFilePreview({
-      name: fileName,
-      type: fileType,
-      size: sizeBytes,
-      pages: estimatedPages,
-      base64,
-    });
-
-    setPrintJob({
-      id: job.id,
-      file_url: filePath,
-      pages_count: estimatedPages,
-      total_amount: totalAmount,
-      payment_method: chargeEnabled ? 'pix' : 'credits',
-    });
-
-    if (chargeEnabled) {
-      setStage('payment');
-      await generatePix(job.id, totalAmount);
-    } else {
-      setStage('printing');
-      await processPrint(job.id);
-    }
-
-  } catch (err: any) {
-    console.error('❌ Erro no upload:', err);
-    setErrorMsg(err.message ?? 'Erro ao processar arquivo.');
-    setStage('error');
-  }
-}, [data.companyId, chargeEnabled, pricePerPage, supabase]);
+  }, [data.companyId, chargeEnabled, pricePerPage, supabase]);
 
   // ── Gerar PIX ───────────────────────────────────────────
   const generatePix = async (jobId: string, amount: number) => {
@@ -227,7 +213,7 @@ const handleCapture = useCallback(async (base64: string) => {
         body: {
           company_id: data.companyId,
           amount_cents: Math.round(amount * 100),
-          description: `Impressão Remota - ${filePreview?.pages} pág`,
+          description: `Impressão Remota - ${filePreview?.pages ?? 1} pág`,
           print_job_id: jobId,
         },
       });
@@ -249,44 +235,19 @@ const handleCapture = useCallback(async (base64: string) => {
     }
   };
 
-  // ── Confirmar PIX ───────────────────────────────────────
-  const handleConfirmPix = async () => {
-    if (!pixData) return;
-
-    try {
-      await playText('Verificando pagamento...');
-
-      const { data: result, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: { transaction_id: pixData.transaction_id },
-      });
-
-      if (error) throw error;
-
-      if (!result.success) {
-        await playText('PIX ainda não foi pago. Aguarde após o pagamento e diga: confirmar.');
-        return;
-      }
-
-      await playText('Pagamento confirmado! Enviando para impressora remota...');
-      setStage('printing');
-      await processPrint(printJob!.id);
-
-    } catch (err: any) {
-      console.error('❌ Erro ao confirmar PIX:', err);
-      await playText('Erro ao confirmar pagamento.');
-    }
-  };
-
   // ── Processar impressão (PrintNode) ─────────────────────
-  const processPrint = async (jobId: string) => {
+  // paymentMethod é parâmetro — nunca lido do state desatualizado
+  const processPrint = async (jobId: string, paymentMethod: 'pix' | 'credits') => {
     try {
+      if (!jobId) throw new Error('Job de impressão não foi criado');
+
       await playText('Enviando para impressora remota...');
 
       const { data: result, error } = await supabase.functions.invoke('processar-impressao', {
         body: {
           jobId,
           companyId: data.companyId,
-          paymentMethod: printJob!.payment_method,
+          paymentMethod, // ← vem do parâmetro, nunca do state
         },
       });
 
@@ -296,12 +257,12 @@ const handleCapture = useCallback(async (base64: string) => {
         throw new Error(result.error ?? 'Falha ao processar impressão');
       }
 
-      // Sucesso - PrintNode recebeu o job
+      // Sucesso — PrintNode recebeu o job
       setPrintJob(prev => prev ? { ...prev, printnode_job_id: result.printNodeJobId } : null);
       setStage('success');
-      
+
       await playText(
-        result.hasPrintNode 
+        result.hasPrintNode
           ? `Documento enviado para ${printerName}. A impressão será feita automaticamente.`
           : 'Impressão processada com sucesso.'
       );
@@ -312,15 +273,6 @@ const handleCapture = useCallback(async (base64: string) => {
       setStage('error');
     }
   };
-
-  // ── Copiar PIX ──────────────────────────────────────────
-  const handleCopyPix = useCallback(async () => {
-    if (!pixData) return;
-    await navigator.clipboard.writeText(pixData.qr_code);
-    setCopied(true);
-    await playText('Código PIX copiado.');
-    setTimeout(() => setCopied(false), 2000);
-  }, [pixData, playText]);
 
   // ── Comandos de voz ─────────────────────────────────────
   useModalVoiceCommand({
@@ -349,17 +301,6 @@ const handleCapture = useCallback(async (base64: string) => {
         }
       }
 
-      if (stage === 'payment' && pixData) {
-        if (['copiar', 'copia', 'copie'].some(c => t.includes(c))) {
-          handleCopyPix();
-          return;
-        }
-        if (['confirmar', 'confirma', 'pago'].some(c => t.includes(c))) {
-          handleConfirmPix();
-          return;
-        }
-      }
-
       if (stage === 'success') {
         if (['fechar', 'concluir', 'ok'].some(c => t.includes(c))) {
           onClose();
@@ -369,249 +310,155 @@ const handleCapture = useCallback(async (base64: string) => {
     }
   });
 
-  const modalMaxWidth = stage === 'payment' ? 'max-w-sm sm:max-w-3xl' : 'max-w-lg';
-
+  // ── Renderização ────────────────────────────────────────
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-      <div className={`w-full ${modalMaxWidth} rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
+    <>
+      {/* ── STAGE: PAYMENT — delegado ao PIXConfirmationModal ── */}
+      {stage === 'payment' && pixData && printJob && (
+        <PIXConfirmationModal
+          transactionId={pixData.transaction_id}
+          amount={printJob.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          qrCodeUrl={pixData.qr_code_url}
+          pixCode={pixData.qr_code}
+          theme={theme}
+          onConfirm={async () => {
+            await playText('Pagamento confirmado! Enviando para impressora remota...');
+            setStage('printing');
+            // printJob.id capturado no closure, paymentMethod passado diretamente
+            await processPrint(printJob.id, 'pix');
+          }}
+          onCancel={async () => {
+            onClose();
+          }}
+        />
+      )}
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Cloud className={`w-5 h-5 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
-              <Zap className={`w-3 h-3 absolute -bottom-0.5 -right-0.5 ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`} />
-            </div>
-            <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Impressão Remota
-            </h2>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'}`}>
-              PrintNode
-            </span>
-          </div>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+      {/* ── Modal principal (todos os outros stages) ── */}
+      {stage !== 'payment' && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
 
-        {/* ── STAGE: UPLOAD ── */}
-        {stage === 'upload' && (
-          <div className="flex flex-col gap-3">
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${isDark ? 'bg-indigo-900/30 border border-indigo-700 text-indigo-300' : 'bg-indigo-50 border border-indigo-200 text-indigo-700'}`}>
-              <Zap className="w-3.5 h-3.5 shrink-0" />
-              <span>
-                <strong>Impressão 100% automática.</strong> O documento será enviado para {printerName || 'a impressora configurada'} sem nenhuma interação do cliente.
-              </span>
-            </div>
-
-            <CameraCapture
-              onCapture={handleCapture}
-              onCancel={onClose}
-              theme={theme}
-              companyId={data.companyId}
-              instructions="Envie o arquivo para impressão automática."
-              acceptPdf={true}
-              activeTab={cameraTab}
-              onTabChange={setCameraTab}
-              enabledTabs={['companion', 'upload']}
-            />
-            <VoiceHint commands={['"celular"', '"arquivo"', '"fechar"']} isDark={isDark} />
-          </div>
-        )}
-
-        {/* ── STAGE: PROCESSING ── */}
-        {stage === 'processing' && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
-              Processando arquivo...
-            </p>
-          </div>
-        )}
-
-        {/* ── STAGE: PAYMENT (PIX) ── */}
-        {stage === 'payment' && pixData && printJob && (
-          <div className="flex flex-col gap-4">
-            {/* Desktop: layout horizontal */}
-            <div className="hidden sm:flex gap-6">
-              {/* QR Code */}
-              <div className="flex-shrink-0">
-                <div className="relative w-64 h-64 bg-white rounded-xl p-4 shadow-sm">
-                  <img src={pixData.qr_code_url} alt="QR Code PIX" className="w-full h-full object-contain" />
-                  {copied && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-500/95 rounded-xl">
-                      <Check className="w-12 h-12 text-white" />
-                      <span className="text-white font-bold mt-1">Copiado!</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 flex flex-col gap-4">
-                <div className={`px-4 py-3 rounded-lg ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
-                  <p className={`text-xs uppercase tracking-wide mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                    Valor a Pagar
-                  </p>
-                  <p className={`text-4xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                    {printJob.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 text-sm">
-                  <InfoRow label="Arquivo" value={filePreview?.name ?? ''} isDark={isDark} />
-                  <InfoRow label="Páginas" value={`${printJob.pages_count} página${printJob.pages_count > 1 ? 's' : ''}`} isDark={isDark} />
-                  <InfoRow label="Impressora" value={printerName || 'PrintNode'} isDark={isDark} />
-                  <InfoRow label="Tipo" value="Automática (3 créditos)" isDark={isDark} highlight />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div
-                    onClick={handleCopyPix}
-                    className={`flex-1 px-3 py-2 rounded-lg cursor-pointer font-mono text-xs truncate ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
-                  >
-                    {pixData.qr_code.substring(0, 40)}…
-                  </div>
-                  <button
-                    onClick={handleCopyPix}
-                    className={`p-2.5 rounded-lg ${copied ? 'bg-green-500 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                  >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                <button
-                  onClick={handleConfirmPix}
-                  className="w-full py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium flex items-center justify-center gap-2"
-                >
-                  <Check className="w-5 h-5" />
-                  Confirmar Pagamento
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile: layout vertical */}
-            <div className="sm:hidden flex flex-col gap-4">
-              <div className={`px-4 py-3 rounded-lg ${isDark ? 'bg-blue-950/40' : 'bg-blue-50'}`}>
-                <p className={`text-xs uppercase tracking-wide mb-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                  Valor a Pagar
-                </p>
-                <p className={`text-3xl font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                  {printJob.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-              </div>
-
-              <div className="flex justify-center">
-                <div className="relative w-56 h-56 bg-white rounded-xl p-3 shadow-sm">
-                  <img src={pixData.qr_code_url} alt="QR Code PIX" className="w-full h-full object-contain" />
-                  {copied && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-500/95 rounded-xl">
-                      <Check className="w-10 h-10 text-white" />
-                      <span className="text-white font-bold text-sm">Copiado!</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5 text-sm">
-                <InfoRow label="Arquivo" value={filePreview?.name ?? ''} isDark={isDark} />
-                <InfoRow label="Páginas" value={`${printJob.pages_count}`} isDark={isDark} />
-                <InfoRow label="Impressora" value={printerName || 'PrintNode'} isDark={isDark} />
-              </div>
-
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <div
-                  onClick={handleCopyPix}
-                  className={`flex-1 px-3 py-2 rounded-lg cursor-pointer font-mono text-xs truncate ${isDark ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-900'}`}
-                >
-                  {pixData.qr_code.substring(0, 30)}…
+                <div className="relative">
+                  <Cloud className={`w-5 h-5 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                  <Zap className={`w-3 h-3 absolute -bottom-0.5 -right-0.5 ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`} />
                 </div>
-                <button
-                  onClick={handleCopyPix}
-                  className={`p-2.5 rounded-lg ${copied ? 'bg-green-500 text-white' : 'bg-blue-600 text-white'}`}
-                >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </button>
+                <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Impressão Remota
+                </h2>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'}`}>
+                  PrintNode
+                </span>
               </div>
-
-              <button
-                onClick={handleConfirmPix}
-                className="w-full py-3 rounded-lg bg-green-600 text-white font-medium flex items-center justify-center gap-2"
-              >
-                <Check className="w-5 h-5" />
-                Confirmar Pagamento
+              <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <VoiceHint commands={['"copiar"', '"confirmar"', '"fechar"']} isDark={isDark} />
-          </div>
-        )}
+            {/* ── STAGE: UPLOAD ── */}
+            {stage === 'upload' && (
+              <div className="flex flex-col gap-3">
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${isDark ? 'bg-indigo-900/30 border border-indigo-700 text-indigo-300' : 'bg-indigo-50 border border-indigo-200 text-indigo-700'}`}>
+                  <Zap className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    <strong>Impressão 100% automática.</strong> O documento será enviado para {printerName || 'a impressora configurada'} sem nenhuma interação do cliente.
+                  </span>
+                </div>
 
-        {/* ── STAGE: PRINTING ── */}
-        {stage === 'printing' && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="relative">
-              <Loader2 className={`w-12 h-12 animate-spin ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
-              <Cloud className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${isDark ? 'text-indigo-300' : 'text-indigo-500'}`} />
-            </div>
-            <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
-              Enviando para {printerName || 'impressora remota'}...
-            </p>
-            <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
-              A impressão será automática
-            </p>
-          </div>
-        )}
+                <CameraCapture
+                  onCapture={handleCapture}
+                  onCancel={onClose}
+                  theme={theme}
+                  companyId={data.companyId}
+                  instructions="Envie o arquivo para impressão automática."
+                  acceptPdf={true}
+                  activeTab={cameraTab}
+                  onTabChange={setCameraTab}
+                  enabledTabs={['companion', 'upload']}
+                />
+                <VoiceHint commands={['"celular"', '"arquivo"', '"fechar"']} isDark={isDark} />
+              </div>
+            )}
 
-        {/* ── STAGE: SUCCESS ── */}
-        {stage === 'success' && (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check className="w-8 h-8 text-green-500" />
-            </div>
-            <div className="text-center">
-              <p className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Impressão Enviada!
-              </p>
-              <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                O documento será impresso automaticamente em {printerName || 'impressora remota'}
-              </p>
-              {printJob?.printnode_job_id && (
-                <p className={`text-xs mt-2 font-mono ${isDark ? 'text-slate-600' : 'text-gray-400'}`}>
-                  Job ID: {printJob.printnode_job_id}
+            {/* ── STAGE: PROCESSING ── */}
+            {stage === 'processing' && (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
+                  Processando arquivo...
                 </p>
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              className="px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium"
-            >
-              Concluir
-            </button>
-            <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
-              Fechando automaticamente em {Math.ceil(AUTO_CLOSE_DURATION / 1000)}s
-            </p>
-          </div>
-        )}
+              </div>
+            )}
 
-        {/* ── STAGE: ERROR ── */}
-        {stage === 'error' && (
-          <div className="flex flex-col gap-4">
-            <div className={`flex items-center gap-2 px-4 py-3 rounded-lg ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span className="text-sm">{errorMsg}</span>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
-            >
-              Fechar
-            </button>
-          </div>
-        )}
+            {/* ── STAGE: PRINTING ── */}
+            {stage === 'printing' && (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <div className="relative">
+                  <Loader2 className={`w-12 h-12 animate-spin ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                  <Cloud className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${isDark ? 'text-indigo-300' : 'text-indigo-500'}`} />
+                </div>
+                <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
+                  Enviando para {printerName || 'impressora remota'}...
+                </p>
+                <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
+                  A impressão será automática
+                </p>
+              </div>
+            )}
 
-      </div>
-    </div>,
+            {/* ── STAGE: SUCCESS ── */}
+            {stage === 'success' && (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-500" />
+                </div>
+                <div className="text-center">
+                  <p className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Impressão Enviada!
+                  </p>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                    O documento será impresso automaticamente em {printerName || 'impressora remota'}
+                  </p>
+                  {printJob?.printnode_job_id && (
+                    <p className={`text-xs mt-2 font-mono ${isDark ? 'text-slate-600' : 'text-gray-400'}`}>
+                      Job ID: {printJob.printnode_job_id}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium"
+                >
+                  Concluir
+                </button>
+                <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
+                  Fechando automaticamente em {Math.ceil(AUTO_CLOSE_DURATION / 1000)}s
+                </p>
+              </div>
+            )}
+
+            {/* ── STAGE: ERROR ── */}
+            {stage === 'error' && (
+              <div className="flex flex-col gap-4">
+                <div className={`flex items-center gap-2 px-4 py-3 rounded-lg ${isDark ? 'bg-red-900/30 border border-red-700 text-red-300' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span className="text-sm">{errorMsg}</span>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+    </>,
     document.body
   );
 }

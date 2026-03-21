@@ -156,60 +156,92 @@ export default function ImpressaoReciboDisplay({ data, onClose, theme = 'dark', 
     }
   }, [stage, onClose]);
 
-// Upload + criar job via Edge Function (bypassa RLS)
-const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
-  body: {
-    base64: base64,
-    companyId: data.companyId,
-    fileName: fileName,
-    functionKey: data.functionKey,  // 'impressao_remota', 'impressao_local', ou 'impressao_recibo'
-    pricePerPage: pricePerPage,
-    paymentMethod: chargeEnabled ? 'pix' : 'credits',
-  },
-});
+  // ── Upload de arquivo ───────────────────────────────────
+  const handleCapture = useCallback(async (base64: string) => {
+    setStage('processing');
 
-if (uploadError || !uploadResult?.success) {
-  throw new Error(uploadResult?.error || 'Erro ao processar arquivo');
-}
+    try {
+      // Detectar tipo
+      let fileType = 'image/jpeg';
+      let fileName = `recibo_${Date.now()}.jpg`;
+      let estimatedPages = 1;
 
-// Dados retornados pela Edge Function
-const job = uploadResult.job;
-const filePath = uploadResult.filePath;
-const estimatedPages = uploadResult.pagesCount;
-
-console.log('✅ Arquivo processado. Job ID:', job.id);
-
-      setFilePreview({
-        name: fileName,
-        type: fileType,
-        size: blob.size,
-        pages: estimatedPages,
-        base64,
-      });
-
-      setPrintJob({
-        id: job.id,
-        file_url: filePath,
-        pages_count: estimatedPages,
-        total_amount: totalAmount,
-        payment_method: chargeEnabled ? 'pix' : 'credits',
-      });
-
-      // Ir para pagamento (PIX) ou impressão direta (créditos)
-      if (chargeEnabled) {
-        setStage('payment');
-        await generatePix(job.id, totalAmount);
-      } else {
-        setStage('printing');
-        await processPrint(job.id, base64);
+      if (base64.startsWith('JVBERi')) {
+        fileType = 'application/pdf';
+        fileName = `recibo_${Date.now()}.pdf`;
+        const sizeKB = (base64.length * 0.75) / 1024;
+        estimatedPages = Math.max(1, Math.ceil(sizeKB / 50));
       }
 
-    } catch (err: any) {
-      console.error('❌ Erro no upload:', err);
-      setErrorMsg(err.message ?? 'Erro ao processar arquivo.');
-      setStage('error');
+const handleCapture = useCallback(async (base64: string) => {
+  setStage('processing');
+
+  try {
+    // Detectar tipo e nome do arquivo
+    let fileType = 'image/jpeg';
+    let fileName = `impressao_${Date.now()}.jpg`;
+
+    if (base64.startsWith('JVBERi')) {
+      fileType = 'application/pdf';
+      fileName = `impressao_${Date.now()}.pdf`;
     }
-  }, [data.companyId, chargeEnabled, pricePerPage, supabase]);
+
+    // Upload + criar job via Edge Function (bypassa RLS)
+    const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
+      body: {
+        base64,
+        companyId: data.companyId,
+        fileName,
+        functionKey: data.functionKey,
+        pricePerPage,
+        paymentMethod: chargeEnabled ? 'pix' : 'credits',
+      },
+    });
+
+    if (uploadError || !uploadResult?.success) {
+      throw new Error(uploadResult?.error || 'Erro ao processar arquivo');
+    }
+
+    // Dados retornados pela Edge Function
+    const job = uploadResult.job;
+    const filePath = uploadResult.filePath;
+    const estimatedPages = uploadResult.pagesCount;  // ← única declaração
+    const totalAmount = estimatedPages * pricePerPage;
+
+    console.log('✅ Arquivo processado. Job ID:', job.id);
+
+    const sizeBytes = Math.round((base64.length * 3) / 4); // estimativa do tamanho
+
+    setFilePreview({
+      name: fileName,
+      type: fileType,
+      size: sizeBytes,
+      pages: estimatedPages,
+      base64,
+    });
+
+    setPrintJob({
+      id: job.id,
+      file_url: filePath,
+      pages_count: estimatedPages,
+      total_amount: totalAmount,
+      payment_method: chargeEnabled ? 'pix' : 'credits',
+    });
+
+    if (chargeEnabled) {
+      setStage('payment');
+      await generatePix(job.id, totalAmount);
+    } else {
+      setStage('printing');
+      await processPrint(job.id);
+    }
+
+  } catch (err: any) {
+    console.error('❌ Erro no upload:', err);
+    setErrorMsg(err.message ?? 'Erro ao processar arquivo.');
+    setStage('error');
+  }
+}, [data.companyId, chargeEnabled, pricePerPage, supabase]);
 
   // ── Gerar PIX ───────────────────────────────────────────
   const generatePix = async (jobId: string, amount: number) => {

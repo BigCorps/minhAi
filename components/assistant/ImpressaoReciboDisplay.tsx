@@ -173,16 +173,21 @@ export default function ImpressaoReciboDisplay({ data, onClose, theme = 'dark', 
         estimatedPages = Math.max(1, Math.ceil(sizeKB / 50));
       }
 
-      // Upload para Supabase Storage
-      const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-      const blob = new Blob([buffer], { type: fileType });
+// Upload via Edge Function (bypassa RLS)
+const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('upload-print-file', {
+  body: {
+    base64: base64,
+    companyId: data.companyId,
+    fileName: fileName,
+  },
+});
 
-      const filePath = `${data.companyId}/${fileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('print-files')
-        .upload(filePath, blob);
+if (uploadError || !uploadResult?.success) {
+  throw new Error(uploadResult?.error || 'Erro ao fazer upload do arquivo');
+}
 
-      if (uploadError) throw uploadError;
+const filePath = uploadResult.filePath;
+console.log('✅ Upload concluído:', filePath);
 
       // Criar registro no banco
       const totalAmount = estimatedPages * pricePerPage;
@@ -478,12 +483,13 @@ export default function ImpressaoReciboDisplay({ data, onClose, theme = 'dark', 
               onCancel={onClose}
               theme={theme}
               companyId={data.companyId}
-              instructions="Envie um arquivo ou tire uma foto para impressão de recibo."
+              instructions="Envie o arquivo para impressão do recibo."
               acceptPdf={true}
               activeTab={cameraTab}
               onTabChange={setCameraTab}
+              enabledTabs={['companion', 'upload']}
             />
-            <VoiceHint commands={['"celular"', '"webcam"', '"câmera"', '"arquivo"', '"fechar"']} isDark={isDark} />
+            <VoiceHint commands={['"celular"', '"arquivo"', '"fechar"']} isDark={isDark} />
           </div>
         )}
 

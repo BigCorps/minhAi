@@ -196,15 +196,18 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         pagesCountRaw: uploadResult.pagesCount,
       });
 
-      // ✅ CORREÇÃO: Fluxo manual vs PIX automático
-      if (manualPaymentEnabled) {
-        // Modo manual: mostra mensagem para atendente processar
-        setStage('waiting_attendant');
-      } else {
-        // Modo autoatendimento: gera PIX automático
-        setStage('payment');
-        await generatePix(job.id, totalAmount);
-      }
+if (manualPaymentEnabled) {
+  // Com cobrança manual: aguarda atendente
+  setStage('waiting_attendant');
+} else if (totalAmount > 0) {
+  // Com cobrança PIX: gera QR Code
+  setStage('payment');
+  await generatePix(job.id, totalAmount);
+} else {
+  // Sem cobrança configurada: vai direto para impressão
+  setStage('printing');
+  await processPrint(job.id, filePath, 'manual');
+}
 
     } catch (err: any) {
       console.error('❌ Erro no upload:', err);

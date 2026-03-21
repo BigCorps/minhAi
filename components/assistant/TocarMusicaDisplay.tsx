@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Music, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Music, Loader2, ChevronDown, ChevronUp, Play, Pause } from 'lucide-react';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 
 interface TocarMusicaDisplayProps {
@@ -36,6 +36,7 @@ export default function TocarMusicaDisplay({
   const [searchInput, setSearchInput] = useState(query || '');
   const [showSearch, setShowSearch] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasClosedRef = useRef(false);
@@ -45,15 +46,19 @@ export default function TocarMusicaDisplay({
     return () => { window.speechSynthesis.cancel(); };
   }, []);
 
-  // Listener fim de música (YouTube playerState 0 = ended)
+  // Listener de eventos do YouTube IFrame API
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (hasClosedRef.current) return;
       if (event.data && typeof event.data === 'string') {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.event === 'infoDelivery' && msg.info?.playerState === 0) {
-            handleClose();
+          // playerState: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering
+          if (msg.event === 'infoDelivery' && msg.info?.playerState !== undefined) {
+            const state = msg.info.playerState;
+            if (state === 0) handleClose();           // terminou
+            if (state === 1) setIsPlaying(true);      // tocando
+            if (state === 2) setIsPlaying(false);     // pausado
           }
         } catch (e) {}
       }
@@ -62,21 +67,40 @@ export default function TocarMusicaDisplay({
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Habilitar eventos YouTube
+  // Registrar listener assim que iframe carregar
   useEffect(() => {
     if (!musica || !iframeRef.current) return;
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       iframeRef.current?.contentWindow?.postMessage(
         JSON.stringify({ event: 'listening', id: 1 }), '*'
       );
     }, 1000);
+    return () => clearTimeout(timer);
   }, [musica]);
+
+  const sendCommand = (command: string, args?: any) => {
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func: command, args: args ?? [] }),
+      '*'
+    );
+  };
+
+  const togglePlay = () => {
+    if (isPlaying) {
+      sendCommand('pauseVideo');
+      setIsPlaying(false);
+    } else {
+      sendCommand('playVideo');
+      setIsPlaying(true);
+    }
+  };
 
   const fetchMusica = async (searchQuery: string) => {
     if (!searchQuery.trim()) return;
     setLoading(true);
     setError(null);
     setMusica(null);
+    setIsPlaying(true);
     hasClosedRef.current = false;
 
     try {
@@ -97,7 +121,10 @@ export default function TocarMusicaDisplay({
       if (!res.ok || json.error) throw new Error(json.error || 'Erro ao buscar música');
       if (!json.musicas || json.musicas.length === 0) throw new Error('Nenhuma música encontrada');
 
-      setMusica(json.musicas[0]);
+      // controls=0 — sem barra do YouTube, enablejsapi=1 — permite postMessage
+      const m = json.musicas[0];
+      m.embed_url = `https://www.youtube.com/embed/${m.video_id}?autoplay=1&controls=0&rel=0&modestbranding=1&enablejsapi=1`;
+      setMusica(m);
       setShowSearch(false);
       playText('Música encontrada.').catch(() => {});
 
@@ -158,12 +185,8 @@ export default function TocarMusicaDisplay({
               className={`p-1.5 rounded-lg transition ${
                 isDark ? 'hover:bg-white/10 text-white/60' : 'hover:bg-gray-100 text-gray-400'
               }`}
-              title={minimized ? 'Expandir' : 'Minimizar'}
             >
-              {minimized
-                ? <ChevronUp className="w-3.5 h-3.5" />
-                : <ChevronDown className="w-3.5 h-3.5" />
-              }
+              {minimized ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={handleClose}
@@ -180,40 +203,56 @@ export default function TocarMusicaDisplay({
         {!minimized && (
           <div className="p-4 space-y-3">
 
-            {/* Info da música */}
+            {/* Info + Play/Pause */}
             {musica && !loading && (
-              <div className="space-y-0.5">
-                <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {musica.title}
-                </p>
-                <p className={`text-xs truncate ${isDark ? 'text-white/50' : 'text-gray-400'}`}>
-                  {musica.channel}
+              <div className="flex items-center gap-3">
+                {/* Botão Play/Pause */}
+                <button
+                  onClick={togglePlay}
+                  className="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center flex-shrink-0 transition shadow-lg"
+                >
+                  {isPlaying
+                    ? <Pause className="w-4 h-4 text-white" />
+                    : <Play className="w-4 h-4 text-white ml-0.5" />
+                  }
+                </button>
+
+                {/* Título e canal */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {musica.title}
+                  </p>
+                  <p className={`text-xs truncate ${isDark ? 'text-white/50' : 'text-gray-400'}`}>
+                    {musica.channel}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Loading state */}
+            {loading && (
+              <div className="flex items-center gap-3 py-1">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <Loader2 className="w-4 h-4 text-green-400 animate-spin" />
+                </div>
+                <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-400'}`}>
+                  Buscando música...
                 </p>
               </div>
             )}
 
             {/* Erro */}
             {error && !loading && (
-              <p className="text-xs text-red-400 text-center">{error}</p>
+              <p className="text-xs text-red-400 text-center py-1">{error}</p>
             )}
 
-            {/* Player YouTube — apenas barra de controles visível */}
+            {/* iframe oculto — apenas para reprodução */}
             {musica && (
-              <div
-                className="relative w-full overflow-hidden rounded-xl"
-                style={{ height: '48px' }}
-              >
+              <div className="hidden">
                 <iframe
                   ref={iframeRef}
-                  src={musica.embed_url + '&controls=1'}
-                  className="absolute w-full"
-                  style={{
-                    height: '300px',
-                    bottom: 0,
-                    left: 0,
-                    border: 'none',
-                  }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  src={musica.embed_url}
+                  allow="autoplay"
                   frameBorder="0"
                 />
               </div>
@@ -264,21 +303,32 @@ export default function TocarMusicaDisplay({
 
         {/* Versão minimizada */}
         {minimized && (
-          <div className="px-4 py-2">
+          <div className="px-4 py-2 flex items-center gap-2">
+            {musica && !loading && (
+              <button
+                onClick={togglePlay}
+                className="w-6 h-6 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center flex-shrink-0 transition"
+              >
+                {isPlaying
+                  ? <Pause className="w-2.5 h-2.5 text-white" />
+                  : <Play className="w-2.5 h-2.5 text-white ml-0.5" />
+                }
+              </button>
+            )}
             {loading
               ? <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Buscando...</p>
               : musica
                 ? <p className={`text-xs truncate ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
-                    🎵 {musica.title}
+                    {musica.title}
                   </p>
                 : <p className={`text-xs ${isDark ? 'text-red-400' : 'text-red-500'}`}>Erro ao buscar</p>
             }
-            {/* Player continua rodando quando minimizado */}
+            {/* iframe continua rodando minimizado */}
             {musica && (
               <div className="hidden">
                 <iframe
                   ref={iframeRef}
-                  src={musica.embed_url + '&controls=1'}
+                  src={musica.embed_url}
                   allow="autoplay"
                   frameBorder="0"
                 />

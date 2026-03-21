@@ -1934,13 +1934,12 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
       {/* Info */}
       <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
         <p className="text-sm text-purple-800 dark:text-purple-200 mb-2">
-          <strong>Impressão Local:</strong> Usa a impressora nativa do dispositivo (1 crédito).
+          <strong>Impressão Local:</strong> Usa a impressora nativa do dispositivo.
         </p>
         <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
           <li>• Funciona em qualquer dispositivo (desktop, tablet, mobile)</li>
           <li>• Cliente escolhe a impressora e confirma</li>
-          <li>• Sem custo mensal adicional</li>
-          <li>• Custo: 1 crédito por impressão</li>
+          <li>• Sem custo mensal</li>
         </ul>
       </div>
 
@@ -1949,12 +1948,12 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
         <label className="flex items-center justify-between cursor-pointer">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrar do Cliente via PIX
+              Cobrar do Cliente?
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {chargeEnabled
                 ? 'Cliente paga via PIX antes de imprimir'
-                : 'Desconta créditos do cliente automaticamente'}
+                : 'Desconta do seu saldo.'}
             </p>
           </div>
           <div className="relative">
@@ -1971,7 +1970,7 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
         {chargeEnabled && (
           <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <p className="text-xs text-green-800 dark:text-green-200">
-              Você receberá <strong>0,5% de cada saque</strong> realizado pelos clientes.
+              Você receberá os pagamentos no <strong>seu Saldo</strong> aqui no dashboard.
             </p>
           </div>
         )}
@@ -2405,13 +2404,12 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
       {/* Info */}
       <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
         <p className="text-sm text-green-800 dark:text-green-200 mb-2">
-          <strong>Impressão Térmica:</strong> Para PDV, Totens e TEF (1 crédito).
+          <strong>Impressão Térmica:</strong> Para PDV, Totens e TEF.
         </p>
         <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
           <li>• Conecta via USB ou Bluetooth diretamente</li>
-          <li>• Sem custo mensal (PrintNode não necessário)</li>
+          <li>• Sem custo mensal</li>
           <li>• Ideal para recibos e cupons fiscais</li>
-          <li>• Custo: 1 crédito por impressão</li>
         </ul>
       </div>
 
@@ -2524,12 +2522,12 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
         <label className="flex items-center justify-between cursor-pointer">
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Cobrar do Cliente via PIX
+              Cobrar do Cliente?
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {chargeEnabled
                 ? 'Cliente paga via PIX antes de imprimir'
-                : 'Desconta créditos do cliente automaticamente'}
+                : 'Desconta do seu saldo.'}
             </p>
           </div>
           <div className="relative">
@@ -2587,7 +2585,6 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
           Vantagens da Impressora Térmica:
         </p>
         <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-          <li>• Sem custo mensal (R$ 0 vs R$ 95-495 PrintNode)</li>
           <li>• Conexão direta USB ou Bluetooth</li>
           <li>• Funciona offline (não depende de internet)</li>
           <li>• Impressão instantânea (ideal para PDV/TEF)</li>

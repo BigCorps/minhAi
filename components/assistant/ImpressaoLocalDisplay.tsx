@@ -120,6 +120,15 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
     }
   }, [stage, onClose]);
 
+  // ── Limpar blob URL ao desmontar ────────────────────────
+  useEffect(() => {
+    return () => {
+      if (printFileUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(printFileUrl);
+      }
+    };
+  }, [printFileUrl]);
+
   // ── Upload de arquivo ───────────────────────────────────
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
@@ -306,8 +315,22 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
   // ── Renderização ────────────────────────────────────────
   return createPortal(
     <>
-      {/* ── STAGE: PAYMENT — delegado ao PIXConfirmationModal ── */}
-      {stage === 'payment' && pixData && printJob && (
+      {/* ── STAGE: PAYMENT aguardando pixData ── */}
+      {stage === 'payment' && (!pixData?.qr_code || !pixData?.qr_code_url) && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
+                Gerando QR Code PIX...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STAGE: PAYMENT — PIXConfirmationModal sobreposto ao modal principal ── */}
+      {stage === 'payment' && pixData?.qr_code && pixData?.qr_code_url && printJob && (
         <PIXConfirmationModal
           transactionId={pixData.transaction_id}
           amount={printJob.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -326,7 +349,7 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         />
       )}
 
-      {/* ── Modal principal (todos os outros stages) ── */}
+      {/* ── Modal principal (sempre visível exceto no loading de PIX) ── */}
       {stage !== 'payment' && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
           <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-gray-200'}`}>

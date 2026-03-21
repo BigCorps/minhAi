@@ -2302,20 +2302,6 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
     </div>
   );
 };
- 
-const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
-  const router = useRouter();
-  return (
-    <div className="space-y-4">
-      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800">
-        <p className="text-sm text-emerald-800 dark:text-emerald-200">Configure seus produtos e loja virtual no painel de vendas.</p>
-      </div>
-      <button type="button" onClick={() => router.push(`/dashboard/vendas?company=${companyId}`)} className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
-        <ExternalLink size={16} />Gerenciar Loja Virtual
-      </button>
-    </div>
-  );
-};
 
 const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
   const router = useRouter();

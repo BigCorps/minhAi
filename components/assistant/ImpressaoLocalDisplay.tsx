@@ -214,6 +214,8 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
 
       if (error) throw error;
 
+      console.log('🔍 pixResult completo:', JSON.stringify(pixResult));
+
       setPixData({
         qr_code: pixResult.qr_code,
         qr_code_url: pixResult.qr_code_url,

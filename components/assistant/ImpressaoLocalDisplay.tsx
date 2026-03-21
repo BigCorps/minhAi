@@ -19,7 +19,7 @@ import {
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import CameraCapture from '@/components/assistant/CameraCapture';
-import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
+import PIXConfirmationModal from '@/components/assistant/PIXConfirmationModal';
 
 type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage = 'upload' | 'processing' | 'payment' | 'printing' | 'success' | 'error';
@@ -243,11 +243,14 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
         .from('print-files')
         .getPublicUrl(fileUrl);
 
-      const printWindow = window.open(fileData.publicUrl, '_blank');
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
+      if (fileData?.publicUrl) {
+        const printWindow = window.open(fileData.publicUrl, '_blank');
+        if (printWindow) {
+          printWindow.focus();
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
       }
 
       setStage('success');

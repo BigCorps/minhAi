@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const audioBuffer = await synthesizeSpeech({
       text,
       voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-      speakingRate: 1.3,
+      speakingRate: 1.2,
       audioEncoding: 'MP3',
     });
 

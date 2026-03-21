@@ -495,34 +495,33 @@ tocar_musica: {
   isPremium: false,
 
   handler: async ({ transcript, playText, setActiveModal, companyId }) => {
-    try {
-      const queryMatch = transcript?.match(
-        /(?:tocar|reproduzir|ouvir|escutar|coloca|toca)\s+(?:uma\s+)?(?:musica|música)\s+(?:de|do|da|sobre)?\s*(.+)/i
-      ) || transcript?.match(
-        /(?:quero ouvir|quero escutar)\s+(.+)/i
-      );
+  try {
+    const queryMatch = transcript?.match(
+      /(?:tocar|reproduzir|ouvir|escutar|coloca|toca)\s+(?:uma\s+)?(?:musica|música)\s+(?:de|do|da|sobre)?\s*(.+)/i
+    ) || transcript?.match(
+      /(?:quero ouvir|quero escutar)\s+(.+)/i
+    );
 
-      const query = queryMatch ? queryMatch[1].trim() : transcript?.trim() || '';
+    const query = queryMatch ? queryMatch[1].trim() : transcript?.trim() || '';
 
-      if (!query) {
-        await playText('Qual música você quer ouvir? Me diga o estilo ou artista.');
-        return false;
-      }
-
-      setActiveModal?.({
-        type: 'TocarMusicaDisplay',
-        data: { companyId, query },
-      });
-
-      await playText(`Buscando música...`);
-      return true;
-    } catch (error) {
-      console.error('Erro tocar_musica:', error);
-      await playText('Não consegui buscar a música. Tente novamente.');
+    if (!query) {
+      playText('Qual música você quer ouvir? Me diga o estilo ou artista.').catch(() => {});
       return false;
     }
-  },
-},
+
+    setActiveModal?.({
+      type: 'TocarMusicaDisplay',
+      data: { companyId, query },
+    });
+
+    // ✅ fire-and-forget — não bloqueia o assistente
+    playText('Buscando música...').catch(() => {});
+    return true;
+
+  } catch (error) {
+    console.error('Erro tocar_musica:', error);
+    return false;
+  }
 
 tocar_video: {
   functionKey: 'tocar_video',

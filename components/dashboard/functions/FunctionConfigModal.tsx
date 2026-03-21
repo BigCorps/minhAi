@@ -1920,6 +1920,639 @@ const TocarMusicaForm = () => (
   </div>
 );
 
+// ============================================================
+// Formulário de configuração para Impressão Local (Nativa)
+// ============================================================
+
+const NativeConfigForm = ({ settings, onChange }: any) => {
+  const chargeEnabled = settings.print_charge_enabled ?? false;
+  const pricePerPage = settings.print_price_per_page ?? 0.50;
+  const maxPages = settings.print_max_pages_per_job ?? 50;
+
+  return (
+    <div className="space-y-4">
+      {/* Info */}
+      <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+        <p className="text-sm text-purple-800 dark:text-purple-200 mb-2">
+          <strong>Impressão Local:</strong> Usa a impressora nativa do dispositivo (1 crédito).
+        </p>
+        <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
+          <li>• Funciona em qualquer dispositivo (desktop, tablet, mobile)</li>
+          <li>• Cliente escolhe a impressora e confirma</li>
+          <li>• Sem custo mensal adicional</li>
+          <li>• Custo: 1 crédito por impressão</li>
+        </ul>
+      </div>
+
+      {/* Toggle: Cobrar via PIX */}
+      <div className="space-y-3">
+        <label className="flex items-center justify-between cursor-pointer">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              Cobrar do Cliente via PIX
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {chargeEnabled
+                ? 'Cliente paga via PIX antes de imprimir'
+                : 'Desconta créditos do cliente automaticamente'}
+            </p>
+          </div>
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={chargeEnabled}
+              onChange={e => onChange('print_charge_enabled', e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+          </div>
+        </label>
+
+        {chargeEnabled && (
+          <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <p className="text-xs text-green-800 dark:text-green-200">
+              Você receberá <strong>0,5% de cada saque</strong> realizado pelos clientes.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Preço por Página */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Preço por Página {chargeEnabled ? '(cobrado do consumidor via PIX)' : '(informativo)'}
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+            R$
+          </span>
+          <input
+            type="number"
+            step="0.10"
+            min="0"
+            max="10"
+            value={pricePerPage}
+            onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Preço sugerido: R$ 0,30 a R$ 0,80 por página
+        </p>
+      </div>
+
+      {/* Máximo de Páginas */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Máximo de Páginas por Trabalho
+        </label>
+        <input
+          type="number"
+          step="1"
+          min="1"
+          max="200"
+          value={maxPages}
+          onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)}
+          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Limite de páginas para evitar abusos
+        </p>
+      </div>
+
+      {/* Dicas */}
+      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+          <strong>Como funciona:</strong>
+        </p>
+        <ol className="text-xs text-gray-500 dark:text-gray-400 space-y-1 list-decimal list-inside">
+          <li>Cliente envia arquivo ou tira foto</li>
+          <li>Sistema prepara documento para impressão</li>
+          <li>Cliente escolhe impressora (toque)</li>
+          <li>Confirma impressão</li>
+        </ol>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Formulário de configuração para Impressão Remota (PrintNode)
+// ============================================================
+
+const PrintNodeConfigForm = ({ settings, onChange }: any) => {
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [printerName, setPrinterName] = useState('');
+
+  const chargeEnabled = settings.print_charge_enabled ?? false;
+  const pricePerPage = settings.print_price_per_page ?? 0.50;
+  const maxPages = settings.print_max_pages_per_job ?? 50;
+  const apiKey = settings.printnode_api_key ?? '';
+  const printerId = settings.printnode_printer_id ?? '';
+
+  const handleTestConnection = async () => {
+    if (!apiKey) {
+      setConnectionStatus('error');
+      return;
+    }
+
+    setTestingConnection(true);
+    setConnectionStatus('idle');
+
+    try {
+      // Testar API Key
+      const response = await fetch('https://api.printnode.com/whoami', {
+        headers: {
+          'Authorization': `Basic ${btoa(apiKey + ':')}`,
+        },
+      });
+
+      if (response.ok) {
+        setConnectionStatus('success');
+        
+        // Se tiver printer ID, buscar nome
+        if (printerId) {
+          const printerResponse = await fetch(`https://api.printnode.com/printers/${printerId}`, {
+            headers: {
+              'Authorization': `Basic ${btoa(apiKey + ':')}`,
+            },
+          });
+          
+          if (printerResponse.ok) {
+            const printer = await printerResponse.json();
+            setPrinterName(printer.name || 'Impressora PrintNode');
+          }
+        }
+      } else {
+        setConnectionStatus('error');
+      }
+    } catch {
+      setConnectionStatus('error');
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Info */}
+      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800">
+        <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-2">
+          <strong>Impressão Remota:</strong> Impressão 100% automática via PrintNode (3 créditos).
+        </p>
+        <ul className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
+          <li>• Cliente não precisa fazer nada - imprime automaticamente</li>
+          <li>• Ideal para desktop sem touch</li>
+          <li>• Requer conta PrintNode (R$ 95-495/mês)</li>
+          <li>• Custo: 3 créditos por impressão</li>
+        </ul>
+      </div>
+
+      {/* Como obter */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-2">
+          📌 Como obter suas credenciais PrintNode:
+        </p>
+        <ol className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
+          <li>Acesse <a href="https://app.printnode.com" target="_blank" rel="noopener" className="underline font-medium">app.printnode.com</a></li>
+          <li>Faça login ou crie uma conta</li>
+          <li>Vá em "API Keys" → Copie sua chave</li>
+          <li>Vá em "Printers" → Copie o ID da impressora</li>
+        </ol>
+      </div>
+
+      {/* API Key */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          PrintNode API Key <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <input
+            type={showApiKey ? 'text' : 'password'}
+            value={apiKey}
+            onChange={e => onChange('printnode_api_key', e.target.value)}
+            placeholder="Cole sua API Key do PrintNode"
+            className="w-full px-4 py-2 pr-12 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => setShowApiKey(!showApiKey)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10"
+          >
+            {showApiKey ? '👁️' : '👁️‍🗨️'}
+          </button>
+        </div>
+      </div>
+
+      {/* Printer ID */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          ID da Impressora <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={printerId}
+          onChange={e => onChange('printnode_printer_id', e.target.value)}
+          placeholder="Ex: 12345"
+          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+        />
+        {printerName && (
+          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+            ✓ {printerName}
+          </p>
+        )}
+      </div>
+
+      {/* Botão Testar */}
+      {apiKey && (
+        <button
+          type="button"
+          onClick={handleTestConnection}
+          disabled={testingConnection}
+          className={`w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            connectionStatus === 'success'
+              ? 'bg-green-600 text-white'
+              : connectionStatus === 'error'
+              ? 'bg-red-600 text-white'
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+          } disabled:opacity-50`}
+        >
+          {testingConnection ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Testando...
+            </>
+          ) : connectionStatus === 'success' ? (
+            <>✓ Conexão OK!</>
+          ) : connectionStatus === 'error' ? (
+            <>✗ Erro na Conexão</>
+          ) : (
+            'Testar Conexão'
+          )}
+        </button>
+      )}
+
+      {/* Divisor */}
+      <div className="border-t border-gray-200 dark:border-white/10 my-4"></div>
+
+      {/* Toggle PIX */}
+      <div className="space-y-3">
+        <label className="flex items-center justify-between cursor-pointer">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              Cobrar do Cliente via PIX
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {chargeEnabled
+                ? 'Cliente paga via PIX antes de imprimir'
+                : 'Desconta créditos do cliente automaticamente'}
+            </p>
+          </div>
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={chargeEnabled}
+              onChange={e => onChange('print_charge_enabled', e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+          </div>
+        </label>
+      </div>
+
+      {/* Preço */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Preço por Página
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+            R$
+          </span>
+          <input
+            type="number"
+            step="0.10"
+            min="0"
+            max="10"
+            value={pricePerPage}
+            onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+
+      {/* Máximo */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Máximo de Páginas
+        </label>
+        <input
+          type="number"
+          step="1"
+          min="1"
+          max="200"
+          value={maxPages}
+          onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)}
+          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      {/* Custo PrintNode */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+        <p className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-1">
+          Custo PrintNode (mensal):
+        </p>
+        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+          <li>• Starter: R$ ~95/mês (até 1.000 impressões)</li>
+          <li>• Business: R$ ~495/mês (até 5.000 impressões)</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Formulário de configuração para Impressão Recibo (Térmica)
+// ============================================================
+
+const ThermalConfigForm = ({ settings, onChange }: any) => {
+  const [detectingPrinters, setDetectingPrinters] = useState(false);
+  const [thermalPrinters, setThermalPrinters] = useState<any[]>([]);
+  const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
+  const [testingPrint, setTestingPrint] = useState(false);
+
+  const chargeEnabled = settings.print_charge_enabled ?? false;
+  const pricePerPage = settings.print_price_per_page ?? 0.50;
+  const maxPages = settings.print_max_pages_per_job ?? 50;
+  const thermalPrinterId = settings.thermal_printer_id ?? '';
+
+  const handleDetectPrinters = async () => {
+    setDetectingPrinters(true);
+    try {
+      // Importar dinamicamente para evitar erro no servidor
+      const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+      const printers = await thermalPrinterService.detectPrinters();
+      setThermalPrinters(printers);
+      
+      if (printers.length === 0) {
+        alert('Nenhuma impressora térmica detectada. Conecte uma impressora USB ou Bluetooth e tente novamente.');
+      }
+    } catch (error: any) {
+      console.error('Erro ao detectar impressoras:', error);
+      alert('Erro ao detectar impressoras: ' + error.message);
+    } finally {
+      setDetectingPrinters(false);
+    }
+  };
+
+  const handleRequestUSB = async () => {
+    try {
+      const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+      const printer = await thermalPrinterService.requestUSBPrinter();
+      
+      if (printer) {
+        setThermalPrinters(prev => [...prev, printer]);
+        setSelectedPrinter(printer);
+        onChange('thermal_printer_id', printer.id);
+        onChange('thermal_connection_type', 'usb');
+      }
+    } catch (error: any) {
+      alert('Erro ao conectar impressora USB: ' + error.message);
+    }
+  };
+
+  const handleSelectPrinter = (printer: any) => {
+    setSelectedPrinter(printer);
+    onChange('thermal_printer_id', printer.id);
+    onChange('thermal_connection_type', printer.type);
+  };
+
+  const handleTestPrint = async () => {
+    if (!selectedPrinter) {
+      alert('Selecione uma impressora primeiro');
+      return;
+    }
+
+    setTestingPrint(true);
+    try {
+      const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+      
+      await thermalPrinterService.printText(
+        '──── TESTE ────\n\neAi Assistente\nImpressão Térmica\n\n' + new Date().toLocaleString('pt-BR') + '\n\n────────────────\n',
+        {
+          align: 'center',
+          bold: true,
+          cut: true,
+        }
+      );
+      
+      alert('✅ Teste de impressão enviado com sucesso!');
+    } catch (error: any) {
+      alert('❌ Erro no teste: ' + error.message);
+    } finally {
+      setTestingPrint(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Info */}
+      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-sm text-green-800 dark:text-green-200 mb-2">
+          <strong>Impressão Térmica:</strong> Para PDV, Totens e TEF (1 crédito).
+        </p>
+        <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
+          <li>• Conecta via USB ou Bluetooth diretamente</li>
+          <li>• Sem custo mensal (PrintNode não necessário)</li>
+          <li>• Ideal para recibos e cupons fiscais</li>
+          <li>• Custo: 1 crédito por impressão</li>
+        </ul>
+      </div>
+
+      {/* Impressoras Compatíveis */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-2">
+          🖨️ Marcas compatíveis (ESC/POS):
+        </p>
+        <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+          <li>✓ Epson TM-T20, TM-T88</li>
+          <li>✓ Bematech MP-4200, MP-2800</li>
+          <li>✓ Elgin i9, i7, L42 PRO</li>
+          <li>✓ Daruma DR-800, DR-700</li>
+          <li>✓ Citizen, Custom, e outras ESC/POS</li>
+        </ul>
+      </div>
+
+      {/* Botões Detectar */}
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={handleDetectPrinters}
+          disabled={detectingPrinters}
+          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+        >
+          {detectingPrinters ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Detectando...
+            </>
+          ) : (
+            <>📡 Detectar Impressoras Bluetooth</>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleRequestUSB}
+          className="w-full px-4 py-2 border-2 border-green-600 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/10 font-medium flex items-center justify-center gap-2"
+        >
+          🔌 Conectar Impressora USB
+        </button>
+      </div>
+
+      {/* Lista de Impressoras */}
+      {thermalPrinters.length > 0 && (
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
+            Impressoras Encontradas:
+          </label>
+          {thermalPrinters.map((printer, index) => (
+            <div
+              key={index}
+              onClick={() => handleSelectPrinter(printer)}
+              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                selectedPrinter?.id === printer.id || thermalPrinterId === printer.id
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                  : 'border-gray-200 dark:border-white/10 hover:border-green-300'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">
+                    {printer.type === 'usb' ? '🔌' : '📡'}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {printer.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {printer.type === 'usb' ? 'USB' : 'Bluetooth'}
+                    </p>
+                  </div>
+                </div>
+                {printer.connected && (
+                  <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                    Conectada
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Botão Testar */}
+      {selectedPrinter && (
+        <button
+          type="button"
+          onClick={handleTestPrint}
+          disabled={testingPrint}
+          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+        >
+          {testingPrint ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Imprimindo...
+            </>
+          ) : (
+            <>✓ Imprimir Teste</>
+          )}
+        </button>
+      )}
+
+      {/* Divisor */}
+      <div className="border-t border-gray-200 dark:border-white/10 my-4"></div>
+
+      {/* Toggle PIX */}
+      <div className="space-y-3">
+        <label className="flex items-center justify-between cursor-pointer">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              Cobrar do Cliente via PIX
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {chargeEnabled
+                ? 'Cliente paga via PIX antes de imprimir'
+                : 'Desconta créditos do cliente automaticamente'}
+            </p>
+          </div>
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={chargeEnabled}
+              onChange={e => onChange('print_charge_enabled', e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+          </div>
+        </label>
+      </div>
+
+      {/* Preço */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Preço por Página
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+            R$
+          </span>
+          <input
+            type="number"
+            step="0.10"
+            min="0"
+            max="10"
+            value={pricePerPage}
+            onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+      </div>
+
+      {/* Máximo */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+          Máximo de Páginas
+        </label>
+        <input
+          type="number"
+          step="1"
+          min="1"
+          max="200"
+          value={maxPages}
+          onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)}
+          className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500"
+        />
+      </div>
+
+      {/* Vantagens */}
+      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+        <p className="text-xs font-medium text-gray-900 dark:text-white mb-2">
+          Vantagens da Impressora Térmica:
+        </p>
+        <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+          <li>• Sem custo mensal (R$ 0 vs R$ 95-495 PrintNode)</li>
+          <li>• Conexão direta USB ou Bluetooth</li>
+          <li>• Funciona offline (não depende de internet)</li>
+          <li>• Impressão instantânea (ideal para PDV/TEF)</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
 const VendasForm = ({ functionKey, companyId }: { functionKey: string; companyId: string }) => {
   const router = useRouter();
 
@@ -2116,6 +2749,10 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'consultar_estoque': VendasForm,
   'cadastrar_produto': VendasForm,
   'tocar_musica': TocarMusicaForm,
+  'impressao_local': NativeConfigForm,
+  'impressao_remota': PrintNodeConfigForm,
+  'impressao_recibo': ThermalConfigForm,
+
 };
 
 // ===== INTERFACE =====
@@ -2377,7 +3014,14 @@ export default function FunctionConfigModal({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label')
+        .select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, print_charge_enabled,
+  print_price_per_page,
+  print_max_pages_per_job,
+  printnode_api_key,
+  printnode_printer_id,
+  thermal_printer_id,
+  thermal_connection_type
+')
         .eq('id', companyId)
         .single();
 

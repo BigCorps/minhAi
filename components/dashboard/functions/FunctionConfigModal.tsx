@@ -2060,12 +2060,15 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
   const [printersList, setPrintersList] = useState<any[]>([]);
   const [computerInfo, setComputerInfo] = useState<any>(null);
 
-  // ✅ CORREÇÃO: Renomeado print_charge_enabled → manual_payment_enabled
   const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
-  const pricePerPage = settings.print_price_per_page ?? 0.50;
-  const maxPages = settings.print_max_pages_per_job ?? 50;
+  // ✅ NOVO: Campos de cor e preços separados
+  const colorEnabled = settings.print_color_enabled ?? true;
+  const priceBW = settings.print_price_bw ?? 0.30;
+  const priceColor = settings.print_price_color ?? 0.80;
   const computerId = settings.printnode_computer_id ?? '';
-  const printerId = settings.printnode_printer_id ?? '';
+  // ✅ NOVO: IDs separados por modo
+  const printerIdBW = settings.printnode_printer_id_bw ?? '';
+  const printerIdColor = settings.printnode_printer_id_color ?? '';
 
   const handleTestConnection = async () => {
     if (!computerId) {
@@ -2108,10 +2111,6 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
     }
   };
 
-  const handleSelectPrinter = (printer: any) => {
-    onChange('printnode_printer_id', printer.id.toString());
-  };
-
   return (
     <div className="space-y-4">
       {/* Info */}
@@ -2122,6 +2121,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
         <ul className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
           <li>• Cliente não precisa fazer nada - imprime automaticamente</li>
           <li>• Ideal para desktop sem touch</li>
+          <li>• Suporta filas separadas para P&B e Colorida</li>
         </ul>
       </div>
 
@@ -2145,7 +2145,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
           <li>Instale no computador que tem a impressora</li>
           <li>Abra o PrintNode Client → aba "Account"</li>
           <li>Copie o <strong>"Computer ID"</strong> (ex: abc123def456)</li>
-          <li>Cole aqui abaixo</li>
+          <li>Cole aqui abaixo e clique em Detectar</li>
         </ol>
       </div>
 
@@ -2166,7 +2166,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
         </p>
       </div>
 
-      {/* Botão Testar */}
+      {/* Botão Detectar */}
       {computerId && (
         <button
           type="button"
@@ -2207,65 +2207,79 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
         </div>
       )}
 
-      {/* Lista de Impressoras */}
+      {/* ✅ NOVO: Seleção separada P&B e Colorida */}
       {printersList.length > 0 && (
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            Impressoras Disponíveis:
-          </label>
-          {printersList.map((printer) => (
-            <div
-              key={printer.id}
-              onClick={() => handleSelectPrinter(printer)}
-              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                printerId === printer.id.toString()
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                  : 'border-gray-200 dark:border-white/10 hover:border-indigo-300'
-              }`}
+        <>
+          {/* Impressora P&B */}
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+              Impressora Preto e Branco <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={printerIdBW}
+              onChange={e => onChange('printnode_printer_id_bw', e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {printer.name}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {printer.description || 'Sem descrição'}
-                  </p>
-                </div>
-                {printer.state === 'online' && (
-                  <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-                    Online
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              <option value="">Selecione a impressora P&B...</option>
+              {printersList.map(p => (
+                <option key={p.id} value={p.id.toString()}>
+                  {p.name} (ID: {p.id}){p.state === 'online' ? ' ✓' : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Fila configurada para impressão monocromática
+            </p>
+          </div>
 
-      {/* Printer ID Manual (caso não encontre) */}
-      {connectionStatus === 'success' && printersList.length === 0 && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-900 dark:text-white">
-            ID da Impressora (manual)
-          </label>
-          <input
-            type="text"
-            value={printerId}
-            onChange={e => onChange('printnode_printer_id', e.target.value)}
-            placeholder="Ex: 12345"
-            className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
-          />
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Nenhuma impressora detectada. Informe o ID manualmente.
-          </p>
-        </div>
+          {/* Toggle Colorida */}
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={colorEnabled}
+                onChange={e => onChange('print_color_enabled', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+              />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                Oferecer impressão colorida
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+              Se desativado, apenas P&B estará disponível para o cliente
+            </p>
+          </div>
+
+          {/* Impressora Colorida (só aparece se colorida habilitada) */}
+          {colorEnabled && (
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+                Impressora Colorida
+              </label>
+              <select
+                value={printerIdColor}
+                onChange={e => onChange('printnode_printer_id_color', e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Selecione a impressora colorida...</option>
+                {printersList.map(p => (
+                  <option key={p.id} value={p.id.toString()}>
+                    {p.name} (ID: {p.id}){p.state === 'online' ? ' ✓' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Fila configurada para impressão colorida (CMYK)
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Divisor */}
       <div className="border-t border-gray-200 dark:border-white/10 my-4"></div>
 
-      {/* ✅ CORREÇÃO: Toggle Cobrança Manual */}
+      {/* Toggle Cobrança Manual */}
       <div className="space-y-3">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
@@ -2288,18 +2302,16 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
           </div>
         </label>
-
-        {/* ✅ CORREÇÃO: Descrição atualizada */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           ✅ Ativado: Atendente cobra (dinheiro/cartão) e libera impressão manualmente<br/>
           ❌ Desativado: Sistema gera PIX automático para o cliente pagar sozinho
         </p>
       </div>
 
-      {/* Preço por Página */}
+      {/* ✅ NOVO: Preço P&B */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Preço por Página
+          Preço por Página — Preto e Branco
         </label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
@@ -2310,17 +2322,43 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
             step="0.10"
             min="0"
             max="10"
-            value={pricePerPage}
-            onChange={e => onChange('print_price_per_page', parseFloat(e.target.value) || 0)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500"
+            value={priceBW}
+            onChange={e => onChange('print_price_bw', parseFloat(e.target.value) || 0)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Preço sugerido: R$ 0,30 a R$ 0,80 por página
+          Preço sugerido: R$ 0,20 a R$ 0,50 por página
         </p>
       </div>
 
-      {/* Máximo */}
+      {/* ✅ NOVO: Preço Colorida (só aparece se colorida habilitada) */}
+      {colorEnabled && (
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+            Preço por Página — Colorida
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+              R$
+            </span>
+            <input
+              type="number"
+              step="0.10"
+              min="0"
+              max="10"
+              value={priceColor}
+              onChange={e => onChange('print_price_color', parseFloat(e.target.value) || 0)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Preço sugerido: R$ 0,60 a R$ 1,50 por página
+          </p>
+        </div>
+      )}
+
+      {/* Máximo de Páginas */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Máximo de Páginas
@@ -2330,7 +2368,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
           step="1"
           min="1"
           max="200"
-          value={maxPages}
+          value={settings.print_max_pages_per_job ?? 50}
           onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)}
           className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500"
         />
@@ -2338,8 +2376,6 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
     </div>
   );
 };
-
-
 // ============================================================
 // Formulário de configuração para Impressão Recibo (Térmica)
 // ============================================================

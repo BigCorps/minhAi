@@ -217,7 +217,7 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
       console.log('🔍 pixResult completo:', JSON.stringify(pixResult));
 
       setPixData({
-        qr_code: pixResult.qr_code,
+        qr_code: pixResult.pix_code,        // ← era qr_code, edge retorna pix_code
         qr_code_url: pixResult.qr_code_url,
         transaction_id: pixResult.transaction_id,
       });
@@ -338,6 +338,7 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
           amount={printJob.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           qrCodeUrl={pixData.qr_code_url}
           pixCode={pixData.qr_code}
+          companyName={pixData.company_name}
           theme={theme}
           onConfirm={async () => {
             await playText('Pagamento confirmado! Preparando impressão...');

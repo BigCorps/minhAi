@@ -427,31 +427,52 @@ function getFunctionCredits(functionKey: string): number {
         <div className="max-w-6xl mx-auto">
 
           {/* ── Header ── */}
-          <div className="mb-4 sm:mb-8">
-            {/* Desktop */}
-            <div className="hidden sm:flex items-start justify-between gap-4 mb-6">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Funções do Assistente
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Defina as funções que seu assistente {selectedAssistantName} pode executar
-                </p>
-              </div>
-            </div>
+<div className="mb-4 sm:mb-8">
+  {/* Desktop */}
+  <div className="hidden sm:flex items-start justify-between gap-4 mb-6">
+    <div className="flex-1">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        Funções do Assistente
+      </h1>
+      <p className="text-gray-600 dark:text-gray-400">
+        Defina as funções que seu assistente {selectedAssistantName} pode executar
+      </p>
+    </div>
+    {/* Botão de configuração — aparece só se houver assistente selecionado */}
+    {companyId && (
+      <a
+        href={`/dashboard/assistentes/${companyId}`}
+        className="flex-shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
+        title="Configurar assistente"
+      >
+        <Settings className="w-5 h-5" />
+      </a>
+    )}
+  </div>
 
-            {/* Mobile */}
-            <div className="sm:hidden flex flex-col gap-3 mb-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Funções do Assistente
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Defina as funções que seu assistente {selectedAssistantName} pode executar
-                </p>
-              </div>
-            </div>
-          </div>
+  {/* Mobile */}
+  <div className="sm:hidden flex flex-col gap-3 mb-4">
+    <div className="flex items-start justify-between gap-2">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          Funções do Assistente
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Defina as funções que seu assistente {selectedAssistantName} pode executar
+        </p>
+      </div>
+      {companyId && (
+        <a
+          href={`/dashboard/assistentes/${companyId}`}
+          className="flex-shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition mt-1"
+          title="Configurar assistente"
+        >
+          <Settings className="w-5 h-5" />
+        </a>
+      )}
+    </div>
+  </div>
+</div>
 
           {/* ── Com assistente selecionado ── */}
           {loading && (

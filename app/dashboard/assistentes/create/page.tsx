@@ -218,7 +218,7 @@ export default function NovaEmpresaPage() {
                         type="text"
                         required
                         value={slugValue}
-                        placeholder="assistente-da-pizzaria"
+                        placeholder="assistente-empresa"
                         onChange={e => setSlugValue(e.target.value)}
                         className={`w-full px-4 py-2.5 pr-12 bg-white dark:bg-slate-900 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition ${
                           slugStatus === 'available' ? 'border-green-500' :
@@ -231,7 +231,7 @@ export default function NovaEmpresaPage() {
                     {slugStatus === 'available' && slugValue && (
                       <div className="mt-2 flex items-center text-sm text-green-600 dark:text-green-400">
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">eai.app.br/ia/{slugValue}</span>
+                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">minhai.app/ia/{slugValue}</span>
                       </div>
                     )}
                     {slugError && (
@@ -271,7 +271,7 @@ export default function NovaEmpresaPage() {
                     <Globe className="w-5 h-5 mr-2" />
                     <div className="text-left">
                       <p className="font-bold text-sm">Público</p>
-                      <p className="text-[10px] opacity-70">Acessível via link slug</p>
+                      <p className="text-[10px] opacity-70">Acessível via link</p>
                     </div>
                   </button>
                   <button type="button" onClick={() => setIsPublic(false)}
@@ -281,7 +281,7 @@ export default function NovaEmpresaPage() {
                     <Lock className="w-5 h-5 mr-2" />
                     <div className="text-left">
                       <p className="font-bold text-sm">Privado</p>
-                      <p className="text-[10px] opacity-70">Acessível via link único</p>
+                      <p className="text-[10px] opacity-70">Acessível via login e senha</p>
                     </div>
                   </button>
                 </div>

@@ -715,7 +715,7 @@ export default function ProducaoCompanyClient({
       <div className="mb-3 pb-3 border-b border-blue-200 dark:border-blue-700">
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
-            <strong>Produtos praticamente prontos para venda!</strong> Disponibilize-os também na loja virtual e totem do assistente.
+            <strong>Produtos praticamente prontos para venda!</strong> Disponibilize-os também na loja virtual e totem do seu assistente.
           </p>
           <button
             onClick={() => router.push(`/dashboard/vendas/${companyId}`)}

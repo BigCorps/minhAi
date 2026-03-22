@@ -33,7 +33,6 @@
     "date-fns": "^4.1.0",
     "esc-pos-encoder": "^3.0.0",
     "jsbarcode": "^3.12.3",
-    "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.562.0",

@@ -3,13 +3,56 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { Timer, CheckCircle, XCircle, ImageUp, FileUp } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, ImageUp, FileUp, RefreshCw } from 'lucide-react';
+import { PDFDocument } from 'pdf-lib';
 
-// Tipos MIME aceitos pelo input (bucket aceita todos após a migration)
+// Tipos MIME aceitos pelo input
 const ACCEPTED_TYPES = 'image/*,application/pdf,text/plain,text/csv,.docx,.xlsx,.doc,.xls';
-const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB por arquivo
+const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50MB total ao mesclar
 
-type PageStatus = 'validating' | 'ready' | 'uploading' | 'success' | 'expired' | 'error';
+type PageStatus = 'validating' | 'ready' | 'uploading' | 'merging' | 'success' | 'expired' | 'error';
+
+// ─────────────────────────────────────────────────────────────
+// Mescla múltiplos arquivos (PDFs + imagens) em 1 PDF único.
+// Retorna Uint8Array do PDF resultante.
+// ─────────────────────────────────────────────────────────────
+async function mergeFilesToPDF(files: File[]): Promise<Uint8Array> {
+  const mergedPdf = await PDFDocument.create();
+
+  for (const file of files) {
+    if (file.type === 'application/pdf') {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer);
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+
+    } else if (file.type.startsWith('image/')) {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+
+      let image;
+      if (file.type === 'image/png') {
+        image = await mergedPdf.embedPng(bytes);
+      } else {
+        image = await mergedPdf.embedJpg(bytes);
+      }
+
+      const page = mergedPdf.addPage([595.28, 841.89]);
+      const { width, height } = page.getSize();
+      const imgDims = image.scaleToFit(width, height);
+
+      page.drawImage(image, {
+        x: (width - imgDims.width) / 2,
+        y: (height - imgDims.height) / 2,
+        width: imgDims.width,
+        height: imgDims.height,
+      });
+    }
+  }
+
+  return await mergedPdf.save();
+}
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -29,6 +72,7 @@ function ArquivosContent() {
   const [error, setError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
+  const [mergingCount, setMergingCount] = useState(0);
 
   const supabase = createClient();
 
@@ -67,22 +111,74 @@ function ArquivosContent() {
     validateToken();
   }, [token]); // eslint-disable-line
 
-  const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    captureMode?: boolean
-  ) => {
+  // ── Upload de arquivo único (câmera ou tipo não-mesclável) ──
+  const uploadSingleFile = async (file: File) => {
+    if (!token) return;
+
+    const ext = file.name.split('.').pop() ?? 'bin';
+    const storagePath = `${token}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from('companion-uploads')
+      .upload(storagePath, file, { contentType: file.type, upsert: true });
+
+    if (uploadError) throw new Error('Erro no upload: ' + uploadError.message);
+
+    const { error: updateError } = await supabase
+      .from('companion_uploads')
+      .update({
+        status: 'uploaded',
+        storage_path: storagePath,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+      })
+      .eq('token', token)
+      .eq('status', 'pending');
+
+    if (updateError) throw new Error('Erro ao confirmar envio: ' + updateError.message);
+  };
+
+  // ── Upload de PDF mesclado ──
+  const uploadMergedPDF = async (pdfBytes: Uint8Array, fileCount: number) => {
+    if (!token) return;
+
+    const fileName = `arquivos_mesclados_${Date.now()}.pdf`;
+    const storagePath = `${token}/${fileName}`;
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from('companion-uploads')
+      .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true });
+
+    if (uploadError) throw new Error('Erro no upload: ' + uploadError.message);
+
+    const { error: updateError } = await supabase
+      .from('companion_uploads')
+      .update({
+        status: 'uploaded',
+        storage_path: storagePath,
+        file_name: fileName,
+        file_type: 'application/pdf',
+        file_size: pdfBytes.byteLength,
+      })
+      .eq('token', token)
+      .eq('status', 'pending');
+
+    if (updateError) throw new Error('Erro ao confirmar envio: ' + updateError.message);
+
+    setUploadedFileName(`${fileCount} arquivos mesclados → ${fileName}`);
+  };
+
+  // ── Handler câmera (sempre 1 arquivo, sempre imagem) ──
+  const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !token) return;
 
-    // Validação de tamanho
     if (file.size > MAX_SIZE_BYTES) {
       setError('Arquivo muito grande. Máximo 10MB.');
-      return;
-    }
-
-    // Em modo câmera, só aceitar imagem
-    if (captureMode && !file.type.startsWith('image/')) {
-      setError('Selecione uma imagem.');
       return;
     }
 
@@ -91,34 +187,75 @@ function ArquivosContent() {
     setUploadedFileName(file.name);
 
     try {
-      const ext = file.name.split('.').pop() ?? 'bin';
-      const storagePath = `${token}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase
-        .storage
-        .from('companion-uploads')
-        .upload(storagePath, file, { contentType: file.type, upsert: true });
-
-      if (uploadError) throw new Error('Erro no upload: ' + uploadError.message);
-
-      const { error: updateError } = await supabase
-        .from('companion_uploads')
-        .update({
-          status: 'uploaded',
-          storage_path: storagePath,
-          file_name: file.name,
-          file_type: file.type,
-          file_size: file.size,
-        })
-        .eq('token', token)
-        .eq('status', 'pending');
-
-      if (updateError) throw new Error('Erro ao confirmar envio: ' + updateError.message);
-
+      await uploadSingleFile(file);
       setStatus('success');
     } catch (err: any) {
       setError(err.message ?? 'Erro desconhecido.');
       setStatus('error');
+    }
+  };
+
+  // ── Handler arquivo(s) — aceita múltiplos ──
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0 || !token) return;
+
+    // Validar tamanho total
+    const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+    if (totalSize > MAX_TOTAL_BYTES) {
+      setError(`Total de arquivos muito grande. Máximo ${MAX_TOTAL_BYTES / 1024 / 1024}MB.`);
+      return;
+    }
+    for (const f of files) {
+      if (f.size > MAX_SIZE_BYTES) {
+        setError(`"${f.name}" é muito grande. Máximo 10MB por arquivo.`);
+        return;
+      }
+    }
+
+    setError(null);
+
+    // Arquivo único e não-mesclável (docx, xlsx, txt, csv): upload direto
+    const isMergeable = (f: File) =>
+      f.type.startsWith('image/') || f.type === 'application/pdf';
+
+    if (files.length === 1) {
+      setStatus('uploading');
+      setUploadedFileName(files[0].name);
+      try {
+        await uploadSingleFile(files[0]);
+        setStatus('success');
+      } catch (err: any) {
+        setError(err.message ?? 'Erro desconhecido.');
+        setStatus('error');
+      }
+      return;
+    }
+
+    // Múltiplos arquivos — verificar se todos são mesclávies
+    const nonMergeable = files.filter(f => !isMergeable(f));
+    if (nonMergeable.length > 0) {
+      setError(
+        `Ao enviar vários arquivos, use apenas PDFs e imagens. ` +
+        `Arquivo não suportado: ${nonMergeable[0].name}`
+      );
+      return;
+    }
+
+    // Mesclar e fazer upload
+    setStatus('merging');
+    setMergingCount(files.length);
+
+    try {
+      const pdfBytes = await mergeFilesToPDF(files);
+      setStatus('uploading');
+      await uploadMergedPDF(pdfBytes, files.length);
+      setStatus('success');
+    } catch (err: any) {
+      setError(err.message ?? 'Erro ao mesclar arquivos.');
+      setStatus('error');
+    } finally {
+      setMergingCount(0);
     }
   };
 
@@ -145,6 +282,31 @@ function ArquivosContent() {
     </PageWrapper>
   );
 
+  if (status === 'merging') return (
+    <PageWrapper>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <RefreshCw className="w-12 h-12 text-indigo-400 animate-spin" />
+        <p className="text-slate-300 text-sm font-medium">
+          Mesclando {mergingCount} arquivos em 1 PDF...
+        </p>
+        <p className="text-slate-500 text-xs">Aguarde, não feche esta página.</p>
+      </div>
+    </PageWrapper>
+  );
+
+  if (status === 'uploading') return (
+    <PageWrapper>
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-300 text-sm font-medium">Enviando arquivo...</p>
+        {uploadedFileName && (
+          <p className="text-slate-500 text-xs font-mono">{uploadedFileName}</p>
+        )}
+        <p className="text-slate-500 text-xs">Aguarde, não feche esta página.</p>
+      </div>
+    </PageWrapper>
+  );
+
   if (status === 'success') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4 text-center">
@@ -161,19 +323,6 @@ function ArquivosContent() {
           O assistente já recebeu o arquivo e está processando.
         </p>
         <p className="text-slate-500 text-xs mt-2">Pode fechar esta página.</p>
-      </div>
-    </PageWrapper>
-  );
-
-  if (status === 'uploading') return (
-    <PageWrapper>
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-300 text-sm font-medium">Enviando arquivo...</p>
-        {uploadedFileName && (
-          <p className="text-slate-500 text-xs font-mono">{uploadedFileName}</p>
-        )}
-        <p className="text-slate-500 text-xs">Aguarde, não feche esta página.</p>
       </div>
     </PageWrapper>
   );
@@ -205,18 +354,18 @@ function ArquivosContent() {
             {companyName || 'minhAi - Uma IA pra chamar de sua!'}
           </h1>
           <p className="text-slate-400 text-sm">
-            Envie um arquivo para o assistente
+            Envie um ou mais arquivos para o assistente
           </p>
         </div>
 
-        {/* Botão câmera — apenas imagem */}
+        {/* Botão câmera — apenas 1 imagem */}
         <label className="w-full cursor-pointer">
           <input
             type="file"
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={e => handleFileChange(e, true)}
+            onChange={handleCameraCapture}
           />
           <div className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-semibold transition-all active:scale-95">
             <ImageUp className="w-5 h-5" />
@@ -230,23 +379,25 @@ function ArquivosContent() {
           <div className="flex-1 h-px bg-slate-700" />
         </div>
 
-        {/* Botão arquivo — aceita imagens, PDF, planilhas, docs */}
+        {/* Botão arquivo — aceita múltiplos */}
         <label className="w-full cursor-pointer">
           <input
             type="file"
             accept={ACCEPTED_TYPES}
+            multiple
             className="hidden"
-            onChange={e => handleFileChange(e, false)}
+            onChange={handleFileChange}
           />
           <div className="w-full flex items-center justify-center gap-3 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-2xl text-base font-semibold transition-all active:scale-95 border border-slate-600">
             <FileUp className="w-5 h-5" />
-            <span>Escolher Arquivo</span>
+            <span>Escolher Arquivo(s)</span>
           </div>
         </label>
 
-        {/* Tipos aceitos */}
         <p className="text-slate-600 text-xs text-center">
-          Imagens, PDF, TXT, CSV, DOC, XLS — até 10MB
+          Imagens e PDFs podem ser enviados juntos e serão mesclados.
+          <br />
+          TXT, CSV, DOC, XLS — envie 1 por vez. Máx. 10MB/arquivo.
         </p>
 
         {error && (

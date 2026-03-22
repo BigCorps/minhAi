@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useCameraCapture } from '@/components/VoiceAssistant/hooks/useCameraCapture';
 import { useCompanionUpload } from '@/components/VoiceAssistant/hooks/useCompanionUpload';
 import { PDFDocument } from 'pdf-lib';
-import jsPDF from 'jspdf';
 
 // ─────────────────────────────────────────────────────────────
 // Mescla múltiplos arquivos (PDFs + imagens) em 1 PDF único.
@@ -17,39 +16,35 @@ async function mergeFilesToPDF(files: File[]): Promise<string> {
 
   for (const file of files) {
     if (file.type === 'application/pdf') {
-      // ── PDF: copiar todas as páginas ──
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFDocument.load(arrayBuffer);
       const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
       copiedPages.forEach((page) => mergedPdf.addPage(page));
 
     } else if (file.type.startsWith('image/')) {
-      // ── Imagem: converter para 1 página A4 ──
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+
+      // pdf-lib suporta JPG e PNG nativamente — sem jsPDF
+      let image;
+      if (file.type === 'image/png') {
+        image = await mergedPdf.embedPng(bytes);
+      } else {
+        // JPEG, WEBP e demais tratados como JPEG
+        image = await mergedPdf.embedJpg(bytes);
+      }
+
+      // Página A4 em pontos (72 DPI): 595 x 842
+      const page = mergedPdf.addPage([595.28, 841.89]);
+      const { width, height } = page.getSize();
+      const imgDims = image.scaleToFit(width, height);
+
+      page.drawImage(image, {
+        x: (width - imgDims.width) / 2,
+        y: (height - imgDims.height) / 2,
+        width: imgDims.width,
+        height: imgDims.height,
       });
-
-      const tempPdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const img = new Image() as HTMLImageElement;
-
-      await new Promise<void>((resolve) => {
-        img.onload = () => {
-          const imgWidth = 210; // largura A4 em mm
-          const imgHeight = (img.height * imgWidth) / img.width;
-          tempPdf.addImage(img, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
-          resolve();
-        };
-        img.src = dataUrl;
-      });
-
-      // Converter jsPDF → pdf-lib para mesclar
-      const tempBytes = tempPdf.output('arraybuffer');
-      const tempDoc = await PDFDocument.load(tempBytes);
-      const copiedPages = await mergedPdf.copyPages(tempDoc, tempDoc.getPageIndices());
-      copiedPages.forEach((page) => mergedPdf.addPage(page));
     }
   }
 

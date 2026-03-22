@@ -5,6 +5,65 @@ import { Camera, Upload, Smartphone, ZapOff, QrCode, RefreshCw, Timer, Copy, Che
 import Image from 'next/image';
 import { useCameraCapture } from '@/components/VoiceAssistant/hooks/useCameraCapture';
 import { useCompanionUpload } from '@/components/VoiceAssistant/hooks/useCompanionUpload';
+import { PDFDocument } from 'pdf-lib';
+import jsPDF from 'jspdf';
+
+// ─────────────────────────────────────────────────────────────
+// Mescla múltiplos arquivos (PDFs + imagens) em 1 PDF único.
+// Retorna o base64 puro do PDF resultante (sem prefixo data:).
+// ─────────────────────────────────────────────────────────────
+async function mergeFilesToPDF(files: File[]): Promise<string> {
+  const mergedPdf = await PDFDocument.create();
+
+  for (const file of files) {
+    if (file.type === 'application/pdf') {
+      // ── PDF: copiar todas as páginas ──
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer);
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+
+    } else if (file.type.startsWith('image/')) {
+      // ── Imagem: converter para 1 página A4 ──
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const tempPdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const img = new Image() as HTMLImageElement;
+
+      await new Promise<void>((resolve) => {
+        img.onload = () => {
+          const imgWidth = 210; // largura A4 em mm
+          const imgHeight = (img.height * imgWidth) / img.width;
+          tempPdf.addImage(img, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
+          resolve();
+        };
+        img.src = dataUrl;
+      });
+
+      // Converter jsPDF → pdf-lib para mesclar
+      const tempBytes = tempPdf.output('arraybuffer');
+      const tempDoc = await PDFDocument.load(tempBytes);
+      const copiedPages = await mergedPdf.copyPages(tempDoc, tempDoc.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+    }
+  }
+
+  const pdfBytes = await mergedPdf.save();
+  // btoa em chunks para evitar estouro de stack em arquivos grandes
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...pdfBytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+// ─────────────────────────────────────────────────────────────
 
 interface CameraCaptureProps {
   onCapture: (base64: string) => void;
@@ -16,6 +75,7 @@ interface CameraCaptureProps {
   defaultTab?: Tab;
   enabledTabs?: Tab[];
   acceptPdf?: boolean;
+  allowMultiple?: boolean; // ← NOVO: habilita seleção de múltiplos arquivos
   activeTab?: Tab;
   onTabChange?: (tab: Tab) => void;
   captureRef?: React.MutableRefObject<(() => void) | null>;
@@ -32,6 +92,7 @@ export default function CameraCapture(props: CameraCaptureProps) {
     acceptedTypes = 'image/*',
     instructions,
     companyId,
+    allowMultiple = false,
   } = props;
 
   const isDark = theme === 'dark';
@@ -42,6 +103,11 @@ export default function CameraCapture(props: CameraCaptureProps) {
 
   const [isMobile, setIsMobile] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // ── Estado de progresso de mesclagem ─────────────────────
+  const [processingFiles, setProcessingFiles] = useState(false);
+  const [fileCount, setFileCount] = useState(0);
+
   useEffect(() => {
     setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
   }, []);
@@ -116,6 +182,46 @@ export default function CameraCapture(props: CameraCaptureProps) {
     if (tab === 'mobile') mobileInputRef.current?.click();
   };
 
+  // ── Handler de upload (único ou múltiplo) ─────────────────
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ''; // limpa input para permitir re-seleção
+
+    if (files.length === 0) return;
+
+    // Arquivo único: comportamento original via hook
+    if (!allowMultiple || files.length === 1) {
+      camera.handleFileUpload(files[0]);
+      return;
+    }
+
+    // Múltiplos arquivos: validar e mesclar
+    const invalidFiles = files.filter(
+      (f) => !f.type.startsWith('image/') && f.type !== 'application/pdf'
+    );
+    if (invalidFiles.length > 0) {
+      alert('Apenas imagens (JPG/PNG) e PDFs são permitidos.');
+      return;
+    }
+
+    try {
+      setFileCount(files.length);
+      setProcessingFiles(true);
+      console.log(`📄 Mesclando ${files.length} arquivos...`);
+
+      const mergedBase64 = await mergeFilesToPDF(files);
+      onCapture(`data:application/pdf;base64,${mergedBase64}`);
+
+      console.log('✅ Arquivos mesclados com sucesso');
+    } catch (err: any) {
+      console.error('❌ Erro ao mesclar arquivos:', err);
+      alert(err?.message ?? 'Erro ao mesclar arquivos. Tente novamente.');
+    } finally {
+      setProcessingFiles(false);
+      setFileCount(0);
+    }
+  };
+
   const tabClass = (active: boolean) =>
     `flex items-center justify-center gap-1.5 py-2 px-2 text-xs font-medium rounded-lg transition-all ${
       active
@@ -138,7 +244,6 @@ export default function CameraCapture(props: CameraCaptureProps) {
     ? allTabs.filter(t => props.enabledTabs!.includes(t.id))
     : allTabs;
 
-  // MUDANÇA 2: altura mínima que cresce se precisar
   const CONTENT_H = 'min-h-[200px]';
 
   return (
@@ -149,7 +254,6 @@ export default function CameraCapture(props: CameraCaptureProps) {
         </p>
       )}
 
-      {/* MUDANÇA 1: abas horizontais em cima, conteúdo embaixo */}
       <div className="flex flex-col gap-2">
 
         {/* Abas horizontais */}
@@ -172,6 +276,21 @@ export default function CameraCapture(props: CameraCaptureProps) {
             isDark ? 'bg-slate-900/50' : 'bg-gray-50'
           }`}
         >
+          {/* ── Overlay de mesclagem ── */}
+          {processingFiles && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 rounded-xl">
+              <div className={`rounded-xl p-6 text-center shadow-2xl ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                <RefreshCw className="w-10 h-10 mx-auto mb-3 text-indigo-400 animate-spin" />
+                <p className={`font-medium text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Mesclando {fileCount} arquivos...
+                </p>
+                <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                  Isso pode levar alguns segundos
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ── Webcam ── */}
           {activeTab === 'webcam' && camera.stream && (
             <div className="relative w-full h-full">
@@ -225,26 +344,36 @@ export default function CameraCapture(props: CameraCaptureProps) {
               onDragOver={e => e.preventDefault()}
               onDrop={e => {
                 e.preventDefault();
-                const file = e.dataTransfer.files?.[0];
-                if (file) camera.handleFileUpload(file);
+                const droppedFiles = Array.from(e.dataTransfer.files ?? []);
+                if (droppedFiles.length === 0) return;
+                if (!allowMultiple || droppedFiles.length === 1) {
+                  camera.handleFileUpload(droppedFiles[0]);
+                } else {
+                  // Simular evento para reusar o handler
+                  const dt = new DataTransfer();
+                  droppedFiles.forEach(f => dt.items.add(f));
+                  const fakeEvent = { target: { files: dt.files, value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>;
+                  handleFileInputChange(fakeEvent);
+                }
               }}
             >
               <Upload className={`w-10 h-10 ${isDark ? 'text-slate-600' : 'text-gray-300'}`} />
               <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-gray-400'}`}>
-                Arraste uma imagem aqui ou clique para selecionar.
+                {allowMultiple
+                  ? 'Arraste arquivos aqui ou clique para selecionar vários.'
+                  : 'Arraste uma imagem aqui ou clique para selecionar.'}
               </p>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all"
               >
-                Selecionar arquivo
+                {allowMultiple ? 'Selecionar arquivos' : 'Selecionar arquivo'}
               </button>
             </div>
           )}
 
           {/* ── Companion ── */}
           {activeTab === 'companion' && (
-            /* MUDANÇA 3: removido overflow-y-auto e h-full */
             <div className="flex flex-col items-center gap-3 p-3 w-full justify-center">
               {companion.status === 'generating' && (
                 <>
@@ -264,7 +393,6 @@ export default function CameraCapture(props: CameraCaptureProps) {
                       unoptimized
                     />
                   </div>
-                  {/* Link copiável */}
                   {companion.uploadUrl && (
                     <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border w-full ${
                       isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'
@@ -358,12 +486,9 @@ export default function CameraCapture(props: CameraCaptureProps) {
         ref={fileInputRef}
         type="file"
         accept={props.acceptPdf ? 'image/*,application/pdf' : (acceptedTypes ?? 'image/*')}
+        multiple={allowMultiple}
         className="hidden"
-        onChange={e => {
-          const file = e.target.files?.[0];
-          if (file) camera.handleFileUpload(file);
-          e.target.value = '';
-        }}
+        onChange={handleFileInputChange}
       />
 
       {/* Erro de câmera */}

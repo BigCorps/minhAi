@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
 import {
   ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw,
-  FileText, Download, CheckCircle, Upload, File, Image,
+  FileText, Download, CheckCircle, Upload, File, Image, Printer,
 } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
@@ -17,16 +17,19 @@ interface ArquivosCompanyClientProps {
   cupons: any[];
   consultas: any[];
   enviados: any[];
+  impressoes: any[];
   stats: {
     totalCupons: number;
     totalConsultas: number;
     totalEnviados: number;
+    totalImpressoes: number;
     totalArquivos: number;
   };
 }
 
-type TabKey    = 'enviados' | 'cupons' | 'consultas';
-type FiltroKey = 'todos' | 'ativos' | 'expirados' | 'esgotados';
+type TabKey          = 'enviados' | 'cupons' | 'consultas' | 'impressoes';
+type FiltroKey       = 'todos' | 'ativos' | 'expirados' | 'esgotados';
+type FiltroImpressoes = 'todos' | 'pendentes' | 'concluidas' | 'erro';
 
 interface Consulta {
   id: string;
@@ -79,15 +82,18 @@ export default function ArquivosCompanyClient({
   cupons: initialCupons,
   consultas: initialConsultas,
   enviados: initialEnviados,
+  impressoes: initialImpressoes,
   stats: initialStats,
 }: ArquivosCompanyClientProps) {
   const supabase = createClient();
 
-  const [activeTab,        setActiveTab]        = useState<TabKey>('enviados');
-  const [cupons,           setCupons]           = useState(initialCupons);
-  const [consultas,        setConsultas]        = useState<Consulta[]>(initialConsultas);
-  const [enviados,         setEnviados]         = useState<Enviado[]>(initialEnviados);
-  const [stats,            setStats]            = useState(initialStats);
+  const [activeTab,          setActiveTab]          = useState<TabKey>('enviados');
+  const [cupons,             setCupons]             = useState(initialCupons);
+  const [consultas,          setConsultas]          = useState<Consulta[]>(initialConsultas);
+  const [enviados,           setEnviados]           = useState<Enviado[]>(initialEnviados);
+  const [impressoes,         setImpressoes]         = useState<any[]>(initialImpressoes);
+  const [stats,              setStats]              = useState(initialStats);
+  const [filtroImpressoes,   setFiltroImpressoes]   = useState<FiltroImpressoes>('todos');
   const [filtro,           setFiltro]           = useState<FiltroKey>('todos');
   const [loadingId,        setLoadingId]        = useState<string | null>(null);
   const [loadingConsultas, setLoadingConsultas] = useState(false);
@@ -281,6 +287,24 @@ export default function ArquivosCompanyClient({
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
+  // ── Download de arquivo de impressão ────────────────────────────────────
+  const handleBaixarImpressao = async (impressao: any) => {
+    try {
+      const { data } = supabase.storage
+        .from('print-files')
+        .getPublicUrl(impressao.file_url);
+
+      if (data?.publicUrl) {
+        window.open(data.publicUrl, '_blank');
+      } else {
+        throw new Error('Arquivo não disponível');
+      }
+    } catch (error) {
+      console.error('Erro ao baixar impressão:', error);
+      alert('Erro ao baixar arquivo. Tente novamente.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -310,10 +334,10 @@ export default function ArquivosCompanyClient({
         {/* Cards de stats — 4 colunas */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Arquivos Enviados', value: stats.totalEnviados,  color: 'text-indigo-600 dark:text-indigo-400' },
-            { label: 'Total de Cupons',   value: stats.totalCupons,    color: 'text-blue-600 dark:text-blue-400'    },
-            { label: 'Total de Consultas',value: stats.totalConsultas, color: 'text-green-600 dark:text-green-400'  },
-            { label: 'Total de Arquivos', value: stats.totalArquivos,  color: 'text-purple-600 dark:text-purple-400'},
+            { label: 'Arquivos Enviados', value: stats.totalEnviados,    color: 'text-indigo-600 dark:text-indigo-400' },
+            { label: 'Total de Cupons',   value: stats.totalCupons,      color: 'text-blue-600 dark:text-blue-400'    },
+            { label: 'Total de Consultas',value: stats.totalConsultas,   color: 'text-green-600 dark:text-green-400'  },
+            { label: 'Impressões',        value: stats.totalImpressoes,  color: 'text-orange-600 dark:text-orange-400'},
           ].map(s => (
             <div
               key={s.label}
@@ -329,9 +353,10 @@ export default function ArquivosCompanyClient({
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="flex border-b border-gray-200 dark:border-white/10">
             {([
-              { key: 'enviados',  label: 'Enviados',  icon: <Upload  className="w-4 h-4" /> },
-              { key: 'cupons',    label: 'Cupons',    icon: <Ticket  className="w-4 h-4" /> },
-              { key: 'consultas', label: 'Consultas', icon: <FileText className="w-4 h-4" /> },
+              { key: 'enviados',   label: 'Enviados',   icon: <Upload   className="w-4 h-4" /> },
+              { key: 'cupons',     label: 'Cupons',     icon: <Ticket   className="w-4 h-4" /> },
+              { key: 'consultas',  label: 'Consultas',  icon: <FileText className="w-4 h-4" /> },
+              { key: 'impressoes', label: 'Impressões', icon: <Printer  className="w-4 h-4" /> },
             ] as { key: TabKey; label: string; icon: React.ReactNode }[]).map(tab => (
               <button
                 key={tab.key}
@@ -551,6 +576,139 @@ export default function ArquivosCompanyClient({
         )}
 
         {/* ── Aba: Consultas ───────────────────────────────────────────────────── */}
+        {/* ── Aba: Impressões ──────────────────────────────────────────────── */}
+        {activeTab === 'impressoes' && (
+          <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Histórico de Impressões
+              </h3>
+              <div className="flex items-center gap-2">
+                {(['todos', 'pendentes', 'concluidas', 'erro'] as FiltroImpressoes[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFiltroImpressoes(f)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      filtroImpressoes === f
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
+                    }`}
+                  >
+                    {f === 'todos' && 'Todos'}
+                    {f === 'pendentes' && 'Pendentes'}
+                    {f === 'concluidas' && 'Concluídas'}
+                    {f === 'erro' && 'Erro'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {impressoes.length === 0 ? (
+              <div className="py-16 text-center">
+                <Printer className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
+                <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma impressão realizada</p>
+                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
+                  As impressões aparecem aqui após serem realizadas via assistente
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-white/10">
+                      {['Arquivo', 'Tipo', 'Páginas', 'Modo', 'Valor', 'Status', 'Data', 'Ações'].map(h => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                    {impressoes
+                      .filter(imp => {
+                        if (filtroImpressoes === 'pendentes') return imp.print_status === 'pending' || imp.print_status === 'printing';
+                        if (filtroImpressoes === 'concluidas') return imp.print_status === 'completed';
+                        if (filtroImpressoes === 'erro') return imp.print_status === 'failed';
+                        return true;
+                      })
+                      .map(impressao => (
+                        <tr key={impressao.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <FileTypeIcon mimeType={impressao.file_type} />
+                              <span className="font-medium text-gray-900 dark:text-white truncate max-w-[160px]">
+                                {impressao.file_name || 'Documento'}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                              {impressao.function_key === 'impressao_remota' ? 'Remota' : impressao.function_key === 'impressao_local' ? 'Local' : 'Recibo'}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 text-gray-600 dark:text-white/60">
+                            {impressao.pages_count} pág
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <span className={`text-xs font-medium ${
+                              impressao.print_mode === 'bw'
+                                ? 'text-gray-600 dark:text-gray-400'
+                                : 'text-purple-600 dark:text-purple-400'
+                            }`}>
+                              {impressao.print_mode === 'bw' ? '⚫ P&B' : '🌈 Color'}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 text-gray-900 dark:text-white font-semibold">
+                            {(impressao.total_amount ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            {impressao.print_status === 'completed' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Concluída</span>
+                            )}
+                            {impressao.print_status === 'pending' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400">Pendente</span>
+                            )}
+                            {impressao.print_status === 'printing' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">Imprimindo</span>
+                            )}
+                            {impressao.print_status === 'failed' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Erro</span>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4 text-gray-600 dark:text-white/60 text-xs">
+                            {new Date(impressao.created_at).toLocaleString('pt-BR', {
+                              day: '2-digit', month: '2-digit', year: '2-digit',
+                              hour: '2-digit', minute: '2-digit',
+                            })}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => handleBaixarImpressao(impressao)}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-all text-xs font-medium"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Baixar
+                            </button>
+                          </td>
+
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'consultas' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 

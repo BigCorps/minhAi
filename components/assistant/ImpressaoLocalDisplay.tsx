@@ -1,13 +1,3 @@
-// ============================================================
-// ImpressaoLocalDisplay.tsx
-// Caminho: eAi/components/assistant/ImpressaoLocalDisplay.tsx
-//
-// Modal para Impressão Local (Nativa) - 1 crédito
-// - Upload de arquivo ou foto via CameraCapture
-// - Opção de cobrança via PIX ou desconto de créditos
-// - Abertura de impressão nativa do sistema
-// ============================================================
-
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -394,11 +384,12 @@ if (manualPaymentEnabled) {
                   companyId={data.companyId}
                   instructions="Envie o arquivo para impressão."
                   acceptPdf={true}
+                  allowMultiple={true}
                   activeTab={cameraTab}
                   onTabChange={setCameraTab}
                   enabledTabs={['companion', 'upload']}
                 />
-                <VoiceHint commands={['"celular"', '"arquivo"', '"fechar"']} isDark={isDark} />
+                <VoiceHint commands={['"celular"', '"vários arquivos"', '"arquivo"', '"fechar"']} isDark={isDark} />
               </div>
             )}
 

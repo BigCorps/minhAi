@@ -1,13 +1,3 @@
-// ============================================================
-// ImpressaoRemotaDisplay.tsx
-// Caminho: eAi/components/assistant/ImpressaoRemotaDisplay.tsx
-//
-// Modal para Impressão Remota (PrintNode) - 3 créditos
-// - Upload de arquivo ou foto via CameraCapture
-// - Seletor P&B / Colorida com preços dinâmicos
-// - Envio automático para PrintNode (sem interação do cliente)
-// ============================================================
-
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -496,6 +486,7 @@ if (manualPaymentEnabled) {
                   companyId={data.companyId}
                   instructions="Envie o arquivo para impressão automática."
                   acceptPdf={true}
+                  allowMultiple={true}
                   activeTab={cameraTab}
                   onTabChange={setCameraTab}
                   enabledTabs={['companion', 'upload']}
@@ -503,8 +494,8 @@ if (manualPaymentEnabled) {
 
                 <VoiceHint
                   commands={colorEnabled
-                    ? ['"preto e branco"', '"colorida"', '"celular"', '"arquivo"', '"fechar"']
-                    : ['"celular"', '"arquivo"', '"fechar"']
+                    ? ['"preto e branco"', '"colorida"', '"celular"', '"vários arquivos"', '"arquivo"', '"fechar"']
+                    : ['"celular"', '"vários arquivos"', '"arquivo"', '"fechar"']
                   }
                   isDark={isDark}
                 />

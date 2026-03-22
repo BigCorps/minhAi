@@ -11,14 +11,16 @@ export default function ArquivosCompanyPage() {
   const companyId = params.companyId as string;
   const supabase = createClient();
 
-  const [company, setCompany]   = useState<any>(null);
-  const [cupons, setCupons]     = useState<any[]>([]);
-  const [consultas, setConsultas] = useState<any[]>([]);
-  const [enviados, setEnviados] = useState<any[]>([]);
-  const [stats, setStats]       = useState({
+  const [company, setCompany]       = useState<any>(null);
+  const [cupons, setCupons]         = useState<any[]>([]);
+  const [consultas, setConsultas]   = useState<any[]>([]);
+  const [enviados, setEnviados]     = useState<any[]>([]);
+  const [impressoes, setImpressoes] = useState<any[]>([]);
+  const [stats, setStats]           = useState({
     totalCupons: 0,
     totalConsultas: 0,
     totalEnviados: 0,
+    totalImpressoes: 0,
     totalArquivos: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -98,16 +100,28 @@ export default function ArquivosCompanyPage() {
       const listaEnviados = uploadsData || [];
       setEnviados(listaEnviados);
 
+      // ── Impressões (print_jobs) ──────────────────────────────────────────────
+      const { data: printJobsData } = await supabase
+        .from('print_jobs')
+        .select('id, function_key, file_name, file_url, file_type, pages_count, price_per_page, total_amount, payment_method, payment_status, print_status, print_mode, credits_charged, error_message, created_at, updated_at')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+
+      const listaImpressoes = printJobsData || [];
+      setImpressoes(listaImpressoes);
+
       // ── Stats ───────────────────────────────────────────────────────────────
-      const totalCupons     = listaCupons.length;
-      const totalConsultas  = consultasData?.length || 0;
-      const totalEnviados   = listaEnviados.length;
+      const totalCupons       = listaCupons.length;
+      const totalConsultas    = consultasData?.length || 0;
+      const totalEnviados     = listaEnviados.length;
+      const totalImpressoes   = listaImpressoes.length;
 
       setStats({
         totalCupons,
         totalConsultas,
         totalEnviados,
-        totalArquivos: totalCupons + totalConsultas + totalEnviados,
+        totalImpressoes,
+        totalArquivos: totalCupons + totalConsultas + totalEnviados + totalImpressoes,
       });
 
       setLoading(false);
@@ -134,6 +148,7 @@ export default function ArquivosCompanyPage() {
       cupons={cupons}
       consultas={consultas}
       enviados={enviados}
+      impressoes={impressoes}
       stats={stats}
     />
   );

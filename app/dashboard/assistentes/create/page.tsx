@@ -17,7 +17,7 @@ export default function NovaEmpresaPage() {
   const [nome, setNome] = useState('');
   const [slugValue, setSlugValue] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
-  const [wakeWord, setWakeWord] = useState('olá assistente');
+  const [wakeWord, setWakeWord] = useState('');
   const [greetingMessage, setGreetingMessage] = useState('Olá! Como posso ajudar você hoje?');
   const [isPublic, setIsPublic] = useState(true);
 
@@ -199,7 +199,7 @@ export default function NovaEmpresaPage() {
                     type="text"
                     required
                     value={nome}
-                    placeholder="Ex: Assistente da Pizzaria"
+                    placeholder="Ex: Assistente Empresa"
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                     onChange={e => {
                       setNome(e.target.value);
@@ -293,7 +293,7 @@ export default function NovaEmpresaPage() {
                   Palavras de Ativação *
                 </label>
                 <input type="text" value={wakeWord} onChange={e => setWakeWord(e.target.value)}
-                  placeholder="Ex: olá assistente, oi gerente"
+                  placeholder="Ex: Assistente, Alexa"
                   className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white transition" />
                 <p className="mt-1 text-xs text-gray-500">Separe múltiplas palavras com vírgula (,)</p>
               </div>

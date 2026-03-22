@@ -4,104 +4,96 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Globe, Lock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Globe, Lock, CheckCircle, XCircle, AlertCircle, Sparkles, Bot } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import SetupAssistantChat from '@/components/dashboard/SetupAssistantChat';
+import { usePlayText } from '@/hooks/usePlayText';
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(true);
-  
-  // 🆕 Estados para validação de slug
+  const { playText } = usePlayText();
+
+  // ── Slug validation ──────────────────────────────────────
   const [slugValue, setSlugValue] = useState('');
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [slugError, setSlugError] = useState<string | null>(null);
   const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 🆕 Verificar disponibilidade do slug
+  // ── Setup bot ────────────────────────────────────────────
+  const [showSetupBot, setShowSetupBot] = useState(false);
+  const [setupCompanyId, setSetupCompanyId] = useState<string | null>(null);
+  const [setupCompanyName, setSetupCompanyName] = useState('');
+  const [setupSlug, setSetupSlug] = useState('');
+
+  // ── Tema da página ───────────────────────────────────────
+  const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
+  useEffect(() => {
+    const detect = () => {
+      setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    };
+    detect();
+    const obs = new MutationObserver(detect);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+
   const checkSlugAvailability = async (slug: string) => {
     if (!slug || slug.length < 3) {
       setSlugStatus('idle');
       setSlugError(null);
       return;
     }
-
     setSlugStatus('checking');
     setSlugError(null);
-
     try {
       const supabase = createClient();
-      
-      // Verificar se slug já existe
       const { data, error } = await supabase
         .from('companies')
         .select('id, slug')
         .eq('slug', slug)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = not found (ok)
-        console.error('Erro ao verificar slug:', error);
+      if (error && error.code !== 'PGRST116') {
         setSlugStatus('idle');
         setSlugError('Erro ao verificar disponibilidade');
         return;
       }
 
       if (data) {
-        // Slug já existe
         setSlugStatus('taken');
         setSlugError('Este slug já está em uso. Escolha outro.');
       } else {
-        // Slug disponível
         setSlugStatus('available');
         setSlugError(null);
       }
-    } catch (err) {
-      console.error('Erro na verificação:', err);
+    } catch {
       setSlugStatus('idle');
       setSlugError('Erro ao verificar disponibilidade');
     }
   };
 
-  // 🆕 Debounce para não fazer request a cada letra
   useEffect(() => {
-    if (!isPublic) {
-      setSlugStatus('idle');
-      setSlugError(null);
-      return;
-    }
-
-    if (checkTimeoutRef.current) {
-      clearTimeout(checkTimeoutRef.current);
-    }
-
+    if (!isPublic) { setSlugStatus('idle'); setSlugError(null); return; }
+    if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
     if (slugValue.length < 3) {
       setSlugStatus('idle');
       setSlugError(slugValue.length > 0 ? 'Slug deve ter no mínimo 3 caracteres' : null);
       return;
     }
-
-    // Aguardar 500ms após parar de digitar
-    checkTimeoutRef.current = setTimeout(() => {
-      checkSlugAvailability(slugValue);
-    }, 500);
-
-    return () => {
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-    };
+    checkTimeoutRef.current = setTimeout(() => checkSlugAvailability(slugValue), 500);
+    return () => { if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current); };
   }, [slugValue, isPublic]);
 
+  // ── Criar assistente (manual) ────────────────────────────
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    
-    // 🆕 Validação final do slug antes de submeter
     if (isPublic && slugStatus !== 'available') {
       setError('Por favor, escolha um slug disponível antes de continuar.');
       return;
     }
-    
     setLoading(true);
     setError(null);
 
@@ -130,20 +122,13 @@ export default function NovaEmpresaPage() {
       const result = await response.json();
       const newCompanyId = result.company?.id;
 
-      // Inicializar funções padrão
       if (newCompanyId) {
-        console.log('🔧 Inicializando funções padrão para empresa:', newCompanyId);
-        
         const supabase = createClient();
         const { error: funcError } = await supabase.rpc('initialize_company_functions', {
-          p_company_id: newCompanyId
+          p_company_id: newCompanyId,
         });
-
-        if (funcError) {
-          console.error('⚠️ Erro ao inicializar funções:', funcError);
-        } else {
-          console.log('✅ Funções padrão inicializadas com sucesso');
-        }
+        if (funcError) console.error('⚠️ Erro ao inicializar funções:', funcError);
+        else console.log('✅ Funções padrão inicializadas');
       }
 
       router.push('/dashboard/assistentes');
@@ -154,32 +139,82 @@ export default function NovaEmpresaPage() {
     }
   }
 
+  // ── Criar assistente via bot ─────────────────────────────
+  async function handleCriarComIA(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isPublic && slugStatus !== 'available') {
+      setError('Por favor, escolha um slug disponível antes de continuar.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string;
+    const slug = isPublic ? (formData.get('slug') as string) : '';
+
+    const data = {
+      name,
+      slug,
+      logo_url: formData.get('logo_url') as string,
+      wake_word: formData.get('wake_word') as string || 'olá assistente',
+      greeting_message: formData.get('greeting_message') as string || 'Olá! Como posso ajudar você hoje?',
+      is_public: isPublic,
+    };
+
+    try {
+      const response = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao criar assistente');
+      }
+
+      const result = await response.json();
+      const newCompanyId = result.company?.id;
+
+      if (newCompanyId) {
+        // Inicializar funções padrão
+        const supabase = createClient();
+        await supabase.rpc('initialize_company_functions', { p_company_id: newCompanyId });
+
+        // Abrir o bot de setup
+        setSetupCompanyId(newCompanyId);
+        setSetupCompanyName(name);
+        setSetupSlug(slug);
+        setShowSetupBot(true);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function generateSlug(name: string) {
-    const generated = name
+    return name
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
-    
-    return generated;
   }
 
-  // 🆕 Ícone do status do slug
   const renderSlugStatusIcon = () => {
     if (!isPublic) return null;
-
     switch (slugStatus) {
-      case 'checking':
-        return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
-      case 'available':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'taken':
-        return <XCircle className="w-5 h-5 text-red-500" />;
-      default:
-        return null;
+      case 'checking': return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'available': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'taken': return <XCircle className="w-5 h-5 text-red-500" />;
+      default: return null;
     }
   };
+
+  const canSubmit = !loading && (!isPublic || slugStatus === 'available');
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -193,10 +228,10 @@ export default function NovaEmpresaPage() {
         </Link>
 
         <div className="bg-white/80 dark:bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+
+          {/* Header */}
           <div className="px-8 py-6 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Novo Assistente
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Novo Assistente</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Configure as informações básicas do seu novo assistente virtual.
             </p>
@@ -221,7 +256,7 @@ export default function NovaEmpresaPage() {
                     id="name"
                     name="name"
                     required
-                    placeholder="Ex: Suporte minhAi"
+                    placeholder="Ex: Assistente da Pizzaria"
                     className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
                     onChange={(e) => {
                       if (isPublic) {
@@ -245,14 +280,14 @@ export default function NovaEmpresaPage() {
                         id="slug"
                         name="slug"
                         required={isPublic}
-                        placeholder="suporte-minhai"
+                        placeholder="assistente-da-pizzaria"
                         value={slugValue}
                         onChange={(e) => setSlugValue(e.target.value)}
                         className={`w-full px-4 py-2.5 pr-12 bg-white dark:bg-slate-900 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white font-mono text-sm transition ${
-                          slugStatus === 'available' 
-                            ? 'border-green-500 dark:border-green-500' 
-                            : slugStatus === 'taken' 
-                            ? 'border-red-500 dark:border-red-500' 
+                          slugStatus === 'available'
+                            ? 'border-green-500 dark:border-green-500'
+                            : slugStatus === 'taken'
+                            ? 'border-red-500 dark:border-red-500'
                             : 'border-gray-300 dark:border-white/10'
                         }`}
                       />
@@ -260,22 +295,18 @@ export default function NovaEmpresaPage() {
                         {renderSlugStatusIcon()}
                       </div>
                     </div>
-                    
-                    {/* 🆕 Feedback de validação */}
                     {slugStatus === 'available' && slugValue && (
                       <div className="mt-2 flex items-center text-sm text-green-600 dark:text-green-400">
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">minhai.app/ia/{slugValue}</span>
+                        Slug disponível! URL: <span className="ml-1 font-mono font-bold">eai.app.br/ia/{slugValue}</span>
                       </div>
                     )}
-                    
                     {slugError && (
                       <div className="mt-2 flex items-start text-sm text-red-600 dark:text-red-400">
                         <AlertCircle className="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" />
                         <span>{slugError}</span>
                       </div>
                     )}
-                    
                     {slugStatus === 'checking' && slugValue && (
                       <div className="mt-2 flex items-center text-sm text-blue-600 dark:text-blue-400">
                         <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -310,8 +341,8 @@ export default function NovaEmpresaPage() {
                     type="button"
                     onClick={() => setIsPublic(true)}
                     className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      isPublic 
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' 
+                      isPublic
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
                         : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
                     }`}
                   >
@@ -325,8 +356,8 @@ export default function NovaEmpresaPage() {
                     type="button"
                     onClick={() => setIsPublic(false)}
                     className={`flex items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      !isPublic 
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400' 
+                      !isPublic
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
                         : 'border-gray-200 dark:border-white/10 bg-transparent text-gray-500'
                     }`}
                   >
@@ -339,7 +370,7 @@ export default function NovaEmpresaPage() {
                 </div>
               </div>
 
-              {/* Palavras de Ativação */}
+              {/* Wake word */}
               <div>
                 <label htmlFor="wake_word" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Palavras de Ativação *
@@ -356,7 +387,7 @@ export default function NovaEmpresaPage() {
                 <p className="mt-1 text-xs text-gray-500">Separe múltiplas palavras com vírgula (,)</p>
               </div>
 
-              {/* Mensagem de Ativação */}
+              {/* Greeting */}
               <div>
                 <label htmlFor="greeting_message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Mensagem de Ativação *
@@ -373,47 +404,114 @@ export default function NovaEmpresaPage() {
               </div>
             </div>
 
-            <div className="mt-8 flex items-center gap-4">
+            {/* ── Botões ─────────────────────────────────────────── */}
+            <div className="mt-8 space-y-3">
+
+              {/* Botão principal: Criar com IA */}
               <button
-                type="submit"
-                disabled={loading || (isPublic && slugStatus !== 'available')}
-                className={`flex-1 flex items-center justify-center px-6 py-3 rounded-xl transition font-bold shadow-lg ${
-                  loading || (isPublic && slugStatus !== 'available')
-                    ? 'bg-gray-400 cursor-not-allowed text-white/70'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20'
+                type="button"
+                disabled={!canSubmit}
+                onClick={(e) => {
+                  // Pegar form via closest
+                  const form = (e.currentTarget as HTMLElement).closest('form') as HTMLFormElement;
+                  if (form) handleCriarComIA({ ...e, currentTarget: form, preventDefault: () => {} } as any);
+                }}
+                className={`w-full flex items-center justify-center px-6 py-3 rounded-xl transition font-bold shadow-lg text-white ${
+                  !canSubmit
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-purple-500/20'
                 }`}
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
                 ) : (
-                  <Save className="w-5 h-5 mr-2" />
+                  <Sparkles className="w-5 h-5 mr-2" />
                 )}
-                Criar Assistente
+                Criar e Configurar com IA
               </button>
-              <Link
-                href="/dashboard/assistentes"
-                className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold"
-              >
-                Cancelar
-              </Link>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
+                <span className="text-xs text-gray-400 dark:text-white/30">ou</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
+              </div>
+
+              {/* Linha inferior: Criar manual + Cancelar */}
+              <div className="flex items-center gap-4">
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className={`flex-1 flex items-center justify-center px-6 py-3 rounded-xl transition font-bold ${
+                    !canSubmit
+                      ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-white/70'
+                      : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20'
+                  }`}
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <Save className="w-5 h-5 mr-2" />
+                  )}
+                  Criar sem configurar
+                </button>
+                <Link
+                  href="/dashboard/assistentes"
+                  className="px-6 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition font-bold"
+                >
+                  Cancelar
+                </Link>
+              </div>
             </div>
-            
-            {/* 🆕 Aviso se slug não está disponível */}
+
+            {/* Aviso slug */}
             {isPublic && slugStatus !== 'available' && slugValue.length >= 3 && (
               <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
                 <div className="flex items-start">
                   <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-700 dark:text-amber-300">
-                    {slugStatus === 'taken' 
-                      ? 'Este slug já está em uso. Escolha outro nome para continuar.' 
+                    {slugStatus === 'taken'
+                      ? 'Este slug já está em uso. Escolha outro nome para continuar.'
                       : 'Aguarde a verificação do slug para poder criar o assistente.'}
                   </p>
                 </div>
               </div>
             )}
+
+            {/* Explicação dos botões */}
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+              <div className="flex items-start gap-3">
+                <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Criar e Configurar com IA</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    Nosso assistente vai recomendar as melhores funções para o seu ramo de atividade e configurar tudo por você — WhatsApp, endereço, horários e muito mais — tudo por conversa.
+                  </p>
+                </div>
+              </div>
+            </div>
           </form>
         </div>
       </div>
+
+      {/* ── Modal do Setup Bot ─────────────────────────────── */}
+      {showSetupBot && setupCompanyId && (
+        <SetupAssistantChat
+          companyId={setupCompanyId}
+          companyName={setupCompanyName}
+          slug={setupSlug}
+          theme={pageTheme}
+          playText={playText}
+          onClose={() => {
+            setShowSetupBot(false);
+            router.push('/dashboard/assistentes');
+            router.refresh();
+          }}
+          onConcluido={() => {
+            router.push('/dashboard/assistentes');
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

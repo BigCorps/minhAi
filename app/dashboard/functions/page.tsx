@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useTheme } from 'next-themes';
-import { Search } from 'lucide-react';
+import { Search, Settings } from 'lucide-react';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 

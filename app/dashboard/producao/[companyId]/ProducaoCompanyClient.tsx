@@ -718,7 +718,7 @@ export default function ProducaoCompanyClient({
             <strong>Produtos praticamente prontos para venda!</strong> Disponibilize-os também na loja virtual e totem do seu assistente.
           </p>
           <button
-            onClick={() => router.push(`/dashboard/vendas/${companyId}`)}
+            onClick={() => router.push(`/dashboard/vendas`)}
             className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-xs font-semibold rounded-md transition-colors"
           >
             <span>Ir para Vendas</span>
@@ -739,7 +739,7 @@ export default function ProducaoCompanyClient({
     <p className="text-sm text-blue-800 dark:text-blue-200 mt-2">
       <strong>Dica:</strong> Ative o <strong>Auxiliar de Produção</strong> na{' '}
       <button
-        onClick={() => router.push(`/dashboard/functions/${companyId}`)}
+        onClick={() => router.push(`/dashboard/functions`)}
         className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold hover:underline transition-colors"
       >
         seção de Funções

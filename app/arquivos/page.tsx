@@ -140,36 +140,13 @@ function ArquivosContent() {
     if (updateError) throw new Error('Erro ao confirmar envio: ' + updateError.message);
   };
 
-  // ── Upload de PDF mesclado ──
+  // ── Upload de PDF mesclado — usa File object para compatibilidade com políticas do bucket ──
   const uploadMergedPDF = async (pdfBytes: Uint8Array, fileCount: number) => {
-    if (!token) return;
-
     const fileName = `arquivos_mesclados_${Date.now()}.pdf`;
-    const storagePath = `${token}/${fileName}`;
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-
-    const { error: uploadError } = await supabase
-      .storage
-      .from('companion-uploads')
-      .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true });
-
-    if (uploadError) throw new Error('Erro no upload: ' + uploadError.message);
-
-    const { error: updateError } = await supabase
-      .from('companion_uploads')
-      .update({
-        status: 'uploaded',
-        storage_path: storagePath,
-        file_name: fileName,
-        file_type: 'application/pdf',
-        file_size: pdfBytes.byteLength,
-      })
-      .eq('token', token)
-      .eq('status', 'pending');
-
-    if (updateError) throw new Error('Erro ao confirmar envio: ' + updateError.message);
-
-    setUploadedFileName(`${fileCount} arquivos mesclados → ${fileName}`);
+    // File object é tratado igual a um upload manual pelo usuário
+    const file = new File([pdfBytes], fileName, { type: 'application/pdf' });
+    setUploadedFileName(`${fileCount} arquivos → ${fileName}`);
+    await uploadSingleFile(file);
   };
 
   // ── Handler câmera (sempre 1 arquivo, sempre imagem) ──

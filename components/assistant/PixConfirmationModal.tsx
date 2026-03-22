@@ -29,9 +29,10 @@ export default function PIXConfirmationModal({
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [autoChecking, setAutoChecking] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
   const supabase = createClient();
-
+  
   const isDark = theme === 'dark';
 
   useEffect(() => {
@@ -40,6 +41,33 @@ export default function PIXConfirmationModal({
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // Aguarda 30s após o modal abrir antes de começar o auto-check
+  useEffect(() => {
+    const startDelay = setTimeout(() => setAutoChecking(true), 30000);
+    return () => clearTimeout(startDelay);
+  }, []);
+
+  // Polling a cada 5s
+  useEffect(() => {
+    if (!autoChecking) return;
+    const interval = setInterval(async () => {
+      try {
+        const response = await supabase.functions.invoke('confirmar-pix-assistente', {
+          body: { transaction_id: transactionId },
+        });
+        if (!response.error && response.data?.success) {
+          showToast(`✅ Pagamento confirmado! Saldo: R$ ${response.data.new_balance.toFixed(2)}`, 'success');
+          clearInterval(interval);
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          await onConfirm();
+        }
+      } catch {
+        // silencioso
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [autoChecking]);
 
   const showToast = (message: string, type: 'error' | 'warning' | 'success' = 'warning') => {
     setToast({ message, type });

@@ -710,10 +710,31 @@ export default function ProducaoCompanyClient({
               </div>
             ) : (
               <div className="mt-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Para criar ou editar guia, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Clique no lápis azul para editar preço de venda e custo dos ingredientes.
-                </p>
-              </div>
+  {/* Aviso sobre Vendas - COMPACTO */}
+  {fichasProdutos.length > 0 && (
+    <div className="mb-3 pb-3 border-b border-blue-200 dark:border-blue-700">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+          <strong>Produtos prontos!</strong> Disponibilize-os na loja virtual e totem.
+        </p>
+        <button
+          onClick={() => router.push(`/dashboard/vendas/${companyId}`)}
+          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-xs font-semibold rounded-md transition-colors"
+        >
+          <span>Ir para Vendas</span>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )}
+  
+  {/* Texto original */}
+  <p className="text-sm text-blue-800 dark:text-blue-200">
+    Para criar ou editar um produto, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Clique no lápis azul para editar preço de venda e custo dos ingredientes.
+  </p>
+</div>
             )}
           </>
         )}

@@ -14,7 +14,6 @@ export default async function DashboardPage() {
   let totalConversations = 0;
   let totalFAQs = 0;
 
-  // Busca IDs das empresas do usuário (usado em múltiplas queries)
   const { data: userCompanies } = await supabase
     .from('companies')
     .select('id')
@@ -55,32 +54,32 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-{/* Welcome */}
-<div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-  <div>
-    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-      Olá, {displayName}!
-    </h1>
-    <p className="text-lg text-gray-600 dark:text-white/60">
-      Bem-vindo ao seu painel de controle
-    </p>
-  </div>
+      {/* Welcome */}
+      <div className="flex flex-col items-center md:flex-row md:items-start justify-between gap-4">
+        <div className="text-center md:text-left">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Olá, {displayName}!
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-white/60">
+            Bem-vindo ao seu painel de controle
+          </p>
+        </div>
 
-  {/* ✅ Botão alinhado à direita/topo com cor Verde Limão */}
-  <div className="flex-shrink-0">
-    <WebAppButton 
-      userId={user.id} 
-      className="bg-[#ADFF2F] hover:bg-[#96e028] text-black border-none" 
-    />
-  </div>
-</div>
+        {/* Botão alinhado à direita/topo com cor Verde Limão */}
+        <div className="flex-shrink-0">
+          <WebAppButton
+            userId={user.id}
+            className="bg-[#ADFF2F] hover:bg-[#96e028] text-black border-none"
+          />
+        </div>
+      </div>
 
       {/* Credit Card */}
       {user && (
         <CreditsCard userId={user.id} />
       )}
 
-      {/* Credits Progress Chart - Wrapper que carrega apenas no cliente */}
+      {/* Credits Progress Chart */}
       {user && (
         <CreditsProgressChartWrapper userId={user.id} />
       )}
@@ -168,7 +167,7 @@ export default async function DashboardPage() {
       {/* CTA */}
       {totalCompanies === 0 && (
         <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6">
-          <h3 className="font-semibold text-blue-900 dark:text-white mb-1">🚀 Comece Agora</h3>
+          <h3 className="font-semibold text-blue-900 dark:text-white mb-1">Comece Agora</h3>
           <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
           <Link href="/dashboard/assistentes/novo" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold">
             + Criar Assistente

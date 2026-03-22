@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
   try {
     const {
       companyId,
-      functions,       // FunctionToApply[]
-      companyData,     // CompanyData
+      functions,
+      companyData,
     } = await request.json();
 
     if (!companyId) {
@@ -59,51 +59,31 @@ export async function POST(request: NextRequest) {
     };
 
     // ── 1. Ativar / desativar funções ────────────────────────────────
+    // Usa upsert para não quebrar se initialize_company_functions já inseriu
+    // os registros padrão — apenas atualiza o is_enabled sem erro de duplicata
     if (functions && functions.length > 0) {
       for (const item of functions as FunctionToApply[]) {
         try {
-          // Verificar se já existe registro em company_function_settings
-          const { data: existing } = await supabase
+          const { error } = await supabase
             .from('company_function_settings')
-            .select('id, is_enabled')
-            .eq('company_id', companyId)
-            .eq('function_key', item.function_key)
-            .maybeSingle();
-
-          if (existing) {
-            // Atualizar estado
-            const { error } = await supabase
-              .from('company_function_settings')
-              .update({
-                is_enabled: item.enabled,
-                updated_at: new Date().toISOString(),
-                ...(item.enabled ? { enabled_at: new Date().toISOString() } : { disabled_at: new Date().toISOString() }),
-              })
-              .eq('id', existing.id);
-
-            if (error) {
-              console.error(`Erro ao atualizar ${item.function_key}:`, error);
-              results.functions.failed.push(item.function_key);
-            } else {
-              results.functions.success++;
-            }
-          } else if (item.enabled) {
-            // Criar novo registro (só cria se for para ativar)
-            const { error } = await supabase
-              .from('company_function_settings')
-              .insert({
+            .upsert(
+              {
                 company_id: companyId,
                 function_key: item.function_key,
-                is_enabled: true,
-                enabled_at: new Date().toISOString(),
-              });
+                is_enabled: item.enabled,
+                updated_at: new Date().toISOString(),
+                ...(item.enabled
+                  ? { enabled_at: new Date().toISOString() }
+                  : { disabled_at: new Date().toISOString() }),
+              },
+              { onConflict: 'company_id,function_key' }
+            );
 
-            if (error) {
-              console.error(`Erro ao criar ${item.function_key}:`, error);
-              results.functions.failed.push(item.function_key);
-            } else {
-              results.functions.success++;
-            }
+          if (error) {
+            console.error(`Erro ao aplicar ${item.function_key}:`, error);
+            results.functions.failed.push(item.function_key);
+          } else {
+            results.functions.success++;
           }
         } catch (err) {
           console.error(`Erro inesperado em ${item.function_key}:`, err);
@@ -114,7 +94,6 @@ export async function POST(request: NextRequest) {
 
     // ── 2. Salvar dados da empresa ───────────────────────────────────
     if (companyData && Object.keys(companyData).length > 0) {
-      // Filtrar apenas campos não vazios
       const dataToSave: Record<string, any> = {};
       for (const [key, value] of Object.entries(companyData as CompanyData)) {
         if (value !== undefined && value !== null && value !== '') {
@@ -140,8 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 3. Retornar resultado ────────────────────────────────────────
-    const totalFailed = results.functions.failed.length;
-    const success = totalFailed === 0;
+    const success = results.functions.failed.length === 0;
 
     return NextResponse.json({
       success,

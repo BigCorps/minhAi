@@ -32,8 +32,6 @@ const menuItems = [
   { href: '/dashboard/producao',     label: 'Linha de Produção',                icon: ClipboardList },
   { href: '/dashboard/cadastros',    label: 'Cadastros',                        icon: UserPlus },
   { href: '/dashboard/arquivos',     label: 'Arquivos e Cupons',                icon: FolderOpen },
-  { href: '/dashboard/saldo',        label: 'Recebimentos',                     icon: Wallet },
-  { href: '/dashboard/historico',    label: 'Histórico',                        icon: MessageSquare },
 ];
 
 export function Sidebar() {

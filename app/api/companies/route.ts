@@ -63,8 +63,11 @@ export async function POST(request: NextRequest) {
 
         // INSERIR AS CONFIGURAÇÕES PADRÃO PARA A NOVA EMPRESA
         const { error: settingsError } = await supabase
-          .from('company_function_settings')
-          .insert(settingsToInsert);
+  .from('company_function_settings')
+  .upsert(settingsToInsert, {
+    onConflict: 'company_id,function_key',
+    ignoreDuplicates: true,
+  });
 
         if (settingsError) {
           console.error('Erro ao inserir configurações de função padrão:', settingsError);

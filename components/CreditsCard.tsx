@@ -176,7 +176,7 @@ export function CreditsCard({ userId }: CreditsCardProps) {
               Créditos
             </p>
           </div>
-          <button className={`px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 ${
+          <button className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 ${
             isDark
               ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
               : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200'

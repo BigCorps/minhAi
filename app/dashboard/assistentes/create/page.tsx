@@ -281,7 +281,7 @@ export default function NovaEmpresaPage() {
                     <Lock className="w-5 h-5 mr-2" />
                     <div className="text-left">
                       <p className="font-bold text-sm">Privado</p>
-                      <p className="text-[10px] opacity-70">Acessível via login e senha</p>
+                      <p className="text-[10px] opacity-70">Acessível via login</p>
                     </div>
                   </button>
                 </div>

@@ -81,6 +81,10 @@ export default function NovaEmpresaPage() {
 
   // ── Criar assistente (lógica compartilhada) ──────────────
   async function criarAssistente(): Promise<string | null> {
+    if (isPublic && slugStatus === 'checking') {
+      setError('Aguarde a verificação do slug terminar.');
+      return null;
+    }
     if (isPublic && slugStatus !== 'available') {
       setError('Por favor, escolha um slug disponível antes de continuar.');
       return null;
@@ -110,18 +114,18 @@ export default function NovaEmpresaPage() {
       }
 
       const result = await response.json();
-      const newCompanyId = result.company?.id;
 
-      if (newCompanyId) {
-        const supabase = createClient();
-        const { error: funcError } = await supabase.rpc('initialize_company_functions', {
-          p_company_id: newCompanyId,
-        });
-        if (funcError) console.error('⚠️ Erro ao inicializar funções:', funcError);
-        else console.log('✅ Funções padrão inicializadas');
+      // ✅ A API retorna o objeto company diretamente (não { company: {...} })
+      // result.id é o companyId, result.company?.id seria undefined
+      const newCompanyId = result.id ?? result.company?.id ?? null;
+
+      console.log('✅ Assistente criado:', newCompanyId, result);
+
+      if (!newCompanyId) {
+        throw new Error('ID do assistente não retornado pela API');
       }
 
-      return newCompanyId || null;
+      return newCompanyId;
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
@@ -130,8 +134,7 @@ export default function NovaEmpresaPage() {
   }
 
   // ── Submit manual ────────────────────────────────────────
-  async function handleSubmitManual(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmitManual() {
     setSubmitMode('manual');
     const id = await criarAssistente();
     if (id) {
@@ -141,8 +144,7 @@ export default function NovaEmpresaPage() {
   }
 
   // ── Submit com IA ────────────────────────────────────────
-  async function handleSubmitComIA(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmitComIA() {
     setSubmitMode('ia');
     const id = await criarAssistente();
     if (id) {
@@ -290,7 +292,7 @@ export default function NovaEmpresaPage() {
               {/* Wake word */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Palavras de Ativação *
+                  Palavras de Ativação
                 </label>
                 <input type="text" value={wakeWord} onChange={e => setWakeWord(e.target.value)}
                   placeholder="Ex: Assistente, Alexa"
@@ -301,7 +303,7 @@ export default function NovaEmpresaPage() {
               {/* Greeting */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Mensagem de Ativação *
+                  Mensagem de Ativação
                 </label>
                 <textarea value={greetingMessage} onChange={e => setGreetingMessage(e.target.value)}
                   rows={3} placeholder="Frase que o assistente dirá ao ser ativado"
@@ -312,7 +314,6 @@ export default function NovaEmpresaPage() {
             {/* ── Botões ──────────────────────────────────── */}
             <div className="mt-8 space-y-3">
 
-              {/* Criar com IA */}
               <button
                 type="button"
                 disabled={!canSubmit}

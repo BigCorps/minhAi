@@ -177,7 +177,7 @@ export default function NovaEmpresaPage() {
           <div className="px-8 py-6 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Novo Assistente</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Configure as informações básicas do seu novo assistente virtual.
+              Configure as informações básicas do seu assistente IA.
             </p>
           </div>
 

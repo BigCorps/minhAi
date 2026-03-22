@@ -40,6 +40,12 @@ export function useCompanionUpload({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusRef = useRef<UseCompanionUploadReturn['status']>('idle');
 
+  // ── Ref para onImageReceived: garante que o canal Realtime sempre chame
+  // a versão mais recente do callback, mesmo após re-renders com novos
+  // valores de manualPaymentEnabled / pricePerPage na modal pai.
+  const onImageReceivedRef = useRef(onImageReceived);
+  useEffect(() => { onImageReceivedRef.current = onImageReceived; }, [onImageReceived]);
+
   useEffect(() => { statusRef.current = status; }, [status]);
 
   useEffect(() => {
@@ -81,13 +87,14 @@ export function useCompanionUpload({
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = (reader.result as string).split(',')[1];
-        onImageReceived(base64);
+        // Usa ref para garantir callback atualizado (evita stale closure do canal Realtime)
+        onImageReceivedRef.current(base64);
       };
       reader.readAsDataURL(fileData);
     } catch (err: any) {
       setError('Imagem recebida mas erro ao processar: ' + err.message);
     }
-  }, [supabase, cleanupAll, onImageReceived]);
+  }, [supabase, cleanupAll]); // onImageReceived removido — acesso via ref
 
   const start = useCallback(async () => {
     setStatus('generating');
@@ -163,7 +170,7 @@ export function useCompanionUpload({
 
       channelRef.current = channel;
 
-      // 6. Polling de fallback — usa newToken do closure, não ref
+      // 6. Polling de fallback
       pollRef.current = setInterval(async () => {
         if (statusRef.current !== 'waiting') {
           clearInterval(pollRef.current!);

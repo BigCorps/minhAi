@@ -729,6 +729,21 @@ export default function ProducaoCompanyClient({
         </div>
       </div>
     )}
+
+{/* ✅ NOVA LINHA - Ativar função */}
+    <p className="text-sm text-blue-800 dark:text-blue-200 mt-2">
+      <strong>Dica:</strong> Ative o <strong>Auxiliar de Produção</strong> na{' '}
+      <button
+        onClick={() => router.push(`/dashboard/functions/${companyId}`)}
+        className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold hover:underline transition-colors"
+      >
+        seção de Funções
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </button>
+      {' '}para criar produtos diretamente pelo assistente dizendo <em>"Criar um produto"</em>.
+    </p>
     
     {/* Texto original */}
     <p className="text-sm text-blue-800 dark:text-blue-200">

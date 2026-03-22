@@ -22,17 +22,17 @@ export default function SetupBanner() {
         <Sparkles className="w-4 h-4 flex-shrink-0 opacity-90 mt-0.5 sm:mt-0" />
         <p className="text-sm font-medium leading-snug">
           <span className="font-bold">Crie agora</span>{' '}
-          seu assistente facilmente , interagindo com nossa IA — informe o ramo e as características que a IA recomenda as melhores funções para você.
+          seu assistente facilmente, interagindo com nossa IA — informe o ramo e as características que ele recomenda as melhores funções para você.
         </p>
       </div>
 
       {/* Botão */}
-      <div className="flex items-center gap-2 ml-7 sm:ml-0 sm:flex-shrink-0">
+      <div className="flex items-center gap-2 justify-center sm:justify-start sm:flex-shrink-0">
         <button
           onClick={() => router.push('/dashboard/assistentes/create')}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition whitespace-nowrap"
         >
-          NOVO ASSISTENTE
+          CRIAR ASSISTENTE
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>

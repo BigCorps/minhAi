@@ -21,11 +21,7 @@ export default async function DashboardPage() {
     .eq('user_id', user.id);
   const companyIds = (userCompanies || []).map(c => c.id);
 
-  try {
-    totalCompanies = companyIds.length;
-  } catch (e) {
-    console.error('Error loading companies:', e);
-  }
+  try { totalCompanies = companyIds.length; } catch (e) { console.error(e); }
 
   try {
     if (companyIds.length > 0) {
@@ -35,9 +31,7 @@ export default async function DashboardPage() {
         .in('company_id', companyIds);
       totalConversations = count || 0;
     }
-  } catch (e) {
-    console.error('Error loading conversations:', e);
-  }
+  } catch (e) { console.error(e); }
 
   try {
     if (companyIds.length > 0) {
@@ -47,14 +41,13 @@ export default async function DashboardPage() {
         .in('company_id', companyIds);
       totalFAQs = count || 0;
     }
-  } catch (e) {
-    console.error('Error loading FAQs:', e);
-  }
+  } catch (e) { console.error(e); }
 
   const displayName = user?.user_metadata?.name || user?.email || 'Usuário';
 
   return (
     <div className="space-y-8">
+
       {/* Welcome */}
       <div className="flex flex-col items-center md:flex-row md:items-start justify-between gap-4">
         <div className="text-center md:text-left">
@@ -76,15 +69,14 @@ export default async function DashboardPage() {
       {/* Credit Card */}
       {user && <CreditsCard userId={user.id} />}
 
+      {/* ✅ Banner — entre créditos e gráfico */}
+      <SetupBanner />
+
       {/* Credits Progress Chart */}
       {user && <CreditsProgressChartWrapper userId={user.id} />}
 
-      {/* ✅ Banner de configuração com IA — aparece sempre no topo dos cards */}
-      <SetupBanner />
-
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Assistentes */}
         <Link href="/dashboard/assistentes">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer h-full">
             <div className="flex flex-col items-center text-center gap-3 mb-4">
@@ -102,7 +94,6 @@ export default async function DashboardPage() {
           </div>
         </Link>
 
-        {/* Histórico */}
         <Link href="/dashboard/historico">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-cyan-500 dark:hover:border-cyan-500/50 transition cursor-pointer h-full">
             <div className="flex flex-col items-center text-center gap-3 mb-4">
@@ -120,7 +111,6 @@ export default async function DashboardPage() {
           </div>
         </Link>
 
-        {/* FAQs */}
         <Link href="/dashboard/faqs">
           <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-green-500 dark:hover:border-green-500/50 transition cursor-pointer h-full">
             <div className="flex flex-col items-center text-center gap-3 mb-4">
@@ -162,10 +152,10 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* CTA para quem não tem assistente ainda */}
+      {/* CTA para quem não tem assistente */}
       {totalCompanies === 0 && (
         <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6">
-          <h3 className="font-semibold text-blue-900 dark:text-white mb-1">🚀 Comece Agora</h3>
+          <h3 className="font-semibold text-blue-900 dark:text-white mb-1">Comece Agora</h3>
           <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
           <Link
             href="/dashboard/assistentes/create"

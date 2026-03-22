@@ -5,6 +5,7 @@ import { Settings, Wallet } from 'lucide-react';
 import { CreditsCard } from '@/components/CreditsCard';
 import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
+import SetupBanner from '@/components/dashboard/SetupBanner';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -77,6 +78,9 @@ export default async function DashboardPage() {
 
       {/* Credits Progress Chart */}
       {user && <CreditsProgressChartWrapper userId={user.id} />}
+
+      {/* ✅ Banner de configuração com IA — aparece sempre no topo dos cards */}
+      <SetupBanner />
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6">
@@ -158,12 +162,15 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* CTA */}
+      {/* CTA para quem não tem assistente ainda */}
       {totalCompanies === 0 && (
         <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6">
           <h3 className="font-semibold text-blue-900 dark:text-white mb-1">🚀 Comece Agora</h3>
           <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
-          <Link href="/dashboard/assistentes/novo" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold">
+          <Link
+            href="/dashboard/assistentes/create"
+            className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold"
+          >
             + Criar Assistente
           </Link>
         </div>

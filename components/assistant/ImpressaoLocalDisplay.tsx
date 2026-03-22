@@ -457,7 +457,6 @@ if (manualPaymentEnabled) {
               </div>
             )}
 
-            // ── STAGE: SUCCESS ── 
 {stage === 'success' && (
   <div className="flex flex-col gap-4">
 

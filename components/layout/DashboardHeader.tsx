@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { createClient } from '@/lib/supabase-browser';
-import { User, CreditCard, LogOut, LifeBuoy, Users } from 'lucide-react';
+import { User, CreditCard, LogOut, LifeBuoy, Users, Wallet, MessageSquare } from 'lucide-react';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
 
 interface DashboardHeaderProps {
@@ -96,6 +96,22 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                         <CreditCard className="w-4 h-4" />
                         <span>Créditos</span>
                       </Link>
+<Link
+  href="/dashboard/saldo"
+  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+  onClick={() => setUserMenuOpen(false)}
+>
+  <Wallet className="w-4 h-4" />
+  <span>Recebimentos</span>
+</Link>
+<Link
+  href="/dashboard/historico"
+  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+  onClick={() => setUserMenuOpen(false)}
+>
+  <MessageSquare className="w-4 h-4" />
+  <span>Histórico</span>
+</Link>
                       <Link
                         href="/dashboard/indicacoes"
                         className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"

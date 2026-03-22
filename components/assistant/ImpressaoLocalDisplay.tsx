@@ -457,48 +457,61 @@ if (manualPaymentEnabled) {
               </div>
             )}
 
-            {/* ── STAGE: SUCCESS ── */}
-            {stage === 'success' && (
-              <div className="flex flex-col gap-4">
+            // ── STAGE: SUCCESS ── 
+{stage === 'success' && (
+  <div className="flex flex-col gap-4">
 
-                {/* Preview inline do PDF */}
-                {printFileUrl && (
-                  <iframe
-                    ref={iframeRef}
-                    src={printFileUrl}
-                    className={`w-full h-72 rounded-xl border ${isDark ? 'border-white/10' : 'border-gray-200'}`}
-                    onLoad={() => {
-                      // Aciona impressão automaticamente quando o PDF carrega
-                      iframeRef.current?.contentWindow?.print();
-                    }}
-                  />
-                )}
+    {/* Preview inline do PDF — apenas desktop */}
+    {printFileUrl && (
+      <iframe
+        ref={iframeRef}
+        src={printFileUrl}
+        className={`w-full h-72 rounded-xl border ${isDark ? 'border-white/10' : 'border-gray-200'} hidden md:block`}
+        onLoad={() => {
+          // Auto-print só funciona no desktop; mobile bloqueia por política do browser
+          const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+          if (!isMobile) {
+            iframeRef.current?.contentWindow?.print();
+          }
+        }}
+      />
+    )}
 
-                <div className="text-center">
-                  <p className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    Arquivo pronto para impressão
-                  </p>
-                  <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                    A janela de impressão deve abrir automaticamente
-                  </p>
-                </div>
+    <div className="text-center">
+      <p className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        Arquivo pronto para impressão
+      </p>
+      <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+        {/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+          ? 'Toque em "Imprimir agora" para abrir o arquivo'
+          : 'A janela de impressão deve abrir automaticamente'}
+      </p>
+    </div>
 
-                <button
-                  onClick={() => iframeRef.current?.contentWindow?.print()}
-                  className={`w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white`}
-                >
-                  <Printer className="w-5 h-5" />
-                  Imprimir agora
-                </button>
+    <button
+      onClick={() => {
+        const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+        if (isMobile && printFileUrl) {
+          // No mobile, abre o arquivo numa nova aba — o sistema oferece impressão nativamente
+          window.open(printFileUrl, '_blank');
+        } else {
+          iframeRef.current?.contentWindow?.print();
+        }
+      }}
+      className="w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white"
+    >
+      <Printer className="w-5 h-5" />
+      Imprimir agora
+    </button>
 
-                <button
-                  onClick={onClose}
-                  className={`w-full py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
-                >
-                  Concluir
-                </button>
-              </div>
-            )}
+    <button
+      onClick={onClose}
+      className={`w-full py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+    >
+      Concluir
+    </button>
+  </div>
+)}
 
             {/* ── STAGE: ERROR ── */}
             {stage === 'error' && (

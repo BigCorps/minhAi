@@ -729,6 +729,11 @@ export default function ProducaoCompanyClient({
         </div>
       </div>
     )}
+    
+    {/* Texto original */}
+    <p className="text-sm text-blue-800 dark:text-blue-200">
+      Para criar ou editar um produto, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Clique no lápis azul para editar preço de venda e custo dos ingredientes.
+    </p>
 
 {/* ✅ NOVA LINHA - Ativar função */}
     <p className="text-sm text-blue-800 dark:text-blue-200 mt-2">
@@ -743,11 +748,6 @@ export default function ProducaoCompanyClient({
         </svg>
       </button>
       {' '}para criar produtos diretamente pelo assistente dizendo <em>"Criar um produto"</em>.
-    </p>
-    
-    {/* Texto original */}
-    <p className="text-sm text-blue-800 dark:text-blue-200">
-      Para criar ou editar um produto, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Clique no lápis azul para editar preço de venda e custo dos ingredientes.
     </p>
   </div>
             )}

@@ -280,7 +280,7 @@ export default function SaldoPage() {
     );
   }
 
-  const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.005 : 0;
+  const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.01 : 0;
   const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
   const pixKey = userProfile?.withdrawal_pix_key;
 

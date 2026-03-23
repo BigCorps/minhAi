@@ -241,9 +241,21 @@ export default function PixQRCodeDisplay({
           </div>
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: '12px', color: textMuted, marginTop: '20px' }}>
-          Pagamento processado com segurança via Banco Inter e BigCorps
-        </p>
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+  <p style={{ fontSize: '12px', color: textMuted, margin: '0 0 6px' }}>
+    Pagamento processado com segurança via Banco Inter e BigCorps
+  </p>
+  <a
+    href="https://minhai.app"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{ fontSize: '12px', color: textMuted, textDecoration: 'none', opacity: 0.6, transition: 'opacity 0.2s' }}
+    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+  >
+    minhAi — Uma IA pra chamar de sua!
+  </a>
+</div>
 
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>

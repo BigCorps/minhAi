@@ -529,7 +529,7 @@ export default function SaldoPage() {
                   {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
                     <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl space-y-2 border border-gray-100 dark:border-white/5">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Taxa de Serviço (0,5%)</span>
+                        <span className="text-gray-500">Taxa de Serviço (1%)</span>
                         <span className="text-red-500 font-medium">-{fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                       </div>
                       <div className="flex justify-between text-base font-bold border-t border-gray-200 dark:border-white/10 pt-2">

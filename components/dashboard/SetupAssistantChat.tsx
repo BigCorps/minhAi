@@ -490,7 +490,7 @@ export default function SetupAssistantChat({
             width: '100%', padding: '12px', background: C.success, color: 'white',
             border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
           }}>
-            Ir para o Dashboard
+            Conheça todas as funções
           </button>
         </div>
       )}

@@ -59,11 +59,29 @@ export async function POST(request: NextRequest) {
 Sua tarefa é analisar o ramo de atividade informado e selecionar as funções mais relevantes de uma lista.
 
 REGRAS:
-- Selecione entre 8 e 15 funções mais relevantes para o ramo
+- Selecione entre 15 e 30 funções mais relevantes para o ramo
 - Priorize funções que o cliente vai usar no dia a dia
 - Ordene da mais para a menos relevante
 - Para cada função, escreva uma justificativa curta em português (máximo 10 palavras)
 - Retorne SOMENTE JSON válido, sem markdown, sem backticks
+
+REGRAS ESPECIAIS — SEMPRE APLICAR:
+
+1. RAMO ALIMENTÍCIO (restaurante, pizzaria, lanchonete, padaria, confeitaria, hamburgueria,
+   açaí, sorveteria, food truck, buffet, bar, café, doceria, sushi, churrascaria, marmitaria,
+   ou qualquer negócio que produza ou venda alimentos):
+   - OBRIGATORIAMENTE inclua "fichas_producao_conversacional" com justificativa:
+     "Crie fichas técnicas e calcule custos de produção por voz — exclusivo minhAi"
+   - OBRIGATORIAMENTE inclua "modo_venda" com justificativa:
+     "Venda produtos direto no totem com carrinho e checkout — exclusivo minhAi"
+   - Coloque essas duas funções nas primeiras posições da lista
+
+2. NEGÓCIOS AUTÔNOMOS/SELF-SERVICE (mercado autônomo, loja autônoma, lavanderia self-service,
+   pet shop autônomo, academia 24h, estacionamento, coworking, venda automática, totem de serviço,
+   ou qualquer negócio que funcione sem atendente):
+   - OBRIGATORIAMENTE inclua "sequencia_videos" com justificativa:
+     "Ensine os clientes a usar o serviço com vídeos explicativos no totem"
+   - Coloque esta função nas primeiras posições da lista
 
 FORMATO DE SAÍDA:
 {

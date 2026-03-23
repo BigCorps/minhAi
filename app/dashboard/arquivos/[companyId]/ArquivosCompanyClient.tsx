@@ -351,7 +351,7 @@ export default function ArquivosCompanyClient({
 
         {/* Abas — ordem: Enviados / Cupons / Consultas */}
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-          <div className="flex border-b border-gray-200 dark:border-white/10">
+          <div className="grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-white/10">
             {([
               { key: 'enviados',   label: 'Enviados',   icon: <Upload   className="w-4 h-4" /> },
               { key: 'cupons',     label: 'Cupons',     icon: <Ticket   className="w-4 h-4" /> },
@@ -361,7 +361,7 @@ export default function ArquivosCompanyClient({
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
+                className={`sm:flex-1 px-4 py-3 text-sm font-medium transition flex items-center justify-center gap-2 border-gray-200 dark:border-white/10 [&:nth-child(1)]:border-b sm:[&:nth-child(1)]:border-b-0 [&:nth-child(2)]:border-b sm:[&:nth-child(2)]:border-b-0 [&:nth-child(1)]:border-r [&:nth-child(2)]:border-r sm:[&:nth-child(2)]:border-r-0 [&:nth-child(3)]:border-r sm:[&:nth-child(3)]:border-r-0 ${
                   activeTab === tab.key
                     ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'

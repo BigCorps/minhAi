@@ -72,9 +72,9 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
               bg-white/80 border-gray-200 hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/5
               dark:bg-white/5 dark:border-white/10 dark:hover:border-blue-500/30 backdrop-blur-sm"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 items-center md:items-stretch">
                 {/* Info do Assistente */}
-                <div className="flex items-center space-x-4 flex-1">
+                <div className="flex items-center space-x-4 flex-1 justify-center md:justify-start">
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 duration-300
                   bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 overflow-hidden border border-gray-100 dark:border-white/5 relative">
                     {assistant.logo_url ? (
@@ -113,9 +113,9 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                 </div>
 
                 {/* Ações — 2 linhas: 4 em cima, 3 embaixo */}
-                <div className="flex flex-col gap-2 items-end">
+                <div className="flex flex-col gap-2 items-center md:items-end">
                   {/* Linha 1: até 4 botões */}
-                  <div className="flex flex-wrap gap-2 justify-end">
+                  <div className="flex flex-wrap gap-2 justify-center md:justify-end">
                     {/* Copiar Link (apenas públicos) */}
                     {assistant.is_public && (
                       <button
@@ -166,7 +166,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                   </div>
 
                   {/* Linha 2: 3 botões fixos */}
-                  <div className="flex flex-wrap gap-2 justify-end">
+                  <div className="flex flex-wrap gap-2 justify-center md:justify-end">
                     {/* Funções */}
                     <Link
                       href={`/dashboard/functions?companyId=${assistant.id}`}

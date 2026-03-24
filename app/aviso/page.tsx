@@ -120,7 +120,7 @@ export default function PrivacyPage() {
                 <strong>Última atualização:</strong> 23 de janeiro de 2026
               </p>
               
-              <p>Este Aviso de Privacidade descreve como o eAi coleta, usa, armazena e protege suas informações pessoais. Levamos sua privacidade muito a sério e estamos comprometidos em proteger seus dados.</p>
+              <p>Este Aviso de Privacidade descreve como o minhAi coleta, usa, armazena e protege suas informações pessoais. Levamos sua privacidade muito a sério e estamos comprometidos em proteger seus dados.</p>
               
               <h2>1. Informações que Coletamos</h2>
               <p>Coletamos diferentes tipos de informações para fornecer e melhorar nossos serviços:</p>
@@ -141,6 +141,13 @@ export default function PrivacyPage() {
                 <li><strong>Treinar e melhorar nosso assistente de IA (apenas com seu consentimento explícito)</strong></li>
                 <li><strong>Cumprir obrigações legais e regulatórias</strong></li>
               </ul>
+              <p>
+                O uso de informações recebidas das APIs do Google pelo minhAi aderirá à{' '}
+                <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className={`underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                  Política de Dados do Usuário dos Serviços de API do Google
+                </a>
+                , incluindo os requisitos de Uso Limitado (Limited Use).
+              </p>
 
               <h2>3. Proteção de Dados</h2>
               <p>Implementamos medidas de segurança técnicas e organizacionais para proteger seus dados:</p>
@@ -157,6 +164,11 @@ export default function PrivacyPage() {
               <p><strong>Compartilhamento Limitado:</strong></p>
               <ul>
                 <li><strong>Com a Meta:</strong> Apenas os dados necessários para operar as integrações do Facebook, Instagram e WhatsApp</li>
+                <li><strong>Com o Google:</strong> Os dados acessados via APIs do Google (Gmail, Drive, Calendar, SDM) são utilizados estritamente para as funcionalidades de automação solicitadas pelo usuário e seguem a{' '}
+                  <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className={`underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                    Política de Dados do Usuário dos Serviços de API do Google
+                  </a>.
+                </li>
                 <li><strong>Provedores de Serviço:</strong> Empresas que nos auxiliam a operar a plataforma (hospedagem, analytics, etc.)</li>
                 <li><strong>Requisitos Legais:</strong> Quando exigido por lei, ordem judicial ou regulamentação governamental</li>
               </ul>
@@ -172,7 +184,7 @@ export default function PrivacyPage() {
                 
                 <h4>Opção 1: Através da Plataforma</h4>
                 <ol>
-                  <li>Faça login na sua conta no eAi</li>
+                  <li>Faça login na sua conta no minhAi</li>
                   <li>Acesse a <Link href="/exclusao" className={`underline font-semibold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>página de Exclusão de Dados</Link></li>
                   <li>Clique em "Solicitar Exclusão de Dados"</li>
                   <li>Confirme sua solicitação</li>
@@ -217,7 +229,7 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
               <p>Você mantém controle total sobre suas integrações:</p>
               <ul>
                 <li>Pode desconectar qualquer plataforma a qualquer momento</li>
-                <li>Pode escolher quais serviços conectar ao eAi</li>
+                <li>Pode escolher quais serviços conectar ao minhAi</li>
                 <li>Pode limitar quais tipos de mensagens são processadas</li>
               </ul>
 
@@ -230,11 +242,11 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
               }`}>
                 <p>Para questões sobre privacidade e proteção de dados:</p>
                 <p><strong>Email de Privacidade:</strong> contato@bigcorps.com.br</p>
-                <p><strong>Email Geral:</strong> eai@bigcorps.com.br</p>
+                <p><strong>Email Geral:</strong> contato@bigcorps.com.br</p>
                 <p><strong>Encarregado de Proteção de Dados (DPO)</strong></p>
                 <p className="!mt-4"><strong>Endereço Físico:</strong></p>
                 <p className="!mt-1">
-                  eAi<br />
+                  BigCorps Tecnologia LTA<br />
                   Rua Saguairu, 925<br />
                   São Paulo - SP - 02514-000<br />
                   Brasil
@@ -246,7 +258,7 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
               <div className={`text-center text-sm ${
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>
-                <p><strong>Ao usar o eAi, você confirma que leu e compreende este Aviso de Privacidade.</strong></p>
+                <p><strong>Ao usar o minhAi, você confirma que leu e compreende este Aviso de Privacidade.</strong></p>
                 <p className="mt-2">Estamos comprometidos com a proteção de sua privacidade e conformidade com a LGPD.</p>
               </div>
             </div>

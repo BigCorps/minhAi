@@ -31,11 +31,11 @@ export default function CanalYoutubeDisplay({
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [copied, setCopied] = useState(false);
-  const [previewError, setPreviewError] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const { channelUrl, channelName, channelDescription } = data;
 
-  // Garante URL completa para microlink e QR Code
+  // Garante URL completa para APIs externas
   const normalizeUrl = (url: string) => {
     if (!url) return url;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -58,14 +58,25 @@ export default function CanalYoutubeDisplay({
 
   useModalVoiceClose(handleManualClose);
 
+  // QR Code
   useEffect(() => {
     if (fullChannelUrl) {
-      const size = 300;
-      const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(fullChannelUrl)}&margin=10`;
-      setQrCodeUrl(url);
+      setQrCodeUrl(
+        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fullChannelUrl)}&margin=10`
+      );
     }
   }, [fullChannelUrl]);
 
+  // OG Image via proxy Next.js — resolve bloqueio do YouTube no microlink
+  useEffect(() => {
+    if (!fullChannelUrl) return;
+    fetch(`/api/og-image?url=${encodeURIComponent(fullChannelUrl)}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.imageUrl) setPreviewImageUrl(d.imageUrl); })
+      .catch(() => {});
+  }, [fullChannelUrl]);
+
+  // Countdown auto-close
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -84,7 +95,6 @@ export default function CanalYoutubeDisplay({
     active: true,
     onTranscript: (transcript) => {
       const t = normalize(transcript);
-
       if (['fechar', 'cancelar', 'sair', 'voltar', 'encerrar'].some((cmd) => t.includes(cmd))) {
         onClose();
         return;
@@ -114,18 +124,9 @@ export default function CanalYoutubeDisplay({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleOpen = () => {
-    window.open(channelUrl, '_blank');
-  };
-
-  // Preview via screenshot — mesmo padrão do cardápio (sem embed de vídeo)
-  const previewUrl = !previewError
-    ? `https://api.microlink.io?url=${encodeURIComponent(fullChannelUrl)}&screenshot=true&meta=false&embed=screenshot.url`
-    : null;
+  const handleOpen = () => window.open(channelUrl, '_blank');
 
   const isDark = theme === 'dark';
-
-  // Exibe o handle se disponível, senão a URL
   const displayHandle = channelUrl.match(/@[\w-]+/)?.[0] ?? channelUrl;
 
   return createPortal(
@@ -139,7 +140,6 @@ export default function CanalYoutubeDisplay({
         <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-red-900/30' : 'bg-red-100'}`}>
-              {/* YouTube SVG icon */}
               <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#ef4444">
                 <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z" />
               </svg>
@@ -222,21 +222,21 @@ export default function CanalYoutubeDisplay({
               </div>
 
               {/* Voice Hint */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slateate-400' : 'bg-gray-50 text-gray-500'}`}>
                 <span>🎤</span>
                 <span>Diga <strong>"abrir"</strong>, <strong>"inscrever"</strong>, <strong>"copiar"</strong> ou <strong>"fechar"</strong></span>
               </div>
             </div>
 
-            {/* COLUNA DIREITA: Preview screenshot */}
+            {/* COLUNA DIREITA: OG Image do canal */}
             <div className={`rounded-xl overflow-hidden border h-full min-h-[420px] ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-              {previewUrl ? (
+              {previewImageUrl ? (
                 <div className={`relative w-full h-full min-h-[420px] flex items-center justify-center p-4 ${isDark ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
                   <img
-                    src={previewUrl}
+                    src={previewImageUrl}
                     alt="Preview do canal"
-                    className="w-full h-auto rounded-lg shadow-2xl border-2 border-white/10 max-h-[400px] object-contain"
-                    onError={() => setPreviewError(true)}
+                    className="w-full h-auto rounded-lg shadow-2xl max-h-[400px] object-contain"
+                    onError={() => setPreviewImageUrl(null)}
                   />
                 </div>
               ) : (
@@ -247,6 +247,7 @@ export default function CanalYoutubeDisplay({
                     </svg>
                   </div>
                   <p className={`font-semibold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {/* Mostra loading enquanto busca, placeholder se falhar */}
                     Preview não disponível
                   </p>
                   <p className={`text-sm text-center ${isDark ? 'text-white/50' : 'text-gray-500'}`}>

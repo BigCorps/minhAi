@@ -1238,7 +1238,7 @@ const CardapioForm = ({ settings, onChange }: any) => (
   <div className="space-y-4">
     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
       <p className="text-sm text-blue-800 dark:text-blue-200">
-        💡 Funciona com Google Drive (PDF público), iFood, Linktree, site próprio e qualquer link público.
+        Funciona com Google Drive (PDF público), iFood, Linktree, site próprio e qualquer link público.
       </p>
     </div>
     <div>
@@ -1273,6 +1273,66 @@ const CardapioForm = ({ settings, onChange }: any) => (
       <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
         <p className="text-xs text-orange-800 dark:text-orange-200">
           ✅ {settings.cardapio_url.toLowerCase().includes('.pdf') ? '📄 PDF detectado' : '🌐 Link de site detectado'}
+        </p>
+      </div>
+    )}
+  </div>
+);
+
+const CanalYoutubeForm = ({ settings, onChange }: any) => (
+  <div className="space-y-4">
+    <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+      <p className="text-sm text-red-800 dark:text-red-200">
+        Cole o link do seu canal do YouTube. Funciona com <strong>@handle</strong> (ex: youtube.com/@seucanal) ou link direto do canal.
+      </p>
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Link do Canal <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="url"
+        placeholder="https://youtube.com/@seucanal"
+        value={settings.youtube_channel_url || ''}
+        onChange={e => onChange('youtube_channel_url', e.target.value)}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-red-500"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Nome do Canal (opcional)
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Canal Oficial da Empresa"
+        value={settings.youtube_channel_name || ''}
+        onChange={e => onChange('youtube_channel_name', e.target.value)}
+        maxLength={80}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-red-500"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+        Descrição (opcional)
+      </label>
+      <input
+        type="text"
+        placeholder="Ex: Inscreva-se e fique por dentro das novidades!"
+        value={settings.youtube_channel_description || ''}
+        onChange={e => onChange('youtube_channel_description', e.target.value)}
+        maxLength={120}
+        className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 focus:ring-2 focus:ring-red-500"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
+        {(settings.youtube_channel_description || '').length}/120
+      </p>
+    </div>
+    {settings.youtube_channel_url && (
+      <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+        <p className="text-xs text-red-800 dark:text-red-200">
+          ✅ {settings.youtube_channel_url.includes('@')
+            ? `🔴 Canal detectado: ${settings.youtube_channel_url.match(/@[\w-]+/)?.[0] ?? ''}`
+            : '🔴 Link de canal detectado'}
         </p>
       </div>
     )}
@@ -2747,6 +2807,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'porta_retrato': PortaRetratoConfigForm,
   'painel_ofertas': PainelOfertasConfigForm,
   'aparelhos_smart': AparelhosSmartConfigForm,
+  'canal_youtube': CanalYoutubeForm,
 };
 
 // ===== INTERFACE =====

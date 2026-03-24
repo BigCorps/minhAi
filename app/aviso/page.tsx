@@ -117,10 +117,10 @@ export default function PrivacyPage() {
               <p className={`text-sm mb-4 ${
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>
-                <strong>Última atualização:</strong> 23 de janeiro de 2026
+                <strong>Última atualização:</strong> 24 de março de 2026
               </p>
               
-              <p>Este Aviso de Privacidade descreve como o minhAi coleta, usa, armazena e protege suas informações pessoais. Levamos sua privacidade muito a sério e estamos comprometidos em proteger seus dados.</p>
+              <p>Este Aviso de Privacidade descreve como o <strong>minhAi</strong> (desenvolvido pela <strong>BigCorps Tecnologia LTDA</strong>) coleta, usa, armazena e protege suas informações pessoais. Levamos sua privacidade muito a sério e estamos comprometidos em proteger seus dados.</p>
               
               <h2>1. Informações que Coletamos</h2>
               <p>Coletamos diferentes tipos de informações para fornecer e melhorar nossos serviços:</p>
@@ -133,44 +133,44 @@ export default function PrivacyPage() {
               <h2>2. Como Usamos suas Informações</h2>
               <p>Utilizamos suas informações para os seguintes propósitos:</p>
               <ul>
-                <li>Fornecer, operar e manter nossos serviços</li>
-                <li>Gerenciar sua conta e autenticação</li>
-                <li>Processar e facilitar comunicações através de plataformas integradas</li>
-                <li>Melhorar, personalizar e expandir nossos serviços</li>
-                <li>Enviar notificações sobre atualizações, segurança e suporte</li>
-                <li><strong>Treinar e melhorar nosso assistente de IA (apenas com seu consentimento explícito)</strong></li>
-                <li><strong>Cumprir obrigações legais e regulatórias</strong></li>
+                <li>Fornecer, operar e manter nossos serviços de assistência de voz e produtividade</li>
+                <li>Gerenciar sua conta e autenticação segura</li>
+                <li>Processar comunicações através de plataformas integradas (Google, Meta, etc.)</li>
+                <li>Enviar notificações sobre atualizações e segurança</li>
+                <li><strong>Cumprir obrigações legais e regulatórias (LGPD)</strong></li>
               </ul>
-              <p>
-                O uso de informações recebidas das APIs do Google pelo minhAi aderirá à{' '}
-                <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className={`underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
-                  Política de Dados do Usuário dos Serviços de API do Google
-                </a>
-                , incluindo os requisitos de Uso Limitado (Limited Use).
-              </p>
+
+              <div className={`p-4 rounded-lg border my-4 ${
+                theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200'
+              }`}>
+                <p className="text-sm !mb-0">
+                  <strong>Conformidade com APIs do Google:</strong> O uso e a transferência de informações recebidas das APIs do Google pelo <strong>minhAi</strong> para qualquer outro aplicativo seguirão a{' '}
+                  <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className={`underline font-semibold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                    Política de Dados do Usuário dos Serviços de API do Google
+                  </a>, incluindo os requisitos de <strong>Uso Limitado (Limited Use)</strong>.
+                </p>
+              </div>
 
               <h2>3. Proteção de Dados</h2>
               <p>Implementamos medidas de segurança técnicas e organizacionais para proteger seus dados:</p>
-              <p><strong>Medidas de Segurança:</strong></p>
               <ul>
                 <li>Criptografia de dados em trânsito (HTTPS/TLS) e em repouso</li>
                 <li>Armazenamento seguro de senhas usando hashing bcrypt</li>
-                <li>Autenticação de dois fatores disponível (quando habilitada)</li>
                 <li>Acesso restrito a dados pessoais apenas para pessoal autorizado</li>
               </ul>
 
               <h2>4. Compartilhamento de Dados</h2>
               <p>Respeitamos sua privacidade e não vendemos seus dados pessoais. Podemos compartilhar informações apenas nas seguintes circunstâncias:</p>
-              <p><strong>Compartilhamento Limitado:</strong></p>
               <ul>
-                <li><strong>Com a Meta:</strong> Apenas os dados necessários para operar as integrações do Facebook, Instagram e WhatsApp</li>
-                <li><strong>Com o Google:</strong> Os dados acessados via APIs do Google (Gmail, Drive, Calendar, SDM) são utilizados estritamente para as funcionalidades de automação solicitadas pelo usuário e seguem a{' '}
-                  <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className={`underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
-                    Política de Dados do Usuário dos Serviços de API do Google
-                  </a>.
+                <li><strong>Com o Google:</strong> Os dados acessados via APIs do Google (Gmail, Drive, Agenda, YouTube, Fotos e SDM) são utilizados estritamente para as funcionalidades de automação e produtividade solicitadas pelo usuário.
+                  <ul className="ml-4 mt-2 list-disc">
+                    <li>Não utilizamos dados do Google para fins de publicidade ou marketing.</li>
+                    <li>Não permitimos que humanos leiam seus dados das APIs do Google, exceto sob consentimento explícito para suporte técnico.</li>
+                    <li>O acesso ao Google Drive é restrito à leitura de arquivos para exibição em dashboards solicitados pelo usuário.</li>
+                  </ul>
                 </li>
-                <li><strong>Provedores de Serviço:</strong> Empresas que nos auxiliam a operar a plataforma (hospedagem, analytics, etc.)</li>
-                <li><strong>Requisitos Legais:</strong> Quando exigido por lei, ordem judicial ou regulamentação governamental</li>
+                <li><strong>Com a Meta:</strong> Apenas os dados necessários para operar as integrações do Facebook, Instagram e WhatsApp</li>
+                <li><strong>Requisitos Legais:</strong> Quando exigido por lei ou regulamentação governamental</li>
               </ul>
 
               <h2>5. Exclusão de Dados</h2>
@@ -180,78 +180,30 @@ export default function PrivacyPage() {
                   : 'bg-blue-50 border-blue-200'
               }`}>
                 <h3 className="!mt-0">Como Excluir Seus Dados</h3>
-                <p>Você tem o direito de solicitar a exclusão de todos os seus dados pessoais a qualquer momento. Oferecemos duas opções:</p>
+                <p>Você tem o direito de solicitar a exclusão de todos os seus dados pessoais a qualquer momento:</p>
                 
                 <h4>Opção 1: Através da Plataforma</h4>
                 <ol>
-                  <li>Faça login na sua conta no minhAi</li>
+                  <li>Faça login na sua conta no <strong>minhAi</strong></li>
                   <li>Acesse a <Link href="/exclusao" className={`underline font-semibold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>página de Exclusão de Dados</Link></li>
-                  <li>Clique em "Solicitar Exclusão de Dados"</li>
-                  <li>Confirme sua solicitação</li>
+                  <li>Confirme sua solicitação de exclusão permanente</li>
                 </ol>
                 
                 <h4>Opção 2: Por Email</h4>
-                <p>Envie um email para <strong>contato@bigcorps.com.br</strong></p>
-                <p><strong>Assunto:</strong> Solicitação de Exclusão de Dados - LGPD</p>
-                <p><strong>No corpo do email, inclua:</strong></p>
-                <pre className={`text-sm p-3 rounded whitespace-pre-wrap ${
-                  theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-100'
-                }`}>{`Nome completo:
-Email da conta:
-Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais conforme a LGPD"`}</pre>
+                <p>Envie um email para <strong>contato@bigcorps.com.br</strong> com o assunto "Solicitação de Exclusão de Dados - LGPD".</p>
               </div>
 
-              <h3>Prazo de Exclusão</h3>
-              <p>Após recebermos sua solicitação:</p>
-              <ul>
-                <li><strong>Confirmação:</strong> Você receberá uma confirmação em até 48 horas</li>
-                <li><strong>Processamento:</strong> A exclusão será processada em até 7 dias úteis</li>
-                <li><strong>Confirmação Final:</strong> Você receberá um email confirmando a exclusão completa</li>
-                <li><strong>Backups:</strong> Dados em backups serão removidos no próximo ciclo de limpeza (até 30 dias)</li>
-              </ul>
-
-              <h3>Retenção Legal</h3>
-              <p>Alguns dados podem ser retidos por períodos específicos para cumprir obrigações legais, contábeis ou fiscais, conforme exigido pela legislação brasileira.</p>
-
               <h2>6. Seus Direitos (LGPD)</h2>
-              <p>Conforme a Lei Geral de Proteção de Dados (LGPD), você tem os seguintes direitos:</p>
-              <ul>
-                <li><strong>Acesso:</strong> Confirmar quais dados pessoais processamos sobre você</li>
-                <li><strong>Correção:</strong> Solicitar a correção de dados incompletos ou incorretos</li>
-                <li><strong>Exclusão:</strong> Solicitar a eliminação de seus dados pessoais</li>
-                <li><strong>Portabilidade:</strong> Receber seus dados em formato estruturado</li>
-                <li><strong>Revogação de Consentimento:</strong> Revogar consentimentos dados anteriormente</li>
-                <li><strong>Oposição:</strong> Opor-se ao tratamento de seus dados em certas situações</li>
-              </ul>
-              <p>Para exercer qualquer destes direitos, entre em contato através do email <strong>contato@bigcorps.com.br</strong></p>
+              <p>Conforme a Lei Geral de Proteção de Dados (LGPD), você tem direitos de acesso, correção, exclusão e portabilidade de seus dados. Para exercê-los, entre em contato através do email oficial de suporte.</p>
 
-              <h3>Controle do Usuário</h3>
-              <p>Você mantém controle total sobre suas integrações:</p>
-              <ul>
-                <li>Pode desconectar qualquer plataforma a qualquer momento</li>
-                <li>Pode escolher quais serviços conectar ao minhAi</li>
-                <li>Pode limitar quais tipos de mensagens são processadas</li>
-              </ul>
-
-              <h2>8. Alterações neste Aviso</h2>
-              <p>Podemos atualizar este Aviso de Privacidade periodicamente. Notificaremos você sobre alterações significativas através de email ou aviso na plataforma. Recomendamos revisar este documento regularmente.</p>
-
-              <h2>9. Contato</h2>
+              <h2>7. Contato e Responsabilidade Legal</h2>
               <div className={`p-4 rounded-lg space-y-2 ${
                 theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'
               }`}>
-                <p>Para questões sobre privacidade e proteção de dados:</p>
+                <p>O <strong>minhAi</strong> é um produto desenvolvido e operado por:</p>
+                <p><strong>BigCorps Tecnologia LTDA</strong></p>
                 <p><strong>Email de Privacidade:</strong> contato@bigcorps.com.br</p>
-                <p><strong>Email Geral:</strong> contato@bigcorps.com.br</p>
-                <p><strong>Encarregado de Proteção de Dados (DPO)</strong></p>
-                <p className="!mt-4"><strong>Endereço Físico:</strong></p>
-                <p className="!mt-1">
-                  BigCorps Tecnologia LTA<br />
-                  Rua Saguairu, 925<br />
-                  São Paulo - SP - 02514-000<br />
-                  Brasil
-                </p>
-                <p className="!mt-4"><strong>Horário de Atendimento: Segunda a Sexta, 9h às 18h (horário de Brasília)</strong></p>
+                <p><strong>Endereço:</strong> Rua Saguairu, 925 - São Paulo - SP - 02514-000 - Brasil</p>
               </div>
 
               <hr className="my-6" />
@@ -259,7 +211,6 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
                 theme === 'dark' ? 'text-white/60' : 'text-gray-600'
               }`}>
                 <p><strong>Ao usar o minhAi, você confirma que leu e compreende este Aviso de Privacidade.</strong></p>
-                <p className="mt-2">Estamos comprometidos com a proteção de sua privacidade e conformidade com a LGPD.</p>
               </div>
             </div>
           </div>
@@ -273,9 +224,6 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
                 ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
                 : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
             }`}>
-              <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
               Excluir Meus Dados
             </button>
           </Link>
@@ -285,9 +233,6 @@ Confirmação: "Solicito a exclusão permanente de todos os meus dados pessoais 
                 ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                 : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}>
-              <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
               Contato de Privacidade
             </button>
           </a>

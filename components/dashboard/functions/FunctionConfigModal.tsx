@@ -2050,6 +2050,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
           <li>• Documento enviado automaticamente para a impressora</li>
           <li>• Ideal para desktop sem touch</li>
           <li>• Suporta filas separadas para P&B e Colorida</li>
+          <li>• Baixe gratuitamente em: https://www.printnode.com/en/download</li>
         </ul>
       </div>
  

@@ -2029,7 +2029,7 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
     setPrintersList([]);
     setComputerInfo(null);
     try {
-      const response = await fetch('/api/edge/test-printnode-computer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ computerId }) });
+      const response = await fetch('/app/api/edge/test-printnode-computer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ computerId }) });
       if (!response.ok) throw new Error('Erro ao conectar com PrintNode');
       const data = await response.json();
       if (data.success) { setConnectionStatus('success'); setComputerInfo(data.computer); setPrintersList(data.printers || []); }

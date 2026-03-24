@@ -345,6 +345,221 @@ const GoogleCalendarForm = ({ companyId }: any) => {
   );
 };
 
+const PlaylistConfigForm = ({ companyId }: any) => {
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetch() {
+      setLoading(true);
+      const { data } = await supabase.from('company_function_settings').select('config')
+        .eq('company_id', companyId).eq('function_key', 'playlist').maybeSingle();
+      setPlaylists(data?.config?.playlists || []);
+      setLoading(false);
+    }
+    fetch();
+  }, [companyId]);
+
+  const save = async () => {
+    setSaving(true);
+    await supabase.from('company_function_settings')
+      .update({ config: { playlists }, updated_at: new Date().toISOString() })
+      .eq('company_id', companyId).eq('function_key', 'playlist');
+    setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
+  };
+
+  if (loading) return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+        <p className="text-sm text-red-800 dark:text-red-200">
+          Configure playlists públicas do YouTube. Cada playlist deve ter um link ou ID público.
+        </p>
+      </div>
+      {playlists.map((pl: any, idx: number) => (
+        <div key={idx} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10 space-y-2">
+          <input type="text" placeholder="Nome da playlist" value={pl.name || ''}
+            onChange={e => { const a = [...playlists]; a[idx].name = e.target.value; setPlaylists(a); }}
+            className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white" />
+          <input type="text" placeholder="ID ou link da playlist YouTube"
+            value={pl.id || ''} onChange={e => {
+              const a = [...playlists];
+              let val = e.target.value;
+              const m = val.match(/[?&]list=([^&]+)/);
+              a[idx].id = m ? m[1] : val;
+              setPlaylists(a);
+            }}
+            className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white" />
+          <div className="flex items-center justify-between">
+            <select value={pl.type || 'video'} onChange={e => { const a = [...playlists]; a[idx].type = e.target.value; setPlaylists(a); }}
+              className="px-3 py-1.5 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white">
+              <option value="video">Vídeo</option>
+              <option value="music">Música</option>
+            </select>
+            <button onClick={() => setPlaylists(playlists.filter((_: any, i: number) => i !== idx))}
+              className="text-xs text-red-500 hover:text-red-700">Remover</button>
+          </div>
+        </div>
+      ))}
+      <button onClick={() => setPlaylists([...playlists, { name: '', id: '', type: 'video' }])}
+        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-500 hover:border-red-400 hover:text-red-500 transition">
+        + Adicionar Playlist
+      </button>
+      <button onClick={save} disabled={saving}
+        className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold text-sm transition">
+        {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
+      </button>
+    </div>
+  );
+};
+
+const PortaRetratoConfigForm = ({ companyId }: any) => {
+  const [config, setConfig] = useState<any>({ album_id: '', seconds_per_photo: 5, transition: 'fade', shuffle: false });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetch() {
+      const { data } = await supabase.from('company_function_settings').select('config')
+        .eq('company_id', companyId).eq('function_key', 'porta_retrato').maybeSingle();
+      if (data?.config) setConfig(data.config);
+    }
+    fetch();
+  }, [companyId]);
+
+  const save = async () => {
+    setSaving(true);
+    await supabase.from('company_function_settings')
+      .update({ config, updated_at: new Date().toISOString() })
+      .eq('company_id', companyId).eq('function_key', 'porta_retrato');
+    setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-200 dark:border-pink-800">
+        <p className="text-sm text-pink-800 dark:text-pink-200">Exibe fotos do Google Photos em slideshow. Deixe o álbum vazio para usar todas as fotos.</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">ID do Álbum (opcional)</label>
+        <input type="text" placeholder="Deixe vazio para todas as fotos"
+          value={config.album_id || ''} onChange={e => setConfig((p: any) => ({ ...p, album_id: e.target.value }))}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+        <p className="text-xs text-gray-500 mt-1">Você pode obter o ID do álbum no Google Photos.</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por foto</label>
+        <input type="number" min="2" max="30" value={config.seconds_per_photo || 5}
+          onChange={e => setConfig((p: any) => ({ ...p, seconds_per_photo: Number(e.target.value) }))}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Transição</label>
+        <select value={config.transition || 'fade'} onChange={e => setConfig((p: any) => ({ ...p, transition: e.target.value }))}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white">
+          <option value="fade">Fade</option>
+          <option value="slide">Slide</option>
+        </select>
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={config.shuffle || false}
+          onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))} />
+        <span className="text-sm text-gray-900 dark:text-white">Embaralhar fotos</span>
+      </label>
+      <button onClick={save} disabled={saving}
+        className="w-full py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white font-semibold text-sm transition">
+        {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
+      </button>
+    </div>
+  );
+};
+
+const PainelOfertasConfigForm = ({ companyId }: any) => {
+  const [config, setConfig] = useState<any>({ folder_id: '', seconds_per_image: 8, shuffle: false });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetch() {
+      const { data } = await supabase.from('company_function_settings').select('config')
+        .eq('company_id', companyId).eq('function_key', 'painel_ofertas').maybeSingle();
+      if (data?.config) setConfig(data.config);
+    }
+    fetch();
+  }, [companyId]);
+
+  const save = async () => {
+    setSaving(true);
+    await supabase.from('company_function_settings')
+      .update({ config, updated_at: new Date().toISOString() })
+      .eq('company_id', companyId).eq('function_key', 'painel_ofertas');
+    setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+        <p className="text-sm text-orange-800 dark:text-orange-200">Coloque imagens de ofertas em uma pasta do Google Drive e cole o ID da pasta abaixo.</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">ID da Pasta do Drive <span className="text-red-500">*</span></label>
+        <input type="text" placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+          value={config.folder_id || ''} onChange={e => setConfig((p: any) => ({ ...p, folder_id: e.target.value }))}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+        <p className="text-xs text-gray-500 mt-1">Abra a pasta no Drive e copie o ID da URL (a parte após /folders/).</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por imagem</label>
+        <input type="number" min="3" max="60" value={config.seconds_per_image || 8}
+          onChange={e => setConfig((p: any) => ({ ...p, seconds_per_image: Number(e.target.value) }))}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={config.shuffle || false}
+          onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))} />
+        <span className="text-sm text-gray-900 dark:text-white">Embaralhar imagens</span>
+      </label>
+      <button onClick={save} disabled={saving || !config.folder_id}
+        className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition">
+        {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
+      </button>
+    </div>
+  );
+};
+
+const AparelhosSmartConfigForm = () => (
+  <div className="space-y-4">
+    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">Como funciona</h4>
+      <ul className="space-y-1 text-sm text-green-800 dark:text-green-200">
+        <li>✓ Lista e controla dispositivos Google Home por voz</li>
+        <li>✓ Suporta luzes, termostatos, ar condicionado, TVs e mais</li>
+        <li>✓ Requer conta Google com Smart Home ativado</li>
+      </ul>
+    </div>
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">Comandos de voz</h5>
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+        <li>• "Aparelhos smart" — abre o painel</li>
+        <li>• "Ligar luz da sala"</li>
+        <li>• "Desligar ar condicionado"</li>
+        <li>• "Smart home"</li>
+      </ul>
+    </div>
+    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
+      <p className="text-xs text-yellow-800 dark:text-yellow-200">
+        ⚠️ A conta Google conectada precisa ter o <strong>Device Access</strong> ativado e dispositivos Google Home vinculados.
+      </p>
+    </div>
+  </div>
+);
+
 const GoogleEmailForm = ({ companyId }: any) => {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -2528,7 +2743,10 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'impressao_local': NativeConfigForm,
   'impressao_remota': PrintNodeConfigForm,
   'impressao_recibo': ThermalConfigForm,
-
+  'playlist': PlaylistConfigForm,
+  'porta_retrato': PortaRetratoConfigForm,
+  'painel_ofertas': PainelOfertasConfigForm,
+  'aparelhos_smart': AparelhosSmartConfigForm,
 };
 
 // ===== INTERFACE =====

@@ -25,7 +25,7 @@ import {
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
 import { getFunctionByKey } from '@/lib/functions-registry';
 import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogioMundial, handleAlarme } from './utilitiesHandlers';
-import { handleWifiQRCode, handleCardapio, handleCadastro, handleNossoQRCode } from './companyHandlers';
+import { handleWifiQRCode, handleCardapio, handleCanalYoutube, handleCadastro, handleNossoQRCode } from './companyHandlers';
 
 // ── Interface de dependências ─────────────────────────────────
 // IMPORTANTE: setActiveModal é o único setter de modal necessário.
@@ -311,6 +311,16 @@ if (consultarEstoqueTriggers.some(t => lowerTranscript.includes(t))) {
     await registerFunctionUsage(companyId, 'cardapio', 1);
     return true;
   }
+
+  // ── Canal do YouTube ──
+const canalYoutubeTriggers = ['youtube', 'canal do youtube', 'canal youtube', 'nosso canal', 'ver canal', 'abrir youtube', 'inscrever', 'se inscreva', 'se inscrever'];
+if (canalYoutubeTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'canal_youtube');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  await handleCanalYoutube({ companyId, setIsProcessing, setActiveModal: deps.setActiveModal, playText });
+  await registerFunctionUsage(companyId, 'canal_youtube', 1);
+  return true;
+}
 
   // ── Nosso QR Code ──
   const qrcodeTriggers = ['nosso qr code', 'nosso qrcode', 'meu qr code', 'meu qrcode', 'mostrar qr code', 'mostrar qrcode'];

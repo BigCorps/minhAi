@@ -781,6 +781,11 @@ case 'aparelhos_smart':
           await handleWifiQRCode({ companyId, setIsProcessing, setActiveModal, playText });
           break;
 
+        case 'canal_youtube':
+          await stopGoogleSpeech();
+          await handleCanalYoutube({ companyId, setIsProcessing, setActiveModal, playText });
+          break;
+
         case 'cardapio':
           await stopGoogleSpeech();
           await handleCardapio({ companyId, setIsProcessing, setActiveModal, playText });

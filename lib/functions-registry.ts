@@ -3363,6 +3363,73 @@ cardapio: {
     },
   },
 
+  canal_youtube: {
+  functionKey: 'canal_youtube',
+  functionName: 'Canal do YouTube',
+  category: 'video',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'youtube',
+    'canal do youtube',
+    'canal youtube',
+    'nosso canal',
+    'ver canal',
+    'abrir youtube',
+    'inscrever',
+    'se inscreva',
+    'se inscrever',
+  ],
+  examplePhrases: [
+    'Mostrar canal do YouTube',
+    'Abrir nosso canal',
+    'Como me inscrever no canal',
+  ],
+  requiresInput: false,
+  description: 'Exibe o canal do YouTube da empresa com QR Code, preview e botão de inscrição.',
+  shortDescription: 'Canal do YouTube com QR Code.',
+  icon: '🔴',
+  color: '#A52A2A',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('companies')
+        .select('youtube_channel_url, youtube_channel_name, youtube_channel_description, name')
+        .eq('id', companyId)
+        .single();
+
+      if (!data?.youtube_channel_url) {
+        await playText('O canal do YouTube ainda não foi configurado. Configure no painel.');
+        return false;
+      }
+
+      setActiveModal?.({
+        type: 'CanalYoutubeDisplay',
+        data: {
+          channelUrl: data.youtube_channel_url,
+          channelName: data.youtube_channel_name ?? data.name,
+          channelDescription: data.youtube_channel_description ?? '',
+        },
+      });
+
+      await playText(
+        data.youtube_channel_description
+          ? `Aqui está o nosso canal do YouTube. ${data.youtube_channel_description}`
+          : 'Aqui está o nosso canal do YouTube. Escaneie o QR Code ou clique para se inscrever.'
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Erro canal_youtube:', error);
+      return false;
+    }
+  },
+},
+
   // ──────────────────────────────────────────────────────────
   // IMPRESSÃO REMOTA (PrintNode) - 3 CRÉDITOS
   // ──────────────────────────────────────────────────────────

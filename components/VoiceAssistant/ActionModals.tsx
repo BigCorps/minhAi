@@ -63,7 +63,10 @@ import TocarMusicaDisplay from '@/components/assistant/TocarMusicaDisplay';
 import ImpressaoLocalDisplay from '@/components/assistant/ImpressaoLocalDisplay';
 import ImpressaoRemotaDisplay from '@/components/assistant/ImpressaoRemotaDisplay';
 import ImpressaoReciboDisplay from '@/components/assistant/ImpressaoReciboDisplay';
-
+import PlaylistDisplay from '@/components/assistant/PlaylistDisplay';
+import PortaRetratoDisplay from '@/components/assistant/PortaRetratoDisplay';
+import PainelOfertasDisplay from '@/components/assistant/PainelOfertasDisplay';
+import AparelhosSmartDisplay from '@/components/assistant/AparelhosSmartDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -126,6 +129,10 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ImpressaoLocalDisplay': ImpressaoLocalDisplay,
   'ImpressaoRemotaDisplay': ImpressaoRemotaDisplay,
   'ImpressaoReciboDisplay': ImpressaoReciboDisplay,
+  'PlaylistDisplay': PlaylistDisplay,
+  'PortaRetratoDisplay': PortaRetratoDisplay,
+  'PainelOfertasDisplay': PainelOfertasDisplay,
+  'AparelhosSmartDisplay': AparelhosSmartDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

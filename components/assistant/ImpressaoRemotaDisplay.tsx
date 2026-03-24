@@ -403,9 +403,6 @@ if (manualPaymentEnabled) {
                 <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Impressão Remota
                 </h2>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'}`}>
-                  PrintNode
-                </span>
               </div>
               <button onClick={onClose} className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
                 <X className="w-5 h-5" />

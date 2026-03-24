@@ -701,6 +701,26 @@ case 'tocar_musica':
   playText('Qual música você quer ouvir?').catch(() => {});
   break;
 
+case 'playlist':
+  setActiveModal({ type: 'PlaylistDisplay', data: { companyId } });
+  playText('Abrindo playlist...').catch(() => {});
+  break;
+
+case 'porta_retrato':
+  setActiveModal({ type: 'PortaRetratoDisplay', data: { companyId } });
+  playText('Abrindo porta retrato...').catch(() => {});
+  break;
+
+case 'painel_ofertas':
+  setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+  playText('Abrindo painel de ofertas...').catch(() => {});
+  break;
+
+case 'aparelhos_smart':
+  setActiveModal({ type: 'AparelhosSmartDisplay', data: { companyId, transcript: '' } });
+  playText('Abrindo controle de dispositivos...').catch(() => {});
+  break;
+
         case 'confirmar_presenca':
           setActiveModal({ type: 'ConfirmPresenceModal', data: { companyId } });
           playText('Vou buscar seu agendamento para confirmar presença.').catch(() => {});

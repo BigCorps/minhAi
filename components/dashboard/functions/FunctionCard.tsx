@@ -109,6 +109,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'porta_retrato',
   'painel_ofertas',
   'aparelhos_smart',
+  'canal_youtube',
   'tef_debito',
   'tef_credito'
 ];

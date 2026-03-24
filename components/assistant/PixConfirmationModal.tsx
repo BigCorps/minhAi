@@ -57,7 +57,7 @@ export default function PIXConfirmationModal({
           body: { transaction_id: transactionId },
         });
         if (!response.error && response.data?.success) {
-          showToast(`✅ Pagamento confirmado! Saldo: R$ ${response.data.new_balance.toFixed(2)}`, 'success');
+          showToast(`✅ Pagamento confirmado!`, 'success');
           clearInterval(interval);
           await new Promise((resolve) => setTimeout(resolve, 1500));
           await onConfirm();
@@ -96,7 +96,7 @@ export default function PIXConfirmationModal({
         return;
       }
 
-      showToast(`✅ Pagamento confirmado! Saldo: R$ ${data.new_balance.toFixed(2)}`, 'success');
+      showToast(`✅ Pagamento confirmado!`, 'success');
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await onConfirm();
     } catch {

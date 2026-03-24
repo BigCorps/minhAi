@@ -3319,37 +3319,35 @@ cardapio: {
     uiComponent: 'ImpressaoRemotaDisplay',
     edgeFunction: 'processar-impressao',
 
-    handler: async ({ playText, setActiveModal, companyId }) => {
-      const supabase = createClient();
+handler: async ({ playText, setActiveModal, companyId }) => {
+  const supabase = createClient();
 
-      // Verificar se PrintNode está configurado
-      const { data: company } = await supabase
-        .from('companies')
-        .select('printnode_api_key, printnode_printer_id')
-        .eq('id', companyId)
-        .single();
+  // ✅ Colunas corretas
+  const { data: company } = await supabase
+    .from('companies')
+    .select('printnode_computer_id, printnode_printer_id_bw')
+    .eq('id', companyId)
+    .single();
 
-      if (!company?.printnode_api_key || !company?.printnode_printer_id) {
-        await playText(
-          'A impressão remota não está configurada. Por favor, configure o PrintNode no painel administrativo.'
-        );
-        return false;
-      }
+  if (!company?.printnode_computer_id || !company?.printnode_printer_id_bw) {
+    await playText(
+      'A impressão remota não está configurada. Por favor, configure o PrintNode no painel administrativo.'
+    );
+    return false;
+  }
 
-      playText(
-        'Envie seu arquivo para imprimir automaticamente.'
-      );
+  playText('Envie seu arquivo para imprimir automaticamente.');
 
-      setActiveModal?.({
-        type: 'ImpressaoRemotaDisplay',
-        data: {
-          companyId,
-          functionKey: 'impressao_remota',
-        },
-      });
-
-      return true;
+  setActiveModal?.({
+    type: 'ImpressaoRemotaDisplay',
+    data: {
+      companyId,
+      functionKey: 'impressao_remota',
     },
+  });
+
+  return true;
+},
   },
 
   impressao_local: {

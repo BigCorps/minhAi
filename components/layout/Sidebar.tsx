@@ -30,7 +30,7 @@ const menuItems = [
   { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: Share2 },
   { href: '/dashboard/vendas',       label: 'Vendas',                           icon: ShoppingCart },
   { href: '/dashboard/producao',     label: 'Linha de Produção',                icon: ClipboardList },
-  { href: '/dashboard/cadastros',    label: 'Cadastros',                        icon: UserPlus },
+  { href: '/dashboard/cadastros',    label: 'Controle de Usuários',             icon: UserPlus },
   { href: '/dashboard/arquivos',     label: 'Arquivos e Cupons',                icon: FolderOpen },
 ];
 

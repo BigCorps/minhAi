@@ -212,7 +212,7 @@ export default function ImpressaoRemotaDisplay({ data, onClose, theme = 'dark', 
 
 if (manualPaymentEnabled) {
   setStage('printing');
-  await processPrint(job.id, filePath, 'manual');
+  await processPrint(job.id, 'manual');
 } else {
   setStage('payment');
   await generatePix(job.id, totalAmount);

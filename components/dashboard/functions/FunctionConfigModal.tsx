@@ -2009,6 +2009,7 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
 // ============================================================
  
 const PrintNodeConfigForm = ({ settings, onChange }: any) => {
+  const supabase = createClient();
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [printersList, setPrintersList] = useState<any[]>([]);

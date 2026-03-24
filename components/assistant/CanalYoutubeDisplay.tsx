@@ -35,6 +35,14 @@ export default function CanalYoutubeDisplay({
 
   const { channelUrl, channelName, channelDescription } = data;
 
+  // Garante URL completa para microlink e QR Code
+  const normalizeUrl = (url: string) => {
+    if (!url) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `https://${url}`;
+  };
+  const fullChannelUrl = normalizeUrl(channelUrl);
+
   const normalize = (text: string) =>
     text
       .toLowerCase()
@@ -51,12 +59,12 @@ export default function CanalYoutubeDisplay({
   useModalVoiceClose(handleManualClose);
 
   useEffect(() => {
-    if (channelUrl) {
+    if (fullChannelUrl) {
       const size = 300;
-      const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(channelUrl)}&margin=10`;
+      const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(fullChannelUrl)}&margin=10`;
       setQrCodeUrl(url);
     }
-  }, [channelUrl]);
+  }, [fullChannelUrl]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -112,7 +120,7 @@ export default function CanalYoutubeDisplay({
 
   // Preview via screenshot — mesmo padrão do cardápio (sem embed de vídeo)
   const previewUrl = !previewError
-    ? `https://api.microlink.io?url=${encodeURIComponent(channelUrl)}&screenshot=true&meta=false&embed=screenshot.url`
+    ? `https://api.microlink.io?url=${encodeURIComponent(fullChannelUrl)}&screenshot=true&meta=false&embed=screenshot.url`
     : null;
 
   const isDark = theme === 'dark';
@@ -215,6 +223,7 @@ export default function CanalYoutubeDisplay({
 
               {/* Voice Hint */}
               <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+                <span>🎤</span>
                 <span>Diga <strong>"abrir"</strong>, <strong>"inscrever"</strong>, <strong>"copiar"</strong> ou <strong>"fechar"</strong></span>
               </div>
             </div>
@@ -288,6 +297,7 @@ export default function CanalYoutubeDisplay({
 
             {/* Voice Hint mobile */}
             <div className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${isDark ? 'bg-slate-700/50 text-slate-400' : 'bg-gray-50 text-gray-500'}`}>
+              <span>🎤</span>
               <span>Diga <strong>"abrir"</strong>, <strong>"inscrever"</strong>, <strong>"copiar"</strong> ou <strong>"fechar"</strong></span>
             </div>
           </div>

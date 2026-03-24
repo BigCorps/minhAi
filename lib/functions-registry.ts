@@ -1921,6 +1921,94 @@ ver_agenda: {
   },
 },
 
+playlist: {
+  functionKey: 'playlist',
+  functionName: 'Playlist',
+  category: 'video',
+  responseType: 'voice+modal',
+  voiceTriggers: ['playlist', 'tocar playlist', 'minha playlist', 'abrir playlist', 'tocar lista', 'lista de videos', 'lista de músicas', 'lista de musicas'],
+  examplePhrases: ['Tocar playlist', 'Minha playlist de músicas', 'Abrir lista de vídeos'],
+  edgeFunction: 'playlist-items',
+  requiresInput: false,
+  description: 'Reproduz playlists do YouTube configuradas com navegação por voz.',
+  shortDescription: 'Toca playlists de vídeo ou música.',
+  icon: '📚', color: '#FF0000',
+  saveToHistory: true, creditsPerUse: 1, requiresPayment: false, isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'PlaylistDisplay', data: { companyId } });
+      playText('Abrindo playlist...').catch(() => {});
+      return true;
+    } catch { return false; }
+  },
+},
+
+porta_retrato: {
+  functionKey: 'porta_retrato',
+  functionName: 'Porta Retrato',
+  category: 'video',
+  responseType: 'voice+modal',
+  voiceTriggers: ['porta retrato', 'mostrar fotos', 'album de fotos', 'álbum de fotos', 'slideshow', 'mostrar álbum', 'mostrar album', 'exibir fotos'],
+  examplePhrases: ['Mostrar porta retrato', 'Abrir álbum de fotos', 'Slideshow de fotos'],
+  edgeFunction: 'google-photos-list',
+  requiresInput: false,
+  description: 'Exibe slideshow de fotos do Google Photos com música opcional.',
+  shortDescription: 'Slideshow de fotos do Google Photos.',
+  icon: '🖼️', color: '#E91E63',
+  saveToHistory: true, creditsPerUse: 1, requiresPayment: false, isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'PortaRetratoDisplay', data: { companyId } });
+      playText('Abrindo porta retrato...').catch(() => {});
+      return true;
+    } catch { return false; }
+  },
+},
+
+painel_ofertas: {
+  functionKey: 'painel_ofertas',
+  functionName: 'Painel de Ofertas',
+  category: 'information',
+  responseType: 'voice+modal',
+  voiceTriggers: ['painel de ofertas', 'mostrar ofertas', 'promoções', 'promocoes', 'ofertas', 'ver ofertas', 'mostrar promoções', 'mostrar promocoes', 'painel ofertas'],
+  examplePhrases: ['Mostrar ofertas', 'Ver promoções', 'Abrir painel de ofertas'],
+  edgeFunction: 'google-drive-images',
+  requiresInput: false,
+  description: 'Exibe imagens de ofertas do Google Drive em slideshow fullscreen.',
+  shortDescription: 'Slideshow de ofertas do Google Drive.',
+  icon: '📢', color: '#FF6F00',
+  saveToHistory: true, creditsPerUse: 1, requiresPayment: false, isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'PainelOfertasDisplay', data: { companyId } });
+      playText('Abrindo painel de ofertas...').catch(() => {});
+      return true;
+    } catch { return false; }
+  },
+},
+
+aparelhos_smart: {
+  functionKey: 'aparelhos_smart',
+  functionName: 'Aparelhos Smart',
+  category: 'utylities',
+  responseType: 'voice+modal',
+  voiceTriggers: ['aparelhos smart', 'smart home', 'dispositivos smart', 'ligar luz', 'apagar luz', 'ligar ar', 'desligar ar', 'controlar dispositivos', 'meus aparelhos', 'aparelhos inteligentes', 'ligar televisão', 'ligar televisao', 'desligar televisão', 'desligar televisao'],
+  examplePhrases: ['Ligar a luz', 'Desligar o ar condicionado', 'Mostrar aparelhos smart'],
+  edgeFunction: 'smart-home-devices',
+  requiresInput: false,
+  description: 'Controla dispositivos Google Smart Home por voz.',
+  shortDescription: 'Controla dispositivos Smart Home por voz.',
+  icon: '🏠', color: '#4CAF50',
+  saveToHistory: true, creditsPerUse: 1, requiresPayment: false, isPremium: false,
+  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'AparelhosSmartDisplay', data: { companyId, transcript } });
+      playText('Abrindo controle de dispositivos...').catch(() => {});
+      return true;
+    } catch { return false; }
+  },
+},
+  
 cadastro: {
   functionKey: 'cadastro',
   functionName: 'Cadastro',

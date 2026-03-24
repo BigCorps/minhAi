@@ -2022,25 +2022,49 @@ const PrintNodeConfigForm = ({ settings, onChange }: any) => {
   const printerIdBW = settings.printnode_printer_id_bw ?? '';
   const printerIdColor = settings.printnode_printer_id_color ?? '';
  
-  const handleTestConnection = async () => {
-    if (!computerId) { alert('Por favor, insira o Computer ID primeiro'); setConnectionStatus('error'); return; }
-    setTestingConnection(true);
-    setConnectionStatus('idle');
-    setPrintersList([]);
-    setComputerInfo(null);
-    try {
-      const response = await fetch('/app/api/edge/test-printnode-computer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ computerId }) });
-      if (!response.ok) throw new Error('Erro ao conectar com PrintNode');
-      const data = await response.json();
-      if (data.success) { setConnectionStatus('success'); setComputerInfo(data.computer); setPrintersList(data.printers || []); }
-      else { setConnectionStatus('error'); alert(data.error || 'Computer ID não encontrado'); }
-    } catch (error: any) {
+const handleTestConnection = async () => {
+  if (!computerId) {
+    alert('Por favor, insira o Computer ID primeiro');
+    setConnectionStatus('error');
+    return;
+  }
+
+  setTestingConnection(true);
+  setConnectionStatus('idle');
+  setPrintersList([]);
+  setComputerInfo(null);
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const response = await fetch('/api/edge/test-printnode-computer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({ computerId }),
+    });
+
+    if (!response.ok) throw new Error('Erro ao conectar com PrintNode');
+
+    const data = await response.json();
+
+    if (data.success) {
+      setConnectionStatus('success');
+      setComputerInfo(data.computer);
+      setPrintersList(data.printers || []);
+    } else {
       setConnectionStatus('error');
-      alert('Erro ao testar conexão: ' + error.message);
-    } finally {
-      setTestingConnection(false);
+      alert(data.error || 'Computer ID não encontrado');
     }
-  };
+  } catch (error: any) {
+    setConnectionStatus('error');
+    alert('Erro ao testar conexão: ' + error.message);
+  } finally {
+    setTestingConnection(false);
+  }
+};
  
   return (
     <div className="space-y-4">

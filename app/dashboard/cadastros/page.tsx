@@ -164,10 +164,10 @@ function CadastrosPageContent() {
               {/* Lado esquerdo */}
               <div className="flex-1 min-w-0">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 whitespace-nowrap">
-                  Cadastros
+                  Controle de Usuários
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Registros coletados pelo assistente {selectedAssistantName} .
+                  Controle Cadastros, Chamadas em Fila de Atendimento, Registro de Ponto e Presença coletados pelo assistente {selectedAssistantName} .
                 </p>
               </div>
             </div>

@@ -188,7 +188,7 @@ export default function ImpressaoLocalDisplay({ data, onClose, theme = 'dark', p
 
 if (manualPaymentEnabled) {
   setStage('printing');
-  await processPrint(job.id, filePath, 'manual');
+  await processPrint(job.id, 'manual');
 } else {
   setStage('payment');
   await generatePix(job.id, totalAmount);

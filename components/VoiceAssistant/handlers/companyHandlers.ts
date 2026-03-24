@@ -128,6 +128,39 @@ export async function handleCadastro({
   }
 }
 
+export async function handleCanalYoutube({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
+  try {
+    setIsProcessing(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('companies')
+      .select('youtube_channel_url, youtube_channel_name, youtube_channel_description, name')
+      .eq('id', companyId)
+      .single();
+    if (!data?.youtube_channel_url) {
+      await playText('O canal do YouTube ainda não foi configurado. Configure no painel.');
+      return;
+    }
+    setActiveModal({
+      type: 'CanalYoutubeDisplay',
+      data: {
+        channelUrl: data.youtube_channel_url,
+        channelName: data.youtube_channel_name ?? data.name,
+        channelDescription: data.youtube_channel_description ?? '',
+      },
+    });
+    playText(
+      data.youtube_channel_description
+        ? `Aqui está o nosso canal do YouTube. ${data.youtube_channel_description}`
+        : 'Aqui está o nosso canal do YouTube. Escaneie o QR Code ou clique para se inscrever.'
+    ).catch(() => {});
+  } catch {
+    await playText('Erro ao carregar o canal do YouTube. Tente novamente.');
+  } finally {
+    setIsProcessing(false);
+  }
+}
+
 export async function handleLerQRCode({ companyId, setIsProcessing, setActiveModal, playText }: CompanyHandlerDeps): Promise<void> {
   try {
     setIsProcessing(true);

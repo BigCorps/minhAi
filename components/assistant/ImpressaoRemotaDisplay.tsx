@@ -440,7 +440,7 @@ if (manualPaymentEnabled) {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-1.5">
-                        <span className="text-2xl">⚫</span>
+                        <span className="text-2xl">📄</span>
                         <span>Preto e Branco</span>
                         <span className={`text-xs ${printMode === 'bw' ? (isDark ? 'text-slate-300' : 'text-gray-700') : 'text-slate-500'}`}>
                           {priceBW.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/pág
@@ -464,7 +464,7 @@ if (manualPaymentEnabled) {
                       }`}
                     >
                       <div className="flex flex-col items-center gap-1.5">
-                        <span className="text-2xl">🌈</span>
+                        <span className="text-2xl">🖨️</span>
                         <span>Colorida</span>
                         <span className={`text-xs ${printMode === 'color' ? 'text-white/90' : 'text-slate-500'}`}>
                           {priceColor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/pág

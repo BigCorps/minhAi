@@ -22,7 +22,7 @@ export default function SetupBanner() {
         <Sparkles className="w-4 h-4 flex-shrink-0 opacity-90 mt-0.5 sm:mt-0" />
         <p className="text-sm font-medium leading-snug text-center sm:text-left">
           <span className="font-bold">Crie agora</span>{' '}
-          seu assistente facilmente, informando o ramo e as características para a nossa IA, te recomendando as melhores funções, especialmente para suas necessidades.
+          seu assistente facilmente, informando as características para a IA, que te recomenda as melhores funções especialmente para suas necessidades.
         </p>
       </div>
 

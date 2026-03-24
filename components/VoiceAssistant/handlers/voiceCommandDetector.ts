@@ -668,6 +668,50 @@ if (tocarVideoTriggers.some(t => lowerTranscript.includes(t))) {
   return true;
 }
 
+// ── Playlist ──────────────────────────────────────────────
+const playlistTriggers = ['playlist', 'tocar playlist', 'minha playlist', 'abrir playlist', 'lista de videos', 'lista de músicas', 'lista de musicas'];
+if (playlistTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'playlist');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  setActiveModal({ type: 'PlaylistDisplay', data: { companyId } });
+  playText('Abrindo playlist...').catch(() => {});
+  await registerFunctionUsage(companyId, 'playlist', 1);
+  return true;
+}
+
+// ── Porta Retrato ─────────────────────────────────────────
+const portaRetratoTriggers = ['porta retrato', 'mostrar fotos', 'album de fotos', 'álbum de fotos', 'slideshow', 'mostrar álbum', 'mostrar album', 'exibir fotos'];
+if (portaRetratoTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'porta_retrato');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  setActiveModal({ type: 'PortaRetratoDisplay', data: { companyId } });
+  playText('Abrindo porta retrato...').catch(() => {});
+  await registerFunctionUsage(companyId, 'porta_retrato', 1);
+  return true;
+}
+
+// ── Painel de Ofertas ─────────────────────────────────────
+const painelOfertasTriggers = ['painel de ofertas', 'mostrar ofertas', 'promoções', 'promocoes', 'ver ofertas', 'mostrar promoções', 'mostrar promocoes', 'painel ofertas'];
+if (painelOfertasTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'painel_ofertas');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  setActiveModal({ type: 'PainelOfertasDisplay', data: { companyId } });
+  playText('Abrindo painel de ofertas...').catch(() => {});
+  await registerFunctionUsage(companyId, 'painel_ofertas', 1);
+  return true;
+}
+
+// ── Aparelhos Smart ───────────────────────────────────────
+const smartTriggers = ['aparelhos smart', 'smart home', 'dispositivos smart', 'ligar luz', 'apagar luz', 'ligar ar', 'desligar ar', 'controlar dispositivos', 'meus aparelhos', 'aparelhos inteligentes', 'ligar televisão', 'ligar televisao', 'desligar televisão', 'desligar televisao'];
+if (smartTriggers.some(t => lowerTranscript.includes(t))) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, 'aparelhos_smart');
+  if (!isEnabled) { await playText('Esta função está desativada.'); return true; }
+  setActiveModal({ type: 'AparelhosSmartDisplay', data: { companyId, transcript: correctedTranscript } });
+  playText('Abrindo controle de dispositivos...').catch(() => {});
+  await registerFunctionUsage(companyId, 'aparelhos_smart', 1);
+  return true;
+}
+  
   // ── PIX: Confirmar ────────────────────────────────────────
   const confirmTriggers = ['confirmar', 'confirmado', 'paguei', 'já paguei', 'pagamento confirmado'];
   if (confirmTriggers.some(t => lowerTranscript.includes(t))) {

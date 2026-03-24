@@ -104,6 +104,11 @@ const CONFIGURABLE_FUNCTIONS = [
   'fazer_pedido',
   'consultar_estoque',
   'cadastrar_produto',
+  'consultar_cep',
+  'playlist',
+  'porta_retrato',
+  'painel_ofertas',
+  'aparelhos_smart',
   'tef_debito',
   'tef_credito'
 ];

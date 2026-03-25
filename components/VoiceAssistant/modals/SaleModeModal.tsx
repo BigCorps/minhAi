@@ -63,9 +63,11 @@ function SaleModeInner({
   onMicUp,
   onTextMessage,
   isMaximized = false,
+  produtoInicial,
+  quantidadeInicial,  
 }: SaleModeModalProps) {
   const isDark = theme === 'dark';
-  const { totalItens } = useCart();
+  const { totalItens, addItem } = useCart();
 
   const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
@@ -126,21 +128,6 @@ function SaleModeInner({
   }, [onClose, showCheckout]);
 
   useEffect(() => {
-  if (!produtoInicial) return;
-
-  const qty = quantidadeInicial ?? produtoInicial._quantidade ?? 1;
-
-  // Adiciona o produto ao carrinho a quantidade correta de vezes
-  for (let i = 0; i < qty; i++) {
-    addItem(produtoInicial);
-  }
-
-  // Grava as opções no item do carrinho se houver
-  // (depende da implementação do useCart — ajustar conforme necessário)
-
-  // Vai direto para o carrinho após adicionar
-  setTimeout(() => setActiveStep('cart'), 200);
-}, []); // só na montagem
 
   const handleCheckout = useCallback(() => {
     if (totalItens === 0) return;

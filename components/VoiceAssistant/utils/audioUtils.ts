@@ -42,16 +42,23 @@ export function unlockAudio(audioUnlocked: React.MutableRefObject<boolean>): voi
 
 /**
  * Solicita permissão de microfone ao usuário.
+ * Retorna se a permissão foi concedida e se o dispositivo possui microfone.
  */
-export async function requestMicrophonePermission(): Promise<boolean> {
+export async function requestMicrophonePermission(): Promise<{ granted: boolean; hasMicrophone: boolean }> {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(track => track.stop());
     console.log('✅ Permissão de microfone concedida');
-    return true;
-  } catch (err) {
-    console.error('❌ Permissão negada:', err);
-    return false;
+    return { granted: true, hasMicrophone: true };
+  } catch (err: any) {
+    console.error('❌ Erro ao solicitar microfone:', err);
+    // Verifica se o erro é devido à ausência de dispositivo
+    if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      console.warn('⚠️ Nenhum microfone encontrado no dispositivo.');
+      return { granted: false, hasMicrophone: false };
+    }
+    // Outros erros (ex: NotAllowedError)
+    return { granted: false, hasMicrophone: true };
   }
 }
 

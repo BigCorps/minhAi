@@ -275,14 +275,15 @@ export async function criarPedido(input: CriarPedidoInput): Promise<Pedido> {
 
   if (pedidoErr) throw pedidoErr;
 
-  const itensInsert = input.itens.map((i) => ({
-    pedido_id: pedido.id,
-    produto_id: i.produto.id,
-    nome_snapshot: i.produto.nome,
-    preco_unitario: i.produto.preco_venda,
-    quantidade: i.quantidade,
-    subtotal: i.subtotal,
-  }));
+const itensInsert = input.itens.map((i) => ({
+  pedido_id:             pedido.id,
+  produto_id:            i.produto.id,
+  nome_snapshot:         i.produto.nome,
+  preco_unitario:        i.produto.preco_venda, // já inclui adicionais
+  quantidade:            i.quantidade,
+  subtotal:              i.subtotal,
+  opcoes_selecionadas:   (i.produto as any)._opcoes_selecionadas ?? [],
+}));
 
   const { error: itensErr } = await supabase
     .from('pedido_itens')

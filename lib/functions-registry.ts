@@ -4111,16 +4111,17 @@ ver_produtos: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'ver produtos', 'mostrar produtos', 'ver catalogo', 'ver catálogo',
-    'o que vocês vendem', 'o que voces vendem',
-    'tem algum produto', 'quero ver os produtos',
+    'me mostra', 'quero ver', 'detalhes do', 'detalhes de',
+    'o que é', 'como é', 'informações sobre', 'informacoes sobre',
+    'mostra o', 'mostra a', 'ver o produto', 'ver a',
+    'quanto custa o', 'quanto custa a', 'qual o preco do', 'qual o preço do',
   ],
 
   examplePhrases: [
-    'Ver produtos disponíveis',
-    'O que vocês vendem?',
-    'Quero ver o catálogo',
-    'Tem algum produto?',
+    'Me mostra a pizza de calabresa',
+    'Detalhes do hambúrguer artesanal',
+    'O que é o suco de laranja?',
+    'Quanto custa a pizza grande?',
   ],
 
   requiresInput: false,
@@ -4136,17 +4137,45 @@ ver_produtos: {
 
   handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     try {
-      const termoBusca = transcript
-        ?.replace(/ver produtos?|mostrar produtos?|ver catalogo|ver catálogo|o que vocês vendem|o que voces vendem|tem|você tem|voce tem/gi, '')
-        .trim() || undefined;
+      // Extrai o nome do produto removendo os triggers
+      const nomeProduto = (transcript ?? '')
+        .replace(/me mostra|quero ver|detalhes do|detalhes de|o que é|o que e|como é|como e|informações sobre|informacoes sobre|mostra o|mostra a|ver o produto|ver a|quanto custa o|quanto custa a|qual o preco do|qual o preço do/gi, '')
+        .replace(/\?/g, '')
+        .trim();
+
+      if (!nomeProduto || nomeProduto.length < 2) {
+        await playText('Qual produto você quer ver? Me diga o nome.');
+        return false;
+      }
+
+      const { buscarProdutoPorNome } = await import('@/lib/produtos-venda');
+      let produtos = await buscarProdutoPorNome(companyId, nomeProduto);
+
+      // Fallback com primeira palavra relevante
+      if (!produtos.length) {
+        const primeiraPalavra = nomeProduto.split(' ').find(w => w.length >= 3);
+        if (primeiraPalavra) {
+          produtos = await buscarProdutoPorNome(companyId, primeiraPalavra);
+        }
+      }
+
+      if (!produtos.length) {
+        await playText(`Não encontrei nenhum produto chamado ${nomeProduto}. Quer ver o cardápio completo?`);
+        return true;
+      }
+
+      // Usa o primeiro por display_order (já ordenado pela query)
+      const produto = produtos[0];
 
       setActiveModal?.({
-        type: 'SaleModeModal',
-        data: { companyId, termoBusca },
+        type: 'VerProdutoDisplay',
+        data: { companyId, produto },
       });
-      await playText(termoBusca ? `Buscando ${termoBusca}...` : 'Abrindo catálogo de produtos.');
+
       return true;
-    } catch {
+    } catch (err) {
+      console.error('Erro ver_produto:', err);
+      await playText('Não consegui buscar o produto. Tente novamente.');
       return false;
     }
   },

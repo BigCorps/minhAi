@@ -35,7 +35,7 @@ import ImportarCSVModal from '@/components/dashboard/vendas/ImportarCSVModal';
 
 // ─── Tipos locais ─────────────────────────────────────────────────────────────
 
-type Aba = 'visao_geral' | 'produtos' | 'pedidos';
+type Aba = 'visao_geral' | 'produtos' | 'pedidos' | 'pagamentos';
 
 type StatusPedido = Pedido['status'] | 'todos';
 
@@ -1493,6 +1493,330 @@ function AbaPedidos({ companyId }: { companyId: string }) {
   );
 }
 
+// ─── Aba: Pagamentos ──────────────────────────────────────────────────────────
+
+function AbaPagamentos({ companyId }: { companyId: string }) {
+  const supabase = createClient();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<Record<string, any>>({});
+  const [salvando, setSalvando] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('companies')
+        .select('receiving_pix_key, infinitepay_handle, mp_access_token, mp_terminal_id')
+        .eq('id', companyId)
+        .single();
+      setConfig(data ?? {});
+      setLoading(false);
+    }
+    load();
+  }, [companyId]);
+
+  const [ativados, setAtivados] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    async function loadAtivados() {
+      const metodos = ['pix_generate', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
+      const { data } = await supabase
+        .from('company_function_settings')
+        .select('function_key, is_enabled')
+        .eq('company_id', companyId)
+        .in('function_key', metodos);
+      const map: Record<string, boolean> = {};
+      (data ?? []).forEach((r: any) => { map[r.function_key] = r.is_enabled; });
+      setAtivados(map);
+    }
+    loadAtivados();
+  }, [companyId]);
+
+  async function toggleAtivado(functionKey: string, atual: boolean) {
+    setSalvando(functionKey);
+    await supabase
+      .from('company_function_settings')
+      .update({ is_enabled: !atual })
+      .eq('company_id', companyId)
+      .eq('function_key', functionKey);
+    setAtivados(prev => ({ ...prev, [functionKey]: !atual }));
+    setSalvando(null);
+  }
+
+  const metodos = [
+    {
+      grupo: 'PIX',
+      cor: 'emerald',
+      corHex: '#00b894',
+      icone: (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+          <path d="M6.5 3.5L12 9l5.5-5.5M12 9V15M6.5 20.5L12 15l5.5 5.5"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+      funcoes: [
+        {
+          key: 'pix_generate',
+          label: 'PIX (Banco Inter)',
+          descricao: 'QR Code PIX gerado automaticamente via API',
+          configurado: !!config.receiving_pix_key,
+          pendencia: !config.receiving_pix_key ? 'Configure a Chave PIX nas funções' : null,
+          destino: '/dashboard/functions',
+        },
+      ],
+    },
+    {
+      grupo: 'InfinitePay (NFC)',
+      cor: 'violet',
+      corHex: '#7c3aed',
+      icone: (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M12 18.5A6.5 6.5 0 1 0 12 5.5a6.5 6.5 0 0 0 0 13zm0-4a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
+        </svg>
+      ),
+      funcoes: [
+        {
+          key: 'nfc_debito',
+          label: 'NFC Débito',
+          descricao: 'Cartão de débito por aproximação',
+          configurado: !!config.infinitepay_handle,
+          pendencia: !config.infinitepay_handle ? 'Configure o Token InfinitePay nas funções' : null,
+          destino: '/dashboard/functions',
+        },
+        {
+          key: 'nfc_credito',
+          label: 'NFC Crédito',
+          descricao: 'Cartão de crédito por aproximação',
+          configurado: !!config.infinitepay_handle,
+          pendencia: !config.infinitepay_handle ? 'Configure o Token InfinitePay nas funções' : null,
+          destino: '/dashboard/functions',
+        },
+      ],
+    },
+    {
+      grupo: 'Mercado Pago Point (TEF)',
+      cor: 'blue',
+      corHex: '#2563eb',
+      icone: (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      ),
+      funcoes: [
+        {
+          key: 'tef_debito',
+          label: 'TEF Débito',
+          descricao: 'Maquininha Mercado Pago Point — débito',
+          configurado: !!(config.mp_access_token && config.mp_terminal_id),
+          pendencia: !config.mp_access_token
+            ? 'Configure o Access Token do Mercado Pago nas funções'
+            : !config.mp_terminal_id
+              ? 'Configure o Terminal ID da maquininha nas funções'
+              : null,
+          destino: '/dashboard/functions',
+        },
+        {
+          key: 'tef_credito',
+          label: 'TEF Crédito',
+          descricao: 'Maquininha Mercado Pago Point — crédito e parcelado',
+          configurado: !!(config.mp_access_token && config.mp_terminal_id),
+          pendencia: !config.mp_access_token
+            ? 'Configure o Access Token do Mercado Pago nas funções'
+            : !config.mp_terminal_id
+              ? 'Configure o Terminal ID da maquininha nas funções'
+              : null,
+          destino: '/dashboard/functions',
+        },
+      ],
+    },
+    {
+      grupo: 'Dinheiro',
+      cor: 'gray',
+      corHex: '#6b7280',
+      icone: (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+      funcoes: [
+        {
+          key: 'dinheiro',
+          label: 'Dinheiro',
+          descricao: 'Pagamento em espécie — sempre disponível, sem configuração',
+          configurado: true,
+          pendencia: null,
+          destino: null,
+        },
+      ],
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  const totalConfigurados = metodos
+    .flatMap(g => g.funcoes)
+    .filter(f => f.configurado).length;
+  const totalFuncoes = metodos.flatMap(g => g.funcoes).length;
+
+  return (
+    <div className="space-y-6">
+
+      {/* Resumo */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Métodos disponíveis', valor: totalFuncoes, cor: 'text-gray-900 dark:text-white' },
+          { label: 'Configurados', valor: totalConfigurados, cor: 'text-emerald-600 dark:text-emerald-400' },
+          { label: 'Pendentes', valor: totalFuncoes - totalConfigurados, cor: 'text-amber-600 dark:text-amber-400' },
+          {
+            label: 'Ativos no modo venda',
+            valor: Object.values(ativados).filter(Boolean).length,
+            cor: 'text-blue-600 dark:text-blue-400',
+          },
+        ].map(card => (
+          <div key={card.label}
+            className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-gray-100 dark:border-white/5 shadow-sm">
+            <p className={`text-2xl font-bold ${card.cor}`}>{card.valor}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{card.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Nota explicativa */}
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+        <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-700 dark:text-blue-300">
+          O toggle <strong>Ativo no modo venda</strong> controla se o método aparece como opção de pagamento
+          quando o cliente finaliza o pedido. Um método só pode ser ativado se estiver configurado.
+        </p>
+      </div>
+
+      {/* Grupos de métodos */}
+      {metodos.map(grupo => (
+        <div key={grupo.grupo}
+          className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+
+          {/* Header do grupo */}
+          <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/3">
+            <div style={{ color: grupo.corHex }}>
+              {grupo.icone}
+            </div>
+            <h3 className="font-semibold text-sm text-gray-900 dark:text-white">{grupo.grupo}</h3>
+          </div>
+
+          {/* Funções do grupo */}
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
+            {grupo.funcoes.map(funcao => {
+              const ativo = ativados[funcao.key] ?? false;
+              const podeAtivar = funcao.configurado;
+              const isToggling = salvando === funcao.key;
+
+              return (
+                <div key={funcao.key} className="flex items-center gap-4 px-5 py-4">
+
+                  {/* Status configurado */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    funcao.configurado
+                      ? 'bg-emerald-100 dark:bg-emerald-500/10'
+                      : 'bg-amber-100 dark:bg-amber-500/10'
+                  }`}>
+                    {funcao.configurado ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-sm text-gray-900 dark:text-white">
+                        {funcao.label}
+                      </p>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        funcao.configurado
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                      }`}>
+                        {funcao.configurado ? 'configurado' : 'pendente'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      {funcao.descricao}
+                    </p>
+                    {funcao.pendencia && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                        <span>⚠</span>
+                        {funcao.pendencia}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+
+                    {/* Botão configurar (se pendente e tiver destino) */}
+                    {!funcao.configurado && funcao.destino && (
+                      <button
+                        onClick={() => router.push(funcao.destino!)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition whitespace-nowrap"
+                      >
+                        Configurar
+                      </button>
+                    )}
+
+                    {/* Toggle ativo — só para métodos reais (não dinheiro) */}
+                    {funcao.key !== 'dinheiro' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
+                          {ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={!podeAtivar || isToggling}
+                          onClick={() => toggleAtivado(funcao.key, ativo)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none
+                            disabled:opacity-40 disabled:cursor-not-allowed ${
+                            ativo ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600'
+                          }`}
+                        >
+                          {isToggling ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
+                          ) : (
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              ativo ? 'translate-x-6' : 'translate-x-1'
+                            }`} />
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Dinheiro — sempre ativo */}
+                    {funcao.key === 'dinheiro' && (
+                      <span className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400">
+                        Sempre disponível
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 function VendasPageContent() {
@@ -1503,6 +1827,7 @@ function VendasPageContent() {
     { key: 'visao_geral', label: 'Visão Geral', icon: BarChart2 },
     { key: 'produtos',    label: 'Produtos',    icon: Package },
     { key: 'pedidos',     label: 'Pedidos',     icon: ClipboardList },
+    { key: 'pagamentos',  label: 'Pagamentos',  icon: ShoppingCart },
   ];
 
   return (
@@ -1568,6 +1893,7 @@ function VendasPageContent() {
                   )}
                   {aba === 'produtos' && <AbaProducts companyId={companyId} />}
                   {aba === 'pedidos' && <AbaPedidos companyId={companyId} />}
+                  {aba === 'pagamentos' && <AbaPagamentos companyId={companyId} />}
                 </div>
               </div>
             </>

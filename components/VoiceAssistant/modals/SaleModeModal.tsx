@@ -37,6 +37,9 @@ export interface SaleModeModalProps {
   onMicUp?: () => void;
   onTextMessage?: (msg: string) => Promise<void>;
   isMaximized?: boolean;
+  produtoInicial?:    ProdutoVenda & { _opcoes_selecionadas?: any[]; _quantidade?: number };
+  quantidadeInicial?: number;
+  opcoesIniciais?:   any[];
 }
 
 function getIsPortrait() {
@@ -121,6 +124,23 @@ function SaleModeInner({
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, showCheckout]);
+
+  useEffect(() => {
+  if (!produtoInicial) return;
+
+  const qty = quantidadeInicial ?? produtoInicial._quantidade ?? 1;
+
+  // Adiciona o produto ao carrinho a quantidade correta de vezes
+  for (let i = 0; i < qty; i++) {
+    addItem(produtoInicial);
+  }
+
+  // Grava as opções no item do carrinho se houver
+  // (depende da implementação do useCart — ajustar conforme necessário)
+
+  // Vai direto para o carrinho após adicionar
+  setTimeout(() => setActiveStep('cart'), 200);
+}, []); // só na montagem
 
   const handleCheckout = useCallback(() => {
     if (totalItens === 0) return;

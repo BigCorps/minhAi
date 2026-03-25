@@ -1546,7 +1546,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
 
   const metodos = [
     {
-      grupo: 'PIX',
+      grupo: 'PIX (Recebimentos)',
       cor: 'emerald',
       corHex: '#00b894',
       icone: (
@@ -1558,7 +1558,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       funcoes: [
         {
           key: 'pix_generate',
-          label: 'PIX (Direto para os seus Recebimentos do seu Perfil)',
+          label: 'PIX (minhAi)',
           descricao: 'QR Code PIX gerado automaticamente via API',
           configurado: !!config.receiving_pix_key,
           pendencia: !config.receiving_pix_key ? 'Configure a Chave PIX nas funções' : null,

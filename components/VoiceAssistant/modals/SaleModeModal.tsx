@@ -127,7 +127,15 @@ function SaleModeInner({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, showCheckout]);
 
-  useEffect(() => {
+useEffect(() => {
+  if (!produtoInicial) return;
+  const qty = quantidadeInicial ?? produtoInicial._quantidade ?? 1;
+  for (let i = 0; i < qty; i++) {
+    addItem(produtoInicial as any);
+  }
+  // Vai direto para o checkout após adicionar
+  setTimeout(() => setShowCheckout(false), 100); // garante que está no carrinho
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCheckout = useCallback(() => {
     if (totalItens === 0) return;

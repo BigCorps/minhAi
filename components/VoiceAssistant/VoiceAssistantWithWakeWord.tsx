@@ -1099,6 +1099,9 @@ case 'modo_venda':
       const textBlob = new Blob([questionText], { type: 'text/plain' });
       formData.append('audio', textBlob, 'question.txt');
       formData.append('companyId', companyId);
+      if (activeModal?.type === 'SaleModeModal') {
+        formData.append('saleMode', 'true');
+      }
       formData.append('directQuestion', questionText);
       if (sessionId) formData.append('sessionId', sessionId);
 

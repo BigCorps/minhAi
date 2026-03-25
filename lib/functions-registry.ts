@@ -4360,6 +4360,7 @@ handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     return true;
   }
 },
+},
 
 cadastrar_produto: {
   functionKey: 'cadastrar_produto',

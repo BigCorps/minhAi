@@ -75,7 +75,7 @@ export default function PortaRetratoDisplay({
 
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-photos-list`,
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-images`,
           {
             method: 'POST',
             headers: {

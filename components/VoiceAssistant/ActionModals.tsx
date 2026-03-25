@@ -59,6 +59,7 @@ import ClimaTempoDisplay from '@/components/assistant/ClimaTempoDisplay';
 import TocarVideoDisplay from '@/components/assistant/TocarVideoDisplay';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 import CadastrarProdutoDisplay from '@/components/assistant/CadastrarProdutoDisplay';
+import VerProdutoDisplay from '@/components/assistant/VerProdutoDisplay';
 import TocarMusicaDisplay from '@/components/assistant/TocarMusicaDisplay';
 import ImpressaoLocalDisplay from '@/components/assistant/ImpressaoLocalDisplay';
 import ImpressaoRemotaDisplay from '@/components/assistant/ImpressaoRemotaDisplay';
@@ -150,6 +151,47 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     onMicUp={data.onMicUp}
     onTextMessage={data.onTextMessage}
     isMaximized={data.isMaximized}
+  />
+),
+'VerProdutoDisplay': ({ data, onClose, theme, playText }: any) => (
+  <VerProdutoDisplay
+    data={data}
+    onClose={onClose}
+    theme={theme}
+    playText={playText}
+
+    // PIX direto: gera cobrança com o produto sem passar pelo carrinho
+    onComprarPix={(produto, opcoes, totalAdicional) => {
+      onClose();
+      // Dispara o modal PIX com o valor total (produto + adicionais) × quantidade
+      const quantidade = (produto as any)._quantidade ?? 1;
+      const valorCents = Math.round(produto.preco_venda * quantidade * 100);
+      window.dispatchEvent(new CustomEvent('verProdutoPix', {
+        detail: {
+          companyId: data.companyId,
+          produto,
+          opcoes,
+          quantidade,
+          valorCents,
+        },
+      }));
+    }}
+
+    // Carrinho: abre SaleModeModal com produto pré-adicionado
+    onAdicionarCarrinho={(produto, opcoes, totalAdicional) => {
+      onClose();
+      const quantidade = (produto as any)._quantidade ?? 1;
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+          detail: {
+            functionKey: 'modo_venda',
+            produtoInicial: produto,
+            quantidadeInicial: quantidade,
+            opcoesIniciais: opcoes,
+          },
+        }));
+      }, 150);
+    }}
   />
 ),
 'CadastrarProdutoDisplay': ({ data, onClose, theme, playText }: any) => (

@@ -1,5 +1,5 @@
 // components/VoiceAssistant/modals/SaleModeModal/CheckoutFlow.tsx
-// v3 — layout PIX 2 colunas sem scroll, auto-check com delay 30s igual ao PixLinkPage
+// v4 — dinheiro controlado pelo banco via prop metodosAtivos
 
 'use client';
 
@@ -22,6 +22,10 @@ interface CheckoutFlowProps {
   theme: 'dark' | 'light';
   onClose: () => void;
   playText?: (text: string) => Promise<void>;
+  /** Chaves de métodos ativos vindas do banco (company_function_settings).
+   *  Ex: ['pix_generate', 'tef_debito', 'tef_credito', 'dinheiro']
+   *  Se undefined, exibe todos (comportamento legado). */
+  metodosAtivos?: string[];
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -44,7 +48,7 @@ function formatTime(s: number) {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-export default function CheckoutFlow({ companyId, theme, onClose, playText }: CheckoutFlowProps) {
+export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos }: CheckoutFlowProps) {
   const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
 
@@ -94,43 +98,42 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText }: Ch
   const [autoChecking, setAutoChecking] = useState(false);
   const pixTimeLeft = usePixTimer(pixExpiresAt);
 
-useEffect(() => {
-  if (!pixTransactionId) return;
-  const delay = setTimeout(() => setAutoChecking(true), 30_000);
-  return () => clearTimeout(delay);
-}, [pixTransactionId]);
+  useEffect(() => {
+    if (!pixTransactionId) return;
+    const delay = setTimeout(() => setAutoChecking(true), 30_000);
+    return () => clearTimeout(delay);
+  }, [pixTransactionId]);
 
-useEffect(() => {
-  if (!autoChecking || !pixTransactionId || !pedidoId) return;
-  const supabase = createClient();
+  useEffect(() => {
+    if (!autoChecking || !pixTransactionId || !pedidoId) return;
+    const supabase = createClient();
 
-  const interval = setInterval(async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: { transaction_id: pixTransactionId },
-      });
-      if (!error && data?.success) {
-        clearInterval(interval);
-        setAutoChecking(false);
-        setTotalConfirmado(total);
-        setStep('confirmado');
-        playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
-        clear();
-      }
-      // data?.success === false = PIX ainda não pago, continua tentando silenciosamente
-    } catch { /* erro pontual — continua tentando */ }
-  }, 5_000);
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('confirmar-pix-assistente', {
+          body: { transaction_id: pixTransactionId },
+        });
+        if (!error && data?.success) {
+          clearInterval(interval);
+          setAutoChecking(false);
+          setTotalConfirmado(total);
+          setStep('confirmado');
+          playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
+          clear();
+        }
+      } catch { /* erro pontual — continua tentando */ }
+    }, 5_000);
 
-  const timeout = setTimeout(() => {
-    clearInterval(interval);
-    setAutoChecking(false);
-  }, 10 * 60 * 1000);
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      setAutoChecking(false);
+    }, 10 * 60 * 1000);
 
-  return () => {
-    clearInterval(interval);
-    clearTimeout(timeout);
-  };
-}, [autoChecking, pixTransactionId, pedidoId, total, playText, clear]);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [autoChecking, pixTransactionId, pedidoId, total, playText, clear]);
 
   // Polling NFC / TEF
   useEffect(() => {
@@ -342,12 +345,31 @@ useEffect(() => {
 
   // ── STEP: PAGAMENTO ───────────────────────────────────────────────────────
   if (step === 'pagamento') {
-    const metodos: { key: MetodoPagamento; label: string; Icon: React.ElementType; desc: string }[] = [
-      { key: 'pix',      label: 'PIX',           Icon: Zap,        desc: 'QR Code instantâneo' },
-      { key: 'nfc',      label: 'Cartão NFC',     Icon: Smartphone, desc: 'Aproximar cartão' },
-      { key: 'tef',      label: 'TEF Maquininha', Icon: CreditCard, desc: 'Inserir na maquininha' },
-      { key: 'dinheiro', label: 'Dinheiro',       Icon: Banknote,   desc: 'Pagamento em espécie' },
+    // Mapeamento chave-do-banco → MetodoPagamento
+    // Um método aparece se metodosAtivos é undefined (legado) OU se alguma das
+    // suas chaves estiver presente no array.
+    const todosMétodos: {
+      key: MetodoPagamento;
+      label: string;
+      Icon: React.ElementType;
+      desc: string;
+      dbKeys: string[];
+    }[] = [
+      { key: 'pix',      label: 'PIX',           Icon: Zap,        desc: 'QR Code instantâneo',       dbKeys: ['pix_generate'] },
+      { key: 'nfc',      label: 'Cartão NFC',     Icon: Smartphone, desc: 'Aproximar cartão',          dbKeys: ['nfc_debito', 'nfc_credito'] },
+      { key: 'tef',      label: 'TEF Maquininha', Icon: CreditCard, desc: 'Inserir na maquininha',     dbKeys: ['tef_debito', 'tef_credito'] },
+      { key: 'dinheiro', label: 'Dinheiro',       Icon: Banknote,   desc: 'Pagamento em espécie',      dbKeys: ['dinheiro'] },
     ];
+
+    const metodosFiltrados = metodosAtivos === undefined
+      ? todosMétodos
+      : todosMétodos.filter(m => m.dbKeys.some(k => metodosAtivos.includes(k)));
+
+    // Garante que o método selecionado é válido; se não for, usa o primeiro disponível
+    const primeiroAtivo = metodosFiltrados[0]?.key ?? 'pix';
+    const metodoValido = metodosFiltrados.some(m => m.key === metodo) ? metodo : primeiroAtivo;
+    if (metodoValido !== metodo) setMetodo(metodoValido);
+
     return (
       <div className="w-full flex flex-col gap-4">
         <div>
@@ -355,7 +377,7 @@ useEffect(() => {
           <p className={`text-xs ${textMuted}`}>{formatarPreco(total)} · {itens.length} {itens.length === 1 ? 'item' : 'itens'}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          {metodos.map(m => (
+          {metodosFiltrados.map(m => (
             <button key={m.key} onClick={() => setMetodo(m.key)}
               className={`p-3 rounded-xl border-2 text-left transition-all ${
                 metodo === m.key

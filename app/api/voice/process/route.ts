@@ -221,6 +221,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userMessage = directQuestion || '';
+    const saleMode = formData.get('saleMode') === 'true';
 
     if (!userMessage) {
       const errorAudio = await synthesizeSpeech({
@@ -294,8 +295,17 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('🤖 Usando OpenAI GPT-4o-mini');
 
-      const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
-        ? company.orcamento_prompt
+const saleModeContext = saleMode
+  ? `\n\nCONTEXTO ATUAL: O cliente está visualizando o CARDÁPIO/LOJA VIRTUAL.
+Suas prioridades agora:
+1. Responda perguntas sobre produtos, preços e disponibilidade de forma direta.
+2. Se o cliente perguntar algo não relacionado a produtos, responda brevemente e redirecione: "Posso te ajudar a escolher algo do cardápio?"
+3. Respostas curtas — o cliente está no processo de compra.
+4. Se mencionar um produto, confirme se está disponível e informe o preço.`
+  : '';
+
+const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
+  ? company.orcamento_prompt
         : `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
 
 Regras:

@@ -347,21 +347,48 @@ const GoogleCalendarForm = ({ companyId }: any) => {
 
 const PlaylistConfigForm = ({ companyId }: any) => {
   const [playlists, setPlaylists] = useState<any[]>([]);
+  const [accountPlaylists, setAccountPlaylists] = useState<any[]>([]);
+  const [loadingAccount, setLoadingAccount] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState<'browse' | 'manual'>('browse');
   const supabase = createClient();
 
   useEffect(() => {
-    async function fetch() {
+    async function init() {
       setLoading(true);
-      const { data } = await supabase.from('company_function_settings').select('config')
+      const { data } = await supabase
+        .from('company_function_settings').select('config')
         .eq('company_id', companyId).eq('function_key', 'playlist').maybeSingle();
       setPlaylists(data?.config?.playlists || []);
       setLoading(false);
+      fetchAccountPlaylists();
     }
-    fetch();
+    init();
   }, [companyId]);
+
+  const fetchAccountPlaylists = async () => {
+    setLoadingAccount(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/playlist-items`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ action: 'list', company_id: companyId }),
+        }
+      );
+      const json = await res.json();
+      setAccountPlaylists(json.playlists || []);
+    } catch { setAccountPlaylists([]); }
+    finally { setLoadingAccount(false); }
+  };
+
+  const addFromAccount = (pl: any) => {
+    if (playlists.some((p: any) => p.id === pl.id)) return;
+    setPlaylists(prev => [...prev, { id: pl.id, name: pl.name, type: 'video' }]);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -371,66 +398,149 @@ const PlaylistConfigForm = ({ companyId }: any) => {
     setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
   };
 
-  if (loading) return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
+  if (loading) return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600" /></div>;
 
   return (
     <div className="space-y-4">
       <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
         <p className="text-sm text-red-800 dark:text-red-200">
-          Configure playlists públicas do YouTube. Cada playlist deve ter um link ou ID público.
+          Selecione playlists da sua conta YouTube ou adicione manualmente pelo ID/link.
         </p>
       </div>
-      {playlists.map((pl: any, idx: number) => (
-        <div key={idx} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10 space-y-2">
-          <input type="text" placeholder="Nome da playlist" value={pl.name || ''}
-            onChange={e => { const a = [...playlists]; a[idx].name = e.target.value; setPlaylists(a); }}
-            className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white" />
-          <input type="text" placeholder="ID ou link da playlist YouTube"
-            value={pl.id || ''} onChange={e => {
-              const a = [...playlists];
-              let val = e.target.value;
-              const m = val.match(/[?&]list=([^&]+)/);
-              a[idx].id = m ? m[1] : val;
-              setPlaylists(a);
-            }}
-            className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white" />
-          <div className="flex items-center justify-between">
-            <select value={pl.type || 'video'} onChange={e => { const a = [...playlists]; a[idx].type = e.target.value; setPlaylists(a); }}
-              className="px-3 py-1.5 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white">
-              <option value="video">Vídeo</option>
-              <option value="music">Música</option>
-            </select>
-            <button onClick={() => setPlaylists(playlists.filter((_: any, i: number) => i !== idx))}
-              className="text-xs text-red-500 hover:text-red-700">Remover</button>
+
+      {/* Abas */}
+      <div className="flex gap-2">
+        <button onClick={() => setMode('browse')} className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${mode === 'browse' ? 'bg-red-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>
+          Minhas Playlists
+        </button>
+        <button onClick={() => setMode('manual')} className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${mode === 'manual' ? 'bg-red-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>
+          Adicionar Manual
+        </button>
+      </div>
+
+      {/* Browse playlists da conta */}
+      {mode === 'browse' && (
+        <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Playlists da conta Google</span>
+            <button onClick={fetchAccountPlaylists} className="text-xs text-blue-500 hover:underline">Atualizar</button>
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            {loadingAccount ? (
+              <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500" /></div>
+            ) : accountPlaylists.length === 0 ? (
+              <p className="text-center py-6 text-sm text-gray-400">Nenhuma playlist encontrada na conta</p>
+            ) : (
+              accountPlaylists.map(pl => {
+                const added = playlists.some((p: any) => p.id === pl.id);
+                return (
+                  <div key={pl.id} className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                    {pl.thumbnail && <img src={pl.thumbnail} alt="" className="w-12 h-9 object-cover rounded flex-shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{pl.name}</p>
+                      <p className="text-xs text-gray-400">{pl.itemCount} itens</p>
+                    </div>
+                    <button
+                      onClick={() => addFromAccount(pl)}
+                      disabled={added}
+                      className={`text-xs px-2 py-1 rounded flex-shrink-0 transition ${added ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200'}`}
+                    >
+                      {added ? '✓ Adicionada' : '+ Adicionar'}
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
-      ))}
-      <button onClick={() => setPlaylists([...playlists, { name: '', id: '', type: 'video' }])}
-        className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-500 hover:border-red-400 hover:text-red-500 transition">
-        + Adicionar Playlist
-      </button>
-      <button onClick={save} disabled={saving}
+      )}
+
+      {/* Manual */}
+      {mode === 'manual' && (
+        <div className="space-y-2">
+          <input type="text" placeholder="Link ou ID da playlist YouTube"
+            className="w-full px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white"
+            id="manual-playlist-input"
+          />
+          <button
+            onClick={() => {
+              const input = document.getElementById('manual-playlist-input') as HTMLInputElement;
+              const val = input.value.trim();
+              if (!val) return;
+              const m = val.match(/[?&]list=([^&]+)/);
+              const id = m ? m[1] : val;
+              if (playlists.some((p: any) => p.id === id)) return;
+              setPlaylists(prev => [...prev, { id, name: id, type: 'video' }]);
+              input.value = '';
+            }}
+            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg font-medium transition"
+          >
+            Adicionar
+          </button>
+        </div>
+      )}
+
+      {/* Playlists selecionadas */}
+      {playlists.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Playlists configuradas ({playlists.length})</p>
+          {playlists.map((pl: any, idx: number) => (
+            <div key={idx} className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10">
+              <span className="text-sm flex-1 truncate text-gray-800 dark:text-gray-200">📋 {pl.name}</span>
+              <select value={pl.type || 'video'} onChange={e => { const a = [...playlists]; a[idx].type = e.target.value; setPlaylists(a); }}
+                className="text-xs px-2 py-1 border rounded dark:bg-slate-900 dark:border-white/10 dark:text-white">
+                <option value="video">Vídeo</option>
+                <option value="music">Música</option>
+              </select>
+              <button onClick={() => setPlaylists(playlists.filter((_: any, i: number) => i !== idx))}
+                className="text-red-400 hover:text-red-600 text-xs flex-shrink-0">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={save} disabled={saving || playlists.length === 0}
         className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold text-sm transition">
         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
       </button>
     </div>
   );
 };
-
 const PortaRetratoConfigForm = ({ companyId }: any) => {
   const [config, setConfig] = useState<any>({ album_id: '', seconds_per_photo: 5, transition: 'fade', shuffle: false });
+  const [albums, setAlbums] = useState<any[]>([]);
+  const [loadingAlbums, setLoadingAlbums] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
-    async function fetch() {
-      const { data } = await supabase.from('company_function_settings').select('config')
+    async function init() {
+      const { data } = await supabase
+        .from('company_function_settings').select('config')
         .eq('company_id', companyId).eq('function_key', 'porta_retrato').maybeSingle();
       if (data?.config) setConfig(data.config);
+      fetchAlbums();
     }
-    fetch();
+    init();
   }, [companyId]);
+
+  const fetchAlbums = async () => {
+    setLoadingAlbums(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-photos-list`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ action: 'albums', company_id: companyId }),
+        }
+      );
+      const json = await res.json();
+      setAlbums(json.albums || []);
+    } catch { setAlbums([]); }
+    finally { setLoadingAlbums(false); }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -440,18 +550,79 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
     setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
   };
 
+  const selectedAlbumName = albums.find(a => a.id === config.album_id)?.name;
+
   return (
     <div className="space-y-4">
       <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-200 dark:border-pink-800">
-        <p className="text-sm text-pink-800 dark:text-pink-200">Exibe fotos do Google Photos em slideshow. Deixe o álbum vazio para usar todas as fotos.</p>
+        <p className="text-sm text-pink-800 dark:text-pink-200">Selecione um álbum do Google Photos ou deixe vazio para usar todas as fotos.</p>
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">ID do Álbum (opcional)</label>
-        <input type="text" placeholder="Deixe vazio para todas as fotos"
-          value={config.album_id || ''} onChange={e => setConfig((p: any) => ({ ...p, album_id: e.target.value }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
-        <p className="text-xs text-gray-500 mt-1">Você pode obter o ID do álbum no Google Photos.</p>
+
+      {/* Álbum selecionado */}
+      <div className={`p-3 rounded-lg border text-sm ${
+        config.album_id
+          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+          : 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400'
+      }`}>
+        {config.album_id
+          ? <span>Álbum: <strong>{selectedAlbumName || config.album_id}</strong></span>
+          : <span>Usando todas as fotos da conta</span>
+        }
+        {config.album_id && (
+          <button onClick={() => setConfig((p: any) => ({ ...p, album_id: '' }))}
+            className="ml-2 text-xs text-red-500 hover:text-red-700">Remover</button>
+        )}
       </div>
+
+      {/* Lista de álbuns */}
+      <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+        <div className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+          <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Álbuns do Google Photos</span>
+          <button onClick={fetchAlbums} className="text-xs text-blue-500 hover:underline">Atualizar</button>
+        </div>
+        <div className="max-h-52 overflow-y-auto">
+          {loadingAlbums ? (
+            <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500" /></div>
+          ) : albums.length === 0 ? (
+            <p className="text-center py-6 text-sm text-gray-400">Nenhum álbum encontrado</p>
+          ) : (
+            <>
+              {/* Opção: todas as fotos */}
+              <button
+                onClick={() => setConfig((p: any) => ({ ...p, album_id: '' }))}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition text-left ${!config.album_id ? 'bg-pink-50 dark:bg-pink-900/20' : ''}`}
+              >
+                <div className="w-12 h-9 bg-pink-100 dark:bg-pink-900/30 rounded flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">🌟</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Todas as fotos</p>
+                  <p className="text-xs text-gray-400">Sem filtro de álbum</p>
+                </div>
+                {!config.album_id && <span className="text-xs text-pink-500 font-medium flex-shrink-0">✓ Selecionado</span>}
+              </button>
+              {albums.map(album => (
+                <button
+                  key={album.id}
+                  onClick={() => setConfig((p: any) => ({ ...p, album_id: album.id }))}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition text-left ${config.album_id === album.id ? 'bg-pink-50 dark:bg-pink-900/20' : ''}`}
+                >
+                  {album.thumbnail
+                    ? <img src={album.thumbnail} alt="" className="w-12 h-9 object-cover rounded flex-shrink-0" />
+                    : <div className="w-12 h-9 bg-gray-200 dark:bg-slate-700 rounded flex-shrink-0 flex items-center justify-center"><span>📷</span></div>
+                  }
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{album.name}</p>
+                    <p className="text-xs text-gray-400">{album.itemCount} itens</p>
+                  </div>
+                  {config.album_id === album.id && <span className="text-xs text-pink-500 font-medium flex-shrink-0">✓</span>}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por foto</label>
         <input type="number" min="2" max="30" value={config.seconds_per_photo || 5}
@@ -483,83 +654,386 @@ const PainelOfertasConfigForm = ({ companyId }: any) => {
   const [config, setConfig] = useState<any>({ folder_id: '', seconds_per_image: 8, shuffle: false });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [folders, setFolders] = useState<any[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState(false);
+  const [folderPath, setFolderPath] = useState<{ id: string; name: string }[]>([]);
+  const [mode, setMode] = useState<'browse' | 'manual'>('browse');
   const supabase = createClient();
 
   useEffect(() => {
-    async function fetch() {
-      const { data } = await supabase.from('company_function_settings').select('config')
-        .eq('company_id', companyId).eq('function_key', 'painel_ofertas').maybeSingle();
+    async function init() {
+      const { data } = await supabase
+        .from('company_function_settings')
+        .select('config')
+        .eq('company_id', companyId)
+        .eq('function_key', 'painel_ofertas')
+        .maybeSingle();
       if (data?.config) setConfig(data.config);
+      fetchFolders(null);
     }
-    fetch();
+    init();
   }, [companyId]);
+
+  const fetchFolders = async (parentId: string | null) => {
+    setLoadingFolders(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-folders`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ company_id: companyId, parent_id: parentId }),
+        }
+      );
+      const json = await res.json();
+      setFolders(json.folders || []);
+    } catch (e) {
+      setFolders([]);
+    } finally {
+      setLoadingFolders(false);
+    }
+  };
+
+  const enterFolder = (folder: { id: string; name: string }) => {
+    setFolderPath(prev => [...prev, folder]);
+    fetchFolders(folder.id);
+  };
+
+  const goBack = () => {
+    const newPath = folderPath.slice(0, -1);
+    setFolderPath(newPath);
+    fetchFolders(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
+  };
+
+  const selectFolder = (folder: { id: string; name: string }) => {
+    setConfig((p: any) => ({ ...p, folder_id: folder.id }));
+  };
 
   const save = async () => {
     setSaving(true);
-    await supabase.from('company_function_settings')
+    await supabase
+      .from('company_function_settings')
       .update({ config, updated_at: new Date().toISOString() })
-      .eq('company_id', companyId).eq('function_key', 'painel_ofertas');
-    setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
+      .eq('company_id', companyId)
+      .eq('function_key', 'painel_ofertas');
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+    setSaving(false);
   };
+
+  const selectedFolderName = folderPath.find(f => f.id === config.folder_id)?.name
+    || folders.find(f => f.id === config.folder_id)?.name
+    || config.folder_id;
 
   return (
     <div className="space-y-4">
       <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-        <p className="text-sm text-orange-800 dark:text-orange-200">Coloque imagens de ofertas em uma pasta do Google Drive e cole o ID da pasta abaixo.</p>
+        <p className="text-sm text-orange-800 dark:text-orange-200">
+          Coloque imagens de ofertas em uma pasta do Google Drive e selecione-a abaixo.
+        </p>
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">ID da Pasta do Drive <span className="text-red-500">*</span></label>
-        <input type="text" placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-          value={config.folder_id || ''} onChange={e => setConfig((p: any) => ({ ...p, folder_id: e.target.value }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
-        <p className="text-xs text-gray-500 mt-1">Abra a pasta no Drive e copie o ID da URL (a parte após /folders/).</p>
+
+      {/* Pasta selecionada */}
+      {config.folder_id && (
+        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <span className="text-green-600 dark:text-green-400">📁</span>
+          <span className="text-sm font-medium text-green-800 dark:text-green-200 truncate flex-1">
+            {selectedFolderName || config.folder_id}
+          </span>
+          <button
+            onClick={() => setConfig((p: any) => ({ ...p, folder_id: '' }))}
+            className="text-xs text-red-500 hover:text-red-700 flex-shrink-0"
+          >
+            Remover
+          </button>
+        </div>
+      )}
+
+      {/* Abas: Navegar / Manual */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setMode('browse')}
+          className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${
+            mode === 'browse'
+              ? 'bg-orange-600 text-white'
+              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+          }`}
+        >
+          📁 Navegar Drive
+        </button>
+        <button
+          onClick={() => setMode('manual')}
+          className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${
+            mode === 'manual'
+              ? 'bg-orange-600 text-white'
+              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+          }`}
+        >
+          Inserir ID
+        </button>
       </div>
+
+      {/* Modo: Navegar */}
+      {mode === 'browse' && (
+        <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 text-xs overflow-x-auto">
+            <button
+              onClick={() => { setFolderPath([]); fetchFolders(null); }}
+              className="text-blue-500 hover:underline flex-shrink-0"
+            >
+              Meu Drive
+            </button>
+            {folderPath.map((f, i) => (
+              <span key={f.id} className="flex items-center gap-1 flex-shrink-0">
+                <span className="text-gray-400">/</span>
+                <button
+                  onClick={() => {
+                    const newPath = folderPath.slice(0, i + 1);
+                    setFolderPath(newPath);
+                    fetchFolders(f.id);
+                  }}
+                  className="text-blue-500 hover:underline"
+                >
+                  {f.name}
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Lista de pastas */}
+          <div className="max-h-48 overflow-y-auto">
+            {loadingFolders ? (
+              <div className="flex justify-center py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500" />
+              </div>
+            ) : folders.length === 0 ? (
+              <p className="text-center py-6 text-sm text-gray-400">Nenhuma pasta encontrada</p>
+            ) : (
+              <>
+                {folderPath.length > 0 && (
+                  <button
+                    onClick={goBack}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition border-b border-gray-100 dark:border-white/5"
+                  >
+                    ← Voltar
+                  </button>
+                )}
+                {folders.map(folder => (
+                  <div
+                    key={folder.id}
+                    className={`flex items-center justify-between px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition ${
+                      config.folder_id === folder.id ? 'bg-orange-50 dark:bg-orange-900/20' : ''
+                    }`}
+                  >
+                    <button
+                      onClick={() => enterFolder(folder)}
+                      className="flex items-center gap-2 flex-1 text-left text-sm text-gray-800 dark:text-gray-200"
+                    >
+                      📁 {folder.name}
+                    </button>
+                    <button
+                      onClick={() => selectFolder(folder)}
+                      className={`text-xs px-2 py-1 rounded flex-shrink-0 transition ${
+                        config.folder_id === folder.id
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-orange-100'
+                      }`}
+                    >
+                      {config.folder_id === folder.id ? '✓ Selecionada' : 'Usar'}
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modo: Manual */}
+      {mode === 'manual' && (
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
+            ID da Pasta <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs"
+            value={config.folder_id || ''}
+            onChange={e => setConfig((p: any) => ({ ...p, folder_id: e.target.value }))}
+            className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Abra a pasta no Drive e copie o ID da URL (após /folders/).
+          </p>
+        </div>
+      )}
+
+      {/* Configurações */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por imagem</label>
-        <input type="number" min="3" max="60" value={config.seconds_per_image || 8}
+        <input
+          type="number" min="3" max="60"
+          value={config.seconds_per_image || 8}
           onChange={e => setConfig((p: any) => ({ ...p, seconds_per_image: Number(e.target.value) }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white"
+        />
       </div>
       <label className="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" checked={config.shuffle || false}
-          onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))} />
+        <input
+          type="checkbox"
+          checked={config.shuffle || false}
+          onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))}
+        />
         <span className="text-sm text-gray-900 dark:text-white">Embaralhar imagens</span>
       </label>
-      <button onClick={save} disabled={saving || !config.folder_id}
-        className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition">
+
+      <button
+        onClick={save}
+        disabled={saving || !config.folder_id}
+        className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition"
+      >
         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
       </button>
     </div>
   );
 };
 
-const AparelhosSmartConfigForm = () => (
-  <div className="space-y-4">
-    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">Como funciona</h4>
-      <ul className="space-y-1 text-sm text-green-800 dark:text-green-200">
-        <li>✓ Lista e controla dispositivos Google Home por voz</li>
-        <li>✓ Suporta luzes, termostatos, ar condicionado, TVs e mais</li>
-        <li>✓ Requer conta Google com Smart Home ativado</li>
-      </ul>
-    </div>
-    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
-      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">Comandos de voz</h5>
-      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-        <li>• "Aparelhos smart" — abre o painel</li>
-        <li>• "Ligar luz da sala"</li>
-        <li>• "Desligar ar condicionado"</li>
-        <li>• "Smart home"</li>
-      </ul>
-    </div>
-    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
-      <p className="text-xs text-yellow-800 dark:text-yellow-200">
-        ⚠️ A conta Google conectada precisa ter o <strong>Device Access</strong> ativado e dispositivos Google Home vinculados.
-      </p>
-    </div>
-  </div>
-);
+const AparelhosSmartConfigForm = ({ companyId }: any) => {
+  const [devices, setDevices] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
 
+  useEffect(() => {
+    async function init() {
+      const { data } = await supabase
+        .from('company_function_settings').select('config')
+        .eq('company_id', companyId).eq('function_key', 'aparelhos_smart').maybeSingle();
+      setSelectedIds(data?.config?.selected_devices || []);
+      fetchDevices();
+    }
+    init();
+  }, [companyId]);
+
+  const fetchDevices = async () => {
+    setLoadingDevices(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ company_id: companyId, action: 'list' }),
+        }
+      );
+      const json = await res.json();
+      setDevices(json.devices || []);
+    } catch { setDevices([]); }
+    finally { setLoadingDevices(false); }
+  };
+
+  const toggleDevice = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const config = {
+      selected_devices: selectedIds.length > 0 ? selectedIds : null,
+    };
+    await supabase.from('company_function_settings')
+      .update({ config, updated_at: new Date().toISOString() })
+      .eq('company_id', companyId).eq('function_key', 'aparelhos_smart');
+    setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-sm text-green-800 dark:text-green-200">
+          Selecione quais dispositivos serão exibidos no painel. Deixe todos desmarcados para mostrar todos.
+        </p>
+      </div>
+
+      <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+        <div className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+          <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Dispositivos da conta</span>
+          <button onClick={fetchDevices} className="text-xs text-blue-500 hover:underline">Atualizar</button>
+        </div>
+        <div className="max-h-60 overflow-y-auto">
+          {loadingDevices ? (
+            <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500" /></div>
+          ) : devices.length === 0 ? (
+            <div className="text-center py-6 space-y-1">
+              <p className="text-sm text-gray-400">Nenhum dispositivo encontrado</p>
+              <p className="text-xs text-gray-400">Verifique se a conta Google tem dispositivos Smart Home.</p>
+            </div>
+          ) : (
+            devices.map(device => (
+              <label
+                key={device.id}
+                className="flex items-center gap-3 px-3 py-3 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(device.id)}
+                  onChange={() => toggleDevice(device.id)}
+                  className="flex-shrink-0"
+                />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm ${
+                  device.online ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-slate-700'
+                }`}>
+                  {device.type.toLowerCase().includes('light') ? '💡'
+                    : device.type.toLowerCase().includes('thermostat') ? '🌡️'
+                    : device.type.toLowerCase().includes('fan') ? '🌀'
+                    : device.type.toLowerCase().includes('tv') ? '📺'
+                    : '🔌'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{device.displayName}</p>
+                  <p className="text-xs text-gray-400">{device.type.split('.').pop()} · {device.online ? '🟢 Online' : '🔴 Offline'}</p>
+                </div>
+              </label>
+            ))
+          )}
+        </div>
+      </div>
+
+      {selectedIds.length > 0 && (
+        <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+          {selectedIds.length} de {devices.length} dispositivos selecionados
+        </p>
+      )}
+      {selectedIds.length === 0 && devices.length > 0 && (
+        <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+          Nenhum selecionado — todos os dispositivos serão exibidos
+        </p>
+      )}
+
+      <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+        <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">Comandos de voz</h5>
+        <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+          <li>• "Aparelhos smart" — abre o painel</li>
+          <li>• "Ligar luz da sala"</li>
+          <li>• "Desligar ar condicionado"</li>
+        </ul>
+      </div>
+
+      <button onClick={save} disabled={saving || loadingDevices}
+        className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold text-sm transition">
+        {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
+      </button>
+    </div>
+  );
+};
 const GoogleEmailForm = ({ companyId }: any) => {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
   const [loading, setLoading] = useState(true);

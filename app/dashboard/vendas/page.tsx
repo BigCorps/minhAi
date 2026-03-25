@@ -1558,7 +1558,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       funcoes: [
         {
           key: 'pix_generate',
-          label: 'PIX (Banco Inter)',
+          label: 'PIX (Direto para os seus Recebimentos do seu Perfil)',
           descricao: 'QR Code PIX gerado automaticamente via API',
           configurado: !!config.receiving_pix_key,
           pendencia: !config.receiving_pix_key ? 'Configure a Chave PIX nas funções' : null,
@@ -1696,7 +1696,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
         <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-blue-700 dark:text-blue-300">
           O toggle <strong>Ativo no modo venda</strong> controla se o método aparece como opção de pagamento
-          quando o cliente finaliza o pedido. Um método só pode ser ativado se estiver configurado.
+          quando o cliente finaliza o pedido. Um método só pode ser ativado se estiver configurado na seção Funções.
         </p>
       </div>
 

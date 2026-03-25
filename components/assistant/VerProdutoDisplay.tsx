@@ -20,7 +20,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
 import { formatarPreco, type ProdutoVenda } from '@/lib/produtos-venda';
-import OpcionaisProdutoModal, { type OpcaoSelecionada } from './OpcionaisProdutoModal';
+import OpcionaisProdutoModal, { type OpcaoSelecionada } from '@/components/VoiceAssistant/modals/SaleModeModal/OpcionaisProdutoModal';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 

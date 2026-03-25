@@ -506,6 +506,7 @@ const PlaylistConfigForm = ({ companyId }: any) => {
     </div>
   );
 };
+
 const PortaRetratoConfigForm = ({ companyId }: any) => {
   const [config, setConfig] = useState<any>({ album_id: '', seconds_per_photo: 5, transition: 'fade', shuffle: false });
   const [albums, setAlbums] = useState<any[]>([]);
@@ -555,7 +556,7 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
   return (
     <div className="space-y-4">
       <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-200 dark:border-pink-800">
-        <p className="text-sm text-pink-800 dark:text-pink-200">Selecione um álbum do Google Photos ou deixe vazio para usar todas as fotos.</p>
+        <p className="text-sm text-pink-800 dark:text-pink-200">🖼️ Selecione um álbum do Google Photos ou deixe vazio para usar todas as fotos.</p>
       </div>
 
       {/* Álbum selecionado */}
@@ -565,8 +566,8 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
           : 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400'
       }`}>
         {config.album_id
-          ? <span>Álbum: <strong>{selectedAlbumName || config.album_id}</strong></span>
-          : <span>Usando todas as fotos da conta</span>
+          ? <span>📷 Álbum: <strong>{selectedAlbumName || config.album_id}</strong></span>
+          : <span>📷 Usando todas as fotos da conta</span>
         }
         {config.album_id && (
           <button onClick={() => setConfig((p: any) => ({ ...p, album_id: '' }))}
@@ -619,6 +620,28 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
                 </button>
               ))}
             </>
+          )}
+        </div>
+      </div>
+
+      {/* Opção manual */}
+      <div className="border-t border-gray-200 dark:border-white/10 pt-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Ou insira o ID do álbum manualmente:</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="ID do álbum Google Photos"
+            value={config.album_id || ''}
+            onChange={e => setConfig((p: any) => ({ ...p, album_id: e.target.value }))}
+            className="flex-1 p-2 text-sm border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white"
+          />
+          {config.album_id && (
+            <button
+              onClick={() => setConfig((p: any) => ({ ...p, album_id: '' }))}
+              className="px-3 py-2 text-xs text-red-500 border border-red-200 rounded-md hover:bg-red-50"
+            >
+              Limpar
+            </button>
           )}
         </div>
       </div>

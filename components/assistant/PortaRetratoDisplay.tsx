@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { X, Loader2, Pause, Play, SkipForward, SkipBack, Shuffle } from 'lucide-react';
+import { X, Loader2, Pause, Play, SkipForward, SkipBack } from 'lucide-react';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
 
-interface Photo {
+interface DriveImage {
   id: string;
+  name: string;
   url: string;
   thumb: string;
-  description: string;
 }
 
 interface PortaRetratoDisplayProps {
@@ -28,15 +28,14 @@ export default function PortaRetratoDisplay({
 }: PortaRetratoDisplayProps) {
   const { companyId } = data;
 
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [images, setImages] = useState<DriveImage[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [transition, setTransition] = useState<'fade' | 'slide'>('fade');
-  const [intervalSeconds, setIntervalSeconds] = useState(5);
   const [fadeIn, setFadeIn] = useState(true);
+  const [intervalSeconds, setIntervalSeconds] = useState(5);
 
   const hasClosedRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,20 +45,20 @@ export default function PortaRetratoDisplay({
   const goNext = useCallback(() => {
     setFadeIn(false);
     setTimeout(() => {
-      setCurrentIndex(prev => (prev + 1) % photos.length);
+      setCurrentIndex(prev => (prev + 1) % images.length);
       setFadeIn(true);
     }, 300);
-  }, [photos.length]);
+  }, [images.length]);
 
   const goPrev = useCallback(() => {
     setFadeIn(false);
     setTimeout(() => {
-      setCurrentIndex(prev => (prev - 1 + photos.length) % photos.length);
+      setCurrentIndex(prev => (prev - 1 + images.length) % images.length);
       setFadeIn(true);
     }, 300);
-  }, [photos.length]);
+  }, [images.length]);
 
-  // Buscar fotos e config
+  // Buscar imagens do Drive e config
   useEffect(() => {
     async function init() {
       const { data: settings } = await supabase
@@ -71,7 +70,12 @@ export default function PortaRetratoDisplay({
 
       const cfg = settings?.config || {};
       setIntervalSeconds(cfg.seconds_per_photo || 5);
-      setTransition(cfg.transition || 'fade');
+
+      if (!cfg.folder_id) {
+        setError('Nenhuma pasta do Drive configurada. Configure no painel.');
+        setLoading(false);
+        return;
+      }
 
       try {
         const res = await fetch(
@@ -82,26 +86,24 @@ export default function PortaRetratoDisplay({
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
             },
-            body: JSON.stringify({
-              company_id: companyId,
-              album_id: cfg.album_id || null,
-            }),
+            body: JSON.stringify({ company_id: companyId, folder_id: cfg.folder_id }),
           }
         );
         const json = await res.json();
         if (!res.ok || json.error) throw new Error(json.error || 'Erro ao carregar fotos');
-        if (!json.photos || json.photos.length === 0) throw new Error('Nenhuma foto encontrada no álbum.');
+        if (!json.images || json.images.length === 0) throw new Error('Nenhuma foto encontrada na pasta.');
 
-        let photoList = json.photos;
+        let imageList = json.images;
         if (cfg.shuffle) {
-          for (let i = photoList.length - 1; i > 0; i--) {
+          for (let i = imageList.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [photoList[i], photoList[j]] = [photoList[j], photoList[i]];
+            [imageList[i], imageList[j]] = [imageList[j], imageList[i]];
           }
         }
-        setPhotos(photoList);
+        setImages(imageList);
       } catch (err: any) {
         setError(err.message);
+        playText('Não consegui carregar as fotos.').catch(() => {});
       } finally {
         setLoading(false);
       }
@@ -111,17 +113,17 @@ export default function PortaRetratoDisplay({
 
   // Auto-advance
   useEffect(() => {
-    if (!isPlaying || photos.length === 0) return;
+    if (!isPlaying || images.length === 0) return;
     timerRef.current = setInterval(goNext, intervalSeconds * 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isPlaying, photos.length, goNext, intervalSeconds]);
+  }, [isPlaying, images.length, goNext, intervalSeconds]);
 
   // Auto-hide controls
   useEffect(() => {
-    if (photos.length === 0) return;
+    if (images.length === 0) return;
     hideControlsRef.current = setTimeout(() => setControlsVisible(false), 3000);
     return () => { if (hideControlsRef.current) clearTimeout(hideControlsRef.current); };
-  }, [photos]);
+  }, [images]);
 
   const showControls = () => {
     setControlsVisible(true);
@@ -144,16 +146,15 @@ export default function PortaRetratoDisplay({
       const t = transcript.toLowerCase().trim()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[.,!?;:]+/g, '');
-
       if (['fechar', 'cancelar', 'sair'].some(c => t.includes(c))) { handleClose(); return; }
       if (['pausar', 'pausa', 'parar'].some(c => t.includes(c))) { setIsPlaying(false); return; }
-      if (['continuar', 'play', 'reproduzir', 'retomar'].some(c => t.includes(c))) { setIsPlaying(true); return; }
+      if (['continuar', 'play', 'retomar'].some(c => t.includes(c))) { setIsPlaying(true); return; }
       if (['proximo', 'próximo', 'avancar'].some(c => t.includes(c))) { goNext(); return; }
       if (['anterior', 'voltar'].some(c => t.includes(c))) { goPrev(); return; }
     },
   });
 
-  const currentPhoto = photos[currentIndex];
+  const currentImage = images[currentIndex];
 
   return (
     <div
@@ -181,18 +182,19 @@ export default function PortaRetratoDisplay({
       )}
 
       {/* Foto */}
-      {!loading && currentPhoto && (
+      {!loading && currentImage && (
         <img
-          key={currentPhoto.id}
-          src={currentPhoto.url}
-          alt={currentPhoto.description}
+          key={currentImage.id}
+          src={currentImage.url}
+          alt={currentImage.name}
           className="w-full h-full object-contain transition-opacity duration-500"
           style={{ opacity: fadeIn ? 1 : 0 }}
+          onError={e => { (e.target as HTMLImageElement).src = currentImage.thumb; }}
         />
       )}
 
       {/* Controles */}
-      {!loading && photos.length > 0 && (
+      {!loading && images.length > 0 && (
         <div className={`absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent transition-all duration-300 ${
           controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}>
@@ -207,21 +209,17 @@ export default function PortaRetratoDisplay({
               >
                 {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
               </button>
-              <span className="text-white/60 text-sm">{currentIndex + 1} / {photos.length}</span>
+              <span className="text-white/60 text-sm">{currentIndex + 1} / {images.length}</span>
             </div>
             <button onClick={goNext} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
               <SkipForward className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Barra de progresso */}
           <div className="mt-4 h-0.5 bg-white/20 rounded-full max-w-2xl mx-auto overflow-hidden">
             <div
               className="h-full bg-pink-500 rounded-full"
-              style={{
-                width: `${((currentIndex + 1) / photos.length) * 100}%`,
-                transition: 'width 0.5s ease',
-              }}
+              style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }}
             />
           </div>
         </div>

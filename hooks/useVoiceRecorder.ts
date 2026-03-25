@@ -66,9 +66,17 @@ export function useVoiceRecorder() {
       });
     } catch (error: any) {
       console.error('Error starting recording:', error);
+      let errorMessage = 'Erro ao acessar microfone. Verifique as permissões.';
+
+      if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'Nenhum microfone encontrado neste dispositivo.';
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Permissão de microfone negada pelo usuário.';
+      }
+
       setState((prev) => ({
         ...prev,
-        error: 'Erro ao acessar microfone. Verifique as permissões.',
+        error: errorMessage,
       }));
     }
   }, []);

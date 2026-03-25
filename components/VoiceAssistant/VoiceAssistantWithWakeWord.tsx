@@ -191,9 +191,32 @@ export function VoiceAssistantWithWakeWord({
     requestCameraPermission().catch(() => {});
     requestLocationPermission().catch(() => {});
 
-    const handleExternalFunctionClick = (event: any) => {
-      handleFunctionClick(event.detail.functionKey);
-    };
+    const handleVerProdutoPix = (event: any) => {
+  const { companyId: cId, valorCents, produto, quantidade, opcoes } = event.detail;
+  // Reutiliza o mesmo fluxo do PIX existente
+  // Dispara handlePixCommand com o valor pré-definido
+  handlePixCommand(`gerar pix de ${(valorCents / 100).toFixed(2)}`, {
+    companyId: cId,
+    setIsProcessing,
+    setQrCodeData,
+    setPixConfirmationData,
+    playText,
+    functionSettings,
+    sessionId,
+    commandProcessor,
+    pixStateRef,
+    setActiveModal,
+    activeFunctionContextRef,
+  });
+};
+
+window.addEventListener('verProdutoPix', handleVerProdutoPix);
+// No cleanup do useEffect:
+// window.removeEventListener('verProdutoPix', handleVerProdutoPix);
+
+const handleExternalFunctionClick = (event: any) => {
+  handleFunctionClick(event.detail.functionKey, event);  // ← passa event inteiro
+};
     window.addEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
 
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -559,7 +582,7 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ── Function click (carrossel) ────────────────────────────
-  async function handleFunctionClick(functionKey: string) {
+  async function handleFunctionClick(functionKey: string, event?: any) {
     console.log('🎯 Função clicada:', functionKey);
 
     const isEnabled = await checkIfFunctionIsEnabled(companyId, functionKey);
@@ -921,24 +944,23 @@ case 'cadastrar_produto':
   playText('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
   return; // pula o registerFunctionUsage — cobrado só quando salvar
 
-        case 'modo_venda':
-          await stopGoogleSpeech();
-          setActiveModal({
-            type: 'SaleModeModal',
-            data: {
-              companyId,
-              isMaximized,
-              isListening,
-              isProcessing,
-              isPlayingAudio,
-              isTranscribing,
-              onMicDown: handleMicButtonDown,
-              onMicUp: handleMicButtonUp,
-              onTextMessage: handleTextMessage,
-            },
-          });
-          playText('Modo venda aberto! Escolha os produtos.').catch(() => {});
-          break;
+case 'modo_venda':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'SaleModeModal',
+    data: {
+      companyId,
+      produtoInicial:   (event?.detail?.produtoInicial)   ?? undefined,  // ← NOVO
+      quantidadeInicial:(event?.detail?.quantidadeInicial) ?? undefined,  // ← NOVO
+      opcoesIniciais:   (event?.detail?.opcoesIniciais)   ?? undefined,  // ← NOVO
+      isListening, isProcessing, isPlayingAudio, isTranscribing,
+      onMicDown: handleMicButtonDown,
+      onMicUp:   handleMicButtonUp,
+      onTextMessage: handleTextMessage,
+    },
+  });
+  playText('Modo venda aberto!').catch(() => {});
+  break;
 
         case 'ver_produtos':
           break;

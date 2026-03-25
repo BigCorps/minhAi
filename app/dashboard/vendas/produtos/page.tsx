@@ -16,9 +16,12 @@ import {
   CheckCircle2,
   Trash2,
   ArrowLeft,
+  Settings,
 } from 'lucide-react';
 import type { ProdutoVenda, ProdutoVendaInput } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
+import OpcionaisModal from '@/components/dashboard/vendas/OpcionaisModal';
+import ImportarCSVModal from '@/components/dashboard/vendas/ImportarCSVModal';
 
 interface IngredienteImportavel {
   id: string;
@@ -64,7 +67,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // ✅ CORREÇÃO 2: saving=false explícito antes de fechar, sem depender do finally
   async function handleSalvar() {
     if (!form.nome?.trim()) { setErro('Nome é obrigatório'); return; }
     if ((form.preco_venda ?? 0) <= 0) { setErro('Preço de venda deve ser maior que zero'); return; }
@@ -86,10 +88,10 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
       }
 
       setSucesso(true);
-      setSaving(false); // garante saving=false antes de fechar
+      setSaving(false);
 
       onSalvo();
-      setTimeout(() => onClose(), 600); // fecha após breve feedback visual
+      setTimeout(() => onClose(), 600);
     } catch (e: any) {
       setErro(e.message ?? 'Erro ao salvar');
       setSaving(false);
@@ -311,7 +313,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Controle de Estoque
               </label>
-              {/* ✅ CORREÇÃO 1: bg-gray-400 dark:bg-slate-600 para contraste no dark mode */}
               <button
                 type="button"
                 onClick={() => set('controla_estoque', !form.controla_estoque)}
@@ -361,7 +362,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
                 Produtos inativos não aparecem na loja do kiosk
               </p>
             </div>
-            {/* ✅ CORREÇÃO 1: bg-gray-400 dark:bg-slate-600 para contraste no dark mode */}
             <button
               type="button"
               onClick={() => set('is_active', !form.is_active)}
@@ -615,6 +615,8 @@ function ProdutosPageContent() {
   const [produtoEditando, setProdutoEditando] = useState<ProdutoVenda | null>(null);
   const [importarAberto, setImportarAberto] = useState(false);
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [opcionaisProduto, setOpcionaisProduto] = useState<ProdutoVenda | null>(null);
+  const [csvAberto, setCsvAberto] = useState(false);
 
   useEffect(() => {
     if (companyId) load();
@@ -685,6 +687,15 @@ function ProdutosPageContent() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCsvAberto(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Importar CSV
+            </button>
             <button
               onClick={() => setImportarAberto(true)}
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition"
@@ -835,12 +846,20 @@ function ProdutosPageContent() {
                             </button>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => abrirEditar(p)}
-                              className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition"
-                            >
-                              Editar
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setOpcionaisProduto(p); }}
+                                className="text-xs px-3 py-1.5 rounded-lg border border-purple-200 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition"
+                              >
+                                Opcionais
+                              </button>
+                              <button
+                                onClick={() => abrirEditar(p)}
+                                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition"
+                              >
+                                Editar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -888,6 +907,13 @@ function ProdutosPageContent() {
                           </span>
                         </div>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOpcionaisProduto(p); }}
+                        className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-purple-100 dark:bg-purple-500/10 text-purple-500 hover:bg-purple-200 transition"
+                        title="Opcionais"
+                      >
+                        <Settings className="w-3 h-3" />
+                      </button>
                     </div>
                     <div className="p-3">
                       <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{p.nome}</p>
@@ -935,6 +961,23 @@ function ProdutosPageContent() {
           companyId={companyId}
           onClose={() => setImportarAberto(false)}
           onImportado={load}
+        />
+      )}
+
+      {opcionaisProduto && companyId && (
+        <OpcionaisModal
+          companyId={companyId}
+          produtoId={opcionaisProduto.id}
+          produtoNome={opcionaisProduto.nome}
+          onClose={() => setOpcionaisProduto(null)}
+        />
+      )}
+
+      {csvAberto && companyId && (
+        <ImportarCSVModal
+          companyId={companyId}
+          onClose={() => setCsvAberto(false)}
+          onImportado={(qty) => { load(); setCsvAberto(false); }}
         />
       )}
     </div>

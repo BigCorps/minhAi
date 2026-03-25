@@ -13,6 +13,7 @@
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react';
+import { Mic, MicOff } from 'lucide-react';
 import { AvatarFace } from '@/components/AvatarFace';
 import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
@@ -95,6 +96,7 @@ export function VoiceAssistantWithWakeWord({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [hasMicrophone, setHasMicrophone] = useState(true);
   const [showStartButton, setShowStartButton] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [externalInput, setExternalInput] = useState('');
@@ -183,9 +185,15 @@ export function VoiceAssistantWithWakeWord({
   useEffect(() => {
     isActiveRef.current = true;
 
-    requestMicrophonePermission().then(granted => {
-      setPermissionGranted(granted);
-      if (!granted) setError('Permissão do microfone negada.');
+    requestMicrophonePermission().then(result => {
+      setPermissionGranted(result.granted);
+      setHasMicrophone(result.hasMicrophone);
+
+      if (!result.hasMicrophone) {
+        setError('Nenhum microfone detectado. O modo de voz está desativado, mas você pode usar a digitação.');
+      } else if (!result.granted) {
+        setError('Permissão do microfone negada. O modo de voz está desativado.');
+      }
     });
 
     requestCameraPermission().catch(() => {});
@@ -1330,7 +1338,8 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
   // ── Status helpers ────────────────────────────────────────
   const getStatusMessage = () => {
-    if (!permissionGranted) return 'Aguardando permissão...';
+    if (!hasMicrophone) return 'Modo de voz indisponível';
+    if (!permissionGranted) return 'Aguardando permissão de voz...';
     if (showStartButton) return 'Clique em "Iniciar"';
     if (isTranscribing) return 'Transcrevendo...';
     if (isPlayingAudio) return 'Falando...';
@@ -1342,7 +1351,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
   const getMicButtonColor = () => {
     if (voiceRecorder.isRecording) return 'bg-red-500 animate-pulse';
     if (isTranscribing) return 'bg-orange-400 animate-pulse';
-    if (!permissionGranted) return 'bg-gray-400';
+    if (!hasMicrophone || !permissionGranted) return 'bg-gray-400';
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
     if (isProcessing) return 'bg-yellow-400 animate-pulse';
     if (isListening) return 'bg-blue-400 animate-pulse';
@@ -1350,6 +1359,8 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
   };
 
   const getMicHintText = () => {
+    if (!hasMicrophone) return 'Microfone não detectado';
+    if (!permissionGranted) return 'Permissão de voz necessária';
     if (voiceRecorder.isRecording) return 'solte para enviar...';
     if (isTranscribing) return 'transcrevendo...';
     return 'segure para falar ou';
@@ -1420,7 +1431,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
           )}
         </div>
 
-        {showStartButton && permissionGranted && (
+        {showStartButton && (
           <button onClick={handleStart} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
             Iniciar Assistente
           </button>
@@ -1481,13 +1492,15 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
                 onMouseUp={handleMicButtonUp}
                 onTouchStart={handleMicButtonDown}
                 onTouchEnd={handleMicButtonUp}
-                disabled={!permissionGranted || showStartButton || isTranscribing}
+                disabled={(!permissionGranted && hasMicrophone) || !hasMicrophone || showStartButton || isTranscribing}
                 className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
                 aria-label="Segurar para falar"
               >
-                <svg className="w-[51px] h-[51px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
+                {hasMicrophone && permissionGranted ? (
+                  <Mic className="w-[51px] h-[51px] text-white" />
+                ) : (
+                  <MicOff className="w-[51px] h-[51px] text-white opacity-50" />
+                )}
               </button>
             </div>
 
@@ -1517,7 +1530,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
               </div>
             )}
 
-            {showStartButton && permissionGranted && (
+            {showStartButton && (
               <button onClick={handleStart} className="mt-6 px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
                 Iniciar Assistente
               </button>

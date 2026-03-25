@@ -1774,8 +1774,8 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
                       </button>
                     )}
 
-                    {/* Toggle ativo — para todos os métodos incluindo dinheiro */}
-                    {(funcao.key !== 'dinheiro' || true) && (
+                    {/* Toggle ativo — métodos normais (precisam estar configurados) */}
+                    {funcao.key !== 'dinheiro' && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
                           {ativo ? 'Ativo' : 'Inativo'}
@@ -1783,6 +1783,32 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
                         <button
                           type="button"
                           disabled={!podeAtivar || isToggling}
+                          onClick={() => toggleAtivado(funcao.key, ativo)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none
+                            disabled:opacity-40 disabled:cursor-not-allowed ${
+                            ativo ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600'
+                          }`}
+                        >
+                          {isToggling ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
+                          ) : (
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              ativo ? 'translate-x-6' : 'translate-x-1'
+                            }`} />
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Toggle ativo — dinheiro (sempre configurado, sem restrição) */}
+                    {funcao.key === 'dinheiro' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
+                          {ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isToggling}
                           onClick={() => toggleAtivado(funcao.key, ativo)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none
                             disabled:opacity-40 disabled:cursor-not-allowed ${

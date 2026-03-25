@@ -9,6 +9,8 @@ import { useState, useMemo } from 'react';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
 import { useCart } from '@/hooks/useCart';
+import { createClient } from '@/lib/supabase-browser';
+import OpcionaisProdutoModal, { type OpcaoSelecionada } from '../OpcionaisProdutoModal';
 
 interface ProductGridProps {
   produtos: ProdutoVenda[];
@@ -34,6 +36,7 @@ export default function ProductGrid({
   const { addItem, itens } = useCart();
   const [categoria, setCategoria] = useState<string>('');
   const [feedbacks, setFeedbacks] = useState<Record<string, boolean>>({});
+  const [produtoOpcionais, setProdutoOpcionais] = useState<{ produto: ProdutoVenda; quantidade: number } | null>(null);
   const isDark = theme === 'dark';
 
   const produtosFiltrados = useMemo(() => {
@@ -51,14 +54,29 @@ export default function ProductGrid({
   const getQtdNoCarrinho = (produtoId: string) =>
     itens.find((i) => i.produto.id === produtoId)?.quantidade ?? 0;
 
-  const handleAdd = (produto: ProdutoVenda) => {
+  const handleAdd = async (produto: ProdutoVenda) => {
     if (produto.controla_estoque) {
       const qtdAtual = getQtdNoCarrinho(produto.id);
       if (qtdAtual >= produto.estoque_atual) return;
     }
-    addItem(produto);
-    setFeedbacks((prev) => ({ ...prev, [produto.id]: true }));
-    setTimeout(() => setFeedbacks((prev) => ({ ...prev, [produto.id]: false })), 600);
+
+    // Verifica se o produto tem opcionais configurados
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('produto_opcoes_grupos')
+      .select('id')
+      .eq('produto_id', produto.id)
+      .limit(1);
+
+    if (data && data.length > 0) {
+      // Tem opcionais — abre o modal de seleção
+      setProdutoOpcionais({ produto, quantidade: 1 });
+    } else {
+      // Sem opcionais — adiciona direto
+      addItem(produto);
+      setFeedbacks((prev) => ({ ...prev, [produto.id]: true }));
+      setTimeout(() => setFeedbacks((prev) => ({ ...prev, [produto.id]: false })), 600);
+    }
   };
 
   if (loading) {
@@ -164,7 +182,6 @@ export default function ProductGrid({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto pr-1 -mr-1">
-          {/* ✅ CORRIGIDO: 3 colunas base, 4 em telas médias, 5 em telas grandes */}
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 pb-2">
             {produtosFiltrados.map((produto) => {
               const qtdCarrinho = getQtdNoCarrinho(produto.id);
@@ -189,7 +206,6 @@ export default function ProductGrid({
                     </div>
                   )}
 
-                  {/* ✅ CORRIGIDO: aspect-[4/3] em vez de aspect-square — imagem ~25% menos alta */}
                   <div className={`w-full aspect-[4/3] relative overflow-hidden ${
                     isDark ? 'bg-white/4' : 'bg-gray-50'
                   }`}>
@@ -274,6 +290,27 @@ export default function ProductGrid({
             })}
           </div>
         </div>
+      )}
+
+      {/* Modal de opcionais */}
+      {produtoOpcionais && (
+        <OpcionaisProdutoModal
+          produto={produtoOpcionais.produto}
+          quantidade={produtoOpcionais.quantidade}
+          theme={theme}
+          onConfirmar={(opcoes: OpcaoSelecionada[], totalAdicional: number) => {
+            const produtoComOpcoes = {
+              ...produtoOpcionais.produto,
+              preco_venda: produtoOpcionais.produto.preco_venda + totalAdicional,
+              _opcoes_selecionadas: opcoes,
+            };
+            addItem(produtoComOpcoes as any);
+            setFeedbacks((prev) => ({ ...prev, [produtoOpcionais.produto.id]: true }));
+            setTimeout(() => setFeedbacks((prev) => ({ ...prev, [produtoOpcionais.produto.id]: false })), 600);
+            setProdutoOpcionais(null);
+          }}
+          onCancelar={() => setProdutoOpcionais(null)}
+        />
       )}
     </div>
   );

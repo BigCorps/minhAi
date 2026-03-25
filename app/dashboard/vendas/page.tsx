@@ -1558,8 +1558,8 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       funcoes: [
         {
           key: 'pix_generate',
-          label: 'PIX (minhAi)',
-          descricao: 'QR Code PIX gerado automaticamente via API',
+          label: 'PIX',
+          descricao: 'QR Code PIX gerado automaticamente',
           configurado: !!config.receiving_pix_key,
           pendencia: !config.receiving_pix_key ? 'Configure a Chave PIX nas funções' : null,
           destino: '/dashboard/functions',
@@ -1567,7 +1567,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       ],
     },
     {
-      grupo: 'InfinitePay (NFC)',
+      grupo: 'InfinitePay (NFC/TAP)',
       cor: 'violet',
       corHex: '#7c3aed',
       icone: (
@@ -1596,7 +1596,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       ],
     },
     {
-      grupo: 'Mercado Pago Point (TEF)',
+      grupo: 'Mercado Pago Point (TEF/POS)',
       cor: 'blue',
       corHex: '#2563eb',
       icone: (
@@ -1633,7 +1633,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       ],
     },
     {
-      grupo: 'Dinheiro',
+      grupo: 'Dinheiro (Físico)',
       cor: 'gray',
       corHex: '#6b7280',
       icone: (

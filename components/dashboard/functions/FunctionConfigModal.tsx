@@ -508,11 +508,13 @@ const PlaylistConfigForm = ({ companyId }: any) => {
 };
 
 const PortaRetratoConfigForm = ({ companyId }: any) => {
-  const [config, setConfig] = useState<any>({ album_id: '', seconds_per_photo: 5, transition: 'fade', shuffle: false });
-  const [albums, setAlbums] = useState<any[]>([]);
-  const [loadingAlbums, setLoadingAlbums] = useState(false);
+  const [config, setConfig] = useState<any>({ folder_id: '', seconds_per_photo: 5, transition: 'fade', shuffle: false });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [folders, setFolders] = useState<any[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState(false);
+  const [folderPath, setFolderPath] = useState<{ id: string; name: string }[]>([]);
+  const [mode, setMode] = useState<'browse' | 'manual'>('browse');
   const supabase = createClient();
 
   useEffect(() => {
@@ -521,26 +523,41 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
         .from('company_function_settings').select('config')
         .eq('company_id', companyId).eq('function_key', 'porta_retrato').maybeSingle();
       if (data?.config) setConfig(data.config);
-      fetchAlbums();
+      fetchFolders(null);
     }
     init();
   }, [companyId]);
 
-  const fetchAlbums = async () => {
-    setLoadingAlbums(true);
+  const fetchFolders = async (parentId: string | null) => {
+    setLoadingFolders(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-photos-list`,
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-folders`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ action: 'albums', company_id: companyId }),
+          body: JSON.stringify({ company_id: companyId, parent_id: parentId }),
         }
       );
       const json = await res.json();
-      setAlbums(json.albums || []);
-    } catch { setAlbums([]); }
-    finally { setLoadingAlbums(false); }
+      setFolders(json.folders || []);
+    } catch { setFolders([]); }
+    finally { setLoadingFolders(false); }
+  };
+
+  const enterFolder = (folder: { id: string; name: string }) => {
+    setFolderPath(prev => [...prev, folder]);
+    fetchFolders(folder.id);
+  };
+
+  const goBack = () => {
+    const newPath = folderPath.slice(0, -1);
+    setFolderPath(newPath);
+    fetchFolders(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
+  };
+
+  const selectFolder = (folder: { id: string; name: string }) => {
+    setConfig((p: any) => ({ ...p, folder_id: folder.id }));
   };
 
   const save = async () => {
@@ -551,100 +568,82 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
     setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
   };
 
-  const selectedAlbumName = albums.find(a => a.id === config.album_id)?.name;
+  const selectedFolderName = folderPath.find(f => f.id === config.folder_id)?.name
+    || folders.find(f => f.id === config.folder_id)?.name
+    || config.folder_id;
 
   return (
     <div className="space-y-4">
       <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-200 dark:border-pink-800">
-        <p className="text-sm text-pink-800 dark:text-pink-200">🖼️ Selecione um álbum do Google Photos ou deixe vazio para usar todas as fotos.</p>
+        <p className="text-sm text-pink-800 dark:text-pink-200">🖼️ Coloque fotos em uma pasta do Google Drive e selecione-a abaixo.</p>
       </div>
 
-      {/* Álbum selecionado */}
-      <div className={`p-3 rounded-lg border text-sm ${
-        config.album_id
-          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
-          : 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400'
-      }`}>
-        {config.album_id
-          ? <span>📷 Álbum: <strong>{selectedAlbumName || config.album_id}</strong></span>
-          : <span>📷 Usando todas as fotos da conta</span>
-        }
-        {config.album_id && (
-          <button onClick={() => setConfig((p: any) => ({ ...p, album_id: '' }))}
-            className="ml-2 text-xs text-red-500 hover:text-red-700">Remover</button>
-        )}
-      </div>
-
-      {/* Lista de álbuns */}
-      <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
-        <div className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-          <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Álbuns do Google Photos</span>
-          <button onClick={fetchAlbums} className="text-xs text-blue-500 hover:underline">Atualizar</button>
+      {/* Pasta selecionada */}
+      {config.folder_id && (
+        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <span className="text-green-600 dark:text-green-400">📁</span>
+          <span className="text-sm font-medium text-green-800 dark:text-green-200 truncate flex-1">{selectedFolderName}</span>
+          <button onClick={() => setConfig((p: any) => ({ ...p, folder_id: '' }))} className="text-xs text-red-500 hover:text-red-700 flex-shrink-0">Remover</button>
         </div>
-        <div className="max-h-52 overflow-y-auto">
-          {loadingAlbums ? (
-            <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500" /></div>
-          ) : albums.length === 0 ? (
-            <p className="text-center py-6 text-sm text-gray-400">Nenhum álbum encontrado</p>
-          ) : (
-            <>
-              {/* Opção: todas as fotos */}
-              <button
-                onClick={() => setConfig((p: any) => ({ ...p, album_id: '' }))}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition text-left ${!config.album_id ? 'bg-pink-50 dark:bg-pink-900/20' : ''}`}
-              >
-                <div className="w-12 h-9 bg-pink-100 dark:bg-pink-900/30 rounded flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">🌟</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Todas as fotos</p>
-                  <p className="text-xs text-gray-400">Sem filtro de álbum</p>
-                </div>
-                {!config.album_id && <span className="text-xs text-pink-500 font-medium flex-shrink-0">✓ Selecionado</span>}
-              </button>
-              {albums.map(album => (
-                <button
-                  key={album.id}
-                  onClick={() => setConfig((p: any) => ({ ...p, album_id: album.id }))}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition text-left ${config.album_id === album.id ? 'bg-pink-50 dark:bg-pink-900/20' : ''}`}
-                >
-                  {album.thumbnail
-                    ? <img src={album.thumbnail} alt="" className="w-12 h-9 object-cover rounded flex-shrink-0" />
-                    : <div className="w-12 h-9 bg-gray-200 dark:bg-slate-700 rounded flex-shrink-0 flex items-center justify-center"><span>📷</span></div>
-                  }
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{album.name}</p>
-                    <p className="text-xs text-gray-400">{album.itemCount} itens</p>
+      )}
+
+      {/* Abas */}
+      <div className="flex gap-2">
+        <button onClick={() => setMode('browse')} className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${mode === 'browse' ? 'bg-pink-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>
+          📁 Navegar Drive
+        </button>
+        <button onClick={() => setMode('manual')} className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${mode === 'manual' ? 'bg-pink-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>
+          ✏️ Inserir ID
+        </button>
+      </div>
+
+      {/* Navegar */}
+      {mode === 'browse' && (
+        <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+          <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 text-xs overflow-x-auto">
+            <button onClick={() => { setFolderPath([]); fetchFolders(null); }} className="text-blue-500 hover:underline flex-shrink-0">Meu Drive</button>
+            {folderPath.map((f, i) => (
+              <span key={f.id} className="flex items-center gap-1 flex-shrink-0">
+                <span className="text-gray-400">/</span>
+                <button onClick={() => { const p = folderPath.slice(0, i + 1); setFolderPath(p); fetchFolders(f.id); }} className="text-blue-500 hover:underline">{f.name}</button>
+              </span>
+            ))}
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {loadingFolders ? (
+              <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500" /></div>
+            ) : folders.length === 0 ? (
+              <p className="text-center py-6 text-sm text-gray-400">Nenhuma pasta encontrada</p>
+            ) : (
+              <>
+                {folderPath.length > 0 && (
+                  <button onClick={goBack} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 transition border-b border-gray-100 dark:border-white/5">← Voltar</button>
+                )}
+                {folders.map(folder => (
+                  <div key={folder.id} className={`flex items-center justify-between px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition ${config.folder_id === folder.id ? 'bg-pink-50 dark:bg-pink-900/20' : ''}`}>
+                    <button onClick={() => enterFolder(folder)} className="flex items-center gap-2 flex-1 text-left text-sm text-gray-800 dark:text-gray-200">📁 {folder.name}</button>
+                    <button onClick={() => selectFolder(folder)} className={`text-xs px-2 py-1 rounded flex-shrink-0 transition ${config.folder_id === folder.id ? 'bg-pink-500 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-pink-100'}`}>
+                      {config.folder_id === folder.id ? '✓ Selecionada' : 'Usar'}
+                    </button>
                   </div>
-                  {config.album_id === album.id && <span className="text-xs text-pink-500 font-medium flex-shrink-0">✓</span>}
-                </button>
-              ))}
-            </>
-          )}
+                ))}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Opção manual */}
-      <div className="border-t border-gray-200 dark:border-white/10 pt-3">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Ou insira o ID do álbum manualmente:</p>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="ID do álbum Google Photos"
-            value={config.album_id || ''}
-            onChange={e => setConfig((p: any) => ({ ...p, album_id: e.target.value }))}
-            className="flex-1 p-2 text-sm border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white"
-          />
-          {config.album_id && (
-            <button
-              onClick={() => setConfig((p: any) => ({ ...p, album_id: '' }))}
-              className="px-3 py-2 text-xs text-red-500 border border-red-200 rounded-md hover:bg-red-50"
-            >
-              Limpar
-            </button>
-          )}
+      {/* Manual */}
+      {mode === 'manual' && (
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">ID da Pasta</label>
+          <input type="text" placeholder="Cole o ID da pasta do Drive"
+            value={config.folder_id || ''}
+            onChange={e => setConfig((p: any) => ({ ...p, folder_id: e.target.value }))}
+            className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+          <p className="text-xs text-gray-500 mt-1">Abra a pasta no Drive e copie o ID da URL (após /folders/).</p>
         </div>
-      </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por foto</label>
@@ -665,7 +664,8 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
           onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))} />
         <span className="text-sm text-gray-900 dark:text-white">Embaralhar fotos</span>
       </label>
-      <button onClick={save} disabled={saving}
+
+      <button onClick={save} disabled={saving || !config.folder_id}
         className="w-full py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white font-semibold text-sm transition">
         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
       </button>
@@ -913,6 +913,52 @@ const PainelOfertasConfigForm = ({ companyId }: any) => {
         />
         <span className="text-sm text-gray-900 dark:text-white">Embaralhar imagens</span>
       </label>
+
+      {/* ── Seção QR Code ── */}
+      <div className="border-t border-gray-200 dark:border-white/10 pt-4">
+        <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
+          QR Code fixo no slideshow
+        </label>
+        <select
+          value={config.qr_type || 'none'}
+          onChange={e => setConfig((p: any) => ({ ...p, qr_type: e.target.value }))}
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white mb-3"
+        >
+          <option value="none">Sem QR Code</option>
+          <option value="website">🌐 Site da empresa</option>
+          <option value="whatsapp">💬 WhatsApp</option>
+          <option value="instagram">📸 Instagram</option>
+          <option value="custom">🔗 Link personalizado</option>
+        </select>
+
+        {config.qr_type === 'custom' && (
+          <div className="space-y-2">
+            <input type="url" placeholder="https://..."
+              value={config.qr_custom_link || ''}
+              onChange={e => setConfig((p: any) => ({ ...p, qr_custom_link: e.target.value }))}
+              className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+            <input type="text" placeholder="Texto abaixo do QR (ex: Saiba mais)"
+              value={config.qr_custom_label || ''}
+              onChange={e => setConfig((p: any) => ({ ...p, qr_custom_label: e.target.value }))}
+              className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
+          </div>
+        )}
+
+        {config.qr_type && config.qr_type !== 'none' && config.qr_type !== 'custom' && (
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-xs text-blue-800 dark:text-blue-200">
+              ✅ O QR Code será gerado automaticamente usando os dados já configurados em{' '}
+              <strong>
+                {config.qr_type === 'website' ? 'Site da empresa' :
+                 config.qr_type === 'whatsapp' ? 'WhatsApp' : 'Instagram'}
+              </strong>.
+              {config.qr_type === 'website' && ' Configure em Configurações > Contato > Site.'}
+              {config.qr_type === 'whatsapp' && ' Configure em Configurações > Contato > WhatsApp.'}
+              {config.qr_type === 'instagram' && ' Configure em Configurações > Contato > Instagram.'}
+            </p>
+          </div>
+        )}
+      </div>
 
       <button
         onClick={save}

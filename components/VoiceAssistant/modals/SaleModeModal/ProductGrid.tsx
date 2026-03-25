@@ -10,7 +10,7 @@ import type { ProdutoVenda } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
 import { useCart } from '@/hooks/useCart';
 import { createClient } from '@/lib/supabase-browser';
-import OpcionaisProdutoModal, { type OpcaoSelecionada } from '../OpcionaisProdutoModal';
+import OpcionaisProdutoModal, { type OpcaoSelecionada } from './OpcionaisProdutoModal';
 
 interface ProductGridProps {
   produtos: ProdutoVenda[];

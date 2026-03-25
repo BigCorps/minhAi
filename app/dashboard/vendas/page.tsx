@@ -1520,7 +1520,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
 
   useEffect(() => {
     async function loadAtivados() {
-      const metodos = ['pix_generate', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito'];
+      const metodos = ['pix_generate', 'nfc_debito', 'nfc_credito', 'tef_debito', 'tef_credito', 'dinheiro'];
       const { data } = await supabase
         .from('company_function_settings')
         .select('function_key, is_enabled')
@@ -1706,11 +1706,11 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
           className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
 
           {/* Header do grupo */}
-          <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/3">
+          <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800/60">
             <div style={{ color: grupo.corHex }}>
               {grupo.icone}
             </div>
-            <h3 className="font-semibold text-sm text-gray-900 dark:text-white">{grupo.grupo}</h3>
+            <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100">{grupo.grupo}</h3>
           </div>
 
           {/* Funções do grupo */}
@@ -1774,8 +1774,8 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
                       </button>
                     )}
 
-                    {/* Toggle ativo — só para métodos reais (não dinheiro) */}
-                    {funcao.key !== 'dinheiro' && (
+                    {/* Toggle ativo — para todos os métodos incluindo dinheiro */}
+                    {(funcao.key !== 'dinheiro' || true) && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
                           {ativo ? 'Ativo' : 'Inativo'}
@@ -1798,13 +1798,6 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
                           )}
                         </button>
                       </div>
-                    )}
-
-                    {/* Dinheiro — sempre ativo */}
-                    {funcao.key === 'dinheiro' && (
-                      <span className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400">
-                        Sempre disponível
-                      </span>
                     )}
                   </div>
                 </div>
@@ -1866,16 +1859,18 @@ function VendasPageContent() {
             <>
               {/* Tabs */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-100 dark:border-white/5 overflow-hidden">
-                <div className="flex border-b border-gray-200 dark:border-white/10">
+                <div className="grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-white/10">
                   {abas.map(({ key, label, icon: Icon }) => (
                     <button
                       key={key}
                       onClick={() => setAba(key)}
-                      className={`flex-1 px-4 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                        aba === key
+                      className={`sm:flex-1 px-4 py-3 text-sm font-medium transition flex items-center justify-center gap-2
+                        first:rounded-tl-2xl [&:nth-child(2)]:rounded-tr-2xl sm:[&:nth-child(2)]:rounded-none
+                        border-b sm:border-b-0
+                        ${aba === key
                           ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-b-transparent'
+                        }`}
                     >
                       <Icon className="w-4 h-4" />
                       {label}

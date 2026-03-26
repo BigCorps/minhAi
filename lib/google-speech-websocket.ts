@@ -152,19 +152,20 @@ export class GoogleSpeechWebSocket {
         }
       }
 
-      if (type === 'audio') {
-        if (this.isVoiceDetected) {
-          if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(data);
-          }
-        } else {
-          // Acumula no preRoll enquanto não há voz ativa
-          this.preRollBuffer.push(data);
-          if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
-            this.preRollBuffer.shift();
-          }
-        }
-      }
+if (type === 'audio') {
+  // Cria uma cópia do buffer antes de enviar — necessário após transferência do worklet
+  const bufferToSend = data instanceof ArrayBuffer ? data : new ArrayBuffer(0);
+  if (this.isVoiceDetected) {
+    if (this.ws?.readyState === WebSocket.OPEN && bufferToSend.byteLength > 0) {
+      this.ws.send(bufferToSend);
+    }
+  } else {
+    this.preRollBuffer.push(bufferToSend);
+    if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
+      this.preRollBuffer.shift();
+    }
+  }
+}
     };
 
     // Conecta source → worklet (sem conectar ao destination — evita echo)

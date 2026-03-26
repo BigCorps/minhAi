@@ -86,15 +86,6 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
-      // ✅ AudioWorklet processor — MIME type correto + isolamento de contexto
-      {
-        source: '/audio-processor.worklet.js',
-        headers: [
-          { key: 'Content-Type', value: 'application/javascript' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
-        ],
-      },
     ];
   },
   transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],

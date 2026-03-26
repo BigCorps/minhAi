@@ -28,6 +28,7 @@ export function useCompanionUpload({
   companyId,
   onImageReceived,
   onUrlReceived,
+  allowUrl = false, 
 }: UseCompanionUploadOptions): UseCompanionUploadReturn {
   const [token, setToken]       = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);

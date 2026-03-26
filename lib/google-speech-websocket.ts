@@ -22,10 +22,17 @@ export class GoogleSpeechWebSocket {
   private isRecording: boolean = false;
   private config: Required<GoogleSpeechConfig>;
 
-  // VAD state — mantido na main thread para controlar preRoll e status
+  // VAD state
   private isVoiceDetected: boolean = false;
   private preRollBuffer: ArrayBuffer[] = [];
   private readonly MAX_PRE_ROLL_CHUNKS = 8;
+
+  // ✅ Acumulador de chunks — AudioWorklet entrega blocos de 128 amostras (256 bytes),
+  // precisamos acumular até 4096 amostras (8192 bytes) antes de enviar ao WS,
+  // equivalente ao bufferSize original do ScriptProcessorNode.
+  private audioAccumulator: Int16Array[] = [];
+  private accumulatorSize: number = 0;
+  private readonly ACCUMULATOR_TARGET = 4096; // amostras Int16
 
   private readonly SILENCE_THRESHOLD: number;
   private readonly VOLUME_THRESHOLD: number;
@@ -152,23 +159,41 @@ export class GoogleSpeechWebSocket {
         }
       }
 
-if (type === 'audio') {
-  // 👇 DIAGNÓSTICO — remove depois de confirmar
-  console.log('📦 Audio chunk recebido:', data?.byteLength, 'bytes | WS state:', this.ws?.readyState, '| voz:', this.isVoiceDetected);
-  
-  if (this.isVoiceDetected) {
-    if (this.ws?.readyState === WebSocket.OPEN && data?.byteLength > 0) {
-      this.ws.send(data);
-    }
-  } else {
-    if (data?.byteLength > 0) {
-      this.preRollBuffer.push(data);
-      if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
-        this.preRollBuffer.shift();
+      if (type === 'audio') {
+        // ✅ Acumula chunks pequenos (128 amostras = 256 bytes) até atingir
+        // 4096 amostras (8192 bytes) — equivalente ao bufferSize original.
+        // Necessário porque AudioWorklet entrega blocos fixos de 128 amostras,
+        // enquanto o ScriptProcessorNode entregava 4096 por callback.
+        const chunk = new Int16Array(data);
+        this.audioAccumulator.push(chunk);
+        this.accumulatorSize += chunk.length;
+
+        if (this.accumulatorSize >= this.ACCUMULATOR_TARGET) {
+          // Monta buffer único com todos os chunks acumulados
+          const merged = new Int16Array(this.accumulatorSize);
+          let offset = 0;
+          for (const c of this.audioAccumulator) {
+            merged.set(c, offset);
+            offset += c.length;
+          }
+          this.audioAccumulator = [];
+          this.accumulatorSize = 0;
+
+          const mergedBuffer = merged.buffer;
+
+          if (this.isVoiceDetected) {
+            if (this.ws?.readyState === WebSocket.OPEN) {
+              this.ws.send(mergedBuffer);
+            }
+          } else {
+            // Acumula no preRoll enquanto não há voz ativa
+            this.preRollBuffer.push(mergedBuffer);
+            if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
+              this.preRollBuffer.shift();
+            }
+          }
+        }
       }
-    }
-  }
-}
     };
 
     // Conecta source → worklet (sem conectar ao destination — evita echo)
@@ -212,6 +237,10 @@ if (type === 'audio') {
     this.isRecording = false;
     this.isVoiceDetected = false;
     this.preRollBuffer = [];
+
+    // ✅ Limpa acumulador
+    this.audioAccumulator = [];
+    this.accumulatorSize = 0;
 
     // ✅ Limpeza do AudioWorkletNode
     if (this.audioWorkletNode) {

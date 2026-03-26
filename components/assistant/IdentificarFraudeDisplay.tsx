@@ -397,6 +397,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                   enabledTabs={['companion', 'upload']}
                   activeTab={cameraTab}
                   onTabChange={(tab) => setCameraTab(tab as Tab)}
+                  allowUrl
                   onUrlReceived={handleUrlFromCompanion}
                   instructions="Envie o boleto ou comprovante suspeito para análise."
                 />

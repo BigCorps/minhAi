@@ -8,6 +8,7 @@ interface UseCompanionUploadOptions {
   companyId: string;
   onImageReceived: (base64: string) => void;
   onUrlReceived?: (url: string) => void;
+  allowUrl?: boolean; 
 }
 
 export interface UseCompanionUploadReturn {
@@ -168,7 +169,7 @@ export function useCompanionUpload({
 
       const newToken  = data.token as string;
       const BASE_URL  = process.env.NEXT_PUBLIC_APP_URL || 'https://www.minhai.app';
-      const url       = `${BASE_URL}/arquivos?token=${newToken}`;
+      const url = `${BASE_URL}/arquivos?token=${newToken}${allowUrl ? '&allowUrl=1' : ''}`;
 
       const qr = await QRCode.toDataURL(url, {
         width: 280, margin: 2,

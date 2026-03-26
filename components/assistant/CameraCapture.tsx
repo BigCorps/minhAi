@@ -62,6 +62,7 @@ async function mergeFilesToPDF(files: File[]): Promise<string> {
 
 interface CameraCaptureProps {
   onCapture: (base64: string) => void;
+  onUrlReceived?: (url: string) => void;
   onCancel: () => void;
   theme?: 'dark' | 'light';
   acceptedTypes?: string;
@@ -90,6 +91,7 @@ export default function CameraCapture(props: CameraCaptureProps) {
     instructions,
     companyId,
     allowMultiple = false,
+    onUrlReceived, 
   } = props;
 
   const isDark = theme === 'dark';
@@ -122,6 +124,7 @@ export default function CameraCapture(props: CameraCaptureProps) {
   const companion = useCompanionUpload({
     companyId,
     onImageReceived: (base64) => onCapture(base64),
+    onUrlReceived: onUrlReceived,
   });
 
   useEffect(() => {

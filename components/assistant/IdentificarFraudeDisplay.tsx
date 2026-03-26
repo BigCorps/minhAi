@@ -414,17 +414,6 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                   Cole o link suspeito para verificar se é phishing ou fraude
                 </p>
 
-                {/* Dica totem */}
-                <div style={{
-                  padding: '10px 14px', borderRadius: 12,
-                  background: theme === 'dark' ? 'rgba(99,102,241,0.1)' : '#eef2ff',
-                  border: `1px solid ${theme === 'dark' ? 'rgba(99,102,241,0.25)' : '#c7d2fe'}`,
-                  fontSize: 12,
-                  color: theme === 'dark' ? '#a5b4fc' : '#4338ca',
-                }}>
-                  📱 Em totens sem teclado: use a aba <strong>Imagem / Boleto</strong> e envie o link pelo celular via QR Code.
-                </div>
-
                 <input
                   type="url"
                   value={urlInput}

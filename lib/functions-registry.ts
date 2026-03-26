@@ -4154,12 +4154,16 @@ ver_produtos: {
   category: 'products',
   responseType: 'voice+modal',
 
-  voiceTriggers: [
-    'me mostra', 'quero ver', 'detalhes do', 'detalhes de',
-    'o que é', 'como é', 'informações sobre', 'informacoes sobre',
-    'mostra o', 'mostra a', 'ver o produto', 'ver a',
-    'quanto custa o', 'quanto custa a', 'qual o preco do', 'qual o preço do',
-  ],
+voiceTriggers: [
+  'detalhes do produto',
+  'detalhes de produto', 
+  'ver o produto',
+  'quanto custa o produto',
+  'quanto custa',
+  'ver produtos',
+  'catálogo de produtos',
+  'produto no cardápio',
+],
 
   examplePhrases: [
     'Me mostra a pizza de calabresa',

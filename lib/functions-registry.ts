@@ -456,6 +456,51 @@ voiceTriggers: [
     },
   },
 
+identificar_fraude: {
+  functionKey:      'identificar_fraude',
+  functionName:     'Identificar Fraude',
+  category:         'security' as any,
+  responseType:     'voice+modal',
+
+  voiceTriggers: [
+    'identificar fraude',
+    'verificar fraude',
+    'checar boleto',
+    'boleto suspeito',
+    'analisar link',
+    'link suspeito',
+    'site suspeito',
+    'verificar site',
+    'golpe',
+    'fraude',
+  ],
+  examplePhrases: [
+    'Identificar fraude',
+    'Verificar boleto',
+    'Checar link suspeito',
+  ],
+
+  edgeFunction:  'camera-process',
+  uiComponent:   'IdentificarFraudeDisplay',
+  requiresInput: false,
+  description:   'Analisa imagens, boletos e links para detectar fraudes e golpes.',
+  icon:          '🔍',
+  color:         '#dc2626',
+  saveToHistory:  true,
+  creditsPerUse:  2,
+  requiresPayment: false,
+  isPremium:      false,
+
+  handler: async ({ companyId, playText, setActiveModal }) => {
+    setActiveModal?.({
+      type: 'IdentificarFraudeDisplay',
+      data: { companyId },
+    });
+    playText('Modo de identificação de fraude. Escolha a image ou um link para uma análise aprofundada.').catch(() => {});
+    return true;
+  },
+},
+
 tocar_musica: {
   functionKey: 'tocar_musica',
   functionName: 'Tocar Música',

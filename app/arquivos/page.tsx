@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { Timer, CheckCircle, XCircle, ImageUp, FileUp, RefreshCw } from 'lucide-react';
+import { Timer, CheckCircle, XCircle, ImageUp, FileUp, RefreshCw, Paperclip, Link } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 
 // Tipos MIME aceitos pelo input
@@ -73,6 +73,8 @@ function ArquivosContent() {
   const [companyName, setCompanyName] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [mergingCount, setMergingCount] = useState(0);
+  const [inputMode, setInputMode] = useState<'file' | 'url'>('file');
+  const [urlInput, setUrlInput] = useState('');
 
   const supabase = createClient();
 
@@ -236,6 +238,37 @@ function ArquivosContent() {
     }
   };
 
+  // ── Handler envio de URL ──
+  const handleUrlSubmit = async () => {
+    if (!token || !urlInput.trim()) return;
+
+    const normalized = urlInput.trim().startsWith('http')
+      ? urlInput.trim()
+      : `https://${urlInput.trim()}`;
+
+    try { new URL(normalized); } catch {
+      setError('URL inválida. Verifique e tente novamente.');
+      return;
+    }
+
+    setStatus('uploading');
+    setError(null);
+    setUploadedFileName(normalized);
+
+    // Salvar a URL como texto simples no storage
+    // (a edge vai detectar pelo prefixo 'URL:' e tratar diferente de imagem)
+    const blob = new Blob([`URL:${normalized}`], { type: 'text/plain' });
+    const file = new File([blob], 'url_para_analise.txt', { type: 'text/plain' });
+
+    try {
+      await uploadSingleFile(file);
+      setStatus('success');
+    } catch (err: any) {
+      setError(err.message ?? 'Erro ao enviar link.');
+      setStatus('error');
+    }
+  };
+
   if (status === 'validating') return (
     <PageWrapper>
       <div className="flex flex-col items-center gap-4">
@@ -335,47 +368,102 @@ function ArquivosContent() {
           </p>
         </div>
 
-        {/* Botão câmera — apenas 1 imagem */}
-        <label className="w-full cursor-pointer">
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={handleCameraCapture}
-          />
-          <div className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-semibold transition-all active:scale-95">
-            <ImageUp className="w-5 h-5" />
-            <span>Tirar Foto</span>
-          </div>
-        </label>
-
-        <div className="flex items-center gap-3 w-full">
-          <div className="flex-1 h-px bg-slate-700" />
-          <span className="text-slate-500 text-xs">ou</span>
-          <div className="flex-1 h-px bg-slate-700" />
+        {/* Toggle modo Arquivo / URL */}
+        <div className="flex gap-1 p-1 rounded-xl bg-slate-800 w-full">
+          <button
+            onClick={() => { setInputMode('file'); setError(null); }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+              inputMode === 'file'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Paperclip className="w-4 h-4" />
+            Arquivo / Foto
+          </button>
+          <button
+            onClick={() => { setInputMode('url'); setError(null); }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+              inputMode === 'url'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Link className="w-4 h-4" />
+            Link / URL
+          </button>
         </div>
 
-        {/* Botão arquivo — aceita múltiplos */}
-        <label className="w-full cursor-pointer">
-          <input
-            type="file"
-            accept={ACCEPTED_TYPES}
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <div className="w-full flex items-center justify-center gap-3 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-2xl text-base font-semibold transition-all active:scale-95 border border-slate-600">
-            <FileUp className="w-5 h-5" />
-            <span>Escolher Arquivo(s)</span>
-          </div>
-        </label>
+        {/* Modo arquivo */}
+        {inputMode === 'file' && (
+          <>
+            {/* Botão câmera — apenas 1 imagem */}
+            <label className="w-full cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleCameraCapture}
+              />
+              <div className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-base font-semibold transition-all active:scale-95">
+                <ImageUp className="w-5 h-5" />
+                <span>Tirar Foto</span>
+              </div>
+            </label>
 
-        <p className="text-slate-600 text-xs text-center">
-          Imagens e PDFs podem ser enviados juntos e serão mesclados.
-          <br />
-          TXT, CSV, DOC, XLS — envie 1 por vez. Máx. 10MB/arquivo.
-        </p>
+            <div className="flex items-center gap-3 w-full">
+              <div className="flex-1 h-px bg-slate-700" />
+              <span className="text-slate-500 text-xs">ou</span>
+              <div className="flex-1 h-px bg-slate-700" />
+            </div>
+
+            {/* Botão arquivo — aceita múltiplos */}
+            <label className="w-full cursor-pointer">
+              <input
+                type="file"
+                accept={ACCEPTED_TYPES}
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <div className="w-full flex items-center justify-center gap-3 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-2xl text-base font-semibold transition-all active:scale-95 border border-slate-600">
+                <FileUp className="w-5 h-5" />
+                <span>Escolher Arquivo(s)</span>
+              </div>
+            </label>
+
+            <p className="text-slate-600 text-xs text-center">
+              Imagens e PDFs podem ser enviados juntos e serão mesclados.
+              <br />
+              TXT, CSV, DOC, XLS — envie 1 por vez. Máx. 10MB/arquivo.
+            </p>
+          </>
+        )}
+
+        {/* Modo URL */}
+        {inputMode === 'url' && (
+          <div className="flex flex-col gap-3 w-full">
+            <p className="text-slate-400 text-sm text-center">
+              Cole o link suspeito para análise
+            </p>
+            <input
+              type="url"
+              value={urlInput}
+              onChange={e => { setUrlInput(e.target.value); setError(null); }}
+              placeholder="https://site-suspeito.com"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 text-slate-200 placeholder-slate-500 rounded-2xl text-sm font-mono outline-none focus:border-indigo-500"
+              autoFocus
+            />
+            <button
+              onClick={handleUrlSubmit}
+              disabled={!urlInput.trim()}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-2xl text-base font-semibold transition-all active:scale-95"
+            >
+              Enviar link para análise
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="w-full px-4 py-3 bg-red-900/30 border border-red-700 text-red-300 rounded-xl text-sm text-center">

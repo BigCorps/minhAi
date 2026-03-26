@@ -2,8 +2,23 @@
 // handlers/functionUsage.ts
 // Caminho: components/assistant/VoiceAssistant/handlers/functionUsage.ts
 // ============================================================
-
 import { createClient } from '@/lib/supabase-browser';
+
+// ── Cache de sessão ───────────────────────────────────────────
+// Evita queries repetidas ao Supabase durante a mesma sessão do assistente.
+// Os settings de função não mudam enquanto o assistente está ativo.
+// Chave: `${companyId}:${functionKey}` → valor: boolean
+const functionEnabledCache = new Map<string, boolean>();
+
+/**
+ * Limpa o cache de sessão.
+ * Chame isso se os settings forem alterados em runtime
+ * (ex: admin habilita/desabilita uma função enquanto o assistente está aberto).
+ */
+export function clearFunctionEnabledCache(): void {
+  functionEnabledCache.clear();
+  console.log('🗑️ Cache de funções limpo');
+}
 
 /**
  * Registra uso de uma função no Supabase via RPC.
@@ -15,21 +30,17 @@ export async function registerFunctionUsage(
   creditsConsumed: number
 ): Promise<void> {
   console.log('🔵 Registrando uso:', { functionKey, creditsConsumed, companyId });
-
   try {
     const supabase = createClient();
-
     const { data, error } = await supabase.rpc('register_function_usage', {
       p_company_id: companyId,
       p_function_key: functionKey,
       p_credits_consumed: creditsConsumed,
     });
-
     if (error) {
       console.error('❌ ERRO RPC:', error);
       return;
     }
-
     console.log('✅ Uso registrado:', functionKey, creditsConsumed, 'créditos — Resposta:', data);
   } catch (error) {
     console.error('❌ ERRO GERAL ao registrar uso:', error);
@@ -38,15 +49,24 @@ export async function registerFunctionUsage(
 
 /**
  * Verifica se uma função está ativa globalmente e habilitada para a empresa.
+ * ✅ Resultado cacheado por sessão — evita queries repetidas ao Supabase.
  */
 export async function checkIfFunctionIsEnabled(
   companyId: string,
   functionKey: string
 ): Promise<boolean> {
+  // ✅ Cache hit — retorna imediatamente sem query
+  const cacheKey = `${companyId}:${functionKey}`;
+  if (functionEnabledCache.has(cacheKey)) {
+    const cached = functionEnabledCache.get(cacheKey)!;
+    console.log(`⚡ Cache hit — ${functionKey}: ${cached ? '✅' : '❌'}`);
+    return cached;
+  }
+
   try {
     const supabase = createClient();
 
-    // ✅ Busca is_active E default_enabled juntos
+    // Busca is_active E default_enabled juntos
     const { data: func } = await supabase
       .from('assistant_functions')
       .select('is_active, default_enabled')
@@ -55,6 +75,7 @@ export async function checkIfFunctionIsEnabled(
 
     if (!func || !func.is_active) {
       console.log(`⚠️ Função ${functionKey} não ativa globalmente`);
+      functionEnabledCache.set(cacheKey, false);
       return false;
     }
 
@@ -65,17 +86,24 @@ export async function checkIfFunctionIsEnabled(
       .eq('function_key', functionKey)
       .single();
 
+    let result: boolean;
+
     if (!setting) {
-      // ✅ Sem setting — usa default_enabled da função
-      console.log(`${func.default_enabled ? '✅' : '❌'} Função ${functionKey} usando default_enabled: ${func.default_enabled}`);
-      return func.default_enabled ?? false;
+      // Sem setting — usa default_enabled da função
+      result = func.default_enabled ?? false;
+      console.log(`${result ? '✅' : '❌'} Função ${functionKey} usando default_enabled: ${result}`);
+    } else {
+      result = setting.is_enabled;
+      console.log(`${result ? '✅' : '❌'} Função ${functionKey} ${result ? 'habilitada' : 'desabilitada'}`);
     }
 
-    console.log(`${setting.is_enabled ? '✅' : '❌'} Função ${functionKey} ${setting.is_enabled ? 'habilitada' : 'desabilitada'}`);
-    return setting.is_enabled;
+    // ✅ Armazena no cache para próximas chamadas
+    functionEnabledCache.set(cacheKey, result);
+    return result;
+
   } catch (error) {
     console.error('Erro ao verificar função:', error);
-    return false; // ✅ falha fechada
+    return false; // falha fechada — não cacheia erro para tentar novamente
   }
 }
 
@@ -89,7 +117,6 @@ export async function saveInteractionToHistory(
 ): Promise<void> {
   try {
     const supabase = createClient();
-
     const { data: conv, error: convError } = await supabase
       .from('conversations')
       .insert({

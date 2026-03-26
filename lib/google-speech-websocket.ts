@@ -153,16 +153,19 @@ export class GoogleSpeechWebSocket {
       }
 
 if (type === 'audio') {
-  // Cria uma cópia do buffer antes de enviar — necessário após transferência do worklet
-  const bufferToSend = data instanceof ArrayBuffer ? data : new ArrayBuffer(0);
+  // 👇 DIAGNÓSTICO — remove depois de confirmar
+  console.log('📦 Audio chunk recebido:', data?.byteLength, 'bytes | WS state:', this.ws?.readyState, '| voz:', this.isVoiceDetected);
+  
   if (this.isVoiceDetected) {
-    if (this.ws?.readyState === WebSocket.OPEN && bufferToSend.byteLength > 0) {
-      this.ws.send(bufferToSend);
+    if (this.ws?.readyState === WebSocket.OPEN && data?.byteLength > 0) {
+      this.ws.send(data);
     }
   } else {
-    this.preRollBuffer.push(bufferToSend);
-    if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
-      this.preRollBuffer.shift();
+    if (data?.byteLength > 0) {
+      this.preRollBuffer.push(data);
+      if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
+        this.preRollBuffer.shift();
+      }
     }
   }
 }

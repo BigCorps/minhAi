@@ -496,7 +496,6 @@ identificar_fraude: {
       type: 'IdentificarFraudeDisplay',
       data: { companyId },
     });
-    playText('Modo de identificação de fraude. Escolha a image ou um link para uma análise aprofundada.').catch(() => {});
     return true;
   },
 },

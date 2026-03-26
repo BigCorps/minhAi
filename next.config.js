@@ -3,9 +3,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: {
-    optimizePackageImports: ['@ricky0123/vad-web'],
-  },
   // Permitir imagens do Supabase Storage para logos
   images: {
     remotePatterns: [
@@ -38,21 +35,18 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // minhai.app sem www → www.minhai.app
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'minhai.app' }],
         destination: 'https://www.minhai.app/:path*',
         permanent: true,
       },
-      // minhai.com.br → www.minhai.app
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'minhai.com.br' }],
         destination: 'https://www.minhai.app/:path*',
         permanent: true,
       },
-      // www.minhai.com.br → www.minhai.app
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'www.minhai.com.br' }],

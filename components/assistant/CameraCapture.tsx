@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Upload, Smartphone, ZapOff, QrCode, RefreshCw, Timer, Copy, Check } from 'lucide-react';
+import { Camera, Upload, Smartphone, ZapOff, QrCode, RefreshCw, Timer, Copy, Check, Link as LinkIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useCameraCapture } from '@/components/VoiceAssistant/hooks/useCameraCapture';
 import { useCompanionUpload } from '@/components/VoiceAssistant/hooks/useCompanionUpload';
@@ -71,13 +71,15 @@ interface CameraCaptureProps {
   enabledTabs?: Tab[];
   acceptPdf?: boolean;
   allowMultiple?: boolean; // ← NOVO: habilita seleção de múltiplos arquivos
+  allowUrl?: boolean;       // habilita aba de URL (só para IdentificarFraude)
+  onUrlCapture?: (url: string) => void;  // callback separado para URL
   activeTab?: Tab;
   onTabChange?: (tab: Tab) => void;
   captureRef?: React.MutableRefObject<(() => void) | null>;
   videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
 
-type Tab = 'companion' | 'webcam' | 'mobile' | 'upload';
+type Tab = 'companion' | 'webcam' | 'mobile' | 'upload' | 'url';
 
 export default function CameraCapture(props: CameraCaptureProps) {
   const {
@@ -102,6 +104,8 @@ export default function CameraCapture(props: CameraCaptureProps) {
   // ── Estado de progresso de mesclagem ─────────────────────
   const [processingFiles, setProcessingFiles] = useState(false);
   const [fileCount, setFileCount] = useState(0);
+  const [urlInput, setUrlInput] = useState('');
+  const [urlError, setUrlError] = useState('');
 
   useEffect(() => {
     setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
@@ -234,6 +238,7 @@ export default function CameraCapture(props: CameraCaptureProps) {
     { id: 'webcam',    label: 'Webcam',  icon: <Camera className="w-3.5 h-3.5" /> },
     ...(isMobile ? [{ id: 'mobile' as Tab, label: 'Câmera', icon: <Smartphone className="w-3.5 h-3.5" /> }] : []),
     { id: 'upload',    label: 'Upload',  icon: <Upload className="w-3.5 h-3.5" /> },
+    ...(props.allowUrl ? [{ id: 'url' as Tab, label: 'Link', icon: <LinkIcon className="w-3.5 h-3.5" /> }] : []),
   ];
   const visibleTabs = props.enabledTabs
     ? allTabs.filter(t => props.enabledTabs!.includes(t.id))
@@ -363,6 +368,41 @@ export default function CameraCapture(props: CameraCaptureProps) {
                 className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all"
               >
                 {allowMultiple ? 'Selecionar arquivos' : 'Selecionar arquivo'}
+              </button>
+            </div>
+          )}
+
+          {/* ── URL ── */}
+          {activeTab === 'url' && (
+            <div className="flex flex-col items-center gap-3 p-4 w-full">
+              <p className={`text-sm text-center ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                Cole o link suspeito para análise
+              </p>
+              <input
+                type="url"
+                value={urlInput}
+                onChange={e => { setUrlInput(e.target.value); setUrlError(''); }}
+                placeholder="https://exemplo.com"
+                className={`w-full px-3 py-2.5 rounded-xl text-sm border outline-none font-mono ${
+                  isDark
+                    ? 'bg-slate-800 border-slate-600 text-slate-200 placeholder-slate-500 focus:border-indigo-500'
+                    : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-indigo-500'
+                }`}
+              />
+              {urlError && (
+                <p className="text-red-400 text-xs">{urlError}</p>
+              )}
+              <button
+                onClick={() => {
+                  const trimmed = urlInput.trim();
+                  if (!trimmed) { setUrlError('Cole uma URL válida.'); return; }
+                  const normalized = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+                  try { new URL(normalized); } catch { setUrlError('URL inválida.'); return; }
+                  props.onUrlCapture?.(normalized);
+                }}
+                className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-all"
+              >
+                Analisar link
               </button>
             </div>
           )}

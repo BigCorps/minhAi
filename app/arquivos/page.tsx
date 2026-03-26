@@ -257,8 +257,11 @@ function ArquivosContent() {
 
     // Salvar a URL como texto simples no storage
     // (a edge vai detectar pelo prefixo 'URL:' e tratar diferente de imagem)
-    const blob = new Blob([`URL:${normalized}`], { type: 'text/plain' });
-    const file = new File([blob], 'url_para_analise.txt', { type: 'text/plain' });
+const blob = new Blob(
+  [JSON.stringify({ type: 'url', url: normalized })],
+  { type: 'application/json' }
+);
+const file = new File([blob], 'url_para_analise.json', { type: 'application/json' });
 
     try {
       await uploadSingleFile(file);

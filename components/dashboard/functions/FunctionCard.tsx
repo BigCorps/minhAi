@@ -110,6 +110,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'painel_ofertas',
   'aparelhos_smart',
   'canal_youtube',
+  'identificar_fraude',
   'tef_debito',
   'tef_credito'
 ];

@@ -3,10 +3,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // IdentificarFraudeDisplay.tsx
 // Caminho: components/VoiceAssistant/modals/IdentificarFraudeDisplay.tsx
-//
-// Analisa imagens, boletos (PDF) e URLs em busca de fraudes.
-// Usa action='fraude' (imagem/PDF) ou action='fraude_url' (link).
-// Suporta envio de link via QR Code (celular sem teclado / totem).
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -18,7 +14,7 @@ import CameraCapture from '@/components/assistant/CameraCapture';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 type InputMode = 'image' | 'url';
-type Tab       = 'companion' | 'webcam' | 'mobile' | 'upload';
+type Tab       = 'companion' | 'upload';
 type Stage     = 'input' | 'processing' | 'result' | 'error';
 type RiskLevel = 'SEGURO' | 'SUSPEITO' | 'FRAUDE';
 
@@ -94,7 +90,7 @@ const LIGHT = {
   errorText:       '#dc2626',
 };
 
-// ─── Cores do semáforo ────────────────────────────────────────────────────────
+// ─── Semáforo ─────────────────────────────────────────────────────────────────
 const RISK_CONFIG: Record<RiskLevel, {
   color: string; bg: string; border: string; emoji: string; label: string;
 }> = {
@@ -117,10 +113,10 @@ const normalize = (text: string) =>
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[.,!?;:\-]+/g, '');
 
-// NÃO reproduzir no mount — o handler do registry/VoiceAssistant não chama
-// playText, então o modal fala apenas uma vez aqui.
+// Áudio de abertura — apenas aqui.
+// O handler do registry e o case do VoiceAssistant NÃO chamam playText.
 const OPENING_TEXT =
-  'Modo de identificação de fraude. Escolha imagem para fotografar ou link para analisar um site. Diga imagem ou link para alternar.';
+  'Modo de identificação de fraude. Escolha imagem para enviar um boleto ou comprovante, ou link para analisar um site suspeito.';
 
 // ─── VoiceHint ────────────────────────────────────────────────────────────────
 function VoiceHint({ commands, p }: { commands: string[]; p: typeof DARK }) {
@@ -167,7 +163,7 @@ function ScoreBar({ score, riskLevel }: { score: number; riskLevel: RiskLevel })
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark', playText }: Props) {
-  const p       = theme === 'dark' ? DARK : LIGHT;
+  const p        = theme === 'dark' ? DARK : LIGHT;
   const supabase = createClient();
 
   // ── Estado ──────────────────────────────────────────────────────────────────
@@ -180,19 +176,19 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
   const [errorMsg, setErrorMsg]           = useState('');
   const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
 
-  // debounce de comandos de voz de aba
+  // Refs
   const lastTabCommandRef    = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref para handleAnalyzeUrl — evita stale closure no companion callback
+  const handleAnalyzeUrlRef  = useRef<(urlToAnalyze?: string) => Promise<void>>();
 
   // ── Abrir modal — fala UMA vez ───────────────────────────────────────────────
-  // O handler do registry e o case do VoiceAssistant NÃO chamam playText,
-  // então este useEffect é a única fonte de áudio de abertura.
   useEffect(() => {
     window.speechSynthesis?.cancel();
     playText(OPENING_TEXT).catch(() => {});
   }, []); // eslint-disable-line
 
-  // ── Analisar URL (chamada tanto pelo botão quanto pelo companion) ─────────────
+  // ── Analisar URL ──────────────────────────────────────────────────────────────
   const handleAnalyzeUrl = useCallback(async (urlToAnalyze?: string) => {
     const target = (urlToAnalyze ?? urlInput).trim();
     if (!target) { setUrlError('Cole uma URL para análise.'); return; }
@@ -219,16 +215,23 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
     }
   }, [urlInput, data.companyId, supabase, playText]);
 
-  // ── Callback para quando o celular envia um link via QR ──────────────────────
-  // Passa para CameraCapture via prop onUrlReceived → useCompanionUpload
+  // Manter ref sempre atualizada com a versão mais recente
+  useEffect(() => {
+    handleAnalyzeUrlRef.current = handleAnalyzeUrl;
+  }, [handleAnalyzeUrl]);
+
+  // ── Callback para quando o celular envia link via QR ─────────────────────────
+  // Usa ref para garantir versão atualizada — evita stale closure do Realtime
   const handleUrlFromCompanion = useCallback((url: string) => {
     setInputMode('url');
     setUrlInput(url);
-    // Analisar automaticamente ao receber
-    handleAnalyzeUrl(url);
-  }, [handleAnalyzeUrl]);
+    // Defer de 50ms garante que setUrlInput já propagou antes de chamar via ref
+    setTimeout(() => {
+      handleAnalyzeUrlRef.current?.(url);
+    }, 50);
+  }, []);
 
-  // ── Captura imagem ────────────────────────────────────────────────────────────
+  // ── Captura imagem/PDF ────────────────────────────────────────────────────────
   const handleCapture = useCallback(async (base64: string) => {
     setStage('processing');
     try {
@@ -259,15 +262,12 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
   }, []);
 
   // ── Voice commands ────────────────────────────────────────────────────────────
+  // Apenas companion e upload — webcam e câmera removidos desta função
   const TAB_COMMANDS: Record<string, string[]> = {
-    webcam:    ['webcam', 'computador', 'camera do computador'],
-    mobile:    ['camera', 'meu celular', 'telefone'],
     upload:    ['arquivo', 'upload', 'galeria'],
     companion: ['celular', 'qr code', 'qrcode', 'enviar do celular'],
   };
   const TAB_FEEDBACK: Record<string, string> = {
-    webcam:    'Webcam ativada.',
-    mobile:    'Câmera do celular selecionada.',
     upload:    'Selecione um arquivo ou imagem.',
     companion: 'Aponte o celular para o QR Code.',
   };
@@ -285,11 +285,11 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
         return;
       }
 
-      // Alternar modo input
+      // Alternar modo
       if (stage === 'input') {
-        if (['imagem', 'foto', 'boleto', 'fotografar'].some(cmd => t.includes(cmd))) {
+        if (['imagem', 'foto', 'boleto', 'comprovante'].some(cmd => t.includes(cmd))) {
           setInputMode('image');
-          playText('Modo imagem. Envie uma foto ou boleto.').catch(() => {});
+          playText('Modo imagem. Envie o boleto ou comprovante.').catch(() => {});
           return;
         }
         if (['link', 'url', 'site', 'endereco'].some(cmd => t.includes(cmd))) {
@@ -299,7 +299,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
         }
       }
 
-      // Comandos de aba (só no modo imagem, stage input)
+      // Comandos de aba — só no modo imagem, stage input
       if (stage === 'input' && inputMode === 'image') {
         for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
           if (triggers.some(tr => t.includes(tr))) {
@@ -385,7 +385,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
               ))}
             </div>
 
-            {/* ── Modo Imagem ── */}
+            {/* ── Modo Imagem — apenas Celular e Upload ── */}
             {inputMode === 'image' && (
               <>
                 <CameraCapture
@@ -394,13 +394,14 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                   theme={theme}
                   companyId={data.companyId}
                   acceptPdf
+                  enabledTabs={['companion', 'upload']}
                   activeTab={cameraTab}
-                  onTabChange={(tab) => setCameraTab(tab)}
+                  onTabChange={(tab) => setCameraTab(tab as Tab)}
                   onUrlReceived={handleUrlFromCompanion}
-                  instructions="Fotografe o boleto, print ou comprovante suspeito."
+                  instructions="Envie o boleto ou comprovante suspeito para análise."
                 />
                 <VoiceHint
-                  commands={['imagem', 'link', 'celular', 'webcam', 'arquivo', 'fechar']}
+                  commands={['imagem', 'link', 'celular', 'arquivo', 'fechar']}
                   p={p}
                 />
               </>
@@ -413,15 +414,15 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                   Cole o link suspeito para verificar se é phishing ou fraude
                 </p>
 
-                {/* Dica: também pode enviar link pelo celular */}
+                {/* Dica totem */}
                 <div style={{
                   padding: '10px 14px', borderRadius: 12,
                   background: theme === 'dark' ? 'rgba(99,102,241,0.1)' : '#eef2ff',
                   border: `1px solid ${theme === 'dark' ? 'rgba(99,102,241,0.25)' : '#c7d2fe'}`,
-                  fontSize: 12, color: theme === 'dark' ? '#a5b4fc' : '#4338ca',
+                  fontSize: 12,
+                  color: theme === 'dark' ? '#a5b4fc' : '#4338ca',
                 }}>
-                  📱 Em totens sem teclado: mude para a aba <strong>Imagem / Boleto</strong> e use
-                  o QR Code para enviar o link pelo celular.
+                  📱 Em totens sem teclado: use a aba <strong>Imagem / Boleto</strong> e envie o link pelo celular via QR Code.
                 </div>
 
                 <input

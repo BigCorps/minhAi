@@ -31,14 +31,18 @@ export function useWakeWordDetector(companyWakeWord: string) {
       keywords: [
         companyWakeWord,
         ...generated.variations.slice(0, 10),
-        // Removidas as wake words padrão hardcoded
+        'gerente',
+        'atendente',
+        'assistente',
+        'alexa',
+        'oi',
+        'olá',
       ],
       threshold: 0.7,
       contextWindow: 5,
       usePhoneticMatching: true,
       excludeWords: END_COMMANDS,
     });
-
 
     console.log('✅ WakeWordDetector inicializado');
   }, [companyWakeWord]);

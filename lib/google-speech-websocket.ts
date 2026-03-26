@@ -1,13 +1,14 @@
+
 export interface GoogleSpeechConfig {
   onTranscript: (text: string, isFinal: boolean) => void;
   onError?: (error: Error) => void;
   onReady?: () => void;
   onStatusChange?: (status: 'idle' | 'recording' | 'processing') => void;
-  onVolumeChange?: (rms: number) => void;
+  onVolumeChange?: (rms: number) => void; // ✅ NOVO: expõe nível de ruído ao componente pai
   languageCode?: string;
   sampleRate?: number;
 
-  // Thresholds configuráveis — permitem valores diferentes para mobile e desktop
+  // ✅ NOVO: thresholds configuráveis — permitem valores diferentes para mobile e desktop
   volumeThreshold?: number;   // Nível mínimo de RMS para considerar voz ativa
   silenceThreshold?: number;  // Nº de chunks silenciosos antes de pausar transmissão
 }
@@ -16,8 +17,7 @@ export class GoogleSpeechWebSocket {
   private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
   private mediaStream: MediaStream | null = null;
-  // ✅ AudioWorkletNode substituiu ScriptProcessorNode (depreciado, rodava na main thread)
-  private audioWorkletNode: AudioWorkletNode | null = null;
+  private scriptProcessor: ScriptProcessorNode | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private isRecording: boolean = false;
   private config: Required<GoogleSpeechConfig>;
@@ -26,14 +26,9 @@ export class GoogleSpeechWebSocket {
   private isVoiceDetected: boolean = false;
   private preRollBuffer: ArrayBuffer[] = [];
   private readonly MAX_PRE_ROLL_CHUNKS = 8;
+  private silenceCounter: number = 0;
 
-  // ✅ Acumulador de chunks — AudioWorklet entrega blocos de 128 amostras (256 bytes),
-  // precisamos acumular até 4096 amostras (8192 bytes) antes de enviar ao WS,
-  // equivalente ao bufferSize original do ScriptProcessorNode.
-  private audioAccumulator: Int16Array[] = [];
-  private accumulatorSize: number = 0;
-  private readonly ACCUMULATOR_TARGET = 4096; // amostras Int16
-
+  // ✅ Thresholds agora vêm do config (com fallback para valores desktop seguros)
   private readonly SILENCE_THRESHOLD: number;
   private readonly VOLUME_THRESHOLD: number;
 
@@ -50,6 +45,7 @@ export class GoogleSpeechWebSocket {
       silenceThreshold: config.silenceThreshold ?? 120,
     };
 
+    // ✅ Fixar os thresholds na instância (imutáveis após construção, como antes)
     this.VOLUME_THRESHOLD = this.config.volumeThreshold;
     this.SILENCE_THRESHOLD = this.config.silenceThreshold;
 
@@ -112,99 +108,11 @@ export class GoogleSpeechWebSocket {
     });
   }
 
-  /**
-   * ✅ Inicializa o AudioWorklet via API Route (/api/audio-worklet).
-   * Funciona em qualquer domínio (.app, .com.br, subdomínios de cliente)
-   * sem depender de arquivo estático em /public.
-   * O processamento de áudio roda em thread separada, liberando a main thread.
-   */
-  private async initAudioWorklet(source: MediaStreamAudioSourceNode): Promise<void> {
-    // URL relativa ao domínio atual — funciona em .app, .com.br e subdomínios
-    await this.audioContext!.audioWorklet.addModule('/api/audio-worklet');
-
-    this.audioWorkletNode = new AudioWorkletNode(this.audioContext!, 'audio-processor', {
-      processorOptions: {
-        volumeThreshold: this.VOLUME_THRESHOLD,
-        silenceThreshold: this.SILENCE_THRESHOLD,
-      },
-    });
-
-    this.audioWorkletNode.port.onmessage = (event) => {
-      const { type, data, rms } = event.data;
-
-      if (type === 'rms') {
-        // Expõe volume ao componente pai (indicador de ruído na UI)
-        this.config.onVolumeChange(rms);
-      }
-
-      if (type === 'voice_start') {
-        if (!this.isVoiceDetected) {
-          console.log('🎤 VOZ DETECTADA');
-          this.isVoiceDetected = true;
-          this.config.onStatusChange('recording');
-
-          // Enviar preRoll acumulado (contexto anterior ao início da fala)
-          if (this.ws?.readyState === WebSocket.OPEN) {
-            this.preRollBuffer.forEach(chunk => this.ws!.send(chunk));
-            this.preRollBuffer = [];
-          }
-        }
-      }
-
-      if (type === 'silence') {
-        if (this.isVoiceDetected) {
-          console.log('🤫 SILÊNCIO PROLONGADO - Pausando');
-          this.isVoiceDetected = false;
-          this.config.onStatusChange('idle');
-        }
-      }
-
-      if (type === 'audio') {
-        // ✅ Acumula chunks pequenos (128 amostras = 256 bytes) até atingir
-        // 4096 amostras (8192 bytes) — equivalente ao bufferSize original.
-        // Necessário porque AudioWorklet entrega blocos fixos de 128 amostras,
-        // enquanto o ScriptProcessorNode entregava 4096 por callback.
-        const chunk = new Int16Array(data);
-        this.audioAccumulator.push(chunk);
-        this.accumulatorSize += chunk.length;
-
-        if (this.accumulatorSize >= this.ACCUMULATOR_TARGET) {
-          // Monta buffer único com todos os chunks acumulados
-          const merged = new Int16Array(this.accumulatorSize);
-          let offset = 0;
-          for (const c of this.audioAccumulator) {
-            merged.set(c, offset);
-            offset += c.length;
-          }
-          this.audioAccumulator = [];
-          this.accumulatorSize = 0;
-
-          const mergedBuffer = merged.buffer;
-
-          if (this.isVoiceDetected) {
-            if (this.ws?.readyState === WebSocket.OPEN) {
-              this.ws.send(mergedBuffer);
-            }
-          } else {
-            // Acumula no preRoll enquanto não há voz ativa
-            this.preRollBuffer.push(mergedBuffer);
-            if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
-              this.preRollBuffer.shift();
-            }
-          }
-        }
-      }
-    };
-
-    // Conecta source → worklet (sem conectar ao destination — evita echo)
-    source.connect(this.audioWorkletNode);
-  }
-
   async startRecording(): Promise<void> {
     if (this.isRecording) return;
 
     try {
-      // getUserMedia sem sampleRate fixo: deixar o browser negociar com o hardware.
+      // ✅ getUserMedia sem sampleRate fixo: deixar o browser negociar com o hardware.
       // Forçar 16000 em mobile pode causar rejeição silenciosa ou distorção.
       // O sampleRate configurado é usado apenas no AudioContext (downsample via Web Audio).
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -219,10 +127,66 @@ export class GoogleSpeechWebSocket {
 
       this.audioContext = new AudioContext({ sampleRate: this.config.sampleRate });
       this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
+      this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
-      // ✅ Substitui ScriptProcessorNode pelo AudioWorklet
-      await this.initAudioWorklet(this.source);
+      this.scriptProcessor.onaudioprocess = (event) => {
+        const inputData = event.inputBuffer.getChannelData(0);
 
+        // Calcular RMS (volume)
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) {
+          sum += inputData[i] * inputData[i];
+        }
+        const rms = Math.sqrt(sum / inputData.length);
+
+        // ✅ Expor volume ao componente pai (para exibir aviso de ruído no UI)
+        this.config.onVolumeChange(rms);
+
+        // Converter para Int16
+        const int16Data = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        const buffer = int16Data.buffer;
+
+        // LÓGICA DE VAD — usa thresholds da instância
+        if (rms > this.VOLUME_THRESHOLD) {
+          this.silenceCounter = 0;
+          if (!this.isVoiceDetected) {
+            console.log('🎤 VOZ DETECTADA');
+            this.isVoiceDetected = true;
+            this.config.onStatusChange('recording');
+
+            // Enviar preRoll (contexto anterior ao início da fala)
+            if (this.ws?.readyState === WebSocket.OPEN) {
+              this.preRollBuffer.forEach(chunk => this.ws!.send(chunk));
+              this.preRollBuffer = [];
+            }
+          }
+        } else {
+          this.silenceCounter++;
+          if (this.isVoiceDetected && this.silenceCounter > this.SILENCE_THRESHOLD) {
+            console.log('🤫 SILÊNCIO PROLONGADO - Pausando');
+            this.isVoiceDetected = false;
+            this.config.onStatusChange('idle');
+          }
+        }
+
+        if (this.isVoiceDetected) {
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(buffer);
+          }
+        } else {
+          this.preRollBuffer.push(buffer);
+          if (this.preRollBuffer.length > this.MAX_PRE_ROLL_CHUNKS) {
+            this.preRollBuffer.shift();
+          }
+        }
+      };
+
+      this.source.connect(this.scriptProcessor);
+      this.scriptProcessor.connect(this.audioContext.destination);
       this.isRecording = true;
       this.config.onStatusChange('idle');
 
@@ -237,18 +201,7 @@ export class GoogleSpeechWebSocket {
     this.isRecording = false;
     this.isVoiceDetected = false;
     this.preRollBuffer = [];
-
-    // ✅ Limpa acumulador
-    this.audioAccumulator = [];
-    this.accumulatorSize = 0;
-
-    // ✅ Limpeza do AudioWorkletNode
-    if (this.audioWorkletNode) {
-      this.audioWorkletNode.port.close();
-      this.audioWorkletNode.disconnect();
-      this.audioWorkletNode = null;
-    }
-
+    if (this.scriptProcessor) this.scriptProcessor.disconnect();
     if (this.source) this.source.disconnect();
     if (this.audioContext) await this.audioContext.close();
     if (this.mediaStream) this.mediaStream.getTracks().forEach(t => t.stop());

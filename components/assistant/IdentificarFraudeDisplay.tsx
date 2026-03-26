@@ -6,6 +6,7 @@
 //
 // Analisa imagens, boletos (PDF) e URLs em busca de fraudes.
 // Usa action='fraude' (imagem/PDF) ou action='fraude_url' (link).
+// Suporta envio de link via QR Code (celular sem teclado / totem).
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -19,7 +20,6 @@ import CameraCapture from '@/components/assistant/CameraCapture';
 type InputMode = 'image' | 'url';
 type Tab       = 'companion' | 'webcam' | 'mobile' | 'upload';
 type Stage     = 'input' | 'processing' | 'result' | 'error';
-
 type RiskLevel = 'SEGURO' | 'SUSPEITO' | 'FRAUDE';
 
 interface FraudeData {
@@ -41,66 +41,66 @@ interface Props {
 
 // ─── Paletas ─────────────────────────────────────────────────────────────────
 const DARK = {
-  bg:        '#1e293b',
-  border:    'rgba(255,255,255,0.08)',
-  header:    '#f8fafc',
-  sub:       '#94a3b8',
-  card:      '#0f172a',
-  cardBorder:'rgba(255,255,255,0.06)',
-  input:     '#0f172a',
-  inputBorder:'#334155',
-  inputText: '#e2e8f0',
-  inputPlaceholder: '#64748b',
-  tabActive: '#6366f1',
-  tabInactive:'rgba(255,255,255,0.05)',
-  tabActiveText: '#ffffff',
+  bg:              '#1e293b',
+  border:          'rgba(255,255,255,0.08)',
+  header:          '#f8fafc',
+  sub:             '#94a3b8',
+  card:            '#0f172a',
+  cardBorder:      'rgba(255,255,255,0.06)',
+  input:           '#0f172a',
+  inputBorder:     '#334155',
+  inputText:       '#e2e8f0',
+  inputPlaceholder:'#64748b',
+  tabActive:       '#6366f1',
+  tabInactive:     'rgba(255,255,255,0.05)',
+  tabActiveText:   '#ffffff',
   tabInactiveText: '#94a3b8',
-  hint:      'rgba(255,255,255,0.05)',
-  hintText:  '#64748b',
-  hintCode:  'rgba(255,255,255,0.08)',
-  btn:       '#6366f1',
-  btnText:   '#ffffff',
-  btnSecondary: 'rgba(255,255,255,0.08)',
-  btnSecondaryText: '#cbd5e1',
-  errorBg:   'rgba(239,68,68,0.12)',
-  errorBorder:'rgba(239,68,68,0.3)',
-  errorText: '#fca5a5',
+  hint:            'rgba(255,255,255,0.05)',
+  hintText:        '#64748b',
+  hintCode:        'rgba(255,255,255,0.08)',
+  btn:             '#6366f1',
+  btnText:         '#ffffff',
+  btnSecondary:    'rgba(255,255,255,0.08)',
+  btnSecondaryText:'#cbd5e1',
+  errorBg:         'rgba(239,68,68,0.12)',
+  errorBorder:     'rgba(239,68,68,0.3)',
+  errorText:       '#fca5a5',
 };
 
 const LIGHT = {
-  bg:        '#ffffff',
-  border:    '#e2e8f0',
-  header:    '#0f172a',
-  sub:       '#64748b',
-  card:      '#f8fafc',
-  cardBorder:'#e2e8f0',
-  input:     '#ffffff',
-  inputBorder:'#cbd5e1',
-  inputText: '#1e293b',
-  inputPlaceholder: '#94a3b8',
-  tabActive: '#6366f1',
-  tabInactive:'#f1f5f9',
-  tabActiveText: '#ffffff',
+  bg:              '#ffffff',
+  border:          '#e2e8f0',
+  header:          '#0f172a',
+  sub:             '#64748b',
+  card:            '#f8fafc',
+  cardBorder:      '#e2e8f0',
+  input:           '#ffffff',
+  inputBorder:     '#cbd5e1',
+  inputText:       '#1e293b',
+  inputPlaceholder:'#94a3b8',
+  tabActive:       '#6366f1',
+  tabInactive:     '#f1f5f9',
+  tabActiveText:   '#ffffff',
   tabInactiveText: '#64748b',
-  hint:      '#f8fafc',
-  hintText:  '#94a3b8',
-  hintCode:  '#e2e8f0',
-  btn:       '#6366f1',
-  btnText:   '#ffffff',
-  btnSecondary: '#f1f5f9',
-  btnSecondaryText: '#475569',
-  errorBg:   '#fef2f2',
-  errorBorder:'#fecaca',
-  errorText: '#dc2626',
+  hint:            '#f8fafc',
+  hintText:        '#94a3b8',
+  hintCode:        '#e2e8f0',
+  btn:             '#6366f1',
+  btnText:         '#ffffff',
+  btnSecondary:    '#f1f5f9',
+  btnSecondaryText:'#475569',
+  errorBg:         '#fef2f2',
+  errorBorder:     '#fecaca',
+  errorText:       '#dc2626',
 };
 
 // ─── Cores do semáforo ────────────────────────────────────────────────────────
 const RISK_CONFIG: Record<RiskLevel, {
   color: string; bg: string; border: string; emoji: string; label: string;
 }> = {
-  SEGURO:   { color: '#16a34a', bg: 'rgba(22,163,74,0.12)',  border: 'rgba(22,163,74,0.3)',  emoji: '✅', label: 'Seguro'  },
+  SEGURO:   { color: '#16a34a', bg: 'rgba(22,163,74,0.12)',  border: 'rgba(22,163,74,0.3)',  emoji: '✅', label: 'Seguro'   },
   SUSPEITO: { color: '#d97706', bg: 'rgba(217,119,6,0.12)',  border: 'rgba(217,119,6,0.3)',  emoji: '⚠️', label: 'Suspeito' },
-  FRAUDE:   { color: '#dc2626', bg: 'rgba(220,38,38,0.12)',  border: 'rgba(220,38,38,0.3)',  emoji: '🚨', label: 'Fraude'  },
+  FRAUDE:   { color: '#dc2626', bg: 'rgba(220,38,38,0.12)',  border: 'rgba(220,38,38,0.3)',  emoji: '🚨', label: 'Fraude'   },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -117,10 +117,12 @@ const normalize = (text: string) =>
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[.,!?;:\-]+/g, '');
 
+// NÃO reproduzir no mount — o handler do registry/VoiceAssistant não chama
+// playText, então o modal fala apenas uma vez aqui.
 const OPENING_TEXT =
-  'Modo de identificação de fraude. Escolha: imagem para fotografar ou enviar um boleto, ou link para analisar um site. Diga imagem ou link para alternar.';
+  'Modo de identificação de fraude. Escolha imagem para fotografar ou link para analisar um site. Diga imagem ou link para alternar.';
 
-// ─── Componente VoiceHint ─────────────────────────────────────────────────────
+// ─── VoiceHint ────────────────────────────────────────────────────────────────
 function VoiceHint({ commands, p }: { commands: string[]; p: typeof DARK }) {
   return (
     <div style={{
@@ -143,7 +145,7 @@ function VoiceHint({ commands, p }: { commands: string[]; p: typeof DARK }) {
   );
 }
 
-// ─── Score bar ────────────────────────────────────────────────────────────────
+// ─── ScoreBar ─────────────────────────────────────────────────────────────────
 function ScoreBar({ score, riskLevel }: { score: number; riskLevel: RiskLevel }) {
   const cfg = RISK_CONFIG[riskLevel];
   return (
@@ -165,58 +167,42 @@ function ScoreBar({ score, riskLevel }: { score: number; riskLevel: RiskLevel })
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark', playText }: Props) {
-  const p      = theme === 'dark' ? DARK : LIGHT;
+  const p       = theme === 'dark' ? DARK : LIGHT;
   const supabase = createClient();
 
   // ── Estado ──────────────────────────────────────────────────────────────────
-  const [inputMode, setInputMode]   = useState<InputMode>('image');
-  const [cameraTab, setCameraTab]   = useState<Tab>('companion');
-  const [stage, setStage]           = useState<Stage>('input');
-  const [urlInput, setUrlInput]     = useState('');
-  const [urlError, setUrlError]     = useState('');
-  const [fraudeData, setFraudeData] = useState<FraudeData | null>(null);
-  const [errorMsg, setErrorMsg]     = useState('');
+  const [inputMode, setInputMode]         = useState<InputMode>('image');
+  const [cameraTab, setCameraTab]         = useState<Tab>('companion');
+  const [stage, setStage]                 = useState<Stage>('input');
+  const [urlInput, setUrlInput]           = useState('');
+  const [urlError, setUrlError]           = useState('');
+  const [fraudeData, setFraudeData]       = useState<FraudeData | null>(null);
+  const [errorMsg, setErrorMsg]           = useState('');
   const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
 
-  // debounce voice tab command
+  // debounce de comandos de voz de aba
   const lastTabCommandRef    = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Abrir modal ──────────────────────────────────────────────────────────────
+  // ── Abrir modal — fala UMA vez ───────────────────────────────────────────────
+  // O handler do registry e o case do VoiceAssistant NÃO chamam playText,
+  // então este useEffect é a única fonte de áudio de abertura.
   useEffect(() => {
     window.speechSynthesis?.cancel();
     playText(OPENING_TEXT).catch(() => {});
   }, []); // eslint-disable-line
 
-  // ── Captura imagem ────────────────────────────────────────────────────────────
-  const handleCapture = useCallback(async (base64: string) => {
-    setStage('processing');
-    try {
-      // Remover prefixo data:... se presente
-      const clean = base64.includes(',') ? base64.split(',')[1] : base64;
-      const { data: res, error } = await supabase.functions.invoke('camera-process', {
-        body: { action: 'fraude', image: clean, company_id: data.companyId },
-      });
-      if (error) throw new Error(error.message);
-      if (!res.success) throw new Error(res.error ?? 'Falha na análise');
-      setFraudeData(res.fraude);
-      setStage('result');
-      playText(res.speech_text).catch(() => {});
-    } catch (err: any) {
-      setErrorMsg(err.message ?? 'Erro ao analisar imagem.');
-      setStage('error');
-    }
-  }, [data.companyId, supabase, playText]);
+  // ── Analisar URL (chamada tanto pelo botão quanto pelo companion) ─────────────
+  const handleAnalyzeUrl = useCallback(async (urlToAnalyze?: string) => {
+    const target = (urlToAnalyze ?? urlInput).trim();
+    if (!target) { setUrlError('Cole uma URL para análise.'); return; }
 
-  // ── Analisar URL ──────────────────────────────────────────────────────────────
-  const handleAnalyzeUrl = useCallback(async () => {
-    const trimmed = urlInput.trim();
-    if (!trimmed) { setUrlError('Cole uma URL para análise.'); return; }
-    const normalized = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+    const normalized = target.startsWith('http') ? target : `https://${target}`;
     try { new URL(normalized); } catch { setUrlError('URL inválida.'); return; }
 
     setUrlError('');
     setStage('processing');
+
     try {
       const { data: res, error } = await supabase.functions.invoke('camera-process', {
         body: { action: 'fraude_url', url: normalized, company_id: data.companyId },
@@ -233,6 +219,34 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
     }
   }, [urlInput, data.companyId, supabase, playText]);
 
+  // ── Callback para quando o celular envia um link via QR ──────────────────────
+  // Passa para CameraCapture via prop onUrlReceived → useCompanionUpload
+  const handleUrlFromCompanion = useCallback((url: string) => {
+    setInputMode('url');
+    setUrlInput(url);
+    // Analisar automaticamente ao receber
+    handleAnalyzeUrl(url);
+  }, [handleAnalyzeUrl]);
+
+  // ── Captura imagem ────────────────────────────────────────────────────────────
+  const handleCapture = useCallback(async (base64: string) => {
+    setStage('processing');
+    try {
+      const clean = base64.includes(',') ? base64.split(',')[1] : base64;
+      const { data: res, error } = await supabase.functions.invoke('camera-process', {
+        body: { action: 'fraude', image: clean, company_id: data.companyId },
+      });
+      if (error) throw new Error(error.message);
+      if (!res.success) throw new Error(res.error ?? 'Falha na análise');
+      setFraudeData(res.fraude);
+      setStage('result');
+      playText(res.speech_text).catch(() => {});
+    } catch (err: any) {
+      setErrorMsg(err.message ?? 'Erro ao analisar imagem.');
+      setStage('error');
+    }
+  }, [data.companyId, supabase, playText]);
+
   // ── Reset ─────────────────────────────────────────────────────────────────────
   const handleReset = useCallback(() => {
     setStage('input');
@@ -247,7 +261,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
   // ── Voice commands ────────────────────────────────────────────────────────────
   const TAB_COMMANDS: Record<string, string[]> = {
     webcam:    ['webcam', 'computador', 'camera do computador'],
-    mobile:    ['camera', 'camera', 'meu celular', 'telefone'],
+    mobile:    ['camera', 'meu celular', 'telefone'],
     upload:    ['arquivo', 'upload', 'galeria'],
     companion: ['celular', 'qr code', 'qrcode', 'enviar do celular'],
   };
@@ -271,19 +285,21 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
         return;
       }
 
-      // alternar modo
-      if (['imagem', 'foto', 'boleto', 'fotografar'].some(cmd => t.includes(cmd)) && stage === 'input') {
-        setInputMode('image');
-        playText('Modo imagem. Envie uma foto ou boleto.').catch(() => {});
-        return;
-      }
-      if (['link', 'url', 'site', 'endereco'].some(cmd => t.includes(cmd)) && stage === 'input') {
-        setInputMode('url');
-        playText('Modo link. Digite ou cole a URL suspeita.').catch(() => {});
-        return;
+      // Alternar modo input
+      if (stage === 'input') {
+        if (['imagem', 'foto', 'boleto', 'fotografar'].some(cmd => t.includes(cmd))) {
+          setInputMode('image');
+          playText('Modo imagem. Envie uma foto ou boleto.').catch(() => {});
+          return;
+        }
+        if (['link', 'url', 'site', 'endereco'].some(cmd => t.includes(cmd))) {
+          setInputMode('url');
+          playText('Modo link. Digite ou cole a URL suspeita.').catch(() => {});
+          return;
+        }
       }
 
-      // comandos de aba (só no modo imagem)
+      // Comandos de aba (só no modo imagem, stage input)
       if (stage === 'input' && inputMode === 'image') {
         for (const [tab, triggers] of Object.entries(TAB_COMMANDS)) {
           if (triggers.some(tr => t.includes(tr))) {
@@ -314,9 +330,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
     },
   });
 
-  // ── Render ─────────────────────────────────────────────────────────────────────
-  const modalWidth = stage === 'result' ? '100%; max-width: 680px' : '100%; max-width: 520px';
-
+  // ─── Render ──────────────────────────────────────────────────────────────────
   return createPortal(
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
@@ -337,16 +351,15 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
           </h2>
           <button onClick={onClose} style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            padding: '6px 8px', borderRadius: 10,
-            color: p.sub, lineHeight: 0,
+            padding: '6px 8px', borderRadius: 10, color: p.sub, lineHeight: 0,
           }}>
             <X style={{ width: 20, height: 20 }} />
           </button>
         </div>
 
-        {/* ════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════
             STAGE: input
-        ════════════════════════════════════════════════════════ */}
+        ══════════════════════════════════════════════════════ */}
         {stage === 'input' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -356,9 +369,9 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
               background: p.tabInactive, borderRadius: 14,
             }}>
               {([
-                { id: 'image', label: 'Imagem / Boleto', Icon: ImageIcon },
-                { id: 'url',   label: 'Link / URL',       Icon: Link      },
-              ] as const).map(({ id, label, Icon }) => (
+                { id: 'image' as InputMode, label: 'Imagem / Boleto', Icon: ImageIcon },
+                { id: 'url'   as InputMode, label: 'Link / URL',      Icon: Link      },
+              ]).map(({ id, label, Icon }) => (
                 <button key={id} onClick={() => setInputMode(id)} style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: 6, padding: '9px 8px', borderRadius: 10, border: 'none', cursor: 'pointer',
@@ -372,7 +385,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
               ))}
             </div>
 
-            {/* Modo Imagem */}
+            {/* ── Modo Imagem ── */}
             {inputMode === 'image' && (
               <>
                 <CameraCapture
@@ -383,6 +396,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                   acceptPdf
                   activeTab={cameraTab}
                   onTabChange={(tab) => setCameraTab(tab)}
+                  onUrlReceived={handleUrlFromCompanion}
                   instructions="Fotografe o boleto, print ou comprovante suspeito."
                 />
                 <VoiceHint
@@ -392,12 +406,24 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
               </>
             )}
 
-            {/* Modo URL */}
+            {/* ── Modo URL ── */}
             {inputMode === 'url' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p style={{ fontSize: 13, color: p.sub, textAlign: 'center', margin: 0 }}>
                   Cole o link suspeito para verificar se é phishing ou fraude
                 </p>
+
+                {/* Dica: também pode enviar link pelo celular */}
+                <div style={{
+                  padding: '10px 14px', borderRadius: 12,
+                  background: theme === 'dark' ? 'rgba(99,102,241,0.1)' : '#eef2ff',
+                  border: `1px solid ${theme === 'dark' ? 'rgba(99,102,241,0.25)' : '#c7d2fe'}`,
+                  fontSize: 12, color: theme === 'dark' ? '#a5b4fc' : '#4338ca',
+                }}>
+                  📱 Em totens sem teclado: mude para a aba <strong>Imagem / Boleto</strong> e use
+                  o QR Code para enviar o link pelo celular.
+                </div>
+
                 <input
                   type="url"
                   value={urlInput}
@@ -417,7 +443,7 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                   <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>{urlError}</p>
                 )}
                 <button
-                  onClick={handleAnalyzeUrl}
+                  onClick={() => handleAnalyzeUrl()}
                   disabled={!urlInput.trim()}
                   style={{
                     padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
@@ -428,21 +454,24 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                 >
                   Analisar link
                 </button>
-                <VoiceHint
-                  commands={['imagem', 'link', 'fechar']}
-                  p={p}
-                />
+                <VoiceHint commands={['imagem', 'link', 'fechar']} p={p} />
               </div>
             )}
           </div>
         )}
 
-        {/* ════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════
             STAGE: processing
-        ════════════════════════════════════════════════════════ */}
+        ══════════════════════════════════════════════════════ */}
         {stage === 'processing' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
-            <Loader2 style={{ width: 40, height: 40, color: '#6366f1', animation: 'spin 1s linear infinite' }} />
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 16, padding: '32px 0',
+          }}>
+            <Loader2 style={{
+              width: 40, height: 40, color: '#6366f1',
+              animation: 'spin 1s linear infinite',
+            }} />
             <p style={{ fontSize: 15, fontWeight: 600, color: p.header, margin: 0 }}>
               Analisando {inputMode === 'url' ? 'o link' : 'a imagem'}...
             </p>
@@ -453,21 +482,20 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
           </div>
         )}
 
-        {/* ════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════
             STAGE: result
-        ════════════════════════════════════════════════════════ */}
+        ══════════════════════════════════════════════════════ */}
         {stage === 'result' && fraudeData && (() => {
           const cfg = RISK_CONFIG[fraudeData.risk_level] ?? RISK_CONFIG.SUSPEITO;
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-              {/* Card principal — semáforo */}
+              {/* Card semáforo */}
               <div style={{
                 background: cfg.bg, border: `1px solid ${cfg.border}`,
                 borderRadius: 16, padding: 20,
                 display: 'flex', flexDirection: 'column', gap: 12,
               }}>
-                {/* Nível + emoji */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 36, lineHeight: 1 }}>{cfg.emoji}</span>
                   <div>
@@ -478,31 +506,30 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                       {TYPE_LABELS[fraudeData.type] ?? fraudeData.type}
                       {fraudeData.url_analyzed && (
                         <span style={{ fontFamily: 'monospace', marginLeft: 8, fontSize: 11 }}>
-                          · {fraudeData.url_analyzed.slice(0, 50)}{fraudeData.url_analyzed.length > 50 ? '…' : ''}
+                          · {fraudeData.url_analyzed.slice(0, 50)}
+                          {fraudeData.url_analyzed.length > 50 ? '…' : ''}
                         </span>
                       )}
                     </p>
                   </div>
                 </div>
 
-                {/* Score bar */}
                 <ScoreBar score={fraudeData.score} riskLevel={fraudeData.risk_level} />
 
-                {/* Recomendação */}
                 <p style={{ fontSize: 14, color: p.header, fontWeight: 500, margin: 0 }}>
                   {fraudeData.recommendation}
                 </p>
               </div>
 
-              {/* Layout 2 colunas no desktop quando tem indicadores */}
+              {/* Grid 2 colunas no desktop */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: fraudeData.indicators.length > 0 && fraudeData.details
-                  ? 'minmax(0,1fr) minmax(0,1fr)'
-                  : '1fr',
+                gridTemplateColumns:
+                  fraudeData.indicators.length > 0 && fraudeData.details
+                    ? 'minmax(0,1fr) minmax(0,1fr)'
+                    : '1fr',
                 gap: 12,
               }}>
-                {/* Indícios encontrados */}
                 {fraudeData.indicators.length > 0 && (
                   <div style={{
                     background: p.card, border: `1px solid ${p.cardBorder}`,
@@ -523,7 +550,6 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                   </div>
                 )}
 
-                {/* Detalhes técnicos */}
                 {fraudeData.details && (
                   <div style={{
                     background: p.card, border: `1px solid ${p.cardBorder}`,
@@ -543,7 +569,8 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
               {/* Aviso se URL não foi acessível */}
               {urlFetchError && (
                 <div style={{
-                  background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+                  background: 'rgba(245,158,11,0.1)',
+                  border: '1px solid rgba(245,158,11,0.3)',
                   borderRadius: 12, padding: '10px 14px',
                   fontSize: 12, color: '#d97706',
                 }}>
@@ -556,8 +583,8 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
                 <button
                   onClick={handleReset}
                   style={{
-                    flex: 1, minWidth: 120, display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', gap: 6,
+                    flex: 1, minWidth: 120,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     padding: '11px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
                     background: p.btn, color: p.btnText, fontSize: 14, fontWeight: 600,
                   }}
@@ -583,9 +610,9 @@ export default function IdentificarFraudeDisplay({ data, onClose, theme = 'dark'
           );
         })()}
 
-        {/* ════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════
             STAGE: error
-        ════════════════════════════════════════════════════════ */}
+        ══════════════════════════════════════════════════════ */}
         {stage === 'error' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{

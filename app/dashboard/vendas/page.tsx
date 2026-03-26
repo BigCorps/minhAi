@@ -1646,7 +1646,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
         {
           key: 'dinheiro',
           label: 'Dinheiro',
-          descricao: 'Pagamento em espécie — sempre disponível, sem configuração',
+          descricao: 'Pagamento em espécie',
           configurado: true,
           pendencia: null,
           destino: null,

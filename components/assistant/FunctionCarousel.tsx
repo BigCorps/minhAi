@@ -1,7 +1,7 @@
 // components/assistant/FunctionCarousel.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface AssistantFunction {
@@ -104,24 +104,29 @@ export default function FunctionCarousel({
     onFunctionClick(fn.function_key);
   }
 
-  function pauseAnimation() {
+  // ✅ Handlers centralizados no container — um único par de listeners
+  // em vez de 5 listeners por botão (reduz de 200+ para 2 listeners)
+  const pauseAnimation = useCallback(() => {
     if (carouselRef.current) {
       carouselRef.current.style.animationPlayState = 'paused';
     }
-  }
+  }, []);
 
-  function resumeAnimation() {
+  const resumeAnimation = useCallback(() => {
     if (carouselRef.current) {
       carouselRef.current.style.animationPlayState = 'running';
     }
-  }
+  }, []);
 
   const filteredFunctions = hideDisabledFunctions
     ? functions.filter(fn => fn.is_enabled_for_company)
     : functions;
 
+  // ✅ 2x em vez de 4x: metade dos elementos DOM, scroll infinito mantido.
+  // O CSS anima translateX(-50%) — volta exatamente ao início da segunda cópia,
+  // criando loop perfeito independente do número de funções.
   const displayFunctions = autoScroll
-    ? [...filteredFunctions, ...filteredFunctions, ...filteredFunctions, ...filteredFunctions]
+    ? [...filteredFunctions, ...filteredFunctions]
     : filteredFunctions;
 
   const scrollDuration = calcScrollDuration(filteredFunctions.length, isMobile);
@@ -147,57 +152,67 @@ export default function FunctionCarousel({
     <>
       <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
+          {/* ✅ Listeners de pause/resume centralizados no container,
+              não em cada botão individualmente */}
           <div
-            ref={carouselRef}
-            className={autoScroll
-              ? 'flex gap-3 pl-3 w-max'
-              : 'flex gap-3 flex-wrap justify-center w-full px-4'
-            }
-            style={autoScroll ? {
-              animation: `scroll-infinite ${scrollDuration}s linear infinite`,
-            } : undefined}
+            onMouseEnter={autoScroll ? pauseAnimation : undefined}
+            onMouseLeave={autoScroll ? resumeAnimation : undefined}
+            onTouchStart={autoScroll ? pauseAnimation : undefined}
+            onTouchEnd={autoScroll ? resumeAnimation : undefined}
+            onTouchCancel={autoScroll ? resumeAnimation : undefined}
           >
-            {displayFunctions.map((fn, idx) => {
-              const originalIndex = idx % filteredFunctions.length;
-              const borderColor = getCardColor(originalIndex);
-              const isEnabled = fn.is_enabled_for_company;
+            <div
+              ref={carouselRef}
+              className={autoScroll
+                ? 'flex gap-3 pl-3 w-max carousel-track'
+                : 'flex gap-3 flex-wrap justify-center w-full px-4'
+              }
+              style={autoScroll ? {
+                animation: `scroll-infinite ${scrollDuration}s linear infinite`,
+                // ✅ will-change promove o elemento para camada própria do GPU,
+                // removendo o trabalho de compositing da main thread
+                willChange: 'transform',
+              } : undefined}
+            >
+              {displayFunctions.map((fn, idx) => {
+                const originalIndex = idx % filteredFunctions.length;
+                const borderColor = getCardColor(originalIndex);
+                const isEnabled = fn.is_enabled_for_company;
 
-              return (
-                <button
-                  key={`${fn.function_key}-${idx}`}
-                  onClick={() => handleClick(fn)}
-                  onTouchStart={(e) => {
-                    if (autoScroll) { e.preventDefault(); pauseAnimation(); }
-                  }}
-                  onTouchEnd={() => { if (autoScroll) resumeAnimation(); }}
-                  onTouchCancel={() => { if (autoScroll) resumeAnimation(); }}
-                  onMouseEnter={() => { if (autoScroll) pauseAnimation(); }}
-                  onMouseLeave={() => { if (autoScroll) resumeAnimation(); }}
-                  disabled={!isEnabled}
-                  className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
-                    theme === 'dark'
-                      ? 'bg-white/10 hover:bg-white/20 text-white'
-                      : 'bg-white hover:bg-gray-50 text-gray-900'
-                  } ${!isEnabled && !hideDisabledFunctions ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  style={{
-                    borderLeft: `4px solid ${borderColor}`,
-                    boxShadow: theme === 'dark'
-                      ? '0 2px 4px rgba(0, 0, 0, 0.2)'
-                      : '0 2px 8px rgba(0, 0, 0, 0.05)',
-                  }}
-                >
-                  <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={`${fn.function_key}-${idx}`}
+                    onClick={() => handleClick(fn)}
+                    disabled={!isEnabled}
+                    // ✅ Sem onMouseEnter/Leave/Touch por botão —
+                    // herda o comportamento do container pai
+                    className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
+                      theme === 'dark'
+                        ? 'bg-white/10 hover:bg-white/20 text-white'
+                        : 'bg-white hover:bg-gray-50 text-gray-900'
+                    } ${!isEnabled && !hideDisabledFunctions ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    style={{
+                      borderLeft: `4px solid ${borderColor}`,
+                      boxShadow: theme === 'dark'
+                        ? '0 2px 4px rgba(0, 0, 0, 0.2)'
+                        : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                    }}
+                  >
+                    <span className="text-sm font-semibold whitespace-nowrap">{fn.function_name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
       <style jsx>{`
+        /* ✅ translateX(-50%) funciona perfeitamente com duplicação 2x:
+           anima exatamente uma cópia completa e reinicia sem salto */
         @keyframes scroll-infinite {
           0%   { transform: translateX(0); }
-          100% { transform: translateX(calc(-25%)); }
+          100% { transform: translateX(-50%); }
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }

@@ -1,29 +1,13 @@
-
 'use client';
-
-/**
- * AvatarFace Enhanced
- * 
- * Versão estendida do AvatarFace que adiciona suporte ao estado de wake word.
- * 
- * Quando a wake word é detectada:
- * - Avatar muda para roxo/violeta
- * - Orbe pulsa mais intensamente
- * - Glow muda para roxo
- * 
- * Mantém compatibilidade total com a versão anterior.
- * Basta passar o novo prop `isWakeWordDetected`.
- */
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PixConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
-interface AvatarFaceEnhancedProps {
+interface AvatarFaceProps {
   isListening: boolean;
   isSpeaking: boolean;
   isProcessing: boolean;
-  isWakeWordDetected?: boolean; // ✅ NOVO
   theme?: 'dark' | 'light';
   qrCodeData?: {
     type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
@@ -47,11 +31,10 @@ interface AvatarFaceEnhancedProps {
 
 type EyeExpression = 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry' | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy';
 
-export function AvatarFaceEnhanced({ 
+export function AvatarFace({ 
   isListening, 
   isSpeaking, 
   isProcessing, 
-  isWakeWordDetected = false, // ✅ NOVO: default false
   theme = 'dark',
   qrCodeData,
   pixConfirmationData,
@@ -59,18 +42,9 @@ export function AvatarFaceEnhanced({
   onCopyQRCode,
   onConfirmPix,
   onCancelPix,
-}: AvatarFaceEnhancedProps) {
+}: AvatarFaceProps) {
   
   const isDark = theme === 'dark';
-
-  // ✅ NOVO: Cores para wake word (roxo/violeta)
-  const wakeWordColors = useMemo(() => ({
-    primary: '#a855f7',      // purple-600
-    secondary: '#d8b4fe',    // purple-300
-    glow: isDark ? 'rgba(168, 85, 247, 0.6)' : 'rgba(147, 51, 234, 0.6)',
-    ring: isDark ? '#a855f7' : '#9333ea',
-    halo: isDark ? '#a855f7' : '#9333ea'
-  }), [isDark]);
 
   const statusColors = useMemo(() => ({
     idle: { 
@@ -117,20 +91,12 @@ export function AvatarFaceEnhanced({
   
   const showFace = !isProcessing && !isSpeaking;
 
-  // ✅ NOVO: Atualizar cores quando wake word é detectada
   useEffect(() => {
-    if (isWakeWordDetected) {
-      setColors(wakeWordColors);
-    } else if (isSpeaking) {
-      setColors(statusColors.speaking);
-    } else if (isProcessing) {
-      setColors(statusColors.processing);
-    } else if (isListening) {
-      setColors(statusColors.listening);
-    } else {
-      setColors(statusColors.idle);
-    }
-  }, [isSpeaking, isProcessing, isListening, isWakeWordDetected, statusColors, wakeWordColors]);
+    if (isSpeaking) setColors(statusColors.speaking);
+    else if (isProcessing) setColors(statusColors.processing);
+    else if (isListening) setColors(statusColors.listening);
+    else setColors(statusColors.idle);
+  }, [isSpeaking, isProcessing, isListening, statusColors]);
 
   useEffect(() => {
     const generateStars = () => {
@@ -151,6 +117,7 @@ export function AvatarFaceEnhanced({
     const scheduleNextBlink = () => {
       const nextBlinkDelay = Math.random() * 4000 + 2000;
       blinkTimeoutRef.current = setTimeout(() => {
+        // Ajuste Refinado: Impedir piscada no flirt (olho aberto deve ficar aberto) e outras expressões fechadas
         if (eyeExpr === 'flirt' || eyeExpr === 'sleeping' || eyeExpr === 'happy' || isBlinking) {
           scheduleNextBlink();
           return;
@@ -199,10 +166,12 @@ export function AvatarFaceEnhanced({
       }, 2000 + Math.random() * 1000);
     };
 
+    // Ajuste Refinado: Manter o avatar normal (idle) por pelo menos 10 segundos
     const interval = setInterval(() => {
       changeExpression();
-    }, 10000 + Math.random() * 5000);
+    }, 10000 + Math.random() * 5000); // Mínimo 10s entre expressões
 
+    // Primeira expressão após 10 segundos
     const initialTimeout = setTimeout(() => {
       changeExpression();
     }, 10000);
@@ -214,9 +183,8 @@ export function AvatarFaceEnhanced({
     };
   }, [isSpeaking, isProcessing]);
 
-  // ✅ NOVO: Mais partículas quando wake word está ativa
   useEffect(() => {
-    const particleCount = isWakeWordDetected ? 20 : isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
+    const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
     const newParticles = Array.from({ length: particleCount }, () => ({
       x: Math.random() * 500,
       y: Math.random() * 500,
@@ -224,7 +192,7 @@ export function AvatarFaceEnhanced({
       speed: Math.random() * 0.8 + 0.3
     }));
     setParticles(newParticles);
-  }, [isSpeaking, isProcessing, isListening, isWakeWordDetected]);
+  }, [isSpeaking, isProcessing, isListening]);
 
   useEffect(() => {
     if (isSpeaking) {
@@ -269,9 +237,7 @@ export function AvatarFaceEnhanced({
     return () => { if (animationId) cancelAnimationFrame(animationId); };
   }, [particles, colors]);
 
-  // ✅ NOVO: Orbe maior e mais intenso quando wake word está ativa
-  const orbSize = isWakeWordDetected ? 'scale-[1.25]' : isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
-  const orbPulse = isWakeWordDetected ? 'animate-pulse' : '';
+  const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
@@ -287,7 +253,7 @@ export function AvatarFaceEnhanced({
       )}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
-          <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{ width: `${60 + ring * 15}%`, aspectRatio: '1 / 1', borderColor: colors.ring, opacity: isWakeWordDetected ? 0.6 : isSpeaking ? 0.4 : 0.2, animation: `pulse ${isWakeWordDetected ? 0.8 : isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`, animationDelay: `${ring * 0.3}s` }} />
+          <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{ width: `${60 + ring * 15}%`, aspectRatio: '1 / 1', borderColor: colors.ring, opacity: isSpeaking ? 0.4 : 0.2, animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`, animationDelay: `${ring * 0.3}s` }} />
         ))}
       </div>
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
@@ -300,36 +266,146 @@ export function AvatarFaceEnhanced({
         <div className="rounded-full opacity-40" style={{ width: '85%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, filter: 'blur(10px)' }} />
       </div>
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
-        <div className="rounded-full" style={{ width: '75%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, ${colors.glow} 0%, transparent 70%)`, filter: 'blur(30px)', opacity: isWakeWordDetected ? 0.8 : 0.4 }} />
+        <div className="rounded-full" style={{ width: '80%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, ${colors.glow} 0%, transparent 70%)`, opacity: 0.5 }} />
       </div>
-      <canvas ref={canvasRef} width={500} height={500} className="absolute inset-0 pointer-events-none" />
-      <div className={`relative ${orbSize} transition-transform duration-300 ${orbPulse}`}>
-        <div className="w-32 h-32 rounded-full flex items-center justify-center relative" style={{ background: `radial-gradient(circle at 30% 30%, ${colors.primary}, ${colors.secondary})`, boxShadow: `0 0 40px ${colors.primary}80, inset -2px -2px 8px rgba(0,0,0,0.3)` }}>
-          {showFace && (
-            <div className="relative w-20 h-20">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                {/* Olhos */}
-                <circle cx="35" cy="35" r="8" fill="white" opacity="0.9" />
-                <circle cx="65" cy="35" r="8" fill="white" opacity="0.9" />
-                <circle cx="35" cy="35" r="5" fill="black" />
-                <circle cx="65" cy="35" r="5" fill="black" />
-                {/* Boca */}
-                <path d="M 30 60 Q 50 75 70 60" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </svg>
-            </div>
-          )}
-          {isSpeaking && (
-            <div className="absolute inset-0 flex items-center justify-center">
+      <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
+      <div className="absolute w-full h-full overflow-visible pointer-events-none">
+        {particles.map((particle, i) => (
+          <div key={`particle-${i}`} className="absolute rounded-full animate-float" style={{ left: particle.x, top: particle.y, width: particle.size, height: particle.size, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, opacity: 0.3, animationDuration: `${5 / particle.speed}s`, animationDelay: `${i * 0.2}s` }} />
+        ))}
+      </div>
+      
+      {/* Container Principal com Orbe e Rosto integrados */}
+      <div className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-700 ease-in-out`} style={{ background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)', boxShadow: `0 0 40px ${colors.glow}`, backdropFilter: 'blur(8px)', aspectRatio: '1 / 1' }}>
+        
+        {/* ROSTO DO AVATAR - Com transição de esmaecimento (fade) */}
+        <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${showFace ? 'opacity-100' : 'opacity-0'}`}>
+          <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
+            <defs>
+              <radialGradient id="eyeGradient"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.9" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.3" /></radialGradient>
+              <radialGradient id="glowGradient"><stop offset="0%" stopColor="white" stopOpacity="0.8" /><stop offset="100%" stopColor="white" stopOpacity="0" /></radialGradient>
+              <filter id="softGlow"><feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <linearGradient id="mouthDepth" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.3" /><stop offset="50%" stopColor={colors.primary} stopOpacity="0.8" /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.4" /></linearGradient>
+              <filter id="mouthDepthShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            {stars.map((star) => (
+              <circle key={star.id} cx={star.x} cy={star.y} r="1.5" fill={colors.primary} opacity="0.6">
+                <animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${star.delay}s`} repeatCount="indefinite" />
+                <animate attributeName="r" values="1;2;1" dur="2s" begin={`${star.delay}s`} repeatCount="indefinite" />
+                <animateTransform attributeName="transform" type="translate" values="0,0; 5,-5; 0,0" dur="4s" begin={`${star.delay}s`} repeatCount="indefinite" />
+              </circle>
+            ))}
+            <g filter="url(#softGlow)" className="transition-all duration-500">
+              {/* OLHO ESQUERDO */}
+              {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'flirt' && eyeExpr !== 'happy') ? (
+                <g className="transition-all duration-500">
+                  <ellipse cx={eyeExpr === 'lookLeft' ? "72" : eyeExpr === 'lookRight' ? "80" : "76"} cy={eyeExpr === 'lookDown' ? "88" : "85"} rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} fill="url(#eyeGradient)" opacity="0.85" />
+                  {eyeExpr === 'sad' && !isDark && <path d="M 50 60 L 100 85 L 100 60 Z" fill="#f8fafc" />}
+                  {eyeExpr === 'angry' && !isDark && <path d="M 50 60 L 100 60 L 50 85 Z" fill="#f8fafc" />}
+                  <ellipse cx={eyeExpr === 'lookLeft' ? "69" : eyeExpr === 'lookRight' ? "77" : "73"} cy={eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                  <circle cx={eyeExpr === 'lookLeft' ? "70" : eyeExpr === 'lookRight' ? "78" : "74"} cy={eyeExpr === 'lookDown' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
+                </g>
+              ) : (isBlinking || eyeExpr === 'sleeping') ? (
+                <path d="M 62 85 Q 76 87 90 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
+              ) : eyeExpr === 'happy' ? (
+                <path d="M 66 90 L 76 80 L 86 90" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
+              ) : (
+                /* Flirt: Olho esquerdo aberto (idle) e não pisca */
+                <g><ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" /><ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" /><circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" /></g>
+              )}
+              {/* OLHO DIREITO */}
+              {(!isBlinking && eyeExpr !== 'sleeping' && eyeExpr !== 'happy') ? (
+                <g className="transition-all duration-500">
+                  {eyeExpr === 'flirt' ? (
+                    <path d="M 110 85 Q 124 87 138 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
+                  ) : (
+                    <>
+                      <ellipse cx={eyeExpr === 'lookLeft' ? "120" : eyeExpr === 'lookRight' ? "128" : "124"} cy={eyeExpr === 'lookDown' ? "88" : "85"} rx={eyeExpr === 'surprised' ? "16" : eyeExpr === 'attentive' ? "15.5" : "14.4"} ry={eyeExpr === 'surprised' ? "20" : eyeExpr === 'attentive' ? "19" : "17.6"} fill="url(#eyeGradient)" opacity="0.85" />
+                      {eyeExpr === 'sad' && !isDark && <path d="M 100 60 L 150 60 L 100 85 Z" fill="#f8fafc" />}
+                      {eyeExpr === 'angry' && !isDark && <path d="M 100 60 L 150 85 L 150 60 Z" fill="#f8fafc" />}
+                      <ellipse cx={eyeExpr === 'lookLeft' ? "117" : eyeExpr === 'lookRight' ? "125" : "121"} cy={eyeExpr === 'lookDown' ? "82" : "79"} rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+                      <circle cx={eyeExpr === 'lookLeft' ? "118" : eyeExpr === 'lookRight' ? "126" : "122"} cy={eyeExpr === 'lookDown' ? "84" : "81"} r="3.2" fill="white" opacity="0.7" />
+                    </>
+                  )}
+                </g>
+              ) : (isBlinking || eyeExpr === 'sleeping') ? (
+                <path d="M 110 85 Q 124 87 138 85" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.85" />
+              ) : (
+                <path d="M 114 90 L 124 80 L 134 90" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
+              )}
+            </g>
+            <g className="transition-opacity duration-700">
+              <path d="M 66 137 Q 100 152 134 137" stroke={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)'} strokeWidth="10" fill="none" strokeLinecap="round" opacity="0.6" />
+              <path d="M 68 136 Q 100 150 132 136" stroke="url(#mouthDepth)" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#mouthDepthShadow)">
+                <animate attributeName="d" values="M 68 136 Q 100 150 132 136;M 68 136 Q 100 153 132 136;M 68 136 Q 100 150 132 136" dur="3s" repeatCount="indefinite" />
+              </path>
+              <path d="M 70 135 Q 100 147 130 135" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6">
+                <animate attributeName="opacity" values="0.5;0.7;0.5" dur="3s" repeatCount="indefinite" />
+              </path>
+            </g>
+            {eyeExpr === 'sleeping' && [...Array(3)].map((_, i) => (
+              <text key={`zzz-${i}`} x={140 + i * 15} y={60 - i * 15} fill={colors.primary} fontSize="16" fontWeight="bold" opacity="0.6">
+                Z<animate attributeName="opacity" values="0;0.8;0" dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" /><animate attributeName="y" values={`${60 - i * 15};${40 - i * 15}`} dur="3s" begin={`${i * 1}s`} repeatCount="indefinite" />
+              </text>
+            ))}
+          </svg>
+        </div>
+
+        {/* ORBE DE PROCESSAMENTO - Com transição de esmaecimento (fade) */}
+        <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${!showFace ? 'opacity-100' : 'opacity-0'}`}>
+          <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl">
+            <defs>
+              <filter id="gooey"><feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" /><feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo" /></filter>
+              <radialGradient id="coreGradient1"><stop offset="0%" stopColor={colors.primary} /><stop offset="100%" stopColor={colors.secondary} stopOpacity="0.6" /></radialGradient>
+              <radialGradient id="coreGradient2"><stop offset="0%" stopColor={colors.secondary} /><stop offset="100%" stopColor={colors.primary} stopOpacity="0.6" /></radialGradient>
+              <radialGradient id="coreGradient3"><stop offset="0%" stopColor={colors.primary} stopOpacity="0.8" /><stop offset="100%" stopColor={colors.secondary} stopOpacity="0.4" /></radialGradient>
+            </defs>
+            <g filter="url(#gooey)">
+              <circle cx="100" cy="100" r="45" fill="url(#coreGradient1)"><animate attributeName="r" values="40;55;40" dur="1.8s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.5s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="3.2s" repeatCount="indefinite" /></circle>
+              <circle cx="65" cy="100" r="35" fill="url(#coreGradient2)" opacity="0.95"><animate attributeName="r" values="32;42;32" dur="2s" repeatCount="indefinite" /><animate attributeName="cx" values="65;58;72;65" dur="2.8s" repeatCount="indefinite" /><animate attributeName="cy" values="100;108;92;100" dur="3.6s" repeatCount="indefinite" /></circle>
+              <circle cx="135" cy="100" r="35" fill="url(#coreGradient3)" opacity="0.95"><animate attributeName="r" values="33;43;33" dur="1.9s" repeatCount="indefinite" /><animate attributeName="cx" values="135;142;128;135" dur="3.2s" repeatCount="indefinite" /><animate attributeName="cy" values="100;92;108;100" dur="2.9s" repeatCount="indefinite" /></circle>
+              <circle cx="100" cy="65" r="30" fill="url(#coreGradient1)" opacity="0.9"><animate attributeName="r" values="27;37;27" dur="2.2s" repeatCount="indefinite" /><animate attributeName="cx" values="100;108;92;100" dur="3.8s" repeatCount="indefinite" /><animate attributeName="cy" values="65;58;72;65" dur="2.7s" repeatCount="indefinite" /></circle>
+              <circle cx="100" cy="135" r="30" fill="url(#coreGradient2)" opacity="0.9"><animate attributeName="r" values="28;38;28" dur="2.4s" repeatCount="indefinite" /><animate attributeName="cx" values="100;92;108;100" dur="3.1s" repeatCount="indefinite" /><animate attributeName="cy" values="135;142;128;135" dur="3.5s" repeatCount="indefinite" /></circle>
+              <circle cx="72" cy="72" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.1s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="3.3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="2.8s" repeatCount="indefinite" /></circle>
+              <circle cx="128" cy="72" r="26" fill="url(#coreGradient1)" opacity="0.85"><animate attributeName="r" values="24;34;24" dur="2.3s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3s" repeatCount="indefinite" /><animate attributeName="cy" values="72;65;79;72" dur="3.4s" repeatCount="indefinite" /></circle>
+              <circle cx="72" cy="128" r="26" fill="url(#coreGradient2)" opacity="0.85"><animate attributeName="r" values="22;32;22" dur="2.5s" repeatCount="indefinite" /><animate attributeName="cx" values="72;65;79;72" dur="2.9s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="3.2s" repeatCount="indefinite" /></circle>
+              <circle cx="128" cy="128" r="26" fill="url(#coreGradient3)" opacity="0.85"><animate attributeName="r" values="23;33;23" dur="2.6s" repeatCount="indefinite" /><animate attributeName="cx" values="128;135;121;128" dur="3.6s" repeatCount="indefinite" /><animate attributeName="cy" values="128;135;121;128" dur="2.6s" repeatCount="indefinite" /></circle>
+              {[...Array(isSpeaking ? 16 : 8)].map((_, i) => {
+                const angle = (i * Math.PI * 2) / (isSpeaking ? 16 : 8);
+                const radius = isSpeaking ? 55 : 50;
+                return (
+                  <circle key={`small-orb-${i}`} cx={100 + Math.cos(angle) * radius} cy={100 + Math.sin(angle) * radius} r={isSpeaking ? "20" : "16"} fill={i % 3 === 0 ? colors.primary : i % 3 === 1 ? colors.secondary : colors.ring} opacity="0.75">
+                    <animate attributeName="r" values={isSpeaking ? "15;28;15" : "13;23;13"} dur={`${0.8 + (i * 0.08)}s`} repeatCount="indefinite" /><animateTransform attributeName="transform" type="translate" values={`0,0; ${Math.cos(angle) * 18},${Math.sin(angle) * 18}; 0,0`} dur={`${1.2 + (i * 0.07)}s`} repeatCount="indefinite" /><animate attributeName="opacity" values="0.4;1;0.4" dur={`${0.9 + (i * 0.06)}s`} repeatCount="indefinite" />
+                  </circle>
+                );
+              })}
+            </g>
+          </svg>
+        </div>
+
+        {/* Barras de Áudio - Visíveis apenas durante a fala */}
+        {isSpeaking && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50 transition-opacity duration-700">
+            <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
               {audioLevels.map((level, i) => (
-                <div key={i} className="absolute rounded-full" style={{ width: `${20 + level * 40}px`, height: `${20 + level * 40}px`, border: `2px solid ${colors.primary}`, opacity: 0.3 + level * 0.4, animation: 'pulse 0.5s ease-in-out infinite', animationDelay: `${i * 0.05}s` }} />
+                <div key={`audio-bar-${i}`} className="flex-1 rounded-t-sm transition-all duration-75" style={{ height: `${Math.max(5, level * 100)}%`, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, opacity: 0.7 + level * 0.3, boxShadow: `0 0 ${level * 12}px ${i % 2 === 0 ? colors.primary : colors.secondary}`, filter: `blur(${0.3}px)` }} />
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-      {stars.map(star => (
-        <div key={star.id} className="absolute w-1 h-1 rounded-full" style={{ left: `${star.x}%`, top: `${star.y}%`, background: colors.primary, opacity: 0.6, animation: `twinkle 3s ease-in-out infinite`, animationDelay: `${star.delay}s` }} />
-      ))}
+
+      <div className="absolute inset-0 rounded-full pointer-events-none" style={{ aspectRatio: '1/1' }}>
+        {[1, 2, 3].map(ring => (
+          <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
+        ))}
+      </div>
+
+      <style jsx>{`
+        @keyframes float { 0%, 100% { transform: translateY(0) translateX(0); } 33% { transform: translateY(-20px) translateX(10px); } 66% { transform: translateY(-10px) translateX(-10px); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-float { animation: float ease-in-out infinite; }
+      `}</style>
     </div>
   );
 }

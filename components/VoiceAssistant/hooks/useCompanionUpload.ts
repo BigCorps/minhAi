@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 interface UseCompanionUploadOptions {
   companyId: string;
   onImageReceived: (base64: string) => void;
+  onUrlReceived?: (url: string) => void; // NOVO — callback para quando o celular envia um link
 }
 
 export interface UseCompanionUploadReturn {
@@ -25,6 +26,7 @@ const EXPIRY_SECONDS = 600;
 export function useCompanionUpload({
   companyId,
   onImageReceived,
+  onUrlReceived,
 }: UseCompanionUploadOptions): UseCompanionUploadReturn {
   const [token, setToken] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -40,11 +42,11 @@ export function useCompanionUpload({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusRef = useRef<UseCompanionUploadReturn['status']>('idle');
 
-  // ── Ref para onImageReceived: garante que o canal Realtime sempre chame
-  // a versão mais recente do callback, mesmo após re-renders com novos
-  // valores de manualPaymentEnabled / pricePerPage na modal pai.
+  // Refs para callbacks — garante versão atualizada mesmo em closures do Realtime
   const onImageReceivedRef = useRef(onImageReceived);
+  const onUrlReceivedRef = useRef(onUrlReceived);
   useEffect(() => { onImageReceivedRef.current = onImageReceived; }, [onImageReceived]);
+  useEffect(() => { onUrlReceivedRef.current = onUrlReceived; }, [onUrlReceived]);
 
   useEffect(() => { statusRef.current = status; }, [status]);
 
@@ -72,7 +74,7 @@ export function useCompanionUpload({
     setError(null);
   }, [cleanupAll]);
 
-  const processReceivedUpload = useCallback(async (storagePath: string) => {
+  const processReceivedUpload = useCallback(async (storagePath: string, fileName?: string, fileType?: string) => {
     cleanupAll();
     setStatus('received');
 
@@ -82,19 +84,40 @@ export function useCompanionUpload({
         .from('companion-uploads')
         .download(storagePath);
 
-      if (fileError || !fileData) throw new Error('Erro ao baixar imagem do servidor.');
+      if (fileError || !fileData) throw new Error('Erro ao baixar arquivo do servidor.');
 
+      // ── Detectar se é um link enviado pelo celular ──────────────────────────
+      // O arquivo de link é salvo como .json com mime application/json
+      const isJsonLink =
+        (fileName?.endsWith('.json')) ||
+        (fileType === 'application/json') ||
+        storagePath.endsWith('.json');
+
+      if (isJsonLink) {
+        try {
+          const text = await fileData.text();
+          const json = JSON.parse(text);
+          if (json.type === 'url' && json.url) {
+            onUrlReceivedRef.current?.(json.url);
+            return;
+          }
+        } catch {
+          // JSON inválido — tratar como imagem normal abaixo
+        }
+      }
+
+      // ── Arquivo normal (imagem ou PDF) ──────────────────────────────────────
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = (reader.result as string).split(',')[1];
-        // Usa ref para garantir callback atualizado (evita stale closure do canal Realtime)
         onImageReceivedRef.current(base64);
       };
       reader.readAsDataURL(fileData);
+
     } catch (err: any) {
-      setError('Imagem recebida mas erro ao processar: ' + err.message);
+      setError('Arquivo recebido mas erro ao processar: ' + err.message);
     }
-  }, [supabase, cleanupAll]); // onImageReceived removido — acesso via ref
+  }, [supabase, cleanupAll]);
 
   const start = useCallback(async () => {
     setStatus('generating');
@@ -160,9 +183,14 @@ export function useCompanionUpload({
             filter: `token=eq.${newToken}`,
           },
           async (payload) => {
-            const row = payload.new as { status: string; storage_path: string | null };
+            const row = payload.new as {
+              status: string;
+              storage_path: string | null;
+              file_name?: string;
+              file_type?: string;
+            };
             if (row.status === 'uploaded' && row.storage_path) {
-              await processReceivedUpload(row.storage_path);
+              await processReceivedUpload(row.storage_path, row.file_name, row.file_type);
             }
           }
         )
@@ -178,13 +206,13 @@ export function useCompanionUpload({
         }
         const { data: row } = await supabase
           .from('companion_uploads')
-          .select('status, storage_path')
+          .select('status, storage_path, file_name, file_type')
           .eq('token', newToken)
           .single();
 
         if (row?.status === 'uploaded' && row.storage_path) {
           clearInterval(pollRef.current!);
-          await processReceivedUpload(row.storage_path);
+          await processReceivedUpload(row.storage_path, row.file_name, row.file_type);
         }
       }, 5000);
 

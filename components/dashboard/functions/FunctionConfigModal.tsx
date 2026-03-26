@@ -1576,10 +1576,47 @@ const TelefoneForm = ({ settings, onChange }: any) => (
     {settings.telefone_fixo && (
       <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
         <p className="text-xs text-green-800 dark:text-green-200">
-          ✅ <strong>Funcionalidade especial:</strong> Ao escanear este QR Code, o celular do cliente abrirá automaticamente o aplicativo de ligações com o número já preenchido, pronto para ligar!
+          <strong>Funcionalidade especial:</strong> Ao escanear este QR Code, o celular do cliente abrirá automaticamente o aplicativo de ligações com o número já preenchido, pronto para ligar!
         </p>
       </div>
     )}
+  </div>
+);
+
+const IdentificarFraudeForm = () => (
+  <div className="space-y-4">
+    <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+      <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2 flex items-center gap-2">
+        Como funciona o Identificar Fraude
+      </h4>
+      <ul className="space-y-1 text-sm text-red-800 dark:text-red-200">
+        <li>✓ Analisa imagens e boletos (PDF) em busca de adulteração</li>
+        <li>✓ Verifica links e sites suspeitos de phishing</li>
+        <li>✓ Detecta fraudes em PIX, boleto e mensagens de golpe</li>
+        <li>✓ Retorna nível de risco: Seguro, Suspeito ou Fraude</li>
+      </ul>
+    </div>
+
+    <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center gap-2">
+        <Mic size={14} />
+        Comandos de Voz
+      </h5>
+      <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+        <li>• "Identificar fraude"</li>
+        <li>• "Verificar boleto suspeito"</li>
+        <li>• "Checar link"</li>
+        <li>• "Site suspeito"</li>
+        <li>• "Analisar link"</li>
+      </ul>
+    </div>
+
+    <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+      <p className="text-xs text-amber-800 dark:text-amber-200">
+        ⚠️ <strong>Atenção:</strong> A análise usa IA e pode ter limitações.
+        Em caso de dúvida, consulte sempre seu banco ou órgão competente.
+      </p>
+    </div>
   </div>
 );
 
@@ -3331,6 +3368,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'imagem_em_texto':     ImagemEmTextoConfigForm,
   'tabela_em_texto':     TabelaEmTextoConfigForm,
   'contrato_em_texto':   ContratoEmTextoConfigForm,
+  'identificar_fraude': IdentificarFraudeForm,
   'fichas_producao': FichasProducaoForm,
   'fichas_producao_conversacional': FichasProducaoForm,
   'meu_cupom': MeuCupomForm,

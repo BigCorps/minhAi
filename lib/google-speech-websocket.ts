@@ -112,7 +112,8 @@ export class GoogleSpeechWebSocket {
    * liberando a main thread para UI e wake word detection.
    */
   private async initAudioWorklet(source: MediaStreamAudioSourceNode): Promise<void> {
-    await this.audioContext!.audioWorklet.addModule('/audio-processor.worklet.js');
+    const workletUrl = `${window.location.origin}/audio-processor.worklet.js`;
+    await this.audioContext!.audioWorklet.addModule(workletUrl);
 
     this.audioWorkletNode = new AudioWorkletNode(this.audioContext!, 'audio-processor', {
       processorOptions: {

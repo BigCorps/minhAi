@@ -91,7 +91,8 @@ export default function CameraCapture(props: CameraCaptureProps) {
     instructions,
     companyId,
     allowMultiple = false,
-    onUrlReceived, 
+    onUrlReceived,
+    allowUrl = false,
   } = props;
 
   const isDark = theme === 'dark';
@@ -125,6 +126,7 @@ export default function CameraCapture(props: CameraCaptureProps) {
     companyId,
     onImageReceived: (base64) => onCapture(base64),
     onUrlReceived: onUrlReceived,
+    allowUrl,
   });
 
   useEffect(() => {

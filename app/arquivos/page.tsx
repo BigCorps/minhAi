@@ -67,6 +67,7 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 function ArquivosContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const allowUrl = searchParams.get('allowUrl') === '1';
 
   const [status, setStatus] = useState<PageStatus>('validating');
   const [error, setError] = useState<string | null>(null);
@@ -371,33 +372,35 @@ const file = new File([blob], 'url_para_analise.json', { type: 'application/json
           </p>
         </div>
 
-        {/* Toggle modo Arquivo / URL */}
-        <div className="flex gap-1 p-1 rounded-xl bg-slate-800 w-full">
-          <button
-            onClick={() => { setInputMode('file'); setError(null); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-              inputMode === 'file'
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Paperclip className="w-4 h-4" />
-            Arquivo / Foto
-          </button>
-          <button
-            onClick={() => { setInputMode('url'); setError(null); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-              inputMode === 'url'
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Link className="w-4 h-4" />
-            Link / URL
-          </button>
-        </div>
+        {/* Toggle modo Arquivo / URL — só exibe quando allowUrl=1 */}
+        {allowUrl && (
+          <div className="flex gap-1 p-1 rounded-xl bg-slate-800 w-full">
+            <button
+              onClick={() => { setInputMode('file'); setError(null); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                inputMode === 'file'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Paperclip className="w-4 h-4" />
+              Arquivo / Foto
+            </button>
+            <button
+              onClick={() => { setInputMode('url'); setError(null); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                inputMode === 'url'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Link className="w-4 h-4" />
+              Link / URL
+            </button>
+          </div>
+        )}
 
-        {/* Modo arquivo */}
+        {/* Modo arquivo — sempre visível */}
         {inputMode === 'file' && (
           <>
             {/* Botão câmera — apenas 1 imagem */}
@@ -444,8 +447,8 @@ const file = new File([blob], 'url_para_analise.json', { type: 'application/json
           </>
         )}
 
-        {/* Modo URL */}
-        {inputMode === 'url' && (
+        {/* Modo URL — só renderiza quando allowUrl=1 e inputMode='url' */}
+        {allowUrl && inputMode === 'url' && (
           <div className="flex flex-col gap-3 w-full">
             <p className="text-slate-400 text-sm text-center">
               Cole o link suspeito para análise

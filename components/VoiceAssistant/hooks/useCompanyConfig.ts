@@ -20,8 +20,8 @@ export function useCompanyConfig(
   wakeWordProp: string,
   greetingProp: string
 ): CompanyConfig {
-  const [wakeWord, setWakeWord] = useState('');
-  const [greeting, setGreeting] = useState('');
+  const [wakeWord, setWakeWord] = useState(wakeWordProp || 'gerente');
+  const [greeting, setGreeting] = useState(greetingProp || 'Oi! Como posso ajudar?');
 
   useEffect(() => {
     async function loadCompanyConfig() {

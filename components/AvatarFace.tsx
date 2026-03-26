@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PixConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
@@ -48,29 +48,24 @@ export function AvatarFace({
 
   const statusColors = useMemo(() => ({
     idle: { 
-      primary: '#3b82f6',
-      secondary: '#60a5fa',
+      primary: '#3b82f6', secondary: '#60a5fa',
       glow: isDark ? 'rgba(74, 222, 128, 0.4)' : 'rgba(34, 197, 94, 0.4)',
       ring: isDark ? '#4ade80' : '#22c55e',
       halo: isDark ? '#4ade80' : '#22c55e'
     },
     listening: { 
-      primary: '#3b82f6',
-      secondary: '#60a5fa',
+      primary: '#3b82f6', secondary: '#60a5fa',
       glow: isDark ? 'rgba(74, 222, 128, 0.6)' : 'rgba(34, 197, 94, 0.6)',
       ring: isDark ? '#4ade80' : '#22c55e',
       halo: isDark ? '#4ade80' : '#22c55e'
     },
     processing: { 
-      primary: '#3b82f6',
-      secondary: '#60a5fa',
+      primary: '#3b82f6', secondary: '#60a5fa',
       glow: 'rgba(22, 163, 74, 0.6)',
-      ring: '#16a34a',
-      halo: '#16a34a'
+      ring: '#16a34a', halo: '#16a34a'
     },
     speaking: { 
-      primary: '#3b82f6',
-      secondary: '#60a5fa',
+      primary: '#3b82f6', secondary: '#60a5fa',
       glow: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(37, 99, 235, 0.6)',
       ring: isDark ? '#3b82f6' : '#2563eb',
       halo: isDark ? '#3b82f6' : '#2563eb'
@@ -78,18 +73,23 @@ export function AvatarFace({
   }), [isDark]);
 
   const [colors, setColors] = useState(statusColors.idle);
+  // ✅ Partículas reduzidas — máx 8 no idle, 12 ouvindo, 18 falando
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0));
   const [isBlinking, setIsBlinking] = useState(false);
   const [eyeExpr, setEyeExpr] = useState<EyeExpression>('idle');
+  // ✅ Estrelas reduzidas de 6 para 3
   const [stars, setStars] = useState<Array<{id: number, x: number, y: number, delay: number}>>([]);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationIdRef = useRef<number | null>(null);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const showFace = !isProcessing && !isSpeaking;
+  // ✅ Canvas só anima quando há atividade — para no idle puro
+  const isActive = isSpeaking || isProcessing || isListening;
 
   useEffect(() => {
     if (isSpeaking) setColors(statusColors.speaking);
@@ -98,9 +98,10 @@ export function AvatarFace({
     else setColors(statusColors.idle);
   }, [isSpeaking, isProcessing, isListening, statusColors]);
 
+  // ✅ Estrelas: 3 em vez de 6, intervalo 15s em vez de 8s
   useEffect(() => {
     const generateStars = () => {
-      const newStars = Array.from({ length: 6 }, (_, i) => ({
+      const newStars = Array.from({ length: 3 }, (_, i) => ({
         id: Math.random(),
         x: 40 + Math.random() * 120,
         y: 40 + Math.random() * 120,
@@ -109,7 +110,7 @@ export function AvatarFace({
       setStars(newStars);
     };
     generateStars();
-    const interval = setInterval(generateStars, 8000);
+    const interval = setInterval(generateStars, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -117,7 +118,6 @@ export function AvatarFace({
     const scheduleNextBlink = () => {
       const nextBlinkDelay = Math.random() * 4000 + 2000;
       blinkTimeoutRef.current = setTimeout(() => {
-        // Ajuste Refinado: Impedir piscada no flirt (olho aberto deve ficar aberto) e outras expressões fechadas
         if (eyeExpr === 'flirt' || eyeExpr === 'sleeping' || eyeExpr === 'happy' || isBlinking) {
           scheduleNextBlink();
           return;
@@ -146,11 +146,7 @@ export function AvatarFace({
 
   useEffect(() => {
     const shouldAnimate = !isSpeaking && !isProcessing;
-    
-    if (!shouldAnimate) {
-      setEyeExpr('idle');
-      return;
-    }
+    if (!shouldAnimate) { setEyeExpr('idle'); return; }
 
     const expressions: EyeExpression[] = [
       'idle', 'sleeping', 'surprised', 'attentive', 'flirt', 'sad', 'angry', 'lookLeft', 'lookRight', 'lookDown', 'happy'
@@ -160,21 +156,11 @@ export function AvatarFace({
       const nonIdleExpressions = expressions.filter(e => e !== 'idle');
       const randomExpr = nonIdleExpressions[Math.floor(Math.random() * nonIdleExpressions.length)];
       setEyeExpr(randomExpr);
-
-      exprTimeoutRef.current = setTimeout(() => {
-        setEyeExpr('idle');
-      }, 2000 + Math.random() * 1000);
+      exprTimeoutRef.current = setTimeout(() => { setEyeExpr('idle'); }, 2000 + Math.random() * 1000);
     };
 
-    // Ajuste Refinado: Manter o avatar normal (idle) por pelo menos 10 segundos
-    const interval = setInterval(() => {
-      changeExpression();
-    }, 10000 + Math.random() * 5000); // Mínimo 10s entre expressões
-
-    // Primeira expressão após 10 segundos
-    const initialTimeout = setTimeout(() => {
-      changeExpression();
-    }, 10000);
+    const interval = setInterval(() => { changeExpression(); }, 10000 + Math.random() * 5000);
+    const initialTimeout = setTimeout(() => { changeExpression(); }, 10000);
 
     return () => {
       clearInterval(interval);
@@ -183,17 +169,19 @@ export function AvatarFace({
     };
   }, [isSpeaking, isProcessing]);
 
+  // ✅ Partículas reduzidas significativamente
   useEffect(() => {
-    const particleCount = isSpeaking ? 25 : isProcessing ? 15 : isListening ? 10 : 8;
+    const particleCount = isSpeaking ? 18 : isProcessing ? 10 : isListening ? 8 : 5;
     const newParticles = Array.from({ length: particleCount }, () => ({
       x: Math.random() * 500,
       y: Math.random() * 500,
-      size: Math.random() * 4 + 2,
+      size: Math.random() * 3 + 1,  // menores: era 4+2, agora 3+1
       speed: Math.random() * 0.8 + 0.3
     }));
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
+  // ✅ Barras de áudio — sem mudança, já só roda quando isSpeaking
   useEffect(() => {
     if (isSpeaking) {
       audioIntervalRef.current = setInterval(() => {
@@ -210,12 +198,23 @@ export function AvatarFace({
     return () => { if (audioIntervalRef.current) clearInterval(audioIntervalRef.current); };
   }, [isSpeaking]);
 
+  // ✅ Canvas pausa quando idle — requestAnimationFrame só roda com atividade
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    let animationId: number;
+
+    // Se não há atividade, limpa o canvas e não inicia o loop
+    if (!isActive) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = null;
+      }
+      return;
+    }
+
     let time = 0;
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -231,11 +230,16 @@ export function AvatarFace({
         ctx.arc(x, y, particle.size * 3, 0, Math.PI * 2);
         ctx.fill();
       });
-      animationId = requestAnimationFrame(animate);
+      animationIdRef.current = requestAnimationFrame(animate);
     };
     animate();
-    return () => { if (animationId) cancelAnimationFrame(animationId); };
-  }, [particles, colors]);
+    return () => {
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = null;
+      }
+    };
+  }, [particles, colors, isActive]);
 
   const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
 
@@ -251,34 +255,65 @@ export function AvatarFace({
           <PixConfirmationModal transactionId={pixConfirmationData.transactionId} amount={pixConfirmationData.amount} qrCodeUrl={pixConfirmationData.qrCodeUrl} pixCode={pixConfirmationData.pixCode} onConfirm={onConfirmPix || (async () => {})} onCancel={onCancelPix || (async () => {})} theme={theme} />
         </div>
       )}
+
+      {/* Anéis de pulso — will-change para promover ao GPU */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
-          <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{ width: `${60 + ring * 15}%`, aspectRatio: '1 / 1', borderColor: colors.ring, opacity: isSpeaking ? 0.4 : 0.2, animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`, animationDelay: `${ring * 0.3}s` }} />
+          <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{
+            width: `${60 + ring * 15}%`, aspectRatio: '1 / 1',
+            borderColor: colors.ring,
+            opacity: isSpeaking ? 0.4 : 0.2,
+            animation: `pulse ${isSpeaking ? 1 : 2 + ring * 0.5}s ease-in-out infinite`,
+            animationDelay: `${ring * 0.3}s`,
+            willChange: 'transform, opacity',
+          }} />
         ))}
       </div>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
+
+      {/* Halos rotativos — will-change para GPU */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite', willChange: 'transform' }}>
         <div className="rounded-full opacity-20" style={{ width: '95%', aspectRatio: '1 / 1', background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, filter: 'blur(20px)' }} />
       </div>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 15s linear infinite reverse' }}>
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 15s linear infinite reverse', willChange: 'transform' }}>
         <div className="rounded-full opacity-30" style={{ width: '90%', aspectRatio: '1 / 1', background: `conic-gradient(from 45deg, transparent 0%, ${colors.halo} 20%, transparent 40%, ${colors.halo} 60%, transparent 80%, ${colors.halo} 100%)`, filter: 'blur(15px)' }} />
       </div>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 10s linear infinite' }}>
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 10s linear infinite', willChange: 'transform' }}>
         <div className="rounded-full opacity-40" style={{ width: '85%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, transparent 60%, ${colors.halo}40 70%, ${colors.halo}20 80%, transparent 90%)`, filter: 'blur(10px)' }} />
       </div>
+
       <div className="absolute inset-0 flex items-center justify-center animate-pulse pointer-events-none">
         <div className="rounded-full" style={{ width: '80%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, ${colors.glow} 0%, transparent 70%)`, opacity: 0.5 }} />
       </div>
+
+      {/* Canvas — só roda quando isActive */}
       <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
-      <div className="absolute w-full h-full overflow-visible pointer-events-none">
-        {particles.map((particle, i) => (
-          <div key={`particle-${i}`} className="absolute rounded-full animate-float" style={{ left: particle.x, top: particle.y, width: particle.size, height: particle.size, backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary, opacity: 0.3, animationDuration: `${5 / particle.speed}s`, animationDelay: `${i * 0.2}s` }} />
-        ))}
-      </div>
+
+      {/* Partículas flutuantes — só renderiza quando isActive */}
+      {isActive && (
+        <div className="absolute w-full h-full overflow-visible pointer-events-none">
+          {particles.map((particle, i) => (
+            <div key={`particle-${i}`} className="absolute rounded-full animate-float" style={{
+              left: particle.x, top: particle.y,
+              width: particle.size, height: particle.size,
+              backgroundColor: i % 2 === 0 ? colors.primary : colors.secondary,
+              opacity: 0.3,
+              animationDuration: `${5 / particle.speed}s`,
+              animationDelay: `${i * 0.2}s`,
+              willChange: 'transform',
+            }} />
+          ))}
+        </div>
+      )}
       
-      {/* Container Principal com Orbe e Rosto integrados */}
-      <div className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-700 ease-in-out`} style={{ background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)', boxShadow: `0 0 40px ${colors.glow}`, backdropFilter: 'blur(8px)', aspectRatio: '1 / 1' }}>
+      {/* Container Principal */}
+      <div className={`absolute inset-0 m-auto w-[70%] flex items-center justify-center rounded-full overflow-visible ${orbSize} transition-all duration-700 ease-in-out`} style={{
+        background: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(248, 250, 252, 0.9)',
+        boxShadow: `0 0 40px ${colors.glow}`,
+        backdropFilter: 'blur(8px)',
+        aspectRatio: '1 / 1'
+      }}>
         
-        {/* ROSTO DO AVATAR - Com transição de esmaecimento (fade) */}
+        {/* ROSTO */}
         <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${showFace ? 'opacity-100' : 'opacity-0'}`}>
           <svg viewBox="0 0 200 200" className="w-full h-full absolute z-20" style={{ overflow: 'visible' }}>
             <defs>
@@ -310,7 +345,6 @@ export function AvatarFace({
               ) : eyeExpr === 'happy' ? (
                 <path d="M 66 90 L 76 80 L 86 90" stroke={colors.primary} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.85" />
               ) : (
-                /* Flirt: Olho esquerdo aberto (idle) e não pisca */
                 <g><ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" /><ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" /><circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" /></g>
               )}
               {/* OLHO DIREITO */}
@@ -351,7 +385,7 @@ export function AvatarFace({
           </svg>
         </div>
 
-        {/* ORBE DE PROCESSAMENTO - Com transição de esmaecimento (fade) */}
+        {/* ORBE DE PROCESSAMENTO */}
         <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${!showFace ? 'opacity-100' : 'opacity-0'}`}>
           <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 filter drop-shadow-2xl">
             <defs>
@@ -383,7 +417,7 @@ export function AvatarFace({
           </svg>
         </div>
 
-        {/* Barras de Áudio - Visíveis apenas durante a fala */}
+        {/* Barras de Áudio */}
         {isSpeaking && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full z-50 transition-opacity duration-700">
             <div className="flex items-end justify-center gap-[3px] h-[35%] w-[50%]">
@@ -395,9 +429,16 @@ export function AvatarFace({
         )}
       </div>
 
+      {/* Anéis ping — will-change para GPU */}
       <div className="absolute inset-0 rounded-full pointer-events-none" style={{ aspectRatio: '1/1' }}>
         {[1, 2, 3].map(ring => (
-          <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{ borderColor: colors.ring, animationDuration: `${1.5 * ring}s`, animationDelay: `${ring * 0.2}s`, opacity: 0.3 / ring }} />
+          <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{
+            borderColor: colors.ring,
+            animationDuration: `${1.5 * ring}s`,
+            animationDelay: `${ring * 0.2}s`,
+            opacity: 0.3 / ring,
+            willChange: 'transform, opacity',
+          }} />
         ))}
       </div>
 

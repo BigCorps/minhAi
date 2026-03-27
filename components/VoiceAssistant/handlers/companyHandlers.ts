@@ -71,6 +71,7 @@ export async function handleNossaMarcaCommand({
       qrContent,
       isAddress,
       autoCloseDuration: 20000,
+      companyId,
     };
 
     // ✅ Usa setActiveModal (state unificado do ActionModals)
@@ -348,6 +349,7 @@ export async function handleWifiQRCode({ companyId, setIsProcessing, setActiveMo
         networkName: data.wifi_network_name,
         networkPassword: data.wifi_network_password ?? '',
         companyName: data.name,
+        companyId,
       },
     });
     playText(`Aqui está o QR Code do Wi-Fi.`).catch(() => {});
@@ -377,6 +379,7 @@ export async function handleCardapio({ companyId, setIsProcessing, setActiveModa
         menuUrl: data.cardapio_url,
         menuDescription: data.cardapio_description ?? '',
         companyName: data.name,
+        companyId,
       },
     });
     playText(
@@ -410,6 +413,7 @@ export async function handleNossoQRCode({ companyId, setIsProcessing, setActiveM
         qrContent: data.qrcode_content,
         qrLabel: data.qrcode_label,
         companyName: data.name,
+        companyId,
       },
     });
     playText(data.qrcode_label).catch(() => {});

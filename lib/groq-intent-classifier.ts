@@ -22,18 +22,25 @@ const ACTION_VERBS = [
   'agendar', 'agenda', 'marcar', 'marca', 'cancelar', 'cancela',
   'pagar', 'cobrar', 'cobra', 'confirmar', 'validar', 'escanear', 'ler',
   'iniciar', 'inicia', 'começar', 'começa', 'parar', 'quero', 'preciso',
-  'me mostra', 'me passa', 'me diz',
+  'me mostra', 'me passa', 'me diz', 'precisando', 'precisando de',
 ];
 
 const KNOWN_KEYWORDS = [
-  'pix', 'qr', 'wifi', 'wi-fi', 'música', 'musica', 'vídeo', 'video',
-  'cep', 'cnpj', 'cpf', 'placa', 'câmbio', 'cambio', 'dólar', 'dolar',
-  'bitcoin', 'clima', 'temperatura', 'agenda', 'calendário',
-  'lembrete', 'alarme', 'cronômetro', 'temporizador', 'impressão',
-  'cardápio', 'cardapio', 'endereço', 'endereco', 'instagram', 'whatsapp',
-  'youtube', 'cadastro', 'cupom', 'fraude', 'boleto', 'estoque', 'produto',
-  'câmera', 'camera', 'foto', 'pdf', 'recibo', 'nota', 'orçamento',
-  'linkedin', 'tiktok', 'twitter', 'facebook', 'telefone',
+  'pix', 'qr', 'wifi', 'wi-fi', 'musica', 'música', 'video', 'vídeo',
+  'cep', 'cnpj', 'cpf', 'placa', 'cambio', 'câmbio', 'dolar', 'dólar',
+  'bitcoin', 'clima', 'temperatura', 'agenda', 'calendario', 'calendário',
+  'lembrete', 'alarme', 'cronometro', 'cronômetro', 'temporizador',
+  'imprimir', 'impressao', 'impressão', 'impressora', 'imprima', 'imprime',
+  'recibo', 'cupom', 'nota fiscal', 'printnode',
+  'cardapio', 'cardápio', 'endereco', 'endereço',
+  'instagram', 'whatsapp', 'youtube', 'cadastro', 'fraude', 'boleto',
+  'estoque', 'produto', 'camera', 'câmera', 'foto', 'pdf',
+  'orcamento', 'orçamento', 'linkedin', 'tiktok', 'twitter', 'facebook',
+  'telefone', 'alarme', 'lembrete', 'cronometro', 'temporizador',
+  'qrcode', 'código de barras', 'codigo de barras', 'barcode',
+  'cambio', 'câmbio', 'cotação', 'cotacao', 'moeda', 'euro', 'libra',
+  'feriado', 'ddd', 'protesto', 'score', 'serasa', 'spc',
+  'playlist', 'slideshow', 'smart', 'aparelho',
 ];
 
 const GENERAL_CONVERSATION = [
@@ -41,14 +48,31 @@ const GENERAL_CONVERSATION = [
   'boa tarde', 'bom dia', 'boa noite', 'olá ', 'oi ',
   'não entendi', 'nao entendi', 'pode repetir', 'fala de novo',
   'você é', 'voce e ', 'que sistema',
+  // Perguntas sobre capacidades
+  'o que mais você', 'o que mais voce', 'o que você faz', 'o que voce faz',
+  'o que mais faz', 'o que mais consegue', 'o que você consegue',
+  'quais são suas', 'quais sao suas', 'o que sabe fazer',
+  'me conta mais', 'me fala mais', 'o que tem de', 'e aí',
+  'além disso', 'alem disso', 'e também', 'e tambem',
+  'quais funções', 'quais funcoes', 'que funções', 'que funcoes',
+  'o que você pode', 'o que voce pode', 'o que mais pode',
 ];
 
 function shouldCallGroq(transcript: string): boolean {
   const lower = transcript.toLowerCase().trim();
-  if (GENERAL_CONVERSATION.some(p => lower.startsWith(p) || lower === p.trim())) return false;
-  if (ACTION_VERBS.some(v => lower.startsWith(v) || lower.includes(` ${v} `))) return true;
+
+  // Conversa geral → bloqueia
+  if (GENERAL_CONVERSATION.some(p => lower.startsWith(p) || lower.includes(p))) return false;
+
+  // Verbo de ação → passa
+  if (ACTION_VERBS.some(v => lower.startsWith(v) || lower.includes(` ${v} `) || lower.includes(` ${v}`))) return true;
+
+  // Keyword de função → passa
   if (KNOWN_KEYWORDS.some(k => lower.includes(k))) return true;
+
+  // Muito curto sem keyword → bloqueia
   if (lower.split(' ').length <= 3) return false;
+
   return true;
 }
 
@@ -80,7 +104,7 @@ async function getFunctionTriggers(companyId: string) {
       for (const row of data) {
         // Não sobrescreve se já está no registry
         if (!combined[row.function_key] && Array.isArray(row.voice_triggers)) {
-          combined[row.function_key] = row.voice_triggers.slice(0, 5);
+          combined[row.function_key] = (row.voice_triggers as string[]).slice(0, 5);
         }
       }
     }
@@ -98,11 +122,13 @@ export async function classifyIntentWithGroq(
   deps: ClassifierDeps
 ): Promise<boolean> {
   try {
+    // Filtro local rápido — zero latência
     if (!shouldCallGroq(transcript)) {
       console.log('💬 GROQ pulado: vai direto ao GPT');
       return false;
     }
 
+    // Monta lista combinando registry + banco
     const functionTriggers = await getFunctionTriggers(deps.companyId);
     if (!functionTriggers.length) return false;
 
@@ -116,7 +142,7 @@ export async function classifyIntentWithGroq(
 
     const { normalizedTranscript, confidence } = await response.json();
 
-    if (!normalizedTranscript || confidence < 0.7) {
+    if (!normalizedTranscript || confidence < 0.65) {
       console.log('💬 GROQ: intenção vaga → GPT');
       return false;
     }

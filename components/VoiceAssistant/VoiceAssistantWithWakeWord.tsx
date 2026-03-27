@@ -94,6 +94,7 @@ export function VoiceAssistantWithWakeWord({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isWakeWordDetected, setIsWakeWordDetected] = useState(false);
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [hasMicrophone, setHasMicrophone] = useState(true);
@@ -289,6 +290,12 @@ const handleExternalFunctionClick = (event: any) => {
             if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current);
             if (!isFinal) {
               setIsListening(true);
+              // ✅ Detecta wake word em tempo real nos parciais
+              const partialWakeWord = wakeWordDetectorRef.current?.detect(lowerText);
+              if (partialWakeWord?.detected && partialWakeWord.confidence >= 0.75) {
+                setIsWakeWordDetected(true);
+                setTimeout(() => setIsWakeWordDetected(false), 3000);
+              }
             } else {
               listeningTimeoutRef.current = setTimeout(() => {
                 if (!isProcessing && !isPlayingAudio) setIsListening(false);
@@ -530,6 +537,10 @@ const handleExternalFunctionClick = (event: any) => {
     }
 
     console.log(`✅ Wake word aceita: "${wakeWordResult.keyword}" (${(wakeWordResult.confidence * 100).toFixed(0)}%)`);
+
+    // Feedback visual instantâneo — azul por 1.5s
+    setIsWakeWordDetected(true);
+    setTimeout(() => setIsWakeWordDetected(false), 1500);
 
     if (isPlayingAudio || isSpeaking) stopEverything();
     if (processingQuestion.current || isProcessing) return;
@@ -1404,6 +1415,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
             isListening={isListening || voiceRecorder.isRecording}
             isSpeaking={isPlayingAudio}
             isProcessing={isProcessing || isTranscribing}
+            isWakeWordDetected={isWakeWordDetected}
             theme={theme}
             qrCodeData={qrCodeData}
             pixConfirmationData={pixConfirmationData}
@@ -1481,6 +1493,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
               isListening={isListening}
               isSpeaking={isPlayingAudio}
               isProcessing={isProcessing}
+              isWakeWordDetected={isWakeWordDetected}
               theme={theme}
               qrCodeData={qrCodeData}
               pixConfirmationData={pixConfirmationData}

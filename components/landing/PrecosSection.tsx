@@ -236,6 +236,7 @@ export default function PrecosSection({ theme = 'dark' }: PrecosProps) {
                           'Serviços Google',
                           'Serviços Meta',
                           'Linha de Produção',
+                          'QR Codes com seu logo',
                           ...(pkg.has_consultoria ? ['Webapp com subdomínio', 'Consultoria incluída'] : []),
                         ].map((feature, idx) => (
                           <div key={idx} className="flex items-center gap-1.5">

@@ -675,12 +675,16 @@ export async function detectVoiceCommand(
           setActiveModal,
         });
 
-        if (handlerSuccess) {
-          activeFunctionContextRef.current = {
-            functionKey: registryFunc.functionKey,
-            activatedAt: Date.now(),
-            expiresIn: 5 * 60 * 1000,
-          };
+  if (deps.fromGroq && !handlerSuccess) {
+    return true;
+  }
+
+  if (handlerSuccess) {
+    activeFunctionContextRef.current = {
+      functionKey: registryFunc.functionKey,
+      activatedAt: Date.now(),
+      expiresIn: 5 * 60 * 1000,
+    };
           console.log(`🎯 Contexto de ${registryFunc.functionKey} ativado por 5 minutos`);
         }
       } else {

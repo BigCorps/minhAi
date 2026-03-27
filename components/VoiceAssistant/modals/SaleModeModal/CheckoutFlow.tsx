@@ -1,13 +1,12 @@
 // components/VoiceAssistant/modals/SaleModeModal/CheckoutFlow.tsx
-// v4 — dinheiro controlado pelo banco via prop metodosAtivos
+// v5 — link_pagamento InfinitePay adicionado como método de pagamento
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Zap, Smartphone, CreditCard, Banknote,
-  ArrowLeft, Check, Copy, CheckCheck,
-  QrCode, Clock, X,
+  Zap, Smartphone, CreditCard, Banknote, ExternalLink,
+  ArrowLeft, Check, Copy, CheckCheck, X,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useCart } from '@/hooks/useCart';
@@ -15,7 +14,7 @@ import { criarPedido, atualizarStatusPedido, formatarPreco } from '@/lib/produto
 import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
 
 type Step = 'cliente' | 'pagamento' | 'aguardando' | 'confirmado' | 'erro';
-type MetodoPagamento = 'pix' | 'nfc' | 'tef' | 'dinheiro';
+type MetodoPagamento = 'pix' | 'nfc' | 'tef' | 'dinheiro' | 'link';
 
 interface CheckoutFlowProps {
   companyId: string;
@@ -23,7 +22,7 @@ interface CheckoutFlowProps {
   onClose: () => void;
   playText?: (text: string) => Promise<void>;
   /** Chaves de métodos ativos vindas do banco (company_function_settings).
-   *  Ex: ['pix_generate', 'tef_debito', 'tef_credito', 'dinheiro']
+   *  Ex: ['pix_generate', 'tef_debito', 'link_pagamento']
    *  Se undefined, exibe todos (comportamento legado). */
   metodosAtivos?: string[];
 }
@@ -66,6 +65,12 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
   const [pixCode, setPixCode] = useState<string | null>(null);
   const [pixQRCode, setPixQRCode] = useState<string | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
+
+  // Link InfinitePay
+  const [linkCobranca, setLinkCobranca] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [isConfirmingLink, setIsConfirmingLink] = useState(false);
+  const [linkPendingMsg, setLinkPendingMsg] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -193,6 +198,48 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
     finally { setConfirmLoading(false); }
   }
 
+  // Confirmação manual do Link InfinitePay
+  async function handleConfirmarLink() {
+    if (!cobrancaId || isConfirmingLink) return;
+    setIsConfirmingLink(true);
+    setLinkPendingMsg(null);
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const response = await fetch(`${supabaseUrl}/functions/v1/confirmar-pagamento-infinitepay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ cobranca_id: cobrancaId, company_id: companyId }),
+      });
+      const json = await response.json();
+      if (response.status === 400 && json.pending) {
+        setLinkPendingMsg(json.error || 'Pagamento ainda não identificado. Aguarde o cliente pagar e tente novamente.');
+        return;
+      }
+      if (!response.ok || !json.success) {
+        setLinkPendingMsg(json.error || 'Erro ao confirmar. Tente novamente.');
+        return;
+      }
+      // Confirma o pedido no banco
+      if (pedidoId) {
+        const supabase = createClient();
+        await supabase.rpc('confirmar_pedido_pago', { p_pedido_id: pedidoId });
+      }
+      setTotalConfirmado(total);
+      setStep('confirmado');
+      playText?.('Pagamento confirmado! Obrigado pela sua compra.').catch(() => {});
+      clear();
+    } catch {
+      setLinkPendingMsg('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      setIsConfirmingLink(false);
+    }
+  }
+
   // Criar pedido + cobrança
   const handleConfirmarPagamento = useCallback(async () => {
     setLoading(true); setErro(null);
@@ -203,7 +250,7 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
         cliente_nome: clienteNome || undefined,
         cliente_telefone: clienteTel || undefined,
         itens,
-        metodo_pagamento: metodo,
+        metodo_pagamento: metodo === 'link' ? 'nfc' : metodo, // link usa cobranca igual ao nfc
       });
       setPedidoId(pedido.id);
 
@@ -232,17 +279,45 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
 
       if (metodo === 'nfc') {
         const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
-          body: { company_id: companyId, amount_cents: Math.round(total * 100), description: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}` },
+          body: {
+            company_id: companyId,
+            amount_cents: Math.round(total * 100),
+            tipo: 'NFC',
+            nfc_payment_method: 'debit',
+            descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+          },
         });
-        if (cobErr || !cobData?.id) throw new Error('Erro ao gerar cobrança NFC');
-        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.id);
-        setCobrancaId(cobData.id); setStep('aguardando'); setPolling(true);
+        if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar cobrança NFC');
+        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
+        setCobrancaId(cobData.cobranca_id); setStep('aguardando'); setPolling(true);
         playText?.('Aproxime o cartão na maquininha para pagar.').catch(() => {}); return;
+      }
+
+      if (metodo === 'link') {
+        const { data: cobData, error: cobErr } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
+          body: {
+            company_id: companyId,
+            amount_cents: Math.round(total * 100),
+            tipo: 'LINK_PAGAMENTO',
+            descricao: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+          },
+        });
+        if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar link de pagamento');
+        await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
+        setCobrancaId(cobData.cobranca_id);
+        setLinkCobranca(cobData.link_cobranca);
+        setStep('aguardando');
+        playText?.('Link de pagamento gerado. Abra o link para o cliente pagar.').catch(() => {}); return;
       }
 
       if (metodo === 'tef') {
         const { data: orderData, error: orderErr } = await supabase.functions.invoke('criar-order-mp-point', {
-          body: { company_id: companyId, amount_cents: Math.round(total * 100), description: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`, payment_type: 'debit_card' },
+          body: {
+            company_id: companyId,
+            amount_cents: Math.round(total * 100),
+            description: `Pedido ${pedido.id.substring(0, 8).toUpperCase()}`,
+            payment_type: 'debit_card',
+          },
         });
         if (orderErr || !orderData?.id) throw new Error('Erro ao criar order na maquininha');
         await supabase.from('mp_orders').update({ pedido_id: pedido.id }).eq('id', orderData.id);
@@ -258,18 +333,18 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
   const handleFinalizar = () => { clear(); onClose(); };
 
   // Estilos
-  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
-  const textSecondary = isDark ? 'text-white/50' : 'text-gray-500';
-  const textMuted = isDark ? 'text-white/30' : 'text-gray-400';
-  const cardBase = `rounded-xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`;
-  const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border outline-none transition-colors ${
+  const textPrimary   = isDark ? 'text-white'      : 'text-gray-900';
+  const textSecondary = isDark ? 'text-white/50'   : 'text-gray-500';
+  const textMuted     = isDark ? 'text-white/30'   : 'text-gray-400';
+  const cardBase      = `rounded-xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200 shadow-sm'}`;
+  const inputCls      = `w-full px-3 py-2.5 rounded-xl text-sm border outline-none transition-colors ${
     isDark ? 'bg-white/5 border-white/10 text-white placeholder-white/30 focus:border-white/30'
            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-gray-400'}`;
-  const labelCls = `text-xs font-medium mb-1 block ${textSecondary}`;
-  const btnPrimary = `w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20`;
+  const labelCls    = `text-xs font-medium mb-1 block ${textSecondary}`;
+  const btnPrimary  = `w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20`;
   const btnSecondary = `w-full py-2.5 rounded-xl text-sm font-medium transition-all active:scale-95 ${
     isDark ? 'bg-white/5 hover:bg-white/10 text-white/60' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`;
-  const btnOutline = `w-full py-2 rounded-xl text-xs font-medium border transition-all ${
+  const btnOutline  = `w-full py-2 rounded-xl text-xs font-medium border transition-all ${
     isDark ? 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
            : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'}`;
 
@@ -345,9 +420,6 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
 
   // ── STEP: PAGAMENTO ───────────────────────────────────────────────────────
   if (step === 'pagamento') {
-    // Mapeamento chave-do-banco → MetodoPagamento
-    // Um método aparece se metodosAtivos é undefined (legado) OU se alguma das
-    // suas chaves estiver presente no array.
     const todosMétodos: {
       key: MetodoPagamento;
       label: string;
@@ -355,10 +427,11 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
       desc: string;
       dbKeys: string[];
     }[] = [
-      { key: 'pix',      label: 'PIX',           Icon: Zap,        desc: 'QR Code instantâneo',       dbKeys: ['pix_generate'] },
-      { key: 'nfc',      label: 'Cartão NFC',     Icon: Smartphone, desc: 'Aproximar cartão',          dbKeys: ['nfc_debito', 'nfc_credito'] },
-      { key: 'tef',      label: 'TEF Maquininha', Icon: CreditCard, desc: 'Inserir na maquininha',     dbKeys: ['tef_debito', 'tef_credito'] },
-      { key: 'dinheiro', label: 'Dinheiro',       Icon: Banknote,   desc: 'Pagamento em espécie',      dbKeys: ['dinheiro'] },
+      { key: 'pix',      label: 'PIX',              Icon: Zap,          desc: 'QR Code instantâneo',      dbKeys: ['pix_generate'] },
+      { key: 'link',     label: 'Link InfinitePay',  Icon: ExternalLink, desc: 'Cliente paga pelo celular', dbKeys: ['link_pagamento'] },
+      { key: 'nfc',      label: 'Cartão NFC',        Icon: Smartphone,   desc: 'Aproximar cartão',         dbKeys: ['nfc_debito', 'nfc_credito'] },
+      { key: 'tef',      label: 'TEF Maquininha',    Icon: CreditCard,   desc: 'Inserir na maquininha',    dbKeys: ['tef_debito', 'tef_credito'] },
+      { key: 'dinheiro', label: 'Dinheiro',           Icon: Banknote,     desc: 'Pagamento em espécie',     dbKeys: ['dinheiro'] },
     ];
 
     const metodosFiltrados = metodosAtivos === undefined
@@ -383,7 +456,11 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
                 metodo === m.key
                   ? isDark ? 'border-emerald-500 bg-emerald-500/10' : 'border-emerald-500 bg-emerald-50'
                   : isDark ? 'border-white/10 hover:border-white/20' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <m.Icon className={`w-5 h-5 mb-1.5 ${metodo === m.key ? 'text-emerald-500' : textSecondary}`} />
+              <m.Icon className={`w-5 h-5 mb-1.5 ${
+                metodo === m.key
+                  ? m.key === 'link' ? 'text-violet-500' : 'text-emerald-500'
+                  : textSecondary
+              }`} />
               <div className={`text-xs font-semibold ${textPrimary}`}>{m.label}</div>
               <div className={`text-[10px] ${textMuted}`}>{m.desc}</div>
             </button>
@@ -422,7 +499,6 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
           <div className={`${cardBase} p-3 flex flex-col gap-2`}>
             <p className={`text-[10px] font-bold uppercase tracking-wider ${textMuted}`}>Copia e Cola</p>
 
-            {/* Resumo */}
             <div className={`rounded-lg p-2 space-y-1 ${isDark ? 'bg-white/3' : 'bg-gray-50'}`}>
               <div className="flex justify-between text-xs">
                 <span className={textMuted}>Total</span>
@@ -440,7 +516,6 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
               </div>
             </div>
 
-            {/* Código truncado */}
             {pixCode && (
               <div className={`rounded-lg px-2 py-1 text-[9px] font-mono truncate ${
                 isDark ? 'bg-white/5 text-white/40' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}>
@@ -465,7 +540,7 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
             </button>
 
             <button onClick={() => { setAutoChecking(false); setStep('pagamento'); }}
-              className={`text-[10px] flex items-center justify-center gap-1 transition-colors ${textMuted} hover:${textSecondary}`}>
+              className={`text-[10px] flex items-center justify-center gap-1 transition-colors ${textMuted}`}>
               <ArrowLeft className="w-3 h-3" />Cancelar
             </button>
           </div>
@@ -490,6 +565,101 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
             </div>
           </div>
         </div>
+      </div>
+    );
+
+    // Link InfinitePay
+    if (metodo === 'link') return (
+      <div className="w-full flex flex-col gap-4">
+        <div>
+          <p className={`text-base font-bold ${textPrimary}`}>Link de Pagamento</p>
+          <p className={`text-xs ${textMuted}`}>Abra o link para o cliente pagar pelo celular</p>
+        </div>
+
+        {/* Info */}
+        <div className={`p-3 rounded-xl border text-xs ${
+          isDark ? 'bg-violet-500/10 border-violet-500/20 text-violet-300'
+                 : 'bg-violet-50 border-violet-200 text-violet-700'
+        }`}>
+          O cliente preenche o telefone na tela da InfinitePay para receber o código de confirmação.
+        </div>
+
+        {/* Valor */}
+        <div className={`rounded-xl p-3 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+          <div className={`flex justify-between text-sm font-bold ${textPrimary}`}>
+            <span>Total</span>
+            <span className="text-violet-500">{formatarPreco(total)}</span>
+          </div>
+        </div>
+
+        {/* Botão abrir link */}
+        <button
+          onClick={() => linkCobranca && window.open(linkCobranca, '_blank')}
+          disabled={!linkCobranca}
+          className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Abrir link de pagamento
+        </button>
+
+        {/* Botão copiar link */}
+        <button
+          onClick={() => {
+            if (linkCobranca) {
+              navigator.clipboard.writeText(linkCobranca);
+              setLinkCopied(true);
+              setTimeout(() => setLinkCopied(false), 2000);
+            }
+          }}
+          disabled={!linkCobranca}
+          className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 ${
+            linkCopied
+              ? 'bg-emerald-500 text-white border-emerald-500'
+              : isDark
+                ? 'border-white/10 text-white/60 hover:border-white/20 hover:text-white/80'
+                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+          }`}
+        >
+          {linkCopied
+            ? <><CheckCheck className="w-4 h-4" />Copiado!</>
+            : <><Copy className="w-4 h-4" />Copiar link</>}
+        </button>
+
+        {/* Aviso pendente */}
+        {linkPendingMsg && (
+          <div className={`p-3 rounded-xl border text-xs ${
+            isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                   : 'bg-amber-50 border-amber-200 text-amber-700'
+          }`}>
+            {linkPendingMsg}
+          </div>
+        )}
+
+        {/* Confirmar pagamento */}
+        <div className={`pt-2 border-t ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
+          <p className={`text-xs text-center mb-3 ${textMuted}`}>Após o cliente pagar:</p>
+          <button
+            onClick={handleConfirmarLink}
+            disabled={isConfirmingLink || !cobrancaId}
+            className={btnPrimary + (isConfirmingLink ? ' opacity-70 cursor-not-allowed' : '')}
+          >
+            {isConfirmingLink
+              ? <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verificando...
+                </span>
+              : <span className="flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4" />Confirmar pagamento recebido
+                </span>
+            }
+          </button>
+        </div>
+
+        <button
+          onClick={() => { setStep('pagamento'); setLinkCobranca(null); setLinkPendingMsg(null); }}
+          className={btnSecondary}
+        >
+          <span className="flex items-center justify-center gap-1"><ArrowLeft className="w-4 h-4" />Cancelar</span>
+        </button>
       </div>
     );
 

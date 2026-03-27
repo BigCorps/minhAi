@@ -1577,6 +1577,14 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
         </svg>
       ),
       funcoes: [
+{
+  key: 'link_pagamento',
+  label: 'Link de Pagamento',
+  descricao: 'Cliente paga pelo celular sem maquininha',
+  configurado: !!config.infinitepay_handle,
+  pendencia: !config.infinitepay_handle ? 'Configure o Token InfinitePay nas funções' : null,
+  destino: '/dashboard/functions',
+},
         {
           key: 'nfc_debito',
           label: 'NFC Débito',

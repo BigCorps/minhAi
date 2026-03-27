@@ -10,9 +10,11 @@ interface InicioSectionProps {
 
 const OPCOES = [
   'Assistente',
+  'Aplicativo',
   'Funcionário',
   'Atendente',
   'Gerente',
+  'Totem',
   'Auxiliar',
   'Secretário',
   'Operador',
@@ -20,6 +22,7 @@ const OPCOES = [
   'Recepcionista',
   'Agente',
   'Analista',
+  'Estoquista',
   'Consultor',
   'Coordenador',
   'Divulgador',

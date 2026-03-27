@@ -172,7 +172,8 @@ async function runWithTrigger(
     '@/components/VoiceAssistant/handlers/voiceCommandDetector'
   );
   
-  const result = await detectVoiceCommand(trigger, {
+  // Executa o detector com fromGroq=true (evita loop)
+  await detectVoiceCommand(trigger, {
     companyId: deps.companyId,
     functionSettings: deps.functionSettings,
     playText: deps.playText,
@@ -187,10 +188,10 @@ async function runWithTrigger(
     fromGroq: true,
   });
 
-  // ✅ Se o commandProcessor detectou a função (mesmo que handler retorne false),
-  // retornamos true para evitar que o fluxo original chame o GROQ novamente.
-  // O log "✅ Nova função detectada" já confirma que a função foi identificada.
-  return result;
+  // ✅ Sempre retorna true — o detector já falou com o usuário
+  // (seja abrindo modal, seja dizendo "não configurado")
+  // Não importa o resultado: o fluxo está encerrado aqui.
+  return true;
 }
 
 // ── Exportação principal ──────────────────────────────────────

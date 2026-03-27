@@ -125,6 +125,7 @@ export async function detectVoiceCommand(
     pixStateRef,
     setActiveModal,
     activeFunctionContextRef,
+    fromGroq,
   } = deps;
 
   const correctedTranscript = correctTranscriptionErrors(transcript);
@@ -703,7 +704,7 @@ export async function detectVoiceCommand(
   }
 
 // ── GROQ: classificador de intenção como último recurso ──
-if (!deps.fromGroq) {
+if (!fromGroq) {
   console.log('🤖 Consultando GROQ para classificação de intenção...');
   const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
   const groqHandled = await classifyIntentWithGroq(transcript, {

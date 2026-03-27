@@ -19,12 +19,20 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
   try {
     let logoUrl: string | null = null
 
-    if (companyId) {
+ if (companyId) {
       const { data } = await supabase
         .from('companies')
         .select('webapp_logo_url, plan')
         .eq('id', companyId)
         .single()
+
+      // LOG TEMPORÁRIO
+      console.log('QR DEBUG:', {
+        companyId,
+        plan: data?.plan,
+        webapp_logo_url: data?.webapp_logo_url,
+        isPaidPlan: data?.plan === 'top' || data?.plan === 'consulting'
+      })
 
       const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
       if (isPaidPlan && data?.webapp_logo_url) {

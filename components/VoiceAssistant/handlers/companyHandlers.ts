@@ -465,6 +465,7 @@ export async function handleEnderecoCommand({
       address: company.business_address,
       mapsUrl,
       qrContent: mapsUrl,
+      companyId,
     };
 
     // ✅ Usa setActiveModal (state unificado do ActionModals)

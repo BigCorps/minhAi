@@ -29,11 +29,18 @@ export default function IndicacoesPage() {
 
       // Perfil com referral_code
       const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('referral_code, username')
-        .eq('user_id', authUser.id)
-        .single();
-      setProfile(profileData);
+ if (!profileData?.referral_code) {
+  const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+  await supabase
+    .from('user_profiles')
+    .upsert({
+      user_id: authUser.id,
+      referral_code: newCode,
+    }, { onConflict: 'user_id' });
+  setProfile({ ...profileData, referral_code: newCode });
+} else {
+  setProfile(profileData);
+}
 
       // Indicações
       const { data: referralData } = await supabase

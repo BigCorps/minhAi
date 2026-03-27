@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Gera QR como SVG
+// Gera QR como SVG forçando rect
     const qrSvg = await QRCode.toString(data, {
       type: 'svg',
       margin: 2,
@@ -65,22 +65,40 @@ export async function GET(req: NextRequest) {
       },
       errorCorrectionLevel: 'H',
       width: size,
+      // @ts-ignore
+      rendererOpts: { quality: 1 },
     })
 
-    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
+    // O SVG usa viewBox "0 0 69 69" — unidade ~4.3px cada
+    // Arredonda os paths convertendo para rect manualmente não é viável
+    // Solução: pós-processar o SVG substituindo os <path stroke=...> por rect via regex no viewBox
+    const unitSize = size / 69 // tamanho de cada célula em px reais
 
-    // Arredonda os pontos via rx/ry no SVG
-    const qrSvgRounded = qrSvg.replace(
-      /<rect([^/]*)\/>/g,
-      (match, attrs) => {
-        if (attrs.includes(`fill="${bgColor}"`) || attrs.includes(`width="${size}`)) {
-          return match
+    // Extrai os pontos do path stroke e reconstrói como rects arredondados
+    const qrSvgRounded = qrSvg
+      .replace(/shape-rendering="crispEdges"/, '') // remove crisp para suavizar
+      .replace(
+        /<path stroke="([^"]+)" d="([^"]+)"\/>/g,
+        (match, strokeColor, d) => {
+          // Converte cada segmento "Mx y.5hN" em rects arredondados
+          const rects: string[] = []
+          const segments = d.match(/M(\d+) (\d+(?:\.\d+)?)h(\d+)/g) || []
+          segments.forEach((seg: string) => {
+            const m = seg.match(/M(\d+) (\d+(?:\.\d+)?)h(\d+)/)
+            if (!m) return
+            const x = parseFloat(m[1])
+            const y = parseFloat(m[2]) - 0.5
+            const w = parseFloat(m[3])
+            // Gera um rect por célula
+            for (let i = 0; i < w; i++) {
+              rects.push(
+                `<rect x="${x + i + 0.1}" y="${y + 0.1}" width="0.8" height="0.8" rx="0.2" ry="0.2" fill="${strokeColor}"/>`
+              )
+            }
+          })
+          return rects.join('')
         }
-        return `<rect${attrs} rx="0.4" ry="0.4"/>`
-      }
-    )
-
-    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
+      )
 
     // Converte SVG para PNG
     const qrBuffer = await sharp(Buffer.from(qrSvgRounded))
@@ -89,8 +107,6 @@ export async function GET(req: NextRequest) {
       .toBuffer()
 
     const logoBuffer = await getLogoBuffer(companyId)
-
-    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
 
     let finalBuffer: Buffer
 

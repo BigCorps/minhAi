@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
 import sharp from 'sharp'
+import fs from 'fs'
+import path from 'path'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,10 +18,14 @@ async function fetchImageBuffer(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
+// Lê o logo padrão direto do disco — sem fetch externo
+function getDefaultLogoBuffer(): Buffer {
+  const logoPath = path.join(process.cwd(), 'public', 'icon192.png')
+  return fs.readFileSync(logoPath)
+}
+
 async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
   try {
-    let url = MINHAI_LOGO_URL
-
     if (companyId) {
       const { data } = await supabase
         .from('companies')
@@ -29,18 +35,17 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
 
       const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
       if (isPaidPlan && data?.logo_url) {
-        url = data.logo_url
+        const res = await fetch(data.logo_url, { redirect: 'follow' })
+        if (res.ok) {
+          const raw = Buffer.from(await res.arrayBuffer())
+          return await sharp(raw).png().toBuffer()
+        }
       }
     }
 
-    const res = await fetch(url, { redirect: 'follow' })
-    if (!res.ok) return null
-    const arrayBuffer = await res.arrayBuffer()
-    const raw = Buffer.from(arrayBuffer)
-
-    // Força conversão para PNG via sharp independente do formato original
-    const png = await sharp(raw).png().toBuffer()
-    return png
+    // Fallback: logo padrão do disco
+    const raw = getDefaultLogoBuffer()
+    return await sharp(raw).png().toBuffer()
   } catch {
     return null
   }

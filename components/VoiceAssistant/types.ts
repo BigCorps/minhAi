@@ -40,6 +40,7 @@ export interface NossaMarcaData {
   qrContent?: string;
   isAddress?: boolean;
   autoCloseDuration?: number;
+  companyId?: string 
 }
 
 export interface EnderecoData {
@@ -47,6 +48,7 @@ export interface EnderecoData {
   address: string;
   mapsUrl: string;
   qrContent: string;
+  companyId?: string 
 }
 
 export interface FunctionSettings {

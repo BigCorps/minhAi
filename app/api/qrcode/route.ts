@@ -67,6 +67,8 @@ export async function GET(req: NextRequest) {
       width: size,
     })
 
+    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
+
     // Arredonda os pontos via rx/ry no SVG
     const qrSvgRounded = qrSvg.replace(
       /<rect([^/]*)\/>/g,

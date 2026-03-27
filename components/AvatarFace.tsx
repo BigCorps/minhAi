@@ -8,6 +8,7 @@ interface AvatarFaceProps {
   isListening: boolean;
   isSpeaking: boolean;
   isProcessing: boolean;
+  isWakeWordDetected?: boolean;
   theme?: 'dark' | 'light';
   qrCodeData?: {
     type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
@@ -34,7 +35,8 @@ type EyeExpression = 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' |
 export function AvatarFace({ 
   isListening, 
   isSpeaking, 
-  isProcessing, 
+  isProcessing,
+  isWakeWordDetected = false,
   theme = 'dark',
   qrCodeData,
   pixConfirmationData,
@@ -47,6 +49,13 @@ export function AvatarFace({
   const isDark = theme === 'dark';
 
   const statusColors = useMemo(() => ({
+    wakeWord: {
+      primary: '#60a5fa',
+      secondary: '#93c5fd',
+      glow: 'rgba(59, 130, 246, 0.9)',
+      ring: '#3b82f6',
+      halo: '#3b82f6'
+    },
     idle: { 
       primary: '#3b82f6', secondary: '#60a5fa',
       glow: isDark ? 'rgba(74, 222, 128, 0.4)' : 'rgba(34, 197, 94, 0.4)',
@@ -92,11 +101,12 @@ export function AvatarFace({
   const isActive = isSpeaking || isProcessing || isListening;
 
   useEffect(() => {
-    if (isSpeaking) setColors(statusColors.speaking);
+    if (isWakeWordDetected) setColors(statusColors.wakeWord);
+    else if (isSpeaking) setColors(statusColors.speaking);
     else if (isProcessing) setColors(statusColors.processing);
     else if (isListening) setColors(statusColors.listening);
     else setColors(statusColors.idle);
-  }, [isSpeaking, isProcessing, isListening, statusColors]);
+  }, [isWakeWordDetected, isSpeaking, isProcessing, isListening, statusColors]);
 
   // ✅ Estrelas: 3 em vez de 6, intervalo 15s em vez de 8s
   useEffect(() => {

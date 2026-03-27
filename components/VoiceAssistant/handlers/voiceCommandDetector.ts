@@ -697,9 +697,27 @@ export async function detectVoiceCommand(
     }
   }
 
-  console.log('❌ Nenhum comando detectado');
+// ── GROQ: classificador de intenção como último recurso ──
+  console.log('🤖 Consultando GROQ para classificação de intenção...');
+  try {
+    const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
+    const groqHandled = await classifyIntentWithGroq(transcript, {
+      companyId,
+      functionSettings,
+      playText,
+      setIsProcessing,
+      setActiveModal,
+      sessionId,
+      commandProcessor,
+      activeFunctionContextRef,
+    });
+    if (groqHandled) return true;
+  } catch (err) {
+    console.error('❌ Erro GROQ fallback:', err);
+  }
 
-  // Fire-and-forget — salva hint não reconhecido para revisão
+  console.log('❌ GROQ: intenção geral → GPT');
+
   if (commandProcessor) {
     commandProcessor.saveUnrecognizedHint(transcript);
   }

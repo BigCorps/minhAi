@@ -65,7 +65,7 @@ export default function PaymentModal({
   };
 
   // ✅ FIX: Usar img normal ao invés de Next Image para evitar erro 406
-  const qrImageUrl = qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}`;
+  const qrImageUrl = qrCodeUrl || `/api/qrcode?size=300&data=${encodeURIComponent(pixCode)}&color=%23000080`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

@@ -64,6 +64,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     const checkOrientation = () => {
       setIsPortrait(window.innerHeight > window.innerWidth);
     };
+
+    const handleAvatarClick = () => {
+      handleToggleMaximize();
+    };
+    window.addEventListener('eai:avatarClick', handleAvatarClick);
     
     checkMobile();
     checkOrientation();
@@ -73,6 +78,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     
     return () => {
       window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('eai:avatarClick', handleAvatarClick);
       window.removeEventListener('resize', checkOrientation);
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);

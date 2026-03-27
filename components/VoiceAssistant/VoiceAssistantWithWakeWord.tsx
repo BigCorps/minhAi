@@ -98,7 +98,7 @@ export function VoiceAssistantWithWakeWord({
   const [error, setError] = useState('');
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [hasMicrophone, setHasMicrophone] = useState(true);
-  const [showStartButton, setShowStartButton] = useState(true);
+  const [showStartButton, setShowStartButton] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [externalInput, setExternalInput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -252,6 +252,15 @@ const handleExternalFunctionClick = (event: any) => {
     }
     initCommandProcessor();
   }, [companyId]);
+
+// Auto-start: inicia o assistente automaticamente após wake word + permissão estarem prontos
+useEffect(() => {
+  if (!companyWakeWord || !permissionGranted) return;
+  const timer = setTimeout(() => {
+    handleStart();
+  }, 800);
+  return () => clearTimeout(timer);
+}, [companyWakeWord, permissionGranted]);
 
   // ── Google Speech (wake word) ─────────────────────────────
   async function startGoogleSpeech() {
@@ -1364,7 +1373,6 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
   const getStatusMessage = () => {
     if (!hasMicrophone) return 'Modo de voz indisponível';
     if (!permissionGranted) return 'Aguardando permissão de voz...';
-    if (showStartButton) return 'Clique em "Iniciar"';
     if (isTranscribing) return 'Transcrevendo...';
     if (isPlayingAudio) return 'Falando...';
     if (isProcessing) return 'Processando...';
@@ -1457,12 +1465,6 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
           )}
         </div>
 
-        {showStartButton && (
-          <button onClick={handleStart} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
-            Iniciar Assistente
-          </button>
-        )}
-
         <ActionModals
           activeModal={activeModal}
           onClose={handleCloseModal}
@@ -1483,13 +1485,20 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
         {/* Card esquerdo: Avatar */}
         <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
-        }`}>
+          }`}
+          onClick={() => window.dispatchEvent(new CustomEvent('eai:avatarClick'))}
+          title="Clique para expandir"
+        >
           {isSpeaking && (
             <button onClick={stopEverything} className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all z-10">
               🛑 PARAR
             </button>
           )}
-          <div className="relative h-96">
+          <div
+            className="relative h-96 cursor-pointer"
+            onClick={() => window.dispatchEvent(new CustomEvent('eai:setMaximized', { detail: { value: true } }))}
+            title="Clique para expandir"
+          >
             <AvatarFace
               isListening={isListening}
               isSpeaking={isPlayingAudio}
@@ -1556,12 +1565,6 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
               }`}>
                 <p className="text-sm">{error}</p>
               </div>
-            )}
-
-            {showStartButton && (
-              <button onClick={handleStart} className="mt-6 px-8 py-4 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-xl hover:from-blue-700 hover:to-green-600 transition font-bold shadow-xl text-lg">
-                Iniciar Assistente
-              </button>
             )}
 
             {/* Área inferior: cards + TextInput */}

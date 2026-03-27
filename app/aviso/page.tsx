@@ -159,21 +159,56 @@ export default function PrivacyPage() {
                 <li>Acesso restrito a dados pessoais apenas para pessoal autorizado</li>
               </ul>
 
-              <h2>4. Compartilhamento de Dados</h2>
-              <p>Respeitamos sua privacidade e não vendemos seus dados pessoais. Podemos compartilhar informações apenas nas seguintes circunstâncias:</p>
-              <ul>
-                <li><strong>Com o Google:</strong> Os dados acessados via APIs do Google (Gmail, Drive, Agenda, YouTube, Fotos e SDM) são utilizados estritamente para as funcionalidades de automação e produtividade solicitadas pelo usuário.
-                  <ul className="ml-4 mt-2 list-disc">
-                    <li>Não utilizamos dados do Google para fins de publicidade ou marketing.</li>
-                    <li>Não permitimos que humanos leiam seus dados das APIs do Google, exceto sob consentimento explícito para suporte técnico.</li>
-                    <li>O acesso ao Google Drive é restrito à leitura de arquivos para exibição em dashboards solicitados pelo usuário.</li>
-                  </ul>
-                </li>
-                <li><strong>Com a Meta:</strong> Apenas os dados necessários para operar as integrações do Facebook, Instagram e WhatsApp</li>
-                <li><strong>Requisitos Legais:</strong> Quando exigido por lei ou regulamentação governamental</li>
-              </ul>
+<h2>4. Integração com Serviços de Terceiros</h2>
 
-              <h2>5. Exclusão de Dados</h2>
+<h3>4.1 Google</h3>
+<p>Ao conectar sua conta Google ao minhAi, você nos autoriza a acessar apenas os dados necessários para as funcionalidades que você utilizar:</p>
+<ul>
+  <li><strong>Gmail:</strong> Envio de emails compostos por você via comando de voz</li>
+  <li><strong>Google Calendar:</strong> Criação e visualização de eventos por comando de voz</li>
+  <li><strong>Google Drive:</strong> Leitura de imagens em pastas selecionadas por você para exibição em painéis digitais</li>
+  <li><strong>YouTube:</strong> Busca e reprodução de vídeos solicitados por você</li>
+  <li><strong>Smart Device Management:</strong> Controle de dispositivos Google Nest/Home da sua conta por comando de voz</li>
+</ul>
+<p>O uso dos dados das APIs do Google segue estritamente a <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado. Não utilizamos dados do Google para fins de publicidade ou marketing e não vendemos esses dados a terceiros.</p>
+
+<h3>4.2 Meta (Facebook, Instagram, WhatsApp)</h3>
+<p>Ao conectar suas contas Meta ao minhAi, você nos autoriza a:</p>
+<ul>
+  <li>Acessar e gerenciar mensagens para que o assistente possa responder em seu nome</li>
+  <li>Publicar conteúdo previamente aprovado por você</li>
+</ul>
+<p>Você é responsável por garantir que o uso está em conformidade com os Termos de Serviço da Meta.</p>
+
+<h3>4.3 Revogação de Acesso</h3>
+<p>Você pode revogar o acesso do minhAi às suas contas a qualquer momento através das configurações da plataforma ou diretamente nas configurações de aplicativos do Google ou da Meta.</p>
+
+<h2>5. Política de Uso Limitado das APIs do Google</h2>
+<div className={`p-4 rounded-lg border my-4 ${
+  theme === 'dark' ? 'bg-green-500/10 border-green-500/20' : 'bg-green-50 border-green-200'
+}`}>
+  <p className="text-sm !mb-2">
+    <strong>Declaração de Uso Limitado (Google API Services User Data Policy):</strong>
+  </p>
+  <p className="text-sm !mb-2">
+    O uso pelo minhAi de informações recebidas das APIs do Google seguirá a{' '}
+    <a href="https://developers.google.com/terms/api-services-user-data-policy" 
+       target="_blank" rel="noopener noreferrer" 
+       className={`underline font-semibold ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
+      Política de Dados do Usuário dos Serviços de API do Google
+    </a>
+    , incluindo os requisitos de Uso Limitado. Especificamente:
+  </p>
+  <ul className="text-sm space-y-1">
+    <li>✅ Usamos dados das APIs do Google apenas para fornecer ou melhorar as funcionalidades voltadas ao usuário descritas nesta política</li>
+    <li>✅ Não usamos dados das APIs do Google para veicular anúncios</li>
+    <li>✅ Não permitimos que humanos leiam dados das APIs do Google, exceto com consentimento explícito do usuário para suporte técnico, ou conforme exigido por lei</li>
+    <li>✅ Não transferimos dados das APIs do Google para terceiros, exceto quando necessário para fornecer o serviço solicitado pelo usuário, em conformidade com a lei, ou como parte de uma fusão, aquisição ou venda de ativos</li>
+    <li>✅ Não usamos dados das APIs do Google para fins de pesquisa de mercado</li>
+  </ul>
+</div>
+
+              <h2>6. Exclusão de Dados</h2>
               <div className={`p-4 rounded-lg border my-4 ${
                 theme === 'dark'
                   ? 'bg-blue-500/10 border-blue-500/20'

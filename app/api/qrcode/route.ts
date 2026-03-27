@@ -10,15 +10,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const MINHAI_LOGO_URL = 'https://minhai.app/icons/icon-192x192.png'
-
-async function fetchImageBuffer(url: string): Promise<Buffer> {
-  const res = await fetch(url)
-  const arrayBuffer = await res.arrayBuffer()
-  return Buffer.from(arrayBuffer)
-}
-
-// Lê o logo padrão direto do disco — sem fetch externo
 function getDefaultLogoBuffer(): Buffer {
   const logoPath = path.join(process.cwd(), 'public', 'icon192.png')
   return fs.readFileSync(logoPath)
@@ -43,7 +34,6 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
       }
     }
 
-    // Fallback: logo padrão do disco
     const raw = getDefaultLogoBuffer()
     return await sharp(raw).png().toBuffer()
   } catch {
@@ -65,37 +55,90 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Gera QR como PNG buffer
-    const qrBuffer = await QRCode.toBuffer(data, {
-      width: size,
+    // Gera QR como SVG
+    const qrSvg = await QRCode.toString(data, {
+      type: 'svg',
       margin: 2,
       color: {
         dark: color,
         light: bgColor,
       },
-      errorCorrectionLevel: 'H', // Alto — necessário para logo no meio
+      errorCorrectionLevel: 'H',
+      width: size,
     })
 
-    // Redimensiona o logo para 25% do tamanho do QR
-    const logoSize = Math.floor(size * 0.25)
+    // Arredonda os pontos via rx/ry no SVG
+    const qrSvgRounded = qrSvg.replace(
+      /<rect([^/]*)\/>/g,
+      (match, attrs) => {
+        if (attrs.includes(`fill="${bgColor}"`) || attrs.includes(`width="${size}`)) {
+          return match
+        }
+        return `<rect${attrs} rx="0.4" ry="0.4"/>`
+      }
+    )
+
+    // Converte SVG para PNG
+    const qrBuffer = await sharp(Buffer.from(qrSvgRounded))
+      .resize(size, size)
+      .png()
+      .toBuffer()
+
     const logoBuffer = await getLogoBuffer(companyId)
 
-    const logoResized = await sharp(logoBuffer)
-      .resize(logoSize, logoSize, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    let finalBuffer: Buffer
+
+    if (logoBuffer) {
+      const logoSize = Math.floor(size * 0.25)
+      const padding = 6
+
+      // Fundo branco com padding
+      const whiteBg = await sharp({
+        create: {
+          width: logoSize + padding * 2,
+          height: logoSize + padding * 2,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        }
+      })
       .png()
       .toBuffer()
 
-    // Centraliza o logo sobre o QR
-    const offset = Math.floor((size - logoSize) / 2)
+      // Logo redimensionado
+      const logoResized = await sharp(logoBuffer)
+        .resize(logoSize, logoSize, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+        .png()
+        .toBuffer()
 
-    const finalBuffer = await sharp(qrBuffer)
-      .composite([{
-        input: logoResized,
-        top: offset,
-        left: offset,
-      }])
-      .png()
-      .toBuffer()
+      // Logo sobre fundo branco
+      const logoWithBg = await sharp(whiteBg)
+        .composite([{ input: logoResized, top: padding, left: padding }])
+        .png()
+        .toBuffer()
+
+      // Máscara circular
+      const totalSize = logoSize + padding * 2
+      const circleMask = Buffer.from(
+        `<svg width="${totalSize}" height="${totalSize}">
+          <circle cx="${totalSize / 2}" cy="${totalSize / 2}" r="${totalSize / 2}" fill="white"/>
+        </svg>`
+      )
+
+      const logoRounded = await sharp(logoWithBg)
+        .composite([{ input: circleMask, blend: 'dest-in' }])
+        .png()
+        .toBuffer()
+
+      // Centraliza logo sobre o QR
+      const offset = Math.floor((size - totalSize) / 2)
+
+      finalBuffer = await sharp(qrBuffer)
+        .composite([{ input: logoRounded, top: offset, left: offset }])
+        .png()
+        .toBuffer()
+    } else {
+      finalBuffer = qrBuffer
+    }
 
     return new NextResponse(finalBuffer, {
       status: 200,

@@ -716,9 +716,7 @@ if (!deps.fromGroq) {
     activeFunctionContextRef,
   });
   if (groqHandled) return true;
-} catch (err) {
-    console.error('❌ Erro GROQ fallback:', err);
-  }
+}
 
   console.log('❌ GROQ: intenção geral → GPT');
 

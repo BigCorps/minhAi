@@ -55,25 +55,42 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-// Gera QR como PNG direto
-    const qrPng = await QRCode.toBuffer(data, {
-      width: size,
+    // Gera QR como SVG
+    const qrSvg = await QRCode.toString(data, {
+      type: 'svg',
       margin: 2,
       color: {
         dark: color,
         light: bgColor,
       },
       errorCorrectionLevel: 'H',
+      width: size,
     })
 
-    // Aplica blur leve + threshold para arredondar os pontos
-    const qrBuffer = await sharp(qrPng)
-      .blur(1.5)
-      .threshold(128)
+    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
+
+    // Arredonda os pontos via rx/ry no SVG
+    const qrSvgRounded = qrSvg.replace(
+      /<rect([^/]*)\/>/g,
+      (match, attrs) => {
+        if (attrs.includes(`fill="${bgColor}"`) || attrs.includes(`width="${size}`)) {
+          return match
+        }
+        return `<rect${attrs} rx="0.4" ry="0.4"/>`
+      }
+    )
+
+    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
+
+    // Converte SVG para PNG
+    const qrBuffer = await sharp(Buffer.from(qrSvgRounded))
+      .resize(size, size)
       .png()
       .toBuffer()
 
     const logoBuffer = await getLogoBuffer(companyId)
+
+    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
 
     let finalBuffer: Buffer
 

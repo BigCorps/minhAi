@@ -1,4 +1,4 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v6
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v7
 //
 // CORREÇÃO PRINCIPAL: usa createPortal para renderizar direto no document.body
 // quando isMaximized=true, escapando do transform:scale() do container pai no kiosk.
@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { createClient } from '@/lib/supabase-browser';
 import { CartProvider, useCart } from '@/hooks/useCart';
 import ProductGrid from './SaleModeModal/ProductGrid';
 import CartPanel from './SaleModeModal/CartPanel';
@@ -37,9 +38,9 @@ export interface SaleModeModalProps {
   onMicUp?: () => void;
   onTextMessage?: (msg: string) => Promise<void>;
   isMaximized?: boolean;
-  produtoInicial?:    ProdutoVenda & { _opcoes_selecionadas?: any[]; _quantidade?: number };
+  produtoInicial?: ProdutoVenda & { _opcoes_selecionadas?: any[]; _quantidade?: number };
   quantidadeInicial?: number;
-  opcoesIniciais?:   any[];
+  opcoesIniciais?: any[];
 }
 
 function getIsPortrait() {
@@ -64,7 +65,7 @@ function SaleModeInner({
   onTextMessage,
   isMaximized = false,
   produtoInicial,
-  quantidadeInicial,  
+  quantidadeInicial,
 }: SaleModeModalProps) {
   const isDark = theme === 'dark';
   const { totalItens, addItem } = useCart();
@@ -79,6 +80,9 @@ function SaleModeInner({
   const [isPortrait, setIsPortrait] = useState(false);
   // Garante que o portal só monta no cliente (evita erro de hidratação)
   const [mounted, setMounted] = useState(false);
+
+  // Métodos de pagamento ativos carregados do banco
+  const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -127,15 +131,46 @@ function SaleModeInner({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, showCheckout]);
 
-useEffect(() => {
-  if (!produtoInicial) return;
-  const qty = quantidadeInicial ?? produtoInicial._quantidade ?? 1;
-  for (let i = 0; i < qty; i++) {
-    addItem(produtoInicial as any);
-  }
-  // Vai direto para o checkout após adicionar
-  setTimeout(() => setShowCheckout(false), 100); // garante que está no carrinho
-}, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Carregar métodos de pagamento ativos do banco
+  useEffect(() => {
+    async function loadMetodos() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('company_function_settings')
+          .select('function_key, is_enabled')
+          .eq('company_id', companyId)
+          .in('function_key', [
+            'pix_generate',
+            'nfc_debito', 'nfc_credito',
+            'tef_debito', 'tef_credito',
+            'dinheiro',
+          ]);
+
+        const ativos: string[] = [];
+        (data ?? []).forEach((r: any) => {
+          if (r.is_enabled) ativos.push(r.function_key);
+        });
+
+        setMetodosAtivos(ativos);
+      } catch {
+        // Em caso de erro, deixa undefined (fallback mostra todos)
+        setMetodosAtivos([]);
+      }
+    }
+    loadMetodos();
+  }, [companyId]);
+
+  // Adicionar produto inicial ao carrinho ao montar
+  useEffect(() => {
+    if (!produtoInicial) return;
+    const qty = quantidadeInicial ?? produtoInicial._quantidade ?? 1;
+    for (let i = 0; i < qty; i++) {
+      addItem(produtoInicial as any);
+    }
+    // Garante que está no carrinho (não abre checkout ainda)
+    setTimeout(() => setShowCheckout(false), 100);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCheckout = useCallback(() => {
     if (totalItens === 0) return;
@@ -164,6 +199,7 @@ useEffect(() => {
                 theme={theme}
                 onClose={() => { setShowCheckout(false); onClose(); }}
                 playText={playText}
+                metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
               />
               <button
                 onClick={() => setShowCheckout(false)}

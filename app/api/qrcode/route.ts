@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import QRCodeStyling from 'qr-code-styling'
-import { createCanvas } from 'canvas'
+import QRCode from 'qrcode'
+import sharp from 'sharp'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,39 +10,35 @@ const supabase = createClient(
 
 const MINHAI_LOGO_URL = 'https://minhai.app/icons/icon-192x192.png'
 
-async function fetchImageAsBase64(url: string): Promise<string> {
+async function fetchImageBuffer(url: string): Promise<Buffer> {
   const res = await fetch(url)
-  const buffer = await res.arrayBuffer()
-  const base64 = Buffer.from(buffer).toString('base64')
-  const mime = res.headers.get('content-type') || 'image/png'
-  return `data:${mime};base64,${base64}`
+  const arrayBuffer = await res.arrayBuffer()
+  return Buffer.from(arrayBuffer)
 }
 
-async function getLogoForCompany(companyId: string | null): Promise<string> {
-  if (!companyId) return await fetchImageAsBase64(MINHAI_LOGO_URL)
+async function getLogoBuffer(companyId: string | null): Promise<Buffer> {
+  if (companyId) {
+    const { data } = await supabase
+      .from('companies')
+      .select('logo_url, plan')
+      .eq('id', companyId)
+      .single()
 
-  const { data } = await supabase
-    .from('companies')
-    .select('logo_url, plan')
-    .eq('id', companyId)
-    .single()
-
-  const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
-
-  if (isPaidPlan && data?.logo_url) {
-    return await fetchImageAsBase64(data.logo_url)
+    const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
+    if (isPaidPlan && data?.logo_url) {
+      return await fetchImageBuffer(data.logo_url)
+    }
   }
-
-  return await fetchImageAsBase64(MINHAI_LOGO_URL)
+  return await fetchImageBuffer(MINHAI_LOGO_URL)
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
 
-  const data     = searchParams.get('data')
-  const color    = searchParams.get('color')    || '#000000'
-  const bgColor  = searchParams.get('bg')       || '#ffffff'
-  const size     = parseInt(searchParams.get('size') || '300')
+  const data      = searchParams.get('data')
+  const color     = searchParams.get('color')  || '#000000'
+  const bgColor   = searchParams.get('bg')     || '#ffffff'
+  const size      = parseInt(searchParams.get('size') || '300')
   const companyId = searchParams.get('company_id') || null
 
   if (!data) {
@@ -50,42 +46,39 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const logoBase64 = await getLogoForCompany(companyId)
-
-    const qrCode = new QRCodeStyling({
+    // Gera QR como PNG buffer
+    const qrBuffer = await QRCode.toBuffer(data, {
       width: size,
-      height: size,
-      type: 'canvas',
-      data: data,
-      image: logoBase64,
-      dotsOptions: {
-        color: color,
-        type: 'rounded',
+      margin: 2,
+      color: {
+        dark: color,
+        light: bgColor,
       },
-      cornersSquareOptions: {
-        type: 'extra-rounded',
-      },
-      cornersDotOptions: {
-        type: 'dot',
-      },
-      backgroundOptions: {
-        color: bgColor,
-      },
-      imageOptions: {
-        crossOrigin: 'anonymous',
-        margin: 4,
-        imageSize: 0.3,
-      },
+      errorCorrectionLevel: 'H', // Alto — necessário para logo no meio
     })
 
-    // qr-code-styling no Node precisa de canvas global
-    const nodeCanvas = createCanvas(size, size)
-    // @ts-ignore
-    await qrCode.applyTo(nodeCanvas)
+    // Redimensiona o logo para 25% do tamanho do QR
+    const logoSize = Math.floor(size * 0.25)
+    const logoBuffer = await getLogoBuffer(companyId)
 
-    const buffer = nodeCanvas.toBuffer('image/png')
+    const logoResized = await sharp(logoBuffer)
+      .resize(logoSize, logoSize, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+      .png()
+      .toBuffer()
 
-    return new NextResponse(buffer, {
+    // Centraliza o logo sobre o QR
+    const offset = Math.floor((size - logoSize) / 2)
+
+    const finalBuffer = await sharp(qrBuffer)
+      .composite([{
+        input: logoResized,
+        top: offset,
+        left: offset,
+      }])
+      .png()
+      .toBuffer()
+
+    return new NextResponse(finalBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'image/png',

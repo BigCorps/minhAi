@@ -80,6 +80,8 @@ export async function GET(req: NextRequest) {
       }
     )
 
+    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
+
     // Converte SVG para PNG
     const qrBuffer = await sharp(Buffer.from(qrSvgRounded))
       .resize(size, size)
@@ -87,6 +89,8 @@ export async function GET(req: NextRequest) {
       .toBuffer()
 
     const logoBuffer = await getLogoBuffer(companyId)
+
+    console.log('SVG SAMPLE:', qrSvg.substring(0, 500))
 
     let finalBuffer: Buffer
 

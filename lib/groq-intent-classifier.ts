@@ -1,6 +1,6 @@
 // lib/groq-intent-classifier.ts
 import { getAllFunctions } from '@/lib/functions-registry';
-import { checkIfFunctionIsEnabled, registerFunctionUsage } from '@/components/VoiceAssistant/handlers/functionUsage';
+import { registerFunctionUsage } from '@/components/VoiceAssistant/handlers/functionUsage';
 
 interface ClassifierDeps {
   companyId: string;
@@ -13,25 +13,39 @@ interface ClassifierDeps {
   activeFunctionContextRef: React.MutableRefObject<any>;
 }
 
+// Frases que claramente são conversa geral — pular GROQ e ir direto ao GPT
+const CONVERSATION_PATTERNS = [
+  'o que mais', 'além disso', 'alem disso', 'e também', 'e tambem',
+  'pode também', 'pode tambem', 'consegue fazer', 'o que você faz',
+  'o que voce faz', 'quais são', 'quais sao', 'quais funções',
+  'quais funcoes', 'me conta', 'me fala', 'como você', 'como voce',
+  'você pode', 'voce pode', 'você sabe', 'voce sabe', 'me explica',
+  'o que é', 'o que e ', 'como funciona', 'me ajuda com',
+  'não entendi', 'nao entendi', 'pode repetir', 'fala de novo',
+];
+
 export async function classifyIntentWithGroq(
   transcript: string,
   deps: ClassifierDeps
 ): Promise<boolean> {
   try {
-    const allFunctions = getAllFunctions();
+    const lower = transcript.toLowerCase().trim();
 
-    // Monta lista das funções habilitadas para esta empresa
-    const enabledFunctions: { key: string; name: string; triggers: string[] }[] = [];
-    for (const fn of allFunctions) {
-      const enabled = await checkIfFunctionIsEnabled(deps.companyId, fn.functionKey);
-      if (enabled && fn.voiceTriggers?.length) {
-        enabledFunctions.push({
-          key: fn.functionKey,
-          name: fn.name,
-          triggers: fn.voiceTriggers.slice(0, 5),
-        });
-      }
+    // Filtro rápido: frases de conversa geral não precisam do GROQ
+    if (CONVERSATION_PATTERNS.some(p => lower.includes(p))) {
+      console.log('💬 GROQ: conversa geral detectada, pulando classificação');
+      return false;
     }
+
+    // Monta lista diretamente do registry — sem queries ao Supabase
+    const allFunctions = getAllFunctions();
+    const enabledFunctions = allFunctions
+      .filter(fn => fn.voiceTriggers?.length)
+      .map(fn => ({
+        key: fn.functionKey,
+        name: fn.name,
+        triggers: fn.voiceTriggers!.slice(0, 3),
+      }));
 
     if (!enabledFunctions.length) return false;
 
@@ -48,7 +62,7 @@ export async function classifyIntentWithGroq(
 
     console.log(`🤖 GROQ classificou: "${transcript}" → ${functionKey}`);
 
-    // Dispara a função via evento (o VoiceAssistantWithWakeWord já sabe tratar)
+    // Dispara a função via evento
     window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
       detail: { functionKey },
     }));

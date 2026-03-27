@@ -164,7 +164,6 @@ async function getFunctionTriggers(companyId: string) {
   return result;
 }
 
-// ── Executa o trigger no detector normal (com flag anti-loop) ─
 async function runWithTrigger(
   trigger: string,
   deps: ClassifierDeps
@@ -172,7 +171,8 @@ async function runWithTrigger(
   const { detectVoiceCommand } = await import(
     '@/components/VoiceAssistant/handlers/voiceCommandDetector'
   );
-  return await detectVoiceCommand(trigger, {
+  
+  const result = await detectVoiceCommand(trigger, {
     companyId: deps.companyId,
     functionSettings: deps.functionSettings,
     playText: deps.playText,
@@ -186,6 +186,11 @@ async function runWithTrigger(
     activeFunctionContextRef: deps.activeFunctionContextRef,
     fromGroq: true,
   });
+
+  // ✅ Se o commandProcessor detectou a função (mesmo que handler retorne false),
+  // retornamos true para evitar que o fluxo original chame o GROQ novamente.
+  // O log "✅ Nova função detectada" já confirma que a função foi identificada.
+  return result;
 }
 
 // ── Exportação principal ──────────────────────────────────────

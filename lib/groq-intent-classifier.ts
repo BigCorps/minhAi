@@ -1,3 +1,4 @@
+// lib/groq-intent-classifier.ts
 import { getAllFunctions } from '@/lib/functions-registry';
 import { registerFunctionUsage } from '@/components/VoiceAssistant/handlers/functionUsage';
 import { createClient } from '@/lib/supabase-browser';
@@ -16,6 +17,7 @@ interface ClassifierDeps {
   activeFunctionContextRef: React.MutableRefObject<any>;
 }
 
+// ── Verbos de ação que indicam intenção de comando ────────────
 const ACTION_VERBS = [
   'gerar', 'gera', 'criar', 'cria', 'abrir', 'abre', 'mostrar', 'mostra',
   'tocar', 'toca', 'ouvir', 'escutar', 'consultar', 'consulta',
@@ -27,6 +29,7 @@ const ACTION_VERBS = [
   'me mostra', 'me passa', 'precisando',
 ];
 
+// ── Keywords que indicam função específica ────────────────────
 const KNOWN_KEYWORDS = [
   'pix', 'qr', 'wifi', 'wi-fi', 'musica', 'música', 'video', 'vídeo',
   'cep', 'cnpj', 'cpf', 'placa', 'cambio', 'câmbio', 'dolar', 'dólar',
@@ -44,6 +47,7 @@ const KNOWN_KEYWORDS = [
   'playlist', 'slideshow', 'smart', 'aparelho',
 ];
 
+// ── Frases de conversa geral — pular tudo ─────────────────────
 const GENERAL_CONVERSATION = [
   'tudo bem', 'tudo certo', 'obrigado', 'obrigada', 'valeu', 'tchau',
   'boa tarde', 'bom dia', 'boa noite', 'olá ', 'oi ',
@@ -56,6 +60,50 @@ const GENERAL_CONVERSATION = [
   'quais funções', 'quais funcoes', 'o que você pode', 'o que voce pode',
 ];
 
+// ── Mapeamento local rápido — zero latência, zero custo ───────
+const QUICK_TRIGGERS: [RegExp, string][] = [
+  [/imprim|impressora/, 'imprimir documento'],
+  [/pizza|lanche|hamburguer|hambúrguer|recomenda.*comer|quero.*comer|pedir comida/, 'ver produtos'],
+  [/musiqu|ouvir.*music|escutar.*music|toca.*music|coloca.*music/, 'tocar musica'],
+  [/video|vídeo|assistir/, 'tocar video'],
+  [/dólar|dolar|euro|bitcoin|câmbio|cambio|cotação|cotacao|libra/, 'cotação dólar'],
+  [/wifi|wi-fi|senha.*rede|rede.*senha|senha.*internet/, 'wifi'],
+  [/cardap|cardápio/, 'cardápio'],
+  [/onde fica|onde vocês|localiz|como chegar|mapa|google maps/, 'endereço'],
+  [/qr.*code|qrcode/, 'gerar qr code'],
+  [/cep|código postal|codigo postal/, 'consultar cep'],
+  [/cnpj|empresa.*receita|receita.*federal/, 'dados da empresa'],
+  [/cpf.*dado|dado.*cpf|pessoa.*física|pessoa.*fisica/, 'consultar cpf'],
+  [/placa|veiculo|veículo|detran/, 'consultar placa'],
+  [/vai chover|previsão.*tempo|previsao.*tempo|temperatura.*cidade/, 'clima'],
+  [/criar.*lembrete|me lembra|me lembre|novo lembrete/, 'criar lembrete'],
+  [/criar.*alarme|me acorda|definir.*alarme/, 'criar alarme'],
+  [/iniciar.*cronometro|comecar.*cronometro|ligar.*cronometro/, 'cronometro'],
+  [/timer|temporizador|contagem regressiva/, 'temporizador'],
+  [/cadastrar.*cliente|novo.*cadastro|quero.*cadastrar/, 'fazer cadastro'],
+  [/gerar.*cupom|quero.*cupom|meu cupom/, 'gerar cupom'],
+  [/fraude|boleto suspeito|golpe|site suspeito|link suspeito/, 'identificar fraude'],
+  [/estoque.*de|quantos.*tem|quanto.*tem.*produto/, 'estoque de'],
+  [/quero.*comprar|fazer.*pedido|adicionar.*carrinho/, 'quero comprar'],
+  [/ver.*agenda|minha.*agenda|compromissos.*hoje/, 'ver agenda'],
+  [/enviar.*email|mandar.*email|mande.*email/, 'enviar email'],
+  [/código.*barras|gerar.*barcode/, 'gerar codigo de barras'],
+  [/restrição.*cpf|restricao.*cpf|score.*cpf|serasa.*cpf|spc.*cpf/, 'restrições cpf'],
+  [/feriados|calendário.*feriado/, 'feriados'],
+  [/qual.*ddd|ddd.*de/, 'consultar ddd'],
+  [/protesto.*cpf|cpf.*protesto|cartório/, 'consultar protestos'],
+  [/tocar.*playlist|minha.*playlist/, 'playlist'],
+  [/ligar.*luz|apagar.*luz|ligar.*ar|desligar.*ar|aparelhos.*smart/, 'aparelhos smart'],
+];
+
+function quickMatch(transcript: string): string | null {
+  const lower = transcript.toLowerCase();
+  for (const [regex, trigger] of QUICK_TRIGGERS) {
+    if (regex.test(lower)) return trigger;
+  }
+  return null;
+}
+
 function shouldCallGroq(transcript: string): boolean {
   const lower = transcript.toLowerCase().trim();
   if (GENERAL_CONVERSATION.some(p => lower.startsWith(p) || lower.includes(p))) return false;
@@ -65,7 +113,7 @@ function shouldCallGroq(transcript: string): boolean {
   return true;
 }
 
-// Cache em memória por companyId
+// ── Cache de triggers por empresa ────────────────────────────
 const triggersCache: Record<string, { key: string; triggers: string[]; examples: string[] }[]> = {};
 
 async function getFunctionTriggers(companyId: string) {
@@ -73,7 +121,6 @@ async function getFunctionTriggers(companyId: string) {
 
   const combined: Record<string, { triggers: string[]; examples: string[] }> = {};
 
-  // 1. Registry (funções novas) — tem voiceTriggers e examplePhrases
   for (const fn of getAllFunctions()) {
     if (fn.voiceTriggers?.length) {
       combined[fn.functionKey] = {
@@ -83,7 +130,6 @@ async function getFunctionTriggers(companyId: string) {
     }
   }
 
-  // 2. Banco (funções legadas)
   try {
     const supabase = createClient();
     const { data } = await supabase
@@ -118,16 +164,50 @@ async function getFunctionTriggers(companyId: string) {
   return result;
 }
 
+// ── Executa o trigger no detector normal (com flag anti-loop) ─
+async function runWithTrigger(
+  trigger: string,
+  deps: ClassifierDeps
+): Promise<boolean> {
+  const { detectVoiceCommand } = await import(
+    '@/components/VoiceAssistant/handlers/voiceCommandDetector'
+  );
+  return await detectVoiceCommand(trigger, {
+    companyId: deps.companyId,
+    functionSettings: deps.functionSettings,
+    playText: deps.playText,
+    setIsProcessing: deps.setIsProcessing,
+    setQrCodeData: deps.setQrCodeData,
+    setPixConfirmationData: deps.setPixConfirmationData,
+    sessionId: deps.sessionId,
+    commandProcessor: deps.commandProcessor,
+    pixStateRef: deps.pixStateRef,
+    setActiveModal: deps.setActiveModal,
+    activeFunctionContextRef: deps.activeFunctionContextRef,
+    fromGroq: true,
+  });
+}
+
+// ── Exportação principal ──────────────────────────────────────
 export async function classifyIntentWithGroq(
   transcript: string,
   deps: ClassifierDeps
 ): Promise<boolean> {
   try {
+    // 1. Conversa geral → GPT direto
     if (!shouldCallGroq(transcript)) {
       console.log('💬 GROQ pulado: conversa geral');
       return false;
     }
 
+    // 2. Quick match local — zero latência
+    const quickTrigger = quickMatch(transcript);
+    if (quickTrigger) {
+      console.log(`⚡ Quick match: "${transcript}" → "${quickTrigger}"`);
+      return await runWithTrigger(quickTrigger, deps);
+    }
+
+    // 3. GROQ — para frases que passaram nos filtros mas não tiveram quick match
     const functionTriggers = await getFunctionTriggers(deps.companyId);
     if (!functionTriggers.length) return false;
 
@@ -140,36 +220,14 @@ export async function classifyIntentWithGroq(
     if (!response.ok) return false;
 
     const { trigger } = await response.json();
-
     if (!trigger) {
       console.log('💬 GROQ: sem match → GPT');
       return false;
     }
 
-    console.log(`🤖 GROQ identificou trigger: "${transcript}" → "${trigger}"`);
+    console.log(`🤖 GROQ trigger: "${transcript}" → "${trigger}"`);
+    return await runWithTrigger(trigger, deps);
 
-    // ✅ Chama detectVoiceCommand com o trigger exato + flag fromGroq = true
-    // para evitar loop (detectVoiceCommand não chama GROQ quando fromGroq=true)
-    const { detectVoiceCommand } = await import(
-      '@/components/VoiceAssistant/handlers/voiceCommandDetector'
-    );
-
-    const handled = await detectVoiceCommand(trigger, {
-      companyId: deps.companyId,
-      functionSettings: deps.functionSettings,
-      playText: deps.playText,
-      setIsProcessing: deps.setIsProcessing,
-      setQrCodeData: deps.setQrCodeData,
-      setPixConfirmationData: deps.setPixConfirmationData,
-      sessionId: deps.sessionId,
-      commandProcessor: deps.commandProcessor,
-      pixStateRef: deps.pixStateRef,
-      setActiveModal: deps.setActiveModal,
-      activeFunctionContextRef: deps.activeFunctionContextRef,
-      fromGroq: true, // ← flag anti-loop
-    });
-
-    return handled;
   } catch (err) {
     console.error('❌ Erro no GROQ classifier:', err);
     return false;

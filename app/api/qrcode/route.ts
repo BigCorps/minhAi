@@ -16,20 +16,34 @@ async function fetchImageBuffer(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
-async function getLogoBuffer(companyId: string | null): Promise<Buffer> {
-  if (companyId) {
-    const { data } = await supabase
-      .from('companies')
-      .select('logo_url, plan')
-      .eq('id', companyId)
-      .single()
+async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
+  try {
+    let url = MINHAI_LOGO_URL
 
-    const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
-    if (isPaidPlan && data?.logo_url) {
-      return await fetchImageBuffer(data.logo_url)
+    if (companyId) {
+      const { data } = await supabase
+        .from('companies')
+        .select('logo_url, plan')
+        .eq('id', companyId)
+        .single()
+
+      const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
+      if (isPaidPlan && data?.logo_url) {
+        url = data.logo_url
+      }
     }
+
+    const res = await fetch(url, { redirect: 'follow' })
+    if (!res.ok) return null
+    const arrayBuffer = await res.arrayBuffer()
+    const raw = Buffer.from(arrayBuffer)
+
+    // Força conversão para PNG via sharp independente do formato original
+    const png = await sharp(raw).png().toBuffer()
+    return png
+  } catch {
+    return null
   }
-  return await fetchImageBuffer(MINHAI_LOGO_URL)
 }
 
 export async function GET(req: NextRequest) {

@@ -657,10 +657,32 @@ export async function detectVoiceCommand(
 
   // ── Sistema híbrido (FUNCTIONS_REGISTRY via VoiceCommandProcessor) ──
   // ✅ Chamado apenas UMA vez — ao final, como fallback para comandos não mapeados acima.
-  if (commandProcessor) {
-    const result = await commandProcessor.processCommand(transcript);
+if (commandProcessor) {
+  const result = await commandProcessor.processCommand(transcript);
 
-    if (result?.success) {
+  // ✅ Se veio do GROQ e a função foi identificada (mesmo sem sucesso no handler),
+  // tratar como resolvido para evitar loop e chamada dupla ao GPT.
+  if (fromGroq && result?.functionKey) {
+    // Tenta executar, mas independente do resultado, para aqui
+    if (result.functionKey) {
+      const registryFunc = getFunctionByKey(result.functionKey);
+      if (registryFunc?.handler) {
+        await registryFunc.handler({
+          transcript: lowerTranscript,
+          companyId,
+          functionSettings,
+          playText,
+          setIsProcessing,
+          sessionId,
+          setActiveModal,
+        });
+      }
+      await commandProcessor.registerUsage(result.functionKey);
+    }
+    return true; // ← sai sempre quando fromGroq=true e função foi identificada
+  }
+
+  if (result?.success) {
       console.log('✅ Nova função detectada pelo registry:', result.functionKey);
 
       const registryFunc = getFunctionByKey(result.functionKey || '');

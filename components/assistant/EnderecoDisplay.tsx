@@ -14,6 +14,7 @@ interface EnderecoDisplayProps {
     mapsUrl: string;
     qrContent: string;
     autoCloseDuration?: number;
+    companyId?: string
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
@@ -42,13 +43,14 @@ export default function EnderecoDisplay({
     address,
     mapsUrl,
     qrContent,
+    companyId,
   } = data;
 
   // Gerar QR Code
   useEffect(() => {
     if (qrContent) {
       const size = 300;
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrContent)}&margin=10`;
+      const qrUrl = `/api/qrcode?size=${size}&data=${encodeURIComponent(qrContent)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`;
       setQrCodeUrl(qrUrl);
     }
   }, [qrContent]);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
 import PixConfirmationModal from '@/components/assistant/PixConfirmationModal';
 
@@ -8,8 +8,9 @@ interface AvatarFaceProps {
   isListening: boolean;
   isSpeaking: boolean;
   isProcessing: boolean;
-  isWakeWordDetected?: boolean;
   theme?: 'dark' | 'light';
+  // ✅ Quando true, o avatar some com animação de escala — libera CPU durante modais
+  isHidden?: boolean;
   qrCodeData?: {
     type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';
     qrCodeUrl: string;
@@ -36,7 +37,7 @@ export function AvatarFace({
   isListening, 
   isSpeaking, 
   isProcessing,
-  isWakeWordDetected = false,
+  isHidden = false,
   theme = 'dark',
   qrCodeData,
   pixConfirmationData,
@@ -49,13 +50,6 @@ export function AvatarFace({
   const isDark = theme === 'dark';
 
   const statusColors = useMemo(() => ({
-    wakeWord: {
-      primary: '#60a5fa',
-      secondary: '#93c5fd',
-      glow: 'rgba(59, 130, 246, 0.9)',
-      ring: '#3b82f6',
-      halo: '#3b82f6'
-    },
     idle: { 
       primary: '#3b82f6', secondary: '#60a5fa',
       glow: isDark ? 'rgba(74, 222, 128, 0.4)' : 'rgba(34, 197, 94, 0.4)',
@@ -82,12 +76,10 @@ export function AvatarFace({
   }), [isDark]);
 
   const [colors, setColors] = useState(statusColors.idle);
-  // ✅ Partículas reduzidas — máx 8 no idle, 12 ouvindo, 18 falando
   const [particles, setParticles] = useState<Array<{x: number, y: number, size: number, speed: number}>>([]);
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(10).fill(0));
   const [isBlinking, setIsBlinking] = useState(false);
   const [eyeExpr, setEyeExpr] = useState<EyeExpression>('idle');
-  // ✅ Estrelas reduzidas de 6 para 3
   const [stars, setStars] = useState<Array<{id: number, x: number, y: number, delay: number}>>([]);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -97,21 +89,19 @@ export function AvatarFace({
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const showFace = !isProcessing && !isSpeaking;
-  // ✅ Canvas só anima quando há atividade — para no idle puro
   const isActive = isSpeaking || isProcessing || isListening;
 
   useEffect(() => {
-    if (isWakeWordDetected) setColors(statusColors.wakeWord);
-    else if (isSpeaking) setColors(statusColors.speaking);
+    if (isSpeaking) setColors(statusColors.speaking);
     else if (isProcessing) setColors(statusColors.processing);
     else if (isListening) setColors(statusColors.listening);
     else setColors(statusColors.idle);
-  }, [isWakeWordDetected, isSpeaking, isProcessing, isListening, statusColors]);
+  }, [isSpeaking, isProcessing, isListening, statusColors]);
 
-  // ✅ Estrelas: 3 em vez de 6, intervalo 15s em vez de 8s
+  // ✅ Estrelas reduzidas: 3 em vez de 6, intervalo 15s em vez de 8s
   useEffect(() => {
     const generateStars = () => {
-      const newStars = Array.from({ length: 3 }, (_, i) => ({
+      const newStars = Array.from({ length: 3 }, () => ({
         id: Math.random(),
         x: 40 + Math.random() * 120,
         y: 40 + Math.random() * 120,
@@ -179,19 +169,18 @@ export function AvatarFace({
     };
   }, [isSpeaking, isProcessing]);
 
-  // ✅ Partículas reduzidas significativamente
+  // ✅ Partículas reduzidas
   useEffect(() => {
     const particleCount = isSpeaking ? 18 : isProcessing ? 10 : isListening ? 8 : 5;
     const newParticles = Array.from({ length: particleCount }, () => ({
       x: Math.random() * 500,
       y: Math.random() * 500,
-      size: Math.random() * 3 + 1,  // menores: era 4+2, agora 3+1
+      size: Math.random() * 3 + 1,
       speed: Math.random() * 0.8 + 0.3
     }));
     setParticles(newParticles);
   }, [isSpeaking, isProcessing, isListening]);
 
-  // ✅ Barras de áudio — sem mudança, já só roda quando isSpeaking
   useEffect(() => {
     if (isSpeaking) {
       audioIntervalRef.current = setInterval(() => {
@@ -208,15 +197,14 @@ export function AvatarFace({
     return () => { if (audioIntervalRef.current) clearInterval(audioIntervalRef.current); };
   }, [isSpeaking]);
 
-  // ✅ Canvas pausa quando idle — requestAnimationFrame só roda com atividade
+  // ✅ Canvas pausa quando isHidden ou idle
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Se não há atividade, limpa o canvas e não inicia o loop
-    if (!isActive) {
+    if (!isActive || isHidden) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
@@ -249,12 +237,16 @@ export function AvatarFace({
         animationIdRef.current = null;
       }
     };
-  }, [particles, colors, isActive]);
+  }, [particles, colors, isActive, isHidden]);
 
   const orbSize = isSpeaking ? 'scale-[1.15]' : isProcessing ? 'scale-100' : isListening ? 'scale-95' : 'scale-90';
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-visible bg-transparent">
+    // ✅ Quando isHidden: encolhe para zero e some — para todos os loops de animação visualmente
+    // pointer-events-none evita cliques acidentais enquanto escondido
+    <div className={`relative w-full h-full flex items-center justify-center overflow-visible bg-transparent transition-all duration-500 ease-in-out ${
+      isHidden ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'
+    }`}>
       {qrCodeData && !pixConfirmationData && (
         <div className="absolute inset-0 z-[100]">
           <QRCodeDisplay type={qrCodeData.type} qrCodeUrl={qrCodeData.qrCodeUrl} qrContent={qrCodeData.qrContent} displayText={qrCodeData.displayText} amount={qrCodeData.amount} companyName={qrCodeData.companyName} onClose={onCloseQRCode || (() => {})} onCopy={onCopyQRCode} autoCloseSeconds={qrCodeData.type === 'pix' ? 0 : 15} theme={theme} />
@@ -266,7 +258,7 @@ export function AvatarFace({
         </div>
       )}
 
-      {/* Anéis de pulso — will-change para promover ao GPU */}
+      {/* Anéis de pulso */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2].map((ring) => (
           <div key={`wave-${ring}`} className="absolute rounded-full border-2" style={{
@@ -280,7 +272,7 @@ export function AvatarFace({
         ))}
       </div>
 
-      {/* Halos rotativos — will-change para GPU */}
+      {/* Halos rotativos */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ animation: 'spin 20s linear infinite', willChange: 'transform' }}>
         <div className="rounded-full opacity-20" style={{ width: '95%', aspectRatio: '1 / 1', background: `conic-gradient(from 0deg, transparent 0%, ${colors.halo} 25%, transparent 50%, ${colors.halo} 75%, transparent 100%)`, filter: 'blur(20px)' }} />
       </div>
@@ -295,11 +287,11 @@ export function AvatarFace({
         <div className="rounded-full" style={{ width: '80%', aspectRatio: '1 / 1', background: `radial-gradient(circle at center, ${colors.glow} 0%, transparent 70%)`, opacity: 0.5 }} />
       </div>
 
-      {/* Canvas — só roda quando isActive */}
+      {/* Canvas — pausa quando isHidden ou idle */}
       <canvas ref={canvasRef} width={500} height={500} className="absolute w-full h-full opacity-60 pointer-events-none" />
 
-      {/* Partículas flutuantes — só renderiza quando isActive */}
-      {isActive && (
+      {/* Partículas — só renderiza quando isActive e não isHidden */}
+      {isActive && !isHidden && (
         <div className="absolute w-full h-full overflow-visible pointer-events-none">
           {particles.map((particle, i) => (
             <div key={`particle-${i}`} className="absolute rounded-full animate-float" style={{
@@ -439,7 +431,7 @@ export function AvatarFace({
         )}
       </div>
 
-      {/* Anéis ping — will-change para GPU */}
+      {/* Anéis ping */}
       <div className="absolute inset-0 rounded-full pointer-events-none" style={{ aspectRatio: '1/1' }}>
         {[1, 2, 3].map(ring => (
           <div key={ring} className="absolute inset-0 rounded-full border-2 animate-ping" style={{

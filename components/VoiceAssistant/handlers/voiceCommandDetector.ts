@@ -44,6 +44,7 @@ interface DetectorDeps {
   pixStateRef: React.MutableRefObject<{ qrCodeData: any; pixConfirmationData: any } | null>;
   setActiveModal: (modal: ActiveModal | null) => void;
   activeFunctionContextRef: React.MutableRefObject<any>;
+  fromGroq?: boolean;
 }
 
 // ── Helper: parsear view/data do transcript de agenda ────────
@@ -698,21 +699,24 @@ export async function detectVoiceCommand(
   }
 
 // ── GROQ: classificador de intenção como último recurso ──
+if (!deps.fromGroq) {
   console.log('🤖 Consultando GROQ para classificação de intenção...');
-  try {
-    const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
-    const groqHandled = await classifyIntentWithGroq(transcript, {
-      companyId,
-      functionSettings,
-      playText,
-      setIsProcessing,
-      setActiveModal,
-      sessionId,
-      commandProcessor,
-      activeFunctionContextRef,
-    });
-    if (groqHandled) return true;
-  } catch (err) {
+  const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
+  const groqHandled = await classifyIntentWithGroq(transcript, {
+    companyId,
+    functionSettings,
+    playText,
+    setIsProcessing,
+    setActiveModal,
+    sessionId,
+    commandProcessor,
+    pixStateRef,
+    setQrCodeData,
+    setPixConfirmationData,
+    activeFunctionContextRef,
+  });
+  if (groqHandled) return true;
+} catch (err) {
     console.error('❌ Erro GROQ fallback:', err);
   }
 

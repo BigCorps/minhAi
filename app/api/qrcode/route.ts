@@ -10,33 +10,43 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-function getDefaultLogoBuffer(): Buffer {
-  const logoPath = path.join(process.cwd(), 'public', 'icon192.png')
-  return fs.readFileSync(logoPath)
-}
-
 async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
   try {
     let logoUrl: string | null = null
 
- if (companyId) {
-      const { data } = await supabase
+    if (companyId) {
+      // Busca empresa + user_id
+      const { data: company } = await supabase
         .from('companies')
-        .select('webapp_logo_url, plan')
+        .select('webapp_logo_url, user_id')
         .eq('id', companyId)
         .single()
 
-      // LOG TEMPORÁRIO
-      console.log('QR DEBUG:', {
-        companyId,
-        plan: data?.plan,
-        webapp_logo_url: data?.webapp_logo_url,
-        isPaidPlan: data?.plan === 'top' || data?.plan === 'consulting'
-      })
+      if (company?.user_id) {
+        // Busca plano pelo user_id
+        const { data: credits } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, active_plan_name, plan_expires_at')
+          .eq('user_id', company.user_id)
+          .single()
 
-      const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
-      if (isPaidPlan && data?.webapp_logo_url) {
-        logoUrl = data.webapp_logo_url
+        const isPaidPlan =
+          credits?.has_active_plan === true &&
+          credits?.active_plan_name !== 'Trial' &&
+          credits?.plan_expires_at != null &&
+          new Date(credits.plan_expires_at) > new Date()
+
+        console.log('QR DEBUG:', {
+          companyId,
+          user_id: company.user_id,
+          active_plan_name: credits?.active_plan_name,
+          isPaidPlan,
+          webapp_logo_url: company.webapp_logo_url,
+        })
+
+        if (isPaidPlan && company.webapp_logo_url) {
+          logoUrl = company.webapp_logo_url
+        }
       }
     }
 
@@ -48,7 +58,6 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
       }
     }
 
-    // Fallback: logo padrão do disco
     const raw = getDefaultLogoBuffer()
     return await sharp(raw).png().toBuffer()
   } catch {

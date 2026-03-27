@@ -113,6 +113,7 @@ export async function detectVoiceCommand(
   transcript: string,
   deps: DetectorDeps
 ): Promise<boolean> {
+    console.log(`🔍 detectVoiceCommand — fromGroq: ${deps.fromGroq}, transcript: "${transcript}"`);
   const {
     companyId,
     functionSettings,
@@ -655,75 +656,42 @@ export async function detectVoiceCommand(
     return true;
   }
 
-  // ── Sistema híbrido (FUNCTIONS_REGISTRY via VoiceCommandProcessor) ──
-  // ✅ Chamado apenas UMA vez — ao final, como fallback para comandos não mapeados acima.
 if (commandProcessor) {
   const result = await commandProcessor.processCommand(transcript);
 
-  // ✅ Se veio do GROQ e a função foi identificada (mesmo sem sucesso no handler),
-  // tratar como resolvido para evitar loop e chamada dupla ao GPT.
-  if (fromGroq && result?.functionKey) {
-    // Tenta executar, mas independente do resultado, para aqui
-    if (result.functionKey) {
-      const registryFunc = getFunctionByKey(result.functionKey);
-      if (registryFunc?.handler) {
-        await registryFunc.handler({
-          transcript: lowerTranscript,
-          companyId,
-          functionSettings,
-          playText,
-          setIsProcessing,
-          sessionId,
-          setActiveModal,
-        });
+  if (result?.success || (fromGroq && result?.functionKey)) {
+    const funcKey = result.functionKey || '';
+    const registryFunc = getFunctionByKey(funcKey);
+
+    if (registryFunc?.handler) {
+      await registryFunc.handler({
+        transcript: lowerTranscript,
+        companyId,
+        functionSettings,
+        playText,
+        setIsProcessing,
+        sessionId,
+        setActiveModal,
+      });
+    } else {
+      if (result.speechText) await playText(result.speechText);
+      if (result.modalData && result.modalType) {
+        setActiveModal({ type: result.modalType, data: result.modalData });
       }
-      await commandProcessor.registerUsage(result.functionKey);
     }
-    return true; // ← sai sempre quando fromGroq=true e função foi identificada
-  }
 
-  if (result?.success) {
-      console.log('✅ Nova função detectada pelo registry:', result.functionKey);
+    if (funcKey) {
+      activeFunctionContextRef.current = {
+        functionKey: funcKey,
+        activatedAt: Date.now(),
+        expiresIn: 5 * 60 * 1000,
+      };
+      await commandProcessor.registerUsage(funcKey);
+    }
 
-      const registryFunc = getFunctionByKey(result.functionKey || '');
-
-      if (registryFunc?.handler) {
-        const handlerSuccess = await registryFunc.handler({
-          transcript: lowerTranscript,
-          companyId,
-          functionSettings,
-          playText,
-          setIsProcessing,
-          sessionId,
-          setActiveModal,
-        });
-
-  if (deps.fromGroq && !handlerSuccess) {
     return true;
   }
-
-  if (handlerSuccess) {
-    activeFunctionContextRef.current = {
-      functionKey: registryFunc.functionKey,
-      activatedAt: Date.now(),
-      expiresIn: 5 * 60 * 1000,
-    };
-          console.log(`🎯 Contexto de ${registryFunc.functionKey} ativado por 5 minutos`);
-        }
-      } else {
-        if (result.speechText) await playText(result.speechText);
-        if (result.modalData && result.modalType) {
-          setActiveModal({ type: result.modalType, data: result.modalData });
-        }
-      }
-
-      if (result.functionKey) {
-        await commandProcessor.registerUsage(result.functionKey);
-      }
-
-      return true;
-    }
-  }
+}
 
 // ── GROQ: classificador de intenção como último recurso ──
 if (!fromGroq) {

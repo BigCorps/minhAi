@@ -17,23 +17,30 @@ function getDefaultLogoBuffer(): Buffer {
 
 async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
   try {
+    let logoUrl: string | null = null
+
     if (companyId) {
       const { data } = await supabase
         .from('companies')
-        .select('logo_url, plan')
+        .select('webapp_logo_url, plan')
         .eq('id', companyId)
         .single()
 
       const isPaidPlan = data?.plan === 'top' || data?.plan === 'consulting'
-      if (isPaidPlan && data?.logo_url) {
-        const res = await fetch(data.logo_url, { redirect: 'follow' })
-        if (res.ok) {
-          const raw = Buffer.from(await res.arrayBuffer())
-          return await sharp(raw).png().toBuffer()
-        }
+      if (isPaidPlan && data?.webapp_logo_url) {
+        logoUrl = data.webapp_logo_url
       }
     }
 
+    if (logoUrl) {
+      const res = await fetch(logoUrl, { redirect: 'follow' })
+      if (res.ok) {
+        const raw = Buffer.from(await res.arrayBuffer())
+        return await sharp(raw).png().toBuffer()
+      }
+    }
+
+    // Fallback: logo padrão do disco
     const raw = getDefaultLogoBuffer()
     return await sharp(raw).png().toBuffer()
   } catch {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { User } from '@supabase/supabase-js';
-import { Check, Zap, Star, TrendingUp, Shield, Clock, Globe, Users, Sparkles } from 'lucide-react';
+import { Check, Zap, Star, TrendingUp, Shield, Clock, Globe, Users, Sparkles, QrCode } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { useTheme } from 'next-themes';
 import { useSearchParams } from 'next/navigation';
@@ -284,7 +284,7 @@ export default function CreditsPage() {
               Planos com Acesso às Integrações
             </h2>
             <p className={`text-sm mt-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-              Libera Serviços Google, Meta e Linha de Produção. Inclui créditos mensais.
+              Libera Serviços Google, Meta e Linha de Produção e QR Codes com seu logo. Inclui créditos mensais.
             </p>
           </div>
 
@@ -345,6 +345,7 @@ export default function CreditsPage() {
                       { icon: Globe, label: 'Serviços Google' },
                       { icon: Users, label: 'Serviços Meta' },
                       { icon: TrendingUp, label: 'Linha de Produção' },
+                      { icon: QrCode, label: 'QR Codes com o seu logo' },
                       ...(pkg.has_consultoria ? [
                         { icon: Star, label: 'Subdomínio Próprio' },
                         { icon: Shield, label: 'Consultoria' }

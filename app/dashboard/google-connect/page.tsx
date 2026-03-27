@@ -358,10 +358,6 @@ function GoogleConnectPageContent() {
                           <span>Gerenciar calendário e eventos</span>
                         </div>
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Image className="w-4 h-4 mt-0.5 flex-shrink-0 text-pink-500" />
-                          <span>Acessar fotos (Google Photos)</span>
-                        </div>
-                        <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <HardDrive className="w-4 h-4 mt-0.5 flex-shrink-0 text-yellow-500" />
                           <span>Ler arquivos (Google Drive)</span>
                         </div>
@@ -469,13 +465,7 @@ function GoogleConnectPageContent() {
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Criar/editar eventos</span>
                         </div>
                       )}
-                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/photoslibrary.readonly') && (
-                        <div className="flex items-center gap-3 p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
-                          <Image className="w-5 h-5 text-pink-600 dark:text-pink-400" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">Google Photos</span>
-                        </div>
-                      )}
-                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/drive.readonly') && (
+                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/drive.file') && (
                         <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                           <HardDrive className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Google Drive</span>

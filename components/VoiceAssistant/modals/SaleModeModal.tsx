@@ -41,6 +41,7 @@ export interface SaleModeModalProps {
   produtoInicial?: ProdutoVenda & { _opcoes_selecionadas?: any[]; _quantidade?: number };
   quantidadeInicial?: number;
   opcoesIniciais?: any[];
+  profile?: { nome: string; email?: string | null; identificador?: string | null } | null; // ← adicionado
 }
 
 function getIsPortrait() {
@@ -66,6 +67,7 @@ function SaleModeInner({
   isMaximized = false,
   produtoInicial,
   quantidadeInicial,
+  profile, // ← adicionado
 }: SaleModeModalProps) {
   const isDark = theme === 'dark';
   const { totalItens, addItem } = useCart();
@@ -200,6 +202,7 @@ function SaleModeInner({
                 onClose={() => { setShowCheckout(false); onClose(); }}
                 playText={playText}
                 metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
+                profile={profile} // ← adicionado
               />
               <button
                 onClick={() => setShowCheckout(false)}

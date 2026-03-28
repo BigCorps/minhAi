@@ -1949,55 +1949,72 @@ const NossoQRCodeForm = ({ settings, onChange, companyId }: any) => (
         {(settings.qrcode_label || '').length}/100
       </p>
     </div>
+
     {settings.qrcode_content && (
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-        
-        {/* QR Code pequeno */}
-        <div style={{ 
-          background: '#ffffff', 
-          borderRadius: '12px', 
-          padding: '8px',
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+
+        {/* QR Code */}
+        <div style={{
+          background: '#ffffff',
+          borderRadius: '12px',
+          padding: '12px',
           border: '1px solid #e5e7eb',
           flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
         }}>
-          <p style={{ 
-            fontSize: '11px', 
-            fontWeight: 700, 
-            color: '#000080', 
-            marginBottom: '6px' 
+          <p style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: '#000080',
+            margin: 0,
+            whiteSpace: 'nowrap',
           }}>
             Prévia do QR Code:
           </p>
           <img
-            src={`/api/qrcode?size=80&data=${encodeURIComponent(settings.qrcode_content)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`}
+            src={`/api/qrcode?size=120&data=${encodeURIComponent(settings.qrcode_content)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`}
             alt="Preview QR"
-            className="w-20 h-20 rounded"
+            style={{ width: '120px', height: '120px', display: 'block', borderRadius: '6px' }}
           />
         </div>
 
         {/* Exemplos de uso ao lado */}
-        <div className="flex-1 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-white/10">
-          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exemplos de uso:</p>
+        <div style={{
+          flex: 1,
+          padding: '12px',
+          borderRadius: '12px',
+          border: '1px solid',
+          borderColor: 'rgba(229,231,235,1)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: '4px',
+          background: 'transparent',
+        }}>
+          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Exemplos de uso:</p>
           <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
             <li>Chave Pix estática</li>
             <li>Link de avaliação Google Maps</li>
             <li>Formulário, promoção, entre outros</li>
           </ul>
         </div>
-       
+
       </div>
     )}
 
-    {/* Exemplos — só aparece se não tem conteúdo ainda */}
     {!settings.qrcode_content && (
-    <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
-      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exemplos de uso:</p>
-      <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
-        <li>Chave Pix estática</li>
-        <li>Link de avaliação Google Maps</li>
-        <li>Formulário, promoção, entre outros</li>
-      </ul>
-    </div>
+      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
+        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exemplos de uso:</p>
+        <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+          <li>Chave Pix estática</li>
+          <li>Link de avaliação Google Maps</li>
+          <li>Formulário, promoção, entre outros</li>
+        </ul>
+      </div>
     )}
   </div>
 );

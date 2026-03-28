@@ -91,7 +91,7 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
   if (!mounted) {
     // Render mínimo no SSR para evitar layout shift
     return (
-      <header className="w-full border-b bg-slate-900/50 border-white/5 backdrop-blur-xl">
+      <header className="w-full border-b bg-gradient-to-r from-slate-950/80 via-slate-900/70 to-slate-950/80 border-white/5 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 h-[72px]" />
       </header>
     );

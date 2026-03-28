@@ -54,10 +54,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
 
-  // 🛡️ Manter ref sincronizada com o estado do modal
+
+  // Sincronizar montagem para evitar erros de hidratação
   useEffect(() => {
-    showPasswordOverlayRef.current = showPasswordOverlay;
-  }, [showPasswordOverlay]);
     setMounted(true);
     
     const checkMobile = () => {
@@ -91,6 +90,12 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       }
     };
   }, []);
+
+  // 🛡️ Manter ref sincronizada com o estado do modal
+  useEffect(() => {
+    showPasswordOverlayRef.current = showPasswordOverlay;
+  }, [showPasswordOverlay]);
+
 
   // 🆕 BLOQUEAR TECLAS EM MODO KIOSK
   useEffect(() => {

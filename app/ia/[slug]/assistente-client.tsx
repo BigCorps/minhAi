@@ -132,9 +132,15 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     window.addEventListener('keydown', blockKeys, { capture: true });
     document.addEventListener('keydown', blockKeys, { capture: true });
     document.body.addEventListener('keydown', blockKeys, { capture: true });
+    // Escuta requisição de kiosk vinda do SlugHeader
+const handleRequestKiosk = () => {
+  handleEnterKioskMode();
+};
+window.addEventListener('eai:requestKioskMode', handleRequestKiosk);
     
     return () => {
       window.removeEventListener('keydown', blockKeys, { capture: true });
+      window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
       document.removeEventListener('keydown', blockKeys, { capture: true });
       document.body.removeEventListener('keydown', blockKeys, { capture: true });
     };

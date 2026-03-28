@@ -465,7 +465,7 @@ function GoogleConnectPageContent() {
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Criar/editar eventos</span>
                         </div>
                       )}
-                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/drive.file') && (
+                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/drive.readonly') && (
                         <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                           <HardDrive className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Google Drive</span>

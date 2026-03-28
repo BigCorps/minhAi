@@ -46,14 +46,18 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [modalType, setModalType] = useState<'setup' | 'verify'>('setup');
   const [showKioskBadge, setShowKioskBadge] = useState(false); // 🆕 Controla exibição do badge
   const badgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // 🛡️ Ref para guardar estado do modal — evita closure stale no event listener
+  const showPasswordOverlayRef = useRef(false);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
 
-  // Sincronizar montagem para evitar erros de hidratação
+  // 🛡️ Manter ref sincronizada com o estado do modal
   useEffect(() => {
+    showPasswordOverlayRef.current = showPasswordOverlay;
+  }, [showPasswordOverlay]);
     setMounted(true);
     
     const checkMobile = () => {
@@ -66,6 +70,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     };
 
     const handleAvatarClick = () => {
+      // 🛡️ Não ativar modo full se um modal estiver aberto (usa ref para evitar closure stale)
+      if (showPasswordOverlayRef.current) return;
       handleToggleMaximize();
     };
     window.addEventListener('eai:avatarClick', handleAvatarClick);

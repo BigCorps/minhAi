@@ -126,9 +126,15 @@ export default function LoginClienteDisplay({
           }
         );
         const rows = await res.json();
-        if (rows?.[0]?.fields) {
-          setConfigFields(rows[0].fields);
-        }
+if (rows?.[0]?.fields) {
+  const rawFields = rows[0].fields;
+  // fields pode vir como string JSON ou array — normalizar os dois casos
+  const parsed = typeof rawFields === 'string'
+    ? JSON.parse(rawFields)
+    : rawFields;
+  // Garantir que nome sempre apareça primeiro se estiver na config
+  setConfigFields(Array.isArray(parsed) ? parsed : ['nome', 'email']);
+}
       } catch (err) {
         console.error('Erro ao carregar config de cadastro:', err);
       }

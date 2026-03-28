@@ -1405,7 +1405,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
   // ── RENDER: MAXIMIZED ─────────────────────────────────────
   if (isMaximized) {
     return (
-      <div className="flex flex-col items-center gap-4 md:gap-8 w-full">
+      <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
         {isSpeaking && (
           <button onClick={stopEverything} className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all">
             🛑 PARAR
@@ -1440,7 +1440,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
         </div>
 
         {!showStartButton && (
-          <p className={`text-sm font-medium -mt-2 ${
+          <p className={`text-sm font-medium -mt-6 ${
             theme === 'dark' ? 'text-white/40' : 'text-gray-400'
           }`}>
             {voiceRecorder.isRecording ? 'solte para enviar...' : isTranscribing ? 'transcrevendo...' : 'clique em mim para falar ou'}

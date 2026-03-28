@@ -1,3 +1,4 @@
+// app/api/groq/classify/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 
@@ -9,6 +10,9 @@ export async function POST(req: NextRequest) {
     if (!transcript || !functionsContext) {
       return NextResponse.json({ response: null });
     }
+
+    // Detecta se há perfil logado no contexto para personalizar respostas
+    const hasProfile = functionsContext?.includes('Cliente logado:');
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
@@ -29,6 +33,7 @@ Regras:
 - Quando a pergunta for conversa geral sem relação com as funções, retorne null
 - NUNCA execute funções — apenas oriente o cliente sobre o que dizer
 - NUNCA sugira uma função porque ela menciona o tema indiretamente — só sugira se a função RESOLVE o pedido
+${hasProfile ? '- Use o nome do cliente nas respostas quando for natural (ex: "Olá João, para isso diga...")' : ''}
 
 Exemplos:
 "tô precisando imprimir" → "Tenho essas opções de impressão: Diga 'impressão local' para usar sua impressora, 'impressão remota' para enviar automaticamente, ou 'imprimir recibo' para impressora térmica. sugira APENAS funções com 'impressão' no nome, não cardápio ou PDF"

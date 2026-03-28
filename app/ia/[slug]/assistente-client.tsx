@@ -46,8 +46,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [modalType, setModalType] = useState<'setup' | 'verify'>('setup');
   const [showKioskBadge, setShowKioskBadge] = useState(false); // 🆕 Controla exibição do badge
   const badgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // 🛡️ Ref para guardar estado do modal — evita closure stale no event listener
-  const showPasswordOverlayRef = useRef(false);
+  // 🛡️ Ref genérica: true quando qualquer modal estiver aberto (portal ou interno)
+  const anyModalOpenRef = useRef(false);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -70,7 +70,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
     const handleAvatarClick = () => {
       // 🛡️ Não ativar modo full se um modal estiver aberto (usa ref para evitar closure stale)
-      if (showPasswordOverlayRef.current) return;
+      if (anyModalOpenRef.current) return;
       handleToggleMaximize();
     };
     window.addEventListener('eai:avatarClick', handleAvatarClick);
@@ -91,10 +91,17 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     };
   }, []);
 
-  // 🛡️ Manter ref sincronizada com o estado do modal
+  // 🛡️ Escutar eventos de modal aberto/fechado (qualquer portal ou modal interno)
   useEffect(() => {
-    showPasswordOverlayRef.current = showPasswordOverlay;
-  }, [showPasswordOverlay]);
+    const onOpen  = () => { anyModalOpenRef.current = true; };
+    const onClose = () => { anyModalOpenRef.current = false; };
+    window.addEventListener('eai:modalOpen',  onOpen);
+    window.addEventListener('eai:modalClose', onClose);
+    return () => {
+      window.removeEventListener('eai:modalOpen',  onOpen);
+      window.removeEventListener('eai:modalClose', onClose);
+    };
+  }, []);
 
 
   // 🆕 BLOQUEAR TECLAS EM MODO KIOSK
@@ -303,6 +310,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const handleEnterKioskMode = () => {
     setModalType('setup');
     setShowPasswordOverlay(true);
+    window.dispatchEvent(new CustomEvent('eai:modalOpen'));
   };
 
   // 🆕 DEFINIR SENHA E ATIVAR FULLSCREEN
@@ -365,6 +373,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       setPasswordInput('');
       setPasswordError(false);
       setShowPasswordOverlay(false);
+      window.dispatchEvent(new CustomEvent('eai:modalClose'));
       await exitKioskMode();
     } else {
       setPasswordError(true);
@@ -598,6 +607,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                     onClick={() => {
                       setShowPasswordOverlay(false);
                       setPasswordInput('');
+                      window.dispatchEvent(new CustomEvent('eai:modalClose'));
                     }}
                     className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                       theme === 'dark'
@@ -667,7 +677,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 {/* Botões */}
                 <div className="flex space-x-3 pt-2">
                   <button
-                    onClick={() => setShowPasswordOverlay(false)}
+                    onClick={() => { setShowPasswordOverlay(false); window.dispatchEvent(new CustomEvent('eai:modalClose')); }}
                     className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                       theme === 'dark'
                         ? 'bg-white/5 hover:bg-white/10 text-white'

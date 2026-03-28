@@ -145,7 +145,7 @@ export function VoiceAssistantWithWakeWord({
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
-  const groqContextRef = useGroqContext(companyId);
+  const groqContextRef = useGroqContext(companyId, profile);
   const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? ''); // ← adicionado
 
   // ── Push-to-talk: gravação direta via MediaRecorder ────────

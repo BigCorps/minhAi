@@ -141,7 +141,7 @@ export default function EnviarArquivoDisplay({ data, onClose, theme = 'dark', pl
 
       setToken(newToken);
       setUploadUrl(url);
-      encodeURIComponent(url)}&color=%23000080&company_id=${data.companyId}`);
+      setQrCodeUrl(`/api/qrcode?size=200&data=${encodeURIComponent(url)}&color=%23000080&company_id=${data.companyId}`);
       setStage('waiting_celular');
       setTimeLeft(EXPIRY_SECONDS);
 

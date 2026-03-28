@@ -131,13 +131,16 @@ export default function SlugHeader({
 {/* No overlayMode o espaço esquerdo fica vazio — o logo já está no bloco de zoom */}
 {overlayMode && <div />}
 
-          {/* CENTRO: relógio digital (só landscape) */}
-          {!isPortrait && (
-            <DigitalClock
-              className="absolute left-1/2 -translate-x-1/2"
-              theme={theme}
-            />
-          )}
+{/* CENTRO: relógio digital (só landscape) */}
+{!isPortrait && (
+  <DigitalClock
+    className={overlayMode
+      ? 'fixed left-1/2 -translate-x-1/2 top-4'
+      : 'absolute left-1/2 -translate-x-1/2'
+    }
+    theme={theme}
+  />
+)}
 
           {/* DIREITA: botões + logo minhAi */}
           <div className="relative flex items-center space-x-2">

@@ -369,6 +369,7 @@ function AbaCadastros({ companyId, assistantName }: { companyId: string; assista
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [customLabels, setCustomLabels] = useState<Record<string, string>>({});
 
   useEffect(() => { load(); }, [companyId]);
 
@@ -378,6 +379,20 @@ function AbaCadastros({ companyId, assistantName }: { companyId: string; assista
       .from('registrations').select('*').eq('company_id', companyId)
       .order('created_at', { ascending: sortOrder === 'asc' });
     setRegistrations(data ?? []);
+    // Carregar labels customizados da registration_configs
+    const { data: config } = await supabase
+      .from('registration_configs')
+      .select('custom_fields')
+      .eq('company_id', companyId)
+      .maybeSingle();
+
+    if (config?.custom_fields) {
+      const labels: Record<string, string> = {};
+      (config.custom_fields as { key: string; label: string }[]).forEach(cf => {
+        labels[cf.key] = cf.label || cf.key;
+      });
+      setCustomLabels(labels);
+    }
     setLoading(false);
   }
 
@@ -455,7 +470,7 @@ function AbaCadastros({ companyId, assistantName }: { companyId: string; assista
                   </th>
                   {allFieldKeys.map(k => (
                     <th key={k} className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {FIELD_LABELS[k] ?? k}
+                      {FIELD_LABELS[k] ?? customLabels[k] ?? k}
                     </th>
                   ))}
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">

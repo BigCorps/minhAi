@@ -1448,7 +1448,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
         )}
 
         <div className="text-center px-4 max-w-md">
-          <p className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 ${
+          <p className={`text-lg sm:text-xl md:text-2xl font-bold mb-2 whitespace-nowrap ${
             theme === 'dark' ? 'text-white/50' : 'text-gray-900/50'
           }`}>
             {getStatusMessage()}

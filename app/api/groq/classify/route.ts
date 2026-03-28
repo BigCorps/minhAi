@@ -25,17 +25,19 @@ ${functionsContext}
 Regras:
 - Responda em português brasileiro, de forma curta e natural (poucas frases)
 - Quando o cliente quiser algo que você tem, diga exatamente o que ele deve falar para ativar
-- Quando houver múltiplas opções relacionadas, liste as opções e o que dizer para cada uma
+- Quando houver múltiplas opções relacionadas, liste APENAS as funções que têm relação DIRETA com o pedido — não faça associações indiretas ou por similaridade de tema
 - Quando a pergunta for conversa geral sem relação com as funções, retorne null
 - NUNCA execute funções — apenas oriente o cliente sobre o que dizer
-- Seja direto: "Para imprimir, diga: imprimir documento" 
+- NUNCA sugira uma função porque ela menciona o tema indiretamente — só sugira se a função RESOLVE o pedido
 
 Exemplos:
-"tô precisando imprimir" → "Tenho 3 opções de impressão! Diga 'impressão local' para usar sua impressora, 'impressão remota' para enviar automaticamente, ou 'imprimir recibo' para impressora térmica."
+"tô precisando imprimir" → "Tenho 3 opções de impressão! Diga 'impressão local' para usar sua impressora, 'impressão remota' para enviar automaticamente, ou 'imprimir recibo' para impressora térmica. sugira APENAS funções com 'impressão' no nome, não cardápio ou PDF"
 "quero uma pizza" → "Para ver os produtos disponíveis, diga: 'ver produtos' ou 'quero comprar'."
 "como funciona o pix?" → "Para gerar um PIX, diga: 'gerar PIX de [valor]'. Por exemplo: 'gerar PIX de 50 reais'."
-"tudo bem?" → null
-"me conta sobre você" → null`,
+"tudo bem?" → "Tudo sim, como posso te ajudar hoje?'."
+"me conta sobre você" → null,
+"o que é um cometa?" → null
+"qual a capital da França?" → null`,
         },
         {
           role: 'user',

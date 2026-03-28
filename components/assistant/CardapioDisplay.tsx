@@ -11,6 +11,7 @@ interface CardapioDisplayProps {
     menuUrl: string;
     companyName?: string;
     menuDescription?: string;
+    companyId?: string; 
     autoCloseDuration?: number;
   };
   onClose: () => void;
@@ -32,7 +33,7 @@ export default function CardapioDisplay({
   const [copied, setCopied] = useState(false);
   const [previewError, setPreviewError] = useState(false);
 
-  const { menuUrl, companyName, menuDescription } = data;
+  const { menuUrl, companyName, menuDescription, companyId } = data;
 
   const isPdf = menuUrl?.toLowerCase().includes('.pdf');
 
@@ -51,7 +52,7 @@ export default function CardapioDisplay({
   useEffect(() => {
     if (menuUrl) {
       const size = 300;
-      const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(menuUrl)}&margin=10`;
+      const url = `/api/qrcode?size=${size}&data=${encodeURIComponent(menuUrl)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`;
       setQrCodeUrl(url);
     }
   }, [menuUrl]);

@@ -11,6 +11,7 @@ interface NossoQRCodeDisplayProps {
     qrContent: string;
     qrLabel: string;
     companyName?: string;
+    companyId?: string;
     autoCloseDuration?: number;
   };
   onClose: () => void;
@@ -29,7 +30,7 @@ export default function NossoQRCodeDisplay({
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const { qrContent, qrLabel, companyName } = data;
+  const { qrContent, qrLabel, companyName, companyId } = data;
 
   const OPENING_TEXT = `${qrLabel} Diga copiar para copiar o conteúdo, ou fechar para sair.`;
 
@@ -53,7 +54,7 @@ export default function NossoQRCodeDisplay({
   useEffect(() => {
     if (qrContent) {
       const size = 400;
-      const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrContent)}&margin=10`;
+      const url = `/api/qrcode?size=${size}&data=${encodeURIComponent(qrContent)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`;
       setQrCodeUrl(url);
     }
   }, [qrContent]);

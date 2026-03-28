@@ -173,7 +173,7 @@ export function useCompanionUpload({
 
       setToken(newToken);
       setUploadUrl(url);
-      setQrCodeUrl(`/api/qrcode?data=${encodeURIComponent(url)}&company_id=${companyId}&size=280&color=%231e293b&bg=%23ffffff`);
+      setQrCodeUrl(`/api/qrcode?data=${encodeURIComponent(url)}&company_id=${companyId}&size=280&color=%23000080&bg=%23ffffff`);
       setStatus('waiting');
       setTimeLeft(EXPIRY_SECONDS);
 

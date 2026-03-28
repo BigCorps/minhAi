@@ -56,13 +56,19 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
 
   // Sincronizar montagem para evitar erros de hidratação
-useEffect(() => {
-  setMounted(true);
-  
-  const checkMobile = () => { ... };
-  const checkOrientation = () => { ... };
+  useEffect(() => {
+    setMounted(true);
+    
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // 🆕 Verificar orientação
+    const checkOrientation = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
 
-  const handleAvatarClick = () => {
+    const handleAvatarClick = () => {
     if (anyModalOpenRef.current) return;
     handleToggleMaximize();
   };

@@ -1919,7 +1919,7 @@ const CanalYoutubeForm = ({ settings, onChange }: any) => (
   </div>
 );
 
-const NossoQRCodeForm = ({ settings, onChange }: any) => (
+const NossoQRCodeForm = ({ settings, onChange, companyId }: any) => (
   <div className="space-y-4">
     <div>
       <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
@@ -1949,16 +1949,47 @@ const NossoQRCodeForm = ({ settings, onChange }: any) => (
         {(settings.qrcode_label || '').length}/100
       </p>
     </div>
-    {settings.qrcode_content && (
-      <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-        <p className="text-xs text-orange-800 dark:text-orange-200 mb-2">Prévia do QR Code:</p>
-        <img
-          src={`/api/qrcode?size=80&data=${encodeURIComponent(settings.qrcode_content)}&color=%23000080`}
-          alt="Preview QR"
-          className="w-20 h-20 rounded"
-        />
+{settings.qrcode_content && (
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        
+        {/* QR Code pequeno */}
+        <div style={{ 
+          background: '#ffffff', 
+          borderRadius: '12px', 
+          padding: '8px',
+          border: '1px solid #e5e7eb',
+          flexShrink: 0,
+        }}>
+          <p style={{ 
+            fontSize: '11px', 
+            fontWeight: 700, 
+            color: '#000080', 
+            marginBottom: '6px' 
+          }}>
+            Prévia do QR Code:
+          </p>
+          <img
+            src={`/api/qrcode?size=80&data=${encodeURIComponent(settings.qrcode_content)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`}
+            alt="Preview QR"
+            className="w-20 h-20 rounded"
+          />
+        </div>
+
+        {/* Exemplos de uso ao lado */}
+        <div className="flex-1 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-white/10">
+          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exemplos de uso:</p>
+          <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+            <li>Chave Pix estática</li>
+            <li>Link de avaliação Google Maps</li>
+            <li>Formulário, promoção, entre outros</li>
+          </ul>
+        </div>
+
       </div>
     )}
+
+    {/* Exemplos — só aparece se não tem conteúdo ainda */}
+    {!settings.qrcode_content && (
     <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
       <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exemplos de uso:</p>
       <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">

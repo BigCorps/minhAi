@@ -131,26 +131,38 @@ function CategoryPillSelector({
     );
   });
 
+  // ── Mobile layout (mantido intacto) ──
   if (isMobile) {
     const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
     const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
     return (
-      <div className="flex flex-col gap-0.5 w-full"> {/* Diminuído de gap-2 para 1.5 */}
-        <div className="grid grid-cols-3 gap-0.5"> {/* Diminuído de gap-2 para 1.5 */}
+      <div className="flex flex-col gap-0.5 w-full">
+        <div className="grid grid-cols-3 gap-0.5">
           {allBtn}
           {firstRowCats}
         </div>
-        <div className="grid grid-cols-3 gap-0.5"> {/* Diminuído de gap-2 para 1.5 */}
+        <div className="grid grid-cols-3 gap-0.5">
           {restCats}
         </div>
       </div>
     );
   }
 
+  // ── Desktop layout: 2 linhas fixas que se expandem de ponta a ponta ──
+  // Linha 1: "Todas as Funções" + primeiros 6 itens = 7 colunas
+  // Linha 2: itens restantes (8) = 8 colunas
+  // Dessa forma "Contato" (índice 6) sempre fica na segunda linha
   return (
-    <div className="flex flex-wrap justify-center gap-2">
-      {allBtn}
-      {catBtns}
+    <div className="flex flex-col gap-2 w-full">
+      {/* Linha 1: Todas + categorias 0–5 (Conhecimento até Agendamento) */}
+      <div className="grid gap-2 w-full" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+        {allBtn}
+        {catBtns.slice(0, 6)}
+      </div>
+      {/* Linha 2: categorias 6–13 (Contato até Serviços) */}
+      <div className="grid gap-2 w-full" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
+        {catBtns.slice(6)}
+      </div>
     </div>
   );
 }
@@ -589,7 +601,7 @@ function getFunctionCredits(functionKey: string): number {
               ) : (
                 <>
                   {/* Mobile: Espaçamento reduzido entre cards */}
-                  <div className="sm:hidden flex flex-col gap-3"> {/* Trocado space-y-2 por gap-3 para consistência */}
+                  <div className="sm:hidden flex flex-col gap-3">
                     {filteredFunctions.map(fn => {
                       const enabled = isFunctionEnabled(fn.function_key);
                       const stats = getFunctionStats(fn.function_key);

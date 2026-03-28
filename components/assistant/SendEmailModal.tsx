@@ -31,6 +31,8 @@ export default function SendEmailModal({
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
   const [companyEmail, setCompanyEmail] = useState<string>('');
   const [recipientEmail, setRecipientEmail] = useState<string>('');
+  // 1. NOVO ESTADO: Modo Manual
+  const [isManualMode, setIsManualMode] = useState(false);
   
   const recognitionRef = useRef<any>(null);           // desktop (mantém)
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null); // mobile
@@ -81,15 +83,15 @@ export default function SendEmailModal({
     fetchGoogleEmail();
   }, [companyId]);
 
-  // Countdown inicial
+  // 2. COUNTDOWN MODIFICADO: respeita isManualMode
   useEffect(() => {
-    if (step === 'recording' && countdown > 0) {
+    if (step === 'recording' && countdown > 0 && !isManualMode) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (countdown === 0 && step === 'recording' && !isRecording) {
+    } else if (countdown === 0 && step === 'recording' && !isRecording && !isManualMode) {
       startRecording();
     }
-  }, [countdown, step, isRecording]);
+  }, [countdown, step, isRecording, isManualMode]);
 
   // Toast
   useEffect(() => {
@@ -263,12 +265,8 @@ export default function SendEmailModal({
             setEmailBody(cleaned);
             stopRecording();
 
-            if (cleaned.length > 0) {
-              setStep('confirming');
-            } else {
-              showToast('Nenhum conteúdo detectado. Tente novamente.', 'warning');
-              setTimeout(() => onClose(), 2000);
-            }
+            // 4. MOBILE: Sempre vai para confirming
+            setStep('confirming');
             return;
           }
 
@@ -370,6 +368,7 @@ export default function SendEmailModal({
       setEmailBody(finalTranscriptRef.current + interimTranscript);
     };
 
+    // 3. DESKTOP onend MODIFICADO: sempre vai para confirming
     recognition.onend = () => {
       setIsRecording(false);
       const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
@@ -380,8 +379,9 @@ export default function SendEmailModal({
       cleaned = cleaned.trim();
       setEmailBody(cleaned);
       finalTranscriptRef.current = cleaned;
-      if (cleaned.length > 0) setStep('confirming');
-      else { showToast('Nenhum conteúdo detectado.', 'warning'); setTimeout(() => onClose(), 2000); }
+
+      // ✅ Sempre vai para confirming, mesmo se vazio (usuário pode ter digitado)
+      setStep('confirming');
     };
 
     recognition.onerror = (event: any) => {
@@ -497,10 +497,10 @@ export default function SendEmailModal({
         {/* Content */}
         <div className="p-6 space-y-4">
           
-          {/* STEP 1: Countdown + Recording */}
+          {/* 5. STEP 1: Countdown + Recording (SEÇÃO TOTALMENTE SUBSTITUÍDA) */}
           {step === 'recording' && (
             <>
-              {countdown > 0 ? (
+              {countdown > 0 && !isManualMode ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="w-32 h-32 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse">
                     <div className="w-24 h-24 rounded-full bg-blue-500/40 flex items-center justify-center">
@@ -508,17 +508,38 @@ export default function SendEmailModal({
                     </div>
                   </div>
                   <p className={`text-lg font-medium ${textPrimary} mt-6`}>Prepare-se para falar...</p>
+
+                  {/* Botão para pular e digitar */}
+                  <button
+                    onClick={() => {
+                      setIsManualMode(true);
+                      setCountdown(0);
+                    }}
+                    className={`mt-4 px-6 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition`}
+                  >
+                    Prefiro Digitar
+                  </button>
                 </div>
               ) : (
                 <>
-                  <div className={`p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
-                    <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center font-medium`}>
-                      🎤 <strong>Ditando o email...</strong> Diga <strong>"CONCLUIR"</strong> quando terminar
-                    </p>
-                    <p className={`text-xs ${isDark ? 'text-blue-300/60' : 'text-blue-600/60'} text-center mt-1`}>
-                      Diga "enviar para fulano@email.com" para definir o destinatário
-                    </p>
-                  </div>
+                  {!isManualMode && (
+                    <div className={`p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
+                      <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'} text-center font-medium`}>
+                        🎤 <strong>Ditando o email...</strong> Diga <strong>"CONCLUIR"</strong> quando terminar
+                      </p>
+                      <p className={`text-xs ${isDark ? 'text-blue-300/60' : 'text-blue-600/60'} text-center mt-1`}>
+                        Diga "enviar para fulano@email.com" para definir o destinatário
+                      </p>
+                    </div>
+                  )}
+
+                  {isManualMode && (
+                    <div className={`p-4 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
+                      <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'} text-center font-medium`}>
+                        ⌨️ <strong>Modo Digitação</strong> - Digite o conteúdo do email abaixo
+                      </p>
+                    </div>
+                  )}
 
                   {/* Destinatário atual durante gravação */}
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
@@ -537,7 +558,7 @@ export default function SendEmailModal({
                     )}
                   </div>
 
-                  {isRecording && (
+                  {isRecording && !isManualMode && (
                     <div className="flex justify-center">
                       <div className="flex items-center gap-3 px-6 py-3 bg-red-500 rounded-full shadow-lg">
                         <div className="relative">
@@ -554,21 +575,61 @@ export default function SendEmailModal({
                     <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Conteúdo do email:</label>
                     <textarea
                       value={emailBody}
-                      onChange={(e) => setEmailBody(e.target.value)}
-                      placeholder="O conteúdo aparecerá aqui conforme você fala..."
+                      onChange={(e) => {
+                        setEmailBody(e.target.value);
+                        finalTranscriptRef.current = e.target.value;
+                      }}
+                      placeholder={isManualMode ? "Digite o conteúdo do email..." : "O conteúdo aparecerá aqui conforme você fala..."}
                       rows={8}
                       className={`w-full px-4 py-3 rounded-lg border ${border} ${bg} ${textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none`}
                     />
                   </div>
 
-                  <button
-                    onClick={stopRecording}
-                    disabled={!isRecording}
-                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                  >
-                    <X className="w-5 h-5" />
-                    Parar Gravação
-                  </button>
+                  {/* Botão unificado */}
+                  {isRecording && !isManualMode ? (
+                    <button
+                      onClick={stopRecording}
+                      className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                    >
+                      <X className="w-5 h-5" />
+                      Parar Gravação
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (isRecording) {
+                          stopRecording();
+                        } else {
+                          // Se digitado, vai direto para confirming
+                          setStep('confirming');
+                        }
+                      }}
+                      disabled={!emailBody.trim()}
+                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-5 h-5" />
+                      Confirmar Corpo do Email
+                    </button>
+                  )}
+
+                  {/* Botão para alternar modo */}
+                  {!isRecording && (
+                    <button
+                      onClick={() => {
+                        if (isManualMode) {
+                          setIsManualMode(false);
+                          setCountdown(5);
+                          setEmailBody('');
+                          finalTranscriptRef.current = '';
+                        } else {
+                          setIsManualMode(true);
+                        }
+                      }}
+                      className={`w-full px-4 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition text-sm`}
+                    >
+                      {isManualMode ? '🎤 Voltar para Gravação' : '⌨️ Preferir Digitar'}
+                    </button>
+                  )}
                 </>
               )}
             </>
@@ -628,7 +689,7 @@ export default function SendEmailModal({
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => { setStep('recording'); setCountdown(5); setEmailBody(''); finalTranscriptRef.current = ''; }}
+                  onClick={() => { setStep('recording'); setCountdown(5); setEmailBody(''); setIsManualMode(false); finalTranscriptRef.current = ''; }}
                   disabled={isSending}
                   className="flex-1 px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition disabled:opacity-50"
                 >

@@ -139,16 +139,9 @@ export default function EnviarArquivoDisplay({ data, onClose, theme = 'dark', pl
       const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.minhai.app';
       const url = `${BASE_URL}/arquivos?token=${newToken}`;
 
-      const QRCode = (await import('qrcode')).default;
-      const qr = await QRCode.toDataURL(url, {
-        width: 200, margin: 2,
-        color: { dark: '#1e293b', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      });
-
       setToken(newToken);
       setUploadUrl(url);
-      setQrCodeUrl(qr);
+      setQrCodeUrl(`/api/qrcode?size=200&data=${encodeURIComponent(url)}&color=%231e293b`);
       setStage('waiting_celular');
       setTimeLeft(EXPIRY_SECONDS);
 

@@ -317,7 +317,7 @@ function GoogleConnectPageContent() {
                       Conta Google Não Conectada
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                      Conecte sua conta Google para habilitar emails, calendário, fotos, Drive e YouTube por voz.
+                      Conecte sua conta Google para enviar e receber emails, gerenciar seu calendário, ler arquivos no Drive e músicas e vídeos do YouTube com comandos simples.
                     </p>
 
                     <button

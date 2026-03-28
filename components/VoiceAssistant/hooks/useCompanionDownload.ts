@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import QRCode from 'qrcode';
 
 interface UseCompanionDownloadOptions {
   companyId: string;
@@ -84,16 +83,10 @@ export function useCompanionDownload({
       const url = `${BASE_URL}/download/${newToken}`;
 
       // 2. Gerar QR Code
-      const qr = await QRCode.toDataURL(url, {
-        width: 180,
-        margin: 2,
-        color: { dark: '#1e293b', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      });
-
+      
       setDownloadUrl(url);
-      setQrCodeUrl(qr);
-      setStatus('ready');
+setQrCodeUrl(`/api/qrcode?size=180&data=${encodeURIComponent(url)}&color=%231e293b`);
+setStatus('ready');
       setTimeLeft(EXPIRY_SECONDS);
 
       // 3. Contagem regressiva

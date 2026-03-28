@@ -14,6 +14,7 @@ interface AssistenteClientProps {
   company: {
     id: string;
     name: string;
+    slug: string; // ← adicionado
     wake_word: string;
     greeting_message: string;
     logo_url?: string;
@@ -842,6 +843,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     <VoiceAssistantWithWakeWord 
       companyId={company.id} 
       companyName={company.name}
+      slug={company.slug} // ← adicionado
       wakeWord={company.wake_word || 'olá assistente'}
       greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
       theme={theme}
@@ -973,6 +975,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 <VoiceAssistantWithWakeWord 
   companyId={company.id} 
   companyName={company.name}
+  slug={company.slug} // ← adicionado
   wakeWord={company.wake_word || 'olá assistente'}
   greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
   theme={theme}

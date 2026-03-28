@@ -148,19 +148,31 @@ function CategoryPillSelector({
     );
   }
 
-  // ── Desktop layout: 2 linhas fixas que se expandem de ponta a ponta ──
-  // Linha 1: "Todas as Funções" + primeiros 6 itens = 7 colunas
-  // Linha 2: itens restantes (8) = 8 colunas
-  // Dessa forma "Contato" (índice 6) sempre fica na segunda linha
+  // ── Desktop layout ──
+  // Em telas largas: 2 linhas (7 + 8 itens) com pills se expandindo de ponta a ponta.
+  // Em telas menores (sm→md): quebra automaticamente em 3 ou 4 linhas via minmax.
+  // O truque: usamos classes Tailwind responsivas para definir o número de colunas
+  // por breakpoint, mantendo sempre alinhamento de ponta a ponta com 1fr.
   return (
     <div className="flex flex-col gap-2 w-full">
-      {/* Linha 1: Todas + categorias 0–5 (Conhecimento até Agendamento) */}
-      <div className="grid gap-2 w-full" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+      {/* Linha 1 em telas largas: Todas + categorias 0–5 */}
+      {/* Em telas menores quebra em mais linhas automaticamente */}
+      <div
+        className="grid gap-2 w-full"
+        style={{
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 130px), 1fr))',
+        }}
+      >
         {allBtn}
         {catBtns.slice(0, 6)}
       </div>
-      {/* Linha 2: categorias 6–13 (Contato até Serviços) */}
-      <div className="grid gap-2 w-full" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
+      {/* Linha 2 em telas largas: categorias 6–13 (Contato até Serviços) */}
+      <div
+        className="grid gap-2 w-full"
+        style={{
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 130px), 1fr))',
+        }}
+      >
         {catBtns.slice(6)}
       </div>
     </div>

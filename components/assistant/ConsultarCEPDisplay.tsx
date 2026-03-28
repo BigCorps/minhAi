@@ -117,7 +117,7 @@ export default function ConsultarCEPDisplay({ data, onClose, theme = 'dark', pla
 
       // Gerar QR Code do Google Maps
       const mapsUrl = getMapsUrl(res.result);
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(mapsUrl)}&margin=5`;
+      const qrUrl = `/api/qrcode?size=200&data=${encodeURIComponent(mapsUrl)}&color=%23000080&company_id=${data.companyId}`;
       setMapsQrCodeUrl(qrUrl);
 
       // Gerar PDF no frontend

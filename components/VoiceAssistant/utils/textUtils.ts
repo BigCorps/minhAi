@@ -81,31 +81,33 @@ export function correctTranscriptionErrors(text: string): string {
 
 /**
  * Detecta comandos de parada como "pare", "tchau", "cala boca", etc.
+ * IMPORTANTE: só detecta quando a frase É o comando, não quando contém a palavra no meio.
  */
 export function detectStopCommand(text: string): boolean {
   const lowerText = text.toLowerCase().trim();
 
-  const stopPhrases = [
-    'pare', 'para', 'parar', 'stop', 'cala boca', 'cala a boca',
-    'silêncio', 'silencio', 'quieto', 'chega', 'cancela', 'cancelar',
-    'para de falar', 'pare de falar', 'cale a boca', 'fica quieto',
-    'para aí', 'para ai', 'tchau', 'obrigado tchau', 'tá bom tchau', 'ta bom tchau',
-    'não quero', 'nao quero', 'esquece', 'deixa pra lá', 'deixa pra la',
-    // Comandos de fechamento de modal
-    'fechar', 'fecha', 'fecha isso', 'fechar isso', 'fechar modal',
-    'sair', 'voltar', 'vai embora', 'dispensado', 'obrigado',
+  const exactStopPhrases = [
+    'pare', 'para', 'parar', 'stop',
+    'cala boca', 'cala a boca', 'cale a boca',
+    'silêncio', 'silencio', 'quieto', 'fica quieto',
+    'chega',
+    'para de falar', 'pare de falar',
+    'para aí', 'para ai',
+    'tchau', 'obrigado tchau', 'tá bom tchau', 'ta bom tchau',
+    'não quero', 'nao quero',
+    'esquece', 'deixa pra lá', 'deixa pra la',
+    'fecha isso', 'fechar isso', 'fechar modal',
+    'vai embora', 'dispensado',
   ];
 
-  if (stopPhrases.includes(lowerText)) return true;
+  const wordCount = lowerText.split(' ').filter(w => w.length > 0).length;
+  if (wordCount > 4) return false;
 
-  return stopPhrases.some(phrase => {
-    const words = phrase.split(' ');
-    if (words.length === 1) {
-      const regex = new RegExp(`\\b${phrase}\\b`, 'i');
-      return regex.test(lowerText);
-    }
-    return lowerText.includes(phrase);
-  });
+  return exactStopPhrases.some(phrase =>
+    lowerText === phrase ||
+    lowerText.startsWith(phrase + ' ') ||
+    lowerText.endsWith(' ' + phrase)
+  );
 }
 
 /**

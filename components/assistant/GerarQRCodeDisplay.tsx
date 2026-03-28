@@ -140,15 +140,9 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
     setStage('generating');
     setErrorMsg(null);
 
-    try {
-      const QRCode = (await import('qrcode')).default;
-      const dataUrl = await QRCode.toDataURL(trimmed, {
-        width: 300,
-        margin: 2,
-        color: { dark: '#000000', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      });
-      setQrDataUrl(dataUrl);
+try {
+      const qrUrl = `/api/qrcode?size=300&data=${encodeURIComponent(trimmed)}&color=%23000080&company_id=${data.companyId}`;
+      setQrDataUrl(qrUrl);
       setStage('result');
       playText('QR Code gerado! Diga "baixar" para salvar ou "email" para enviar.').catch(() => {});
     } catch (err: any) {
@@ -160,14 +154,22 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
 
   // ── Download PNG ────────────────────────────────────────────────────────────
 
-  const handleDownload = useCallback(() => {
-    if (!qrDataUrl) return;
+const handleDownload = useCallback(async () => {
+  if (!qrDataUrl) return;
+  try {
+    const res = await fetch(qrDataUrl);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = qrDataUrl;
+    link.href = url;
     link.download = `qrcode_${Date.now()}.png`;
     link.click();
+    URL.revokeObjectURL(url);
     playText('QR Code baixado.').catch(() => {});
-  }, [qrDataUrl, playText]);
+  } catch {
+    playText('Erro ao baixar o QR Code.').catch(() => {});
+  }
+}, [qrDataUrl, playText]);
 
   // ── Enviar email ────────────────────────────────────────────────────────────
 
@@ -182,8 +184,14 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
       const email = user?.email;
       if (!email) throw new Error('Usuário sem email cadastrado.');
 
-      // Converter dataUrl em base64 puro
-      const base64 = qrDataUrl.split(',')[1];
+// Buscar imagem da API e converter para base64
+      const res = await fetch(qrDataUrl);
+      const blob = await res.blob();
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
 
       const { error } = await supabase.functions.invoke('enviar-email-google', {
         body: {

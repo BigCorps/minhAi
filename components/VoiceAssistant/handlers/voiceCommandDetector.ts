@@ -45,6 +45,7 @@ interface DetectorDeps {
   setActiveModal: (modal: ActiveModal | null) => void;
   activeFunctionContextRef: React.MutableRefObject<any>;
   fromGroq?: boolean;
+  groqContextRef: React.MutableRefObject<string>;
 }
 
 // ── Helper: parsear view/data do transcript de agenda ────────
@@ -704,6 +705,7 @@ if (!fromGroq) {
     setIsProcessing,
     setActiveModal,
     sessionId,
+    groqContextRef: deps.groqContextRef,
     commandProcessor,
     pixStateRef,
     setQrCodeData,

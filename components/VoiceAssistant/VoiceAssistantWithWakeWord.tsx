@@ -27,6 +27,7 @@ import { useLembreteWatcher } from './hooks/useLembreteWatcher';
 import { handleWifiQRCode, handleCardapio, handleCadastro, handleNossoQRCode } from '@/components/VoiceAssistant/handlers/companyHandlers';
 import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
 import { useGroqContext } from '@/hooks/useGroqContext';
+import { useProfile } from '@/hooks/useProfile'; // ← adicionado
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -81,6 +82,7 @@ import { detectVoiceCommand } from './handlers/voiceCommandDetector';
 export function VoiceAssistantWithWakeWord({
   companyId,
   companyName,
+  slug,
   wakeWord,
   greetingMessage,
   theme = 'dark',
@@ -144,6 +146,7 @@ export function VoiceAssistantWithWakeWord({
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
   const groqContextRef = useGroqContext(companyId);
+  const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? ''); // ← adicionado
 
   // ── Push-to-talk: gravação direta via MediaRecorder ────────
   const voiceRecorder = useVoiceRecorder();
@@ -683,19 +686,6 @@ useEffect(() => {
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
           playText('Sou min I A, uma IA pra chamar de sua! Sou um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
           break;
-
-case 'minha_conta':
-  await stopGoogleSpeech();
-  setActiveModal({
-    type: 'LoginClienteDisplay',
-    data: { companyId, slug: slug ?? '' },
-  });
-  playText(
-    profile
-      ? `Olá ${profile.nome}! Sua conta está aberta.`
-      : 'Abrindo sua conta. Faça login ou crie uma nova conta.'
-  ).catch(() => {});
-  return;
 
         case 'consultar_cambio':
           setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } });

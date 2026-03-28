@@ -1456,18 +1456,18 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
           {error && <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
         </div>
 
-        {/* Avisos */}
-        <div className="min-h-[2.5rem] flex items-center justify-center w-full max-w-sm px-4">
-          {(repromptWarning || noiseWarning) && (
-            <div className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-center ${
-              theme === 'dark'
-                ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-                : 'bg-blue-50 border border-blue-200 text-blue-700'
-            }`}>
-              {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente ruidoso — fale mais perto do microfone'}
-            </div>
-          )}
-        </div>
+{/* Avisos — fixo na parte inferior, não desloca o layout */}
+{(repromptWarning || noiseWarning) && (
+  <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+    <div className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
+      theme === 'dark'
+        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+        : 'bg-blue-50 border border-blue-200 text-blue-700'
+    }`}>
+      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente ruidoso — fale mais perto do microfone'}
+    </div>
+  </div>
+)}
 
         <ActionModals
           activeModal={activeModal}

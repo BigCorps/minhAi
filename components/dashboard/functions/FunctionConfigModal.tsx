@@ -1998,6 +1998,7 @@ const NossoQRCodeForm = ({ settings, onChange, companyId }: any) => (
         <li>Formulário, promoção, entre outros</li>
       </ul>
     </div>
+    )}
   </div>
 );
 

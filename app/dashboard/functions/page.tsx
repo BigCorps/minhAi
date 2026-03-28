@@ -581,24 +581,25 @@ function getFunctionCredits(functionKey: string): number {
           Defina as funções que seu assistente {selectedAssistantName} pode executar
         </p>
       </div>
-      {companyId && (
-        <a
-          href={`/dashboard/assistentes/${companyId}`}
-          className="flex-shrink-0 p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition mt-1"
-          title="Configurar assistente"
-        >
-          <Settings className="w-5 h-5" />
-        </a>
-      )}
+      <div className="flex items-center gap-1 flex-shrink-0 mt-1">
+        {companyId && tiposDisponiveis.length > 0 && (
+          <ProfileTypeSelector
+            selectedTipo={selectedTipo}
+            tiposDisponiveis={tiposDisponiveis}
+            onSelect={setSelectedTipo}
+          />
+        )}
+        {companyId && (
+          <a
+            href={`/dashboard/assistentes/${companyId}`}
+            className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition"
+            title="Configurar assistente"
+          >
+            <Settings className="w-5 h-5" />
+          </a>
+        )}
+      </div>
     </div>
-    {/* Seletor de perfil — mobile */}
-    {companyId && tiposDisponiveis.length > 0 && (
-      <ProfileTypeSelector
-        selectedTipo={selectedTipo}
-        tiposDisponiveis={tiposDisponiveis}
-        onSelect={setSelectedTipo}
-      />
-    )}
   </div>
 </div>
 

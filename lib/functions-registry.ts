@@ -1342,6 +1342,28 @@ horarios_disponiveis: {
   }
 },
 
+minha_conta: {
+  functionKey: 'minha_conta',
+  functionName: 'Minha Conta',
+  category: 'biometry',
+  responseType: 'voice+modal',
+  voiceTriggers: ['minha conta','fazer login','entrar','login','criar conta','meu perfil'],
+  examplePhrases: ['Fazer login', 'Minha conta', 'Criar conta'],
+  requiresInput: false,
+  description: 'Login e cadastro de clientes',
+  saveToHistory: false,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ playText, setActiveModal, companyId, functionSettings }) => {
+    setActiveModal?.({
+      type: 'LoginClienteDisplay',
+      data: { companyId, slug: window.location.hostname.split('.')[0] },
+    });
+    return true;
+  },
+},
+
   sequencia_videos: {
     functionKey: 'sequencia_videos',
     functionName: 'Sequência de Vídeos',

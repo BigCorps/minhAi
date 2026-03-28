@@ -1984,21 +1984,7 @@ const NossoQRCodeForm = ({ settings, onChange, companyId }: any) => (
             <li>Formulário, promoção, entre outros</li>
           </ul>
         </div>
-
-      </div>
-    )}
-
-    {/* Exemplos — só aparece se não tem conteúdo ainda */}
-    {!settings.qrcode_content && (
-      <div className="bg-gray-50 dark:bg-slate-900 p-3 rounded-lg border border-gray-200 dark:border-white/10">
-        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exemplos de uso:</p>
-        <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
-          <li>Chave Pix estática</li>
-          <li>Link de avaliação Google Maps</li>
-          <li>Formulário, promoção, entre outros</li>
-        </ul>
-      </div>
-    )}
+       
       </div>
     )}
 

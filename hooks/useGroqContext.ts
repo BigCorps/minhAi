@@ -1,9 +1,18 @@
-// hooks/useGroqContext.ts — novo hook
+// hooks/useGroqContext.ts
 import { useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { getAllFunctions } from '@/lib/functions-registry';
 
-export function useGroqContext(companyId: string) {
+interface SlugProfileBasic {
+  nome: string;
+  email?: string | null;
+  identificador?: string | null;
+}
+
+export function useGroqContext(
+  companyId: string,
+  profile?: SlugProfileBasic | null
+) {
   const contextRef = useRef<string>('');
 
   useEffect(() => {
@@ -28,7 +37,6 @@ export function useGroqContext(companyId: string) {
 
       const enabledKeys = new Set([
         ...(enabled?.map(r => r.function_key) ?? []),
-        // Funções com default_enabled=true do banco
       ]);
 
       // 3. Buscar default_enabled do banco
@@ -47,12 +55,17 @@ export function useGroqContext(companyId: string) {
         .map(fn => `- ${fn.name} → diga: "${fn.triggers[0]}" (ex: "${fn.example}")`)
         .join('\n');
 
-      contextRef.current = functionLines;
-      console.log(`✅ GROQ context carregado: ${enabledKeys.size} funções`);
+      // 5. Contexto do perfil logado (se houver)
+      const profileContext = profile
+        ? `\nCliente logado: ${profile.nome}${profile.email ? ` (${profile.email})` : ''}${profile.identificador ? `, tel: ${profile.identificador}` : ''}`
+        : '';
+
+      contextRef.current = functionLines + profileContext;
+      console.log(`✅ GROQ context carregado: ${enabledKeys.size} funções${profile ? ` | Cliente: ${profile.nome}` : ''}`);
     }
 
     buildContext();
-  }, [companyId]);
+  }, [companyId, profile]);
 
   return contextRef;
 }

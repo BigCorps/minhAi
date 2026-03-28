@@ -31,7 +31,7 @@ const handleManualClose = () => {
   // ✅ SOLUÇÃO SIMPLES: Gerar QR Code direto via API (sem Edge Function)
   useEffect(() => {
     const size = 400;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(websiteUrl)}&margin=10`;
+    const qrUrl = `/api/qrcode?size=${size}&data=${encodeURIComponent(websiteUrl)}&color=%23000080`;
     setQrCodeUrl(qrUrl);
   }, []);
 

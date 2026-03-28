@@ -685,7 +685,7 @@ case 'minha_conta':
   await stopGoogleSpeech();
   setActiveModal({
     type: 'LoginClienteDisplay',
-    data: { companyId, slug: slug ?? '' },
+    data: { profile, companyId, slug: slug ?? '' },
   });
   playText(
     profile

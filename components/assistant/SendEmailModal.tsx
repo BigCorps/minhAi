@@ -512,8 +512,9 @@ export default function SendEmailModal({
                   {/* Botão para pular e digitar */}
                   <button
                     onClick={() => {
-                      setIsManualMode(true);
-                      setCountdown(0);
+                      setEmailBody('');
+                      finalTranscriptRef.current = '';
+                      setStep('confirming');
                     }}
                     className={`mt-4 px-6 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition`}
                   >
@@ -540,23 +541,6 @@ export default function SendEmailModal({
                       </p>
                     </div>
                   )}
-
-                  {/* Destinatário atual durante gravação */}
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
-                    <Mail className={`w-4 h-4 flex-shrink-0 ${textMuted}`} />
-                    <span className={`text-xs ${textMuted}`}>Para:</span>
-                    <span className={`text-xs font-medium ${recipientEmail !== companyEmail ? 'text-blue-400' : textPrimary}`}>
-                      {recipientEmail || 'Carregando...'}
-                    </span>
-                    {recipientEmail !== companyEmail && (
-                      <button
-                        onClick={() => setRecipientEmail(companyEmail)}
-                        className="ml-auto text-xs text-blue-400 hover:text-blue-300"
-                      >
-                        restaurar
-                      </button>
-                    )}
-                  </div>
 
                   {isRecording && !isManualMode && (
                     <div className="flex justify-center">

@@ -200,31 +200,30 @@ function ProfileTypeSelector({ selectedTipo, tiposDisponiveis, onSelect }: {
   tiposDisponiveis: string[];
   onSelect: (tipo: string | null) => void;
 }) {
+  const selectedColor = selectedTipo ? (TIPOS_COR[selectedTipo] ?? '#6b7280') : null;
+
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <button
-        onClick={() => onSelect(null)}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-          selectedTipo === null
-            ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white shadow-sm'
-            : 'bg-transparent text-gray-600 border-gray-300 hover:border-gray-500 dark:text-gray-300 dark:border-white/20'
-        }`}
+    <div className="relative flex items-center gap-2">
+      <Settings className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      <select
+        value={selectedTipo ?? ''}
+        onChange={e => onSelect(e.target.value === '' ? null : e.target.value)}
+        className="appearance-none pl-3 pr-8 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500
+          bg-white dark:bg-slate-800 border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200"
+        style={selectedTipo ? { borderColor: selectedColor!, color: selectedColor! } : {}}
       >
-        <Settings className="w-3.5 h-3.5" />
-        Principal
-      </button>
-      {tiposDisponiveis.map(tipo => (
-        <button key={tipo} onClick={() => onSelect(tipo)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-            selectedTipo === tipo
-              ? 'text-white border-transparent shadow-sm'
-              : 'bg-transparent text-gray-600 border-gray-300 hover:border-gray-500 dark:text-gray-300 dark:border-white/20'
-          }`}
-          style={selectedTipo === tipo ? { backgroundColor: TIPOS_COR[tipo] ?? '#6b7280' } : {}}
-        >
-          {TIPOS_LABEL[tipo] ?? tipo}
-        </button>
-      ))}
+        <option value="">Principal</option>
+        {tiposDisponiveis.map(tipo => (
+          <option key={tipo} value={tipo}>
+            {TIPOS_LABEL[tipo] ?? tipo}
+          </option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
+        <svg className="w-3 h-3 text-gray-400" viewBox="0 0 12 12" fill="none">
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </span>
     </div>
   );
 }
@@ -573,13 +572,11 @@ function getFunctionCredits(functionKey: string): number {
     </div>
     {/* Seletor de perfil — mobile */}
     {companyId && tiposDisponiveis.length > 0 && (
-      <div className="w-full">
-        <ProfileTypeSelector
-          selectedTipo={selectedTipo}
-          tiposDisponiveis={tiposDisponiveis}
-          onSelect={setSelectedTipo}
-        />
-      </div>
+      <ProfileTypeSelector
+        selectedTipo={selectedTipo}
+        tiposDisponiveis={tiposDisponiveis}
+        onSelect={setSelectedTipo}
+      />
     )}
   </div>
 </div>

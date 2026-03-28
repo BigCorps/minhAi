@@ -85,7 +85,7 @@ export default function MeuCupomDisplay({
     if (cupom?.qr_value) {
       const size = 200;
       setQrCodeUrl(
-        `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(cupom.qr_value)}&margin=10`
+        `/api/qrcode?size=${size}&data=${encodeURIComponent(cupom.qr_value)}&color=%23000080&company_id=${companyId}`
       );
     }
   }, [cupom]);

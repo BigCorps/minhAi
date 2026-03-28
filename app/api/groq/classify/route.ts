@@ -31,7 +31,7 @@ Regras:
 - NUNCA sugira uma função porque ela menciona o tema indiretamente — só sugira se a função RESOLVE o pedido
 
 Exemplos:
-"tô precisando imprimir" → "Tenho 3 opções de impressão! Diga 'impressão local' para usar sua impressora, 'impressão remota' para enviar automaticamente, ou 'imprimir recibo' para impressora térmica. sugira APENAS funções com 'impressão' no nome, não cardápio ou PDF"
+"tô precisando imprimir" → "Tenho essas opções de impressão: Diga 'impressão local' para usar sua impressora, 'impressão remota' para enviar automaticamente, ou 'imprimir recibo' para impressora térmica. sugira APENAS funções com 'impressão' no nome, não cardápio ou PDF"
 "quero uma pizza" → "Para ver os produtos disponíveis, diga: 'ver produtos' ou 'quero comprar'."
 "como funciona o pix?" → "Para gerar um PIX, diga: 'gerar PIX de [valor]'. Por exemplo: 'gerar PIX de 50 reais'."
 "tudo bem?" → "Tudo sim, como posso te ajudar hoje?'."

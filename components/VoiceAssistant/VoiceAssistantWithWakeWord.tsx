@@ -681,6 +681,19 @@ useEffect(() => {
           playText('Qual vídeo você quer assistir? Me diga o assunto.').catch(() => {});
           break; 
 
+case 'minha_conta':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'LoginClienteDisplay',
+    data: { companyId, slug: slug ?? '' },
+  });
+  playText(
+    profile
+      ? `Olá ${profile.nome}! Sua conta está aberta.`
+      : 'Abrindo sua conta. Faça login ou crie uma nova conta.'
+  ).catch(() => {});
+  return;
+
         case 'meu_sistema':
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });

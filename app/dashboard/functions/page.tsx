@@ -131,50 +131,26 @@ function CategoryPillSelector({
     );
   });
 
-  // ── Mobile layout (mantido intacto) ──
   if (isMobile) {
     const firstRowCats = catBtns.filter((_, i) => categories[i].key === 'contact' || categories[i].key === 'video');
     const restCats = catBtns.filter((_, i) => categories[i].key !== 'contact' && categories[i].key !== 'video');
     return (
-      <div className="flex flex-col gap-0.5 w-full">
-        <div className="grid grid-cols-3 gap-0.5">
+      <div className="flex flex-col gap-0.5 w-full"> {/* Diminuído de gap-2 para 1.5 */}
+        <div className="grid grid-cols-3 gap-0.5"> {/* Diminuído de gap-2 para 1.5 */}
           {allBtn}
           {firstRowCats}
         </div>
-        <div className="grid grid-cols-3 gap-0.5">
+        <div className="grid grid-cols-3 gap-0.5"> {/* Diminuído de gap-2 para 1.5 */}
           {restCats}
         </div>
       </div>
     );
   }
 
-  // ── Desktop layout ──
-  // Em telas largas: 2 linhas (7 + 8 itens) com pills se expandindo de ponta a ponta.
-  // Em telas menores (sm→md): quebra automaticamente em 3 ou 4 linhas via minmax.
-  // O truque: usamos classes Tailwind responsivas para definir o número de colunas
-  // por breakpoint, mantendo sempre alinhamento de ponta a ponta com 1fr.
   return (
-    <div className="flex flex-col gap-2 w-full">
-      {/* Linha 1 em telas largas: Todas + categorias 0–5 */}
-      {/* Em telas menores quebra em mais linhas automaticamente */}
-      <div
-        className="grid gap-2 w-full"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 130px), 1fr))',
-        }}
-      >
-        {allBtn}
-        {catBtns.slice(0, 6)}
-      </div>
-      {/* Linha 2 em telas largas: categorias 6–13 (Contato até Serviços) */}
-      <div
-        className="grid gap-2 w-full"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 130px), 1fr))',
-        }}
-      >
-        {catBtns.slice(6)}
-      </div>
+    <div className="flex flex-wrap justify-center gap-2">
+      {allBtn}
+      {catBtns}
     </div>
   );
 }
@@ -613,7 +589,7 @@ function getFunctionCredits(functionKey: string): number {
               ) : (
                 <>
                   {/* Mobile: Espaçamento reduzido entre cards */}
-                  <div className="sm:hidden flex flex-col gap-3">
+                  <div className="sm:hidden flex flex-col gap-3"> {/* Trocado space-y-2 por gap-3 para consistência */}
                     {filteredFunctions.map(fn => {
                       const enabled = isFunctionEnabled(fn.function_key);
                       const stats = getFunctionStats(fn.function_key);

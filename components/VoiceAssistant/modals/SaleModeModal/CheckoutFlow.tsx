@@ -25,6 +25,7 @@ interface CheckoutFlowProps {
    *  Ex: ['pix_generate', 'tef_debito', 'link_pagamento']
    *  Se undefined, exibe todos (comportamento legado). */
   metodosAtivos?: string[];
+  profile?: { nome: string; email?: string | null; identificador?: string | null; endereco?: string | null } | null; // ← adicionado
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -47,13 +48,21 @@ function formatTime(s: number) {
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos }: CheckoutFlowProps) {
+export default function CheckoutFlow({ companyId, theme, onClose, playText, metodosAtivos, profile }: CheckoutFlowProps) {
   const { itens, total, clear } = useCart();
   const isDark = theme === 'dark';
 
   const [step, setStep] = useState<Step>('cliente');
   const [clienteNome, setClienteNome] = useState('');
   const [clienteTel, setClienteTel] = useState('');
+
+  // Pré-preencher com dados do perfil logado
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.nome) setClienteNome(profile.nome);
+    // identificador pode ser telefone
+    if (profile.identificador) setClienteTel(profile.identificador);
+  }, [profile]);
   const [metodo, setMetodo] = useState<MetodoPagamento>('pix');
 
   const [pedidoId, setPedidoId] = useState<string | null>(null);

@@ -34,11 +34,11 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const generateQrUrl = (slug: string, isPublic: boolean, privateSlug: string) => {
+  const generateQrUrl = (slug: string, isPublic: boolean, privateSlug: string, companyId: string) => {
     const baseUrl = isPublic 
       ? `https://minhai.app/ia/${slug}` 
       : `https://minhai.app/ia/private/${privateSlug}`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(baseUrl)}`;
+    return `/api/qrcode?size=300&data=${encodeURIComponent(baseUrl)}&color=%23000080&company_id=${companyId}`;
   };
 
   return (
@@ -236,7 +236,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                 
                 <div className="bg-white p-4 rounded-xl inline-block mb-6 border border-gray-100 shadow-inner">
                   <img 
-                    src={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug)} 
+                    src={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug, showQrModal.id)}
                     alt="QR Code" 
                     className="w-48 h-48"
                   />
@@ -254,7 +254,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                     Fechar
                   </button>
                   <a
-                    href={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug)}
+                    href={generateQrUrl(showQrModal.slug, showQrModal.is_public, showQrModal.private_slug, showQrModal.id)}
                     download={`qrcode-${showQrModal.slug}.png`}
                     target="_blank"
                     rel="noopener noreferrer"

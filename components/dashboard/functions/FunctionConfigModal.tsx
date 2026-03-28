@@ -1953,7 +1953,7 @@ const NossoQRCodeForm = ({ settings, onChange }: any) => (
       <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
         <p className="text-xs text-orange-800 dark:text-orange-200 mb-2">Prévia do QR Code:</p>
         <img
-          src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(settings.qrcode_content)}&margin=5`}
+          src={`/api/qrcode?size=80&data=${encodeURIComponent(settings.qrcode_content)}&color=%23000080`}
           alt="Preview QR"
           className="w-20 h-20 rounded"
         />

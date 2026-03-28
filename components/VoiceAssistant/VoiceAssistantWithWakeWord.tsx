@@ -26,6 +26,7 @@ import { handleCriarLembrete, handleCronometro, handleTemporizador, handleRelogi
 import { useLembreteWatcher } from './hooks/useLembreteWatcher';
 import { handleWifiQRCode, handleCardapio, handleCadastro, handleNossoQRCode } from '@/components/VoiceAssistant/handlers/companyHandlers';
 import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
+import { useGroqContext } from '@/hooks/useGroqContext';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -142,6 +143,7 @@ export function VoiceAssistantWithWakeWord({
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
+  const groqContextRef = useGroqContext(companyId);
 
   // ── Push-to-talk: gravação direta via MediaRecorder ────────
   const voiceRecorder = useVoiceRecorder();
@@ -1121,6 +1123,7 @@ case 'modo_venda':
       pixStateRef,
       setActiveModal,
       activeFunctionContextRef,
+      groqContextRef, 
     });
 
     if (isCommand) {
@@ -1294,6 +1297,7 @@ case 'modo_venda':
         pixStateRef,
         setActiveModal,
         activeFunctionContextRef,
+        groqContextRef,
       });
 
       if (isCommand) return;

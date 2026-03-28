@@ -1453,22 +1453,24 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
           }`}>
             {getStatusMessage()}
           </p>
-          {error && <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
-        </div>
 
-{/* Avisos — fixo na parte inferior, não desloca o layout */}
-{(repromptWarning || noiseWarning) && (
-{!isMaximized && (
-  <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-    <div className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
-      theme === 'dark'
-        ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
-        : 'bg-blue-50 border border-blue-200 text-blue-700'
-    }`}>
-      {repromptWarning ? 'Não consegui entender — pode repetir a pergunta?' : 'Ambiente ruidoso — fale mais perto do microfone'}
-    </div>
-  </div>
-)}
+          {/* Aviso de ruído — aparece abaixo do status, sem deslocar o layout */}
+          <div className={`mt-2 transition-all duration-300 ${
+            (repromptWarning || noiseWarning) ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}>
+            <span className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
+              theme === 'dark'
+                ? 'bg-blue-500/20 border border-blue-500/40 text-blue-300'
+                : 'bg-blue-50 border border-blue-200 text-blue-700'
+            }`}>
+              {repromptWarning
+                ? 'Não consegui entender — pode repetir?'
+                : 'Ambiente ruidoso — fale mais perto do microfone'}
+            </span>
+          </div>
+
+          {error && <p className={`text-xs sm:text-sm mt-2 ${theme === 'dark' ? 'text-red-400/50' : 'text-red-600/50'}`}>{error}</p>}
+        </div>
 
         <ActionModals
           activeModal={activeModal}

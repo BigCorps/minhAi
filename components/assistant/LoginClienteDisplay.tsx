@@ -104,6 +104,8 @@ export default function LoginClienteDisplay({
 
   const [mode, setMode] = useState<'loading' | 'logado' | 'login' | 'cadastro'>('loading');
   const [configFields, setConfigFields] = useState<string[]>(['nome', 'email']);
+  // CHANGE 2: Added customLabels state
+  const [customLabels, setCustomLabels] = useState<Record<string, string>>({});
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -116,8 +118,9 @@ export default function LoginClienteDisplay({
 
     async function loadConfig() {
       try {
+        // CHANGE 4: Added custom_fields to select query
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/registration_configs?company_id=eq.${data.companyId}&select=fields`,
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/registration_configs?company_id=eq.${data.companyId}&select=fields,custom_fields`,
           {
             headers: {
               apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -128,14 +131,26 @@ export default function LoginClienteDisplay({
         const rows = await res.json();
         console.log('registration_configs rows:', rows);
 
-if (rows?.[0]?.fields) {
-  const rawFields = rows[0].fields;
-  console.log('rawFields tipo:', typeof rawFields, 'valor:', rawFields);
-  const parsed = typeof rawFields === 'string'
-    ? JSON.parse(rawFields)
-    : rawFields;
-  setConfigFields(Array.isArray(parsed) ? parsed : ['nome', 'email']);
-}
+        // CHANGES 1 & 3: Updated condition and added customLabels population
+        if (rows?.[0]) {
+          const rawFields = rows[0].fields;
+          console.log('rawFields tipo:', typeof rawFields, 'valor:', rawFields);
+          const parsed = typeof rawFields === 'string'
+            ? JSON.parse(rawFields)
+            : rawFields;
+          setConfigFields(Array.isArray(parsed) ? parsed : ['nome', 'email']);
+
+          // Carregar labels dos campos personalizados
+          const customFields: { key: string; label: string }[] = rows[0].custom_fields ?? [];
+          if (customFields.length > 0) {
+            setCustomLabels(
+              customFields.reduce((acc, cf) => {
+                acc[cf.key] = cf.label || cf.key;
+                return acc;
+              }, {} as Record<string, string>)
+            );
+          }
+        }
       } catch (err) {
         console.error('Erro ao carregar config de cadastro:', err);
       }
@@ -382,7 +397,8 @@ if (rows?.[0]?.fields) {
               {configFields.map((field) => (
                 <FieldInput
                   key={field}
-                  label={FIELD_LABELS[field] || field}
+                  // CHANGE 5: Added customLabels fallback for field labels
+                  label={FIELD_LABELS[field] || customLabels[field] || field}
                   type={FIELD_TYPES[field] || 'text'}
                   value={formValues[field] || ''}
                   onChange={(v) => setFormValues(p => ({ ...p, [field]: v }))}

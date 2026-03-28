@@ -684,6 +684,22 @@ useEffect(() => {
           playText('Sou min I A, uma IA pra chamar de sua! Sou um funcionário de Voz e texto com Inteligência Artificial. Escaneie o QR Code para saber mais. minhai.app').catch(() => {});
           break;
 
+case 'minha_conta':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'LoginClienteDisplay',
+    data: {
+      companyId,
+      slug: window.location.hostname.split('.')[0],
+    },
+  });
+  playText(
+    profile
+      ? `Olá ${profile.nome}! Sua conta está aberta.`
+      : 'Abrindo sua conta. Faça login ou crie uma nova conta.'
+  ).catch(() => {});
+  return; // pula o registerFunctionUsage — função gratuita
+
         case 'consultar_cambio':
           setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } });
           break;

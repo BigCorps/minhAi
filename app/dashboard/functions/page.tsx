@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useTheme } from 'next-themes';
-import { Search, Settings } from 'lucide-react';
+import { Search, Settings, User } from 'lucide-react';
 import FunctionCard from '@/components/dashboard/functions/FunctionCard';
 import FunctionConfigModal from '@/components/dashboard/functions/FunctionConfigModal';
 
@@ -203,28 +203,49 @@ function ProfileTypeSelector({ selectedTipo, tiposDisponiveis, onSelect }: {
   const selectedColor = selectedTipo ? (TIPOS_COR[selectedTipo] ?? '#6b7280') : null;
 
   return (
-    <div className="relative flex items-center gap-2">
-      <Settings className="w-4 h-4 text-gray-400 flex-shrink-0" />
-      <select
-        value={selectedTipo ?? ''}
-        onChange={e => onSelect(e.target.value === '' ? null : e.target.value)}
-        className="appearance-none pl-3 pr-8 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500
-          bg-white dark:bg-slate-800 border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200"
-        style={selectedTipo ? { borderColor: selectedColor!, color: selectedColor! } : {}}
-      >
-        <option value="">Principal</option>
-        {tiposDisponiveis.map(tipo => (
-          <option key={tipo} value={tipo}>
-            {TIPOS_LABEL[tipo] ?? tipo}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-        <svg className="w-3 h-3 text-gray-400" viewBox="0 0 12 12" fill="none">
-          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </span>
-    </div>
+    <>
+      {/* Desktop: icone + select visivel */}
+      <div className="hidden sm:flex items-center gap-1.5 relative">
+        <User
+          className="w-4 h-4 flex-shrink-0"
+          style={selectedColor ? { color: selectedColor } : { color: '#9ca3af' }}
+        />
+        <select
+          value={selectedTipo ?? ''}
+          onChange={e => onSelect(e.target.value === '' ? null : e.target.value)}
+          className="appearance-none pl-2 pr-6 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200"
+          style={selectedTipo ? { borderColor: selectedColor!, color: selectedColor! } : {}}
+        >
+          <option value="">Principal</option>
+          {tiposDisponiveis.map(tipo => (
+            <option key={tipo} value={tipo}>{TIPOS_LABEL[tipo] ?? tipo}</option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2">
+          <svg className="w-3 h-3 text-gray-400" viewBox="0 0 12 12" fill="none">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      </div>
+
+      {/* Mobile: so o icone, select invisivel por baixo */}
+      <div className="sm:hidden relative flex items-center">
+        <User
+          className="w-5 h-5"
+          style={selectedColor ? { color: selectedColor } : { color: '#9ca3af' }}
+        />
+        <select
+          value={selectedTipo ?? ''}
+          onChange={e => onSelect(e.target.value === '' ? null : e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+        >
+          <option value="">Principal</option>
+          {tiposDisponiveis.map(tipo => (
+            <option key={tipo} value={tipo}>{TIPOS_LABEL[tipo] ?? tipo}</option>
+          ))}
+        </select>
+      </div>
+    </>
   );
 }
 

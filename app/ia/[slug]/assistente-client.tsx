@@ -330,6 +330,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     setKioskPassword(passwordInput);
     setPasswordInput('');
     setShowPasswordOverlay(false);
+    window.dispatchEvent(new CustomEvent('eai:modalClose'));
     
     try {
       await document.documentElement.requestFullscreen();
@@ -363,6 +364,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     if (isKioskMode) {
       setModalType('verify');
       setShowPasswordOverlay(true);
+      window.dispatchEvent(new CustomEvent('eai:modalOpen'));
     } else {
       exitKioskMode();
     }

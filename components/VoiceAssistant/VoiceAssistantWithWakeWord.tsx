@@ -688,17 +688,14 @@ case 'minha_conta':
   await stopGoogleSpeech();
   setActiveModal({
     type: 'LoginClienteDisplay',
-    data: {
-      companyId,
-      slug: window.location.hostname.split('.')[0],
-    },
+    data: { companyId, slug: slug ?? '' },
   });
   playText(
     profile
       ? `Olá ${profile.nome}! Sua conta está aberta.`
       : 'Abrindo sua conta. Faça login ou crie uma nova conta.'
   ).catch(() => {});
-  return; // pula o registerFunctionUsage — função gratuita
+  return;
 
         case 'consultar_cambio':
           setActiveModal?.({ type: 'CotacaoMoedasDisplay', data: { companyId } });

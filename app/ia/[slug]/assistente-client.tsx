@@ -335,7 +335,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       await document.documentElement.requestFullscreen();
       setIsKioskMode(true);
       window.dispatchEvent(new CustomEvent('eai:kioskModeChange', { detail: { active: true } }));
-      setIsMaximized(true);
       setZoomLevel(100);
       setAssistantStarted(false);
       showToastMessage('Modo Kiosk ativado!', 'success');

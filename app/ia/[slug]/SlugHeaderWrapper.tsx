@@ -1,19 +1,16 @@
 'use client';
+
 // ============================================================
 // app/ia/[slug]/SlugHeaderWrapper.tsx
 //
-// Client Component responsável por gerenciar os estados do
-// header (tema, kiosk, wake lock, orientação) e passar os
-// handlers corretos para o SlugHeader.
+// Gerencia estados (tema, kiosk, wake lock, orientação) e
+// passa handlers para o SlugHeader.
 //
-// Separado do layout.tsx (Server Component) para não forçar
-// todo o layout a virar client.
-//
-// O modal de kiosk completo (com senha) continua no
-// assistente-client.tsx — aqui apenas disparamos o evento
-// global que o assistente-client.tsx já escuta, mantendo
-// compatibilidade total com o código existente.
+// overlayMode={true} → usado no modo maximizado do
+// assistente-client.tsx. Fundo transparente, botão X visível,
+// comportamento idêntico ao header normal mas sem background.
 // ============================================================
+
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useWakeLock } from '@/hooks/useWakeLock';
@@ -27,14 +24,31 @@ interface SlugHeaderWrapperProps {
     assistant_role?: string | null;
     webapp_theme_color?: string | null;
   };
+  // overlayMode: quando true, renderiza o header transparente
+  // para uso no modo maximizado (assistente-client.tsx)
+  overlayMode?: boolean;
+  // forceTheme: força um tema específico (útil no overlayMode
+  // onde o tema já é gerenciado pelo assistente-client.tsx)
+  forceTheme?: 'dark' | 'light';
+  // onClose: callback para o botão X no overlayMode
+  onClose?: () => void;
 }
 
-export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
+export default function SlugHeaderWrapper({
+  company,
+  overlayMode = false,
+  forceTheme,
+  onClose,
+}: SlugHeaderWrapperProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isPortrait, setIsPortrait] = useState(false);
   const [isKioskMode, setIsKioskMode] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'warning' | 'error';
+  } | null>(null);
+
   const { isSupported, isActive, requestWakeLock, releaseWakeLock } = useWakeLock();
 
   const showToast = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
@@ -42,7 +56,6 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Sincroniza montagem para evitar hydration mismatch
   useEffect(() => {
     setMounted(true);
 
@@ -52,7 +65,7 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
     checkOrientation();
     window.addEventListener('resize', checkOrientation);
 
-    // Escuta evento do assistente-client.tsx para sincronizar estado do kiosk
+    // Sincroniza estado do kiosk com assistente-client.tsx
     const handleKioskChange = (e: CustomEvent) => {
       setIsKioskMode(e.detail?.active ?? false);
     };
@@ -64,9 +77,11 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
     };
   }, []);
 
-  const theme = mounted ? (resolvedTheme as 'dark' | 'light' ?? 'dark') : 'dark';
+  // No overlayMode, o tema é controlado externamente pelo assistente-client.tsx
+  const theme = forceTheme ?? (mounted ? (resolvedTheme as 'dark' | 'light' ?? 'dark') : 'dark');
 
   const handleToggleTheme = () => {
+    if (forceTheme) return; // no overlayMode o tema é externo
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
@@ -84,9 +99,7 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
     }
   };
 
-  // Dispara evento global — o assistente-client.tsx já tem o handler
-  // completo do modal de kiosk (senha, fullscreen, bloqueios).
-  // Aqui apenas delegamos para manter DRY.
+  // Delega para assistente-client.tsx via evento global
   const handleEnterKioskMode = () => {
     window.dispatchEvent(new CustomEvent('eai:requestKioskMode'));
   };
@@ -98,10 +111,13 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
   };
 
   if (!mounted) {
-    // Render mínimo no SSR para evitar layout shift
     return (
-      <header className="w-full border-b bg-gradient-to-r from-slate-950/80 via-slate-900/70 to-slate-950/80 border-white/5 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 h-[72px]" />
+      <header className={`w-full border-b ${
+        overlayMode
+          ? 'bg-transparent border-transparent'
+          : 'bg-gradient-to-r from-slate-950/80 via-slate-900/70 to-slate-950/80 border-white/5 backdrop-blur-xl'
+      }`}>
+        <div className={`${overlayMode ? 'px-6 py-4' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'} h-[72px]`} />
       </header>
     );
   }
@@ -111,6 +127,7 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
       <SlugHeader
         company={company}
         theme={theme}
+        overlayMode={overlayMode}
         isKioskMode={isKioskMode}
         isWakeLockActive={isActive}
         isWakeLockSupported={isSupported}
@@ -118,10 +135,11 @@ export default function SlugHeaderWrapper({ company }: SlugHeaderWrapperProps) {
         onEnterKioskMode={handleEnterKioskMode}
         onToggleWakeLock={handleToggleWakeLock}
         onToggleModoVenda={handleToggleModoVenda}
-        onToggleTheme={handleToggleTheme}
+        onToggleTheme={forceTheme ? undefined : handleToggleTheme}
+        onClose={overlayMode ? onClose : undefined}
       />
 
-      {/* Toast de feedback */}
+      {/* Toast de feedback (wake lock, etc.) */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
           <div className={`px-6 py-3 rounded-lg shadow-lg backdrop-blur-xl border flex items-center space-x-3 ${

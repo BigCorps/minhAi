@@ -85,7 +85,7 @@ export function useCompanionDownload({
       // 2. Gerar QR Code
       
       setDownloadUrl(url);
-setQrCodeUrl(`/api/qrcode?size=180&data=${encodeURIComponent(url)}&color=%231e293b`);
+setQrCodeUrl(`/api/qrcode?data=${encodeURIComponent(url)}&company_id=${companyId}&size=280&color=%23000080&bg=%23ffffff`);
 setStatus('ready');
       setTimeLeft(EXPIRY_SECONDS);
 

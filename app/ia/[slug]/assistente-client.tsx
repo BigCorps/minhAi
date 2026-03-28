@@ -934,7 +934,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           </div>
 
 {/* Orbe + Status (com Zoom aplicado) */}
-<div className="absolute inset-0 flex flex-col items-center justify-center pb-24">
+<div className="absolute inset-0 flex flex-col items-center justify-center pt-16 pb-24">
   <div
     className="relative"
     style={{ 

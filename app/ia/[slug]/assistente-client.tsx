@@ -8,6 +8,7 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
 import DigitalClock from '@/components/ui/DigitalClock';
+import SlugHeaderWrapper from './SlugHeaderWrapper';
 
 interface AssistenteClientProps {
   company: {
@@ -765,173 +766,69 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             }
           }}
         >
-          {/* Header Minimalista */}
-          <div className="absolute top-0 left-0 right-0 px-6 py-4 z-20 pointer-events-none">
-            <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
-              
-              {/* Logo Empresa + Zoom Control (Esquerda) */}
-              <div className="flex items-center space-x-3">
-                {company.logo_url && (
-                  <img
-                    src={company.logo_url}
-                    alt={`${company.name} logo`}
-                    className="rounded-lg object-contain"
-                    style={{ maxHeight: '36px', height: 'auto', width: 'auto' }}
-                  />
-                )}
-                
-                {/* Controle de Zoom */}
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setShowZoomControl(!showZoomControl)}
-                    className={`p-2 rounded-lg transition-all duration-300 ${
-                      showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                    } ${
-                      theme === 'dark'
-                        ? 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
-                        : 'bg-black/5 hover:bg-black/10 text-gray-600 hover:text-gray-900'
-                    }`}
-                    title="Zoom"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                    </svg>
-                  </button>
-                  
-                  {/* Slider + Valor */}
-                  <div className={`flex items-center space-x-2 transition-all duration-300 ${
-                    showZoomControl && showControls ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
-                  }`}>
-                    <input
-                      type="range"
-                      min="50"
-                      max="500"
-                      step="10"
-                      value={zoomLevel}
-                      onChange={(e) => handleZoomChange(Number(e.target.value))}
-                      className="w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 hover:[&::-webkit-slider-thumb]:bg-blue-600"
-                    />
-                    <span className={`text-xs font-mono min-w-[3rem] text-right ${
-                      theme === 'dark' ? 'text-white/70' : 'text-gray-600'
-                    }`}>
-                      {zoomLevel}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* 🆕 Relógio Digital Centralizado - VERSÃO MAXIMIZADA (SEMPRE VISÍVEL) */}
-              {!isPortrait && (
-                <DigitalClock 
-                  className="absolute left-1/2 -translate-x-1/2" 
-                  theme={theme}
-                />
-              )}
-              
-              {/* Controles direita: ícones ocultos + X + Logo */}
-              <div className="relative flex items-center space-x-2">
+{/* Header Minimalista */}
+<div className="absolute top-0 left-0 right-0 z-20 pointer-events-none">
+  <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4 pointer-events-auto">
 
-                {/* Grupo de ícones ocultos — aparecem junto com o X */}
-                <div className={`flex items-center space-x-1 transition-all duration-300 ${
-                  showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                }`}>
+    {/* ESQUERDA: Logo + Zoom */}
+    <div className="flex items-center space-x-3">
+      {company.logo_url && (
+        <img
+          src={company.logo_url}
+          alt={`${company.name} logo`}
+          className="rounded-lg object-contain"
+          style={{ maxHeight: '36px', height: 'auto', width: 'auto' }}
+        />
+      )}
 
-                  {/* Carrinho / Modo Venda */}
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
-                      detail: { functionKey: 'modo_venda' }
-                    }))}
-                    className={`p-2 rounded-full transition-all ${
-                      theme === 'dark'
-                        ? 'bg-white/10 hover:bg-emerald-500/30 text-white'
-                        : 'bg-black/10 hover:bg-emerald-100 text-black'
-                    }`}
-                    title="Modo Venda"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </button>
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={() => setShowZoomControl(!showZoomControl)}
+          className={`p-2 rounded-lg transition-all duration-300 ${
+            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          } ${
+            theme === 'dark'
+              ? 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+              : 'bg-black/5 hover:bg-black/10 text-gray-600 hover:text-gray-900'
+          }`}
+          title="Zoom"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+          </svg>
+        </button>
 
-                  {/* Cadeado / Kiosk — só aparece se não estiver em kiosk */}
-                  {!isKioskMode && (
-                    <button
-                      onClick={handleEnterKioskMode}
-                      className={`p-2 rounded-full transition-all ${
-                        theme === 'dark'
-                          ? 'bg-white/10 hover:bg-white/20 text-white'
-                          : 'bg-black/10 hover:bg-black/20 text-black'
-                      }`}
-                      title="Ativar Modo Kiosk"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-</svg>
-                    </button>
-                  )}
+        <div className={`flex items-center space-x-2 transition-all duration-300 ${
+          showZoomControl && showControls ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+        }`}>
+          <input
+            type="range"
+            min="50"
+            max="500"
+            step="10"
+            value={zoomLevel}
+            onChange={(e) => handleZoomChange(Number(e.target.value))}
+            className="w-24 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 hover:[&::-webkit-slider-thumb]:bg-blue-600"
+          />
+          <span className={`text-xs font-mono min-w-[3rem] text-right ${
+            theme === 'dark' ? 'text-white/70' : 'text-gray-600'
+          }`}>
+            {zoomLevel}%
+          </span>
+        </div>
+      </div>
+    </div>
 
-                  {/* Tema claro/escuro */}
-                  <button
-                    onClick={toggleTheme}
-                    className={`p-2 rounded-full transition-all ${
-                      theme === 'dark'
-                        ? 'bg-white/10 hover:bg-white/20 text-white'
-                        : 'bg-black/10 hover:bg-black/20 text-black'
-                    }`}
-                    title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-                  >
-                    {theme === 'dark' ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
+    {/* DIREITA: SlugHeaderWrapper em overlayMode */}
+    <SlugHeaderWrapper
+      company={company}
+      overlayMode={true}
+      forceTheme={theme}
+      onClose={handleTryExitKiosk}
+    />
 
-                {/* X de fechar */}
-                <button
-                  onClick={handleTryExitKiosk}
-                  className={`p-2 rounded-full transition-all duration-300 ${
-                    showCloseButton ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                  } ${
-                    theme === 'dark'
-                      ? 'bg-white/10 hover:bg-white/20 text-white'
-                      : 'bg-black/10 hover:bg-black/20 text-black'
-                  }`}
-                  title="Fechar"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-
-                {/* Logo minhAi */}
-                <Link
-                  href="https://minhai.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:opacity-80 transition-opacity"
-                  title="Visite minhaAi.app"
-                >
-                  <Image
-                    src="logo-circle.png"
-                    alt="minhAi logo"
-                    width={36}
-                    height={36}
-                    className="rounded-lg"
-                  />
-                </Link>
-              </div>
-            </div>
-          </div>
+  </div>
+</div>
 
 {/* Orbe + Status (com Zoom aplicado) */}
 <div className="absolute inset-0 flex flex-col items-center justify-center pt-16 pb-24">

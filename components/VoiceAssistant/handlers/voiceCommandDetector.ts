@@ -34,12 +34,12 @@ import { handleWifiQRCode, handleCardapio, handleCanalYoutube, handleCadastro, h
 // Para novas funções, apenas passe setActiveModal com o type correto.
 interface DetectorDeps {
   companyId: string;
-  functionSettings: Record<string, FunctionSettings>;
   setIsProcessing: (v: boolean) => void;
   setQrCodeData: (data: QRCodeData | null) => void;
   setPixConfirmationData: (data: PixConfirmationData | null) => void;
   playText: (text: string) => Promise<void>;
   sessionId: string | null;
+  groqContextRef: React.MutableRefObject<string>;
   commandProcessor: VoiceCommandProcessor | null;
   pixStateRef: React.MutableRefObject<{ qrCodeData: any; pixConfirmationData: any } | null>;
   setActiveModal: (modal: ActiveModal | null) => void;

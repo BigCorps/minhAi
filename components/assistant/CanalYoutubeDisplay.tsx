@@ -11,6 +11,7 @@ interface CanalYoutubeDisplayProps {
     channelUrl: string;
     channelName?: string;
     channelDescription?: string;
+    companyId?: string;
     autoCloseDuration?: number;
   };
   onClose: () => void;
@@ -33,7 +34,7 @@ export default function CanalYoutubeDisplay({
   const [copied, setCopied] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-  const { channelUrl, channelName, channelDescription } = data;
+  const { channelUrl, channelName, channelDescription, companyId } = data;
 
   // Garante URL completa para APIs externas
   const normalizeUrl = (url: string) => {
@@ -62,7 +63,7 @@ export default function CanalYoutubeDisplay({
   useEffect(() => {
     if (fullChannelUrl) {
       setQrCodeUrl(
-        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fullChannelUrl)}&margin=10`
+        `/api/qrcode?size=300&data=${encodeURIComponent(fullChannelUrl)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`
       );
     }
   }, [fullChannelUrl]);

@@ -5,56 +5,55 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const { transcript, functionTriggers } = await req.json();
-    if (!transcript) return NextResponse.json({ trigger: null });
-
-    const triggerLines = (functionTriggers as { key: string; triggers: string[]; examples: string[] }[])
-      .map(f => {
-        const all = [...f.triggers.slice(0, 2), ...f.examples.slice(0, 1)];
-        return `${f.key}: ${all.join(' | ')}`;
-      })
-      .join('\n');
+    const { transcript, functionsContext } = await req.json();
+    if (!transcript || !functionsContext) {
+      return NextResponse.json({ response: null });
+    }
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
-      max_tokens: 40,
-      temperature: 0,
+      max_tokens: 120,
+      temperature: 0.4,
       messages: [
         {
           role: 'system',
-          content: `Você é um classificador de intenções para assistente virtual em português brasileiro.
+          content: `Você é o assistente de voz minhAi, ajudando clientes a usar as funções disponíveis.
 
-O cliente falou algo informal. Identifique qual função ele quer e retorne UM trigger exato dessa função.
+Funções disponíveis neste assistente:
+${functionsContext}
 
-Funções disponíveis (function_key: trigger1 | trigger2 | exemplo):
-${triggerLines}
-
-Responda APENAS com JSON: {"trigger": "trigger exato aqui"} ou {"trigger": null} se for conversa geral.
+Regras:
+- Responda em português brasileiro, de forma curta e natural (poucas frases)
+- Quando o cliente quiser algo que você tem, diga exatamente o que ele deve falar para ativar
+- Quando houver múltiplas opções relacionadas, liste as opções e o que dizer para cada uma
+- Quando a pergunta for conversa geral sem relação com as funções, retorne null
+- NUNCA execute funções — apenas oriente o cliente sobre o que dizer
+- Seja direto: "Para imprimir, diga: imprimir documento" 
 
 Exemplos:
-"tô precisando imprimir um negócio" → {"trigger": "imprimir documento"}
-"será que dá pra tocar uma musiquinha?" → {"trigger": "tocar musica"}
-"quanto tá o dólar?" → {"trigger": "cotação dólar"}
-"quero uma pizza" → {"trigger": "ver produtos"}
-"vocês ficam onde?" → {"trigger": "endereço"}
-"tem como ver a senha do wifi?" → {"trigger": "wifi"}
-"quero comprar alguma coisa" → {"trigger": "modo venda"}
-"e aí o que mais você faz?" → {"trigger": null}
-"obrigado" → {"trigger": null}`,
+"tô precisando imprimir" → "Tenho 3 opções de impressão! Diga 'impressão local' para usar sua impressora, 'impressão remota' para enviar automaticamente, ou 'imprimir recibo' para impressora térmica."
+"quero uma pizza" → "Para ver os produtos disponíveis, diga: 'ver produtos' ou 'quero comprar'."
+"como funciona o pix?" → "Para gerar um PIX, diga: 'gerar PIX de [valor]'. Por exemplo: 'gerar PIX de 50 reais'."
+"tudo bem?" → null
+"me conta sobre você" → null`,
         },
-        { role: 'user', content: `Frase: "${transcript}"` },
+        {
+          role: 'user',
+          content: transcript,
+        },
       ],
     });
 
-    const text = completion.choices[0]?.message?.content?.trim() ?? '';
-    const match = text.match(/\{.*\}/s);
-    if (!match) return NextResponse.json({ trigger: null });
+    const text = completion.choices[0]?.message?.content?.trim();
 
-    const json = JSON.parse(match[0]);
-    return NextResponse.json({ trigger: json.trigger ?? null });
+    if (!text || text === 'null' || text.toLowerCase() === 'null') {
+      return NextResponse.json({ response: null });
+    }
+
+    return NextResponse.json({ response: text });
 
   } catch (err) {
-    console.error('❌ GROQ classify error:', err);
-    return NextResponse.json({ trigger: null });
+    console.error('❌ GROQ error:', err);
+    return NextResponse.json({ response: null });
   }
 }

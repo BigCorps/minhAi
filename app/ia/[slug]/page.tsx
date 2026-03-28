@@ -182,6 +182,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
       company={{
         id: company.id,
         name: company.name,
+        slug: company.slug, // ← adicionado
         wake_word: company.wake_word || 'olá assistente',
         greeting_message: company.greeting_message || 'Olá! Como posso ajudar você hoje?',
         logo_url: company.logo_url || undefined,

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import QRCode from 'qrcode';
 
 interface UseCompanionUploadOptions {
   companyId: string;
@@ -179,9 +178,9 @@ export function useCompanionUpload({
       });
 
       setToken(newToken);
-      setUploadUrl(url);
-      setQrCodeUrl(qr);
-      setStatus('waiting');
+setUploadUrl(url);
+setQrCodeUrl(`/api/qrcode?size=280&data=${encodeURIComponent(url)}&color=%231e293b`);
+setStatus('waiting');
       setTimeLeft(EXPIRY_SECONDS);
 
       countdownRef.current = setInterval(() => {

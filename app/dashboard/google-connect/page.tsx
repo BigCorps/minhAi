@@ -351,7 +351,7 @@ function GoogleConnectPageContent() {
                       <div className="grid md:grid-cols-2 gap-3 text-left max-w-lg mx-auto">
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
-                          <span>Enviar e ler emails (Gmail)</span>
+                          <span>Enviar e receber emails (Gmail)</span>
                         </div>
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" />
@@ -450,7 +450,7 @@ function GoogleConnectPageContent() {
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/gmail.readonly') && (
                         <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                           <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">Ler emails</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Receber emails</span>
                         </div>
                       )}
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/calendar') && (

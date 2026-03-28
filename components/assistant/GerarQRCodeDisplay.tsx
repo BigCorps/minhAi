@@ -124,9 +124,16 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
   const dictatingRef  = useRef(false);
   const transcriptRef = useRef('');
 
-  // ── Falar ao abrir ──────────────────────────────────────────────────────────
+  // ── Sinalizar abertura/fechamento do modal para o assistente-client ──────────
   useEffect(() => {
-    return () => { window.speechSynthesis.cancel(); };
+    // Avisa que um modal está aberto — bloqueia o modo full do avatar
+    window.dispatchEvent(new CustomEvent('eai:modalOpen'));
+
+    return () => {
+      // Avisa que o modal fechou — libera o modo full do avatar
+      window.dispatchEvent(new CustomEvent('eai:modalClose'));
+      window.speechSynthesis.cancel();
+    };
   }, []);
 
   // ── Gerar QR ────────────────────────────────────────────────────────────────
@@ -140,7 +147,7 @@ export default function GerarQRCodeDisplay({ data, onClose, theme = 'dark', play
     setStage('generating');
     setErrorMsg(null);
 
-try {
+    try {
       const qrUrl = `/api/qrcode?size=300&data=${encodeURIComponent(trimmed)}&color=%23000080&company_id=${data.companyId}`;
       setQrDataUrl(qrUrl);
       setStage('result');
@@ -154,22 +161,22 @@ try {
 
   // ── Download PNG ────────────────────────────────────────────────────────────
 
-const handleDownload = useCallback(async () => {
-  if (!qrDataUrl) return;
-  try {
-    const res = await fetch(qrDataUrl);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `qrcode_${Date.now()}.png`;
-    link.click();
-    URL.revokeObjectURL(url);
-    playText('QR Code baixado.').catch(() => {});
-  } catch {
-    playText('Erro ao baixar o QR Code.').catch(() => {});
-  }
-}, [qrDataUrl, playText]);
+  const handleDownload = useCallback(async () => {
+    if (!qrDataUrl) return;
+    try {
+      const res = await fetch(qrDataUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `qrcode_${Date.now()}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+      playText('QR Code baixado.').catch(() => {});
+    } catch {
+      playText('Erro ao baixar o QR Code.').catch(() => {});
+    }
+  }, [qrDataUrl, playText]);
 
   // ── Enviar email ────────────────────────────────────────────────────────────
 
@@ -184,7 +191,7 @@ const handleDownload = useCallback(async () => {
       const email = user?.email;
       if (!email) throw new Error('Usuário sem email cadastrado.');
 
-// Buscar imagem da API e converter para base64
+      // Buscar imagem da API e converter para base64
       const res = await fetch(qrDataUrl);
       const blob = await res.blob();
       const base64 = await new Promise<string>((resolve) => {

@@ -102,36 +102,34 @@ export default function SlugHeader({
           overlayMode ? '' : 'py-4'
         }`}>
 
-          {/* ESQUERDA: logo + (nome/role só no modo normal) */}
-          <div className="flex items-center space-x-3">
-            {company.logo_url && (
-              <img
-                src={company.logo_url}
-                alt={`${company.name} logo`}
-                className="rounded-lg object-contain flex-shrink-0"
-                style={{
-                  maxHeight: overlayMode ? '36px' : '40px',
-                  height: 'auto',
-                  width: 'auto',
-                  maxWidth: overlayMode ? '100px' : '120px',
-                }}
-              />
-            )}
-            {!overlayMode && (
-              <div className="flex flex-col">
-                <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {company.name}
-                </h1>
-                <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
-                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-                }`}>
-                  {company.assistant_role || 'Uma IA pra chamar de sua!'}
-                </p>
-              </div>
-            )}
-          </div>
+{/* ESQUERDA: logo + nome/role — só no modo normal */}
+{!overlayMode && (
+  <div className="flex items-center space-x-3">
+    {company.logo_url && (
+      <img
+        src={company.logo_url}
+        alt={`${company.name} logo`}
+        className="rounded-lg object-contain flex-shrink-0"
+        style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }}
+      />
+    )}
+    <div className="flex flex-col">
+      <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
+        theme === 'dark' ? 'text-white' : 'text-gray-900'
+      }`}>
+        {company.name}
+      </h1>
+      <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
+        theme === 'dark' ? 'text-white/40' : 'text-gray-500'
+      }`}>
+        {company.assistant_role || 'Uma IA pra chamar de sua!'}
+      </p>
+    </div>
+  </div>
+)}
+
+{/* No overlayMode o espaço esquerdo fica vazio — o logo já está no bloco de zoom */}
+{overlayMode && <div />}
 
           {/* CENTRO: relógio digital (só landscape) */}
           {!isPortrait && (

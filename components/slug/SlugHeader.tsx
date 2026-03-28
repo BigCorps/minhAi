@@ -59,7 +59,7 @@ export default function SlugHeader({
       data-role="slug-header"
       className={`w-full border-b transition-colors ${
         theme === 'dark'
-          ? 'bg-slate-900/50 border-white/5 backdrop-blur-xl'
+          ? 'bg-gradient-to-r from-slate-950/80 via-slate-900/70 to-slate-950/80 border-white/5 backdrop-blur-xl'
           : 'bg-white/80 border-gray-200 backdrop-blur-xl'
       }`}
     >

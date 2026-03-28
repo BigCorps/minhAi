@@ -29,7 +29,7 @@ import {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type Aba = 'cadastros' | 'clientes' | 'colaboradores' | 'totens' | 'permissoes';
+type Aba = 'cadastros' | 'clientes' | 'colaboradores' | 'totens';
 
 interface Registration {
   id: string;
@@ -55,18 +55,6 @@ interface CompanyProfile {
   is_active: boolean;
   ultimo_acesso: string | null;
   created_at: string;
-}
-
-interface AssistantFunction {
-  function_key: string;
-  function_name: string;
-  function_category: string;
-}
-
-interface ProfilePermission {
-  tipo: string;
-  function_key: string;
-  is_enabled: boolean;
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -781,6 +769,19 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
         </div>
       )}
 
+      {/* Banner — permissões por tipo */}
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+        <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            Quer definir quais funções cada tipo pode acessar?
+          </p>
+          <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+            Acesse <a href="/dashboard/functions" className="underline font-semibold">Funções do Assistente</a> e use o seletor de perfil no topo da página para configurar as permissões de cada tipo.
+          </p>
+        </div>
+      </div>
+
       {modalAberto && (
         <ProfileModal
           companyId={companyId}
@@ -887,6 +888,19 @@ function AbaTotens({ companyId }: { companyId: string }) {
         </div>
       )}
 
+      {/* Banner — permissões por tipo */}
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+        <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            Quer definir quais funções cada tipo pode acessar?
+          </p>
+          <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+            Acesse <a href="/dashboard/functions" className="underline font-semibold">Funções do Assistente</a> e use o seletor de perfil no topo da página para configurar as permissões de cada tipo.
+          </p>
+        </div>
+      </div>
+
       {modalAberto && (
         <ProfileModal
           companyId={companyId}
@@ -896,159 +910,6 @@ function AbaTotens({ companyId }: { companyId: string }) {
           onSalvo={load}
         />
       )}
-    </div>
-  );
-}
-
-// ── ABA: Permissões ───────────────────────────────────────────────────────────
-
-function AbaPermissoes({ companyId }: { companyId: string }) {
-  const supabase = createClient();
-  const [functions, setFunctions] = useState<AssistantFunction[]>([]);
-  const [permissions, setPermissions] = useState<ProfilePermission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  const tipos = ['cliente', 'totem', 'frentista', 'atendente', 'caixa', 'gerente', 'colaborador'];
-
-  useEffect(() => { load(); }, [companyId]);
-
-  async function load() {
-    setLoading(true);
-    try {
-      // Carregar funções ativas
-      const { data: fns } = await supabase
-        .from('assistant_functions')
-        .select('function_key, function_name, function_category')
-        .eq('is_active', true)
-        .order('display_order');
-
-      // Inicializar permissões se não existirem
-      const { data: perms } = await supabase
-        .from('profile_type_permissions')
-        .select('tipo, function_key, is_enabled')
-        .eq('company_id', companyId);
-
-      // Se não tem permissões, inicializar com os defaults
-      if (!perms || perms.length === 0) {
-        await supabase.rpc('initialize_company_profile_permissions', { p_company_id: companyId });
-        const { data: permsInit } = await supabase
-          .from('profile_type_permissions')
-          .select('tipo, function_key, is_enabled')
-          .eq('company_id', companyId);
-        setPermissions(permsInit ?? []);
-      } else {
-        setPermissions(perms);
-      }
-
-      setFunctions(fns ?? []);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function isEnabled(tipo: string, functionKey: string): boolean {
-    return permissions.find(p => p.tipo === tipo && p.function_key === functionKey)?.is_enabled ?? false;
-  }
-
-  async function togglePermission(tipo: string, functionKey: string) {
-    const current = isEnabled(tipo, functionKey);
-    const newValue = !current;
-
-    // Atualizar estado local imediatamente
-    setPermissions(prev => {
-      const exists = prev.find(p => p.tipo === tipo && p.function_key === functionKey);
-      if (exists) {
-        return prev.map(p => p.tipo === tipo && p.function_key === functionKey ? { ...p, is_enabled: newValue } : p);
-      }
-      return [...prev, { tipo, function_key: functionKey, is_enabled: newValue }];
-    });
-
-    // Salvar no banco
-    await supabase
-      .from('profile_type_permissions')
-      .upsert({ company_id: companyId, tipo, function_key: functionKey, is_enabled: newValue },
-        { onConflict: 'company_id,tipo,function_key' });
-  }
-
-  // Agrupar funções por categoria
-  const categorias = [...new Set(functions.map(f => f.function_category))];
-
-  const categoriaLabel: Record<string, string> = {
-    payment: 'Pagamentos', products: 'Produtos e Vendas', schedule: 'Agendamentos',
-    information: 'Informações', contact: 'Contato', biometry: 'Cadastro',
-    ai_assistant: 'IA Assistente', knowledge: 'Consultas', images: 'Imagens e Câmera',
-    codes: 'Códigos', services: 'Serviços', video: 'Vídeo', utylities: 'Utilitários',
-    productivity: 'Produtividade',
-  };
-
-  if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Legenda */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
-        <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-700 dark:text-blue-300">
-          Defina quais funções cada tipo de perfil pode acessar no assistente. Clique nos toggles para habilitar ou desabilitar.
-          As configurações são salvas automaticamente.
-        </p>
-      </div>
-
-      {/* Grade por categoria */}
-      {categorias.map(cat => {
-        const fns = functions.filter(f => f.function_category === cat);
-        return (
-          <div key={cat} className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800/60">
-              <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-                {categoriaLabel[cat] ?? cat}
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-gray-100 dark:border-white/5">
-                    <th className="text-left px-4 py-2 font-medium text-gray-500 dark:text-gray-400 min-w-[160px]">Função</th>
-                    {tipos.map(t => (
-                      <th key={t} className="text-center px-3 py-2 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[80px]">
-                        <TipoBadge tipo={t} />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {fns.map(fn => (
-                    <tr key={fn.function_key} className="border-b border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/3 transition">
-                      <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300 font-medium">{fn.function_name}</td>
-                      {tipos.map(t => {
-                        const enabled = isEnabled(t, fn.function_key);
-                        return (
-                          <td key={t} className="px-3 py-2.5 text-center">
-                            <button
-                              onClick={() => togglePermission(t, fn.function_key)}
-                              className={`w-8 h-4 rounded-full transition-colors relative inline-flex items-center ${
-                                enabled ? 'bg-blue-500' : 'bg-gray-200 dark:bg-slate-600'
-                              }`}
-                            >
-                              <span className={`inline-block w-3 h-3 rounded-full bg-white shadow transition-transform ${
-                                enabled ? 'translate-x-4' : 'translate-x-0.5'
-                              }`} />
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -1064,7 +925,6 @@ function CadastrosPageContent() {
     { key: 'clientes',     label: 'Clientes',     icon: Users },
     { key: 'colaboradores',label: 'Colaboradores',icon: Briefcase },
     { key: 'totens',       label: 'Totens',       icon: Monitor },
-    { key: 'permissoes',   label: 'Permissões',   icon: Shield },
   ];
 
   return (
@@ -1095,7 +955,7 @@ function CadastrosPageContent() {
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-100 dark:border-white/5 overflow-hidden">
 
               {/* Tabs — mesmo padrão do dashboard de Vendas */}
-              <div className="grid grid-cols-3 sm:flex border-b border-gray-200 dark:border-white/10">
+              <div className="grid grid-cols-4 sm:flex border-b border-gray-200 dark:border-white/10">
                 {abas.map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
@@ -1119,7 +979,6 @@ function CadastrosPageContent() {
                 {aba === 'clientes'      && <AbaClientes companyId={companyId} />}
                 {aba === 'colaboradores' && <AbaColaboradores companyId={companyId} />}
                 {aba === 'totens'        && <AbaTotens companyId={companyId} />}
-                {aba === 'permissoes'    && <AbaPermissoes companyId={companyId} />}
               </div>
             </div>
           )}

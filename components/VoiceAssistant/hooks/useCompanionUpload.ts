@@ -178,9 +178,9 @@ export function useCompanionUpload({
       });
 
       setToken(newToken);
-setUploadUrl(url);
-setQrCodeUrl(`/api/qrcode?size=280&data=${encodeURIComponent(url)}&color=%231e293b`);
-setStatus('waiting');
+      setUploadUrl(url);
+      setQrCodeUrl(`/api/qrcode?data=${encodeURIComponent(url)}&company_id=${companyId}&size=280&color=%231e293b&bg=%23ffffff`);
+      setStatus('waiting');
       setTimeLeft(EXPIRY_SECONDS);
 
       countdownRef.current = setInterval(() => {

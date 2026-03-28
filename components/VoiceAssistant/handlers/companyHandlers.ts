@@ -148,6 +148,7 @@ export async function handleCanalYoutube({ companyId, setIsProcessing, setActive
         channelUrl: data.youtube_channel_url,
         channelName: data.youtube_channel_name ?? data.name,
         channelDescription: data.youtube_channel_description ?? '',
+        companyId,
       },
     });
     playText(

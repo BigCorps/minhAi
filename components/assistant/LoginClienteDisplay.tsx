@@ -126,13 +126,14 @@ export default function LoginClienteDisplay({
           }
         );
         const rows = await res.json();
+        console.log('registration_configs rows:', rows);
+
 if (rows?.[0]?.fields) {
   const rawFields = rows[0].fields;
-  // fields pode vir como string JSON ou array — normalizar os dois casos
+  console.log('rawFields tipo:', typeof rawFields, 'valor:', rawFields);
   const parsed = typeof rawFields === 'string'
     ? JSON.parse(rawFields)
     : rawFields;
-  // Garantir que nome sempre apareça primeiro se estiver na config
   setConfigFields(Array.isArray(parsed) ? parsed : ['nome', 'email']);
 }
       } catch (err) {

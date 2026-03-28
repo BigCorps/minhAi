@@ -20,8 +20,8 @@ interface PainelOfertasDisplayProps {
   playText: (text: string) => Promise<void>;
 }
 
-function buildQrUrl(content: string): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(content)}&margin=6&bgcolor=ffffff`;
+function buildQrUrl(content: string, companyId: string): string {
+  return `/api/qrcode?size=96&data=${encodeURIComponent(content)}&color=%23000080&company_id=${companyId}`;
 }
 
 function buildWhatsAppUrl(number: string): string {
@@ -247,7 +247,7 @@ export default function PainelOfertasDisplay({
         <div className="absolute bottom-6 left-6 flex flex-col items-center gap-1.5 z-20">
           <div className="rounded-xl overflow-hidden shadow-2xl border-2 border-white/20">
             <img
-              src={buildQrUrl(qrContent)}
+              src={buildQrUrl(qrContent, companyId)}
               alt="QR Code"
               width={96}
               height={96}

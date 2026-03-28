@@ -171,12 +171,6 @@ export function useCompanionUpload({
       const BASE_URL  = process.env.NEXT_PUBLIC_APP_URL || 'https://www.minhai.app';
       const url = `${BASE_URL}/arquivos?token=${newToken}${allowUrl ? '&allowUrl=1' : ''}`;
 
-      const qr = await QRCode.toDataURL(url, {
-        width: 280, margin: 2,
-        color: { dark: '#1e293b', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      });
-
       setToken(newToken);
       setUploadUrl(url);
       setQrCodeUrl(`/api/qrcode?data=${encodeURIComponent(url)}&company_id=${companyId}&size=280&color=%231e293b&bg=%23ffffff`);

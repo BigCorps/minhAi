@@ -11,6 +11,7 @@ interface WifiQRCodeDisplayProps {
     networkName: string;
     networkPassword: string;
     companyName?: string;
+    companyId?: string;
     autoCloseDuration?: number;
   };
   onClose: () => void;
@@ -30,7 +31,7 @@ export default function WifiQRCodeDisplay({
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
-  const { networkName, networkPassword, companyName } = data;
+  const { networkName, networkPassword, companyName, companyId } = data;
 
   const normalize = (text: string) =>
     text.toLowerCase().trim()
@@ -53,7 +54,7 @@ export default function WifiQRCodeDisplay({
     if (networkName) {
       const wifiString = `WIFI:T:WPA;S:${networkName};P:${networkPassword};;`;
       const size = 400;
-      const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(wifiString)}&margin=10`;
+      const url = `/api/qrcode?size=${size}&data=${encodeURIComponent(wifiString)}&color=%23000080${companyId ? `&company_id=${companyId}` : ''}`;
       setQrCodeUrl(url);
     }
   }, [networkName, networkPassword]);

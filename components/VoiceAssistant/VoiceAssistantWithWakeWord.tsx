@@ -1458,6 +1458,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
 {/* Avisos — fixo na parte inferior, não desloca o layout */}
 {(repromptWarning || noiseWarning) && (
+{!isMaximized && (
   <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
     <div className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
       theme === 'dark'

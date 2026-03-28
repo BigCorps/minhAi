@@ -56,40 +56,41 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
 
   // Sincronizar montagem para evitar erros de hidratação
-  useEffect(() => {
-    setMounted(true);
-    
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    // 🆕 Verificar orientação
-    const checkOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
+useEffect(() => {
+  setMounted(true);
+  
+  const checkMobile = () => { ... };
+  const checkOrientation = () => { ... };
 
-    const handleAvatarClick = () => {
-      // 🛡️ Não ativar modo full se um modal estiver aberto (usa ref para evitar closure stale)
-      if (anyModalOpenRef.current) return;
-      handleToggleMaximize();
-    };
-    window.addEventListener('eai:avatarClick', handleAvatarClick);
-    
-    checkMobile();
-    checkOrientation();
-    
-    window.addEventListener('resize', checkMobile);
-    window.addEventListener('resize', checkOrientation);
-    
-    return () => {
-      window.removeEventListener('resize', checkMobile);
-      window.removeEventListener('eai:avatarClick', handleAvatarClick);
-      window.removeEventListener('resize', checkOrientation);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-    };
-  }, []);
+  const handleAvatarClick = () => {
+    if (anyModalOpenRef.current) return;
+    handleToggleMaximize();
+  };
+  window.addEventListener('eai:avatarClick', handleAvatarClick);
+
+  // ← ADICIONE AQUI
+  const handleRequestKiosk = () => {
+    handleEnterKioskMode();
+  };
+  window.addEventListener('eai:requestKioskMode', handleRequestKiosk);
+  
+  checkMobile();
+  checkOrientation();
+  
+  window.addEventListener('resize', checkMobile);
+  window.addEventListener('resize', checkOrientation);
+  
+  return () => {
+    window.removeEventListener('resize', checkMobile);
+    window.removeEventListener('eai:avatarClick', handleAvatarClick);
+    window.removeEventListener('resize', checkOrientation);
+    // ← ADICIONE AQUI
+    window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+  };
+}, []);
 
   // 🛡️ Escutar eventos de modal aberto/fechado (qualquer portal ou modal interno)
   useEffect(() => {
@@ -132,15 +133,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     window.addEventListener('keydown', blockKeys, { capture: true });
     document.addEventListener('keydown', blockKeys, { capture: true });
     document.body.addEventListener('keydown', blockKeys, { capture: true });
-    // Escuta requisição de kiosk vinda do SlugHeader
-const handleRequestKiosk = () => {
-  handleEnterKioskMode();
-};
-window.addEventListener('eai:requestKioskMode', handleRequestKiosk);
     
     return () => {
       window.removeEventListener('keydown', blockKeys, { capture: true });
-      window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
       document.removeEventListener('keydown', blockKeys, { capture: true });
       document.body.removeEventListener('keydown', blockKeys, { capture: true });
     };

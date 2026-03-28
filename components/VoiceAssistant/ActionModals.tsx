@@ -155,6 +155,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
     onMicUp={data.onMicUp}
     onTextMessage={data.onTextMessage}
     isMaximized={data.isMaximized}
+    profile={data.profile}
   />
 ),
 'VerProdutoDisplay': ({ data, onClose, theme, playText }: any) => (

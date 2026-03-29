@@ -74,8 +74,16 @@ export default function LoginPage() {
         });
 
         if (error) throw error;
-        alert('Cadastro realizado! Verifique seu email para confirmar.');
-        setMode('login');
+
+        // Com "Confirm email" OFF no Supabase, a sessão já vem populada
+        if (data.session) {
+          localStorage.setItem('lastLoggedInUser', email);
+          router.push('/dashboard');
+        } else {
+          // Fallback: caso "Confirm email" esteja ON
+          alert('Cadastro realizado! Verifique seu email para confirmar.');
+          setMode('login');
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,

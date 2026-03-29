@@ -2,13 +2,6 @@
 
 // ============================================================
 // components/slug/SlugHeader.tsx
-//
-// Header fixo compartilhado entre todas as rotas do slug.
-//
-// Props:
-//   overlayMode  — true = fundo transparente (modo maximizado)
-//                  false (default) = header normal com gradiente
-//   onClose      — botão X, só aparece no overlayMode
 // ============================================================
 
 import Image from 'next/image';
@@ -51,7 +44,6 @@ export default function SlugHeader({
 
   const icon = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
 
-  // Classe base do botão varia entre overlay (rounded-full, sem border) e normal
   const btn = (extra = '') => {
     const base = overlayMode
       ? `p-2 rounded-full transition-all active:scale-95 ${
@@ -79,6 +71,73 @@ export default function SlugHeader({
           : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50 hover:border-emerald-300'
       }`;
 
+  // Botões da direita — reutilizados em desktop e mobile overlay
+  const rightButtons = (
+    <div className="flex items-center space-x-1">
+      {onToggleModoVenda && (
+        <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
+          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </button>
+      )}
+
+      {onEnterKioskMode && !isKioskMode && (
+        <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
+          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
+      )}
+
+      {isWakeLockSupported && onToggleWakeLock && (
+        <button
+          onClick={onToggleWakeLock}
+          className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
+          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
+        >
+          {isWakeLockActive ? (
+            <svg className={`${icon} text-green-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
+          ) : (
+            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          )}
+        </button>
+      )}
+
+      {onToggleTheme && (
+        <button onClick={onToggleTheme} className={btn()} title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
+          {theme === 'dark' ? (
+            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ) : (
+            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          )}
+        </button>
+      )}
+
+      {overlayMode && onClose && (
+        <button onClick={onClose} className={btn()} title="Fechar">
+          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <header
       data-role="slug-header"
@@ -102,125 +161,54 @@ export default function SlugHeader({
           overlayMode ? '' : 'py-4'
         }`}>
 
-{/* ESQUERDA: logo + nome/role — só no modo normal */}
-{!overlayMode && (
-  <div className="flex items-center space-x-3">
-    {company.logo_url && (
-      <img
-        src={company.logo_url}
-        alt={`${company.name} logo`}
-        className="rounded-lg object-contain flex-shrink-0"
-        style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }}
-      />
-    )}
-    <div className="flex flex-col">
-      <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
-        theme === 'dark' ? 'text-white' : 'text-gray-900'
-      }`}>
-        {company.name}
-      </h1>
-      <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
-        theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-      }`}>
-        {company.assistant_role || 'Uma IA pra chamar de sua!'}
-      </p>
-    </div>
-  </div>
-)}
+          {/* ESQUERDA: logo + nome/role — só no modo normal */}
+          {!overlayMode && (
+            <div className="flex items-center space-x-3">
+              {company.logo_url && (
+                <img
+                  src={company.logo_url}
+                  alt={`${company.name} logo`}
+                  className="rounded-lg object-contain flex-shrink-0"
+                  style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }}
+                />
+              )}
+              <div className="flex flex-col">
+                <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {company.name}
+                </h1>
+                <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
+                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
+                }`}>
+                  {company.assistant_role || 'Uma IA pra chamar de sua!'}
+                </p>
+              </div>
+            </div>
+          )}
 
-{/* No overlayMode o espaço esquerdo fica vazio — o logo já está no bloco de zoom */}
-{overlayMode && <div />}
+          {/* No overlayMode o espaço esquerdo fica vazio — o logo já está no bloco de zoom */}
+          {overlayMode && <div />}
 
-{/* CENTRO: relógio digital (só landscape) */}
-{!isPortrait && (
-  <DigitalClock
-    className={overlayMode
-      ? 'fixed left-1/2 -translate-x-1/2 top-4'
-      : 'absolute left-1/2 -translate-x-1/2'
-    }
-    theme={theme}
-  />
-)}
+          {/* CENTRO: relógio digital (só landscape) */}
+          {!isPortrait && (
+            <DigitalClock
+              className={overlayMode
+                ? 'fixed left-1/2 -translate-x-1/2 top-4'
+                : 'absolute left-1/2 -translate-x-1/2'
+              }
+              theme={theme}
+            />
+          )}
 
           {/* DIREITA: botões + logo minhAi */}
           <div className="relative flex items-center space-x-2">
+            {rightButtons}
 
-            <div className="flex items-center space-x-1">
-
-              {/* Modo Venda */}
-              {onToggleModoVenda && (
-                <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
-                  <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </button>
-              )}
-
-              {/* Modo Kiosk — oculto quando já ativo */}
-              {onEnterKioskMode && !isKioskMode && (
-                <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
-                  <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
-                </button>
-              )}
-
-              {/* Wake Lock */}
-              {isWakeLockSupported && onToggleWakeLock && (
-                <button
-                  onClick={onToggleWakeLock}
-                  className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-                >
-                  {isWakeLockActive ? (
-                    <svg className={`${icon} text-green-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                  ) : (
-                    <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-
-              {/* Tema */}
-              {onToggleTheme && (
-                <button onClick={onToggleTheme} className={btn()} title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
-                  {theme === 'dark' ? (
-                    <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-
-              {/* Botão X — só no overlayMode */}
-              {overlayMode && onClose && (
-                <button onClick={onClose} className={btn()} title="Fechar">
-                  <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* Divisor — só no modo normal */}
             {!overlayMode && (
               <div className={`w-px h-10 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'}`} />
             )}
 
-            {/* Logo minhAi */}
             <Link
               href="https://minhai.app"
               target="_blank"
@@ -239,10 +227,11 @@ export default function SlugHeader({
           </div>
         </div>
 
-        {/* ── Mobile Layout — só no modo normal ──────────────── */}
+        {/* ── Mobile Layout ──────────────────────────────────── */}
+
+        {/* Mobile NORMAL — logo + nome + botões */}
         {!overlayMode && (
           <div className="md:hidden py-4 space-y-4">
-
             <div className="relative flex items-center justify-center min-h-[48px] px-4">
               {company.logo_url && (
                 <div className="absolute left-4 flex-shrink-0">
@@ -280,8 +269,6 @@ export default function SlugHeader({
             </div>
 
             <div className="flex items-center justify-center space-x-2">
-
-              {/* Kiosk mobile */}
               {onEnterKioskMode && (
                 <button
                   onClick={onEnterKioskMode}
@@ -304,7 +291,6 @@ export default function SlugHeader({
                 </button>
               )}
 
-              {/* Modo Venda mobile */}
               {onToggleModoVenda && (
                 <button
                   onClick={onToggleModoVenda}
@@ -322,7 +308,6 @@ export default function SlugHeader({
                 </button>
               )}
 
-              {/* Wake Lock mobile */}
               {isWakeLockSupported && onToggleWakeLock && (
                 <button
                   onClick={onToggleWakeLock}
@@ -345,7 +330,6 @@ export default function SlugHeader({
                 </button>
               )}
 
-              {/* Tema mobile */}
               {onToggleTheme && (
                 <button
                   onClick={onToggleTheme}
@@ -368,6 +352,22 @@ export default function SlugHeader({
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Mobile OVERLAY — só os botões da direita, compactos */}
+        {overlayMode && (
+          <div className="md:hidden flex items-center justify-end space-x-1 py-2">
+            {rightButtons}
+            <Link
+              href="https://minhai.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 hover:opacity-80 transition-opacity ml-1"
+              title="Visite minhAi.app"
+            >
+              <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
+            </Link>
           </div>
         )}
 

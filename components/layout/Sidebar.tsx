@@ -25,12 +25,12 @@ const menuItems = [
   { href: '/dashboard',              label: 'Dashboard',                        icon: LayoutDashboard },
   { href: '/dashboard/assistentes',  label: 'Assistentes',                      icon: Bot },
   { href: '/dashboard/functions',    label: 'Funções',                          icon: Settings },
-  { href: '/dashboard/faqs',         label: 'Perguntas e Respostas',            icon: HelpCircle },
-  { href: '/dashboard/agenda',       label: 'Serviços Google',                  icon: Calendar },
-  { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: Share2 },
+  { href: '/dashboard/cadastros',    label: 'Controle de Usuários',             icon: UserPlus },
   { href: '/dashboard/vendas',       label: 'Vendas',                           icon: ShoppingCart },
   { href: '/dashboard/producao',     label: 'Linha de Produção',                icon: ClipboardList },
-  { href: '/dashboard/cadastros',    label: 'Controle de Usuários',             icon: UserPlus },
+  { href: '/dashboard/agenda',       label: 'Serviços Google',                  icon: Calendar },
+  { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: Share2 },
+  { href: '/dashboard/faqs',         label: 'Perguntas e Respostas',            icon: HelpCircle },
   { href: '/dashboard/arquivos',     label: 'Arquivos e Cupons',                icon: FolderOpen },
 ];
 

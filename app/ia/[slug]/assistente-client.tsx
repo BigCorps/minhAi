@@ -72,7 +72,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
     const handleAvatarClick = () => {
     if (anyModalOpenRef.current) return;
-    handleToggleMaximize();
+    // Pequeno delay para garantir que o estado do modal foi limpo
+    setTimeout(() => {
+      if (anyModalOpenRef.current) return; // checa de novo após o delay
+      handleToggleMaximize();
+    }, 200);
   };
   window.addEventListener('eai:avatarClick', handleAvatarClick);
 
@@ -769,10 +773,12 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         >
 {/* Header Minimalista */}
 <div className="absolute top-0 left-0 right-0 z-20 pointer-events-none">
-  <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4 pointer-events-auto">
+  <div className={`max-w-7xl mx-auto flex items-center px-6 py-4 pointer-events-auto ${
+    company.logo_url ? 'justify-between' : 'justify-end'
+  }`}>
 
     {/* ESQUERDA: Logo + Zoom */}
-    <div className="flex items-center space-x-3">
+    <div className="flex items-center space-x-3 flex-shrink-0">
       {company.logo_url && (
         <img
           src={company.logo_url}
@@ -821,12 +827,14 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     </div>
 
     {/* DIREITA: SlugHeaderWrapper em overlayMode */}
-    <SlugHeaderWrapper
-      company={company}
-      overlayMode={true}
-      forceTheme={theme}
-      onClose={handleTryExitKiosk}
-    />
+    <div className="flex-shrink-0">
+      <SlugHeaderWrapper
+        company={company}
+        overlayMode={true}
+        forceTheme={theme}
+        onClose={handleTryExitKiosk}
+      />
+    </div>
 
   </div>
 </div>

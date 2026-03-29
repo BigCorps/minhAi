@@ -403,7 +403,7 @@ export default function SlugHeader({
           <div className="md:hidden relative flex items-center justify-end min-h-[48px] py-2">
 
             {/* Botões — absolute para não empurrar o logo */}
-            <div className={`absolute right-10 flex items-center space-x-1 transition-all duration-300 ${
+            <div className={`absolute right-9 flex items-center space-x-1 transition-all duration-300 ${
               showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}>
               {onToggleModoVenda && (
@@ -451,12 +451,12 @@ export default function SlugHeader({
               )}
             </div>
 
-            {/* Logo minhAi — sempre fixo à direita */}
+            {/* Logo minhAi — no fluxo flex, sempre visível */}
             <Link
               href="https://minhai.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity"
+              className="flex-shrink-0 hover:opacity-80 transition-opacity z-10"
               title="Visite minhAi.app"
             >
               <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />

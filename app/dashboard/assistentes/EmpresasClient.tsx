@@ -16,6 +16,7 @@ import {
   Download,
   Mail,
   MessageSquare,
+  Users,
 } from 'lucide-react';
 
 interface AssistentesClientProps {
@@ -112,7 +113,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                   </div>
                 </div>
 
-                {/* Ações — 2 linhas: 4 em cima, 3 embaixo */}
+                {/* Ações — 2 linhas: 4 em cima, 4 embaixo */}
                 <div className="flex flex-col gap-2 items-center md:items-end">
                   {/* Linha 1: até 4 botões */}
                   <div className="flex flex-wrap gap-2 justify-center md:justify-end">
@@ -165,8 +166,20 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                     </Link>
                   </div>
 
-                  {/* Linha 2: 3 botões fixos */}
+                  {/* Linha 2: 4 botões fixos */}
                   <div className="flex flex-wrap gap-2 justify-center md:justify-end">
+
+                    {/* Usuários / Totens */}
+                    <Link
+                      href={`/dashboard/cadastros?companyId=${assistant.id}`}
+                      className="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all
+                      bg-purple-50 text-purple-600 hover:bg-purple-100
+                      dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20 border border-purple-100 dark:border-purple-500/20"
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Usuários / Totens
+                    </Link>
+
                     {/* Funções */}
                     <Link
                       href={`/dashboard/functions?companyId=${assistant.id}`}

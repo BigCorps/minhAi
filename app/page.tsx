@@ -3,31 +3,50 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
-import RecursoSlide from '@/components/landing/RecursoCardsSlide';
-import FuncaoSlide from '@/components/landing/FuncaoCardsSlide';
+import RecursoImageSlide from '@/components/landing/RecursoImageSlide';
+import RecursoCardsSlide from '@/components/landing/RecursoCardsSlide';
+import VantagensSlide from '@/components/landing/VantagensSlide';
+import FuncaoCardsSlide from '@/components/landing/FuncaoCardsSlide';
+import {
+  QrCode,
+  CreditCard,
+  Play,
+  Radio,
+  Search,
+  MapPin,
+  CalendarDays,
+  Brain,
+  Wrench,
+  BadgeCheck,
+  FolderOpen,
+  ConciergeBell,
+  ShoppingCart,
+  Camera,
+} from 'lucide-react';
 import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';
 
 // ============================================================
-// REGISTRY DE RECURSOS
-// Cada recurso vira uma tela no scroll horizontal.
+// RECURSOS - 4 páginas:
+// 1) Dispositivos (imagem + texto)
+// 2) API/Conexões (imagem + texto)
+// 3) Vantagens (imagem + texto)
+// 4) Cards de recursos (4 cards)
 // ============================================================
-const RECURSOS = [
+const RECURSO_CARDS = [
   {
-    id: 'recurso-custo-baixo',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
     title: 'Custo Baixo',
-    highlight: 'R$ 0,12',
-    highlightLabel: 'por interação',
-    description: 'A partir de R$ 0,12 por interação. Economia de até 90% comparado a atendimento humano tradicional.',
+    highlight: 'R$ 0,09',
+    highlightLabel: 'por interação (a partir)',
+    description: 'Planos com custo baixo por interação. Uma economia de até 90% comparado a atendimento humano tradicional.',
     color: 'green' as const,
   },
   {
-    id: 'recurso-customizavel',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -36,11 +55,10 @@ const RECURSOS = [
     title: 'Totalmente Customizável',
     highlight: '100%',
     highlightLabel: 'personalizado',
-    description: 'Configure palavras de ativação, saudações, prompts e funções personalizadas para cada empresa.',
+    description: 'Configure palavras de ativação, saudações, prompts e funções personalizadas para cada assistente.',
     color: 'blue' as const,
   },
   {
-    id: 'recurso-rapido',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -53,7 +71,6 @@ const RECURSOS = [
     color: 'green' as const,
   },
   {
-    id: 'recurso-24h',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -65,126 +82,205 @@ const RECURSOS = [
     description: 'Seu assistente nunca dorme. Atendimento automático a qualquer hora do dia ou da noite, sem custos extras.',
     color: 'blue' as const,
   },
+];
+
+// Slides de recursos com imagem (páginas 1, 2, 3)
+const RECURSO_IMAGE_SLIDES = [
   {
-    id: 'recurso-webapp',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-      </svg>
-    ),
-    title: 'WebApp Próprio',
-    highlight: 'PWA',
-    highlightLabel: 'instalável no celular',
-    description: 'Cada empresa ganha seu próprio aplicativo web instalável. Seus clientes acessam o assistente direto da tela inicial do celular, sem precisar baixar nada na loja.',
-    color: 'green' as const,
-    imageSrc: '/images/webapp.png',
-  },
-  {
-    id: 'recurso-indicacao',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-      </svg>
-    ),
-    title: 'Programa de Indicação',
-    highlight: '+20',
-    highlightLabel: 'créditos por indicação',
-    description: 'Indique o eAi e ganhe créditos. Cada novo cadastro feito com seu link de indicação dá 20 créditos gratuitos para você e para quem você indicou.',
+    id: 'recurso-dispositivos',
+    label: 'Compatibilidade',
+    title: 'Roda em Qualquer Dispositivo',
+    description:
+      'Celulares, computadores, notebooks, TVs, totens, PDVs — qualquer aparelho com um navegador web e uma tela já é suficiente para rodar o seu funcionário IA. Sem instalações, sem hardware especial, sem limites de plataforma. Conecte tambem suas contas Whatsapp, Instagram e Facebook para o assistente responder por você automaticamente.',
+    imageSrc: '/dispositivos.png',
+    imageAlt: 'Dispositivos compatíveis com minhAi',
     color: 'blue' as const,
   },
   {
-    id: 'recurso-link-pix',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-3.061a4.5 4.5 0 00-1.242-7.244l4.5-4.5a4.5 4.5 0 016.364 6.364l-1.757 1.757" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 9l-6 6" />
-      </svg>
-    ),
-    title: 'Link de Pagamento PIX',
-    highlight: '1 clique',
-    highlightLabel: 'para cobrar',
-    description: 'Gere links de pagamento PIX instantâneos para enviar por WhatsApp, SMS ou qualquer canal. Seus clientes pagam direto pelo celular sem precisar do assistente de voz.',
+    id: 'recurso-api',
+    label: 'Integrações',
+    title: 'Conexões e Serviços Profissionais',
+    description:
+      'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
+    imageSrc: '/api.png',
+    imageAlt: 'Integrações e APIs do minhAi',
     color: 'green' as const,
+  },
+  {
+    id: 'recurso-vantagens',
+    label: 'Vantagens',
+    title: 'Maior Eficiência Operacional',
+    description:
+      'O assistente automatiza tarefas repetitivas e responde imediatamente às solicitações, liberando a equipe para atividades estratégicas. Com tecnologia de ponta em constante evolução, não há interrupções nem gargalos no atendimento — acelerando processos internos, aumentando a produtividade e auxiliando funcionários ou clientes com a maior efetividade.',
+    imageSrc: '/vantagens.png',
+    imageAlt: 'Vantagens do minhAi',
+    color: 'blue' as const,
+  },
+  {
+    id: 'recurso-extras',
+    label: 'Extras',
+    title: 'Mais vantagens para você',
+    description: null,
+    imageSrc: null,
+    imageAlt: null,
+    color: 'green' as const,
+  },
+  {
+    id: 'recurso-cards',
+    label: null, // cards slide, no label needed here
+    title: null,
+    description: null,
+    imageSrc: null,
+    imageAlt: null,
+    color: 'blue' as const,
   },
 ];
 
-// ============================================================
-// REGISTRY DE FUNÇÕES
-// Para adicionar novas funções, basta adicionar um objeto aqui.
-// Cada função vira automaticamente uma tela no scroll horizontal.
-// ============================================================
-const FUNCOES = [
-  {
-    id: 'funcao-perguntas-gerais',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-      </svg>
-    ),
-    title: 'Perguntas Gerais',
-    subtitle: 'IA Avançada',
-    description: 'Seu assistente responde a qualquer pergunta utilizando inteligência artificial avançada, fornecendo informações precisas e contextuais sobre seus produtos e serviços.',
-    color: 'blue' as const,
-  },
-  {
-    id: 'funcao-faq',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-      </svg>
-    ),
-    title: 'Perguntas Frequentes',
-    subtitle: 'FAQ Inteligente',
-    description: 'Treine seu assistente com as perguntas mais comuns da sua empresa. Respostas consistentes, rápidas e sem custo de IA para as dúvidas mais frequentes.',
-    color: 'green' as const,
-  },
-  {
-    id: 'funcao-pix',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
-      </svg>
-    ),
-    title: 'Geração de PIX',
-    subtitle: 'Pagamentos Instantâneos',
-    description: 'Facilite cobranças com geração automática de códigos PIX. Seu assistente cria QR Codes na hora para seus clientes pagarem de forma rápida e segura.',
-    color: 'blue' as const,
-  },
-  {
-    id: 'funcao-redes-sociais',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
-      </svg>
-    ),
-    title: 'QR Codes para Redes Sociais',
-    subtitle: 'WhatsApp & Instagram',
-    description: 'Conecte seus clientes às suas redes sociais instantaneamente. O assistente gera QR Codes para WhatsApp e Instagram na hora.',
-    color: 'green' as const,
-  },
-  // ============================================================
-  // PARA ADICIONAR NOVAS FUNÇÕES: copie o bloco acima e preencha.
-  // A nova função aparece automaticamente como tela no scroll.
-  // Alterne color entre 'blue' e 'green'.
-  // ============================================================
-];
+const TOTAL_RECURSO_SLIDES = RECURSO_IMAGE_SLIDES.length; // 5
 
 // ============================================================
-// IDs DE TODAS AS SEÇÕES (gerado dinamicamente)
+// FUNÇÕES - 4 páginas de cards (4 + 3 + 4 + 3 = 14 categorias)
+// ============================================================
+const FUNCAO_PAGES = [
+  // Página 1 — 3 cards
+  {
+    id: 'funcao-page-1',
+    cards: [
+      {
+        title: 'Contatos',
+        icon: <QrCode />,
+        color: 'blue' as const,
+        description:
+          'Conecte seus clientes aos seus canais em segundos. Exibe QR Codes personalizados para Redes Sociais, Telefones e Site. Facilite o acesso ao WhatsApp, Instagram, ligações diretas e outras redes sociais, aumentando conversão e engajamento.',
+      },
+      {
+        title: 'Financeiro',
+        icon: <CreditCard />,
+        color: 'green' as const,
+        description:
+          'Cobranças rápidas, seguras e automatizadas. Geração de Pix, Débito e Crédito via NFC e Link de Pagamento diretamente pelo assistente com confirmação automática. Simplifique o processo de cobrança e aumente a taxa de pagamento imediato.',
+      },
+      {
+        title: 'Multimídia',
+        icon: <Play />,
+        color: 'blue' as const,
+        description:
+          'Experiência interativa e envolvente. Vídeos, Tutoriais, Publicidades, Playlists, Modo Sequência e Música sob comando. Ideal para totens, recepções, lojas, academias e ambientes corporativos.',
+      },
+    ],
+  },
+  // Página 2 — 4 cards
+  {
+    id: 'funcao-page-2',
+    cards: [
+      {
+        title: 'Informação',
+        icon: <Radio />,
+        color: 'green' as const,
+        description:
+          'Informações atualizadas em tempo real. Apresenta dados sobre o minhAi, sua Marca, Notícias, Feriados Nacionais e tambêm Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
+      },
+      {
+        title: 'Consultas',
+        icon: <Search />,
+        color: 'blue' as const,
+        description:
+          'Verificações rápidas e confiáveis. Consulta a Dados de CNPJ, CPF, Placa de Veículo, Leilões, Restrições de CPF e CNPJ. Ferramenta ideal para empresas que precisam validar informações antes de fechar negócios.',
+      },
+      {
+        title: 'Localização',
+        icon: <MapPin />,
+        color: 'green' as const,
+        description:
+          'Geolocalização inteligente e precisa. Mostra o Endereço, Busca CEPs, Traça Rota, verifica Trânsito em tempo real e Consulta DDD. Facilite deslocamentos e atendimento logístico.',
+      },
+      {
+        title: 'Agendamento',
+        icon: <CalendarDays />,
+        color: 'blue' as const,
+        description:
+          'Organização automatizada e eficiente. Marcação de Eventos, Consultas, Mostra Agenda e Calendário, Confirma Presença, Reagenda compromissos e até Envia e lê E-mails. Reduza faltas e melhore a gestão do tempo.',
+      },
+    ],
+  },
+  // Página 3 — 3 cards
+  {
+    id: 'funcao-page-3',
+    cards: [
+      {
+        title: 'Conhecimento',
+        icon: <Brain />,
+        color: 'green' as const,
+        description:
+          'Inteligência avançada ao seu alcance. Responde perguntas gerais, gera Orçamentos, Perguntas e Respostas inteligentes, Tradução, Transcrição de Áudio e consulta a Previsão do Tempo. Um verdadeiro centro de inteligência operacional.',
+      },
+      {
+        title: 'Utilitários',
+        icon: <Wrench />,
+        color: 'blue' as const,
+        description:
+          'Ferramentas práticas para o dia a dia. Controla Aparelhos Smart, Cria Lembretes, Cronômetro, Temporizador e Relógio Mundial. Recursos simples que aumentam produtividade e organização.',
+      },
+      {
+        title: 'Identificação',
+        icon: <BadgeCheck />,
+        color: 'green' as const,
+        description:
+          'Controle e segurança automatizados. Reconhecimento Facial, Registro de Ponto, Fila de Atendimento, Geração de Senha e Cadastro de Cliente. Ideal para empresas que precisam organizar fluxo e validar acessos.',
+      },
+    ],
+  },
+  // Página 4 — 4 cards
+  {
+    id: 'funcao-page-4',
+    cards: [
+      {
+        title: 'Arquivos',
+        icon: <FolderOpen />,
+        color: 'blue' as const,
+        description:
+          'Edição e conversão de documentos com IA. Remover Fundo, Duplicar Imagem, Editar Imagem e Converção de Arquivos automaticamente. Agilidade para marketing, administrativo e operacional.',
+      },
+      {
+        title: 'Serviços',
+        icon: <ConciergeBell />,
+        color: 'green' as const,
+        description:
+          'Soluções operacionais completas. Auxilia os clientes a Imprimir documentos, exibe Tabela de Preços, Cardápio (Menu), Emite Recibos e Chamado ao Suporte agilizado. Facilite o atendimento presencial e digital.',
+      },
+      {
+        title: 'Comercial',
+        icon: <ShoppingCart />,
+        color: 'blue' as const,
+        description:
+          'Aumente suas vendas com inteligência. Recomenda e Cadastra Produtos, gera Avaliações, com modo Totem de Vendas, Resposta de Pesquisas e Consulta ao Estoque. Transforme o assistente em um vendedor digital ativo 24h.',
+      },
+      {
+        title: 'Câmera',
+        icon: <Camera />,
+        color: 'green' as const,
+        description:
+          'Leitura e validação instantânea. Leitura de QR Codes e Código de Barras, Envia Arquivos, Validação de Cupom e Verificação de Acesso. Ideal para controle de entradas, promoções e operações rápidas.',
+      },
+    ],
+  },
+];
+
+const TOTAL_FUNCAO_PAGES = FUNCAO_PAGES.length;
+
+// ============================================================
+// IDs DE TODAS AS SEÇÕES
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
-  ...RECURSOS.map((r) => r.id),
-  ...FUNCOES.map((f) => f.id),
+  ...RECURSO_IMAGE_SLIDES.map((r) => r.id),
+  ...FUNCAO_PAGES.map((f) => f.id),
   'precos',
   'contato',
 ];
 
-// Seções do header (5 itens fixos)
 const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
 
-// Mapeia ID da seção → qual nav item destacar no header
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
   if (sectionId.startsWith('recurso-')) return 'recursos';
@@ -201,20 +297,16 @@ export default function LandingPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const isScrollingRef = useRef(false);
 
-  // Qual nav item está ativo (agrupa funções sob "funcoes")
   const activeNavItem = getSectionNavGroup(activeSectionId);
 
-  // Detecta preferência de tema
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: light)');
     if (mq.matches) setTheme('light');
   }, []);
 
-  // IntersectionObserver
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -225,16 +317,18 @@ export default function LandingPage() {
       },
       { root: container, threshold: 0.5 }
     );
-
     const sections = container.querySelectorAll('section[id]');
     sections.forEach((s) => observer.observe(s));
     return () => sections.forEach((s) => observer.unobserve(s));
   }, []);
 
-  // Scroll para seção por ID
   const scrollToSection = useCallback((id: string) => {
-    // Se o header clica em "funcoes", vai para a primeira função
-    const targetId = id === 'funcoes' ? FUNCOES[0].id : id === 'recursos' ? RECURSOS[0].id : id;
+    const targetId =
+      id === 'funcoes'
+        ? FUNCAO_PAGES[0].id
+        : id === 'recursos'
+        ? RECURSO_IMAGE_SLIDES[0].id
+        : id;
     const section = document.getElementById(targetId);
     if (section && scrollContainerRef.current) {
       isScrollingRef.current = true;
@@ -243,7 +337,6 @@ export default function LandingPage() {
     }
   }, []);
 
-  // Navegar próxima/anterior (usa ALL_SECTION_IDS que inclui cada função)
   const navigateNext = useCallback(() => {
     const i = ALL_SECTION_IDS.indexOf(activeSectionId);
     if (i < ALL_SECTION_IDS.length - 1) scrollToSection(ALL_SECTION_IDS[i + 1]);
@@ -254,13 +347,11 @@ export default function LandingPage() {
     if (i > 0) scrollToSection(ALL_SECTION_IDS[i - 1]);
   }, [activeSectionId, scrollToSection]);
 
-  // Scroll vertical → horizontal
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
     let wheelTimeout: NodeJS.Timeout;
     let canScroll = true;
-
     const handleWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
       e.preventDefault();
@@ -271,12 +362,10 @@ export default function LandingPage() {
       else navigatePrev();
       wheelTimeout = setTimeout(() => { canScroll = true; }, 1000);
     };
-
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => { container.removeEventListener('wheel', handleWheel); clearTimeout(wheelTimeout); };
   }, [navigateNext, navigatePrev]);
 
-  // Teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') { e.preventDefault(); navigateNext(); }
@@ -292,12 +381,14 @@ export default function LandingPage() {
   const canGoLeft = currentAllIndex > 0;
   const canGoRight = currentAllIndex < ALL_SECTION_IDS.length - 1;
 
+  // Compute which recurso slide index we're on
+  const activeRecursoIndex = RECURSO_IMAGE_SLIDES.findIndex((r) => r.id === activeSectionId);
+
   return (
     <div className={`relative h-screen w-screen overflow-hidden transition-colors duration-500 ${
       isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
     }`}>
 
-      {/* Header (usa activeNavItem que agrupa funções) */}
       <Header
         activeSection={activeNavItem}
         onNavigate={scrollToSection}
@@ -305,7 +396,6 @@ export default function LandingPage() {
         onToggleTheme={toggleTheme}
       />
 
-      {/* Container Horizontal */}
       <main
         ref={scrollContainerRef}
         className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
@@ -318,44 +408,65 @@ export default function LandingPage() {
           <InicioSection theme={theme} />
         </section>
 
-        {/* RECURSOS (cada um é uma tela cheia) */}
-        {RECURSOS.map((recurso, index) => (
+        {/* RECURSOS - Páginas 1, 2, 3: imagem + texto */}
+        {RECURSO_IMAGE_SLIDES.slice(0, 3).map((slide, index) => (
           <section
-            key={recurso.id}
-            id={recurso.id}
+            key={slide.id}
+            id={slide.id}
             className="w-screen h-screen flex-shrink-0 snap-start snap-always"
           >
-            <RecursoSlide
+            <RecursoImageSlide
               theme={theme}
-              icon={recurso.icon}
-              title={recurso.title}
-              highlight={recurso.highlight}
-              highlightLabel={recurso.highlightLabel}
-              description={recurso.description}
-              color={recurso.color}
+              label={slide.label!}
+              title={slide.title!}
+              description={slide.description!}
+              imageSrc={slide.imageSrc!}
+              imageAlt={slide.imageAlt!}
+              color={slide.color}
               currentIndex={index}
-              totalCount={RECURSOS.length}
-              imageSrc={'imageSrc' in recurso ? recurso.imageSrc : undefined}
+              totalCount={TOTAL_RECURSO_SLIDES}
+              nextHint={index < 2 ? 'Role para ver mais →' : 'Role para ver mais vantagens →'}
             />
           </section>
         ))}
 
-        {/* FUNÇÕES (cada uma é uma tela cheia) */}
-        {FUNCOES.map((funcao, index) => (
+        {/* RECURSOS - Página 4: Vantagens (WebApp, Indicação, Link PIX) */}
+        <section
+          id="recurso-extras"
+          className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+        >
+          <VantagensSlide
+            theme={theme}
+            currentIndex={3}
+            totalCount={TOTAL_RECURSO_SLIDES}
+          />
+        </section>
+
+        {/* RECURSOS - Página 5: 4 cards */}
+        <section
+          id="recurso-cards"
+          className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+        >
+          <RecursoCardsSlide
+            theme={theme}
+            recursos={RECURSO_CARDS}
+            currentIndex={4}
+            totalCount={TOTAL_RECURSO_SLIDES}
+          />
+        </section>
+
+        {/* FUNÇÕES — 4 páginas de cards */}
+        {FUNCAO_PAGES.map((page, index) => (
           <section
-            key={funcao.id}
-            id={funcao.id}
+            key={page.id}
+            id={page.id}
             className="w-screen h-screen flex-shrink-0 snap-start snap-always"
           >
-            <FuncaoSlide
+            <FuncaoCardsSlide
               theme={theme}
-              icon={funcao.icon}
-              title={funcao.title}
-              subtitle={funcao.subtitle}
-              description={funcao.description}
-              color={funcao.color}
+              cards={page.cards}
               currentIndex={index}
-              totalCount={FUNCOES.length}
+              totalCount={TOTAL_FUNCAO_PAGES}
             />
           </section>
         ))}
@@ -401,7 +512,7 @@ export default function LandingPage() {
         </svg>
       </button>
 
-      {/* INDICADOR DE PROGRESSO (5 pontos, funções agrupadas) */}
+      {/* INDICADOR DE PROGRESSO */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
         {NAV_SECTIONS.map((navId) => {
           const isActive = activeNavItem === navId;

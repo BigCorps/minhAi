@@ -398,15 +398,65 @@ export default function SlugHeader({
         )}
 
         {/* ── Mobile Overlay ─────────────────────────────────── */}
-        {/* Logo sempre visível à direita, botões aparecem via showControls */}
+        {/* Logo fixo à direita, botões sobrepostos aparecem via showControls */}
         {overlayMode && (
-          <div className="md:hidden flex items-center justify-end py-2">
-            {overlayButtons}
+          <div className="md:hidden relative flex items-center justify-end min-h-[48px] py-2">
+
+            {/* Botões — absolute para não empurrar o logo */}
+            <div className={`absolute right-10 flex items-center space-x-1 transition-all duration-300 ${
+              showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}>
+              {onToggleModoVenda && (
+                <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </button>
+              )}
+              {onEnterKioskMode && !isKioskMode && (
+                <button onClick={onEnterKioskMode} className={btn()} title="Modo Kiosk">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                </button>
+              )}
+              {isWakeLockSupported && onToggleWakeLock && (
+                <button
+                  onClick={onToggleWakeLock}
+                  className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
+                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </button>
+              )}
+              {onToggleTheme && (
+                <button onClick={onToggleTheme} className={btn()} title="Tema">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </button>
+              )}
+              {onClose && (
+                <button onClick={onClose} className={btn()} title="Fechar">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Logo minhAi — sempre fixo à direita */}
             <Link
               href="https://minhai.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity ml-2"
+              className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity"
               title="Visite minhAi.app"
             >
               <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />

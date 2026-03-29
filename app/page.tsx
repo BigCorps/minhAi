@@ -41,7 +41,7 @@ const RECURSO_CARDS = [
       </svg>
     ),
     title: 'Custo Baixo',
-    highlight: 'R$ 0,09',
+    highlight: 'R$ 0,05',
     highlightLabel: 'por interação (a partir)',
     description: 'Planos com custo baixo por interação. Uma economia de até 90% comparado a atendimento humano tradicional.',
     color: 'green' as const,

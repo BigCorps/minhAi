@@ -65,9 +65,9 @@ const RECURSO_CARDS = [
       </svg>
     ),
     title: 'Rápido e Fácil',
-    highlight: '< 5 min',
+    highlight: '< 1 min',
     highlightLabel: 'para configurar',
-    description: 'Configure em minutos. Sem necessidade de código ou conhecimento técnico para começar.',
+    description: 'Configure em segundos. Sem necessidade de código ou conhecimento técnico para começar.',
     color: 'green' as const,
   },
   {

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
-import RecursoSlide from '@/components/landing/RecursoSlide';
-import FuncaoSlide from '@/components/landing/FuncaoSlide';
+import RecursoSlide from '@/components/landing/RecursoCardSlide';
+import FuncaoSlide from '@/components/landing/FuncaoCardSlide';
 import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';
 

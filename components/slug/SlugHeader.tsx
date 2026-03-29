@@ -204,7 +204,7 @@ export default function SlugHeader({
       }`}
     >
       <div className={overlayMode
-        ? 'px-6 py-4'
+        ? 'px-3 py-2'
         : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
       }>
 

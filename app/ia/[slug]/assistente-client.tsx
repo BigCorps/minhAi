@@ -72,11 +72,10 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
     const handleAvatarClick = () => {
     if (anyModalOpenRef.current) return;
-    // Pequeno delay para garantir que o estado do modal foi limpo
     setTimeout(() => {
-      if (anyModalOpenRef.current) return; // checa de novo após o delay
+      if (anyModalOpenRef.current) return;
       handleToggleMaximize();
-    }, 200);
+    }, 50);
   };
   window.addEventListener('eai:avatarClick', handleAvatarClick);
 
@@ -107,7 +106,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   // 🛡️ Escutar eventos de modal aberto/fechado (qualquer portal ou modal interno)
   useEffect(() => {
     const onOpen  = () => { anyModalOpenRef.current = true; };
-    const onClose = () => { anyModalOpenRef.current = false; };
+    const onClose = () => {
+      setTimeout(() => {
+        anyModalOpenRef.current = false;
+      }, 300);
+    };
     window.addEventListener('eai:modalOpen',  onOpen);
     window.addEventListener('eai:modalClose', onClose);
     return () => {

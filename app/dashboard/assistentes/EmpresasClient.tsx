@@ -150,7 +150,7 @@ export default function AssistentesClient({ companies, user }: AssistentesClient
                       dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20"
                     >
                       <Mail className="w-4 h-4 mr-2" />
-                      Agenda Google / Gmail
+                      Serviços Google
                     </Link>
 
                     {/* Meta / Atendimentos */}

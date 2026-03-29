@@ -430,7 +430,7 @@ export default function LandingPage() {
           </section>
         ))}
 
-        {/* RECURSOS - Página 4: Vantagens (WebApp, Indicação, Link PIX) */}
+        {/* RECURSOS - Página 4: Extras (WebApp, Indicação, Link PIX) */}
         <section
           id="recurso-extras"
           className="w-screen h-screen flex-shrink-0 snap-start snap-always"

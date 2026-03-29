@@ -1418,6 +1418,12 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
     return 'segure para falar ou';
   };
 
+  // ── Visibilidade do Avatar (QRCode e PIX ficam dentro do AvatarFace) ─
+  const avatarIsHidden =
+    activeModal !== null &&
+    activeModal.type !== 'QRCodeDisplay' &&
+    activeModal.type !== 'PIXConfirmationModal';
+
   // ── RENDER: MAXIMIZED ─────────────────────────────────────
   if (isMaximized) {
     return (
@@ -1451,7 +1457,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
             onCopyQRCode={() => console.log('📋 QR Code copiado!')}
             onConfirmPix={handleConfirmPixLocal}
             onCancelPix={handleCancelPixLocal}
-            isHidden={   activeModal !== null &&   activeModal.type !== 'QRCodeDisplay' &&   activeModal.type !== 'PIXConfirmationModal' }
+            isHidden={avatarIsHidden}
           />
         </div>
 
@@ -1534,7 +1540,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
               onCopyQRCode={() => console.log('📋 QR Code copiado!')}
               onConfirmPix={handleConfirmPixLocal}
               onCancelPix={handleCancelPixLocal}
-              isHidden={   activeModal !== null &&   activeModal.type !== 'QRCodeDisplay' &&   activeModal.type !== 'PIXConfirmationModal' }
+              isHidden={avatarIsHidden}
             />
           </div>
         </div>

@@ -1451,7 +1451,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
             onCopyQRCode={() => console.log('📋 QR Code copiado!')}
             onConfirmPix={handleConfirmPixLocal}
             onCancelPix={handleCancelPixLocal}
-            isHidden={activeModal !== null}
+            isHidden={   activeModal !== null &&   activeModal.type !== 'QRCodeDisplay' &&   activeModal.type !== 'PIXConfirmationModal' }
           />
         </div>
 
@@ -1534,7 +1534,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
               onCopyQRCode={() => console.log('📋 QR Code copiado!')}
               onConfirmPix={handleConfirmPixLocal}
               onCancelPix={handleCancelPixLocal}
-              isHidden={activeModal !== null}
+              isHidden={   activeModal !== null &&   activeModal.type !== 'QRCodeDisplay' &&   activeModal.type !== 'PIXConfirmationModal' }
             />
           </div>
         </div>

@@ -836,6 +836,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         overlayMode={true}
         forceTheme={theme}
         onClose={handleTryExitKiosk}
+        showControls={showCloseButton}
       />
     </div>
 

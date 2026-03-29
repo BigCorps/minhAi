@@ -59,57 +59,55 @@ export default function VantagensSlide({ theme = 'dark', currentIndex, totalCoun
 
   return (
     <div
-      className={`relative flex flex-col items-center justify-center h-full w-full px-4 sm:px-6 lg:px-12 overflow-hidden transition-colors duration-500 ${
+      className={`relative flex flex-col h-full w-full overflow-hidden transition-colors duration-500 ${
         isDark
           ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
           : 'bg-gradient-to-br from-white via-blue-50/50 to-white'
       }`}
     >
-      {/* Fundo decorativo */}
+      {/* Decorative glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className={`absolute top-1/4 left-1/4 w-[30%] h-[30%] rounded-full blur-[120px] ${
-          isDark ? 'bg-blue-500/5' : 'bg-blue-200/15'
-        }`} />
-        <div className={`absolute bottom-1/4 right-1/4 w-[25%] h-[25%] rounded-full blur-[100px] ${
+        <div className={`absolute top-1/4 right-1/4 w-[50%] h-[50%] rounded-full blur-[140px] ${
           isDark ? 'bg-green-500/5' : 'bg-green-200/15'
         }`} />
       </div>
 
-      {/* Layout lado a lado */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-10 lg:gap-16 w-full max-w-6xl">
+      {/* Content: side by side on desktop, stacked on mobile */}
+      <div className="relative z-10 flex flex-col md:flex-row items-center justify-center h-full px-6 sm:px-10 lg:px-16 gap-8 md:gap-12 pt-20 pb-10 md:py-0">
 
-        {/* ESQUERDA: Título + 3 cards empilhados */}
-        <div className="flex-1 order-2 md:order-1 w-full">
-          <p className={`text-xs font-medium uppercase tracking-widest mb-3 text-center md:text-left transition-colors ${
-            isDark ? 'text-blue-400/70' : 'text-blue-600/70'
+        {/* LEFT: Text + 3 benefit cards */}
+        <div className="flex flex-col items-start justify-center w-full md:w-1/2 max-w-xl order-2 md:order-1">
+          {/* Label */}
+          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-5 ${
+            isDark ? 'bg-green-500/10 text-green-400' : 'bg-green-100 text-green-600'
           }`}>
-            Recurso {currentIndex + 1} de {totalCount}
-          </p>
+            Extras
+          </span>
 
+          {/* Title */}
           <h2
             style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold mb-5 sm:mb-6 text-center md:text-left transition-colors ${
+            className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6 transition-colors ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}
           >
             Mais vantagens para você
           </h2>
 
-          {/* 3 Cards horizontais empilhados */}
-          <div className="flex flex-col gap-3">
+          {/* 3 Benefit cards */}
+          <div className="flex flex-col gap-3 w-full">
             {VANTAGENS.map((v, i) => {
               const c = colorMap[v.color][theme];
               return (
                 <div
                   key={i}
                   className={`rounded-xl border p-3 sm:p-4 flex items-center gap-3 sm:gap-4 transition-all duration-300 ${c.border} ${
-                    isDark ? 'bg-slate-800/30 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm shadow-sm'
+                    isDark ? 'bg-white/[0.02]' : 'bg-white/80 shadow-sm'
                   }`}
                 >
                   <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg}`}>
                     <div className={c.iconText}>{v.icon}</div>
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <h3
@@ -133,38 +131,34 @@ export default function VantagensSlide({ theme = 'dark', currentIndex, totalCoun
             })}
           </div>
 
-          {/* Progresso */}
-          <div className="flex items-center gap-2 mt-6 justify-center md:justify-start">
+          {/* Progress dots */}
+          <div className="flex items-center gap-2 mt-8">
             {Array.from({ length: totalCount }).map((_, i) => (
               <div
                 key={i}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   i === currentIndex
-                    ? `w-8 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`
+                    ? `w-8 ${isDark ? 'bg-green-400' : 'bg-green-500'}`
                     : `w-2 ${isDark ? 'bg-white/15' : 'bg-gray-200'}`
                 }`}
               />
             ))}
           </div>
-          <p className={`mt-3 text-xs text-center md:text-left transition-colors ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-            {currentIndex < totalCount - 1 ? 'Role para ver o próximo recurso →' : 'Próximo: Funções do eAi →'}
+
+          {/* Hint */}
+          <p className={`mt-4 text-xs transition-colors ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
+            Role para ver nossos recursos →
           </p>
         </div>
 
-        {/* DIREITA: Imagem grande */}
-        <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
-          <div className={`
-            relative overflow-hidden rounded-3xl border-2 transition-all
-            w-48 h-48 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96
-            ${isDark ? 'border-blue-500/15 shadow-2xl shadow-blue-500/5' : 'border-blue-100 shadow-2xl shadow-blue-200/20'}
-          `}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/webapp.png"
-              alt="Vantagens do eAi"
-              className="w-full h-full object-cover"
-            />
-          </div>
+        {/* RIGHT: Image */}
+        <div className="flex items-center justify-center w-full md:w-1/2 max-w-lg order-1 md:order-2">
+          <img
+            src="/webapp.png"
+            alt="WebApp, Indicação e Link PIX do minhAi"
+            className="w-full max-w-[320px] sm:max-w-[400px] md:max-w-full object-contain drop-shadow-2xl transition-transform duration-300 ease-out hover:scale-105 cursor-pointer"
+            style={{ maxHeight: '55vh' }}
+          />
         </div>
       </div>
     </div>

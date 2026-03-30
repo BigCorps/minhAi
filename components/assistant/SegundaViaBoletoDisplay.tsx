@@ -299,6 +299,23 @@ export default function SegundaViaBoletoDisplay({ data, onClose, theme = 'dark',
       setPdfUri(uri);
       setFileName(name);
       setStage('result');
+
+      // Salvar no histórico
+      try {
+        await supabase.from('interaction_history').insert({
+          company_id:           data.companyId,
+          user_input:           `Segunda via: ${boleto.linhaDigitavel}`,
+          assistant_response:   `PDF gerado. Banco: ${boleto.banco}${boleto.valor ? `. Valor: ${boleto.valor}` : ''}${boleto.vencimento ? `. Vencimento: ${boleto.vencimento}` : ''}.`,
+          interaction_type:     'segunda_via_boleto',
+          metadata: {
+            banco:         boleto.banco,
+            valor:         boleto.valor,
+            vencimento:    boleto.vencimento,
+            codigo_barras: boleto.codigoBarras,
+          },
+        });
+      } catch { /* não bloquear se falhar */ }
+
       playText(
         `Segunda via gerada. ${boleto.valor ? `Valor: ${boleto.valor}.` : ''} ${boleto.vencimento ? `Vencimento: ${boleto.vencimento}.` : ''} O PDF esta pronto para download.`
       ).catch(() => {});
@@ -306,7 +323,7 @@ export default function SegundaViaBoletoDisplay({ data, onClose, theme = 'dark',
       setErrorMsg(err.message ?? 'Erro ao gerar segunda via.');
       setStage('error');
     }
-  }, [linhaInput, playText]);
+  }, [linhaInput, playText, supabase, data.companyId]);
 
   // Manter ref atualizada
   useEffect(() => { handleProcessarRef.current = handleProcessar; }, [handleProcessar]);

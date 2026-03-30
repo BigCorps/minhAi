@@ -313,15 +313,7 @@ export default function ArquivosCompanyClient({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Cabeçalho */}
-        <div className="mb-8">
-          <Link
-            href="/dashboard/arquivos"
-            className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-white/50 hover:text-blue-600 dark:hover:text-blue-400 transition mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar para Arquivos
-          </Link>
-
+        <div className="mb-8">       
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -725,7 +717,7 @@ export default function ArquivosCompanyClient({
                                 ? 'text-gray-600 dark:text-gray-400'
                                 : 'text-purple-600 dark:text-purple-400'
                             }`}>
-                              {impressao.print_mode === 'bw' ? '⚫ P&B' : '🌈 Color'}
+                              {impressao.print_mode === 'bw' ? '⚫ P&B' : '🖨️ Color'}
                             </span>
                           </td>
 

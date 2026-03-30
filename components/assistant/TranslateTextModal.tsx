@@ -32,6 +32,7 @@ export default function TranslateTextModal({
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
   const [targetLanguage, setTargetLanguage] = useState<string>('en');
   const [isManualMode, setIsManualMode] = useState(false);
+  const [detectedLanguage, setDetectedLanguage] = useState<string>('');
   
   const recognitionRef = useRef<any>(null);
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
@@ -282,51 +283,137 @@ export default function TranslateTextModal({
     setIsRecording(false);
   };
 
-  const handleTranslate = async () => {
-    const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
+const handleTranslate = async () => {
+  const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
+  
+  if (!textToTranslate) {
+    showToast('Digite ou fale o texto que deseja traduzir', 'warning');
+    return;
+  }
+
+  setIsTranslating(true);
+
+  try {
+    // PASSO 1: Detectar idioma com OpenAI
+    const detectResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.1,
+        messages: [
+          {
+            role: 'system',
+            content: 'Você detecta o idioma de textos. Responda APENAS com o código do idioma (ex: pt, en, es, fr, de, it, ja, ko, zh). Não adicione texto extra.',
+          },
+          {
+            role: 'user',
+            content: `Detecte o idioma deste texto: "${textToTranslate}"`,
+          },
+        ],
+      }),
+    });
+
+    const detectData = await detectResponse.json();
+    const detected = detectData.choices?.[0]?.message?.content?.trim().toLowerCase() || 'pt';
+    setDetectedLanguage(detected);
+
+    console.log('🌐 Idioma detectado:', detected);
+
+    // PASSO 2: Definir idioma alvo automaticamente
+    let autoTargetLanguage = targetLanguage;
     
-    if (!textToTranslate) {
-      showToast('Digite ou fale o texto que deseja traduzir', 'warning');
+    if (detected === 'pt') {
+      // Se é português, traduz para inglês
+      autoTargetLanguage = 'en';
+    } else {
+      // Se é qualquer outra língua, traduz para português
+      autoTargetLanguage = 'pt';
+    }
+
+    setTargetLanguage(autoTargetLanguage);
+
+    // PASSO 3: Traduzir
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/traduzir-texto`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          text: textToTranslate,
+          target_language: autoTargetLanguage,
+          source_language: detected,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.success) {
+      showToast(result.speech_text || 'Erro ao traduzir', 'error');
       return;
     }
 
-    setIsTranslating(true);
+    setTranslatedText(result.translated_text);
+    setStep('result');
+    
+    const targetLangName = languages.find(l => l.code === autoTargetLanguage)?.name || 'outro idioma';
+    showToast(`✅ Traduzido para ${targetLangName}!`, 'success');
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/traduzir-texto`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            text: textToTranslate,
-            target_language: targetLanguage,
-          }),
-        }
-      );
+  } catch (error: any) {
+    console.error('Erro ao traduzir:', error);
+    showToast('Erro ao traduzir. Tente novamente.', 'error');
+  } finally {
+    setIsTranslating(false);
+  }
+};
 
-      const result = await response.json();
-
-      if (!result.success) {
-        showToast(result.speech_text || 'Erro ao traduzir', 'error');
-        return;
+const handleRetranslate = async (newTargetLanguage: string) => {
+  setIsTranslating(true);
+  
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/traduzir-texto`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          text: inputText.trim(),
+          target_language: newTargetLanguage,
+          source_language: detectedLanguage,
+        }),
       }
+    );
 
-      setTranslatedText(result.translated_text);
-      setStep('result');
-      showToast('✅ Texto traduzido com sucesso!', 'success');
+    const result = await response.json();
 
-    } catch (error: any) {
-      console.error('Erro ao traduzir:', error);
-      showToast('Erro ao traduzir. Tente novamente.', 'error');
-    } finally {
-      setIsTranslating(false);
+    if (!result.success) {
+      showToast(result.speech_text || 'Erro ao traduzir', 'error');
+      return;
     }
-  };
+
+    setTranslatedText(result.translated_text);
+    const targetLangName = languages.find(l => l.code === newTargetLanguage)?.name || 'outro idioma';
+    showToast(`✅ Traduzido para ${targetLangName}!`, 'success');
+
+  } catch (error: any) {
+    console.error('Erro ao retraduzir:', error);
+    showToast('Erro ao traduzir. Tente novamente.', 'error');
+  } finally {
+    setIsTranslating(false);
+  }
+};
 
   const handleCopy = () => {
     navigator.clipboard.writeText(translatedText);
@@ -457,22 +544,6 @@ export default function TranslateTextModal({
                     </div>
                   )}
 
-                  {/* Seletor de Idioma */}
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Traduzir para:</label>
-                    <select
-                      value={targetLanguage}
-                      onChange={(e) => setTargetLanguage(e.target.value)}
-                      className={`w-full px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} focus:ring-2 focus:ring-blue-500 transition`}
-                    >
-                      {languages.map(lang => (
-                        <option key={lang.code} value={lang.code}>
-                          {lang.flag} {lang.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   {isRecording && !isManualMode && (
                     <div className="flex justify-center">
                       <div className="flex items-center gap-3 px-6 py-3 bg-red-500 rounded-full shadow-lg">
@@ -550,66 +621,109 @@ export default function TranslateTextModal({
             </>
           )}
 
-          {/* STEP 2: RESULT */}
-          {step === 'result' && (
-            <div className="space-y-4">
-              <div className={`p-4 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
-                <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'} text-center font-medium`}>
-                  ✅ Texto traduzido com sucesso! Diga <strong>"COPIAR"</strong> ou <strong>"ENVIAR EMAIL"</strong>
-                </p>
-              </div>
+{/* STEP 2: RESULT */}
+{step === 'result' && (
+  <div className="space-y-4">
+    <div className={`p-4 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
+      <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'} text-center font-medium`}>
+        ✅ Texto traduzido com sucesso! Diga <strong>"COPIAR"</strong> ou <strong>"ENVIAR EMAIL"</strong>
+      </p>
+    </div>
 
-              {/* Original */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Texto original:</label>
-                <div className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} border ${border}`}>
-                  <p className={`text-sm ${textPrimary} whitespace-pre-wrap`}>{inputText}</p>
-                </div>
-              </div>
-
-              {/* Tradução */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Tradução:</label>
-                <div className={`p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
-                  <p className={`text-sm ${isDark ? 'text-blue-100' : 'text-blue-900'} whitespace-pre-wrap font-medium`}>
-                    {translatedText}
-                  </p>
-                </div>
-              </div>
-
-              {/* Botões */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={handleCopy}
-                  className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                >
-                  <Copy className="w-5 h-5" />
-                  Copiar
-                </button>
-                <button
-                  onClick={handleSendEmail}
-                  className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                >
-                  <Mail className="w-5 h-5" />
-                  Enviar Email
-                </button>
-              </div>
-
-              <button
-                onClick={() => {
-                  setStep('input');
-                  setCountdown(5);
-                  setInputText('');
-                  setTranslatedText('');
-                  setIsManualMode(false);
-                  finalTranscriptRef.current = '';
-                }}
-                className={`w-full px-4 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition text-sm`}
-              >
-                Nova Tradução
-              </button>
-            </div>
+    {/* Seletor de Idioma para Retraduzir */}
+    <div>
+      <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+        Traduzir para outro idioma:
+      </label>
+      <div className="flex gap-2">
+        <select
+          value={targetLanguage}
+          onChange={(e) => setTargetLanguage(e.target.value)}
+          disabled={isTranslating}
+          className={`flex-1 px-4 py-3 rounded-lg border ${border} ${isDark ? 'bg-slate-800' : 'bg-white'} ${textPrimary} focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50`}
+        >
+          {languages.map(lang => (
+            <option key={lang.code} value={lang.code}>
+              {lang.flag} {lang.name}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => handleRetranslate(targetLanguage)}
+          disabled={isTranslating}
+          className="px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+        >
+          {isTranslating ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Languages className="w-5 h-5" />
           )}
+        </button>
+      </div>
+      {detectedLanguage && (
+        <p className={`text-xs ${textMuted} mt-1`}>
+          Idioma detectado: {languages.find(l => l.code === detectedLanguage)?.flag} {languages.find(l => l.code === detectedLanguage)?.name || detectedLanguage.toUpperCase()}
+        </p>
+      )}
+    </div>
+
+    {/* Original */}
+    <div>
+      <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Texto original:</label>
+      <div className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} border ${border} max-h-48 overflow-y-auto`}>
+        <p className={`text-sm ${textPrimary} whitespace-pre-wrap`}>
+          {inputText || finalTranscriptRef.current}
+        </p>
+      </div>
+    </div>
+
+    {/* Tradução */}
+    <div>
+      <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>
+        Tradução ({languages.find(l => l.code === targetLanguage)?.flag} {languages.find(l => l.code === targetLanguage)?.name}):
+      </label>
+      <div className={`p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border max-h-48 overflow-y-auto`}>
+        <p className={`text-sm ${isDark ? 'text-blue-100' : 'text-blue-900'} whitespace-pre-wrap font-medium`}>
+          {translatedText}
+        </p>
+      </div>
+    </div>
+
+    {/* Botões */}
+    <div className="grid grid-cols-2 gap-3">
+      <button
+        onClick={handleCopy}
+        className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+      >
+        <Copy className="w-5 h-5" />
+        Copiar
+      </button>
+      <button
+        onClick={handleSendEmail}
+        className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+      >
+        <Mail className="w-5 h-5" />
+        Enviar Email
+      </button>
+    </div>
+
+    <button
+      onClick={() => {
+        setStep('input');
+        setCountdown(5);
+        setInputText('');
+        setTranslatedText('');
+        setIsManualMode(false);
+        setDetectedLanguage('');
+        setTargetLanguage('en');
+        finalTranscriptRef.current = '';
+      }}
+      className={`w-full px-4 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition text-sm`}
+    >
+      Nova Tradução
+    </button>
+  </div>
+)}
         </div>
       </div>
     </div>,

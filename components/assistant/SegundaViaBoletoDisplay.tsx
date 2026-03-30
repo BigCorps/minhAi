@@ -302,16 +302,16 @@ export default function SegundaViaBoletoDisplay({ data, onClose, theme = 'dark',
 
       // Salvar no histórico
       try {
-        await supabase.from('interaction_history').insert({
-          company_id:           data.companyId,
-          user_input:           `Segunda via: ${boleto.linhaDigitavel}`,
-          assistant_response:   `PDF gerado. Banco: ${boleto.banco}${boleto.valor ? `. Valor: ${boleto.valor}` : ''}${boleto.vencimento ? `. Vencimento: ${boleto.vencimento}` : ''}.`,
-          interaction_type:     'segunda_via_boleto',
+        await supabase.from('assistant_function_logs').insert({
+          company_id:       data.companyId,
+          function_key:     'segunda_via_boleto',
+          credits_consumed: 0,
           metadata: {
             banco:         boleto.banco,
             valor:         boleto.valor,
             vencimento:    boleto.vencimento,
             codigo_barras: boleto.codigoBarras,
+            linha_digitavel: boleto.linhaDigitavel,
           },
         });
       } catch { /* não bloquear se falhar */ }

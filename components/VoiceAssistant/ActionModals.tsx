@@ -71,6 +71,8 @@ import AparelhosSmartDisplay from '@/components/assistant/AparelhosSmartDisplay'
 import CanalYoutubeDisplay from '@/components/assistant/CanalYoutubeDisplay';
 import IdentificarFraudeDisplay from '@/components/assistant/IdentificarFraudeDisplay';
 import LoginClienteDisplay from '@/components/assistant/LoginClienteDisplay';
+import TranslateTextModal from '@/components/assistant/TranslateTextModal';
+import TranscribeAudioModal from '@/components/assistant/TranscribeAudioModal';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -140,6 +142,8 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'CanalYoutubeDisplay': CanalYoutubeDisplay,
   'IdentificarFraudeDisplay': IdentificarFraudeDisplay,
   'LoginClienteDisplay': LoginClienteDisplay,
+  'TranslateTextModal': TranslateTextModal,
+  'TranscribeAudioModal': TranscribeAudioModal,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

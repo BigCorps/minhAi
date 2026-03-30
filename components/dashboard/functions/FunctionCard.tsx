@@ -111,6 +111,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'aparelhos_smart',
   'canal_youtube',
   'identificar_fraude',
+  'segunda_via_boleto',
   'tef_debito',
   'tef_credito'
 ];

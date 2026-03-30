@@ -111,13 +111,13 @@ export default function ArquivosCompanyPage() {
       const listaImpressoes = printJobsData || [];
       setImpressoes(listaImpressoes);
 
-      // ── Boletos (interaction_history) ────────────────────────────────────────
+      // ── Boletos (assistant_function_logs) ────────────────────────────────────────
       const { data: boletosData } = await supabase
-        .from('interaction_history')
-        .select('id, user_input, assistant_response, created_at, metadata')
+        .from('assistant_function_logs')
+        .select('id, executed_at, metadata')
         .eq('company_id', companyId)
-        .eq('interaction_type', 'segunda_via_boleto')
-        .order('created_at', { ascending: false })
+        .eq('function_key', 'segunda_via_boleto')
+        .order('executed_at', { ascending: false })
         .limit(50);
 
       const listaBoletos = boletosData || [];

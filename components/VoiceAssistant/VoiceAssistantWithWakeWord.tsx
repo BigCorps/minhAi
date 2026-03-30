@@ -694,6 +694,19 @@ case 'minha_conta':
   ).catch(() => {});
   return;
 
+case 'segunda_via_boleto':
+  setActiveModal({
+    type: 'SegundaViaBoletoDisplay',
+    data: { companyId },
+  });
+  await saveInteractionToHistory(
+    companyId,
+    'Segunda Via Boleto',
+    'Geração de segunda via iniciada'
+  );
+  // SEM playText — o modal fala no useEffect
+  break;
+
 case 'traduzir_texto':
   setActiveModal({ type: 'TranslateTextModal', data: { companyId } });
   playText('Abrindo ferramenta de tradução.').catch(() => {});

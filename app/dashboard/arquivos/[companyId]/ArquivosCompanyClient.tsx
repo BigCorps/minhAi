@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase-browser';
 import Link from 'next/link';
 import {
   ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw,
-  FileText, Download, CheckCircle, Upload, File, Image, Printer,
+  FileText, Download, CheckCircle, Upload, File, Image, Printer, Receipt,
 } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
@@ -18,6 +18,7 @@ interface ArquivosCompanyClientProps {
   consultas: any[];
   enviados: any[];
   impressoes: any[];
+  boletos: any[];
   stats: {
     totalCupons: number;
     totalConsultas: number;
@@ -27,7 +28,7 @@ interface ArquivosCompanyClientProps {
   };
 }
 
-type TabKey          = 'enviados' | 'cupons' | 'consultas' | 'impressoes';
+type TabKey          = 'notas' | 'boletos' | 'enviados' | 'cupons' | 'consultas' | 'impressoes';
 type FiltroKey       = 'todos' | 'ativos' | 'expirados' | 'esgotados';
 type FiltroImpressoes = 'todos' | 'pendentes' | 'concluidas' | 'erro';
 
@@ -83,15 +84,17 @@ export default function ArquivosCompanyClient({
   consultas: initialConsultas,
   enviados: initialEnviados,
   impressoes: initialImpressoes,
+  boletos: initialBoletos,
   stats: initialStats,
 }: ArquivosCompanyClientProps) {
   const supabase = createClient();
 
-  const [activeTab,          setActiveTab]          = useState<TabKey>('enviados');
+  const [activeTab,          setActiveTab]          = useState<TabKey>('notas');
   const [cupons,             setCupons]             = useState(initialCupons);
   const [consultas,          setConsultas]          = useState<Consulta[]>(initialConsultas);
   const [enviados,           setEnviados]           = useState<Enviado[]>(initialEnviados);
   const [impressoes,         setImpressoes]         = useState<any[]>(initialImpressoes);
+  const [boletos,            setBoletos]            = useState<any[]>(initialBoletos);
   const [stats,              setStats]              = useState(initialStats);
   const [filtroImpressoes,   setFiltroImpressoes]   = useState<FiltroImpressoes>('todos');
   const [filtro,           setFiltro]           = useState<FiltroKey>('todos');
@@ -335,7 +338,7 @@ export default function ArquivosCompanyClient({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Arquivos Enviados', value: stats.totalEnviados,    color: 'text-indigo-600 dark:text-indigo-400' },
-            { label: 'Total de Cupons',   value: stats.totalCupons,      color: 'text-blue-600 dark:text-blue-400'    },
+            { label: 'Cupons',            value: stats.totalCupons,      color: 'text-blue-600 dark:text-blue-400'    },
             { label: 'Total de Consultas',value: stats.totalConsultas,   color: 'text-green-600 dark:text-green-400'  },
             { label: 'Impressões',        value: stats.totalImpressoes,  color: 'text-orange-600 dark:text-orange-400'},
           ].map(s => (
@@ -349,10 +352,12 @@ export default function ArquivosCompanyClient({
           ))}
         </div>
 
-        {/* Abas — ordem: Enviados / Cupons / Consultas */}
+        {/* Abas */}
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-white/10">
             {([
+              { key: 'notas',      label: 'Notas',      icon: <FileText className="w-4 h-4" /> },
+              { key: 'boletos',    label: 'Boletos',    icon: <Receipt  className="w-4 h-4" /> },
               { key: 'enviados',   label: 'Enviados',   icon: <Upload   className="w-4 h-4" /> },
               { key: 'cupons',     label: 'Cupons',     icon: <Ticket   className="w-4 h-4" /> },
               { key: 'consultas',  label: 'Consultas',  icon: <FileText className="w-4 h-4" /> },
@@ -372,6 +377,67 @@ export default function ArquivosCompanyClient({
             ))}
           </div>
         </div>
+
+        {/* ── Aba: Notas ── */}
+        {activeTab === 'notas' && (
+          <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Notas Fiscais</h3>
+            </div>
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Em breve</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
+                Esta seção exibirá as notas fiscais geradas pelo assistente.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Aba: Boletos ── */}
+        {activeTab === 'boletos' && (
+          <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Segundas Vias de Boleto</h3>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{boletos.length} registro{boletos.length !== 1 ? 's' : ''}</span>
+            </div>
+
+            {boletos.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <Receipt className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma segunda via gerada ainda</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
+                  As segundas vias geradas pelo assistente aparecerão aqui.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-white/5">
+                {boletos.map((b: any) => (
+                  <div key={b.id} className="flex items-start justify-between gap-4 px-6 py-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <Receipt className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {b.metadata?.banco ?? 'Boleto'}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-mono truncate">
+                          {b.metadata?.codigo_barras?.slice(0, 24)}...
+                        </p>
+                        <div className="flex gap-3 mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {b.metadata?.valor     && <span>Valor: {b.metadata.valor}</span>}
+                          {b.metadata?.vencimento && <span>Venc: {b.metadata.vencimento}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5">
+                      {new Date(b.created_at).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Aba: Enviados ───────────────────────────────────────────────────── */}
         {activeTab === 'enviados' && (
@@ -575,7 +641,6 @@ export default function ArquivosCompanyClient({
           </div>
         )}
 
-        {/* ── Aba: Consultas ───────────────────────────────────────────────────── */}
         {/* ── Aba: Impressões ──────────────────────────────────────────────── */}
         {activeTab === 'impressoes' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">

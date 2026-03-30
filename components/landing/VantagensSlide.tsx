@@ -15,7 +15,7 @@ const VANTAGENS = [
     ),
     title: 'WebApp Próprio',
     highlight: 'PWA',
-    description: 'App web instalável direto na tela do celular, sem baixar nada na loja.',
+    description: 'Seu próprio App Web instalável, com sua marca e direto na tela do celular, tablet ou computador.',
     color: 'blue' as const,
   },
   {
@@ -26,19 +26,22 @@ const VANTAGENS = [
     ),
     title: 'Programa de Indicação',
     highlight: '50%',
-    description: 'Ganhe 50% de comissão sobre as mensalidades dos indicados, todos os meses.',
+    description: 'Ganhe 50% de comissão sobre as mensalidades dos seus indicados, todos os meses, direto nos seus recebimentos.',
     color: 'green' as const,
   },
   {
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-3.061a4.5 4.5 0 00-1.242-7.244l4.5-4.5a4.5 4.5 0 016.364 6.364l-1.757 1.757" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 9l-6 6" />
-      </svg>
+  <svg
+    className="w-5 h-5"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M12 2.5c.5 0 1 .2 1.4.6l7.5 7.5c.8.8.8 2 0 2.8l-7.5 7.5c-.8.8-2 .8-2.8 0l-7.5-7.5c-.8-.8-.8-2 0-2.8l7.5-7.5c.4-.4.9-.6 1.4-.6zm0 2.1L4.6 12 12 19.4 19.4 12 12 4.6zm-1.8 4.2c.3-.3.8-.3 1.1 0l.7.7.7-.7c.3-.3.8-.3 1.1 0s.3.8 0 1.1l-.7.7.7.7c.3.3.3.8 0 1.1s-.8.3-1.1 0l-.7-.7-.7.7c-.3.3-.8.3-1.1 0s-.3-.8 0-1.1l.7-.7-.7-.7c-.3-.3-.3-.8 0-1.1z"/>
+  </svg>
     ),
     title: 'Link de Pagamento PIX',
     highlight: '1 clique',
-    description: 'Links de pagamento PIX instantâneos para enviar por WhatsApp, SMS ou qualquer canal.',
+    description: 'Links de pagamento PIX instantâneos, com confirmação automática para enviar por whatsApp, e-mail ou qualquer canal.',
     color: 'blue' as const,
   },
 ];

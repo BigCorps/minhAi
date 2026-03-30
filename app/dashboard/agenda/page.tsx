@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useTheme } from 'next-themes';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAssistant } from '@/contexts/AssistantContext';
-import { 
+import {
   Calendar as CalendarIcon,
   Mail,
-  Link2, 
-  Loader2, 
+  Link2,
+  Loader2,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
@@ -20,11 +20,15 @@ import {
   Paperclip,
   ChevronDown,
   ChevronUp,
-  Inbox,
-  Send
+  Send,
+  HardDrive,
+  Folder,
+  Image as ImageIcon,
+  Wifi,
+  WifiOff,
+  Home,
 } from 'lucide-react';
 
-// FullCalendar imports
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -61,107 +65,108 @@ interface Email {
   isRead: boolean;
 }
 
+interface DriveFolder {
+  id: string;
+  name: string;
+}
+
+interface DriveImage {
+  id: string;
+  name: string;
+  url: string;
+  thumb: string;
+}
+
+interface SmartDevice {
+  id: string;
+  type: string;
+  displayName: string;
+  online: boolean;
+  traits: Record<string, any>;
+}
+
 interface GoogleAccount {
   id: string;
   google_email: string;
   is_active: boolean;
 }
 
-interface Company {
-  id: string;
-  name: string;
-  wake_word?: string;
-}
+type ActiveTab = 'calendar' | 'email' | 'drive' | 'smarthome';
 
 function AgendaPageContent() {
   const [googleAccount, setGoogleAccount] = useState<GoogleAccount | null>(null);
   const { selectedAssistantId: selectedCompanyId } = useAssistant();
-  // Estados do Calendário
+
+  // Calendar
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [currentTitle, setCurrentTitle] = useState('Calendário');
   const [activeView, setActiveView] = useState<'dayGridMonth' | 'timeGridWeek' | 'listWeek'>('dayGridMonth');
   const calendarRef = useRef<FullCalendar>(null);
 
-  // Estados de Emails
-  const [emails, setEmails] = useState<Email[]>([]);
+  // Email (sent only)
   const [sentEmails, setSentEmails] = useState<Email[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
-  const [emailTab, setEmailTab] = useState<'inbox' | 'sent'>('inbox');
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
 
-  // Estados gerais
+  // Drive
+  const [driveFolders, setDriveFolders] = useState<DriveFolder[]>([]);
+  const [driveImages, setDriveImages] = useState<DriveImage[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<DriveFolder | null>(null);
+  const [folderPath, setFolderPath] = useState<DriveFolder[]>([]);
+  const [loadingDrive, setLoadingDrive] = useState(false);
+  const [loadingImages, setLoadingImages] = useState(false);
+
+  // Smart Home
+  const [smartDevices, setSmartDevices] = useState<SmartDevice[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [deviceAction, setDeviceAction] = useState<string | null>(null);
+
+  // General
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'calendar' | 'email'>('calendar');
-  
+  const [activeTab, setActiveTab] = useState<ActiveTab>('calendar');
+
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
-
   const supabase = createClient();
 
- useEffect(() => {
-   if (selectedCompanyId) {
-     loadGoogleAccount(selectedCompanyId);
-   } else {
-     setGoogleAccount(null);
-     setEvents([]);
-     setEmails([]);
-     setSentEmails([]);
-   }
- }, [selectedCompanyId]);
-
-  async function loadCompanies() {
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name, wake_word')
-        .order('name');
-
-      if (error) throw error;
-      setCompanies(data || []);
-
-      if (data && data.length === 1 && !selectedCompanyId) {
-        setSelectedCompanyId(data[0].id);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar empresas:', error);
+  useEffect(() => {
+    if (selectedCompanyId) {
+      loadGoogleAccount(selectedCompanyId);
+    } else {
+      setGoogleAccount(null);
+      setEvents([]);
+      setSentEmails([]);
     }
-  }
+  }, [selectedCompanyId]);
+
+  // Reload data when tab changes
+  useEffect(() => {
+    if (!selectedCompanyId || !googleAccount) return;
+    if (activeTab === 'drive' && driveFolders.length === 0) loadDriveFolders(null);
+    if (activeTab === 'smarthome' && smartDevices.length === 0) loadSmartDevices();
+  }, [activeTab, googleAccount]);
 
   async function loadGoogleAccount(companyId: string) {
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('google_accounts')
         .select('id, google_email, is_active')
         .eq('company_id', companyId)
         .eq('is_active', true)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
       setGoogleAccount(data);
-      
       if (data) {
-        // Carregar eventos e emails em paralelo
         await Promise.all([
           loadGoogleEvents(companyId),
-          loadEmails(companyId),
+          loadSentEmails(companyId),
         ]);
-      } else {
-        setEvents([]);
-        setEmails([]);
-        setSentEmails([]);
       }
     } catch (error) {
       console.error('Erro ao carregar conta Google:', error);
-      setEvents([]);
-      setEmails([]);
-      setSentEmails([]);
     } finally {
       setLoading(false);
     }
@@ -170,16 +175,10 @@ function AgendaPageContent() {
   async function loadGoogleEvents(companyId: string) {
     try {
       setLoadingEvents(true);
-      
       const { data, error } = await supabase.functions.invoke('listar-eventos-google', {
         body: { company_id: companyId },
       });
-
-      if (error) {
-        console.error('Erro ao buscar eventos:', error);
-        throw error;
-      }
-
+      if (error) throw error;
       const calendarEvents: CalendarEvent[] = (data?.events || []).map((event: any) => ({
         id: event.id,
         title: event.summary || 'Sem título',
@@ -195,7 +194,6 @@ function AgendaPageContent() {
           attendees: event.attendees?.map((a: any) => a.email) || [],
         },
       }));
-
       setEvents(calendarEvents);
     } catch (error) {
       console.error('Erro ao carregar eventos:', error);
@@ -204,93 +202,154 @@ function AgendaPageContent() {
     }
   }
 
-  async function loadEmails(companyId: string) {
+  async function loadSentEmails(companyId: string) {
     try {
       setLoadingEmails(true);
-      
-      const [inboxData, sentData] = await Promise.all([
-        supabase.functions.invoke('listar-emails-google', {
-          body: { company_id: companyId, type: 'inbox', max_results: 20 },
-        }),
-        supabase.functions.invoke('listar-emails-google', {
-          body: { company_id: companyId, type: 'sent', max_results: 20 },
-        }),
-      ]);
-
-      if (inboxData.error) {
-        console.error('Erro ao buscar emails recebidos:', inboxData.error);
-      } else {
-        setEmails(inboxData.data?.emails || []);
-      }
-
-      if (sentData.error) {
-        console.error('Erro ao buscar emails enviados:', sentData.error);
-      } else {
-        setSentEmails(sentData.data?.emails || []);
-      }
+      const { data, error } = await supabase.functions.invoke('listar-emails-google', {
+        body: { company_id: companyId, type: 'sent', max_results: 20 },
+      });
+      if (!error) setSentEmails(data?.emails || []);
     } catch (error) {
-      console.error('Erro ao carregar emails:', error);
+      console.error('Erro ao carregar emails enviados:', error);
     } finally {
       setLoadingEmails(false);
     }
   }
 
+  async function loadDriveFolders(parentId: string | null) {
+    if (!selectedCompanyId) return;
+    setLoadingDrive(true);
+    setDriveImages([]);
+    setSelectedFolder(null);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-folders`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ company_id: selectedCompanyId, parent_id: parentId }),
+        }
+      );
+      const json = await res.json();
+      setDriveFolders(json.folders || []);
+    } catch { setDriveFolders([]); }
+    finally { setLoadingDrive(false); }
+  }
+
+  async function loadDriveImages(folderId: string) {
+    if (!selectedCompanyId) return;
+    setLoadingImages(true);
+    setDriveImages([]);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-images`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ company_id: selectedCompanyId, folder_id: folderId }),
+        }
+      );
+      const json = await res.json();
+      setDriveImages(json.images || []);
+    } catch { setDriveImages([]); }
+    finally { setLoadingImages(false); }
+  }
+
+  async function loadSmartDevices() {
+    if (!selectedCompanyId) return;
+    setLoadingDevices(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ company_id: selectedCompanyId, action: 'list' }),
+        }
+      );
+      const json = await res.json();
+      setSmartDevices(json.devices || []);
+    } catch { setSmartDevices([]); }
+    finally { setLoadingDevices(false); }
+  }
+
+  async function sendDeviceCommand(deviceId: string, command: string, params: any = {}) {
+    if (!selectedCompanyId) return;
+    setDeviceAction(deviceId);
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ company_id: selectedCompanyId, action: 'command', device_id: deviceId, command, params }),
+        }
+      );
+      setTimeout(loadSmartDevices, 1500);
+    } catch { }
+    finally { setDeviceAction(null); }
+  }
+
   function handleGoToConnect() {
-    const url = `/dashboard/google-connect${selectedCompanyId ? `?companyId=${selectedCompanyId}` : ''}`;
-    router.push(url);
+    router.push(`/dashboard/google-connect${selectedCompanyId ? `?companyId=${selectedCompanyId}` : ''}`);
   }
 
   async function handleRefresh() {
-    if (selectedCompanyId) {
-      if (activeTab === 'calendar') {
-        await loadGoogleEvents(selectedCompanyId);
-      } else {
-        await loadEmails(selectedCompanyId);
-      }
-    }
+    if (!selectedCompanyId) return;
+    if (activeTab === 'calendar') await loadGoogleEvents(selectedCompanyId);
+    else if (activeTab === 'email') await loadSentEmails(selectedCompanyId);
+    else if (activeTab === 'drive') loadDriveFolders(folderPath.length > 0 ? folderPath[folderPath.length - 1].id : null);
+    else if (activeTab === 'smarthome') loadSmartDevices();
   }
 
-  // Funções do Calendário
   function handleNav(action: 'prev' | 'next' | 'today') {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi[action]();
-      setCurrentTitle(calendarApi.view.title);
-    }
+    const api = calendarRef.current?.getApi();
+    if (api) { api[action](); setCurrentTitle(api.view.title); }
   }
 
   function handleViewChange(view: 'dayGridMonth' | 'timeGridWeek' | 'listWeek') {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi.changeView(view);
-      setActiveView(view);
-      setCurrentTitle(calendarApi.view.title);
-    }
+    const api = calendarRef.current?.getApi();
+    if (api) { api.changeView(view); setActiveView(view); setCurrentTitle(api.view.title); }
   }
 
-  // Funções de Emails
-  function toggleEmailExpand(emailId: string) {
-    setExpandedEmail(expandedEmail === emailId ? null : emailId);
+  function enterFolder(folder: DriveFolder) {
+    setFolderPath(prev => [...prev, folder]);
+    loadDriveFolders(folder.id);
+  }
+
+  function goBackFolder() {
+    const newPath = folderPath.slice(0, -1);
+    setFolderPath(newPath);
+    loadDriveFolders(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
   }
 
   function formatDate(dateString: string) {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    } else if (diffDays === 1) {
-      return 'Ontem';
-    } else if (diffDays < 7) {
-      return `${diffDays} dias atrás`;
-    } else {
-      return date.toLocaleDateString('pt-BR');
-    }
+    const diffDays = Math.ceil(Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays < 7) return `${diffDays} dias atrás`;
+    return date.toLocaleDateString('pt-BR');
   }
 
-  const currentEmails = emailTab === 'inbox' ? emails : sentEmails;
+  function getDeviceIcon(type: string) {
+    const t = type.toLowerCase();
+    if (t.includes('light') || t.includes('lamp')) return '💡';
+    if (t.includes('thermostat')) return '🌡️';
+    if (t.includes('fan')) return '🌀';
+    if (t.includes('tv') || t.includes('display')) return '📺';
+    if (t.includes('speaker')) return '🔊';
+    return '🔌';
+  }
+
+  // ── Tab config ───────────────────────────────────────────
+  const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: number }[] = [
+    { key: 'calendar', label: 'Calendário', icon: <CalendarIcon className="w-4 h-4" />, count: events.length },
+    { key: 'email', label: 'Emails Enviados', icon: <Send className="w-4 h-4" />, count: sentEmails.length },
+    { key: 'drive', label: 'Google Drive', icon: <HardDrive className="w-4 h-4" /> },
+    { key: 'smarthome', label: 'Smart Home', icon: <Home className="w-4 h-4" />, count: smartDevices.length },
+  ];
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -299,69 +358,44 @@ function AgendaPageContent() {
 
           {/* Header */}
           <div className="mb-8">
-<div className="flex items-end justify-between gap-4 mb-6">
-  
-  {/* Lado esquerdo */}
-  <div className="flex-1 min-w-0">
-    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 whitespace-nowrap">
-      Serviços Google
-    </h1>
-
-    <p className="text-gray-600 dark:text-gray-400">
-      Gerencie calendário e emails integrados com Google
-    </p>
-  </div>
-            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Serviços Google</h1>
+            <p className="text-gray-600 dark:text-gray-400">Calendário, emails, Drive e dispositivos Smart Home</p>
           </div>
 
-          {/* Loading */}
           {loading && selectedCompanyId && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           )}
 
-          {/* Sem assistente selecionado */}
           {!selectedCompanyId && !loading && (
             <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
               <CalendarIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Selecione um Assistente
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Escolha um assistente acima para visualizar a agenda e emails
-              </p>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Selecione um Assistente</h3>
+              <p className="text-gray-600 dark:text-gray-400">Escolha um assistente para visualizar os serviços Google</p>
             </div>
           )}
 
-          {/* Sem conta Google conectada */}
           {!loading && selectedCompanyId && !googleAccount && (
             <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
               <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Conta Google Não Conectada
-              </h3>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Conta Google Não Conectada</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                Para visualizar calendário e emails, você precisa conectar uma conta Google primeiro.
+                Conecte uma conta Google para usar calendário, emails, Drive e Smart Home.
               </p>
-              <button
-                onClick={handleGoToConnect}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-              >
+              <button onClick={handleGoToConnect} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                 <Settings className="w-5 h-5" />
                 Conectar Conta Google
               </button>
             </div>
           )}
 
-          {/* Conteúdo Principal */}
           {!loading && selectedCompanyId && googleAccount && (
             <>
-              {/* Info da conta + Tabs Principais */}
+              {/* Header da conta */}
               <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                {/* Conta conectada */}
                 <div className="p-4 border-b border-gray-200 dark:border-white/10">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -369,132 +403,85 @@ function AgendaPageContent() {
                         <Link2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          Conectado como
-                        </p>
-                        <p className="text-sm text-green-600 dark:text-green-400 font-semibold">
-                          {googleAccount.google_email}
-                        </p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Conectado como</p>
+                        <p className="text-sm text-green-600 dark:text-green-400 font-semibold">{googleAccount.google_email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={handleRefresh}
-                        disabled={loadingEvents || loadingEmails}
+                        disabled={loadingEvents || loadingEmails || loadingDrive || loadingDevices}
                         className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition disabled:opacity-50"
                       >
-                        <RefreshCw className={`w-4 h-4 ${(loadingEvents || loadingEmails) ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-4 h-4 ${(loadingEvents || loadingEmails || loadingDrive || loadingDevices) ? 'animate-spin' : ''}`} />
                         Atualizar
                       </button>
-                      <button
-                        onClick={handleGoToConnect}
-                        className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
-                      >
+                      <button onClick={handleGoToConnect} className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition">
                         Gerenciar
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Tabs Principais: Calendário / Email */}
-                <div className="flex border-b border-gray-200 dark:border-white/10">
-                  <button
-                    onClick={() => setActiveTab('calendar')}
-                    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                      activeTab === 'calendar'
-                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <CalendarIcon className="w-4 h-4" />
-                    Calendário ({events.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('email')}
-                    className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                      activeTab === 'email'
-                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <Mail className="w-4 h-4" />
-                    Emails ({emails.length + sentEmails.length})
-                  </button>
+                {/* ── Tabs: 2 por linha no mobile, 4 no desktop ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 border-b border-gray-200 dark:border-white/10">
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`px-3 py-3 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5 border-b-2 ${
+                        activeTab === tab.key
+                          ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                          : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
+                      } ${
+                        // Borda direita entre colunas no mobile
+                        tab.key === 'calendar' || tab.key === 'drive'
+                          ? 'border-r border-r-gray-200 dark:border-r-white/10'
+                          : ''
+                      }`}
+                    >
+                      {tab.icon}
+                      <span className="truncate">{tab.label}</span>
+                      {tab.count !== undefined && tab.count > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full hidden sm:inline">
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* CALENDÁRIO */}
+              {/* ── CALENDÁRIO ── */}
               {activeTab === 'calendar' && (
                 <>
-                  {/* Controles do Calendário */}
                   <div className="mb-4 p-3 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleNav('prev')}
-                          className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition text-gray-700 dark:text-gray-300"
-                        >
+                        <button onClick={() => handleNav('prev')} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition text-gray-700 dark:text-gray-300">
                           <ChevronLeft className="w-5 h-5" />
                         </button>
-                        <button
-                          onClick={() => handleNav('today')}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition"
-                        >
+                        <button onClick={() => handleNav('today')} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition">
                           Hoje
                         </button>
-                        <button
-                          onClick={() => handleNav('next')}
-                          className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition text-gray-700 dark:text-gray-300"
-                        >
+                        <button onClick={() => handleNav('next')} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition text-gray-700 dark:text-gray-300">
                           <ChevronRight className="w-5 h-5" />
                         </button>
                       </div>
-
-                      <div className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
-                        {currentTitle}
-                      </div>
-
+                      <div className="text-lg font-semibold text-gray-900 dark:text-white capitalize">{currentTitle}</div>
                       <div className="flex gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
-                        <button
-                          onClick={() => handleViewChange('dayGridMonth')}
-                          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                            activeView === 'dayGridMonth'
-                              ? 'bg-blue-500 text-white'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'
-                          }`}
-                        >
-                          Mês
-                        </button>
-                        <button
-                          onClick={() => handleViewChange('timeGridWeek')}
-                          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                            activeView === 'timeGridWeek'
-                              ? 'bg-blue-500 text-white'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'
-                          }`}
-                        >
-                          Semana
-                        </button>
-                        <button
-                          onClick={() => handleViewChange('listWeek')}
-                          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                            activeView === 'listWeek'
-                              ? 'bg-blue-500 text-white'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'
-                          }`}
-                        >
-                          Lista
-                        </button>
+                        {(['dayGridMonth', 'timeGridWeek', 'listWeek'] as const).map((v, i) => (
+                          <button key={v} onClick={() => handleViewChange(v)}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${activeView === v ? 'bg-blue-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'}`}>
+                            {['Mês', 'Semana', 'Lista'][i]}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
-
-                  {/* FullCalendar */}
                   <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
                     {loadingEvents ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                      </div>
+                      <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
                     ) : (
                       <FullCalendar
                         ref={calendarRef}
@@ -505,134 +492,241 @@ function AgendaPageContent() {
                         locale={ptBrLocale}
                         height="auto"
                         allDayText="Dia inteiro"
-                        buttonText={{
-                          today: 'Hoje',
-                          month: 'Mês',
-                          week: 'Semana',
-                          list: 'Lista',
-                        }}
-                        eventClassNames="cursor-pointer"
-                        eventClick={(info) => {
-                          console.log('Evento clicado:', info.event);
-                        }}
-                        datesSet={(dateInfo) => {
-                          setCurrentTitle(dateInfo.view.title);
-                          setActiveView(dateInfo.view.type as any);
-                        }}
+                        datesSet={(info) => { setCurrentTitle(info.view.title); setActiveView(info.view.type as any); }}
                       />
                     )}
                   </div>
                 </>
               )}
 
-              {/* EMAILS */}
+              {/* ── EMAILS ENVIADOS ── */}
               {activeTab === 'email' && (
                 <>
-                  {/* Tabs de Email: Recebidos / Enviados */}
-                  <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                    <div className="flex border-b border-gray-200 dark:border-white/10">
-                      <button
-                        onClick={() => setEmailTab('inbox')}
-                        className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                          emailTab === 'inbox'
-                            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        <Inbox className="w-4 h-4" />
-                        Recebidos ({emails.length})
-                      </button>
-                      <button
-                        onClick={() => setEmailTab('sent')}
-                        className={`flex-1 px-6 py-3 text-sm font-medium transition flex items-center justify-center gap-2 ${
-                          emailTab === 'sent'
-                            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        <Send className="w-4 h-4" />
-                        Enviados ({sentEmails.length})
-                      </button>
+                  <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-4 h-4 text-blue-500" />
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        Exibindo apenas emails enviados pelo assistente. O escopo de leitura de emails não está ativo.
+                      </p>
                     </div>
                   </div>
 
-                  {/* Lista de emails */}
                   {loadingEmails ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    </div>
-                  ) : currentEmails.length === 0 ? (
+                    <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+                  ) : sentEmails.length === 0 ? (
                     <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
                       <Mail className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        Nenhum email {emailTab === 'inbox' ? 'recebido' : 'enviado'}
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        {emailTab === 'inbox' 
-                          ? 'Você ainda não recebeu nenhum email'
-                          : 'Você ainda não enviou nenhum email pelo assistente'}
-                      </p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Nenhum email enviado</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Os emails enviados pelo assistente aparecerão aqui.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {currentEmails.map((email) => (
-                        <div
-                          key={email.id}
-                          className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden hover:border-blue-500/30 dark:hover:border-blue-500/30 transition"
-                        >
-                          {/* Header do email */}
-                          <button
-                            onClick={() => toggleEmailExpand(email.id)}
-                            className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition"
-                          >
+                      {sentEmails.map((email) => (
+                        <div key={email.id} className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden hover:border-blue-500/30 transition">
+                          <button onClick={() => setExpandedEmail(expandedEmail === email.id ? null : email.id)} className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                    {emailTab === 'inbox' ? email.from : email.to.join(', ')}
-                                  </p>
-                                  {email.hasAttachments && (
-                                    <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                  )}
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">Para: {email.to.join(', ')}</p>
+                                  {email.hasAttachments && <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />}
                                 </div>
-                                <h3 className={`text-sm mb-1 truncate ${
-                                  email.isRead 
-                                    ? 'text-gray-600 dark:text-gray-400' 
-                                    : 'font-semibold text-gray-900 dark:text-white'
-                                }`}>
-                                  {email.subject || '(Sem assunto)'}
-                                </h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-500 truncate">
-                                  {email.snippet}
-                                </p>
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 truncate">{email.subject || '(Sem assunto)'}</h3>
+                                <p className="text-sm text-gray-500 truncate">{email.snippet}</p>
                               </div>
                               <div className="flex flex-col items-end gap-2">
-                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-500">
-                                  <Clock className="w-3 h-3" />
-                                  {formatDate(email.date)}
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Clock className="w-3 h-3" />{formatDate(email.date)}
                                 </div>
-                                {expandedEmail === email.id ? (
-                                  <ChevronUp className="w-5 h-5 text-gray-400" />
-                                ) : (
-                                  <ChevronDown className="w-5 h-5 text-gray-400" />
-                                )}
+                                {expandedEmail === email.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                               </div>
                             </div>
                           </button>
-
-                          {/* Corpo do email (expandido) */}
                           {expandedEmail === email.id && email.body && (
                             <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                              <div 
-                                className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap"
-                                dangerouslySetInnerHTML={{ __html: email.body }}
-                              />
+                              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: email.body }} />
                             </div>
                           )}
                         </div>
                       ))}
                     </div>
+                  )}
+                </>
+              )}
+
+              {/* ── GOOGLE DRIVE ── */}
+              {activeTab === 'drive' && (
+                <>
+                  {/* Breadcrumb */}
+                  <div className="mb-4 flex items-center gap-1 text-sm flex-wrap">
+                    <button onClick={() => { setFolderPath([]); loadDriveFolders(null); setSelectedFolder(null); setDriveImages([]); }}
+                      className="text-blue-500 hover:underline flex-shrink-0">
+                      Meu Drive
+                    </button>
+                    {folderPath.map((f, i) => (
+                      <span key={f.id} className="flex items-center gap-1">
+                        <span className="text-gray-400">/</span>
+                        <button onClick={() => {
+                          const newPath = folderPath.slice(0, i + 1);
+                          setFolderPath(newPath);
+                          loadDriveFolders(f.id);
+                          setSelectedFolder(null);
+                          setDriveImages([]);
+                        }} className="text-blue-500 hover:underline">
+                          {f.name}
+                        </button>
+                      </span>
+                    ))}
+                    {selectedFolder && (
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">/</span>
+                        <span className="text-gray-600 dark:text-gray-400">{selectedFolder.name}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Pastas */}
+                    <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Folder className="w-4 h-4 text-yellow-500" />
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">Pastas</span>
+                        </div>
+                        {folderPath.length > 0 && (
+                          <button onClick={goBackFolder} className="text-xs text-blue-500 hover:underline">← Voltar</button>
+                        )}
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {loadingDrive ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+                        ) : driveFolders.length === 0 ? (
+                          <p className="text-center py-8 text-sm text-gray-400">Nenhuma pasta encontrada</p>
+                        ) : (
+                          driveFolders.map(folder => (
+                            <div key={folder.id} className={`flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition ${selectedFolder?.id === folder.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                              <button onClick={() => enterFolder(folder)} className="flex items-center gap-2 flex-1 text-left text-sm text-gray-800 dark:text-gray-200">
+                                📁 {folder.name}
+                              </button>
+                              <button
+                                onClick={() => { setSelectedFolder(folder); loadDriveImages(folder.id); }}
+                                className={`text-xs px-2 py-1 rounded transition flex-shrink-0 ${selectedFolder?.id === folder.id ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100'}`}
+                              >
+                                {selectedFolder?.id === folder.id ? '✓ Aberta' : 'Ver imagens'}
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Imagens */}
+                    <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-blue-500" />
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {selectedFolder ? `Imagens em "${selectedFolder.name}"` : 'Selecione uma pasta'}
+                        </span>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {loadingImages ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+                        ) : !selectedFolder ? (
+                          <div className="flex flex-col items-center justify-center py-8 gap-2">
+                            <Folder className="w-10 h-10 text-gray-300" />
+                            <p className="text-sm text-gray-400">Clique em "Ver imagens" em uma pasta</p>
+                          </div>
+                        ) : driveImages.length === 0 ? (
+                          <p className="text-center py-8 text-sm text-gray-400">Nenhuma imagem encontrada</p>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-1 p-2">
+                            {driveImages.map(img => (
+                              <div key={img.id} className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-800">
+                                <img
+                                  src={img.thumb}
+                                  alt={img.name}
+                                  className="w-full h-full object-cover hover:scale-105 transition"
+                                  title={img.name}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {driveImages.length > 0 && (
+                        <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5">
+                          <p className="text-xs text-gray-400">{driveImages.length} imagem{driveImages.length !== 1 ? 's' : ''}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ── SMART HOME ── */}
+              {activeTab === 'smarthome' && (
+                <>
+                  {loadingDevices ? (
+                    <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div>
+                  ) : smartDevices.length === 0 ? (
+                    <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
+                      <Home className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Nenhum dispositivo encontrado</h3>
+                      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                        Certifique-se de ter dispositivos Google Home/Nest vinculados à conta conectada e o Device Access ativado.
+                      </p>
+                      <button onClick={loadSmartDevices} className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition">
+                        Tentar novamente
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                        <p className="text-sm text-green-800 dark:text-green-200">
+                          🏠 {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {smartDevices.map(device => (
+                          <div key={device.id} className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">{getDeviceIcon(device.type)}</span>
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{device.displayName}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">{device.type.split('.').pop()}</p>
+                                </div>
+                              </div>
+                              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${device.online ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                {device.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                                {device.online ? 'Online' : 'Offline'}
+                              </div>
+                            </div>
+                            {device.online && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'HEAT' })}
+                                  disabled={deviceAction === device.id}
+                                  className="flex-1 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition disabled:opacity-50"
+                                >
+                                  {deviceAction === device.id ? '...' : 'Ligar'}
+                                </button>
+                                <button
+                                  onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'OFF' })}
+                                  disabled={deviceAction === device.id}
+                                  className="flex-1 py-1.5 text-xs rounded-lg bg-red-500/80 hover:bg-red-600 text-white font-medium transition disabled:opacity-50"
+                                >
+                                  Desligar
+                                </button>
+                              </div>
+                            )}
+                            {!device.online && (
+                              <p className="text-xs text-gray-400 text-center">Dispositivo offline</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </>
               )}

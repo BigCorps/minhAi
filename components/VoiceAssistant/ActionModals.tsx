@@ -73,6 +73,7 @@ import IdentificarFraudeDisplay from '@/components/assistant/IdentificarFraudeDi
 import LoginClienteDisplay from '@/components/assistant/LoginClienteDisplay';
 import TranslateTextModal from '@/components/assistant/TranslateTextModal';
 import TranscribeAudioModal from '@/components/assistant/TranscribeAudioModal';
+import SegundaViaBoletoDisplay from '@/components/VoiceAssistant/modals/SegundaViaBoletoDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -144,6 +145,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'LoginClienteDisplay': LoginClienteDisplay,
   'TranslateTextModal': TranslateTextModal,
   'TranscribeAudioModal': TranscribeAudioModal,
+  'SegundaViaBoletoDisplay': SegundaViaBoletoDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

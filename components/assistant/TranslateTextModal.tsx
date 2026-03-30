@@ -488,33 +488,41 @@ export default function TranslateTextModal({
                     />
                   </div>
 
-                  {isRecording && !isManualMode ? (
-                    <button
-                      onClick={stopRecording}
-                      className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                    >
-                      <X className="w-5 h-5" />
-                      Parar Gravação
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleTranslate}
-                      disabled={!inputText.trim() || isTranslating}
-                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                    >
-                      {isTranslating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Traduzindo...
-                        </>
-                      ) : (
-                        <>
-                          <Languages className="w-5 h-5" />
-                          Traduzir
-                        </>
-                      )}
-                    </button>
-                  )}
+{isRecording && !isManualMode ? (
+  <button
+    onClick={() => {
+      stopRecording();
+      // Aguarda 500ms para garantir que o texto foi capturado
+      setTimeout(() => {
+        if (finalTranscriptRef.current.trim()) {
+          handleTranslate();
+        }
+      }, 500);
+    }}
+    className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+  >
+    <Check className="w-5 h-5" />
+    Parar e Traduzir
+  </button>
+) : (
+  <button
+    onClick={handleTranslate}
+    disabled={!inputText.trim() || isTranslating}
+    className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+  >
+    {isTranslating ? (
+      <>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        Traduzindo...
+      </>
+    ) : (
+      <>
+        <Languages className="w-5 h-5" />
+        Traduzir
+      </>
+    )}
+  </button>
+)}
 
                   {!isRecording && (
                     <button

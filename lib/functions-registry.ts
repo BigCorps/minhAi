@@ -2045,7 +2045,7 @@ traduzir_texto: {
   isPremium: false,
   
   handler: async ({ playText, setActiveModal, companyId }) => {
-    await playText('Abrindo ferramenta de tradução. Fale ou digite o texto que deseja traduzir.');
+    playText('Abrindo ferramenta de tradução. Fale ou digite o texto que deseja traduzir.');
     setActiveModal({ type: 'TranslateTextModal', data: { companyId } });
     return true;
   }
@@ -2088,7 +2088,7 @@ transcrever_audio: {
   isPremium: false,
   
   handler: async ({ playText, setActiveModal, companyId }) => {
-    await playText('Abrindo ferramenta de transcrição. Fale ou grave o áudio que deseja transcrever.');
+    playText('Abrindo ferramenta de transcrição. Fale ou grave o áudio que deseja transcrever.');
     setActiveModal({ type: 'TranscribeAudioModal', data: { companyId } });
     return true;
   }

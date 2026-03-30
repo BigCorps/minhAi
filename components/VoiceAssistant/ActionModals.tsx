@@ -73,7 +73,7 @@ import IdentificarFraudeDisplay from '@/components/assistant/IdentificarFraudeDi
 import LoginClienteDisplay from '@/components/assistant/LoginClienteDisplay';
 import TranslateTextModal from '@/components/assistant/TranslateTextModal';
 import TranscribeAudioModal from '@/components/assistant/TranscribeAudioModal';
-import SegundaViaBoletoDisplay from '@/components/VoiceAssistant/modals/SegundaViaBoletoDisplay';
+import SegundaViaBoletoDisplay from '@/components/assistant/SegundaViaBoletoDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';

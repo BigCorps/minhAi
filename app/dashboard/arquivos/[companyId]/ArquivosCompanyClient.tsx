@@ -354,7 +354,7 @@ export default function ArquivosCompanyClient({
 
         {/* Abas */}
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-          <div className="grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-white/10">
+          <div className="grid grid-cols-3 sm:flex border-b border-gray-200 dark:border-white/10">
             {([
               { key: 'notas',      label: 'Notas',      icon: <FileText className="w-4 h-4" /> },
               { key: 'boletos',    label: 'Boletos',    icon: <Receipt  className="w-4 h-4" /> },
@@ -424,13 +424,13 @@ export default function ArquivosCompanyClient({
                           {b.metadata?.codigo_barras?.slice(0, 24)}...
                         </p>
                         <div className="flex gap-3 mt-1 text-xs text-gray-400 dark:text-gray-500">
-                          {b.metadata?.valor     && <span>Valor: {b.metadata.valor}</span>}
+                          {b.metadata?.valor      && <span>Valor: {b.metadata.valor}</span>}
                           {b.metadata?.vencimento && <span>Venc: {b.metadata.vencimento}</span>}
                         </div>
                       </div>
                     </div>
                     <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5">
-                      {new Date(b.created_at).toLocaleDateString('pt-BR')}
+                      {new Date(b.executed_at).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
                 ))}

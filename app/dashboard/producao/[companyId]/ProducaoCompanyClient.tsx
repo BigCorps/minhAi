@@ -87,8 +87,8 @@ function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boole
       .then(({ data }) => { setIngrediente(data); setLoading(false); });
   }, [fichaId]);
 
-  if (loading) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Carregando ingrediente...</p>;
-  if (!ingrediente) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Ingrediente ainda não gerado.</p>;
+  if (loading) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Carregando matéria prima...</p>;
+  if (!ingrediente) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Matéria prima ainda não gerado.</p>;
 
   return (
     <div style={{
@@ -394,7 +394,7 @@ export default function ProducaoCompanyClient({
                 : 'border-transparent text-gray-500 dark:text-white/50 hover:text-gray-700 dark:hover:text-white/70'
             }`}
           >
-            Ingredientes Base
+            Matéria Prima
           </button>
         </div>
 
@@ -627,7 +627,7 @@ export default function ProducaoCompanyClient({
                           {ficha.producao_ingredientes?.length > 0 && (
                             <>
                               <p className="text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3 mt-3">
-                                Ingredientes
+                                Matéria Prima
                                 <span className="ml-2 normal-case font-normal text-gray-400 dark:text-white/30">(clique no lápis para editar o custo unitário)</span>
                               </p>
                               <div className="grid sm:grid-cols-2 gap-2">
@@ -705,7 +705,7 @@ export default function ProducaoCompanyClient({
             {tipoFicha === 'preparos' ? (
               <div className="mt-6 p-4 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Fichas de Preparo</strong> produzem ingredientes automaticamente. O custo por unidade é calculado e alimenta o cadastro de ingredientes, propagando para todas as fichas que os utilizam.
+                  <strong>Fichas de Preparo</strong> produzem a matéria prima automaticamente. O custo por unidade é calculado e alimenta o cadastro das matérias primas, propagando para todas as fichas que os utilizam.
                 </p>
               </div>
             ) : (
@@ -732,7 +732,7 @@ export default function ProducaoCompanyClient({
     
     {/* Texto original */}
     <p className="text-sm text-blue-800 dark:text-blue-200">
-      Para criar ou editar um produto, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Clique no lápis azul para editar preço de venda e custo dos ingredientes.
+      Para criar ou editar um produto, use o <strong>Auxiliar de Produção</strong> ou manualmente em <strong>Nova Guia</strong>. Clique no lápis azul para editar preço de venda e custo da matéria prima.
     </p>
 
 {/* ✅ NOVA LINHA - Ativar função */}

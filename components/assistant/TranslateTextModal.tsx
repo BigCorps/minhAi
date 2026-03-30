@@ -135,24 +135,27 @@ export default function TranslateTextModal({
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[.,!?;:]+/g, '');
 
-          const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
-          if (hasFim) {
-            console.log('🛑 [Mobile] Encerramento detectado');
-            let cleaned = finalTranscriptRef.current;
-            for (const t of FIM_TRIGGERS) {
-              cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-            }
-            cleaned = cleaned.trim();
-            finalTranscriptRef.current = cleaned;
-            setInputText(cleaned);
-            stopRecording();
-            
-            // Auto-traduz após parar
-            if (cleaned) {
-              handleTranslate();
-            }
-            return;
-          }
+const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
+if (hasFim) {
+  console.log('🛑 [Mobile] Encerramento detectado');
+  let cleaned = finalTranscriptRef.current;
+  for (const t of FIM_TRIGGERS) {
+    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+  }
+  cleaned = cleaned.trim();
+  
+  // ✅ ATUALIZAR AMBOS OS ESTADOS
+  setInputText(cleaned);
+  finalTranscriptRef.current = cleaned;
+  
+  stopRecording();
+  
+  // Auto-traduz após parar
+  if (cleaned) {
+    handleTranslate();
+  }
+  return;
+}
 
           const isSoloTrigger = FIM_TRIGGERS.some(t => lowerT === t);
           if (!isSoloTrigger) {
@@ -242,22 +245,24 @@ export default function TranslateTextModal({
       setInputText(finalTranscriptRef.current + interimTranscript);
     };
 
-    recognition.onend = () => {
-      setIsRecording(false);
-      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
-      let cleaned = finalTranscriptRef.current;
-      for (const t of FIM_TRIGGERS_CLEAN) {
-        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-      }
-      cleaned = cleaned.trim();
-      setInputText(cleaned);
-      finalTranscriptRef.current = cleaned;
-      
-      // Auto-traduz após parar
-      if (cleaned) {
-        handleTranslate();
-      }
-    };
+recognition.onend = () => {
+  setIsRecording(false);
+  const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
+  let cleaned = finalTranscriptRef.current;
+  for (const t of FIM_TRIGGERS_CLEAN) {
+    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+  }
+  cleaned = cleaned.trim();
+  
+  // ✅ ATUALIZAR AMBOS OS ESTADOS
+  setInputText(cleaned);
+  finalTranscriptRef.current = cleaned;
+  
+  // Auto-traduz após parar
+  if (cleaned) {
+    handleTranslate();
+  }
+};
 
     recognition.onerror = (event: any) => {
       setIsRecording(false);
@@ -291,6 +296,7 @@ const handleTranslate = async () => {
     return;
   }
 
+  setInputText(textToTranslate);
   setIsTranslating(true);
 
   try {
@@ -667,15 +673,15 @@ const handleRetranslate = async (newTargetLanguage: string) => {
       )}
     </div>
 
-    {/* Original */}
-    <div>
-      <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Texto original:</label>
-      <div className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} border ${border} max-h-48 overflow-y-auto`}>
-        <p className={`text-sm ${textPrimary} whitespace-pre-wrap`}>
-          {inputText || finalTranscriptRef.current}
-        </p>
-      </div>
-    </div>
+{/* Original */}
+<div>
+  <label className={`block text-sm font-medium mb-2 ${textPrimary}`}>Texto original:</label>
+  <div className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} border ${border} max-h-48 overflow-y-auto`}>
+    <p className={`text-sm ${textPrimary} whitespace-pre-wrap`}>
+      {inputText}
+    </p>
+  </div>
+</div>
 
     {/* Tradução */}
     <div>

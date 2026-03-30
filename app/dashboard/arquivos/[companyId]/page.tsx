@@ -16,6 +16,7 @@ export default function ArquivosCompanyPage() {
   const [consultas, setConsultas]   = useState<any[]>([]);
   const [enviados, setEnviados]     = useState<any[]>([]);
   const [impressoes, setImpressoes] = useState<any[]>([]);
+  const [boletos, setBoletos]       = useState<any[]>([]);
   const [stats, setStats]           = useState({
     totalCupons: 0,
     totalConsultas: 0,
@@ -110,6 +111,18 @@ export default function ArquivosCompanyPage() {
       const listaImpressoes = printJobsData || [];
       setImpressoes(listaImpressoes);
 
+      // ── Boletos (interaction_history) ────────────────────────────────────────
+      const { data: boletosData } = await supabase
+        .from('interaction_history')
+        .select('id, user_input, assistant_response, created_at, metadata')
+        .eq('company_id', companyId)
+        .eq('interaction_type', 'segunda_via_boleto')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      const listaBoletos = boletosData || [];
+      setBoletos(listaBoletos);
+
       // ── Stats ───────────────────────────────────────────────────────────────
       const totalCupons       = listaCupons.length;
       const totalConsultas    = consultasData?.length || 0;
@@ -149,6 +162,7 @@ export default function ArquivosCompanyPage() {
       consultas={consultas}
       enviados={enviados}
       impressoes={impressoes}
+      boletos={boletos}
       stats={stats}
     />
   );

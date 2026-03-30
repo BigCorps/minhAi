@@ -88,7 +88,7 @@ function IngredienteGerado({ fichaId, isDark }: { fichaId: string; isDark: boole
   }, [fichaId]);
 
   if (loading) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Carregando matéria prima...</p>;
-  if (!ingrediente) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Matéria prima ainda não gerado.</p>;
+  if (!ingrediente) return <p className="text-xs text-gray-400 dark:text-white/30 py-1">Matéria prima ainda não gerada.</p>;
 
   return (
     <div style={{
@@ -571,7 +571,7 @@ export default function ProducaoCompanyClient({
                           <div className="flex items-center gap-1">
                             <button onClick={() => setExpandedId(expandedId === ficha.id ? null : ficha.id)}
                               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition text-gray-400 dark:text-white/40"
-                              title="Ver ingredientes">
+                              title="Ver matéria prima">
                               {expandedId === ficha.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
                             <button onClick={() => handleToggleAtivo(ficha.id, ficha.is_active)} disabled={loadingId === ficha.id}
@@ -619,7 +619,7 @@ export default function ProducaoCompanyClient({
                         <div className="px-6 pb-4 bg-gray-50 dark:bg-slate-900">
                           {ficha.is_ficha_preparo && (
                             <div className="mb-4 mt-3">
-                              <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">Ingrediente Gerado</p>
+                              <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">Matéria Prima Gerada</p>
                               <IngredienteGerado fichaId={ficha.id} isDark={isDark} />
                             </div>
                           )}

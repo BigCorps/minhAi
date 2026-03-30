@@ -694,6 +694,16 @@ case 'minha_conta':
   ).catch(() => {});
   return;
 
+case 'traduzir_texto':
+  setActiveModal({ type: 'TranslateTextModal', data: { companyId } });
+  playText('Abrindo ferramenta de tradução.').catch(() => {});
+  break;
+
+case 'transcrever_audio':
+  setActiveModal({ type: 'TranscribeAudioModal', data: { companyId } });
+  playText('Abrindo ferramenta de transcrição.').catch(() => {});
+  break;
+
         case 'meu_sistema':
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });

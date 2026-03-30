@@ -33,12 +33,17 @@ const VANTAGENS = [
     icon: (
   <svg
     className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
     viewBox="0 0 24 24"
-    fill="currentColor"
   >
-    <path d="M12 2.5c.5 0 1 .2 1.4.6l7.5 7.5c.8.8.8 2 0 2.8l-7.5 7.5c-.8.8-2 .8-2.8 0l-7.5-7.5c-.8-.8-.8-2 0-2.8l7.5-7.5c.4-.4.9-.6 1.4-.6zm0 2.1L4.6 12 12 19.4 19.4 12 12 4.6zm-1.8 4.2c.3-.3.8-.3 1.1 0l.7.7.7-.7c.3-.3.8-.3 1.1 0s.3.8 0 1.1l-.7.7.7.7c.3.3.3.8 0 1.1s-.8.3-1.1 0l-.7-.7-.7.7c-.3.3-.8.3-1.1 0s-.3-.8 0-1.1l.7-.7-.7-.7c-.3-.3-.3-.8 0-1.1z"/>
+    <rect x="3" y="3" width="6" height="6" rx="1.5" strokeWidth="1.5" />
+    <rect x="15" y="3" width="6" height="6" rx="1.5" strokeWidth="1.5" />
+    <rect x="3" y="15" width="6" height="6" rx="1.5" strokeWidth="1.5" />
+    
+    <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M15 15h2v2h-2zM19 15h2v4h-4v-2h2zM15 19h2v2h-2z" />
   </svg>
-    ),
+),
     title: 'Link de Pagamento PIX',
     highlight: '1 clique',
     description: 'Links de pagamento PIX instantâneos, com confirmação automática para enviar por whatsApp, e-mail ou qualquer canal.',

@@ -2009,6 +2009,91 @@ playlist: {
   },
 },
 
+traduzir_texto: {
+  functionKey: 'traduzir_texto',
+  functionName: 'Traduzir Texto',
+  category: 'ai_assistant',
+  description: 'Traduz textos entre idiomas usando IA',
+  shortDescription: 'Traduzir para outro idioma',
+  icon: '🔵',
+  color: '#0000ff',
+  
+  voiceTriggers: [
+    'traduzir',
+    'traduz',
+    'tradução',
+    'traducao',
+    'traduzir texto',
+    'traduzir para',
+    'como se diz',
+    'traduzir isso',
+  ],
+  
+  examplePhrases: [
+    'Traduzir para inglês',
+    'Traduzir este texto para espanhol',
+    'Como se diz isso em francês?',
+  ],
+  
+  creditsPerUse: 2,
+  responseType: 'modal',
+  uiComponent: 'TranslateTextModal',
+  requiresInput: false,
+  
+  saveToHistory: true,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    await playText('Abrindo ferramenta de tradução. Fale ou digite o texto que deseja traduzir.');
+    setActiveModal({ type: 'TranslateTextModal', data: { companyId } });
+    return true;
+  }
+},
+
+transcrever_audio: {
+  functionKey: 'transcrever_audio',
+  functionName: 'Transcrever Áudio',
+  category: 'ai_assistant',
+  description: 'Transcreve áudios para texto escrito',
+  shortDescription: 'Transcrever áudio para texto',
+  icon: '🔵',
+  color: '#0000ff',
+  
+  voiceTriggers: [
+    'transcrever',
+    'transcreve',
+    'transcrição',
+    'transcricao',
+    'transcrever audio',
+    'transcrever áudio',
+    'áudio para texto',
+    'audio para texto',
+    'passar para texto',
+  ],
+  
+  examplePhrases: [
+    'Transcrever áudio',
+    'Transcrever esta gravação',
+    'Passar áudio para texto',
+  ],
+  
+  creditsPerUse: 2,
+  responseType: 'modal',
+  uiComponent: 'TranscribeAudioModal',
+  requiresInput: false,
+  
+  saveToHistory: true,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    await playText('Abrindo ferramenta de transcrição. Fale ou grave o áudio que deseja transcrever.');
+    setActiveModal({ type: 'TranscribeAudioModal', data: { companyId } });
+    return true;
+  }
+},
+
 porta_retrato: {
   functionKey: 'porta_retrato',
   functionName: 'Porta Retrato',

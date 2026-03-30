@@ -2009,6 +2009,46 @@ playlist: {
   },
 },
 
+segunda_via_boleto: {
+  functionKey:     'segunda_via_boleto',
+  functionName:    'Segunda Via Boleto',
+  category:        'finance' as any,
+  responseType:    'voice+modal',
+ 
+  voiceTriggers: [
+    'segunda via',
+    'segunda via boleto',
+    'boleto perdido',
+    'reimprimir boleto',
+    'codigo do boleto',
+  ],
+  examplePhrases: [
+    'Segunda via do boleto',
+    'Gerar boleto',
+    'Perdi meu boleto',
+  ],
+ 
+  edgeFunction:    undefined,   // 100% frontend — sem edge
+  uiComponent:     'SegundaViaBoletoDisplay',
+  requiresInput:   false,
+  description:     'Gera segunda via de boleto a partir da linha digitável. Produz PDF com código de barras.',
+  icon:            '🧾',
+  color:           '#6366f1',
+  saveToHistory:   true,
+  creditsPerUse:   1,
+  requiresPayment: false,
+  isPremium:       false,
+ 
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({
+      type: 'SegundaViaBoletoDisplay',
+      data: { companyId },
+    });
+    // SEM playText aqui — o modal fala no useEffect de mount
+    return true;
+  },
+},
+
 traduzir_texto: {
   functionKey: 'traduzir_texto',
   functionName: 'Traduzir Texto',

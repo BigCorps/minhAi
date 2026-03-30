@@ -34,7 +34,7 @@ export default function FAQsClient() {
               Comandos e Execuções 
             </h2>
             <p className="text-gray-600 dark:text-white/60">
-              Selecione uma empresa para configurar as perguntas frequentes automáticas
+              Selecione uma empresa para configurar os perguntas frequentes em respostas automáticas e execuções de funções.
             </p>
           </div>
 

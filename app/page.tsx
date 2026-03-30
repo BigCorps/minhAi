@@ -101,7 +101,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações',
     title: 'Conexões e Serviços Profissionais',
     description:
-      'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
+      'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Drive, Aparelhos Smart, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações e APIs do minhAi',
     color: 'green' as const,

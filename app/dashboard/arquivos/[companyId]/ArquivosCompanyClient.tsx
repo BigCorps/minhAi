@@ -320,7 +320,7 @@ export default function ArquivosCompanyClient({
                 Arquivos
               </h2>
               <p className="text-gray-600 dark:text-white/60 mt-1">
-                Gerencie arquivos e cupons do assistente {selectedAssistantName} .
+                Gerencie todos os arquivos gerados e recebidos no assistente {selectedAssistantName} .
               </p>
             </div>
           </div>

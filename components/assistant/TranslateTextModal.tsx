@@ -137,25 +137,43 @@ export default function TranslateTextModal({
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[.,!?;:]+/g, '');
 
-const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
-if (hasFim) {
-  console.log('🛑 [Mobile] Encerramento detectado');
-  let cleaned = finalTranscriptRef.current;
-  for (const t of FIM_TRIGGERS) {
-    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-  }
-  cleaned = cleaned.trim();
-  finalTranscriptRef.current = cleaned;
-  setInputText(cleaned);
-  stopRecording();
-  
-  // ✅ ADICIONAR ESTA LINHA - Auto-traduz após parar
-  if (cleaned) {
-    setTimeout(() => handleTranslate(), 500);
-  }
-  
-  return;
-}
+          // CORREÇÃO 1 - Mobile: Remove trigger ANTES de salvar
+          const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
+          if (hasFim) {
+            console.log('🛑 [Mobile] Encerramento detectado');
+
+            // Remove trigger do texto ANTES de salvar
+            let textBeforeTrigger = text.trim();
+            for (const t of FIM_TRIGGERS) {
+              // Remove o trigger do final (case insensitive)
+              const regex = new RegExp(`\\s*${t}\\s*$`, 'gi');
+              textBeforeTrigger = textBeforeTrigger.replace(regex, '');
+            }
+            textBeforeTrigger = textBeforeTrigger.trim();
+
+            // Se tinha texto antes do trigger, adiciona ao acumulado
+            if (textBeforeTrigger && !FIM_TRIGGERS.some(t => textBeforeTrigger.toLowerCase() === t)) {
+              finalTranscriptRef.current += textBeforeTrigger + ' ';
+            }
+
+            // Limpa o texto final
+            let cleaned = finalTranscriptRef.current.trim();
+            for (const t of FIM_TRIGGERS) {
+              cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+            }
+            cleaned = cleaned.trim();
+
+            finalTranscriptRef.current = cleaned;
+            setInputText(cleaned);
+            stopRecording();
+
+            // Auto-traduz após parar
+            if (cleaned) {
+              setTimeout(() => handleTranslate(), 500);
+            }
+
+            return;
+          }
 
           const isSoloTrigger = FIM_TRIGGERS.some(t => lowerT === t);
           if (!isSoloTrigger) {
@@ -204,6 +222,7 @@ if (hasFim) {
 
     recognition.onstart = () => setIsRecording(true);
 
+    // CORREÇÃO 2 - Desktop: Lógica clara de acumulação com logs
     recognition.onresult = (event: any) => {
       let interimTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -219,25 +238,35 @@ if (hasFim) {
 
           const isSoloTrigger = FIM_TRIGGERS.some(t => lowerClean === t);
           if (isSoloTrigger) {
-            recognition.stop(); return;
+            console.log('🛑 [Desktop] Trigger solo detectado, parando');
+            recognition.stop();
+            return;
           }
 
           if (FIM_TRIGGERS.some(t => lowerClean.endsWith(t))) {
+            console.log('🛑 [Desktop] Trigger no final detectado');
+            // Remove trigger do final e acumula o texto antes
             let textToAdd = cleanedTranscript;
             for (const t of FIM_TRIGGERS) {
               textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
             }
             textToAdd = textToAdd.trim();
-            if (textToAdd) finalTranscriptRef.current += textToAdd + ' ';
-            recognition.stop(); return;
+            if (textToAdd) {
+              finalTranscriptRef.current += textToAdd + ' ';
+            }
+            recognition.stop();
+            return;
           }
 
+          // Acumula normalmente (sem trigger)
           let textToAdd = cleanedTranscript;
           for (const t of FIM_TRIGGERS) {
             textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
           }
           textToAdd = textToAdd.trim();
-          if (textToAdd) finalTranscriptRef.current += textToAdd + ' ';
+          if (textToAdd) {
+            finalTranscriptRef.current += textToAdd + ' ';
+          }
         } else {
           interimTranscript += transcript;
         }
@@ -245,22 +274,34 @@ if (hasFim) {
       setInputText(finalTranscriptRef.current + interimTranscript);
     };
 
-recognition.onend = () => {
-  setIsRecording(false);
-  const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
-  let cleaned = finalTranscriptRef.current;
-  for (const t of FIM_TRIGGERS_CLEAN) {
-    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-  }
-  cleaned = cleaned.trim();
-  setInputText(cleaned);
-  finalTranscriptRef.current = cleaned;
-  
-  // ✅ ADICIONAR ESTAS LINHAS - Auto-traduz após parar
-  if (cleaned) {
-    setTimeout(() => handleTranslate(), 500);
-  }
-};
+    // CORREÇÃO 4 - recognition.onend com logs de debug + auto-tradução
+    recognition.onend = () => {
+      setIsRecording(false);
+      console.log('🛑 [Desktop] Recognition.onend acionado');
+
+      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
+      let cleaned = finalTranscriptRef.current;
+
+      console.log('📝 [Desktop] Texto antes de limpar:', cleaned);
+
+      for (const t of FIM_TRIGGERS_CLEAN) {
+        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+      }
+      cleaned = cleaned.trim();
+
+      console.log('✅ [Desktop] Texto final limpo:', cleaned);
+
+      setInputText(cleaned);
+      finalTranscriptRef.current = cleaned;
+
+      // Auto-traduz após parar
+      if (cleaned) {
+        console.log('🚀 [Desktop] Iniciando tradução...');
+        setTimeout(() => handleTranslate(), 500);
+      } else {
+        console.warn('⚠️ [Desktop] Texto vazio, não traduz');
+      }
+    };
 
     recognition.onerror = (event: any) => {
       setIsRecording(false);
@@ -362,7 +403,7 @@ recognition.onend = () => {
         return;
       }
 
-      // ✅ GARANTIR que inputText está salvo
+      // Garante que inputText está salvo
       setInputText(textToTranslate);
       setTranslatedText(result.translated_text);
       setStep('result');
@@ -574,13 +615,23 @@ recognition.onend = () => {
                     />
                   </div>
 
+                  {/* CORREÇÃO 3 - Botão "Parar e Traduzir" */}
                   {isRecording && !isManualMode ? (
                     <button
-                      onClick={stopRecording}
-                      className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                      onClick={() => {
+                        stopRecording();
+                        // Aguarda parar completamente antes de traduzir
+                        setTimeout(() => {
+                          const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
+                          if (textToTranslate) {
+                            handleTranslate();
+                          }
+                        }, 500);
+                      }}
+                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
                     >
-                      <X className="w-5 h-5" />
-                      Parar Gravação
+                      <Check className="w-5 h-5" />
+                      Parar e Traduzir
                     </button>
                   ) : (
                     <button

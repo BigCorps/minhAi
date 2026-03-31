@@ -446,7 +446,7 @@ export default function ArquivosCompanyClient({
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="grid grid-cols-3 sm:flex border-b border-gray-200 dark:border-white/10">
             {([
-              { key: 'notas',      label: 'Notas',      icon: <FileText className="w-4 h-4" /> },
+              { key: 'notas',      label: 'Nota/Lista',      icon: <FileText className="w-4 h-4" /> },
               { key: 'boletos',    label: 'Boletos',    icon: <Receipt  className="w-4 h-4" /> },
               { key: 'enviados',   label: 'Enviados',   icon: <Upload   className="w-4 h-4" /> },
               { key: 'cupons',     label: 'Cupons',     icon: <Ticket   className="w-4 h-4" /> },
@@ -473,7 +473,7 @@ export default function ArquivosCompanyClient({
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Notas</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Notas e Listas de Compras</h3>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 dark:text-white/40">
                   {notas.length} nota{notas.length !== 1 ? 's' : ''}
@@ -498,7 +498,7 @@ export default function ArquivosCompanyClient({
                 <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma nota criada ainda</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
-                  As notas criadas pelo assistente aparecerão aqui
+                  As notas e listas criadas pelo assistente aparecerão aqui
                 </p>
               </div>
             ) : (

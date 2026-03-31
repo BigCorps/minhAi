@@ -112,6 +112,9 @@ const CONFIGURABLE_FUNCTIONS = [
   'canal_youtube',
   'identificar_fraude',
   'segunda_via_boleto',
+  'rastreio_correios',
+  'buscar_endereco',
+  'tracar_rota',
   'tef_debito',
   'tef_credito'
 ];

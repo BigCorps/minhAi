@@ -2141,7 +2141,7 @@ const CriarNotaForm = () => (
       </h4>
       <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
         <li>• Cliente dita a nota por voz ou usa comando "criar nota sobre [assunto]"</li>
-        <li>• Sistema reconhece e transcreve o texto automaticamente</li>
+        <li>• Assistente reconhece e transcreve o texto automaticamente</li>
         <li>• Cliente pode editar e adicionar título antes de salvar</li>
         <li>• Notas ficam salvas no dashboard em Arquivos → Notas</li>
       </ul>
@@ -2170,19 +2170,8 @@ const CriarNotaForm = () => (
         </div>
       </div>
     </div>
- 
-    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
-      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-        Créditos
-      </h4>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
-        Cada nota salva consome <strong>1 crédito</strong>
-      </p>
-    </div>
   </div>
 );
- 
-// ── 2. Componente LembreteRemediosForm (adicionar antes de FORM_COMPONENTS) ─
  
 const LembreteRemediosForm = () => (
   <div className="space-y-4">
@@ -2192,7 +2181,7 @@ const LembreteRemediosForm = () => (
       </h4>
       <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
         <li>• Cliente informa o nome do remédio por voz</li>
-        <li>• Sistema pergunta os horários (ex: 8h, 14h, 20h)</li>
+        <li>• Assistente pergunta os horários (ex: 8h, 14h, 20h)</li>
         <li>• Cliente pode editar manualmente antes de salvar</li>
         <li>• Opção de receber lembretes no assistente ou Google Calendar</li>
       </ul>
@@ -2240,15 +2229,6 @@ const LembreteRemediosForm = () => (
           </ul>
         </div>
       </div>
-    </div>
- 
-    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
-      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-        Créditos
-      </h4>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
-        Cada lembrete salvo consome <strong>1 crédito</strong>
-      </p>
     </div>
   </div>
 );

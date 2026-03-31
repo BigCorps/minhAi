@@ -2458,10 +2458,9 @@ const BuscarEnderecoForm = () => (
     <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
       <h4 className="font-semibold mb-2">Comandos de voz</h4>
       <ul className="space-y-1 text-sm">
-        <li>• "Buscar endereço da Av. Paulista"</li>
-        <li>• "Qual o CEP 01310-100"</li>
-        <li>• "Copiar endereço"</li>
-        <li>• "Traçar rota"</li>
+        <li>• "Buscar esse endereço na Av. Paulista"</li>
+        <li>• "Buscar endereço"</li>
+        <li>• "Pesquisar um endereço"</li>
       </ul>
     </div>
   </div>

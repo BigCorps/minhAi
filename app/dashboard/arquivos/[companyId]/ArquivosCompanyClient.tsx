@@ -103,6 +103,14 @@ export default function ArquivosCompanyClient({
   const [loadingEnviados,  setLoadingEnviados]  = useState(false);
   const [downloadingId,    setDownloadingId]    = useState<string | null>(null);
   const [deletingId,       setDeletingId]       = useState<string | null>(null);
+
+  // ── States de Notas ─────────────────────────────────────────────────────────
+  const [notas,         setNotas]         = useState<any[]>([]);
+  const [loadingNotas,  setLoadingNotas]  = useState(false);
+  const [editingNota,   setEditingNota]   = useState<string | null>(null);
+  const [editTitulo,    setEditTitulo]    = useState('');
+  const [editConteudo,  setEditConteudo]  = useState('');
+
   const { selectedAssistantId, selectedAssistantName } = useAssistant();
   const router = useRouter();
 
@@ -120,6 +128,13 @@ export default function ArquivosCompanyClient({
       fetchConsultas();
     }
   }, [activeTab]); // eslint-disable-line
+
+  // ── Notas: carregar quando aba é ativada ────────────────────────────────────
+  useEffect(() => {
+    if (activeTab === 'notas' && notas.length === 0) {
+      fetchNotas();
+    }
+  }, [activeTab, fetchNotas]); // eslint-disable-line
 
   // ── Cupons: toggle ──────────────────────────────────────────────────────────
   async function handleToggleAtivo(cupomId: string, current: boolean) {
@@ -154,6 +169,89 @@ export default function ArquivosCompanyClient({
       setLoadingConsultas(false);
     }
   }
+
+  // ── Notas: fetch ────────────────────────────────────────────────────────────
+  const fetchNotas = useCallback(async () => {
+    setLoadingNotas(true);
+    try {
+      const { data } = await supabase
+        .from('notas')
+        .select('id, titulo, conteudo, created_at, updated_at')
+        .eq('company_id', initialCompany.id)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setNotas(data);
+        setStats(prev => ({
+          ...prev,
+          totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + data.length,
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar notas:', error);
+    } finally {
+      setLoadingNotas(false);
+    }
+  }, [initialCompany.id, supabase]);
+
+  // ── Notas: editar ───────────────────────────────────────────────────────────
+  const handleEditNota = (nota: any) => {
+    setEditingNota(nota.id);
+    setEditTitulo(nota.titulo || '');
+    setEditConteudo(nota.conteudo);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingNota) return;
+
+    try {
+      const { error } = await supabase
+        .from('notas')
+        .update({
+          titulo: editTitulo.trim() || null,
+          conteudo: editConteudo.trim(),
+        })
+        .eq('id', editingNota);
+
+      if (error) throw error;
+
+      setNotas(notas.map(n =>
+        n.id === editingNota
+          ? { ...n, titulo: editTitulo.trim() || null, conteudo: editConteudo.trim(), updated_at: new Date().toISOString() }
+          : n
+      ));
+      setEditingNota(null);
+      setEditTitulo('');
+      setEditConteudo('');
+    } catch (error) {
+      console.error('Erro ao editar nota:', error);
+      alert('Erro ao editar nota');
+    }
+  };
+
+  // ── Notas: deletar ──────────────────────────────────────────────────────────
+  const handleDeleteNota = async (notaId: string) => {
+    if (!confirm('Deletar esta nota?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('notas')
+        .delete()
+        .eq('id', notaId);
+
+      if (error) throw error;
+
+      const updated = notas.filter(n => n.id !== notaId);
+      setNotas(updated);
+      setStats(prev => ({
+        ...prev,
+        totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + updated.length,
+      }));
+    } catch (error) {
+      console.error('Erro ao deletar nota:', error);
+      alert('Erro ao deletar nota');
+    }
+  };
 
   // ── Consultas: baixar PDF ───────────────────────────────────────────────────
   async function handleBaixarPDF(consultaId: string) {
@@ -288,9 +386,7 @@ export default function ArquivosCompanyClient({
     return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Ativo</span>;
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
-
-  // ── Download de arquivo de impressão ────────────────────────────────────
+  // ── Download de arquivo de impressão ────────────────────────────────────────
   const handleBaixarImpressao = async (impressao: any) => {
     try {
       const { data } = supabase.storage
@@ -308,12 +404,14 @@ export default function ArquivosCompanyClient({
     }
   };
 
+  // ─── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Cabeçalho */}
-        <div className="mb-8">       
+        <div className="mb-8">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -373,16 +471,130 @@ export default function ArquivosCompanyClient({
         {/* ── Aba: Notas ── */}
         {activeTab === 'notas' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
+
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Notas Fiscais</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Notas</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400 dark:text-white/40">
+                  {notas.length} nota{notas.length !== 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={fetchNotas}
+                  disabled={loadingNotas}
+                  className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loadingNotas ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-3 py-12 text-center">
-              <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Em breve</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
-                Esta seção exibirá as notas fiscais geradas pelo assistente.
-              </p>
-            </div>
+
+            {loadingNotas && notas.length === 0 ? (
+              <div className="py-16 text-center">
+                <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
+                <p className="text-gray-500 dark:text-white/40 font-medium">Carregando notas...</p>
+              </div>
+            ) : notas.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma nota criada ainda</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
+                  As notas criadas pelo assistente aparecerão aqui
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-white/5">
+                {notas.map((nota) => (
+                  <div key={nota.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+
+                    {editingNota === nota.id ? (
+                      // Modo de edição
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={editTitulo}
+                          onChange={(e) => setEditTitulo(e.target.value)}
+                          placeholder="Título (opcional)"
+                          className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
+                        />
+                        <textarea
+                          value={editConteudo}
+                          onChange={(e) => setEditConteudo(e.target.value)}
+                          rows={6}
+                          className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 resize-none bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSaveEdit}
+                            className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition text-sm font-medium"
+                          >
+                            Salvar
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingNota(null);
+                              setEditTitulo('');
+                              setEditConteudo('');
+                            }}
+                            className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-white/15 transition text-sm font-medium"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Modo de visualização
+                      <div>
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="flex-1 min-w-0">
+                            {nota.titulo && (
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+                                {nota.titulo}
+                              </h4>
+                            )}
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                              Criada em {new Date(nota.created_at).toLocaleString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => handleEditNota(nota)}
+                              className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-500/25 transition"
+                              title="Editar nota"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNota(nota.id)}
+                              className="p-2 rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/25 transition"
+                              title="Deletar nota"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-100 dark:border-white/10">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {nota.conteudo}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -77,6 +77,8 @@ import SegundaViaBoletoDisplay from '@/components/assistant/SegundaViaBoletoDisp
 import RastreioCorreiosDisplay from '@/components/assistant/RastreioCorreiosDisplay';
 import BuscarEnderecoDisplay from '@/components/assistant/BuscarEnderecoDisplay';
 import TracarRotaDisplay from '@/components/assistant/TracarRotaDisplay';
+import CriarNotaDisplay from '@/components/assistant/CriarNotaDisplay';
+import LembreteRemediosDisplay from '@/components/assistant/LembreteRemediosDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -152,6 +154,8 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'RastreioCorreiosDisplay': RastreioCorreiosDisplay,
   'BuscarEnderecoDisplay': BuscarEnderecoDisplay,
   'TracarRotaDisplay': TracarRotaDisplay,
+  'CriarNotaDisplay': CriarNotaDisplay,
+  'LembreteRemediosDisplay': LembreteRemediosDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

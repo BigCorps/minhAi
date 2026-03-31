@@ -3351,16 +3351,12 @@ consultar_leilao: {
     voiceTriggers: [
       'qual o endereço',
       'endereço de vocês',
-      'onde fica',
       'onde vocês ficam',
       'onde voces ficam',
       'localização',
       'localizacao',
-      'como chegar',
       'onde estão',
       'onde estao',
-      'mostrar mapa',
-      'abrir mapa',
     ],
     
     examplePhrases: [

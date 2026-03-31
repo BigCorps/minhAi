@@ -137,19 +137,25 @@ export default function TranslateTextModal({
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[.,!?;:]+/g, '');
 
-          const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
-          if (hasFim) {
-            console.log('🛑 [Mobile] Encerramento detectado');
-            let cleaned = finalTranscriptRef.current;
-            for (const t of FIM_TRIGGERS) {
-              cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-            }
-            cleaned = cleaned.trim();
-            finalTranscriptRef.current = cleaned;
-            setInputText(cleaned);
-            stopRecording();
-            return;
-          }
+const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
+if (hasFim) {
+  console.log('🛑 [Mobile] Encerramento detectado');
+  let cleaned = finalTranscriptRef.current;
+  for (const t of FIM_TRIGGERS) {
+    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+  }
+  cleaned = cleaned.trim();
+  finalTranscriptRef.current = cleaned;
+  setInputText(cleaned);
+  stopRecording();
+  
+  // ✅ ADICIONAR ESTA LINHA - Auto-traduz após parar
+  if (cleaned) {
+    setTimeout(() => handleTranslate(), 500);
+  }
+  
+  return;
+}
 
           const isSoloTrigger = FIM_TRIGGERS.some(t => lowerT === t);
           if (!isSoloTrigger) {
@@ -239,17 +245,22 @@ export default function TranslateTextModal({
       setInputText(finalTranscriptRef.current + interimTranscript);
     };
 
-    recognition.onend = () => {
-      setIsRecording(false);
-      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
-      let cleaned = finalTranscriptRef.current;
-      for (const t of FIM_TRIGGERS_CLEAN) {
-        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-      }
-      cleaned = cleaned.trim();
-      setInputText(cleaned);
-      finalTranscriptRef.current = cleaned;
-    };
+recognition.onend = () => {
+  setIsRecording(false);
+  const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
+  let cleaned = finalTranscriptRef.current;
+  for (const t of FIM_TRIGGERS_CLEAN) {
+    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+  }
+  cleaned = cleaned.trim();
+  setInputText(cleaned);
+  finalTranscriptRef.current = cleaned;
+  
+  // ✅ ADICIONAR ESTAS LINHAS - Auto-traduz após parar
+  if (cleaned) {
+    setTimeout(() => handleTranslate(), 500);
+  }
+};
 
     recognition.onerror = (event: any) => {
       setIsRecording(false);
@@ -531,7 +542,7 @@ export default function TranslateTextModal({
                   {isManualMode && (
                     <div className={`p-4 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
                       <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'} text-center font-medium`}>
-                        ⌨️ <strong>Modo Digitação</strong> - Digite o texto abaixo
+                        <strong>Modo Digitação</strong> - Digite o texto abaixo
                       </p>
                     </div>
                   )}

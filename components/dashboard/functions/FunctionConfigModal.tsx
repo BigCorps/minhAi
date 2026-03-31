@@ -2137,7 +2137,7 @@ const RastreioCorreiosForm = () => (
       <h4 className="font-semibold mb-2">Como funciona</h4>
       <ul className="space-y-1 text-sm">
         <li>• Cliente digita código de rastreio (13 caracteres)</li>
-        <li>• Sistema consulta API pública dos Correios</li>
+        <li>• Assistente consulta API pública dos Correios</li>
         <li>• Exibe status atual + data/hora + local</li>
         <li>• Ícones coloridos por status (entregue, em trânsito, postado)</li>
       </ul>
@@ -2449,7 +2449,7 @@ const BuscarEnderecoForm = () => (
       <h4 className="font-semibold mb-2">Como funciona</h4>
       <ul className="space-y-1 text-sm">
         <li>• Cliente fala CEP ou nome do local</li>
-        <li>• Sistema busca via Google Places API</li>
+        <li>• Assistente busca via Google Maps</li>
         <li>• Exibe mapa com pin + endereço formatado</li>
         <li>• Botão "Traçar Rota" para abrir modal de rota</li>
       </ul>

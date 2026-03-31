@@ -2375,9 +2375,8 @@ buscar_endereco: {
     'buscar endereco',
     'buscar endereço',
     'procurar endereco',
-    'qual o endereco',
+    'procurar endereço',
     'encontrar local',
-    'cep',
     'localizar',
   ],
   examplePhrases: [

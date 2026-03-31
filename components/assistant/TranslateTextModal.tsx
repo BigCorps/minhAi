@@ -579,60 +579,89 @@ const handleTranslate = async () => {
                   </div>
 
                   {/* CORREÇÃO 3 - Botão "Parar e Traduzir" */}
-                  {isRecording && !isManualMode ? (
-                    <button
-                      onClick={() => {
-                        stopRecording();
-                        // Aguarda parar completamente antes de traduzir
-                        setTimeout(() => {
-                          const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
-                          if (textToTranslate) {
-                            handleTranslate();
-                          }
-                        }, 500);
-                      }}
-                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-5 h-5" />
-                      Parar e Traduzir
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleTranslate}
-                      disabled={!inputText.trim() || isTranslating}
-                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                    >
-                      {isTranslating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Traduzindo...
-                        </>
-                      ) : (
-                        <>
-                          <Languages className="w-5 h-5" />
-                          Traduzir
-                        </>
-                      )}
-                    </button>
-                  )}
+{isRecording && !isManualMode ? (
+  <button
+    onClick={() => {
+      console.log('🛑 [Botão] Clicado - Parando gravação');
+      
+      // Para a gravação imediatamente
+      stopRecording();
+      
+      // Aguarda 800ms para garantir que o texto foi capturado
+      setTimeout(() => {
+        const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
+        console.log('📝 [Botão] Texto capturado:', textToTranslate);
+        
+        if (textToTranslate) {
+          // Garante que inputText está atualizado antes de traduzir
+          setInputText(textToTranslate);
+          finalTranscriptRef.current = textToTranslate;
+          
+          // Aguarda mais 200ms para garantir que os estados foram atualizados
+          setTimeout(() => {
+            console.log('🚀 [Botão] Iniciando tradução...');
+            handleTranslate();
+          }, 200);
+        } else {
+          console.warn('⚠️ [Botão] Texto vazio, não traduz');
+          showToast('Nenhum texto foi capturado', 'warning');
+        }
+      }, 800);
+    }}
+    className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+  >
+    <Check className="w-5 h-5" />
+    Parar e Traduzir
+  </button>
+) : (
+  <button
+    onClick={() => {
+      console.log('🚀 [Botão Traduzir] Clicado');
+      const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
+      console.log('📝 [Botão Traduzir] Texto:', textToTranslate);
+      
+      if (textToTranslate) {
+        // Garante que inputText está preenchido
+        setInputText(textToTranslate);
+        handleTranslate();
+      } else {
+        showToast('Digite ou fale o texto que deseja traduzir', 'warning');
+      }
+    }}
+    disabled={!inputText.trim() || isTranslating}
+    className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+  >
+    {isTranslating ? (
+      <>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        Traduzindo...
+      </>
+    ) : (
+      <>
+        <Languages className="w-5 h-5" />
+        Traduzir
+      </>
+    )}
+  </button>
+)}
 
-                  {!isRecording && (
-                    <button
-                      onClick={() => {
-                        if (isManualMode) {
-                          setIsManualMode(false);
-                          setCountdown(5);
-                          setInputText('');
-                          finalTranscriptRef.current = '';
-                        } else {
-                          setIsManualMode(true);
-                        }
-                      }}
-                      className={`w-full px-4 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition text-sm`}
-                    >
-                      {isManualMode ? 'Voltar para Gravação' : 'Preferir Digitar'}
-                    </button>
-                  )}
+{!isRecording && (
+  <button
+    onClick={() => {
+      if (isManualMode) {
+        setIsManualMode(false);
+        setCountdown(5);
+        setInputText('');
+        finalTranscriptRef.current = '';
+      } else {
+        setIsManualMode(true);
+      }
+    }}
+    className={`w-full px-4 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition text-sm`}
+  >
+    {isManualMode ? 'Voltar para Gravação' : 'Preferir Digitar'}
+  </button>
+)}
                 </>
               )}
             </>

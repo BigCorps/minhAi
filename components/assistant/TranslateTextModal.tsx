@@ -327,97 +327,60 @@ export default function TranslateTextModal({
     setIsRecording(false);
   };
 
-  const handleTranslate = async () => {
-    const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
-    
-    if (!textToTranslate) {
-      showToast('Digite ou fale o texto que deseja traduzir', 'warning');
+const handleTranslate = async () => {
+  const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
+  
+  if (!textToTranslate) {
+    showToast('Digite ou fale o texto que deseja traduzir', 'warning');
+    return;
+  }
+
+  console.log('🚀 [Traduzir] Texto a traduzir:', textToTranslate);
+
+  setIsTranslating(true);
+
+  try {
+    // Detectar idioma via Edge Function (que usa OpenAI internamente)
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/traduzir-texto`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          text: textToTranslate,
+          target_language: 'auto', // Edge Function detecta e escolhe
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.success) {
+      showToast(result.speech_text || 'Erro ao traduzir', 'error');
       return;
     }
 
-    setIsTranslating(true);
+    // Salvar dados
+    setInputText(textToTranslate);
+    setTranslatedText(result.translated_text);
+    setDetectedLanguage(result.source_language || 'pt');
+    setTargetLanguage(result.target_language || 'en');
+    setStep('result');
+    
+    const targetLangName = languages.find(l => l.code === result.target_language)?.name || 'outro idioma';
+    showToast(`✅ Traduzido para ${targetLangName}!`, 'success');
 
-    try {
-      // PASSO 1: Detectar idioma com OpenAI
-      const detectResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          temperature: 0.1,
-          messages: [
-            {
-              role: 'system',
-              content: 'Você detecta o idioma de textos. Responda APENAS com o código do idioma (ex: pt, en, es, fr, de, it, ja, ko, zh). Não adicione texto extra.',
-            },
-            {
-              role: 'user',
-              content: `Detecte o idioma deste texto: "${textToTranslate}"`,
-            },
-          ],
-        }),
-      });
-
-      const detectData = await detectResponse.json();
-      const detected = detectData.choices?.[0]?.message?.content?.trim().toLowerCase() || 'pt';
-      setDetectedLanguage(detected);
-
-      console.log('🌐 Idioma detectado:', detected);
-
-      // PASSO 2: Definir idioma alvo automaticamente
-      let autoTargetLanguage = targetLanguage;
-      
-      if (detected === 'pt') {
-        autoTargetLanguage = 'en';
-      } else {
-        autoTargetLanguage = 'pt';
-      }
-
-      setTargetLanguage(autoTargetLanguage);
-
-      // PASSO 3: Traduzir
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/traduzir-texto`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            text: textToTranslate,
-            target_language: autoTargetLanguage,
-            source_language: detected,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!result.success) {
-        showToast(result.speech_text || 'Erro ao traduzir', 'error');
-        return;
-      }
-
-      // Garante que inputText está salvo
-      setInputText(textToTranslate);
-      setTranslatedText(result.translated_text);
-      setStep('result');
-      
-      const targetLangName = languages.find(l => l.code === autoTargetLanguage)?.name || 'outro idioma';
-      showToast(`✅ Traduzido para ${targetLangName}!`, 'success');
-
-    } catch (error: any) {
-      console.error('Erro ao traduzir:', error);
-      showToast('Erro ao traduzir. Tente novamente.', 'error');
-    } finally {
-      setIsTranslating(false);
-    }
-  };
+  } catch (error: any) {
+    console.error('❌ Erro ao traduzir:', error);
+    showToast('Erro ao traduzir. Tente novamente.', 'error');
+  } finally {
+    setIsTranslating(false);
+  }
+};
 
   const handleRetranslate = async (newTargetLanguage: string) => {
     setIsTranslating(true);
@@ -616,42 +579,36 @@ export default function TranslateTextModal({
                   </div>
 
                   {/* CORREÇÃO 3 - Botão "Parar e Traduzir" */}
-                  {isRecording && !isManualMode ? (
-                    <button
-                      onClick={() => {
-                        stopRecording();
-                        // Aguarda parar completamente antes de traduzir
-                        setTimeout(() => {
-                          const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
-                          if (textToTranslate) {
-                            handleTranslate();
-                          }
-                        }, 500);
-                      }}
-                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-5 h-5" />
-                      Parar e Traduzir
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleTranslate}
-                      disabled={!inputText.trim() || isTranslating}
-                      className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                    >
-                      {isTranslating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Traduzindo...
-                        </>
-                      ) : (
-                        <>
-                          <Languages className="w-5 h-5" />
-                          Traduzir
-                        </>
-                      )}
-                    </button>
-                  )}
+{isRecording && !isManualMode ? (
+  <button
+    onClick={() => {
+      console.log('🛑 [Botão] Parando gravação manual');
+      stopRecording();
+    }}
+    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+  >
+    <X className="w-5 h-5" />
+    Parar Gravação
+  </button>
+) : (
+  <button
+    onClick={handleTranslate}
+    disabled={!inputText.trim() || isTranslating}
+    className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+  >
+    {isTranslating ? (
+      <>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        Traduzindo...
+      </>
+    ) : (
+      <>
+        <Languages className="w-5 h-5" />
+        Traduzir
+      </>
+    )}
+  </button>
+)}
 
                   {!isRecording && (
                     <button

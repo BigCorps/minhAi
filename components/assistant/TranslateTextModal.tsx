@@ -37,6 +37,8 @@ export default function TranslateTextModal({
   const recognitionRef = useRef<any>(null);
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
   const finalTranscriptRef = useRef<string>('');
+  // ✅ FIX: Flag que diz ao onend se deve traduzir ao terminar
+  const shouldTranslateOnEndRef = useRef<boolean>(false);
   const supabase = createClient();
   const isDark = theme === 'dark';
   const isMobile = useIsMobile();
@@ -122,6 +124,7 @@ export default function TranslateTextModal({
 
   const startRecordingMobile = async () => {
     finalTranscriptRef.current = '';
+    shouldTranslateOnEndRef.current = false;
     setIsRecording(true);
 
     const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto', 'fim'];
@@ -137,26 +140,21 @@ export default function TranslateTextModal({
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[.,!?;:]+/g, '');
 
-          // CORREÇÃO 1 - Mobile: Remove trigger ANTES de salvar
           const hasFim = FIM_TRIGGERS.some(t => lowerT.endsWith(t) || lowerT === t);
           if (hasFim) {
             console.log('🛑 [Mobile] Encerramento detectado');
 
-            // Remove trigger do texto ANTES de salvar
             let textBeforeTrigger = text.trim();
             for (const t of FIM_TRIGGERS) {
-              // Remove o trigger do final (case insensitive)
               const regex = new RegExp(`\\s*${t}\\s*$`, 'gi');
               textBeforeTrigger = textBeforeTrigger.replace(regex, '');
             }
             textBeforeTrigger = textBeforeTrigger.trim();
 
-            // Se tinha texto antes do trigger, adiciona ao acumulado
             if (textBeforeTrigger && !FIM_TRIGGERS.some(t => textBeforeTrigger.toLowerCase() === t)) {
               finalTranscriptRef.current += textBeforeTrigger + ' ';
             }
 
-            // Limpa o texto final
             let cleaned = finalTranscriptRef.current.trim();
             for (const t of FIM_TRIGGERS) {
               cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
@@ -167,7 +165,6 @@ export default function TranslateTextModal({
             setInputText(cleaned);
             stopRecording();
 
-            // Auto-traduz após parar
             if (cleaned) {
               setTimeout(() => handleTranslate(), 500);
             }
@@ -219,10 +216,10 @@ export default function TranslateTextModal({
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     finalTranscriptRef.current = '';
+    shouldTranslateOnEndRef.current = false; // ✅ Reset da flag
 
     recognition.onstart = () => setIsRecording(true);
 
-    // CORREÇÃO 2 - Desktop: Lógica clara de acumulação com logs
     recognition.onresult = (event: any) => {
       let interimTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -238,14 +235,15 @@ export default function TranslateTextModal({
 
           const isSoloTrigger = FIM_TRIGGERS.some(t => lowerClean === t);
           if (isSoloTrigger) {
-            console.log('🛑 [Desktop] Trigger solo detectado, parando');
+            console.log('🛑 [Desktop] Trigger solo — parando com tradução');
+            // ✅ FIX: Seta a flag ANTES de parar, onend vai traduzir
+            shouldTranslateOnEndRef.current = true;
             recognition.stop();
             return;
           }
 
           if (FIM_TRIGGERS.some(t => lowerClean.endsWith(t))) {
             console.log('🛑 [Desktop] Trigger no final detectado');
-            // Remove trigger do final e acumula o texto antes
             let textToAdd = cleanedTranscript;
             for (const t of FIM_TRIGGERS) {
               textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
@@ -254,11 +252,13 @@ export default function TranslateTextModal({
             if (textToAdd) {
               finalTranscriptRef.current += textToAdd + ' ';
             }
+            // ✅ FIX: Seta a flag ANTES de parar
+            shouldTranslateOnEndRef.current = true;
             recognition.stop();
             return;
           }
 
-          // Acumula normalmente (sem trigger)
+          // Acumula normalmente
           let textToAdd = cleanedTranscript;
           for (const t of FIM_TRIGGERS) {
             textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
@@ -274,34 +274,44 @@ export default function TranslateTextModal({
       setInputText(finalTranscriptRef.current + interimTranscript);
     };
 
-    // CORREÇÃO 4 - recognition.onend com logs de debug + auto-tradução
-recognition.onend = () => {
-  setIsRecording(false);
-  console.log('🛑 [Desktop] Recognition.onend acionado');
-  
-  const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
-  let cleaned = finalTranscriptRef.current;
-  
-  console.log('📝 [Desktop] Texto antes de limpar:', cleaned);
-  
-  // Remove triggers do final
-  for (const t of FIM_TRIGGERS_CLEAN) {
-    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-  }
-  cleaned = cleaned.trim();
-  
-  console.log('✅ [Desktop] Texto final limpo:', cleaned);
-  
-  // ✅ ATUALIZA AMBOS OS ESTADOS
-  finalTranscriptRef.current = cleaned;
-  setInputText(cleaned);
-  
-  // ✅ NÃO TRADUZ AUTOMATICAMENTE - deixa o botão fazer isso
-  // O botão já tem a lógica de traduzir após stopRecording
-};
+    // ✅ FIX PRINCIPAL: onend é o único lugar que traduz no desktop
+    // Funciona tanto para "concluir" por voz quanto para o botão "Parar e Traduzir"
+    recognition.onend = () => {
+      setIsRecording(false);
+      console.log('🛑 [Desktop] Recognition.onend acionado');
+
+      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
+      let cleaned = finalTranscriptRef.current;
+
+      console.log('📝 [Desktop] Texto antes de limpar:', cleaned);
+
+      for (const t of FIM_TRIGGERS_CLEAN) {
+        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+      }
+      cleaned = cleaned.trim();
+
+      console.log('✅ [Desktop] Texto final limpo:', cleaned);
+
+      setInputText(cleaned);
+      finalTranscriptRef.current = cleaned;
+
+      // ✅ FIX: Só traduz se a flag estiver setada (voz "concluir" ou botão "Parar e Traduzir")
+      if (shouldTranslateOnEndRef.current && cleaned) {
+        console.log('🚀 [Desktop] Iniciando tradução via onend...');
+        shouldTranslateOnEndRef.current = false; // Reset
+        // Usa diretamente o texto limpo, sem depender de state ainda atualizado
+        handleTranslateWithText(cleaned);
+      } else if (!shouldTranslateOnEndRef.current) {
+        console.log('ℹ️ [Desktop] Gravação parada sem traduzir (botão Parar simples)');
+      } else {
+        console.warn('⚠️ [Desktop] Texto vazio, não traduz');
+        shouldTranslateOnEndRef.current = false;
+      }
+    };
 
     recognition.onerror = (event: any) => {
       setIsRecording(false);
+      shouldTranslateOnEndRef.current = false;
       if (event.error === 'no-speech') showToast('Nenhuma fala detectada.', 'warning');
       else if (event.error === 'not-allowed') showToast('Permissão do microfone negada.', 'error');
       else showToast('Erro ao capturar áudio.', 'error');
@@ -324,60 +334,61 @@ recognition.onend = () => {
     setIsRecording(false);
   };
 
-const handleTranslate = async () => {
-  const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
-  
-  if (!textToTranslate) {
-    showToast('Digite ou fale o texto que deseja traduzir', 'warning');
-    return;
-  }
-
-  console.log('🚀 [Traduzir] Texto a traduzir:', textToTranslate);
-
-  setIsTranslating(true);
-
-  try {
-    // Detectar idioma via Edge Function (que usa OpenAI internamente)
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/traduzir-texto`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          company_id: companyId,
-          text: textToTranslate,
-          target_language: 'auto', // Edge Function detecta e escolhe
-        }),
-      }
-    );
-
-    const result = await response.json();
-
-    if (!result.success) {
-      showToast(result.speech_text || 'Erro ao traduzir', 'error');
+  // ✅ FIX: Versão que recebe o texto diretamente (evita closure stale do state)
+  const handleTranslateWithText = async (textToTranslate: string) => {
+    if (!textToTranslate) {
+      showToast('Digite ou fale o texto que deseja traduzir', 'warning');
       return;
     }
 
-    // Salvar dados
-    setInputText(textToTranslate);
-    setTranslatedText(result.translated_text);
-    setDetectedLanguage(result.source_language || 'pt');
-    setTargetLanguage(result.target_language || 'en');
-    setStep('result');
-    
-    const targetLangName = languages.find(l => l.code === result.target_language)?.name || 'outro idioma';
-    showToast(`✅ Traduzido para ${targetLangName}!`, 'success');
+    console.log('🚀 [Traduzir] Texto a traduzir:', textToTranslate);
+    setIsTranslating(true);
 
-  } catch (error: any) {
-    console.error('❌ Erro ao traduzir:', error);
-    showToast('Erro ao traduzir. Tente novamente.', 'error');
-  } finally {
-    setIsTranslating(false);
-  }
-};
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/traduzir-texto`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            company_id: companyId,
+            text: textToTranslate,
+            target_language: 'auto',
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        showToast(result.speech_text || 'Erro ao traduzir', 'error');
+        return;
+      }
+
+      setInputText(textToTranslate);
+      setTranslatedText(result.translated_text);
+      setDetectedLanguage(result.source_language || 'pt');
+      setTargetLanguage(result.target_language || 'en');
+      setStep('result');
+      
+      const targetLangName = languages.find(l => l.code === result.target_language)?.name || 'outro idioma';
+      showToast(`✅ Traduzido para ${targetLangName}!`, 'success');
+
+    } catch (error: any) {
+      console.error('❌ Erro ao traduzir:', error);
+      showToast('Erro ao traduzir. Tente novamente.', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslate = async () => {
+    const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
+    await handleTranslateWithText(textToTranslate);
+  };
 
   const handleRetranslate = async (newTargetLanguage: string) => {
     setIsTranslating(true);
@@ -575,18 +586,15 @@ const handleTranslate = async () => {
                     />
                   </div>
 
-                  {/* CORREÇÃO 3 - Botão "Parar e Traduzir" */}
+                  {/* ✅ FIX DO BOTÃO: Seta shouldTranslateOnEndRef=true antes de parar */}
                   {isRecording && !isManualMode ? (
                     <button
                       onClick={() => {
+                        console.log('🛑 [Botão] Parar e Traduzir clicado');
+                        // ✅ Seta a flag ANTES de parar — onend vai pegar e traduzir
+                        shouldTranslateOnEndRef.current = true;
                         stopRecording();
-                        // Aguarda parar completamente antes de traduzir
-                        setTimeout(() => {
-                          const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
-                          if (textToTranslate) {
-                            handleTranslate();
-                          }
-                        }, 500);
+                        // Não chama handleTranslate aqui — onend cuida disso
                       }}
                       className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
                     >
@@ -612,6 +620,7 @@ const handleTranslate = async () => {
                       )}
                     </button>
                   )}
+
                   {!isRecording && (
                     <button
                       onClick={() => {
@@ -624,7 +633,7 @@ const handleTranslate = async () => {
                           setIsManualMode(true);
                         }
                       }}
-                      className={w-full px-4 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition text-sm}
+                      className={`w-full px-4 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition text-sm`}
                     >
                       {isManualMode ? 'Voltar para Gravação' : 'Preferir Digitar'}
                     </button>

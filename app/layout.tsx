@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AssistantProvider } from '@/contexts/AssistantContext'; // ← ADD
 import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
-
+import 'react-image-crop/dist/ReactCrop.css';
 export const metadata: Metadata = {
   title: 'minhAi - Uma IA pra chamar de sua!',
   description: 'Funcionários de IA',

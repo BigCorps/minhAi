@@ -21,6 +21,7 @@ const nextConfig = {
         net: false,
         tls: false,
         crypto: false,
+        canvas: false,
       };
       config.module.rules.push({
         test: /\.onnx$/,
@@ -30,7 +31,22 @@ const nextConfig = {
         test: /\.wasm$/,
         type: 'asset/resource',
       });
+      
+      // Configuração para PDF.js worker
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'pdfjs-dist/build/pdf.worker.entry': 'pdfjs-dist/build/pdf.worker.min.js',
+      };
     }
+    
+    // Canvas é problemático no server-side, sempre fazer fallback
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        canvas: false,
+      };
+    }
+    
     return config;
   },
   async redirects() {
@@ -80,8 +96,18 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
+      // Headers para PDF.js worker
+      {
+        source: '/pdf-worker/:path*',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+        ],
+      },
     ];
   },
   transpilePackages: ['@ricky0123/vad-web', 'onnxruntime-web'],
 };
+
 module.exports = nextConfig;

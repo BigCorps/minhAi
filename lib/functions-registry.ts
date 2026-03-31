@@ -456,6 +456,42 @@ voiceTriggers: [
     },
   },
 
+converter_arquivo: {
+  functionKey: 'converter_arquivo',
+  functionName: 'Converter Arquivos',
+  category: 'tools' as any,
+  responseType: 'voice+modal',
+  
+  voiceTriggers: [
+    'converter arquivo', 'converter imagem', 'mudar formato',
+    'transformar em pdf', 'exportar pdf', 'salvar como png',
+    'converter para jpg', 'mudar extensao', 'exportar imagem',
+    'salvar pdf', 'transformar arquivo'
+  ],
+  
+  examplePhrases: [
+    'Converter para PNG',
+    'Transformar em PDF',
+    'Mudar formato do arquivo'
+  ],
+  
+  edgeFunction: undefined,
+  uiComponent: 'ConverterArquivoDisplay',
+  requiresInput: false,
+  description: 'Converte imagens e documentos entre diferentes formatos: JPG, PNG, WebP, PDF, TXT.',
+  icon: '🌐',
+  color: '#000080',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'ConverterArquivoDisplay', data: { companyId } });
+    return true;
+  },
+},
+
 // ── CRIAR NOTA ───────────────────────────────────────────────────────────────
  
 criar_nota: {

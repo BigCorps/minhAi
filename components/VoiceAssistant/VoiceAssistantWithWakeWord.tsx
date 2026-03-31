@@ -878,6 +878,15 @@ case 'aparelhos_smart':
         case 'horarios_disponiveis':
           break;
 
+case 'converter_arquivo':
+  setActiveModal({ type: 'ConverterArquivoDisplay', data: { companyId } });
+  await saveInteractionToHistory(
+    companyId,
+    'Converter Arquivos',
+    'Modal de conversão de arquivos aberto'
+  );
+  break;
+
         case 'meu_cupom': {
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuCupomDisplay', data: { companyId, prefillName: '' } });

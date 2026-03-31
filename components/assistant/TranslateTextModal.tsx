@@ -37,8 +37,9 @@ export default function TranslateTextModal({
   const recognitionRef = useRef<any>(null);
   const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
   const finalTranscriptRef = useRef<string>('');
-  // ✅ FIX: Flag que diz ao onend se deve traduzir ao terminar
   const shouldTranslateOnEndRef = useRef<boolean>(false);
+  // Texto salvo pelo botão antes do stop() — evita race com useModalVoiceCommand
+  const pendingTextRef = useRef<string>('');
   const supabase = createClient();
   const isDark = theme === 'dark';
   const isMobile = useIsMobile();
@@ -55,15 +56,15 @@ export default function TranslateTextModal({
     { code: 'zh', name: 'Chinês', flag: '🇨🇳' },
   ];
 
-  // Countdown
+  // Countdown — só inicia gravação se não está traduzindo
   useEffect(() => {
     if (step === 'input' && countdown > 0 && !isManualMode) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (countdown === 0 && step === 'input' && !isRecording && !isManualMode) {
+    } else if (countdown === 0 && step === 'input' && !isRecording && !isManualMode && !isTranslating) {
       startRecording();
     }
-  }, [countdown, step, isRecording, isManualMode]);
+  }, [countdown, step, isRecording, isManualMode, isTranslating]);
 
   // Toast
   useEffect(() => {
@@ -215,55 +216,83 @@ export default function TranslateTextModal({
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
+
+    // ✅ Reseta apenas a ref local de acumulação — pendingTextRef é preservada
     finalTranscriptRef.current = '';
-    shouldTranslateOnEndRef.current = false; // ✅ Reset da flag
+
+    const FIM_TRIGGERS = ['concluir', 'concluido', 'concluído', 'acabou', 'terminou', 'terminar', 'pronto', 'fim'];
+
+    const cleanTriggers = (text: string): string => {
+      let result = text.trim();
+      let prev = '';
+      while (prev !== result) {
+        prev = result;
+        for (const t of FIM_TRIGGERS) {
+          result = result.replace(new RegExp(`\\s*${t}[.,!?]*\\s*$`, 'gi'), '');
+        }
+        result = result.trim();
+      }
+      return result;
+    };
+
+    const hasTriggerAtEnd = (normalized: string): boolean =>
+      FIM_TRIGGERS.some(t => {
+        const words = normalized.split(/[\s,]+/);
+        return words[words.length - 1] === t;
+      });
+
+    // Flag LOCAL à closure — imune a qualquer re-render ou nova instância
+    let translationFired = false;
+
+    const fireTranslation = (text: string) => {
+      if (translationFired) return; // garante disparo único
+      translationFired = true;
+      console.log('🚀 [Desktop] Disparando tradução:', text);
+      recognition.abort(); // abort em vez de stop — mais imediato, não dispara onend problemático
+      handleTranslateWithText(text);
+    };
 
     recognition.onstart = () => setIsRecording(true);
 
     recognition.onresult = (event: any) => {
       let interimTranscript = '';
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
+
         if (event.results[i].isFinal) {
           console.log('📝 Final:', transcript);
-          
-          const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto', 'fim'];
-          const cleanedTranscript = transcript.trim();
-          const lowerClean = cleanedTranscript.toLowerCase()
+
+          const normalized = transcript.trim().toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/[.,!?;:]+/g, '');
+            .replace(/[.,!?;:]+/g, '').trim();
 
-          const isSoloTrigger = FIM_TRIGGERS.some(t => lowerClean === t);
-          if (isSoloTrigger) {
-            console.log('🛑 [Desktop] Trigger solo — parando com tradução');
-            // ✅ FIX: Seta a flag ANTES de parar, onend vai traduzir
-            shouldTranslateOnEndRef.current = true;
-            recognition.stop();
-            return;
-          }
+          const isTriggerOnly = FIM_TRIGGERS.some(t => normalized === t);
+          const endsWithTrigger = !isTriggerOnly && hasTriggerAtEnd(normalized);
 
-          if (FIM_TRIGGERS.some(t => lowerClean.endsWith(t))) {
-            console.log('🛑 [Desktop] Trigger no final detectado');
-            let textToAdd = cleanedTranscript;
-            for (const t of FIM_TRIGGERS) {
-              textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+          if (isTriggerOnly || endsWithTrigger) {
+            console.log(`🛑 [Desktop] Trigger detectado (${isTriggerOnly ? 'solo' : 'final'})`);
+
+            if (endsWithTrigger) {
+              const textBeforeTrigger = cleanTriggers(transcript.trim());
+              if (textBeforeTrigger) {
+                finalTranscriptRef.current += textBeforeTrigger + ' ';
+              }
             }
-            textToAdd = textToAdd.trim();
-            if (textToAdd) {
-              finalTranscriptRef.current += textToAdd + ' ';
+
+            const capturedText = cleanTriggers(finalTranscriptRef.current.trim());
+            console.log('📸 Texto capturado:', capturedText);
+
+            if (capturedText) {
+              fireTranslation(capturedText);
+            } else {
+              recognition.abort();
             }
-            // ✅ FIX: Seta a flag ANTES de parar
-            shouldTranslateOnEndRef.current = true;
-            recognition.stop();
             return;
           }
 
           // Acumula normalmente
-          let textToAdd = cleanedTranscript;
-          for (const t of FIM_TRIGGERS) {
-            textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-          }
-          textToAdd = textToAdd.trim();
+          const textToAdd = cleanTriggers(transcript.trim());
           if (textToAdd) {
             finalTranscriptRef.current += textToAdd + ' ';
           }
@@ -274,57 +303,17 @@ export default function TranslateTextModal({
       setInputText(finalTranscriptRef.current + interimTranscript);
     };
 
-    // ✅ FIX PRINCIPAL: onend é o único lugar que traduz no desktop
+    // onend apenas limpa estado — NÃO traduz (tradução já disparou no onresult ou no botão)
     recognition.onend = () => {
       setIsRecording(false);
-      recognitionRef.current = null; // ✅ Nullar aqui, depois que onend disparou
-      console.log('🛑 [Desktop] Recognition.onend acionado');
-
-      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou', 'terminou'];
-      let cleaned = finalTranscriptRef.current;
-
-      console.log('📝 [Desktop] Texto antes de limpar:', cleaned);
-
-      // ✅ FIX "concluir" aparecendo: aplica limpeza em loop até não ter mais nenhum trigger no final
-      let prevCleaned = '';
-      while (prevCleaned !== cleaned) {
-        prevCleaned = cleaned;
-        for (const t of FIM_TRIGGERS_CLEAN) {
-          cleaned = cleaned.replace(new RegExp(`\\s*${t}[.,!?]*\\s*$`, 'gi'), '');
-        }
-        cleaned = cleaned.trim();
-      }
-
-      console.log('✅ [Desktop] Texto final limpo:', cleaned);
-
-      // ✅ FIX: Atualiza a ref com o texto limpo (o state é atualizado depois pelo handleTranslateWithText)
-      finalTranscriptRef.current = cleaned;
-
-      if (shouldTranslateOnEndRef.current) {
-        shouldTranslateOnEndRef.current = false;
-        if (cleaned) {
-          console.log('🚀 [Desktop] Iniciando tradução via onend...');
-          // ✅ FIX: Não chamar setInputText aqui — handleTranslateWithText faz isso após a API retornar
-          handleTranslateWithText(cleaned);
-        } else {
-          console.warn('⚠️ [Desktop] Texto vazio após limpeza, não traduz');
-          setInputText(''); // Limpa UI se ficou vazio
-        }
-      } else {
-        // Parou sem intenção de traduzir — só atualiza a UI
-        setInputText(cleaned);
-        console.log('ℹ️ [Desktop] Gravação parada sem traduzir');
-      }
+      recognitionRef.current = null;
+      console.log('🛑 [Desktop] Recognition.onend — apenas limpeza de estado');
     };
 
     recognition.onerror = (event: any) => {
       console.log('⚠️ [Desktop] Recognition.onerror:', event.error);
-      // ✅ FIX: "aborted" acontece quando chamamos .stop() manualmente — não é erro real
-      // Não mostra toast, não reseta flag — deixa o onend cuidar do fluxo
-      if (event.error === 'aborted') return;
-      
+      if (event.error === 'aborted') return; // abort() manual — esperado
       setIsRecording(false);
-      shouldTranslateOnEndRef.current = false;
       recognitionRef.current = null;
       if (event.error === 'no-speech') showToast('Nenhuma fala detectada.', 'warning');
       else if (event.error === 'not-allowed') showToast('Permissão do microfone negada.', 'error');
@@ -601,15 +590,35 @@ export default function TranslateTextModal({
                     />
                   </div>
 
-                  {/* ✅ FIX DO BOTÃO: Seta shouldTranslateOnEndRef=true antes de parar */}
+                  {/* Botão captura o texto e traduz diretamente — não passa pelo onend */}
                   {isRecording && !isManualMode ? (
                     <button
                       onClick={() => {
                         console.log('🛑 [Botão] Parar e Traduzir clicado');
-                        // ✅ Seta a flag ANTES de parar — onend vai pegar e traduzir
-                        shouldTranslateOnEndRef.current = true;
-                        stopRecording();
-                        // Não chama handleTranslate aqui — onend cuida disso
+                        
+                        const FIM_TRIGGERS = ['concluir', 'concluido', 'concluído', 'acabou', 'terminou', 'terminar', 'pronto', 'fim'];
+                        let captured = finalTranscriptRef.current.trim();
+                        let prev = '';
+                        while (prev !== captured) {
+                          prev = captured;
+                          for (const t of FIM_TRIGGERS) {
+                            captured = captured.replace(new RegExp(`\\s*${t}[.,!?]*\\s*$`, 'gi'), '');
+                          }
+                          captured = captured.trim();
+                        }
+                        console.log('📸 [Botão] Texto capturado:', captured);
+
+                        if (captured) {
+                          // ✅ Aborta o recognition e traduz diretamente — sem esperar onend
+                          if (recognitionRef.current) {
+                            try { recognitionRef.current.abort(); } catch (e) {}
+                            recognitionRef.current = null;
+                          }
+                          setIsRecording(false);
+                          handleTranslateWithText(captured);
+                        } else {
+                          showToast('Nenhum texto para traduzir', 'warning');
+                        }
                       }}
                       className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
                     >

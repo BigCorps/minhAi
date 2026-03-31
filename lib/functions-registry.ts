@@ -3349,8 +3349,8 @@ consultar_leilao: {
     responseType: 'voice+modal',
     
     voiceTriggers: [
-      'endereço',
-      'endereco',
+      'qual o endereço',
+      'endereço de vocês',
       'onde fica',
       'onde vocês ficam',
       'onde voces ficam',
@@ -3359,10 +3359,6 @@ consultar_leilao: {
       'como chegar',
       'onde estão',
       'onde estao',
-      'local',
-      'lugar',
-      'mapa',
-      'google maps',
       'mostrar mapa',
       'abrir mapa',
     ],

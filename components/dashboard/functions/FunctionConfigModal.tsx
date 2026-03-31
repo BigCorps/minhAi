@@ -164,6 +164,30 @@ const SequenciaVideosForm = ({ settings, onChange }: any) => {
   );
 };
 
+const TracarRotaForm = () => (
+  <div className="space-y-4">
+    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+      <h4 className="font-semibold mb-2">Como funciona</h4>
+      <ul className="space-y-1 text-sm">
+        <li>• Detecta localização atual automaticamente</li>
+        <li>• Cliente fala ou digita o destino</li>
+        <li>• Exibe mapa com rota desenhada + tempo + distância</li>
+        <li>• QR Code para abrir no Google Maps</li>
+      </ul>
+    </div>
+
+    <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+      <h4 className="font-semibold mb-2">Comandos de voz</h4>
+      <ul className="space-y-1 text-sm">
+        <li>• "Traçar rota para [destino]"</li>
+        <li>• "Como chegar no aeroporto"</li>
+        <li>• "Calcular rota"</li>
+        <li>• "Abrir no Maps"</li>
+      </ul>
+    </div>
+  </div>
+);
+
 const GoogleCalendarForm = ({ companyId }: any) => {
   const [googleAccount, setGoogleAccount] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -2107,6 +2131,37 @@ const FaqForm = () => (
   </div>
 );
 
+const RastreioCorreiosForm = () => (
+  <div className="space-y-4">
+    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+      <h4 className="font-semibold mb-2">Como funciona</h4>
+      <ul className="space-y-1 text-sm">
+        <li>• Cliente digita código de rastreio (13 caracteres)</li>
+        <li>• Sistema consulta API pública dos Correios</li>
+        <li>• Exibe status atual + data/hora + local</li>
+        <li>• Ícones coloridos por status (entregue, em trânsito, postado)</li>
+      </ul>
+    </div>
+
+    <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+      <h4 className="font-semibold mb-2">Comandos de voz</h4>
+      <ul className="space-y-1 text-sm">
+        <li>• "Rastrear encomenda"</li>
+        <li>• "Rastreio Correios"</li>
+        <li>• "Cadê minha encomenda"</li>
+        <li>• (Cliente digita o código manualmente)</li>
+      </ul>
+    </div>
+
+    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+      <h4 className="font-semibold mb-2 text-amber-800 dark:text-amber-300">Atenção</h4>
+      <p className="text-sm text-amber-700 dark:text-amber-400">
+        Usa API pública dos Correios. Se instável, considere migrar para API Brasil (paga).
+      </p>
+    </div>
+  </div>
+);
+
 const NossaMarcaForm = ({ settings, onChange }: any) => (
   <div className="space-y-4">
     {/* Descrição da Marca */}
@@ -2395,6 +2450,30 @@ const ClimaTempoForm = ({ companyId }: any) => {
     </div>
   );
 };
+
+const BuscarEnderecoForm = () => (
+  <div className="space-y-4">
+    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+      <h4 className="font-semibold mb-2">Como funciona</h4>
+      <ul className="space-y-1 text-sm">
+        <li>• Cliente fala CEP ou nome do local</li>
+        <li>• Sistema busca via Google Places API</li>
+        <li>• Exibe mapa com pin + endereço formatado</li>
+        <li>• Botão "Traçar Rota" para abrir modal de rota</li>
+      </ul>
+    </div>
+
+    <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+      <h4 className="font-semibold mb-2">Comandos de voz</h4>
+      <ul className="space-y-1 text-sm">
+        <li>• "Buscar endereço da Av. Paulista"</li>
+        <li>• "Qual o CEP 01310-100"</li>
+        <li>• "Copiar endereço"</li>
+        <li>• "Traçar rota"</li>
+      </ul>
+    </div>
+  </div>
+);
 
 const MeuCupomForm = ({ companyId }: any) => {
   const [config, setConfig] = useState<any>({});
@@ -3471,6 +3550,9 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'aparelhos_smart': AparelhosSmartConfigForm,
   'canal_youtube': CanalYoutubeForm,
   'segunda_via_boleto': SegundaViaBoletoForm,
+  'tracar_rota': TracarRotaForm,
+  'buscar_endereco': BuscarEnderecoForm,
+  'rastreio_correios': RastreioCorreiosForm,
 };
 
 // ===== INTERFACE =====

@@ -74,6 +74,9 @@ import LoginClienteDisplay from '@/components/assistant/LoginClienteDisplay';
 import TranslateTextModal from '@/components/assistant/TranslateTextModal';
 import TranscribeAudioModal from '@/components/assistant/TranscribeAudioModal';
 import SegundaViaBoletoDisplay from '@/components/assistant/SegundaViaBoletoDisplay';
+import RastreioCorreiosDisplay from '@/components/assistant/RastreioCorreiosDisplay';
+import BuscarEnderecoDisplay from '@/components/assistant/BuscarEnderecoDisplay';
+import TracarRotaDisplay from '@/components/assistant/TracarRotaDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -146,6 +149,9 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'TranslateTextModal': TranslateTextModal,
   'TranscribeAudioModal': TranscribeAudioModal,
   'SegundaViaBoletoDisplay': SegundaViaBoletoDisplay,
+  'RastreioCorreiosDisplay': RastreioCorreiosDisplay,
+  'BuscarEnderecoDisplay': BuscarEnderecoDisplay,
+  'TracarRotaDisplay': TracarRotaDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

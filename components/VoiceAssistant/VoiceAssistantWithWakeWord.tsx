@@ -911,6 +911,27 @@ case 'aparelhos_smart':
           await handleEnderecoCommand({ companyId, setIsProcessing, setActiveModal, playText });
           break;
 
+case 'tracar_rota':
+  setActiveModal({ 
+    type: 'TracarRotaDisplay', 
+    data: { companyId, destinoInicial: userMessage } 
+  });
+  await saveInteractionToHistory(companyId, 'Traçar Rota', `Modal aberto para calcular rota`);
+  break;
+
+case 'buscar_endereco':
+  setActiveModal({ 
+    type: 'BuscarEnderecoDisplay', 
+    data: { companyId, termoInicial: userMessage } 
+  });
+  await saveInteractionToHistory(companyId, 'Buscar Endereço', 'Modal aberto para busca');
+  break;
+
+case 'rastreio_correios':
+  setActiveModal({ type: 'RastreioCorreiosDisplay', data: { companyId } });
+  await saveInteractionToHistory(companyId, 'Rastreio Correios', 'Modal de rastreamento aberto');
+  break;
+
         case 'video_instrucoes':
           await stopGoogleSpeech();
           await handleVideoInstrucoesCommand({ companyId, setIsProcessing, setActiveModal, playText });

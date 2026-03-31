@@ -275,33 +275,30 @@ export default function TranslateTextModal({
     };
 
     // CORREÇÃO 4 - recognition.onend com logs de debug + auto-tradução
-    recognition.onend = () => {
-      setIsRecording(false);
-      console.log('🛑 [Desktop] Recognition.onend acionado');
-
-      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
-      let cleaned = finalTranscriptRef.current;
-
-      console.log('📝 [Desktop] Texto antes de limpar:', cleaned);
-
-      for (const t of FIM_TRIGGERS_CLEAN) {
-        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-      }
-      cleaned = cleaned.trim();
-
-      console.log('✅ [Desktop] Texto final limpo:', cleaned);
-
-      setInputText(cleaned);
-      finalTranscriptRef.current = cleaned;
-
-      // Auto-traduz após parar
-      if (cleaned) {
-        console.log('🚀 [Desktop] Iniciando tradução...');
-        setTimeout(() => handleTranslate(), 500);
-      } else {
-        console.warn('⚠️ [Desktop] Texto vazio, não traduz');
-      }
-    };
+recognition.onend = () => {
+  setIsRecording(false);
+  console.log('🛑 [Desktop] Recognition.onend acionado');
+  
+  const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
+  let cleaned = finalTranscriptRef.current;
+  
+  console.log('📝 [Desktop] Texto antes de limpar:', cleaned);
+  
+  // Remove triggers do final
+  for (const t of FIM_TRIGGERS_CLEAN) {
+    cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+  }
+  cleaned = cleaned.trim();
+  
+  console.log('✅ [Desktop] Texto final limpo:', cleaned);
+  
+  // ✅ ATUALIZA AMBOS OS ESTADOS
+  finalTranscriptRef.current = cleaned;
+  setInputText(cleaned);
+  
+  // ✅ NÃO TRADUZ AUTOMATICAMENTE - deixa o botão fazer isso
+  // O botão já tem a lógica de traduzir após stopRecording
+};
 
     recognition.onerror = (event: any) => {
       setIsRecording(false);
@@ -582,31 +579,14 @@ const handleTranslate = async () => {
 {isRecording && !isManualMode ? (
   <button
     onClick={() => {
-      console.log('🛑 [Botão] Clicado - Parando gravação');
-      
-      // Para a gravação imediatamente
       stopRecording();
-      
-      // Aguarda 800ms para garantir que o texto foi capturado
+      // Aguarda parar completamente antes de traduzir
       setTimeout(() => {
         const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
-        console.log('📝 [Botão] Texto capturado:', textToTranslate);
-        
         if (textToTranslate) {
-          // Garante que inputText está atualizado antes de traduzir
-          setInputText(textToTranslate);
-          finalTranscriptRef.current = textToTranslate;
-          
-          // Aguarda mais 200ms para garantir que os estados foram atualizados
-          setTimeout(() => {
-            console.log('🚀 [Botão] Iniciando tradução...');
-            handleTranslate();
-          }, 200);
-        } else {
-          console.warn('⚠️ [Botão] Texto vazio, não traduz');
-          showToast('Nenhum texto foi capturado', 'warning');
+          handleTranslate();
         }
-      }, 800);
+      }, 500);
     }}
     className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
   >
@@ -615,19 +595,7 @@ const handleTranslate = async () => {
   </button>
 ) : (
   <button
-    onClick={() => {
-      console.log('🚀 [Botão Traduzir] Clicado');
-      const textToTranslate = finalTranscriptRef.current.trim() || inputText.trim();
-      console.log('📝 [Botão Traduzir] Texto:', textToTranslate);
-      
-      if (textToTranslate) {
-        // Garante que inputText está preenchido
-        setInputText(textToTranslate);
-        handleTranslate();
-      } else {
-        showToast('Digite ou fale o texto que deseja traduzir', 'warning');
-      }
-    }}
+    onClick={handleTranslate}
     disabled={!inputText.trim() || isTranslating}
     className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
   >
@@ -644,7 +612,6 @@ const handleTranslate = async () => {
     )}
   </button>
 )}
-
 {!isRecording && (
   <button
     onClick={() => {

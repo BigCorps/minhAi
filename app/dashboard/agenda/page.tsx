@@ -502,10 +502,7 @@ function AgendaPageContent() {
               {/* ── EMAILS ENVIADOS ── */}
               {activeTab === 'email' && (
                 <>
-                  <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                    
-                  </div>
-
+                  
                   {loadingEmails ? (
                     <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
                   ) : sentEmails.length === 0 ? (

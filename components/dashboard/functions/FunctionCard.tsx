@@ -115,6 +115,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'rastreio_correios',
   'buscar_endereco',
   'tracar_rota',
+  'criar_nota',
+  'lembrete_remedios',
   'tef_debito',
   'tef_credito'
 ];

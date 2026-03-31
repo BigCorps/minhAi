@@ -248,7 +248,9 @@ export default function TranslateTextModal({
       if (translationFired) return; // garante disparo único
       translationFired = true;
       console.log('🚀 [Desktop] Disparando tradução:', text);
-      recognition.abort(); // abort em vez de stop — mais imediato, não dispara onend problemático
+      // ✅ setTimeout 0: sai do callstack do onresult antes de stop()
+      // Chamar stop() de dentro do onresult causa erro "network" no Chrome
+      setTimeout(() => { try { recognition.stop(); } catch (e) {} }, 0);
       handleTranslateWithText(text);
     };
 
@@ -286,7 +288,7 @@ export default function TranslateTextModal({
             if (capturedText) {
               fireTranslation(capturedText);
             } else {
-              recognition.abort();
+              setTimeout(() => { try { recognition.stop(); } catch (e) {} }, 0);
             }
             return;
           }
@@ -312,7 +314,9 @@ export default function TranslateTextModal({
 
     recognition.onerror = (event: any) => {
       console.log('⚠️ [Desktop] Recognition.onerror:', event.error);
-      if (event.error === 'aborted') return; // abort() manual — esperado
+      // 'aborted' = stop() manual esperado; 'network' pode ocorrer quando stop() é chamado
+      // logo após um resultado — ambos são seguros de ignorar quando translationFired=true
+      if (event.error === 'aborted' || translationFired) return;
       setIsRecording(false);
       recognitionRef.current = null;
       if (event.error === 'no-speech') showToast('Nenhuma fala detectada.', 'warning');
@@ -611,7 +615,7 @@ export default function TranslateTextModal({
                         if (captured) {
                           // ✅ Aborta o recognition e traduz diretamente — sem esperar onend
                           if (recognitionRef.current) {
-                            try { recognitionRef.current.abort(); } catch (e) {}
+                            try { recognitionRef.current.stop(); } catch (e) {}
                             recognitionRef.current = null;
                           }
                           setIsRecording(false);

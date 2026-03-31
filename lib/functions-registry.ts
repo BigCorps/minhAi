@@ -2462,8 +2462,8 @@ consultar_cep: {
   responseType: 'voice+modal',
 
   voiceTriggers: [
-    'cep', 'código postal', 'codigo postal', 'consultar cep',
-    'buscar cep', 'endereço', 'endereco'
+    'localizar cep', 'código postal', 'codigo postal', 'consultar cep',
+    'buscar cep'
   ],
 
   examplePhrases: [
@@ -3348,10 +3348,12 @@ consultar_leilao: {
     responseType: 'voice+modal',
     
     voiceTriggers: [
-      'qual o endereço',
+      'qual o endereço daí',
       'endereço de vocês',
       'onde vocês ficam',
       'onde voces ficam',
+      'seu endereço',
+      'nosso endereço',
       'localização',
       'localizacao',
       'onde estão',

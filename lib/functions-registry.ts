@@ -2319,6 +2319,7 @@ tracar_rota: {
 
   voiceTriggers: [
     'tracar rota',
+    'traçar rota',
     'calcular rota',
     'mostrar caminho',
     'como chegar',

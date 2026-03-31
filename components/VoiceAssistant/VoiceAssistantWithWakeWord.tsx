@@ -768,6 +768,37 @@ case 'transcrever_audio':
           await handleCadastro({ companyId, setIsProcessing, setActiveModal });
           break;
 
+case 'criar_nota': {
+  const match = transcript.match(/nota sobre (.+)/i);
+  const targetText = match ? match[1].trim() : undefined;
+ 
+  setActiveModal({
+    type: 'CriarNotaDisplay',
+    data: { companyId, targetText },
+  });
+ 
+  await saveInteractionToHistory(
+    companyId,
+    'Criar Nota',
+    targetText ? `Modal aberto com texto: "${targetText}"` : 'Modal de criação de nota aberto'
+  );
+  // SEM playText — o modal fala no useEffect
+  break;
+ 
+case 'lembrete_remedios': {
+  setActiveModal({
+    type: 'LembreteRemediosDisplay',
+    data: { companyId },
+  });
+ 
+  await saveInteractionToHistory(
+    companyId,
+    'Lembrete de Remédios',
+    'Modal de lembrete de remédios aberto'
+  );
+  // SEM playText — o modal fala no useEffect
+  break;
+
 case 'identificar_fraude':
   setActiveModal({
     type: 'IdentificarFraudeDisplay',

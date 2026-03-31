@@ -718,6 +718,8 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
         {/* Result Stage */}
         {stage === 'result' && resultBlob && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* Banner de sucesso */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -733,66 +735,119 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
               <IconCheck />
               <span>Conversão concluída!</span>
               <span style={{ marginLeft: 'auto', fontSize: '12px', opacity: 0.7 }}>
-                Fecha em {timeLeft}s
+                Tamanho: {(resultBlob.size / 1024).toFixed(1)} KB
               </span>
             </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{
-                  padding: '12px',
-                  borderRadius: '8px',
-                  backgroundColor: colors.bgSecondary,
-                  border: `1px solid ${colors.border}`,
-                }}>
-                  <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted }}>
-                    Arquivo: <strong style={{ color: colors.text }}>{resultFileName}</strong>
-                  </p>
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: colors.textMuted }}>
-                    Tamanho: {(resultBlob.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
+
+            {/* Layout responsivo: coluna única mobile / duas colunas desktop */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '16px',
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'row',
+                gap: '16px',
+                '@media (max-width: 640px)': {
+                  flexDirection: 'column'
+                }
+              }} className="result-container">
                 
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={handleDownload} style={{
-                    flex: 1,
-                    padding: '10px',
+                {/* Coluna esquerda — info + ações */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '12px', 
+                  flex: 1,
+                  minWidth: 0
+                }}>
+                  {/* Info do arquivo */}
+                  <div style={{
+                    padding: '12px',
                     borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: colors.primary,
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                  }}>
-                    <IconDownload /> Baixar
-                  </button>
-                  
-                  <button onClick={handleReset} style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: `1px solid ${colors.border}`,
                     backgroundColor: colors.bgSecondary,
-                    color: colors.text,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
+                    border: `1px solid ${colors.border}`,
                   }}>
-                    <IconRefresh /> Novo
-                  </button>
+                    <p style={{ margin: 0, fontSize: '13px', color: colors.textMuted }}>
+                      Arquivo: <strong style={{ color: colors.text }}>{resultFileName}</strong>
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: colors.textMuted }}>
+                      Formato: {resultBlob.type || 'application/octet-stream'}
+                    </p>
+                  </div>
+                  
+                  {/* Botões de ação */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={handleDownload} style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: colors.primary,
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}>
+                      <IconDownload /> Baixar
+                    </button>
+                    
+                    <button onClick={handleReset} style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: `1px solid ${colors.border}`,
+                      backgroundColor: colors.bgSecondary,
+                      color: colors.text,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}>
+                      <IconRefresh /> Novo
+                    </button>
+                  </div>
+                </div>
+
+                {/* Coluna direita — QR de download (apenas desktop, em pé) */}
+                <div className="qr-desktop" style={{ 
+                  display: 'none',
+                  flexShrink: 0,
+                  width: '224px', // 56 * 4 = 14rem = w-56
+                }}>
+                  <ResultDownloadQR
+                    companyId={data.companyId}
+                    fileName={resultFileName}
+                    fileType={resultBlob.type}
+                    fileBase64={resultBase64}
+                    isDark={isDark}
+                    enabled={stage === 'result' && !!resultBase64}
+                  />
                 </div>
               </div>
+
+              {/* QR mobile — apenas em telas pequenas, abaixo das ações */}
+              <div className="qr-mobile" style={{ display: 'block' }}>
+                <ResultDownloadQR
+                  companyId={data.companyId}
+                  fileName={resultFileName}
+                  fileType={resultBlob.type}
+                  fileBase64={resultBase64}
+                  isDark={isDark}
+                  enabled={stage === 'result' && !!resultBase64}
+                />
+              </div>
             </div>
-            
+
+            {/* Voice hint */}
             <VoiceHint commands={['"baixar"', '"novo arquivo"', '"fechar"']} isDark={isDark} />
           </div>
         )}
@@ -832,11 +887,40 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
         
       </div>
 
-      {/* CSS Keyframe para animação de spin */}
+      {/* CSS para animação e responsividade */}
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        
+        /* Layout responsivo do resultado */
+        .result-container {
+          display: flex;
+          flex-direction: row;
+          gap: 16px;
+        }
+        
+        @media (max-width: 640px) {
+          .result-container {
+            flex-direction: column !important;
+          }
+          .qr-desktop {
+            display: none !important;
+          }
+          .qr-mobile {
+            display: block !important;
+          }
+        }
+        
+        @media (min-width: 641px) {
+          .qr-desktop {
+            display: flex !important;
+            flex-direction: column;
+          }
+          .qr-mobile {
+            display: none !important;
+          }
         }
       `}</style>
     </div>,

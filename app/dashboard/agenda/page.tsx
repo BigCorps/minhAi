@@ -359,7 +359,7 @@ function AgendaPageContent() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Serviços Google</h1>
-            <p className="text-gray-600 dark:text-gray-400">Calendário, emails, Drive e dispositivos Smart Home</p>
+            <p className="text-gray-600 dark:text-gray-400">Gerencie seu Calendário, Emails, Drive e dispositivos Smart Home</p>
           </div>
 
           {loading && selectedCompanyId && (

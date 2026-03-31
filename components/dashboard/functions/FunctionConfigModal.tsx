@@ -2131,6 +2131,128 @@ const FaqForm = () => (
   </div>
 );
 
+// ── 1. Componente CriarNotaForm (adicionar antes de FORM_COMPONENTS) ────────
+ 
+const CriarNotaForm = () => (
+  <div className="space-y-4">
+    <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+      <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+        Como funciona
+      </h4>
+      <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
+        <li>• Cliente dita a nota por voz ou usa comando "criar nota sobre [assunto]"</li>
+        <li>• Sistema reconhece e transcreve o texto automaticamente</li>
+        <li>• Cliente pode editar e adicionar título antes de salvar</li>
+        <li>• Notas ficam salvas no dashboard em Arquivos → Notas</li>
+      </ul>
+    </div>
+ 
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+        Comandos de voz
+      </h4>
+      <div className="grid grid-cols-2 gap-2 text-sm text-blue-800 dark:text-blue-200">
+        <div>
+          <p className="font-medium">Para criar:</p>
+          <ul className="space-y-0.5 mt-1">
+            <li>• "Criar nota"</li>
+            <li>• "Anotar isso"</li>
+            <li>• "Fazer anotação"</li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-medium">Durante gravação:</p>
+          <ul className="space-y-0.5 mt-1">
+            <li>• "Concluir" (finaliza)</li>
+            <li>• "Salvar" (confirma)</li>
+            <li>• "Cancelar" (fecha)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+ 
+    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+        Créditos
+      </h4>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Cada nota salva consome <strong>1 crédito</strong>
+      </p>
+    </div>
+  </div>
+);
+ 
+// ── 2. Componente LembreteRemediosForm (adicionar antes de FORM_COMPONENTS) ─
+ 
+const LembreteRemediosForm = () => (
+  <div className="space-y-4">
+    <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+      <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+        Como funciona
+      </h4>
+      <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
+        <li>• Cliente informa o nome do remédio por voz</li>
+        <li>• Sistema pergunta os horários (ex: 8h, 14h, 20h)</li>
+        <li>• Cliente pode editar manualmente antes de salvar</li>
+        <li>• Opção de receber lembretes no assistente ou Google Calendar</li>
+      </ul>
+    </div>
+ 
+    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+      <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">
+        Modos de lembrete
+      </h4>
+      <div className="text-sm text-purple-800 dark:text-purple-200 space-y-2">
+        <div>
+          <p className="font-medium">Assistente</p>
+          <p className="text-xs">Alertas visuais quando o cliente usar o assistente no horário</p>
+        </div>
+        <div>
+          <p className="font-medium">Google Calendar</p>
+          <p className="text-xs">Cria eventos recorrentes diários no Google Calendar (requer integração)</p>
+        </div>
+        <div>
+          <p className="font-medium">Ambos</p>
+          <p className="text-xs">Alertas no assistente + eventos no Google Calendar</p>
+        </div>
+      </div>
+    </div>
+ 
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+        Comandos de voz
+      </h4>
+      <div className="grid grid-cols-2 gap-2 text-sm text-blue-800 dark:text-blue-200">
+        <div>
+          <p className="font-medium">Para criar:</p>
+          <ul className="space-y-0.5 mt-1">
+            <li>• "Lembrete de remédio"</li>
+            <li>• "Configurar remédio"</li>
+            <li>• "Horário do remédio"</li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-medium">Durante gravação:</p>
+          <ul className="space-y-0.5 mt-1">
+            <li>• "Concluir" (finaliza)</li>
+            <li>• "Salvar" (confirma)</li>
+            <li>• "Cancelar" (fecha)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+ 
+    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+        Créditos
+      </h4>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Cada lembrete salvo consome <strong>1 crédito</strong>
+      </p>
+    </div>
+  </div>
+);
+
 const RastreioCorreiosForm = () => (
   <div className="space-y-4">
     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
@@ -3544,6 +3666,8 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'tracar_rota': TracarRotaForm,
   'buscar_endereco': BuscarEnderecoForm,
   'rastreio_correios': RastreioCorreiosForm,
+  'criar_nota': CriarNotaForm,
+  'lembrete_remedios': LembreteRemediosForm,
 };
 
 // ===== INTERFACE =====

@@ -129,6 +129,30 @@ export default function ArquivosCompanyClient({
     }
   }, [activeTab]); // eslint-disable-line
 
+  // ── Notas: fetch ────────────────────────────────────────────────────────────
+  const fetchNotas = useCallback(async () => {
+    setLoadingNotas(true);
+    try {
+      const { data } = await supabase
+        .from('notas')
+        .select('id, titulo, conteudo, created_at, updated_at')
+        .eq('company_id', initialCompany.id)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setNotas(data);
+        setStats(prev => ({
+          ...prev,
+          totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + data.length,
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar notas:', error);
+    } finally {
+      setLoadingNotas(false);
+    }
+  }, [initialCompany.id, supabase]);
+
   // ── Notas: carregar quando aba é ativada ────────────────────────────────────
   useEffect(() => {
     if (activeTab === 'notas' && notas.length === 0) {
@@ -169,30 +193,6 @@ export default function ArquivosCompanyClient({
       setLoadingConsultas(false);
     }
   }
-
-  // ── Notas: fetch ────────────────────────────────────────────────────────────
-  const fetchNotas = useCallback(async () => {
-    setLoadingNotas(true);
-    try {
-      const { data } = await supabase
-        .from('notas')
-        .select('id, titulo, conteudo, created_at, updated_at')
-        .eq('company_id', initialCompany.id)
-        .order('created_at', { ascending: false });
-
-      if (data) {
-        setNotas(data);
-        setStats(prev => ({
-          ...prev,
-          totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + data.length,
-        }));
-      }
-    } catch (error) {
-      console.error('Erro ao buscar notas:', error);
-    } finally {
-      setLoadingNotas(false);
-    }
-  }, [initialCompany.id, supabase]);
 
   // ── Notas: editar ───────────────────────────────────────────────────────────
   const handleEditNota = (nota: any) => {

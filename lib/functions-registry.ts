@@ -466,7 +466,7 @@ converter_arquivo: {
     'converter arquivo', 'converter imagem', 'mudar formato',
     'transformar em pdf', 'exportar pdf', 'salvar como png',
     'converter para jpg', 'mudar extensao', 'exportar imagem',
-    'salvar pdf', 'transformar arquivo'
+    'salvar pdf', 'transformar arquivo', 'converter arquivos'
   ],
   
   examplePhrases: [

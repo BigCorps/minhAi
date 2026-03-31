@@ -13,7 +13,7 @@
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff, Square } from 'lucide-react';
 import { AvatarFace } from '@/components/AvatarFace';
 import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
@@ -393,7 +393,8 @@ useEffect(() => {
 
   // ── Push-to-talk handlers ─────────────────────────────────
   const handleMicButtonDown = async () => {
-    if (!permissionGranted || isProcessing || isPlayingAudio || isTranscribing) return;
+    if (isPlayingAudio) { stopEverything(); return; }
+    if (!permissionGranted || isProcessing || isTranscribing) return;
     console.log('🎙️ Push-to-talk: iniciando gravação');
     // Para o Google Speech (wake word) durante a gravação
     shouldProcessAudio.current = false;
@@ -1445,7 +1446,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
   };
 
   const getMicButtonColor = () => {
-    if (voiceRecorder.isRecording) return 'bg-red-500 animate-pulse';
+    if (voiceRecorder.isRecording || isPlayingAudio) return 'bg-red-500 animate-pulse';
     if (isTranscribing) return 'bg-orange-400 animate-pulse';
     if (!hasMicrophone || !permissionGranted) return 'bg-gray-400';
     if (isPlayingAudio) return 'bg-blue-500 animate-pulse';
@@ -1459,6 +1460,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
     if (!permissionGranted) return 'Permissão de voz necessária';
     if (voiceRecorder.isRecording) return 'solte para enviar...';
     if (isTranscribing) return 'transcrevendo...';
+    if (isPlayingAudio) return 'clique para parar';
     return 'segure para falar ou';
   };
 
@@ -1472,11 +1474,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
   if (isMaximized) {
     return (
       <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
-        {isSpeaking && (
-          <button onClick={stopEverything} className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all">
-            🛑 PARAR
-          </button>
-        )}
+        
 
         <div
           className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 cursor-pointer select-none"
@@ -1562,11 +1560,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
           onClick={() => window.dispatchEvent(new CustomEvent('eai:avatarClick'))}
           title="Clique para expandir"
         >
-          {isSpeaking && (
-            <button onClick={stopEverything} className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all z-10">
-              🛑 PARAR
-            </button>
-          )}
+          
           <div
             className="relative h-96 cursor-pointer"
             onClick={() => window.dispatchEvent(new CustomEvent('eai:setMaximized', { detail: { value: true } }))}
@@ -1606,7 +1600,9 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
                 className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
                 aria-label="Segurar para falar"
               >
-                {hasMicrophone && permissionGranted ? (
+                {isPlayingAudio ? (
+                  <Square className="w-[51px] h-[51px] text-white fill-current" />
+                ) : hasMicrophone && permissionGranted ? (
                   <Mic className="w-[51px] h-[51px] text-white" />
                 ) : (
                   <MicOff className="w-[51px] h-[51px] text-white opacity-50" />

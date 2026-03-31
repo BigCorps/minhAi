@@ -2311,6 +2311,150 @@ consultar_cambio: {
   },
 },
 
+tracar_rota: {
+  functionKey: 'tracar_rota',
+  functionName: 'Traçar Rota',
+  category: 'configuration' as any,
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'tracar rota',
+    'calcular rota',
+    'mostrar caminho',
+    'como chegar',
+    'rota para',
+    'ir para',
+    'traçar caminho',
+    'ver rota',
+  ],
+  examplePhrases: [
+    'Traçar rota para a Av. Paulista',
+    'Como chegar no aeroporto',
+    'Calcular rota',
+  ],
+
+  edgeFunction: undefined,
+  uiComponent: 'TracarRotaDisplay',
+  requiresInput: false,
+  description: 'Traça rota entre a localização atual e um destino informado.',
+  icon: '🟣',
+  color: '#800080',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ companyId, setActiveModal, userMessage }) => {
+    // Extrai destino do comando de voz (ex: "traçar rota para av paulista")
+    const triggers = ['tracar rota', 'calcular rota', 'rota para', 'como chegar', 'ir para'];
+    let destino = '';
+    
+    const msgLower = userMessage?.toLowerCase() || '';
+    for (const trigger of triggers) {
+      if (msgLower.includes(trigger)) {
+        destino = msgLower.split(trigger)[1]?.trim() || '';
+        break;
+      }
+    }
+
+    setActiveModal?.({ 
+      type: 'TracarRotaDisplay', 
+      data: { companyId, destinoInicial: destino } 
+    });
+    return true;
+  },
+},
+
+buscar_endereco: {
+  functionKey: 'buscar_endereco',
+  functionName: 'Buscar Endereço',
+  category: 'configuration' as any,
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'buscar endereco',
+    'buscar endereço',
+    'procurar endereco',
+    'qual o endereco',
+    'encontrar local',
+    'cep',
+    'localizar',
+  ],
+  examplePhrases: [
+    'Buscar endereço da Av. Paulista',
+    'Qual o CEP 01310-100',
+    'Encontrar local',
+  ],
+
+  edgeFunction: undefined,
+  uiComponent: 'BuscarEnderecoDisplay',
+  requiresInput: false,
+  description: 'Busca endereços completos por CEP ou nome de lugar.',
+  icon: '🟣',
+  color: '#800080',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ companyId, setActiveModal, userMessage }) => {
+    // Extrai termo de busca
+    const triggers = ['buscar endereco', 'buscar endereço', 'procurar endereco', 'qual o endereco', 'cep'];
+    let termo = '';
+    
+    const msgLower = userMessage?.toLowerCase() || '';
+    for (const trigger of triggers) {
+      if (msgLower.includes(trigger)) {
+        termo = msgLower.split(trigger)[1]?.trim() || '';
+        break;
+      }
+    }
+
+    setActiveModal?.({ 
+      type: 'BuscarEnderecoDisplay', 
+      data: { companyId, termoInicial: termo } 
+    });
+    return true;
+  },
+},
+
+rastreio_correios: {
+  functionKey: 'rastreio_correios',
+  functionName: 'Rastreio Correios',
+  category: 'configuration' as any,
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'rastrear encomenda',
+    'rastreio correios',
+    'rastrear pacote',
+    'cadê minha encomenda',
+    'status correios',
+    'onde está meu pedido',
+  ],
+  examplePhrases: [
+    'Rastrear encomenda AA123456789BR',
+    'Rastreio Correios',
+    'Cadê minha encomenda',
+  ],
+
+  edgeFunction: undefined,
+  uiComponent: 'RastreioCorreiosDisplay',
+  requiresInput: false,
+  description: 'Rastreia encomendas dos Correios informando o status atual.',
+  icon: '🟣',
+  color: '#800080',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'RastreioCorreiosDisplay', data: { companyId } });
+    return true;
+  },
+},
+
 // ── Consultar CEP ─────────────────────────────────────────────
 consultar_cep: {
   functionKey: 'consultar_cep',

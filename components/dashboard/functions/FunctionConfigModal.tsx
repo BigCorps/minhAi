@@ -2149,15 +2149,7 @@ const RastreioCorreiosForm = () => (
         <li>• "Rastrear encomenda"</li>
         <li>• "Rastreio Correios"</li>
         <li>• "Cadê minha encomenda"</li>
-        <li>• (Cliente digita o código manualmente)</li>
       </ul>
-    </div>
-
-    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
-      <h4 className="font-semibold mb-2 text-amber-800 dark:text-amber-300">Atenção</h4>
-      <p className="text-sm text-amber-700 dark:text-amber-400">
-        Usa API pública dos Correios. Se instável, considere migrar para API Brasil (paga).
-      </p>
     </div>
   </div>
 );

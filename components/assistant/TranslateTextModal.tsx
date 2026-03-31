@@ -275,43 +275,57 @@ export default function TranslateTextModal({
     };
 
     // ✅ FIX PRINCIPAL: onend é o único lugar que traduz no desktop
-    // Funciona tanto para "concluir" por voz quanto para o botão "Parar e Traduzir"
     recognition.onend = () => {
       setIsRecording(false);
+      recognitionRef.current = null; // ✅ Nullar aqui, depois que onend disparou
       console.log('🛑 [Desktop] Recognition.onend acionado');
 
-      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
+      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou', 'terminou'];
       let cleaned = finalTranscriptRef.current;
 
       console.log('📝 [Desktop] Texto antes de limpar:', cleaned);
 
-      for (const t of FIM_TRIGGERS_CLEAN) {
-        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
+      // ✅ FIX "concluir" aparecendo: aplica limpeza em loop até não ter mais nenhum trigger no final
+      let prevCleaned = '';
+      while (prevCleaned !== cleaned) {
+        prevCleaned = cleaned;
+        for (const t of FIM_TRIGGERS_CLEAN) {
+          cleaned = cleaned.replace(new RegExp(`\\s*${t}[.,!?]*\\s*$`, 'gi'), '');
+        }
+        cleaned = cleaned.trim();
       }
-      cleaned = cleaned.trim();
 
       console.log('✅ [Desktop] Texto final limpo:', cleaned);
 
-      setInputText(cleaned);
+      // ✅ FIX: Atualiza a ref com o texto limpo (o state é atualizado depois pelo handleTranslateWithText)
       finalTranscriptRef.current = cleaned;
 
-      // ✅ FIX: Só traduz se a flag estiver setada (voz "concluir" ou botão "Parar e Traduzir")
-      if (shouldTranslateOnEndRef.current && cleaned) {
-        console.log('🚀 [Desktop] Iniciando tradução via onend...');
-        shouldTranslateOnEndRef.current = false; // Reset
-        // Usa diretamente o texto limpo, sem depender de state ainda atualizado
-        handleTranslateWithText(cleaned);
-      } else if (!shouldTranslateOnEndRef.current) {
-        console.log('ℹ️ [Desktop] Gravação parada sem traduzir (botão Parar simples)');
-      } else {
-        console.warn('⚠️ [Desktop] Texto vazio, não traduz');
+      if (shouldTranslateOnEndRef.current) {
         shouldTranslateOnEndRef.current = false;
+        if (cleaned) {
+          console.log('🚀 [Desktop] Iniciando tradução via onend...');
+          // ✅ FIX: Não chamar setInputText aqui — handleTranslateWithText faz isso após a API retornar
+          handleTranslateWithText(cleaned);
+        } else {
+          console.warn('⚠️ [Desktop] Texto vazio após limpeza, não traduz');
+          setInputText(''); // Limpa UI se ficou vazio
+        }
+      } else {
+        // Parou sem intenção de traduzir — só atualiza a UI
+        setInputText(cleaned);
+        console.log('ℹ️ [Desktop] Gravação parada sem traduzir');
       }
     };
 
     recognition.onerror = (event: any) => {
+      console.log('⚠️ [Desktop] Recognition.onerror:', event.error);
+      // ✅ FIX: "aborted" acontece quando chamamos .stop() manualmente — não é erro real
+      // Não mostra toast, não reseta flag — deixa o onend cuidar do fluxo
+      if (event.error === 'aborted') return;
+      
       setIsRecording(false);
       shouldTranslateOnEndRef.current = false;
+      recognitionRef.current = null;
       if (event.error === 'no-speech') showToast('Nenhuma fala detectada.', 'warning');
       else if (event.error === 'not-allowed') showToast('Permissão do microfone negada.', 'error');
       else showToast('Erro ao capturar áudio.', 'error');
@@ -324,7 +338,8 @@ export default function TranslateTextModal({
   const stopRecording = () => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
-      recognitionRef.current = null;
+      // ✅ NÃO nullar aqui — onend ainda precisa disparar para traduzir
+      // A ref é nullada no próprio onend após processar
     }
     if (googleSpeechRef.current) {
       googleSpeechRef.current.stopRecording().catch(() => {});

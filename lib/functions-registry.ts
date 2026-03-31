@@ -456,6 +456,90 @@ voiceTriggers: [
     },
   },
 
+// ── CRIAR NOTA ───────────────────────────────────────────────────────────────
+ 
+criar_nota: {
+  functionKey:     'criar_nota',
+  functionName:    'Criar Nota',
+  category:        'utilities' as any,
+  responseType:    'voice+modal',
+ 
+  voiceTriggers: [
+    'criar nota',
+    'anotar',
+    'salvar nota',
+    'fazer anotacao',
+    'quero anotar',
+    'registrar nota',
+    'escrever nota',
+    'nota sobre',
+  ],
+  examplePhrases: ['Criar nota', 'Anotar isso', 'Fazer anotação', 'Quero anotar algo'],
+ 
+  edgeFunction:    undefined,
+  uiComponent:     'CriarNotaDisplay',
+  requiresInput:   false,
+  description:     'Permite criar e salvar notas de texto por comando de voz. O cliente pode ditar o conteúdo da nota e ela será armazenada no dashboard de arquivos para consulta posterior.',
+  icon:            '⏱️',
+  color:           '#FFA500',
+  saveToHistory:   true,
+  creditsPerUse:   1,
+  requiresPayment: false,
+  isPremium:       false,
+ 
+  handler: async ({ companyId, setActiveModal, transcript }) => {
+    // Detecta se veio com "nota sobre [assunto]"
+    const match = transcript?.match(/nota sobre (.+)/i);
+    const targetText = match ? match[1].trim() : undefined;
+ 
+    setActiveModal?.({
+      type: 'CriarNotaDisplay',
+      data: { companyId, targetText },
+    });
+    // SEM playText aqui — o modal fala no useEffect de mount
+    return true;
+  },
+},
+ 
+// ── LEMBRETE DE REMÉDIOS ─────────────────────────────────────────────────────
+ 
+lembrete_remedios: {
+  functionKey:     'lembrete_remedios',
+  functionName:    'Lembrete de Remédios',
+  category:        'utilities' as any,
+  responseType:    'voice+modal',
+ 
+  voiceTriggers: [
+    'lembrete de remedio',
+    'lembrar remedio',
+    'alarme de remedio',
+    'configurar remedio',
+    'horario do remedio',
+    'tomar remedio',
+  ],
+  examplePhrases: ['Lembrete de remédio', 'Configurar remédio', 'Horário do remédio'],
+ 
+  edgeFunction:    undefined,
+  uiComponent:     'LembreteRemediosDisplay',
+  requiresInput:   false,
+  description:     'Configura lembretes para tomar remédios em horários específicos. O cliente informa o nome do remédio e os horários, e pode escolher receber alertas direto no assistente ou via Google Calendar.',
+  icon:            '⏱️',
+  color:           '#FFA500',
+  saveToHistory:   true,
+  creditsPerUse:   1,
+  requiresPayment: false,
+  isPremium:       false,
+ 
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({
+      type: 'LembreteRemediosDisplay',
+      data: { companyId },
+    });
+    // SEM playText aqui — o modal fala no useEffect de mount
+    return true;
+  },
+},
+
 identificar_fraude: {
   functionKey:      'identificar_fraude',
   functionName:     'Identificar Fraude',

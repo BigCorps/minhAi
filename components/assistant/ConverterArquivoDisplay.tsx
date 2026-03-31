@@ -90,7 +90,7 @@ const IconRefresh = () => (
 );
 
 const IconLoader = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
     <line x1="12" y1="2" x2="12" y2="6"></line>
     <line x1="12" y1="18" x2="12" y2="22"></line>
     <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
@@ -174,6 +174,7 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
   const [progressPercent, setProgressPercent] = useState<number>(0);
   
   const scriptsLoaded = useRef(false);
+  const hasSpoken = useRef(false);
   const lastTabCommandRef = useRef<string | null>(null);
   const tabCommandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -200,7 +201,9 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
       script.onload = () => {
         loaded++;
         if (loaded === scripts.length && window.pdfjsLib) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf-worker/pdf.worker.min.js';
+          // Usar CDN ao invés do arquivo local
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
       };
       document.body.appendChild(script);
@@ -224,11 +227,14 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
     return () => clearInterval(interval);
   }, [stage, onClose]);
 
-  // Falar texto de abertura
+  // Falar texto de abertura APENAS UMA VEZ
   useEffect(() => {
+    if (hasSpoken.current) return;
+    hasSpoken.current = true;
+    
     window.speechSynthesis?.cancel();
     playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
+  }, []);
 
   // Detectar arquivo e formatos disponíveis
   const handleCapture = useCallback(async (base64: string) => {
@@ -271,13 +277,11 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
       setAvailableFormats(formats);
       setStage('selecting_format');
       
-      playText(`Arquivo ${extension.toUpperCase()} detectado. Para qual formato deseja converter?`).catch(() => {});
-      
     } catch (err: any) {
       setErrorMsg(err.message ?? 'Erro ao processar arquivo.');
       setStage('error');
     }
-  }, [playText]);
+  }, []);
 
   // Conversões
   const convertImageToImage = async (file: File, targetFormat: string): Promise<Blob> => {
@@ -429,7 +433,7 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
       let blob: Blob;
       let filename: string;
       
-      const isMultiPagePDF = originalExtension === 'pdf' && originalFile.size > 100000; // Assume multi-page se > 100KB
+      const isMultiPagePDF = originalExtension === 'pdf' && originalFile.size > 100000;
       
       if (originalExtension !== 'pdf' && selectedFormat === 'pdf') {
         // Imagem → PDF
@@ -461,8 +465,6 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
         setResultFileName(filename);
         setProgressPercent(100);
         setStage('result');
-        
-        playText(`Arquivo convertido com sucesso para ${selectedFormat.toUpperCase()}.`).catch(() => {});
       };
       reader.readAsDataURL(blob);
       
@@ -475,9 +477,8 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
     } catch (err: any) {
       setErrorMsg(err.message ?? 'Erro na conversão.');
       setStage('error');
-      playText('Erro ao converter arquivo.').catch(() => {});
     }
-  }, [originalFile, selectedFormat, originalExtension, data.companyId, supabase, playText]);
+  }, [originalFile, selectedFormat, originalExtension, data.companyId, supabase]);
 
   const handleDownload = useCallback(() => {
     if (!resultBlob || !resultFileName) return;
@@ -488,9 +489,7 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
     a.download = resultFileName;
     a.click();
     URL.revokeObjectURL(url);
-    
-    playText('Download iniciado.').catch(() => {});
-  }, [resultBlob, resultFileName, playText]);
+  }, [resultBlob, resultFileName]);
 
   const handleReset = useCallback(() => {
     setStage('input');
@@ -498,8 +497,7 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
     setSelectedFormat(null);
     setResultBlob(null);
     setErrorMsg(null);
-    playText(OPENING_TEXT).catch(() => {});
-  }, [playText]);
+  }, []);
 
   // Voice commands
   useModalVoiceCommand({
@@ -544,7 +542,6 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
         for (const [trigger, format] of Object.entries(formatMap)) {
           if (t.includes(trigger) && availableFormats.includes(format)) {
             setSelectedFormat(format);
-            playText(`Formato ${format.toUpperCase()} selecionado. Diga converter para iniciar.`).catch(() => {});
             return;
           }
         }
@@ -648,10 +645,7 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
                 {availableFormats.map(format => (
                   <button
                     key={format}
-                    onClick={() => {
-                      setSelectedFormat(format);
-                      playText(`Formato ${format.toUpperCase()} selecionado.`).catch(() => {});
-                    }}
+                    onClick={() => setSelectedFormat(format)}
                     style={{
                       padding: '12px',
                       borderRadius: '8px',
@@ -743,7 +737,7 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
               </span>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{
                   padding: '12px',
@@ -797,28 +791,6 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
                   </button>
                 </div>
               </div>
-              
-              <div style={{ display: 'none', '@media (min-width: 640px)': { display: 'block' } }}>
-                <ResultDownloadQR
-                  companyId={data.companyId}
-                  fileName={resultFileName}
-                  fileType={resultBlob.type}
-                  fileBase64={resultBase64}
-                  isDark={isDark}
-                  enabled={true}
-                />
-              </div>
-            </div>
-            
-            <div style={{ display: 'block', '@media (min-width: 640px)': { display: 'none' } }}>
-              <ResultDownloadQR
-                companyId={data.companyId}
-                fileName={resultFileName}
-                fileType={resultBlob.type}
-                fileBase64={resultBase64}
-                isDark={isDark}
-                enabled={true}
-              />
             </div>
             
             <VoiceHint commands={['"baixar"', '"novo arquivo"', '"fechar"']} isDark={isDark} />
@@ -859,6 +831,14 @@ export default function ConverterArquivoDisplay({ data, onClose, theme = 'dark',
         )}
         
       </div>
+
+      {/* CSS Keyframe para animação de spin */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>,
     document.body
   );

@@ -784,6 +784,7 @@ case 'criar_nota': {
   );
   // SEM playText — o modal fala no useEffect
   break;
+}
  
 case 'lembrete_remedios': {
   setActiveModal({
@@ -798,6 +799,7 @@ case 'lembrete_remedios': {
   );
   // SEM playText — o modal fala no useEffect
   break;
+}
 
 case 'identificar_fraude':
   setActiveModal({

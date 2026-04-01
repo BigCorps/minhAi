@@ -469,7 +469,7 @@ export async function detectVoiceCommand(
   }
 
   // ── Endereço ──────────────────────────────────────────────
-  const enderecoTriggers = ['endereço', 'endereco', 'onde fica', 'localização', 'localizacao', 'como chegar'];
+  const enderecoTriggers = ['qual o endereço', 'endereço de vocês', 'onde fica', 'localização', 'localizacao', 'como chegar'];
   if (enderecoTriggers.some(t => lowerTranscript.includes(t))) {
     console.log('📍 Comando Endereço detectado!');
     const isEnabled = await checkIfFunctionIsEnabled(companyId, 'endereco');

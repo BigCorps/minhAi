@@ -492,6 +492,76 @@ converter_arquivo: {
   },
 },
 
+editar_imagem: {
+  functionKey: 'editar_imagem',
+  functionName: 'Editar Imagem',
+  category: 'tools' as any,
+  responseType: 'voice+modal',
+  
+  voiceTriggers: [
+    'editar imagem', 'editar foto', 'ajustar foto',
+    'cortar imagem', 'girar foto', 'brilho contraste',
+    'aplicar filtro', 'melhorar foto', 'editar'
+  ],
+  
+  examplePhrases: [
+    'Editar minha foto',
+    'Ajustar brilho e contraste',
+    'Cortar imagem'
+  ],
+  
+  edgeFunction: undefined,
+  uiComponent: 'EditarImagemDisplay',
+  requiresInput: false,
+  description: 'Editor completo de imagens com ajustes de brilho, contraste, saturação, rotação, espelhamento e corte interativo.',
+  icon: '🌐',
+  color: '#000080',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'EditarImagemDisplay', data: { companyId } });
+    return true;
+  },
+},
+
+remover_fundo: {
+  functionKey: 'remover_fundo',
+  functionName: 'Remover Fundo',
+  category: 'tools' as any,
+  responseType: 'voice+modal',
+  
+  voiceTriggers: [
+    'remover fundo', 'tirar fundo', 'fundo transparente',
+    'remover background', 'apagar fundo', 'fundo branco',
+    'recortar pessoa', 'isolar objeto'
+  ],
+  
+  examplePhrases: [
+    'Remover fundo da foto',
+    'Criar fundo transparente',
+    'Tirar background'
+  ],
+  
+  edgeFunction: undefined,
+  uiComponent: 'RemoverFundoDisplay',
+  requiresInput: false,
+  description: 'Remove automaticamente o fundo de imagens usando inteligência artificial. Gera PNG transparente.',
+  icon: '🌐',
+  color: '#000080',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'RemoverFundoDisplay', data: { companyId } });
+    return true;
+  },
+},
+
 // ── CRIAR NOTA ───────────────────────────────────────────────────────────────
  
 criar_nota: {

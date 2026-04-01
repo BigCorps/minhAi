@@ -731,6 +731,16 @@ case 'transcrever_audio':
   playText('Abrindo ferramenta de transcrição.').catch(() => {});
   break;
 
+case 'ver_noticias':
+  setActiveModal({ type: 'VerNoticiasDisplay', data: { companyId } });
+  // SEM playText — o modal fala no useEffect
+  break;
+
+case 'procurar_produto':
+  setActiveModal({ type: 'ProcurarProdutoDisplay', data: { companyId } });
+  // SEM playText — o modal fala no useEffect
+  break;
+
         case 'meu_sistema':
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });

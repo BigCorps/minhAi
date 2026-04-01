@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
-import { playText } from '@/lib/tts';
 
 // ============================================================================
 // PALETAS DE COR (inline styles — nunca Tailwind dinâmico)
@@ -50,6 +49,7 @@ interface VerNoticiasDisplayProps {
   onClose: () => void;
   companyId: string;
   isDarkMode?: boolean;
+  playText?: (text: string) => Promise<void> | void;
 }
 
 // ============================================================================
@@ -66,6 +66,7 @@ export default function VerNoticiasDisplay({
   onClose,
   companyId,
   isDarkMode = false,
+  playText,
 }: VerNoticiasDisplayProps) {
   const P = isDarkMode ? DARK : LIGHT;
 
@@ -80,7 +81,7 @@ export default function VerNoticiasDisplay({
     if (!isOpen) return;
 
     window.speechSynthesis?.cancel();
-    playText(OPENING_TEXT);
+    playText?.(OPENING_TEXT);
 
     buscarNoticias();
     cobrarCredito();
@@ -129,7 +130,7 @@ export default function VerNoticiasDisplay({
       console.error('❌ Erro ao buscar notícias:', err);
       setError(err.message || 'Erro desconhecido');
       setStage('error');
-      playText(ERROR_TEXT);
+      playText?.(ERROR_TEXT);
     }
   };
 

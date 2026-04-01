@@ -210,15 +210,6 @@ const VerNoticiasForm = () => (
         ))}
       </div>
     </div>
-
-    <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-      <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-        Quantidade
-      </div>
-      <div className="text-gray-600 dark:text-gray-400">
-        5 manchetes
-      </div>
-    </div>
   </div>
 );
 
@@ -245,10 +236,6 @@ const ProcurarProdutoForm = () => (
         <li className="flex items-start gap-2">
           <span className="text-cyan-500 mt-0.5">•</span>
           <span>Cliente clica em "Abrir" para ver o produto no Mercado Livre em nova aba</span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span className="text-cyan-500 mt-0.5">•</span>
-          <span>Cobra 1 crédito ao abrir o modal (independente de quantas buscas)</span>
         </li>
       </ul>
     </div>

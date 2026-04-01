@@ -2180,11 +2180,35 @@ const LembreteRemediosForm = () => (
         Como funciona
       </h4>
       <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
-        <li>• Cliente informa o nome do remédio por voz</li>
-        <li>• Assistente pergunta os horários (ex: 8h, 14h, 20h)</li>
-        <li>• Cliente pode editar manualmente antes de salvar</li>
+        <li>• Cliente preenche 4 campos: nome, intervalo, horário e duração</li>
+        <li>• Sistema calcula automaticamente todos os horários do tratamento</li>
+        <li>• Preview em tempo real mostra quantas doses por dia e total de dias</li>
         <li>• Opção de receber lembretes no assistente ou Google Calendar</li>
       </ul>
+    </div>
+ 
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+        📋 Campos do formulário
+      </h4>
+      <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+        <div>
+          <p className="font-medium">1. Nome do Remédio</p>
+          <p className="text-xs">Ex: Paracetamol 500mg</p>
+        </div>
+        <div>
+          <p className="font-medium">2. Intervalo entre doses</p>
+          <p className="text-xs">Ex: 8 horas (= 3 doses por dia)</p>
+        </div>
+        <div>
+          <p className="font-medium">3. Horário da primeira dose</p>
+          <p className="text-xs">Ex: 08:00 (demais horários são calculados)</p>
+        </div>
+        <div>
+          <p className="font-medium">4. Duração do tratamento</p>
+          <p className="text-xs">Escolha: Total de dias OU Quantidade de comprimidos</p>
+        </div>
+      </div>
     </div>
  
     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
@@ -2193,27 +2217,55 @@ const LembreteRemediosForm = () => (
       </h4>
       <div className="text-sm text-purple-800 dark:text-purple-200 space-y-2">
         <div>
-          <p className="font-medium">Assistente</p>
-          <p className="text-xs">Alertas visuais quando o cliente usar o assistente no horário</p>
+          <p className="font-medium">🔔 Assistente</p>
+          <p className="text-xs">Salva horários diários - alertas quando cliente usar o assistente</p>
         </div>
         <div>
-          <p className="font-medium">Google Calendar</p>
-          <p className="text-xs">Cria eventos recorrentes diários no Google Calendar (requer integração)</p>
+          <p className="font-medium">📅 Google Calendar</p>
+          <p className="text-xs">Cria TODOS os eventos até o fim do tratamento (ex: 21 comprimidos = 21 eventos)</p>
         </div>
         <div>
-          <p className="font-medium">Ambos</p>
-          <p className="text-xs">Alertas no assistente + eventos no Google Calendar</p>
+          <p className="font-medium">🔔📅 Ambos</p>
+          <p className="text-xs">Salva no assistente + cria todos os eventos no Calendar</p>
         </div>
       </div>
     </div>
  
-    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+      <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+        💡 Exemplo de uso
+      </h4>
+      <div className="text-sm text-green-800 dark:text-green-200 space-y-1">
+        <p>• <strong>Remédio:</strong> Paracetamol 500mg</p>
+        <p>• <strong>Intervalo:</strong> 8 horas</p>
+        <p>• <strong>Primeira dose:</strong> 08:00</p>
+        <p>• <strong>Duração:</strong> 21 comprimidos</p>
+        <p className="pt-2 border-t border-green-300 dark:border-green-700 mt-2">
+          📊 <strong>Sistema calcula:</strong> 3 doses/dia × 7 dias = 21 doses totais<br/>
+          Horários: 08:00, 16:00, 00:00
+        </p>
+      </div>
+    </div>
+ 
+    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+        🔗 Integração Google Calendar
+      </h4>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+        Se Google Calendar não estiver conectado, o modal exibirá um botão para conectar
+      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-500">
+        Os modos Calendar e Ambos ficam desabilitados até a conexão ser estabelecida
+      </p>
+    </div>
+ 
+    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
         Comandos de voz
       </h4>
-      <div className="grid grid-cols-2 gap-2 text-sm text-blue-800 dark:text-blue-200">
+      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
         <div>
-          <p className="font-medium">Para criar:</p>
+          <p className="font-medium text-gray-900 dark:text-white">Para criar:</p>
           <ul className="space-y-0.5 mt-1">
             <li>• "Lembrete de remédio"</li>
             <li>• "Configurar remédio"</li>
@@ -2221,14 +2273,22 @@ const LembreteRemediosForm = () => (
           </ul>
         </div>
         <div>
-          <p className="font-medium">Durante gravação:</p>
+          <p className="font-medium text-gray-900 dark:text-white">No formulário:</p>
           <ul className="space-y-0.5 mt-1">
-            <li>• "Concluir" (finaliza)</li>
             <li>• "Salvar" (confirma)</li>
             <li>• "Cancelar" (fecha)</li>
           </ul>
         </div>
       </div>
+    </div>
+ 
+    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+        Créditos
+      </h4>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Cada lembrete salvo consome <strong>1 crédito</strong>
+      </p>
     </div>
   </div>
 );

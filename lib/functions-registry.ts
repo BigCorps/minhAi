@@ -3579,7 +3579,6 @@ consultar_leilao: {
       'endereço de vocês',
       'onde vocês ficam',
       'onde voces ficam',
-      'seu endereço',
       'nosso endereço',
       'localização',
       'localizacao',

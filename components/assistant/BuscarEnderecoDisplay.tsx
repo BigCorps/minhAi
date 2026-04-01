@@ -137,7 +137,6 @@ export default function BuscarEnderecoDisplay({
         {
           body: {
             termo,
-            apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
           },
         }
       );

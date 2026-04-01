@@ -164,6 +164,155 @@ const SequenciaVideosForm = ({ settings, onChange }: any) => {
   );
 };
 
+const VerNoticiasForm = () => (
+  <div className="space-y-4">
+    {/* Info box */}
+    <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg border border-cyan-200 dark:border-cyan-800">
+      <h4 className="font-semibold text-cyan-900 dark:text-cyan-100 mb-2 flex items-center gap-2">
+        Como funciona
+      </h4>
+      <ul className="space-y-2 text-sm text-cyan-800 dark:text-cyan-200">
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Cliente solicita por voz "Ver notícias" ou "Mostrar manchetes"</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Assistente busca as 5 últimas manchetes do Google News em português</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Cliente clica na manchete desejada para abrir em nova aba</span>
+        </li>
+      </ul>
+    </div>
+
+    {/* Comandos de voz */}
+    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+      <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+        Comandos de voz aceitos
+      </h4>
+      <div className="flex flex-wrap gap-2">
+        {[
+          'Ver notícias',
+          'Notícias',
+          'Manchetes',
+          'Últimas notícias',
+          'Mostrar notícias',
+          'Quais as notícias',
+        ].map((cmd) => (
+          <span
+            key={cmd}
+            className="px-3 py-1.5 bg-white dark:bg-gray-900 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-700"
+          >
+            "{cmd}"
+          </span>
+        ))}
+      </div>
+    </div>
+
+      <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+          Quantidade
+        </div>
+        <div className="text-gray-600 dark:text-gray-400">
+          5 manchetes
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const ProcurarProdutoForm = () => (
+  <div className="space-y-4">
+    {/* Info box */}
+    <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg border border-cyan-200 dark:border-cyan-800">
+      <h4 className="font-semibold text-cyan-900 dark:text-cyan-100 mb-2 flex items-center gap-2">
+        <span>❄️</span>
+        Como funciona
+      </h4>
+      <ul className="space-y-2 text-sm text-cyan-800 dark:text-cyan-200">
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Cliente solicita por voz "Procurar produto" ou "Buscar produto"</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Modal abre com campo de busca onde cliente digita o produto desejado</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Sistema busca na API do Mercado Livre Brasil e exibe os 5 resultados mais relevantes</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Cliente clica em "Abrir" para ver o produto no Mercado Livre em nova aba</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="text-cyan-500 mt-0.5">•</span>
+          <span>Cobra 1 crédito ao abrir o modal (independente de quantas buscas)</span>
+        </li>
+      </ul>
+    </div>
+ 
+    {/* Comandos de voz */}
+    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+      <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+        Comandos de voz aceitos
+      </h4>
+      <div className="flex flex-wrap gap-2">
+        {[
+          'Procurar produto',
+          'Buscar produto',
+          'Produto',
+          'Mercado Livre',
+          'Quero comprar',
+          'Encontrar produto',
+        ].map((cmd) => (
+          <span
+            key={cmd}
+            className="px-3 py-1.5 bg-white dark:bg-gray-900 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-700"
+          >
+            "{cmd}"
+          </span>
+        ))}
+      </div>
+    </div>
+ 
+    {/* Características */}
+    <div className="grid grid-cols-2 gap-3 text-sm">
+
+    </div>
+ 
+    {/* Exemplo de uso */}
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+        Exemplo de uso
+      </h4>
+      <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+        <p>
+          <strong>Cliente:</strong> "Procurar produto"
+        </p>
+        <p>
+          <strong>Sistema:</strong> Abre modal com campo de busca
+        </p>
+        <p>
+          <strong>Cliente:</strong> Digita "notebook gamer" e clica em Buscar
+        </p>
+        <p>
+          <strong>Sistema:</strong> Exibe 5 notebooks mais relevantes com imagem, título, preço e botão "Abrir"
+        </p>
+        <p>
+          <strong>Cliente:</strong> Clica em "Abrir" no produto desejado
+        </p>
+        <p>
+          <strong>Sistema:</strong> Abre página do produto no Mercado Livre em nova aba
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
 const TracarRotaForm = () => (
   <div className="space-y-4">
     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
@@ -3651,6 +3800,8 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'rastreio_correios': RastreioCorreiosForm,
   'criar_nota': CriarNotaForm,
   'lembrete_remedios': LembreteRemediosForm,
+  'ver_noticias': VerNoticiasForm,
+  'procurar_produto': ProcurarProdutoForm,
 };
 
 // ===== INTERFACE =====

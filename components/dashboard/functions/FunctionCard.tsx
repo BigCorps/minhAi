@@ -117,6 +117,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'tracar_rota',
   'criar_nota',
   'lembrete_remedios',
+  'ver_noticias',
+  'procurar_produto',
   'tef_debito',
   'tef_credito'
 ];

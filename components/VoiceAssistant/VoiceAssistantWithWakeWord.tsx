@@ -695,6 +695,15 @@ case 'minha_conta':
   ).catch(() => {});
   return;
 
+case 'duplicar_imagem':
+  setActiveModal({ type: 'DuplicarImagemDisplay', data: { companyId } });
+  await saveInteractionToHistory(
+    companyId,
+    'Duplicar Imagem',
+    'Modal de duplicação de imagem aberto'
+  );
+  break;
+
 case 'segunda_via_boleto':
   setActiveModal({
     type: 'SegundaViaBoletoDisplay',

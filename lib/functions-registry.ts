@@ -4658,6 +4658,89 @@ modo_venda: {
   },
 },
 
+ver_noticias: {
+  functionKey: 'ver_noticias',
+  functionName: 'Ver Notícias',
+  category: 'information' as any,
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'ver noticias',
+    'noticias',
+    'manchetes',
+    'ultimas noticias',
+    'ver manchetes',
+    'mostrar noticias',
+    'quais as noticias',
+    'quero ver noticias',
+    'mostrar manchetes',
+  ],
+ 
+  examplePhrases: [
+    'Ver notícias',
+    'Mostrar manchetes',
+    'Quais são as últimas notícias',
+  ],
+ 
+  edgeFunction: undefined,
+  uiComponent: 'VerNoticiasDisplay',
+  requiresInput: false,
+  description: 'Exibe as 5 principais manchetes de notícias do momento em português.',
+  icon: '❄️',
+  color: '#00FFF7',
+  saveToHistory: false,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+ 
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'VerNoticiasDisplay', data: { companyId } });
+    // SEM playText aqui — o modal fala no useEffect de mount
+    return true;
+  },
+},
+
+procurar_produto: {
+  functionKey: 'procurar_produto',
+  functionName: 'Procurar Produto',
+  category: 'information' as any,
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'procurar produto',
+    'buscar produto',
+    'mercado livre',
+    'encontrar produto',
+    'pesquisar produto',
+    'busca produto',
+    'procura produto',
+    'buscar no mercado livre',
+  ],
+ 
+  examplePhrases: [
+    'Procurar produto',
+    'Buscar produto no Mercado Livre',
+    'Quero comprar',
+  ],
+ 
+  edgeFunction: undefined,
+  uiComponent: 'ProcurarProdutoDisplay',
+  requiresInput: false,
+  description: 'Pesquisa produtos no Mercado Livre Brasil e exibe os 5 resultados mais relevantes.',
+  icon: '❄️',
+  color: '#00FFF7',
+  saveToHistory: false,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+ 
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'ProcurarProdutoDisplay', data: { companyId } });
+    // SEM playText aqui — o modal fala no useEffect de mount
+    return true;
+  },
+},
+
 ver_produtos: {
   functionKey: 'ver_produtos',
   functionName: 'Ver Produtos',

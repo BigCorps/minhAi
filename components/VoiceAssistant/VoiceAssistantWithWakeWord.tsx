@@ -704,6 +704,24 @@ case 'duplicar_imagem':
   );
   break;
 
+case 'remover_fundo':
+  setActiveModal({ type: 'RemoverFundoDisplay', data: { companyId } });
+  await saveInteractionToHistory(
+    companyId,
+    'Remover Fundo',
+    'Modal de remoção de fundo aberto'
+  );
+  break;
+
+case 'editar_imagem':
+  setActiveModal({ type: 'EditarImagemDisplay', data: { companyId } });
+  await saveInteractionToHistory(
+    companyId,
+    'Editar Imagem',
+    'Modal de edição de imagem aberto'
+  );
+  break;
+
 case 'segunda_via_boleto':
   setActiveModal({
     type: 'SegundaViaBoletoDisplay',

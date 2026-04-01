@@ -211,13 +211,12 @@ const VerNoticiasForm = () => (
       </div>
     </div>
 
-      <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Quantidade
-        </div>
-        <div className="text-gray-600 dark:text-gray-400">
-          5 manchetes
-        </div>
+    <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+        Quantidade
+      </div>
+      <div className="text-gray-600 dark:text-gray-400">
+        5 manchetes
       </div>
     </div>
   </div>
@@ -228,7 +227,6 @@ const ProcurarProdutoForm = () => (
     {/* Info box */}
     <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg border border-cyan-200 dark:border-cyan-800">
       <h4 className="font-semibold text-cyan-900 dark:text-cyan-100 mb-2 flex items-center gap-2">
-        <span>❄️</span>
         Como funciona
       </h4>
       <ul className="space-y-2 text-sm text-cyan-800 dark:text-cyan-200">

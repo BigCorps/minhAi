@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
-import { playText } from '@/lib/tts';
 
 // ============================================================================
 // PALETAS DE COR (inline styles — nunca Tailwind dinâmico)
@@ -55,6 +54,7 @@ interface ProcurarProdutoDisplayProps {
   onClose: () => void;
   companyId: string;
   isDarkMode?: boolean;
+  playText?: (text: string) => Promise<void> | void;
 }
 
 // ============================================================================
@@ -72,6 +72,7 @@ export default function ProcurarProdutoDisplay({
   onClose,
   companyId,
   isDarkMode = false,
+  playText,
 }: ProcurarProdutoDisplayProps) {
   const P = isDarkMode ? DARK : LIGHT;
 
@@ -88,7 +89,7 @@ export default function ProcurarProdutoDisplay({
     if (!isOpen) return;
 
     window.speechSynthesis?.cancel();
-    playText(OPENING_TEXT);
+    playText?.(OPENING_TEXT);
 
     setTimeout(() => {
       inputRef.current?.focus();
@@ -108,7 +109,7 @@ export default function ProcurarProdutoDisplay({
 
     try {
       setStage('loading');
-      playText(LOADING_TEXT);
+      playText?.(LOADING_TEXT);
 
       // API pública do Mercado Livre Brasil
       const url = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(
@@ -137,12 +138,12 @@ export default function ProcurarProdutoDisplay({
 
       setProdutos(produtosFormatados);
       setStage('result');
-      playText(`Encontrei ${produtosFormatados.length} produtos.`);
+      playText?.(`Encontrei ${produtosFormatados.length} produtos.`);
     } catch (err: any) {
       console.error('❌ Erro ao buscar produtos:', err);
       setError(err.message || 'Erro desconhecido');
       setStage('error');
-      playText(ERROR_TEXT);
+      playText?.(ERROR_TEXT);
     }
   };
 

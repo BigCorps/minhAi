@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 
-// Paletas inline
 const DARK = {
   bg: '#1e293b',
   border: 'rgba(255,255,255,0.08)',
@@ -45,6 +44,13 @@ interface TracarRotaDisplayProps {
   theme?: 'dark' | 'light';
 }
 
+// ✅ IMPORTAR A FUNÇÃO playText DO SISTEMA
+declare global {
+  interface Window {
+    playText?: (text: string) => void;
+  }
+}
+
 export default function TracarRotaDisplay({
   data,
   onClose,
@@ -59,7 +65,13 @@ export default function TracarRotaDisplay({
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [error, setError] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const [copied, setCopied] = useState(false);
+
+  // ✅ USAR playText DO SISTEMA
+  const playText = (text: string) => {
+    if (window.playText) {
+      window.playText(text);
+    }
+  };
 
   // Detectar localização atual
   useEffect(() => {
@@ -70,7 +82,7 @@ export default function TracarRotaDisplay({
           setOrigem(`${latitude},${longitude}`);
         },
         () => {
-          setOrigem(''); // Se negar permissão, cliente digita
+          setOrigem('');
         }
       );
     }
@@ -83,10 +95,7 @@ export default function TracarRotaDisplay({
       ? `Calculando rota para ${data.destinoInicial}. Aguarde.`
       : 'Para onde você quer ir? Fale o destino ou digite abaixo.';
     
-    const utterance = new SpeechSynthesisUtterance(texto);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 0.95;
-    window.speechSynthesis?.speak(utterance);
+    playText(texto);
 
     // Se já tem destino, calcula automaticamente
     if (data.destinoInicial && origem) {
@@ -94,7 +103,6 @@ export default function TracarRotaDisplay({
     }
   }, []);
 
-  // Comandos de voz
   const handleVoiceCommand = useCallback(
     (command: string) => {
       const cmd = command.toLowerCase();
@@ -106,10 +114,8 @@ export default function TracarRotaDisplay({
       } else if (cmd.includes('abrir') && cmd.includes('maps')) {
         handleOpenMaps();
       } else if (stage === 'input' && destino.trim()) {
-        // Cliente falou algo e já tem destino → calcula
         handleCalcularRota();
       } else if (stage === 'input') {
-        // Considera o comando como destino
         setDestino(command);
       }
     },
@@ -146,19 +152,27 @@ export default function TracarRotaDisplay({
     setError('');
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(
-        origem
-      )}&destination=${encodeURIComponent(destino)}&key=${apiKey}`;
+      // ✅ USAR EDGE FUNCTION
+      const { data: routeResponse, error: edgeError } = await supabase.functions.invoke(
+        'tracar-rota',
+        {
+          body: {
+            origem,
+            destino,
+            apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+          },
+        }
+      );
 
-      const res = await fetch(url);
-      const json = await res.json();
-
-      if (json.status !== 'OK' || !json.routes[0]) {
-        throw new Error('Rota não encontrada.');
+      if (edgeError || !routeResponse) {
+        throw new Error(edgeError?.message || 'Erro ao calcular rota');
       }
 
-      const route = json.routes[0];
+      if (routeResponse.error) {
+        throw new Error(routeResponse.error);
+      }
+
+      const route = routeResponse.routes[0];
       const leg = route.legs[0];
 
       const routeInfo: RouteData = {
@@ -171,7 +185,7 @@ export default function TracarRotaDisplay({
 
       setRouteData(routeInfo);
 
-      // Gerar QR Code para abrir no Maps
+      // Gerar QR Code
       const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
         origem
       )}&destination=${encodeURIComponent(destino)}`;
@@ -194,11 +208,8 @@ export default function TracarRotaDisplay({
         }),
       });
 
-      // Fala resultado
-      const fala = `Rota calculada. Distância: ${routeInfo.distance}. Tempo estimado: ${routeInfo.duration}.`;
-      const utterance = new SpeechSynthesisUtterance(fala);
-      utterance.lang = 'pt-BR';
-      window.speechSynthesis?.speak(utterance);
+      // ✅ USAR playText DO SISTEMA
+      playText(`Rota calculada. Distância: ${routeInfo.distance}. Tempo estimado: ${routeInfo.duration}.`);
     } catch (err: any) {
       setError(err.message || 'Erro ao calcular rota.');
       setStage('error');
@@ -282,7 +293,6 @@ export default function TracarRotaDisplay({
               cursor: 'pointer',
             }}
           >
-            {/* SVG X inline */}
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M6 6l8 8M14 6l-8 8" />
             </svg>

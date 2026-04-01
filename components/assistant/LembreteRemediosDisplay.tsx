@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
-import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
-import { useIsMobile } from '@/hooks/useIsMobile';
 import { createClient } from '@/lib/supabase-browser';
 
 // ============================================================================
@@ -54,8 +52,6 @@ interface Props {
   playText?: (text: string) => Promise<void>;
 }
 
-type Stage = 'countdown' | 'recording_nome' | 'recording_horarios' | 'editing' | 'saved';
-
 // ============================================================================
 // Componente
 // ============================================================================
@@ -64,51 +60,42 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
   const { companyId } = data;
   const supabase = createClient();
   const isDark = theme === 'dark';
-  const isMobile = useIsMobile();
   const colors = isDark ? DARK : LIGHT;
 
-  const [stage, setStage] = useState<Stage>('countdown');
-  const [countdown, setCountdown] = useState(3);
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcription, setTranscription] = useState('');
   const [nomeRemedio, setNomeRemedio] = useState('');
-  const [horarios, setHorarios] = useState<string[]>([]);
-  const [horariosInput, setHorariosInput] = useState('');
+  const [intervaloHoras, setIntervaloHoras] = useState('');
+  const [horarioPrimeiraDose, setHorarioPrimeiraDose] = useState('');
+  const [tipoDuracao, setTipoDuracao] = useState<'dias' | 'comprimidos'>('dias');
+  const [valorDuracao, setValorDuracao] = useState('');
   const [modoLembrete, setModoLembrete] = useState<'assistente' | 'calendario' | 'ambos'>('assistente');
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(true);
 
-  const recognitionRef = useRef<any>(null);
-  const googleSpeechRef = useRef<GoogleSpeechWebSocket | null>(null);
-  const finalTranscriptRef = useRef<string>('');
+  const handleSaveRef = useRef<() => void>(() => {});
 
   // ── Mount: fala abertura + checa Google ───────────────────────────────────
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.speechSynthesis?.cancel();
     }
-    playText?.('Vamos configurar um lembrete de remédio. Prepare-se para falar o nome do remédio.').catch(() => {});
+    playText?.('Configure o lembrete de remédio. Preencha os campos ou use comandos de voz.').catch(() => {});
 
-    // Verifica se Google está conectado
+    // Verifica se Google está conectado (com escopo de calendar)
     supabase
       .from('google_accounts')
-      .select('id')
+      .select('id, scopes')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .maybeSingle()
-      .then(({ data }) => setGoogleConnected(!!data));
+      .then(({ data }) => {
+        const hasCalendarScope = data?.scopes?.some((scope: string) => scope.includes('calendar'));
+        setGoogleConnected(!!(data && hasCalendarScope));
+        setLoadingGoogle(false);
+      });
   }, []);
-
-  // ── Countdown ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (stage === 'countdown' && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0 && stage === 'countdown') {
-      startRecording('nome');
-    }
-  }, [countdown, stage]);
 
   // ── Toast auto-hide ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -118,305 +105,132 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
     }
   }, [toast]);
 
-  // ── Cleanup ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
-      }
-      if (googleSpeechRef.current) {
-        googleSpeechRef.current.stopRecording().catch(() => {});
-        googleSpeechRef.current.disconnect();
-      }
-    };
-  }, []);
-
-  // ── Voice commands (stage editing) ────────────────────────────────────────
+  // ── Voice commands ─────────────────────────────────────────────────────────
   useModalVoiceCommand({
-    active: stage === 'editing',
     onTranscript: (transcript) => {
       const lower = transcript.toLowerCase().trim();
+      
       if (lower.includes('salvar') || lower.includes('confirmar')) {
-        handleSave();
+        handleSaveRef.current();
       } else if (lower.includes('cancelar') || lower.includes('fechar')) {
         onClose();
       }
     },
   });
 
-  // ── Recording: Mobile ─────────────────────────────────────────────────────
-  const startRecordingMobile = async (mode: 'nome' | 'horarios') => {
-    finalTranscriptRef.current = '';
-    setIsRecording(true);
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [nomeRemedio, intervaloHoras, horarioPrimeiraDose, tipoDuracao, valorDuracao, modoLembrete, isSaving]);
 
-    const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto', 'fim'];
-
-    try {
-      const gs = new GoogleSpeechWebSocket({
-        onTranscript: (text, isFinal) => {
-          if (!isFinal || !text.trim()) return;
-
-          const lowerT = text
-            .toLowerCase()
-            .trim()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[.,!?;:]+/g, '');
-
-          const hasFim = FIM_TRIGGERS.some((t) => lowerT.endsWith(t) || lowerT === t);
-          if (hasFim) {
-            let cleaned = finalTranscriptRef.current;
-            for (const t of FIM_TRIGGERS) {
-              cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-            }
-            cleaned = cleaned.trim();
-            finalTranscriptRef.current = cleaned;
-            setTranscription(cleaned);
-            
-            if (mode === 'nome') {
-              setNomeRemedio(cleaned);
-              stopRecording();
-              // Próximo: horários
-              playText?.('Agora diga os horários do remédio. Por exemplo: 8 horas, 14 horas e 20 horas.').catch(() => {});
-              setTimeout(() => {
-                setTranscription('');
-                startRecording('horarios');
-              }, 3000);
-            } else {
-              setHorariosInput(cleaned);
-              stopRecording();
-              setStage('editing');
-            }
-            return;
-          }
-
-          const isSoloTrigger = FIM_TRIGGERS.some((t) => lowerT === t);
-          if (!isSoloTrigger) {
-            let textToAdd = text.trim();
-            for (const t of FIM_TRIGGERS) {
-              textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-            }
-            textToAdd = textToAdd.trim();
-            if (textToAdd) {
-              finalTranscriptRef.current += textToAdd + ' ';
-              setTranscription(finalTranscriptRef.current.trim());
-            }
-          }
-        },
-        onError: (err) => {
-          console.error('❌ [Mobile] Erro gravação:', err);
-          setIsRecording(false);
-          setToast({ message: 'Erro ao capturar áudio', type: 'error' });
-        },
-        volumeThreshold: 0.03,
-        silenceThreshold: 60,
-      });
-
-      googleSpeechRef.current = gs;
-      await gs.connect();
-      await gs.startRecording();
-    } catch (err) {
-      setIsRecording(false);
-      setToast({ message: 'Erro ao iniciar gravação', type: 'error' });
+  // ── Cálculo de horários diários ───────────────────────────────────────────
+  const calcularHorariosDiarios = (): string[] => {
+    if (!intervaloHoras || !horarioPrimeiraDose) return [];
+    
+    const intervalo = parseInt(intervaloHoras);
+    if (isNaN(intervalo) || intervalo <= 0 || intervalo > 24) return [];
+    
+    const [horaInicial, minutoInicial] = horarioPrimeiraDose.split(':').map(Number);
+    const horarios: string[] = [];
+    
+    let horaAtual = horaInicial;
+    let minutoAtual = minutoInicial;
+    
+    // Gera horários até completar 24h
+    while (true) {
+      const horarioFormatado = `${String(horaAtual).padStart(2, '0')}:${String(minutoAtual).padStart(2, '0')}`;
+      horarios.push(horarioFormatado);
+      
+      // Próximo horário
+      horaAtual += intervalo;
+      if (horaAtual >= 24) break;
     }
+    
+    return horarios;
   };
 
-  // ── Recording: Desktop ────────────────────────────────────────────────────
-  const startRecordingDesktop = (mode: 'nome' | 'horarios') => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      setToast({ message: 'Navegador não suporta reconhecimento de voz', type: 'error' });
-      return;
-    }
-
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SR();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    finalTranscriptRef.current = '';
-
-    recognition.onstart = () => setIsRecording(true);
-
-    recognition.onresult = (event: any) => {
-      let interimTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          const FIM_TRIGGERS = ['concluir', 'acabou', 'terminou', 'pronto', 'fim'];
-          const cleanedTranscript = transcript.trim();
-          const lowerClean = cleanedTranscript
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[.,!?;:]+/g, '');
-
-          const isSoloTrigger = FIM_TRIGGERS.some((t) => lowerClean === t);
-          if (isSoloTrigger) {
-            recognition.stop();
-            return;
-          }
-
-          if (FIM_TRIGGERS.some((t) => lowerClean.endsWith(t))) {
-            let textToAdd = cleanedTranscript;
-            for (const t of FIM_TRIGGERS) {
-              textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-            }
-            textToAdd = textToAdd.trim();
-            if (textToAdd) finalTranscriptRef.current += textToAdd + ' ';
-            recognition.stop();
-            return;
-          }
-
-          let textToAdd = cleanedTranscript;
-          for (const t of FIM_TRIGGERS) {
-            textToAdd = textToAdd.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-          }
-          textToAdd = textToAdd.trim();
-          if (textToAdd) finalTranscriptRef.current += textToAdd + ' ';
-        } else {
-          interimTranscript += transcript;
-        }
-      }
-      setTranscription(finalTranscriptRef.current + interimTranscript);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-      const FIM_TRIGGERS_CLEAN = ['fim', 'pronto', 'terminar', 'encerrar', 'concluir', 'acabou'];
-      let cleaned = finalTranscriptRef.current;
-      for (const t of FIM_TRIGGERS_CLEAN) {
-        cleaned = cleaned.replace(new RegExp(`\\s*${t}\\s*$`, 'gi'), '');
-      }
-      cleaned = cleaned.trim();
-      setTranscription(cleaned);
-      finalTranscriptRef.current = cleaned;
-
-      if (cleaned) {
-        if (mode === 'nome') {
-          setNomeRemedio(cleaned);
-          playText?.('Agora diga os horários do remédio. Por exemplo: 8 horas, 14 horas e 20 horas.').catch(() => {});
-          setTimeout(() => {
-            setTranscription('');
-            startRecording('horarios');
-          }, 3000);
-        } else {
-          setHorariosInput(cleaned);
-          setStage('editing');
-        }
-      } else {
-        setToast({ message: 'Nenhum áudio detectado', type: 'error' });
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      setIsRecording(false);
-      if (event.error === 'no-speech') {
-        setToast({ message: 'Nenhuma fala detectada', type: 'error' });
-      } else if (event.error === 'not-allowed') {
-        setToast({ message: 'Permissão do microfone negada', type: 'error' });
-      } else {
-        setToast({ message: 'Erro ao capturar áudio', type: 'error' });
-      }
-    };
-
-    recognition.start();
-    recognitionRef.current = recognition;
-  };
-
-  // ── Start Recording ───────────────────────────────────────────────────────
-  const startRecording = async (mode: 'nome' | 'horarios') => {
-    if (mode === 'nome') {
-      setStage('recording_nome');
+  // ── Cálculo de total de dias ──────────────────────────────────────────────
+  const calcularTotalDias = (): number => {
+    if (!valorDuracao || !intervaloHoras) return 0;
+    
+    const valor = parseInt(valorDuracao);
+    if (isNaN(valor) || valor <= 0) return 0;
+    
+    if (tipoDuracao === 'dias') {
+      return valor;
     } else {
-      setStage('recording_horarios');
+      // comprimidos
+      const intervalo = parseInt(intervaloHoras);
+      const dosesPorDia = Math.floor(24 / intervalo);
+      return Math.ceil(valor / dosesPorDia);
     }
-    
-    if (isMobile) {
-      await startRecordingMobile(mode);
-    } else {
-      startRecordingDesktop(mode);
-    }
-  };
-
-  // ── Stop Recording ────────────────────────────────────────────────────────
-  const stopRecording = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-      recognitionRef.current = null;
-    }
-    if (googleSpeechRef.current) {
-      googleSpeechRef.current.stopRecording().catch(() => {});
-      googleSpeechRef.current.disconnect();
-      googleSpeechRef.current = null;
-    }
-    setIsRecording(false);
-  };
-
-  // ── Parse horários ────────────────────────────────────────────────────────
-  const parseHorarios = (texto: string): string[] => {
-    // Extrai números seguidos de "hora" ou "horas"
-    const regex = /(\d+)\s*(?:h|hora|horas)/gi;
-    const matches = texto.matchAll(regex);
-    const horasEncontradas: string[] = [];
-    
-    for (const match of matches) {
-      const hora = parseInt(match[1]);
-      if (hora >= 0 && hora <= 23) {
-        horasEncontradas.push(`${String(hora).padStart(2, '0')}:00`);
-      }
-    }
-    
-    return horasEncontradas;
   };
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
+    // Validações
     if (!nomeRemedio.trim()) {
       setToast({ message: 'Informe o nome do remédio', type: 'error' });
       return;
     }
+    if (!intervaloHoras) {
+      setToast({ message: 'Informe o intervalo entre doses', type: 'error' });
+      return;
+    }
+    if (!horarioPrimeiraDose) {
+      setToast({ message: 'Informe o horário da primeira dose', type: 'error' });
+      return;
+    }
+    if (!valorDuracao) {
+      setToast({ message: `Informe ${tipoDuracao === 'dias' ? 'o total de dias' : 'a quantidade de comprimidos'}`, type: 'error' });
+      return;
+    }
 
-    const horariosFinais = horarios.length > 0 ? horarios : parseHorarios(horariosInput);
-    
-    if (horariosFinais.length === 0) {
-      setToast({ message: 'Informe pelo menos um horário', type: 'error' });
+    const horariosDiarios = calcularHorariosDiarios();
+    if (horariosDiarios.length === 0) {
+      setToast({ message: 'Não foi possível calcular os horários', type: 'error' });
       return;
     }
 
     setIsSaving(true);
 
     try {
-      // Salva no banco
+      // Salva no banco (apenas horários diários)
       const { error: insertError } = await supabase.from('lembretes_remedios').insert({
         company_id: companyId,
         nome_remedio: nomeRemedio.trim(),
-        horarios: horariosFinais,
+        horarios: horariosDiarios,
         modo_lembrete: modoLembrete,
       });
 
       if (insertError) throw insertError;
 
-      // Se modo incluir calendario, cria eventos no Google Calendar
+      // Se modo incluir calendario, cria TODOS os eventos até o fim do tratamento
       if ((modoLembrete === 'calendario' || modoLembrete === 'ambos') && googleConnected) {
-        for (const horario of horariosFinais) {
-          const [hora, minuto] = horario.split(':');
-          const agora = new Date();
-          const dataEvento = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), parseInt(hora), parseInt(minuto));
+        const totalDias = calcularTotalDias();
+        const dataInicio = new Date();
+        
+        // Para cada dia
+        for (let dia = 0; dia < totalDias; dia++) {
+          const dataAtual = new Date(dataInicio);
+          dataAtual.setDate(dataAtual.getDate() + dia);
           
-          await supabase.functions.invoke('criar-evento-calendario', {
-            body: {
-              company_id: companyId,
-              titulo: `Lembrete: ${nomeRemedio}`,
-              descricao: `Horário de tomar ${nomeRemedio}`,
-              data_inicio: dataEvento.toISOString(),
-              duracao_minutos: 15,
-              recorrente: true,
-              frequencia: 'daily',
-            },
-          });
+          // Para cada horário do dia
+          for (const horario of horariosDiarios) {
+            const [hora, minuto] = horario.split(':').map(Number);
+            const dataEvento = new Date(dataAtual);
+            dataEvento.setHours(hora, minuto, 0, 0);
+            
+            // Cria evento no Google Calendar
+            await supabase.functions.invoke('criar-evento-calendario', {
+              body: {
+                company_id: companyId,
+                summary: `💊 ${nomeRemedio}`,
+                description: `Lembrete de remédio - Dia ${dia + 1}/${totalDias}`,
+                start_time: dataEvento.toISOString(),
+                end_time: new Date(dataEvento.getTime() + 15 * 60000).toISOString(), // +15 min
+              },
+            });
+          }
         }
       }
 
@@ -426,8 +240,8 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
         p_amount: 1,
       });
 
-      setStage('saved');
-      playText?.('Lembrete de remédio salvo com sucesso!').catch(() => {});
+      setToast({ message: '✅ Lembrete salvo com sucesso!', type: 'success' });
+      playText?.('Lembrete de remédio configurado com sucesso!').catch(() => {});
       setTimeout(() => onClose(), 2000);
     } catch (error: any) {
       console.error('Erro ao salvar lembrete:', error);
@@ -437,17 +251,18 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
     }
   };
 
-  // ── Adicionar horário manual ──────────────────────────────────────────────
-  const handleAddHorario = (hora: string) => {
-    if (!hora) return;
-    if (!horarios.includes(hora)) {
-      setHorarios([...horarios, hora].sort());
-    }
+  // ── Conectar Google Calendar ───────────────────────────────────────────────
+  const handleGoToAgenda = () => {
+    window.location.href = `/dashboard/agenda?companyId=${companyId}`;
   };
 
-  const handleRemoveHorario = (hora: string) => {
-    setHorarios(horarios.filter(h => h !== hora));
-  };
+  // ── Preview de horários ────────────────────────────────────────────────────
+  const horariosDiarios = calcularHorariosDiarios();
+  const totalDias = calcularTotalDias();
+  const dosesPorDia = horariosDiarios.length;
+  const totalDoses = tipoDuracao === 'comprimidos' 
+    ? parseInt(valorDuracao || '0') 
+    : dosesPorDia * totalDias;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -461,7 +276,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
         <div
           className="fixed top-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3"
           style={{
-            background: toast.type === 'success' ? '#10b981' : '#ef4444',
+            background: toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#ef4444' : '#f59e0b',
           }}
         >
           <span className="text-white font-semibold text-sm">{toast.message}</span>
@@ -487,19 +302,18 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
           <div className="flex items-center gap-3">
             {/* Ícone SVG inline */}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: colors.buttonPrimary }}>
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+              <line x1="15" y1="3" x2="15" y2="21" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+              <line x1="3" y1="15" x2="21" y2="15" />
             </svg>
             <div>
               <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
                 Lembrete de Remédios
               </h2>
               <p className="text-sm" style={{ color: colors.textMuted }}>
-                {stage === 'countdown' && 'Preparando gravação...'}
-                {stage === 'recording_nome' && 'Gravando nome do remédio...'}
-                {stage === 'recording_horarios' && 'Gravando horários...'}
-                {stage === 'editing' && 'Edite ou confirme o lembrete'}
-                {stage === 'saved' && 'Lembrete salvo com sucesso!'}
+                Configure os horários do tratamento
               </p>
             </div>
           </div>
@@ -510,285 +324,263 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
               background: colors.buttonSecondary,
               color: colors.textPrimary,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = colors.buttonSecondaryHover)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = colors.buttonSecondary)}
           >
             ✕
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          {/* STAGE: Countdown */}
-          {stage === 'countdown' && (
-            <div className="flex flex-col items-center justify-center py-12">
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          
+          {/* Indicador de escuta ativa */}
+          <div className="flex justify-center">
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
+              style={{
+                background: `${colors.buttonPrimary}20`,
+                border: `1px solid ${colors.buttonPrimary}50`,
+                color: colors.textPrimary,
+              }}
+            >
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: colors.buttonPrimary }} />
+              Ouvindo... diga "salvar" para confirmar
+            </div>
+          </div>
+
+          {/* Campo 1: Nome do Remédio */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+              Nome do Remédio *
+            </label>
+            <input
+              type="text"
+              value={nomeRemedio}
+              onChange={(e) => setNomeRemedio(e.target.value)}
+              placeholder="Ex: Paracetamol 500mg"
+              className="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-2"
+              style={{
+                background: colors.inputBg,
+                border: `1px solid ${colors.inputBorder}`,
+                color: colors.textPrimary,
+                focusRing: colors.buttonPrimary,
+              }}
+            />
+          </div>
+
+          {/* Campo 2: Intervalo entre doses */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+              Intervalo entre doses *
+            </label>
+            <div className="flex gap-3">
+              <input
+                type="number"
+                value={intervaloHoras}
+                onChange={(e) => setIntervaloHoras(e.target.value)}
+                placeholder="8"
+                min="1"
+                max="24"
+                className="flex-1 px-4 py-3 rounded-lg text-sm outline-none focus:ring-2"
+                style={{
+                  background: colors.inputBg,
+                  border: `1px solid ${colors.inputBorder}`,
+                  color: colors.textPrimary,
+                }}
+              />
               <div
-                className="w-32 h-32 rounded-full flex items-center justify-center animate-pulse"
-                style={{ background: `${colors.buttonPrimary}20` }}
+                className="flex items-center px-4 rounded-lg text-sm font-medium"
+                style={{
+                  background: colors.cardBg,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.textSecondary,
+                }}
               >
-                <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center"
-                  style={{ background: `${colors.buttonPrimary}40` }}
-                >
-                  <span className="text-6xl font-bold" style={{ color: colors.textPrimary }}>
-                    {countdown}
-                  </span>
-                </div>
+                horas
               </div>
-              <p className="text-lg font-medium mt-6" style={{ color: colors.textPrimary }}>
-                Prepare-se para falar o nome do remédio...
-              </p>
+            </div>
+            <p className="text-xs mt-1" style={{ color: colors.textMuted }}>
+              Tempo entre cada dose (ex: 8h = 3x ao dia)
+            </p>
+          </div>
+
+          {/* Campo 3: Horário da primeira dose */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+              Horário da primeira dose *
+            </label>
+            <input
+              type="time"
+              value={horarioPrimeiraDose}
+              onChange={(e) => setHorarioPrimeiraDose(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-2"
+              style={{
+                background: colors.inputBg,
+                border: `1px solid ${colors.inputBorder}`,
+                color: colors.textPrimary,
+              }}
+            />
+            <p className="text-xs mt-1" style={{ color: colors.textMuted }}>
+              A partir deste horário, os lembretes serão calculados
+            </p>
+          </div>
+
+          {/* Campo 4: Duração do tratamento */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+              Duração do tratamento *
+            </label>
+            <div className="flex gap-3 mb-2">
+              <button
+                onClick={() => setTipoDuracao('dias')}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition"
+                style={{
+                  background: tipoDuracao === 'dias' ? colors.buttonPrimary : colors.buttonSecondary,
+                  color: tipoDuracao === 'dias' ? '#ffffff' : colors.textPrimary,
+                }}
+              >
+                Total de dias
+              </button>
+              <button
+                onClick={() => setTipoDuracao('comprimidos')}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition"
+                style={{
+                  background: tipoDuracao === 'comprimidos' ? colors.buttonPrimary : colors.buttonSecondary,
+                  color: tipoDuracao === 'comprimidos' ? '#ffffff' : colors.textPrimary,
+                }}
+              >
+                Quantidade de comprimidos
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <input
+                type="number"
+                value={valorDuracao}
+                onChange={(e) => setValorDuracao(e.target.value)}
+                placeholder={tipoDuracao === 'dias' ? '7' : '21'}
+                min="1"
+                className="flex-1 px-4 py-3 rounded-lg text-sm outline-none focus:ring-2"
+                style={{
+                  background: colors.inputBg,
+                  border: `1px solid ${colors.inputBorder}`,
+                  color: colors.textPrimary,
+                }}
+              />
+              <div
+                className="flex items-center px-4 rounded-lg text-sm font-medium"
+                style={{
+                  background: colors.cardBg,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.textSecondary,
+                }}
+              >
+                {tipoDuracao === 'dias' ? 'dias' : 'comprimidos'}
+              </div>
+            </div>
+          </div>
+
+          {/* Preview dos horários */}
+          {horariosDiarios.length > 0 && valorDuracao && (
+            <div
+              className="p-4 rounded-lg border"
+              style={{
+                background: colors.cardBg,
+                borderColor: colors.border,
+              }}
+            >
+              <h4 className="text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>
+                📋 Resumo do tratamento
+              </h4>
+              <div className="space-y-2 text-sm" style={{ color: colors.textSecondary }}>
+                <p>• <strong>Horários diários:</strong> {horariosDiarios.join(', ')}</p>
+                <p>• <strong>Doses por dia:</strong> {dosesPorDia}x</p>
+                <p>• <strong>Duração:</strong> {totalDias} dia{totalDias !== 1 ? 's' : ''}</p>
+                <p>• <strong>Total de doses:</strong> {totalDoses} comprimido{totalDoses !== 1 ? 's' : ''}</p>
+              </div>
             </div>
           )}
 
-          {/* STAGE: Recording Nome */}
-          {stage === 'recording_nome' && (
-            <div className="space-y-6">
-              <div
-                className="p-4 rounded-lg border"
-                style={{
-                  background: `${colors.buttonPrimary}15`,
-                  borderColor: `${colors.buttonPrimary}50`,
-                }}
-              >
-                <p className="text-sm text-center font-medium" style={{ color: colors.textPrimary }}>
-                  🎤 <strong>Gravando...</strong> Diga o nome do remédio e depois <strong>"CONCLUIR"</strong>
-                </p>
+          {/* Modo de lembrete */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+              Onde receber os lembretes?
+            </label>
+            
+            {loadingGoogle ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6" style={{ border: `2px solid ${colors.border}`, borderTopColor: colors.buttonPrimary }} />
               </div>
-
-              {isRecording && (
-                <div className="flex justify-center">
-                  <div
-                    className="flex items-center gap-3 px-6 py-3 rounded-full shadow-lg"
-                    style={{ background: '#ef4444' }}
-                  >
-                    <div className="relative">
-                      <div className="w-3 h-3 bg-white rounded-full animate-ping absolute" />
-                      <div className="w-3 h-3 bg-white rounded-full" />
-                    </div>
-                    <span className="text-white font-semibold">GRAVANDO</span>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                  Transcrição em tempo real:
-                </label>
-                <div
-                  className="p-4 rounded-lg min-h-[100px]"
-                  style={{
-                    background: colors.inputBg,
-                    border: `1px solid ${colors.inputBorder}`,
-                  }}
-                >
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: colors.textPrimary }}>
-                    {transcription || 'O nome do remédio aparecerá aqui...'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STAGE: Recording Horários */}
-          {stage === 'recording_horarios' && (
-            <div className="space-y-6">
-              <div
-                className="p-4 rounded-lg border"
-                style={{
-                  background: `${colors.buttonPrimary}15`,
-                  borderColor: `${colors.buttonPrimary}50`,
-                }}
-              >
-                <p className="text-sm text-center font-medium" style={{ color: colors.textPrimary }}>
-                  🎤 <strong>Gravando horários...</strong> Ex: "8 horas, 14 horas e 20 horas". Depois diga <strong>"CONCLUIR"</strong>
-                </p>
-              </div>
-
-              {isRecording && (
-                <div className="flex justify-center">
-                  <div
-                    className="flex items-center gap-3 px-6 py-3 rounded-full shadow-lg"
-                    style={{ background: '#ef4444' }}
-                  >
-                    <div className="relative">
-                      <div className="w-3 h-3 bg-white rounded-full animate-ping absolute" />
-                      <div className="w-3 h-3 bg-white rounded-full" />
-                    </div>
-                    <span className="text-white font-semibold">GRAVANDO</span>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                  Transcrição em tempo real:
-                </label>
-                <div
-                  className="p-4 rounded-lg min-h-[100px]"
-                  style={{
-                    background: colors.inputBg,
-                    border: `1px solid ${colors.inputBorder}`,
-                  }}
-                >
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: colors.textPrimary }}>
-                    {transcription || 'Os horários aparecerão aqui...'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STAGE: Editing */}
-          {stage === 'editing' && (
-            <div className="space-y-4">
-              <div
-                className="p-4 rounded-lg border"
-                style={{
-                  background: `${colors.buttonPrimary}15`,
-                  borderColor: `${colors.buttonPrimary}50`,
-                }}
-              >
-                <p className="text-sm text-center font-medium" style={{ color: colors.textPrimary }}>
-                  ✏️ Edite ou confirme o lembrete. Diga <strong>"SALVAR"</strong> para confirmar
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                  Nome do remédio:
-                </label>
-                <input
-                  type="text"
-                  value={nomeRemedio}
-                  onChange={(e) => setNomeRemedio(e.target.value)}
-                  placeholder="Ex: Paracetamol"
-                  className="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-2"
-                  style={{
-                    background: colors.inputBg,
-                    border: `1px solid ${colors.inputBorder}`,
-                    color: colors.textPrimary,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                  Horários reconhecidos:
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {(horarios.length > 0 ? horarios : parseHorarios(horariosInput)).map((hora) => (
-                    <span
-                      key={hora}
-                      className="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2"
-                      style={{
-                        background: colors.buttonPrimary,
-                        color: '#ffffff',
-                      }}
-                    >
-                      {hora}
-                      <button
-                        onClick={() => handleRemoveHorario(hora)}
-                        className="text-white hover:text-red-200"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="time"
-                    onBlur={(e) => {
-                      if (e.target.value) {
-                        handleAddHorario(e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm outline-none"
-                    style={{
-                      background: colors.inputBg,
-                      border: `1px solid ${colors.inputBorder}`,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                  Modo de lembrete:
-                </label>
+            ) : (
+              <>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['assistente', 'calendario', 'ambos'] as const).map((modo) => (
-                    <button
-                      key={modo}
-                      onClick={() => setModoLembrete(modo)}
-                      disabled={modo !== 'assistente' && !googleConnected}
-                      className="px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-30 disabled:cursor-not-allowed"
-                      style={{
-                        background: modoLembrete === modo ? colors.buttonPrimary : colors.buttonSecondary,
-                        color: modoLembrete === modo ? '#ffffff' : colors.textPrimary,
-                      }}
-                    >
-                      {modo === 'assistente' && 'Assistente'}
-                      {modo === 'calendario' && 'Calendar'}
-                      {modo === 'ambos' && 'Ambos'}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setModoLembrete('assistente')}
+                    className="px-4 py-3 rounded-lg text-sm font-medium transition"
+                    style={{
+                      background: modoLembrete === 'assistente' ? colors.buttonPrimary : colors.buttonSecondary,
+                      color: modoLembrete === 'assistente' ? '#ffffff' : colors.textPrimary,
+                    }}
+                  >
+                    🔔 Assistente
+                  </button>
+                  <button
+                    onClick={() => setModoLembrete('calendario')}
+                    disabled={!googleConnected}
+                    className="px-4 py-3 rounded-lg text-sm font-medium transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{
+                      background: modoLembrete === 'calendario' ? colors.buttonPrimary : colors.buttonSecondary,
+                      color: modoLembrete === 'calendario' ? '#ffffff' : colors.textPrimary,
+                    }}
+                  >
+                    📅 Calendar
+                  </button>
+                  <button
+                    onClick={() => setModoLembrete('ambos')}
+                    disabled={!googleConnected}
+                    className="px-4 py-3 rounded-lg text-sm font-medium transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{
+                      background: modoLembrete === 'ambos' ? colors.buttonPrimary : colors.buttonSecondary,
+                      color: modoLembrete === 'ambos' ? '#ffffff' : colors.textPrimary,
+                    }}
+                  >
+                    🔔📅 Ambos
+                  </button>
                 </div>
+
                 {!googleConnected && (
-                  <p className="text-xs mt-2" style={{ color: colors.textMuted }}>
-                    Google Calendar desconectado. Somente modo Assistente disponível.
-                  </p>
+                  <div
+                    className="mt-3 p-3 rounded-lg border"
+                    style={{
+                      background: '#fef3c7',
+                      borderColor: '#fbbf24',
+                    }}
+                  >
+                    <p className="text-sm text-amber-900 mb-2">
+                      ⚠️ Google Calendar não conectado
+                    </p>
+                    <button
+                      onClick={handleGoToAgenda}
+                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+                    >
+                      Conectar Google Calendar
+                    </button>
+                  </div>
                 )}
-              </div>
+              </>
+            )}
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving || !nomeRemedio.trim()}
-                  className="px-4 py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: colors.buttonPrimary,
-                    color: '#ffffff',
-                  }}
-                >
-                  {isSaving ? 'Salvando...' : 'Salvar Lembrete'}
-                </button>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-3 rounded-lg font-semibold transition"
-                  style={{
-                    background: colors.buttonSecondary,
-                    color: colors.textPrimary,
-                  }}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STAGE: Saved */}
-          {stage === 'saved' && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-                style={{ background: '#10b981' }}
-              >
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </div>
-              <p className="text-xl font-bold mb-2" style={{ color: colors.textPrimary }}>
-                Lembrete salvo com sucesso!
-              </p>
-              <p className="text-sm" style={{ color: colors.textMuted }}>
-                Fechando automaticamente...
-              </p>
-            </div>
-          )}
+          {/* Botão de Salvar */}
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !nomeRemedio || !intervaloHoras || !horarioPrimeiraDose || !valorDuracao}
+            className="w-full px-4 py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: colors.buttonPrimary,
+              color: '#ffffff',
+            }}
+          >
+            {isSaving ? 'Salvando...' : 'Salvar Lembrete'}
+          </button>
         </div>
       </div>
     </div>,

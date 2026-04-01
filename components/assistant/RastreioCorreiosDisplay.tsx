@@ -44,25 +44,37 @@ interface RastreioCorreiosDisplayProps {
   theme?: 'dark' | 'light';
 }
 
+// ✅ USAR playText DO SISTEMA
+declare global {
+  interface Window {
+    playText?: (text: string) => void;
+  }
+}
+
 export default function RastreioCorreiosDisplay({
   data,
   onClose,
   theme = 'dark',
 }: RastreioCorreiosDisplayProps) {
   const palette = theme === 'dark' ? DARK : LIGHT;
+  const supabase = createClient();
 
   const [stage, setStage] = useState<Stage>('input');
   const [codigo, setCodigo] = useState('');
   const [rastreio, setRastreio] = useState<RastreioData | null>(null);
   const [error, setError] = useState('');
 
+  // ✅ USAR playText DO SISTEMA
+  const playText = (text: string) => {
+    if (window.playText) {
+      window.playText(text);
+    }
+  };
+
   useEffect(() => {
     window.speechSynthesis?.cancel();
     const texto = 'Digite o código de rastreio da sua encomenda dos Correios.';
-    const utterance = new SpeechSynthesisUtterance(texto);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 0.95;
-    window.speechSynthesis?.speak(utterance);
+    playText(texto);
   }, []);
 
   const handleVoiceCommand = useCallback(
@@ -104,26 +116,27 @@ export default function RastreioCorreiosDisplay({
     setError('');
 
     try {
-      // API pública dos Correios
-      const url = `https://proxyapp.correios.com.br/v1/sro-rastro/${codigoLimpo}`;
+      // ✅ USAR EDGE FUNCTION
+      const { data: rastreioResponse, error: edgeError } = await supabase.functions.invoke(
+        'rastreio-correios',
+        {
+          body: { codigo: codigoLimpo },
+        }
+      );
 
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0',
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error('Código não encontrado ou API indisponível.');
+      if (edgeError || !rastreioResponse) {
+        throw new Error(edgeError?.message || 'Erro ao rastrear encomenda');
       }
 
-      const json = await res.json();
+      if (rastreioResponse.error) {
+        throw new Error(rastreioResponse.error);
+      }
 
-      if (!json.objetos || json.objetos.length === 0) {
+      if (!rastreioResponse.objetos || rastreioResponse.objetos.length === 0) {
         throw new Error('Nenhuma informação encontrada para este código.');
       }
 
-      const objeto = json.objetos[0];
+      const objeto = rastreioResponse.objetos[0];
       const eventos = objeto.eventos || [];
 
       if (eventos.length === 0) {
@@ -156,10 +169,8 @@ export default function RastreioCorreiosDisplay({
         }),
       });
 
-      const fala = `Rastreamento encontrado. Status atual: ${rastreioInfo.status}. Local: ${rastreioInfo.local}.`;
-      const utterance = new SpeechSynthesisUtterance(fala);
-      utterance.lang = 'pt-BR';
-      window.speechSynthesis?.speak(utterance);
+      // ✅ USAR playText DO SISTEMA
+      playText(`Rastreamento encontrado. Status atual: ${rastreioInfo.status}. Local: ${rastreioInfo.local}.`);
     } catch (err: any) {
       setError(err.message || 'Erro ao rastrear encomenda.');
       setStage('error');

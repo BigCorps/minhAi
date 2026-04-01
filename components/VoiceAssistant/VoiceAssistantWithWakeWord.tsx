@@ -476,6 +476,8 @@ useEffect(() => {
 
     setIsProcessing(false);
     setIsSpeaking(false);
+    setIsPlayingAudio(false);
+    setIsTranscribing(false);
     setQrCodeData(null);
     setPixConfirmationData(null);
     setActiveModal(null);
@@ -695,33 +697,6 @@ case 'minha_conta':
   ).catch(() => {});
   return;
 
-case 'duplicar_imagem':
-  setActiveModal({ type: 'DuplicarImagemDisplay', data: { companyId } });
-  await saveInteractionToHistory(
-    companyId,
-    'Duplicar Imagem',
-    'Modal de duplicação de imagem aberto'
-  );
-  break;
-
-case 'remover_fundo':
-  setActiveModal({ type: 'RemoverFundoDisplay', data: { companyId } });
-  await saveInteractionToHistory(
-    companyId,
-    'Remover Fundo',
-    'Modal de remoção de fundo aberto'
-  );
-  break;
-
-case 'editar_imagem':
-  setActiveModal({ type: 'EditarImagemDisplay', data: { companyId } });
-  await saveInteractionToHistory(
-    companyId,
-    'Editar Imagem',
-    'Modal de edição de imagem aberto'
-  );
-  break;
-
 case 'segunda_via_boleto':
   setActiveModal({
     type: 'SegundaViaBoletoDisplay',
@@ -794,39 +769,6 @@ case 'transcrever_audio':
         case 'cadastro':
           await handleCadastro({ companyId, setIsProcessing, setActiveModal });
           break;
-
-case 'criar_nota': {
-  const match = transcript.match(/nota sobre (.+)/i);
-  const targetText = match ? match[1].trim() : undefined;
- 
-  setActiveModal({
-    type: 'CriarNotaDisplay',
-    data: { companyId, targetText },
-  });
- 
-  await saveInteractionToHistory(
-    companyId,
-    'Criar Nota',
-    targetText ? `Modal aberto com texto: "${targetText}"` : 'Modal de criação de nota aberto'
-  );
-  // SEM playText — o modal fala no useEffect
-  break;
-}
- 
-case 'lembrete_remedios': {
-  setActiveModal({
-    type: 'LembreteRemediosDisplay',
-    data: { companyId },
-  });
- 
-  await saveInteractionToHistory(
-    companyId,
-    'Lembrete de Remédios',
-    'Modal de lembrete de remédios aberto'
-  );
-  // SEM playText — o modal fala no useEffect
-  break;
-}
 
 case 'identificar_fraude':
   setActiveModal({
@@ -904,15 +846,6 @@ case 'aparelhos_smart':
 
         case 'horarios_disponiveis':
           break;
-
-case 'converter_arquivo':
-  setActiveModal({ type: 'ConverterArquivoDisplay', data: { companyId } });
-  await saveInteractionToHistory(
-    companyId,
-    'Converter Arquivos',
-    'Modal de conversão de arquivos aberto'
-  );
-  break;
 
         case 'meu_cupom': {
           await stopGoogleSpeech();

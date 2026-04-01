@@ -80,6 +80,7 @@ import TracarRotaDisplay from '@/components/assistant/TracarRotaDisplay';
 import CriarNotaDisplay from '@/components/assistant/CriarNotaDisplay';
 import LembreteRemediosDisplay from '@/components/assistant/LembreteRemediosDisplay';
 import ConverterArquivoDisplay from '@/components/assistant/ConverterArquivoDisplay';
+import DuplicarImagemDisplay from '@/components/assistant/DuplicarImagemDisplay';
 
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
@@ -159,6 +160,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'CriarNotaDisplay': CriarNotaDisplay,
   'LembreteRemediosDisplay': LembreteRemediosDisplay,
   'ConverterArquivoDisplay': ConverterArquivoDisplay,
+  'DuplicarImagemDisplay': DuplicarImagemDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

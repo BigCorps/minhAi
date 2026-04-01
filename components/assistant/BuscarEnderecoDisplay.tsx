@@ -43,12 +43,20 @@ interface BuscarEnderecoDisplayProps {
   theme?: 'dark' | 'light';
 }
 
+// ✅ USAR playText DO SISTEMA
+declare global {
+  interface Window {
+    playText?: (text: string) => void;
+  }
+}
+
 export default function BuscarEnderecoDisplay({
   data,
   onClose,
   theme = 'dark',
 }: BuscarEnderecoDisplayProps) {
   const palette = theme === 'dark' ? DARK : LIGHT;
+  const supabase = createClient();
 
   const [stage, setStage] = useState<Stage>('input');
   const [termo, setTermo] = useState(data.termoInicial || '');
@@ -57,16 +65,20 @@ export default function BuscarEnderecoDisplay({
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // ✅ USAR playText DO SISTEMA
+  const playText = (text: string) => {
+    if (window.playText) {
+      window.playText(text);
+    }
+  };
+
   useEffect(() => {
     window.speechSynthesis?.cancel();
     const texto = data.termoInicial
       ? `Buscando endereço para ${data.termoInicial}. Aguarde.`
       : 'Qual endereço você quer buscar? Fale o CEP ou nome do local.';
     
-    const utterance = new SpeechSynthesisUtterance(texto);
-    utterance.lang = 'pt-BR';
-    utterance.rate = 0.95;
-    window.speechSynthesis?.speak(utterance);
+    playText(texto);
 
     if (data.termoInicial) {
       handleBuscar();
@@ -119,19 +131,26 @@ export default function BuscarEnderecoDisplay({
     setError('');
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        termo
-      )}&key=${apiKey}`;
+      // ✅ USAR EDGE FUNCTION
+      const { data: geocodeResponse, error: edgeError } = await supabase.functions.invoke(
+        'buscar-endereco',
+        {
+          body: {
+            termo,
+            apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+          },
+        }
+      );
 
-      const res = await fetch(url);
-      const json = await res.json();
-
-      if (json.status !== 'OK' || !json.results[0]) {
-        throw new Error('Endereço não encontrado.');
+      if (edgeError || !geocodeResponse) {
+        throw new Error(edgeError?.message || 'Erro ao buscar endereço');
       }
 
-      const result = json.results[0];
+      if (geocodeResponse.error) {
+        throw new Error(geocodeResponse.error);
+      }
+
+      const result = geocodeResponse.results[0];
       const { lat, lng } = result.geometry.location;
 
       const endData: EnderecoData = {
@@ -163,10 +182,8 @@ export default function BuscarEnderecoDisplay({
         }),
       });
 
-      const fala = `Endereço encontrado: ${endData.formatted}`;
-      const utterance = new SpeechSynthesisUtterance(fala);
-      utterance.lang = 'pt-BR';
-      window.speechSynthesis?.speak(utterance);
+      // ✅ USAR playText DO SISTEMA
+      playText(`Endereço encontrado: ${endData.formatted}`);
     } catch (err: any) {
       setError(err.message || 'Erro ao buscar endereço.');
       setStage('error');
@@ -192,10 +209,8 @@ export default function BuscarEnderecoDisplay({
 
   const handleTracarRota = () => {
     if (!endereco) return;
-    // Fecha este modal e abre o TracarRota com destino preenchido
     window.speechSynthesis?.cancel();
     
-    // Emitir evento customizado para o VoiceAssistant
     const event = new CustomEvent('openModal', {
       detail: {
         type: 'TracarRotaDisplay',

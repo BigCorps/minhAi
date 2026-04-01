@@ -72,16 +72,28 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
-  const [loadingGoogle, setLoadingGoogle] = useState(true);
 
   const handleSaveRef = useRef<() => void>(() => {});
 
-  // ── Mount: fala abertura + checa Google ───────────────────────────────────
+  // ── Mount: fala abertura + checa Google + busca config da função ─────────
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.speechSynthesis?.cancel();
     }
     playText?.('Configure o lembrete de remédio. Preencha os campos ou use comandos de voz.').catch(() => {});
+
+    // Busca configuração da função para pegar modo_lembrete
+    supabase
+      .from('function_configs')
+      .select('config')
+      .eq('company_id', companyId)
+      .eq('function_key', 'lembrete_remedios')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.config?.modo_lembrete) {
+          setModoLembrete(data.config.modo_lembrete);
+        }
+      });
 
     // Verifica se Google está conectado (com escopo de calendar)
     supabase
@@ -93,7 +105,6 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
       .then(({ data }) => {
         const hasCalendarScope = data?.scopes?.some((scope: string) => scope.includes('calendar'));
         setGoogleConnected(!!(data && hasCalendarScope));
-        setLoadingGoogle(false);
       });
   }, []);
 
@@ -132,20 +143,25 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
     const [horaInicial, minutoInicial] = horarioPrimeiraDose.split(':').map(Number);
     const horarios: string[] = [];
     
+    // Sempre começa do horário informado e distribui ao longo de 24h
     let horaAtual = horaInicial;
     let minutoAtual = minutoInicial;
     
-    // Gera horários até completar 24h
-    while (true) {
+    // Adiciona o primeiro horário
+    horarios.push(`${String(horaAtual).padStart(2, '0')}:${String(minutoAtual).padStart(2, '0')}`);
+    
+    // Calcula quantas doses cabem em 24h
+    const dosesPorDia = Math.floor(24 / intervalo);
+    
+    // Adiciona os demais horários
+    for (let i = 1; i < dosesPorDia; i++) {
+      horaAtual = (horaInicial + (intervalo * i)) % 24;
       const horarioFormatado = `${String(horaAtual).padStart(2, '0')}:${String(minutoAtual).padStart(2, '0')}`;
       horarios.push(horarioFormatado);
-      
-      // Próximo horário
-      horaAtual += intervalo;
-      if (horaAtual >= 24) break;
     }
     
-    return horarios;
+    // Ordena os horários
+    return horarios.sort();
   };
 
   // ── Cálculo de total de dias ──────────────────────────────────────────────
@@ -249,11 +265,6 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
     } finally {
       setIsSaving(false);
     }
-  };
-
-  // ── Conectar Google Calendar ───────────────────────────────────────────────
-  const handleGoToAgenda = () => {
-    window.location.href = `/dashboard/agenda?companyId=${companyId}`;
   };
 
   // ── Preview de horários ────────────────────────────────────────────────────
@@ -498,76 +509,6 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
               </div>
             </div>
           )}
-
-          {/* Modo de lembrete */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-              Onde receber os lembretes?
-            </label>
-            
-            {loadingGoogle ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6" style={{ border: `2px solid ${colors.border}`, borderTopColor: colors.buttonPrimary }} />
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => setModoLembrete('assistente')}
-                    className="px-4 py-3 rounded-lg text-sm font-medium transition"
-                    style={{
-                      background: modoLembrete === 'assistente' ? colors.buttonPrimary : colors.buttonSecondary,
-                      color: modoLembrete === 'assistente' ? '#ffffff' : colors.textPrimary,
-                    }}
-                  >
-                    🔔 Assistente
-                  </button>
-                  <button
-                    onClick={() => setModoLembrete('calendario')}
-                    disabled={!googleConnected}
-                    className="px-4 py-3 rounded-lg text-sm font-medium transition disabled:opacity-30 disabled:cursor-not-allowed"
-                    style={{
-                      background: modoLembrete === 'calendario' ? colors.buttonPrimary : colors.buttonSecondary,
-                      color: modoLembrete === 'calendario' ? '#ffffff' : colors.textPrimary,
-                    }}
-                  >
-                    📅 Calendar
-                  </button>
-                  <button
-                    onClick={() => setModoLembrete('ambos')}
-                    disabled={!googleConnected}
-                    className="px-4 py-3 rounded-lg text-sm font-medium transition disabled:opacity-30 disabled:cursor-not-allowed"
-                    style={{
-                      background: modoLembrete === 'ambos' ? colors.buttonPrimary : colors.buttonSecondary,
-                      color: modoLembrete === 'ambos' ? '#ffffff' : colors.textPrimary,
-                    }}
-                  >
-                    🔔📅 Ambos
-                  </button>
-                </div>
-
-                {!googleConnected && (
-                  <div
-                    className="mt-3 p-3 rounded-lg border"
-                    style={{
-                      background: '#fef3c7',
-                      borderColor: '#fbbf24',
-                    }}
-                  >
-                    <p className="text-sm text-amber-900 mb-2">
-                      ⚠️ Google Calendar não conectado
-                    </p>
-                    <button
-                      onClick={handleGoToAgenda}
-                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
-                    >
-                      Conectar Google Calendar
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
 
           {/* Botão de Salvar */}
           <button

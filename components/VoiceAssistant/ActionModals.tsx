@@ -82,7 +82,7 @@ import LembreteRemediosDisplay from '@/components/assistant/LembreteRemediosDisp
 import ConverterArquivoDisplay from '@/components/assistant/ConverterArquivoDisplay';
 import DuplicarImagemDisplay from '@/components/assistant/DuplicarImagemDisplay';
 import EditarImagemDisplay from '@/components/assistant/EditarImagemDisplay';
-import RemoverFundoDisplay from '@/components/assistantRemoverFundoDisplay';
+import RemoverFundoDisplay from '@/components/assistant/RemoverFundoDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';

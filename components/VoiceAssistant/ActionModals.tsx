@@ -83,6 +83,8 @@ import ConverterArquivoDisplay from '@/components/assistant/ConverterArquivoDisp
 import DuplicarImagemDisplay from '@/components/assistant/DuplicarImagemDisplay';
 import EditarImagemDisplay from '@/components/assistant/EditarImagemDisplay';
 import RemoverFundoDisplay from '@/components/assistant/RemoverFundoDisplay';
+import VerNoticiasDisplay from '@/components/assistant/VerNoticiasDisplay';
+import ProcurarProdutoDisplay from '@/components/assistant/ProcurarProdutoDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -164,6 +166,8 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'DuplicarImagemDisplay': DuplicarImagemDisplay,
   'EditarImagemDisplay': EditarImagemDisplay,
   'RemoverFundoDisplay': RemoverFundoDisplay,
+  'VerNoticiasDisplay': VerNoticiasDisplay,
+  'ProcurarProdutoDisplay': ProcurarProdutoDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

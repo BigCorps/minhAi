@@ -765,6 +765,42 @@ tocar_video: {
     }
   },
 },
+
+duplicar_imagem: {
+  functionKey: 'duplicar_imagem',
+  functionName: 'Duplicar Imagem',
+  category: 'tools' as any,
+  responseType: 'voice+modal',
+  
+  voiceTriggers: [
+    'duplicar imagem', 'fazer copias', 'grid de imagens',
+    'impressao a4', 'layout a4', 'varias copias',
+    'imprimir multiplas', 'grid 3x3', 'grid 2x2',
+    'duplicar foto', 'copiar imagem'
+  ],
+  
+  examplePhrases: [
+    'Duplicar imagem em grid',
+    'Criar layout A4',
+    'Fazer múltiplas cópias'
+  ],
+  
+  edgeFunction: undefined,
+  uiComponent: 'DuplicarImagemDisplay',
+  requiresInput: false,
+  description: 'Cria múltiplas cópias da mesma imagem em layout otimizado para impressão em A4.',
+  icon: '🌐',
+  color: '#000080',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'DuplicarImagemDisplay', data: { companyId } });
+    return true;
+  },
+},
   
 fichas_producao_conversacional: {
   functionKey: 'fichas_producao_conversacional',

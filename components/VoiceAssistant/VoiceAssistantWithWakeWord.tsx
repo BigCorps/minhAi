@@ -392,7 +392,8 @@ useEffect(() => {
   };
 
   // ── Push-to-talk handlers ─────────────────────────────────
-  const handleMicButtonDown = async () => {
+  const handleMicButtonDown = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e && isPlayingAudio) { e.preventDefault(); e.stopPropagation(); }
     if (isPlayingAudio) { stopEverything(); return; }
     if (!permissionGranted || isProcessing || isTranscribing) return;
     console.log('🎙️ Push-to-talk: iniciando gravação');
@@ -474,20 +475,30 @@ useEffect(() => {
       window.speechSynthesis.cancel();
     }
 
+    // Resetar estados de UI imediatamente
     setIsProcessing(false);
     setIsSpeaking(false);
     setIsPlayingAudio(false);
     setIsTranscribing(false);
+    setIsListening(false);
+    
+    // Resetar modais e dados
     setQrCodeData(null);
     setPixConfirmationData(null);
     setActiveModal(null);
     setShowConversationModal(false);
 
+    // Resetar refs de controle
     processingQuestion.current = false;
     shouldProcessAudio.current = true;
     activeFunctionContextRef.current = null;
+    
+    // Garantir que o gravador de voz pare se estiver rodando
+    if (voiceRecorder && voiceRecorder.isRecording) {
+      voiceRecorder.stopRecording().catch(() => {});
+    }
 
-    console.log('✅ Parado');
+    console.log('✅ Parado e estados resetados');
 
     setTimeout(async () => {
       if (isActiveRef.current) await startGoogleSpeech();
@@ -718,16 +729,6 @@ case 'traduzir_texto':
 case 'transcrever_audio':
   setActiveModal({ type: 'TranscribeAudioModal', data: { companyId } });
   playText('Abrindo ferramenta de transcrição.').catch(() => {});
-  break;
-
-case 'ver_noticias':
-  setActiveModal({ type: 'VerNoticiasDisplay', data: { companyId } });
-  // SEM playText — o modal fala no useEffect
-  break;
-
-case 'procurar_produto':
-  setActiveModal({ type: 'ProcurarProdutoDisplay', data: { companyId } });
-  // SEM playText — o modal fala no useEffect
   break;
 
         case 'meu_sistema':

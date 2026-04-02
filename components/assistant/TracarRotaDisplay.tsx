@@ -190,7 +190,7 @@ const handleCalcularRota = async () => {
       origem
     )}&destination=${encodeURIComponent(destino)}`;
     
-    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23800080${
+    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23000080${
       data.companyId ? `&company_id=${data.companyId}` : ''
     }`;
     setQrCodeUrl(qrUrl);

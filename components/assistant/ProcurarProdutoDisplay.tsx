@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
-import { playText } from '@/lib/tts';
 
 // ============================================================================
 // PALETAS DE COR (inline styles — nunca Tailwind dinâmico)
@@ -13,28 +12,34 @@ const DARK = {
   bg: '#1e293b',
   bgSecondary: '#0f172a',
   border: 'rgba(255,255,255,0.08)',
-  text: '#f1f5f9',
-  textMuted: '#94a3b8',
+  cardBg: 'rgba(15,23,42,0.6)',
+  text: '#ffffff',
+  textMuted: 'rgba(255,255,255,0.4)',
+  textSecondary: 'rgba(255,255,255,0.6)',
   accent: '#00FFF7',
   accentHover: '#00d4cc',
-  cardBg: '#334155',
   cardHover: '#475569',
   inputBg: '#0f172a',
   inputBorder: '#334155',
+  buttonSecondary: 'rgba(255,255,255,0.1)',
+  buttonSecondaryHover: 'rgba(255,255,255,0.15)',
 };
 
 const LIGHT = {
   bg: '#ffffff',
   bgSecondary: '#f8fafc',
   border: '#e2e8f0',
-  text: '#0f172a',
-  textMuted: '#64748b',
+  cardBg: '#f8fafc',
+  text: '#1e293b',
+  textMuted: '#94a3b8',
+  textSecondary: '#64748b',
   accent: '#00b8b0',
   accentHover: '#009990',
-  cardBg: '#f1f5f9',
   cardHover: '#e2e8f0',
   inputBg: '#ffffff',
   inputBorder: '#e2e8f0',
+  buttonSecondary: '#e2e8f0',
+  buttonSecondaryHover: '#cbd5e1',
 };
 
 // ============================================================================
@@ -50,11 +55,13 @@ interface Produto {
 
 type Stage = 'input' | 'loading' | 'result' | 'error';
 
-interface ProcurarProdutoDisplayProps {
-  isOpen: boolean;
+interface Props {
+  data: {
+    companyId: string;
+  };
   onClose: () => void;
-  companyId: string;
-  isDarkMode?: boolean;
+  theme?: 'dark' | 'light';
+  playText?: (text: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -65,15 +72,19 @@ const LOADING_TEXT = 'Buscando produtos...';
 const ERROR_TEXT = 'Não foi possível buscar produtos. Tente novamente.';
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+// Força HTTPS no thumbnail para evitar mixed-content block
+const toHttps = (url: string) => url.replace(/^http:\/\//, 'https://');
+
+// ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
-export default function ProcurarProdutoDisplay({
-  isOpen,
-  onClose,
-  companyId,
-  isDarkMode = false,
-}: ProcurarProdutoDisplayProps) {
-  const P = isDarkMode ? DARK : LIGHT;
+export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', playText }: Props) {
+  const { companyId } = data;
+  const isDark = theme === 'dark';
+  const colors = isDark ? DARK : LIGHT;
 
   const [stage, setStage] = useState<Stage>('input');
   const [query, setQuery] = useState('');
@@ -82,23 +93,21 @@ export default function ProcurarProdutoDisplay({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ============================================================================
-  // MOUNT: Falar texto inicial + focar input + cobrar crédito
+  // MOUNT
   // ============================================================================
   useEffect(() => {
-    if (!isOpen) return;
-
-    window.speechSynthesis?.cancel();
-    playText(OPENING_TEXT);
-
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
-
+    if (typeof window !== 'undefined') {
+      window.speechSynthesis?.cancel();
+    }
+    playText?.(OPENING_TEXT).catch(() => {});
+    setTimeout(() => inputRef.current?.focus(), 100);
     cobrarCredito();
-  }, [isOpen]);
+  }, []);
 
   // ============================================================================
-  // BUSCAR PRODUTOS (Mercado Livre API via proxy CORS)
+  // BUSCAR PRODUTOS — Mercado Livre via proxy allorigins.win (contorna CORS/403)
+  // Parse do JSON dentro de proxyData.contents
+  // Thumbnail convertido para HTTPS
   // ============================================================================
   const buscarProdutos = async () => {
     if (!query.trim()) {
@@ -108,51 +117,53 @@ export default function ProcurarProdutoDisplay({
 
     try {
       setStage('loading');
-      playText(LOADING_TEXT);
+      playText?.(LOADING_TEXT).catch(() => {});
 
-      // API pública do Mercado Livre Brasil
-      // Usar proxy CORS público para evitar bloqueio 403
       const mlUrl = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(
-        query
+        query,
       )}&limit=5`;
-      
-      // Proxy CORS gratuito: allorigins.win (alternativa: corsproxy.io)
+
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(mlUrl)}`;
 
       const response = await fetch(proxyUrl);
 
       if (!response.ok) {
-        throw new Error('Serviço de busca temporariamente indisponível');
+        throw new Error(`Erro ao buscar produtos (${response.status})`);
       }
 
       const proxyData = await response.json();
-      const data = JSON.parse(proxyData.contents);
 
-      if (!data.results || data.results.length === 0) {
-        throw new Error('Nenhum produto encontrado para esta busca');
+      if (!proxyData.contents) {
+        throw new Error('Resposta vazia do proxy');
       }
 
-      const produtosFormatados: Produto[] = data.results.map((item: any) => ({
+      const mlData = JSON.parse(proxyData.contents);
+
+      if (!mlData.results || mlData.results.length === 0) {
+        throw new Error('Nenhum produto encontrado');
+      }
+
+      const produtosFormatados: Produto[] = mlData.results.map((item: any) => ({
         id: item.id,
         title: item.title,
         price: item.price,
-        thumbnail: item.thumbnail.replace('http://', 'https://'), // Force HTTPS
+        thumbnail: toHttps(item.thumbnail),
         permalink: item.permalink,
       }));
 
       setProdutos(produtosFormatados);
       setStage('result');
-      playText(`Encontrei ${produtosFormatados.length} produtos.`);
+      playText?.(`Encontrei ${produtosFormatados.length} produtos.`).catch(() => {});
     } catch (err: any) {
       console.error('❌ Erro ao buscar produtos:', err);
       setError(err.message || 'Erro desconhecido');
       setStage('error');
-      playText(ERROR_TEXT);
+      playText?.(ERROR_TEXT).catch(() => {});
     }
   };
 
   // ============================================================================
-  // COBRAR CRÉDITO (1 crédito ao abrir modal)
+  // COBRAR CRÉDITO — sem .single() para evitar erro 400
   // ============================================================================
   const cobrarCredito = async () => {
     try {
@@ -163,28 +174,15 @@ export default function ProcurarProdutoDisplay({
         .select('credits')
         .eq('id', companyId);
 
-      if (fetchError) {
-        console.error('❌ Erro ao buscar empresa:', fetchError);
-        return;
-      }
-
-      if (!companies || companies.length === 0) {
-        console.error('❌ Empresa não encontrada');
-        return;
-      }
+      if (fetchError || !companies || companies.length === 0) return;
 
       const company = companies[0];
       const newCredits = Math.max(0, (company.credits || 0) - 1);
 
-      const { error: updateError } = await supabase
+      await supabase
         .from('companies')
         .update({ credits: newCredits })
         .eq('id', companyId);
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar créditos:', updateError);
-        return;
-      }
 
       console.log('✅ Crédito cobrado: Procurar Produto');
     } catch (err) {
@@ -195,29 +193,29 @@ export default function ProcurarProdutoDisplay({
   // ============================================================================
   // COMANDOS DE VOZ
   // ============================================================================
-  const handleVoiceCommand = useCallback((transcript: string) => {
-    const lower = transcript.toLowerCase();
+  const handleVoiceCommand = useCallback(
+    (transcript: string) => {
+      const lower = transcript.toLowerCase();
 
-    if (lower.includes('fechar') || lower.includes('sair') || lower.includes('voltar')) {
-      onClose();
-      return true;
-    }
-
-    if (stage === 'result') {
-      if (lower.includes('buscar novamente') || lower.includes('nova busca')) {
-        setStage('input');
-        setQuery('');
-        setProdutos([]);
-        setTimeout(() => inputRef.current?.focus(), 100);
+      if (lower.includes('fechar') || lower.includes('sair') || lower.includes('voltar')) {
+        onClose();
         return true;
       }
-    }
 
-    return false;
-  }, [stage, onClose]);
+      if (stage === 'result') {
+        if (lower.includes('buscar novamente') || lower.includes('nova busca')) {
+          handleReset();
+          return true;
+        }
+      }
+
+      return false;
+    },
+    [stage, onClose],
+  );
 
   useModalVoiceCommand({
-    active: isOpen,
+    active: true,
     onTranscript: handleVoiceCommand,
   });
 
@@ -226,11 +224,6 @@ export default function ProcurarProdutoDisplay({
   // ============================================================================
   const handleProdutoClick = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    buscarProdutos();
   };
 
   const handleReset = () => {
@@ -249,73 +242,53 @@ export default function ProcurarProdutoDisplay({
   // ============================================================================
   // RENDER
   // ============================================================================
-  if (!isOpen) return null;
-
   return createPortal(
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.75)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '1rem',
-      }}
-      onClick={handleClose}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
     >
+      {/* Modal */}
       <div
+        className="relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
         style={{
-          backgroundColor: P.bg,
-          borderRadius: '1rem',
-          maxWidth: '48rem',
-          width: '100%',
+          background: colors.bg,
+          border: `1px solid ${colors.border}`,
           maxHeight: '90vh',
-          overflow: 'auto',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-          border: `1px solid ${P.border}`,
+          overflowY: 'auto',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
         <div
+          className="px-6 py-4 flex items-center justify-between"
           style={{
-            padding: '1.5rem',
-            borderBottom: `1px solid ${P.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            borderBottom: `1px solid ${colors.border}`,
+            background: colors.cardBg,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {/* Ícone SVG inline */}
+          <div className="flex items-center gap-3">
             <div
-              style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: '0.5rem',
-                backgroundColor: P.accent + '20',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-              }}
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ background: colors.accent + '20' }}
             >
-              ❄️
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{ color: colors.accent }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
             </div>
             <div>
-              <h2
-                style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold',
-                  color: P.text,
-                  margin: 0,
-                }}
-              >
+              <h2 className="text-xl font-bold" style={{ color: colors.text }}>
                 Procurar Produto
               </h2>
-              <p style={{ fontSize: '0.875rem', color: P.textMuted, margin: 0 }}>
+              <p className="text-sm" style={{ color: colors.textMuted }}>
                 Busque produtos no Mercado Livre
               </p>
             </div>
@@ -323,36 +296,41 @@ export default function ProcurarProdutoDisplay({
 
           <button
             onClick={handleClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.5rem',
-              color: P.textMuted,
-              fontSize: '1.5rem',
-              lineHeight: 1,
-            }}
-            aria-label="Fechar"
+            className="p-2 rounded-full transition"
+            style={{ background: colors.buttonSecondary, color: colors.text }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = colors.buttonSecondaryHover)
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = colors.buttonSecondary)
+            }
           >
-            ×
+            ✕
           </button>
         </div>
 
         {/* CONTENT */}
-        <div style={{ padding: '1.5rem' }}>
+        <div className="p-6">
           {/* INPUT STAGE */}
           {stage === 'input' && (
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '1rem' }}>
+            <div className="space-y-4">
+              <div
+                className="p-4 rounded-xl border"
+                style={{
+                  background: colors.accent + '15',
+                  borderColor: colors.accent + '50',
+                }}
+              >
+                <p className="text-sm text-center font-medium" style={{ color: colors.text }}>
+                  🛒 Digite o nome do produto que deseja encontrar
+                </p>
+              </div>
+
+              <div>
                 <label
                   htmlFor="produto-query"
-                  style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: P.text,
-                    marginBottom: '0.5rem',
-                  }}
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: colors.text }}
                 >
                   O que você está procurando?
                 </label>
@@ -362,75 +340,46 @@ export default function ProcurarProdutoDisplay({
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && buscarProdutos()}
                   placeholder="Ex: notebook gamer, fone bluetooth..."
+                  className="w-full px-4 py-3 rounded-lg text-sm outline-none"
                   style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    backgroundColor: P.inputBg,
-                    border: `1px solid ${P.inputBorder}`,
-                    borderRadius: '0.5rem',
-                    color: P.text,
-                    fontSize: '1rem',
-                    outline: 'none',
+                    background: colors.inputBg,
+                    border: `1px solid ${colors.inputBorder}`,
+                    color: colors.text,
                   }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = P.accent;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = P.inputBorder;
-                  }}
+                  onFocus={(e) => (e.target.style.borderColor = colors.accent)}
+                  onBlur={(e) => (e.target.style.borderColor = colors.inputBorder)}
                 />
               </div>
 
               <button
-                type="submit"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: P.accent,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
+                onClick={buscarProdutos}
+                disabled={!query.trim()}
+                className="w-full px-4 py-3 rounded-lg font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: colors.accent }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = P.accentHover;
+                  if (query.trim()) e.currentTarget.style.background = colors.accentHover;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = P.accent;
-                }}
+                onMouseLeave={(e) => (e.currentTarget.style.background = colors.accent)}
               >
-                Buscar Produtos
+                🔍 Buscar Produtos
               </button>
-            </form>
+            </div>
           )}
 
           {/* LOADING */}
           {stage === 'loading' && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '3rem 1rem',
-                gap: '1rem',
-              }}
-            >
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
               <div
+                className="w-12 h-12 rounded-full"
                 style={{
-                  width: '3rem',
-                  height: '3rem',
-                  border: `3px solid ${P.border}`,
-                  borderTop: `3px solid ${P.accent}`,
-                  borderRadius: '50%',
+                  border: `3px solid ${colors.border}`,
+                  borderTop: `3px solid ${colors.accent}`,
                   animation: 'spin 1s linear infinite',
                 }}
               />
-              <p style={{ color: P.textMuted, fontSize: '0.875rem' }}>
+              <p className="text-sm" style={{ color: colors.textMuted }}>
                 Buscando produtos no Mercado Livre...
               </p>
             </div>
@@ -439,28 +388,22 @@ export default function ProcurarProdutoDisplay({
           {/* ERROR */}
           {stage === 'error' && (
             <div
-              style={{
-                padding: '1.5rem',
-                borderRadius: '0.5rem',
-                backgroundColor: '#fef2f2',
-                border: '1px solid #fecaca',
-                textAlign: 'center',
-              }}
+              className="p-6 rounded-xl text-center"
+              style={{ background: '#fef2f2', border: '1px solid #fecaca' }}
             >
-              <p style={{ color: '#dc2626', fontWeight: '500', margin: '0 0 1rem 0' }}>
+              <p className="font-semibold mb-4" style={{ color: '#dc2626' }}>
                 {error || ERROR_TEXT}
               </p>
               <button
                 onClick={handleReset}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: P.accent,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                }}
+                className="px-4 py-2 rounded-lg font-semibold text-white transition"
+                style={{ background: colors.accent }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = colors.accentHover)
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = colors.accent)
+                }
               >
                 Tentar Novamente
               </button>
@@ -471,97 +414,69 @@ export default function ProcurarProdutoDisplay({
           {stage === 'result' && (
             <>
               <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '1rem',
-                  paddingBottom: '0.75rem',
-                  borderBottom: `1px solid ${P.border}`,
-                }}
+                className="flex justify-between items-center mb-4 pb-3"
+                style={{ borderBottom: `1px solid ${colors.border}` }}
               >
-                <p style={{ color: P.textMuted, fontSize: '0.875rem', margin: 0 }}>
-                  Busca: <strong style={{ color: P.text }}>{query}</strong>
+                <p className="text-sm" style={{ color: colors.textMuted }}>
+                  Busca: <strong style={{ color: colors.text }}>{query}</strong>
                 </p>
                 <button
                   onClick={handleReset}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition"
                   style={{
-                    padding: '0.375rem 0.75rem',
-                    backgroundColor: P.bgSecondary,
-                    color: P.text,
-                    border: `1px solid ${P.border}`,
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    fontWeight: '500',
+                    background: colors.buttonSecondary,
+                    color: colors.text,
+                    border: `1px solid ${colors.border}`,
                   }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = colors.buttonSecondaryHover)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = colors.buttonSecondary)
+                  }
                 >
                   Nova Busca
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div className="flex flex-col gap-3">
                 {produtos.map((produto) => (
                   <div
                     key={produto.id}
+                    className="flex items-center gap-4 p-3 rounded-xl transition-all"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '0.75rem',
-                      backgroundColor: P.cardBg,
-                      borderRadius: '0.5rem',
-                      border: `1px solid ${P.border}`,
-                      transition: 'all 0.2s',
+                      background: colors.cardBg,
+                      border: `1px solid ${colors.border}`,
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = P.cardHover;
-                      e.currentTarget.style.borderColor = P.accent;
+                      e.currentTarget.style.background = colors.cardHover;
+                      e.currentTarget.style.borderColor = colors.accent;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = P.cardBg;
-                      e.currentTarget.style.borderColor = P.border;
+                      e.currentTarget.style.background = colors.cardBg;
+                      e.currentTarget.style.borderColor = colors.border;
                     }}
                   >
                     {/* Imagem */}
                     <img
                       src={produto.thumbnail}
                       alt={produto.title}
-                      style={{
-                        width: '4rem',
-                        height: '4rem',
-                        objectFit: 'cover',
-                        borderRadius: '0.375rem',
-                        flexShrink: 0,
+                      className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                      onError={(e) => {
+                        // Fallback se imagem falhar
+                        (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
 
                     {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex-1 min-w-0">
                       <h3
-                        style={{
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          color: P.text,
-                          margin: '0 0 0.25rem 0',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          lineHeight: '1.3',
-                        }}
+                        className="text-sm font-semibold mb-1 leading-snug line-clamp-2"
+                        style={{ color: colors.text }}
                       >
                         {produto.title}
                       </h3>
-                      <p
-                        style={{
-                          fontSize: '1rem',
-                          fontWeight: 'bold',
-                          color: P.accent,
-                          margin: 0,
-                        }}
-                      >
+                      <p className="text-base font-bold" style={{ color: colors.accent }}>
                         {new Intl.NumberFormat('pt-BR', {
                           style: 'currency',
                           currency: 'BRL',
@@ -569,27 +484,17 @@ export default function ProcurarProdutoDisplay({
                       </p>
                     </div>
 
-                    {/* Botão abrir */}
+                    {/* Botão */}
                     <button
                       onClick={() => handleProdutoClick(produto.permalink)}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        backgroundColor: P.accent,
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        flexShrink: 0,
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = P.accentHover;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = P.accent;
-                      }}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold text-white flex-shrink-0 transition"
+                      style={{ background: colors.accent }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = colors.accentHover)
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = colors.accent)
+                      }
                     >
                       Abrir →
                     </button>
@@ -603,23 +508,14 @@ export default function ProcurarProdutoDisplay({
         {/* FOOTER — Voice Hints */}
         {(stage === 'input' || stage === 'result') && (
           <div
+            className="px-6 py-3"
             style={{
-              padding: '1rem 1.5rem',
-              borderTop: `1px solid ${P.border}`,
-              backgroundColor: P.bgSecondary,
-              borderBottomLeftRadius: '1rem',
-              borderBottomRightRadius: '1rem',
+              borderTop: `1px solid ${colors.border}`,
+              background: colors.bgSecondary,
             }}
           >
-            <p
-              style={{
-                fontSize: '0.75rem',
-                color: P.textMuted,
-                margin: 0,
-                textAlign: 'center',
-              }}
-            >
-              Diga:{' '}
+            <p className="text-xs text-center" style={{ color: colors.textMuted }}>
+              💬 Diga:{' '}
               {stage === 'input' ? (
                 <strong>"Fechar"</strong>
               ) : (
@@ -632,13 +528,12 @@ export default function ProcurarProdutoDisplay({
         )}
       </div>
 
-      {/* Keyframe animation */}
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
       `}</style>
     </div>,
-    document.body
+    document.body,
   );
 }

@@ -1,5 +1,3 @@
-// components/assistant/CategoryCarousel.tsx
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -279,11 +277,11 @@ export default function CategoryCarousel({
                         isEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'
                       }`}
                       style={
-                        isEnabled && hoveredFunction === fn.function_key
+                        hoveredFunction === fn.function_key
                           ? styles.functionItemHover
                           : styles.functionItem
                       }
-                      onMouseEnter={() => isEnabled && setHoveredFunction(fn.function_key)}
+                      onMouseEnter={() => setHoveredFunction(fn.function_key)}
                       onMouseLeave={() => setHoveredFunction(null)}
                       onClick={() => handleFunctionClick(fn)}
                     >
@@ -291,7 +289,7 @@ export default function CategoryCarousel({
                         {fn.function_name}
                       </span>
                       
-                      {isEnabled && hoveredFunction === fn.function_key && fn.short_description && (
+                      {hoveredFunction === fn.function_key && fn.short_description && (
                         <div
                           className="mt-0.5 text-[9px] leading-tight opacity-70"
                           style={{ color: isDark ? 'rgb(203, 213, 225)' : 'rgb(71, 85, 105)' }}

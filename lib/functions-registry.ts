@@ -4666,6 +4666,7 @@ ver_noticias: {
  
   voiceTriggers: [
     'ver noticias',
+    'ver notícias',
     'noticias',
     'manchetes',
     'ultimas noticias',

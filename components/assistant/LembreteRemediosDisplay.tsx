@@ -250,37 +250,6 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
         }
       }
 
-      // 3. ✅ DESCONTAR CRÉDITO - Buscar company para pegar user_id
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('user_id')
-        .eq('id', companyId)
-        .single();
-
-      if (companyData?.user_id) {
-        // Buscar créditos atuais
-        const { data: creditsData } = await supabase
-          .from('user_credits')
-          .select('available_credits, total_used')
-          .eq('user_id', companyData.user_id)
-          .single();
-
-        if (creditsData && creditsData.available_credits >= 1) {
-          // Descontar 1 crédito
-          await supabase
-            .from('user_credits')
-            .update({
-              available_credits: creditsData.available_credits - 1,
-              total_used: (creditsData.total_used || 0) + 1,
-              last_interaction_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', companyData.user_id);
-
-          console.log('✅ 1 crédito descontado');
-        }
-      }
-
       setToast({ message: '✅ Lembrete salvo com sucesso!', type: 'success' });
       playText?.('Lembretes salvos!').catch(() => {});
       setTimeout(() => onClose(), 2000);

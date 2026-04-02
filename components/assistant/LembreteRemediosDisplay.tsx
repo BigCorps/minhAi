@@ -210,7 +210,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
     setIsSaving(true);
 
     try {
-      // Salva no banco (apenas horários diários)
+      // 1. Salva no banco (apenas horários diários)
       const { error: insertError } = await supabase.from('lembretes_remedios').insert({
         company_id: companyId,
         nome_remedio: nomeRemedio.trim(),
@@ -220,7 +220,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
 
       if (insertError) throw insertError;
 
-      // Se modo incluir calendario, cria TODOS os eventos até o fim do tratamento
+      // 2. Se modo incluir calendario, cria TODOS os eventos até o fim do tratamento
       if ((modoLembrete === 'calendario' || modoLembrete === 'ambos') && googleConnected) {
         const totalDias = calcularTotalDias();
         const dataInicio = new Date();
@@ -250,11 +250,36 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
         }
       }
 
-      // Cobrar crédito
-      await supabase.rpc('decrement_credits', {
-        p_company_id: companyId,
-        p_amount: 1,
-      });
+      // 3. ✅ DESCONTAR CRÉDITO - Buscar company para pegar user_id
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('user_id')
+        .eq('id', companyId)
+        .single();
+
+      if (companyData?.user_id) {
+        // Buscar créditos atuais
+        const { data: creditsData } = await supabase
+          .from('user_credits')
+          .select('available_credits, total_used')
+          .eq('user_id', companyData.user_id)
+          .single();
+
+        if (creditsData && creditsData.available_credits >= 1) {
+          // Descontar 1 crédito
+          await supabase
+            .from('user_credits')
+            .update({
+              available_credits: creditsData.available_credits - 1,
+              total_used: (creditsData.total_used || 0) + 1,
+              last_interaction_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', companyData.user_id);
+
+          console.log('✅ 1 crédito descontado');
+        }
+      }
 
       setToast({ message: '✅ Lembrete salvo com sucesso!', type: 'success' });
       playText?.('Lembrete de remédio configurado com sucesso!').catch(() => {});
@@ -520,7 +545,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
               color: '#ffffff',
             }}
           >
-            {isSaving ? 'Salvando...' : 'Salvar Lembrete'}
+            {isSaving ? 'Salvando todas as datas...' : 'Salvar Lembrete'}
           </button>
         </div>
       </div>

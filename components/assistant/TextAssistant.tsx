@@ -250,7 +250,7 @@ export default function TextAssistant({
 
   return (
     <div
-      className="flex flex-col h-full pt-20 pb-32"
+      className="flex flex-col min-h-screen pt-20 pb-32"
       style={styles.container}
     >
       {/* Área de mensagens */}

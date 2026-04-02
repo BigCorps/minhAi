@@ -89,7 +89,10 @@ export function VoiceAssistantWithWakeWord({
   onAssistantStart,
   hideDisabledFunctions = false,
   autoScroll = true,
-}: VoiceAssistantProps) {
+  onTextMessage,
+}: VoiceAssistantProps & {
+  onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
+}) {
 
   // ── States básicos ────────────────────────────────────────
   const [isListening, setIsListening] = useState(false);
@@ -1437,6 +1440,78 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
       }, 500);
     }
   };
+
+  // ── handleTextMessageForText: versão sem áudio, retorna { text, functionKey } ──
+  const handleTextMessageForText = async (message: string): Promise<{ text: string; functionKey?: string } | null> => {
+    if (detectStopCommand(message)) { stopEverything(); return null; }
+
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const isCommand = await detectVoiceCommand(message, {
+        companyId,
+        functionSettings,
+        setIsProcessing,
+        setQrCodeData,
+        setPixConfirmationData,
+        playText,
+        sessionId,
+        commandProcessor,
+        pixStateRef,
+        setActiveModal,
+        activeFunctionContextRef,
+        groqContextRef,
+      });
+
+      if (isCommand) return { text: '', functionKey: undefined };
+
+      const formData = new FormData();
+      formData.append('audio', new Blob([message], { type: 'text/plain' }));
+      formData.append('companyId', companyId);
+      formData.append('directQuestion', message);
+      if (sessionId) formData.append('sessionId', sessionId);
+
+      const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
+
+      const newSessionId = response.headers.get('X-Session-Id');
+      if (newSessionId && !sessionId) setSessionId(newSessionId);
+
+      const responseTextHeader = response.headers.get('X-Response-Text');
+      const responseText = responseTextHeader ? decodeURIComponent(responseTextHeader) : '';
+      if (responseText) setLastResponse(responseText);
+
+      const hintFunctionKey = response.headers.get('X-Function-Key');
+      if (hintFunctionKey) {
+        setIsProcessing(false);
+        handleFunctionClick(hintFunctionKey);
+        return { text: responseText, functionKey: hintFunctionKey };
+      }
+
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
+
+      return { text: responseText, functionKey: undefined };
+    } catch (error: any) {
+      console.error('❌ Erro ao processar mensagem texto:', error);
+      return { text: 'Desculpe, ocorreu um erro ao processar sua mensagem.', functionKey: undefined };
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // ── Registra handler para uso externo (modo texto) ────────
+  useEffect(() => {
+    if (onTextMessage) {
+      onTextMessage(async (text: string) => {
+        return await handleTextMessageForText(text);
+      });
+    }
+  }, [onTextMessage]);
 
   // ── Misc helpers ──────────────────────────────────────────
   async function playGoodbye() {

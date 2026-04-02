@@ -6,7 +6,7 @@ import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModal
 import { createClient } from '@/lib/supabase-browser';
 
 // ============================================================================
-// PALETAS DE COR (inline styles — nunca Tailwind dinâmico)
+// PALETAS DE COR
 // ============================================================================
 const DARK = {
   bg: '#1e293b',
@@ -15,7 +15,6 @@ const DARK = {
   cardBg: 'rgba(15,23,42,0.6)',
   text: '#ffffff',
   textMuted: 'rgba(255,255,255,0.4)',
-  textSecondary: 'rgba(255,255,255,0.6)',
   accent: '#00FFF7',
   accentHover: '#00d4cc',
   cardHover: '#475569',
@@ -30,7 +29,6 @@ const LIGHT = {
   cardBg: '#f8fafc',
   text: '#1e293b',
   textMuted: '#94a3b8',
-  textSecondary: '#64748b',
   accent: '#00b8b0',
   accentHover: '#009990',
   cardHover: '#e2e8f0',
@@ -51,68 +49,57 @@ interface Noticia {
 type Stage = 'loading' | 'result' | 'error';
 
 interface Props {
-  data: {
-    companyId: string;
-  };
+  data: { companyId: string };
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText?: (text: string) => Promise<void>;
 }
 
-// ============================================================================
-// TEXTOS
-// ============================================================================
 const OPENING_TEXT = 'Carregando as últimas notícias para você.';
 const ERROR_TEXT = 'Não foi possível carregar as notícias no momento. Tente novamente.';
 
+// URL da edge function — ajuste para o seu project ref
+const EDGE_URL =
+  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/noticias-produtos`;
+
 // ============================================================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE
 // ============================================================================
 export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', playText }: Props) {
   const { companyId } = data;
-  const isDark = theme === 'dark';
-  const colors = isDark ? DARK : LIGHT;
+  const colors = theme === 'dark' ? DARK : LIGHT;
 
   const [stage, setStage] = useState<Stage>('loading');
   const [noticias, setNoticias] = useState<Noticia[]>([]);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
 
-  // ============================================================================
-  // MOUNT
-  // ============================================================================
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.speechSynthesis?.cancel();
-    }
+    if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
     playText?.(OPENING_TEXT).catch(() => {});
     buscarNoticias();
     cobrarCredito();
   }, []);
 
-  // ============================================================================
-  // BUSCAR NOTÍCIAS — gnews.io
-  // Gratuito: 100 req/dia com apikey=demo | lang=pt | country=br | max=5
-  // ============================================================================
+  // ── Notícias via Edge Function ─────────────────────────────────────────────
   const buscarNoticias = async () => {
     try {
       setStage('loading');
 
-      const url =
-        'https://gnews.io/api/v4/top-headlines?lang=pt&country=br&max=5&apikey=demo';
+      const res = await fetch(EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'noticias' }),
+      });
 
-      const response = await fetch(url);
+      if (!res.ok) throw new Error(`Erro ao buscar notícias (${res.status})`);
 
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar notícias (${response.status})`);
-      }
-
-      const json = await response.json();
+      const json = await res.json();
 
       if (!json.articles || json.articles.length === 0) {
         throw new Error('Nenhuma notícia encontrada');
       }
 
-      const noticiasFormatadas: Noticia[] = json.articles.map((item: any) => ({
+      const formatted: Noticia[] = json.articles.map((item: any) => ({
         title: item.title,
         url: item.url,
         source: item.source?.name || 'GNews',
@@ -124,7 +111,7 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
         }),
       }));
 
-      setNoticias(noticiasFormatadas);
+      setNoticias(formatted);
       setStage('result');
     } catch (err: any) {
       console.error('❌ Erro ao buscar notícias:', err);
@@ -134,9 +121,7 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
     }
   };
 
-  // ============================================================================
-  // COBRAR CRÉDITO — sem .single() para evitar erro 400
-  // ============================================================================
+  // ── Crédito — sem .single() ────────────────────────────────────────────────
   const cobrarCredito = async () => {
     try {
       const supabase = createClient();
@@ -148,13 +133,9 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
 
       if (fetchError || !companies || companies.length === 0) return;
 
-      const company = companies[0];
-      const newCredits = Math.max(0, (company.credits || 0) - 1);
+      const newCredits = Math.max(0, (companies[0].credits || 0) - 1);
 
-      await supabase
-        .from('companies')
-        .update({ credits: newCredits })
-        .eq('id', companyId);
+      await supabase.from('companies').update({ credits: newCredits }).eq('id', companyId);
 
       console.log('✅ Crédito cobrado: Ver Notícias');
     } catch (err) {
@@ -162,75 +143,45 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
     }
   };
 
-  // ============================================================================
-  // COMANDOS DE VOZ
-  // ============================================================================
+  // ── Voz ───────────────────────────────────────────────────────────────────
   const handleVoiceCommand = useCallback(
     (transcript: string) => {
       const lower = transcript.toLowerCase();
-
       if (lower.includes('fechar') || lower.includes('sair') || lower.includes('voltar')) {
         onClose();
         return true;
       }
-
-      if (
-        lower.includes('repetir') ||
-        lower.includes('atualizar') ||
-        lower.includes('recarregar')
-      ) {
+      if (lower.includes('repetir') || lower.includes('atualizar') || lower.includes('recarregar')) {
         buscarNoticias();
         return true;
       }
-
       return false;
     },
     [onClose],
   );
 
-  useModalVoiceCommand({
-    active: true,
-    onTranscript: handleVoiceCommand,
-  });
-
-  // ============================================================================
-  // HANDLERS
-  // ============================================================================
-  const handleNoticiaClick = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+  useModalVoiceCommand({ active: true, onTranscript: handleVoiceCommand });
 
   const handleClose = () => {
     window.speechSynthesis?.cancel();
     onClose();
   };
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  // ── Render ────────────────────────────────────────────────────────────────
   return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
     >
-      {/* Modal */}
       <div
         className="relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
-        style={{
-          background: colors.bg,
-          border: `1px solid ${colors.border}`,
-          maxHeight: '90vh',
-          overflowY: 'auto',
-        }}
+        style={{ background: colors.bg, border: `1px solid ${colors.border}`, maxHeight: '90vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
         <div
           className="px-6 py-4 flex items-center justify-between"
-          style={{
-            borderBottom: `1px solid ${colors.border}`,
-            background: colors.cardBg,
-          }}
+          style={{ borderBottom: `1px solid ${colors.border}`, background: colors.cardBg }}
         >
           <div className="flex items-center gap-3">
             <div
@@ -248,17 +199,12 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
               </p>
             </div>
           </div>
-
           <button
             onClick={handleClose}
             className="p-2 rounded-full transition"
             style={{ background: colors.buttonSecondary, color: colors.text }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = colors.buttonSecondaryHover)
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = colors.buttonSecondary)
-            }
+            onMouseEnter={(e) => (e.currentTarget.style.background = colors.buttonSecondaryHover)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = colors.buttonSecondary)}
           >
             ✕
           </button>
@@ -296,12 +242,8 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
                 onClick={buscarNoticias}
                 className="px-4 py-2 rounded-lg font-semibold text-white transition"
                 style={{ background: colors.accent }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = colors.accentHover)
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = colors.accent)
-                }
+                onMouseEnter={(e) => (e.currentTarget.style.background = colors.accentHover)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = colors.accent)}
               >
                 Tentar Novamente
               </button>
@@ -314,12 +256,9 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
               {noticias.map((noticia, index) => (
                 <div
                   key={index}
-                  onClick={() => handleNoticiaClick(noticia.url)}
+                  onClick={() => window.open(noticia.url, '_blank', 'noopener,noreferrer')}
                   className="p-4 rounded-xl cursor-pointer transition-all"
-                  style={{
-                    background: colors.cardBg,
-                    border: `1px solid ${colors.border}`,
-                  }}
+                  style={{ background: colors.cardBg, border: `1px solid ${colors.border}` }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = colors.cardHover;
                     e.currentTarget.style.borderColor = colors.accent;
@@ -329,16 +268,10 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
                     e.currentTarget.style.borderColor = colors.border;
                   }}
                 >
-                  <h3
-                    className="text-base font-semibold mb-2 leading-snug"
-                    style={{ color: colors.text }}
-                  >
+                  <h3 className="text-base font-semibold mb-2 leading-snug" style={{ color: colors.text }}>
                     {noticia.title}
                   </h3>
-                  <div
-                    className="flex items-center justify-between text-xs"
-                    style={{ color: colors.textMuted }}
-                  >
+                  <div className="flex items-center justify-between text-xs" style={{ color: colors.textMuted }}>
                     <span>{noticia.source}</span>
                     <span>{noticia.publishedAt}</span>
                   </div>
@@ -348,14 +281,11 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
           )}
         </div>
 
-        {/* FOOTER — Voice Hints */}
+        {/* FOOTER */}
         {stage === 'result' && (
           <div
             className="px-6 py-3"
-            style={{
-              borderTop: `1px solid ${colors.border}`,
-              background: colors.bgSecondary,
-            }}
+            style={{ borderTop: `1px solid ${colors.border}`, background: colors.bgSecondary }}
           >
             <p className="text-xs text-center" style={{ color: colors.textMuted }}>
               💬 Diga: <strong>"Atualizar"</strong> • <strong>"Fechar"</strong>
@@ -364,11 +294,7 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
         )}
       </div>
 
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>,
     document.body,
   );

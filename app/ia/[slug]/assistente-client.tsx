@@ -103,15 +103,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       setIsPortrait(window.innerHeight > window.innerWidth);
     };
 
-    const handleAvatarClick = () => {
-      if (anyModalOpenRef.current) return;
-      setTimeout(() => {
-        if (anyModalOpenRef.current) return;
-        handleToggleMaximize();
-      }, 50);
-    };
-    window.addEventListener('eai:avatarClick', handleAvatarClick);
-
     const handleRequestKiosk = () => {
       handleEnterKioskMode();
     };
@@ -125,7 +116,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
     
     return () => {
       window.removeEventListener('resize', checkMobile);
-      window.removeEventListener('eai:avatarClick', handleAvatarClick);
       window.removeEventListener('resize', checkOrientation);
       window.removeEventListener('eai:requestKioskMode', handleRequestKiosk);
       if (controlsTimeoutRef.current) {
@@ -855,7 +845,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 <SlugHeaderWrapper
                   company={company}
                   overlayMode={true}
-                  onClose={handleTryExitKiosk}
+                  onClose={undefined}
                   showControls={showCloseButton}
                 />
               </div>
@@ -932,6 +922,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
+          {/* SlugFooter - igual aos outros modos */}
+          <SlugFooter theme={theme} />
+
           <style jsx>{`
             @keyframes slide-down {
               from {
@@ -974,9 +967,14 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         }`}>
 
           {/* SlugHeader */}
+          {/* No modo texto, o TextAssistant usa fixed inset-0, então o header
+              precisa ser fixed com z-index superior para ficar visível acima dele */}
           <div className={mode === 'texto' ? 'fixed top-0 left-0 right-0 z-50' : ''}>
-  <SlugHeaderWrapper company={company} overlayMode={false} />
-</div>
+            <SlugHeaderWrapper
+              company={company}
+              overlayMode={false}
+            />
+          </div>
 
           {/* Toast */}
           {showToast && (

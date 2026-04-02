@@ -15,7 +15,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Square } from 'lucide-react';
 import { AvatarFace } from '@/components/AvatarFace';
-import FunctionCarousel from '@/components/assistant/FunctionCarousel';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { VoiceCommandProcessor } from '@/lib/voice-command-processor';
@@ -1800,19 +1799,6 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
           </div>
         </div>
       </div>
-
-      {/* Carrossel de funções */}
-      {!showStartButton && (
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-8">
-          <FunctionCarousel
-            companyId={companyId}
-            onFunctionClick={handleFunctionClick}
-            theme={theme}
-            hideDisabledFunctions={hideDisabledFunctions}
-            autoScroll={autoScroll}
-          />
-        </div>
-      )}
 
       <ActionModals
         activeModal={activeModal}

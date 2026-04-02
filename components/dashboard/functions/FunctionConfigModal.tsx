@@ -2302,68 +2302,303 @@ const CriarNotaForm = () => (
   </div>
 );
  
-const LembreteRemediosForm = () => (
-  <div className="space-y-4">
-    <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-      <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
-        Como funciona
-      </h4>
-      <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
-        <li>• Cliente preenche 4 campos: nome, intervalo, horário e duração</li>
-        <li>• Sistema calcula automaticamente todos os horários do tratamento</li>
-        <li>• Preview em tempo real mostra quantas doses por dia e total de dias</li>
-        <li>• Opção de receber lembretes no assistente ou Google Calendar</li>
-      </ul>
-    </div>
+const LembreteRemediosConfigForm = ({ companyId }: any) => {
+  const [googleAccount, setGoogleAccount] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<any>({ modo_lembrete: 'assistente' });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
  
-    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-        📋 Campos do formulário
-      </h4>
-      <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
-        <div>
-          <p className="font-medium">1. Nome do Remédio</p>
-          <p className="text-xs">Ex: Paracetamol 500mg</p>
-        </div>
-        <div>
-          <p className="font-medium">2. Intervalo entre doses</p>
-          <p className="text-xs">Ex: 8 horas (= 3 doses por dia)</p>
-        </div>
-        <div>
-          <p className="font-medium">3. Horário da primeira dose</p>
-          <p className="text-xs">Ex: 08:00 (demais horários são calculados)</p>
-        </div>
-        <div>
-          <p className="font-medium">4. Duração do tratamento</p>
-          <p className="text-xs">Escolha: Total de dias OU Quantidade de comprimidos</p>
+  useEffect(() => {
+    async function init() {
+      setLoading(true);
+      
+      // Buscar conta Google
+      const { data: googleData } = await supabase
+        .from('google_accounts')
+        .select('id, google_email, is_active, scopes')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle();
+ 
+      const hasCalendarScope = googleData?.scopes?.some((scope: string) => 
+        scope.includes('calendar')
+      );
+ 
+      if (googleData && hasCalendarScope) {
+        setGoogleAccount(googleData);
+      }
+ 
+      // Buscar configuração existente
+      const { data: configData } = await supabase
+        .from('company_function_settings')
+        .select('config')
+        .eq('company_id', companyId)
+        .eq('function_key', 'lembrete_remedios')
+        .maybeSingle();
+ 
+      if (configData?.config?.modo_lembrete) {
+        setConfig({ modo_lembrete: configData.config.modo_lembrete });
+      }
+ 
+      setLoading(false);
+    }
+    init();
+  }, [companyId]);
+ 
+  async function handleSave() {
+    setSaving(true);
+ 
+    const { error } = await supabase
+      .from('company_function_settings')
+      .upsert({
+        company_id: companyId,
+        function_key: 'lembrete_remedios',
+        config: config,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'company_id,function_key'
+      });
+ 
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } else {
+      console.error('Erro ao salvar config:', error);
+      alert('Erro ao salvar. Tente novamente.');
+    }
+ 
+    setSaving(false);
+  }
+ 
+  function handleGoToAgenda() {
+    window.location.href = `/dashboard/agenda?companyId=${companyId}`;
+  }
+ 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600" />
+      </div>
+    );
+  }
+ 
+  return (
+    <div className="space-y-4">
+      {/* Como funciona */}
+      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+        <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+          Como funciona
+        </h4>
+        <ul className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
+          <li>• Cliente preenche 4 campos: nome, intervalo, horário e duração</li>
+          <li>• Sistema calcula automaticamente todos os horários do tratamento</li>
+          <li>• Preview em tempo real mostra quantas doses por dia e total de dias</li>
+          <li>• Lembretes salvos no banco + opção de criar eventos no Google Calendar</li>
+        </ul>
+      </div>
+ 
+      {/* Campos do formulário */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          Campos do formulário
+        </h4>
+        <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+          <div>
+            <p className="font-medium">1. Nome do Remédio</p>
+            <p className="text-xs">Ex: Paracetamol 500mg</p>
+          </div>
+          <div>
+            <p className="font-medium">2. Intervalo entre doses</p>
+            <p className="text-xs">Ex: 8 horas (= 3 doses por dia)</p>
+          </div>
+          <div>
+            <p className="font-medium">3. Horário da primeira dose</p>
+            <p className="text-xs">Ex: 08:00 (demais horários são calculados)</p>
+          </div>
+          <div>
+            <p className="font-medium">4. Duração do tratamento</p>
+            <p className="text-xs">Escolha: Total de dias OU Quantidade de comprimidos</p>
+          </div>
         </div>
       </div>
-    </div>
  
-    <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
-      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-        Comandos de voz
-      </h4>
-      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-        <div>
-          <p className="font-medium text-gray-900 dark:text-white">Para criar:</p>
-          <ul className="space-y-0.5 mt-1">
-            <li>• "Lembrete de remédio"</li>
-            <li>• "Configurar remédio"</li>
-            <li>• "Horário do remédio"</li>
-          </ul>
-        </div>
-        <div>
-          <p className="font-medium text-gray-900 dark:text-white">No formulário:</p>
-          <ul className="space-y-0.5 mt-1">
-            <li>• "Salvar" (confirma)</li>
-            <li>• "Cancelar" (fecha)</li>
-          </ul>
+      {/* Modo de Lembrete (Configuração) */}
+      <div className="border-t border-gray-200 dark:border-white/10 pt-4">
+        <label className="block text-sm font-medium mb-3 text-gray-900 dark:text-white">
+          Onde receber os lembretes?
+        </label>
+ 
+        <div className="space-y-2">
+          <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all border-gray-200 dark:border-white/10 hover:border-orange-400">
+            <input
+              type="radio"
+              name="modo_lembrete"
+              checked={config.modo_lembrete === 'assistente'}
+              onChange={() => setConfig({ modo_lembrete: 'assistente' })}
+              className="mt-0.5"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                🔔 Apenas no Assistente
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Horários salvos no banco de dados — alertas quando o cliente usar o assistente
+              </p>
+            </div>
+          </label>
+ 
+          <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+            !googleAccount 
+              ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-white/10' 
+              : 'border-gray-200 dark:border-white/10 hover:border-orange-400'
+          }`}>
+            <input
+              type="radio"
+              name="modo_lembrete"
+              checked={config.modo_lembrete === 'calendario'}
+              onChange={() => setConfig({ modo_lembrete: 'calendario' })}
+              disabled={!googleAccount}
+              className="mt-0.5"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                📅 Apenas no Google Calendar
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Cria TODOS os eventos até o fim do tratamento (ex: 21 comprimidos = 21 eventos)
+              </p>
+            </div>
+          </label>
+ 
+          <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+            !googleAccount 
+              ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-white/10' 
+              : 'border-gray-200 dark:border-white/10 hover:border-orange-400'
+          }`}>
+            <input
+              type="radio"
+              name="modo_lembrete"
+              checked={config.modo_lembrete === 'ambos'}
+              onChange={() => setConfig({ modo_lembrete: 'ambos' })}
+              disabled={!googleAccount}
+              className="mt-0.5"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                🔔📅 Ambos
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Salva no banco + cria todos os eventos no Google Calendar
+              </p>
+            </div>
+          </label>
         </div>
       </div>
+ 
+      {/* Status Google Calendar */}
+      {googleAccount ? (
+        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+              <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">
+                ✅ Google Calendar Conectado
+              </p>
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Email: <span className="font-mono">{googleAccount.google_email}</span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleGoToAgenda}
+            className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <Calendar className="w-4 h-4" />
+            Gerenciar Conexão Google
+          </button>
+        </div>
+      ) : (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
+                Google Calendar não conectado
+              </p>
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                Para usar lembretes no calendário, conecte sua conta Google.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleGoToAgenda}
+            className="w-full mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Conectar Conta Google
+          </button>
+        </div>
+      )}
+ 
+      {/* Exemplo de uso */}
+      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+        <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+          Exemplo de uso
+        </h4>
+        <div className="text-sm text-green-800 dark:text-green-200 space-y-1">
+          <p>• <strong>Remédio:</strong> Paracetamol 500mg</p>
+          <p>• <strong>Intervalo:</strong> 8 horas</p>
+          <p>• <strong>Primeira dose:</strong> 08:00</p>
+          <p>• <strong>Duração:</strong> 21 comprimidos</p>
+          <p className="pt-2 border-t border-green-300 dark:border-green-700 mt-2">
+            <strong>Sistema calcula:</strong> 3 doses/dia × 7 dias = 21 doses totais<br/>
+            Horários: 08:00, 16:00, 00:00
+          </p>
+        </div>
+      </div>
+ 
+      {/* Comandos de voz */}
+      <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+          Comandos de voz
+        </h4>
+        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">Para criar:</p>
+            <ul className="space-y-0.5 mt-1">
+              <li>• "Lembrete de remédio"</li>
+              <li>• "Configurar remédio"</li>
+              <li>• "Horário do remédio"</li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">No formulário:</p>
+            <ul className="space-y-0.5 mt-1">
+              <li>• "Salvar" (confirma)</li>
+              <li>• "Cancelar" (fecha)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+ 
+      {/* Botão salvar */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
+      >
+        {saving
+          ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /><span>Salvando...</span></>
+          : saved ? '✓ Salvo!' : 'Salvar Configurações'
+        }
+      </button>
     </div>
-  </div>
-);
+  );
+};
 
 const RastreioCorreiosForm = () => (
   <div className="space-y-4">
@@ -3779,7 +4014,7 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'buscar_endereco': BuscarEnderecoForm,
   'rastreio_correios': RastreioCorreiosForm,
   'criar_nota': CriarNotaForm,
-  'lembrete_remedios': LembreteRemediosForm,
+  'lembrete_remedios': LembreteRemediosConfigForm,
   'ver_noticias': VerNoticiasForm,
   'procurar_produto': ProcurarProdutoForm,
 };

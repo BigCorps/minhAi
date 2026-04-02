@@ -45,10 +45,11 @@ const LIGHT = {
 // ============================================================================
 interface Produto {
   id: string;
-  title: string;
-  price: number;
-  thumbnail: string;
-  permalink: string;
+  titulo: string;
+  preco: string;
+  imagem: string;
+  link: string;
+  loja: string;
 }
 
 type Stage = 'input' | 'loading' | 'result' | 'error';
@@ -60,16 +61,16 @@ interface Props {
   playText?: (text: string) => Promise<void>;
 }
 
-const OPENING_TEXT = 'Digite o produto que deseja buscar no Mercado Livre.';
+const OPENING_TEXT = 'Digite o produto que deseja buscar.';
 const LOADING_TEXT = 'Buscando produtos...';
 const ERROR_TEXT = 'Não foi possível buscar produtos. Tente novamente.';
 
-// URL da edge function — ajuste para o seu project ref
+// URL da edge function
 const EDGE_URL =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/noticias-produtos`;
 
-// Força HTTPS no thumbnail para evitar mixed-content
-const toHttps = (url: string) => url.replace(/^http:\/\//, 'https://');
+// Força HTTPS na imagem para evitar mixed-content
+const toHttps = (url: string) => (url ? url.replace(/^http:\/\//, 'https://') : '');
 
 // ============================================================================
 // COMPONENTE
@@ -107,25 +108,26 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
 
       if (!res.ok) throw new Error(`Erro ao buscar produtos (${res.status})`);
 
-      const mlData = await res.json();
+      const responseData = await res.json();
 
-      if (!mlData.results || mlData.results.length === 0) {
+      if (!responseData.results || responseData.results.length === 0) {
         throw new Error('Nenhum produto encontrado');
       }
 
-      const formatted: Produto[] = mlData.results.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        price: item.price,
-        thumbnail: toHttps(item.thumbnail),
-        permalink: item.permalink,
+      const formatted: Produto[] = responseData.results.map((item: any, index: number) => ({
+        id: item.id || String(index),
+        titulo: item.titulo,
+        preco: item.preco,
+        imagem: toHttps(item.imagem || ''),
+        link: item.link,
+        loja: item.loja,
       }));
 
       setProdutos(formatted);
       setStage('result');
       playText?.(`Encontrei ${formatted.length} produtos.`).catch(() => {});
     } catch (err: any) {
-      console.error('❌ Erro ao buscar produtos:', err);
+      console.error('Erro ao buscar produtos:', err);
       setError(err.message || 'Erro desconhecido');
       setStage('error');
       playText?.(ERROR_TEXT).catch(() => {});
@@ -148,9 +150,9 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
 
       await supabase.from('companies').update({ credits: newCredits }).eq('id', companyId);
 
-      console.log('✅ Crédito cobrado: Procurar Produto');
+      console.log('Crédito cobrado: Procurar Produto');
     } catch (err) {
-      console.error('❌ Erro ao cobrar crédito:', err);
+      console.error('Erro ao cobrar crédito:', err);
     }
   };
 
@@ -209,7 +211,7 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
             </div>
             <div>
               <h2 className="text-xl font-bold" style={{ color: colors.text }}>Procurar Produto</h2>
-              <p className="text-sm" style={{ color: colors.textMuted }}>Busque produtos no Mercado Livre</p>
+              <p className="text-sm" style={{ color: colors.textMuted }}>Busque produtos disponíveis na internet</p>
             </div>
           </div>
           <button
@@ -219,7 +221,7 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
             onMouseEnter={(e) => (e.currentTarget.style.background = colors.buttonSecondaryHover)}
             onMouseLeave={(e) => (e.currentTarget.style.background = colors.buttonSecondary)}
           >
-            ✕
+            x
           </button>
         </div>
 
@@ -233,7 +235,7 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
                 style={{ background: colors.accent + '15', borderColor: colors.accent + '50' }}
               >
                 <p className="text-sm text-center font-medium" style={{ color: colors.text }}>
-                  🛒 Digite o nome do produto que deseja encontrar
+                  Digite o nome do produto que deseja encontrar
                 </p>
               </div>
 
@@ -264,7 +266,7 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
                 onMouseEnter={(e) => { if (query.trim()) e.currentTarget.style.background = colors.accentHover; }}
                 onMouseLeave={(e) => (e.currentTarget.style.background = colors.accent)}
               >
-                🔍 Buscar Produtos
+                Buscar Produtos
               </button>
             </div>
           )}
@@ -276,7 +278,7 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
                 className="w-12 h-12 rounded-full"
                 style={{ border: `3px solid ${colors.border}`, borderTop: `3px solid ${colors.accent}`, animation: 'spin 1s linear infinite' }}
               />
-              <p className="text-sm" style={{ color: colors.textMuted }}>Buscando produtos no Mercado Livre...</p>
+              <p className="text-sm" style={{ color: colors.textMuted }}>Buscando produtos...</p>
             </div>
           )}
 
@@ -326,28 +328,35 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
                     onMouseEnter={(e) => { e.currentTarget.style.background = colors.cardHover; e.currentTarget.style.borderColor = colors.accent; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = colors.cardBg; e.currentTarget.style.borderColor = colors.border; }}
                   >
-                    <img
-                      src={produto.thumbnail}
-                      alt={produto.title}
-                      className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
+                    {produto.imagem && (
+                      <img
+                        src={produto.imagem}
+                        alt={produto.titulo}
+                        className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold mb-1 leading-snug line-clamp-2" style={{ color: colors.text }}>
-                        {produto.title}
+                        {produto.titulo}
                       </h3>
                       <p className="text-base font-bold" style={{ color: colors.accent }}>
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.price)}
+                        {produto.preco}
                       </p>
+                      {produto.loja && (
+                        <p className="text-xs mt-0.5" style={{ color: colors.textMuted }}>
+                          {produto.loja}
+                        </p>
+                      )}
                     </div>
                     <button
-                      onClick={() => window.open(produto.permalink, '_blank', 'noopener,noreferrer')}
+                      onClick={() => window.open(produto.link, '_blank', 'noopener,noreferrer')}
                       className="px-3 py-2 rounded-lg text-xs font-semibold text-white flex-shrink-0 transition"
                       style={{ background: colors.accent }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = colors.accentHover)}
                       onMouseLeave={(e) => (e.currentTarget.style.background = colors.accent)}
                     >
-                      Abrir →
+                      Abrir
                     </button>
                   </div>
                 ))}
@@ -360,10 +369,10 @@ export default function ProcurarProdutoDisplay({ data, onClose, theme = 'dark', 
         {(stage === 'input' || stage === 'result') && (
           <div className="px-6 py-3" style={{ borderTop: `1px solid ${colors.border}`, background: colors.bgSecondary }}>
             <p className="text-xs text-center" style={{ color: colors.textMuted }}>
-              💬 Diga:{' '}
+              Diga:{' '}
               {stage === 'input'
                 ? <strong>"Fechar"</strong>
-                : <><strong>"Nova busca"</strong> • <strong>"Fechar"</strong></>
+                : <><strong>"Nova busca"</strong> {' • '} <strong>"Fechar"</strong></>
               }
             </p>
           </div>

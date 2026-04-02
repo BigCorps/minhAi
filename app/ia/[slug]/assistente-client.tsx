@@ -855,7 +855,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 <SlugHeaderWrapper
                   company={company}
                   overlayMode={true}
-                  forceTheme={theme}
                   onClose={handleTryExitKiosk}
                   showControls={showCloseButton}
                 />
@@ -978,7 +977,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           <SlugHeaderWrapper
             company={company}
             overlayMode={false}
-            forceTheme={theme}
           />
 
           {/* Toast */}

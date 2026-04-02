@@ -135,10 +135,11 @@ export default function TextAssistant({
       const result = await onSendMessage(messageText);
 
       if (result) {
+        const isFunctionOnly = !!result.functionKey && !result.text?.trim();
         const assistantMessage: TextMessage = {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          content: result.text,
+          content: isFunctionOnly ? 'Função executada.' : result.text,
           functionKey: result.functionKey,
           timestamp: new Date(),
         };
@@ -203,7 +204,7 @@ export default function TextAssistant({
       {/* ── Área de mensagens ────────────────────────────────────────────────
           pt-[120px] mobile (header 2 linhas) / md:pt-[72px] desktop (header 1 linha)
           pb cobre o input + carrossel + footer ──────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 pt-[120px] pb-[220px] md:pt-[80px] flex flex-col">
+      <div className="flex-1 overflow-y-auto px-4 pt-[160px] pb-[220px] md:pt-[96px] flex flex-col">
 
         {/* Boas-vindas quando vazio */}
         {messages.length === 0 && !busy && (

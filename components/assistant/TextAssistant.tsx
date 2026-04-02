@@ -140,44 +140,59 @@ export default function TextAssistant({
     setIsProcessing(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const formData = new FormData();
+      formData.append('audio', new Blob([messageText], { type: 'text/plain' }));
+      formData.append('companyId', companyId);
+      formData.append('directQuestion', messageText);
+
+      const response = await fetch('/api/voice/process', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageText,
-          companyId,
-          directQuestion: true,
-        }),
+        body: formData,
       });
 
-      const data = await response.json();
-
-      if (data.functionKey) {
+      // Verifica se uma função foi ativada via header
+      const hintFunctionKey = response.headers.get('X-Function-Key');
+      if (hintFunctionKey) {
+        window.dispatchEvent(
+          new CustomEvent('voiceAssistantFunctionClick', {
+            detail: { functionKey: hintFunctionKey },
+          })
+        );
+        onFunctionExecuted?.(hintFunctionKey, '');
         const functionMessage: TextMessage = {
           id: `function-${Date.now()}`,
           role: 'assistant',
-          content: data.response || 'Função executada',
-          functionKey: data.functionKey,
-          functionResult: data.response,
+          content: `Função executada: ${hintFunctionKey.replace(/_/g, ' ')}`,
+          functionKey: hintFunctionKey,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, functionMessage]);
+        return;
+      }
 
-        window.dispatchEvent(
-          new CustomEvent('voiceAssistantFunctionClick', {
-            detail: { functionKey: data.functionKey },
-          })
-        );
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
-        onFunctionExecuted?.(data.functionKey, data.response || '');
-      } else {
-        const assistantMessage: TextMessage = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: data.response || 'Desculpe, não entendi.',
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+      // Extrai texto da resposta do header X-Response-Text
+      const responseText = response.headers.get('X-Response-Text');
+      const displayText = responseText
+        ? decodeURIComponent(responseText)
+        : 'Resposta recebida.';
+
+      const assistantMessage: TextMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: displayText,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Toca o áudio da resposta se playText estiver disponível
+      if (playText) {
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.playbackRate = 1.05;
+        audio.play().catch(() => {});
       }
     } catch (error) {
       console.error('Erro ao processar mensagem:', error);

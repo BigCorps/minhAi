@@ -184,13 +184,6 @@ const handleCalcularRota = async () => {
 
     setRouteData(routeInfo);
     setStage('result'); // Certifique-se de avançar o stage aqui
-    
-  } catch (err: any) {
-    console.error('Erro ao calcular rota:', err);
-    setError(err.message || 'Erro ao calcular rota.');
-    setStage('error');
-  }
-};
 
     // Gerar QR Code
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(

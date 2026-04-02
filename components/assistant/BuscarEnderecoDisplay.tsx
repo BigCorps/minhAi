@@ -131,28 +131,24 @@ const handleBuscar = async () => {
   setError('');
 
   try {
-    // ✅ USAR GEOCODING API via proxy
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-      termo
-    )}&key=${apiKey}`;
-
+    // ✅ Agora enviamos APENAS o termo para a Edge Function. 
+    // A chave da API e a URL ficam protegidas no backend.
     const { data: geocodeResponse, error: edgeError } = await supabase.functions.invoke(
       'google-maps-proxy',
       {
-        body: { url },
+        body: { termo }, // <-- Mudança principal aqui
       }
     );
 
     console.log('Geocoding Response:', geocodeResponse); // ✅ DEBUG
 
     if (edgeError) {
-      throw new Error(edgeError.message || 'Erro ao buscar endereço');
+      throw new Error(edgeError.message || 'Erro ao comunicar com o servidor');
     }
 
-    // ✅ VALIDAÇÃO CORRIGIDA
+    // ✅ VALIDAÇÃO CORRIGIDA (Melhorada para exibir o erro da própria API do Google, se houver)
     if (!geocodeResponse || geocodeResponse.status !== 'OK') {
-      throw new Error('Endereço não encontrado');
+      throw new Error(geocodeResponse?.error_message || 'Endereço não encontrado');
     }
 
     if (!geocodeResponse.results || geocodeResponse.results.length === 0) {

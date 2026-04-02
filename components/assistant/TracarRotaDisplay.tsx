@@ -30,7 +30,6 @@ type Stage = 'input' | 'processing' | 'result' | 'error';
 interface RouteData {
   distance: string;
   duration: string;
-  polyline: string;
   startAddress: string;
   endAddress: string;
 }
@@ -44,7 +43,6 @@ interface TracarRotaDisplayProps {
   theme?: 'dark' | 'light';
 }
 
-// ✅ IMPORTAR A FUNÇÃO playText DO SISTEMA
 declare global {
   interface Window {
     playText?: (text: string) => void;
@@ -66,14 +64,12 @@ export default function TracarRotaDisplay({
   const [error, setError] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
-  // ✅ USAR playText DO SISTEMA
   const playText = (text: string) => {
     if (window.playText) {
       window.playText(text);
     }
   };
 
-  // Detectar localização atual
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -88,7 +84,6 @@ export default function TracarRotaDisplay({
     }
   }, []);
 
-  // Fala inicial
   useEffect(() => {
     window.speechSynthesis?.cancel();
     const texto = data.destinoInicial
@@ -97,11 +92,10 @@ export default function TracarRotaDisplay({
     
     playText(texto);
 
-    // Se já tem destino, calcula automaticamente
     if (data.destinoInicial && origem) {
       handleCalcularRota();
     }
-  }, []);
+  }, [origem]);
 
   const handleVoiceCommand = useCallback(
     (command: string) => {
@@ -152,34 +146,39 @@ export default function TracarRotaDisplay({
     setError('');
 
     try {
-      // ✅ USAR EDGE FUNCTION
-      const { data: routeResponse, error: edgeError } = await supabase.functions.invoke(
-        'tracar-rota',
+      // ✅ USAR DISTANCE MATRIX API (funciona via CORS no frontend)
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
+        origem
+      )}&destinations=${encodeURIComponent(destino)}&key=${apiKey}`;
+
+      // ✅ Chamar via Edge Function proxy genérica
+      const { data: distanceResponse, error: edgeError } = await supabase.functions.invoke(
+        'google-maps-proxy',
         {
-          body: {
-            origem,
-            destino,
-          },
+          body: { url },
         }
       );
 
-      if (edgeError || !routeResponse) {
-        throw new Error(edgeError?.message || 'Erro ao calcular rota');
+      if (edgeError || !distanceResponse) {
+        throw new Error('Erro ao calcular rota');
       }
 
-      if (routeResponse.error) {
-        throw new Error(routeResponse.error);
+      if (distanceResponse.status !== 'OK' || !distanceResponse.rows[0]?.elements[0]) {
+        throw new Error('Rota não encontrada');
       }
 
-      const route = routeResponse.routes[0];
-      const leg = route.legs[0];
+      const element = distanceResponse.rows[0].elements[0];
+
+      if (element.status !== 'OK') {
+        throw new Error('Rota não encontrada');
+      }
 
       const routeInfo: RouteData = {
-        distance: leg.distance.text,
-        duration: leg.duration.text,
-        polyline: route.overview_polyline.points,
-        startAddress: leg.start_address,
-        endAddress: leg.end_address,
+        distance: element.distance.text,
+        duration: element.duration.text,
+        startAddress: distanceResponse.origin_addresses[0],
+        endAddress: distanceResponse.destination_addresses[0],
       };
 
       setRouteData(routeInfo);
@@ -207,7 +206,6 @@ export default function TracarRotaDisplay({
         }),
       });
 
-      // ✅ USAR playText DO SISTEMA
       playText(`Rota calculada. Distância: ${routeInfo.distance}. Tempo estimado: ${routeInfo.duration}.`);
     } catch (err: any) {
       setError(err.message || 'Erro ao calcular rota.');
@@ -257,7 +255,6 @@ export default function TracarRotaDisplay({
           overflow: 'hidden',
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: 'flex',
@@ -298,9 +295,7 @@ export default function TracarRotaDisplay({
           </button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: '1.5rem' }}>
-          {/* INPUT */}
           {stage === 'input' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
@@ -363,7 +358,6 @@ export default function TracarRotaDisplay({
             </div>
           )}
 
-          {/* PROCESSING */}
           {stage === 'processing' && (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <div
@@ -381,10 +375,8 @@ export default function TracarRotaDisplay({
             </div>
           )}
 
-          {/* RESULT */}
           {stage === 'result' && routeData && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Mapa com rota */}
               <div
                 style={{
                   borderRadius: '0.75rem',
@@ -403,7 +395,6 @@ export default function TracarRotaDisplay({
                 />
               </div>
 
-              {/* Info + QR Code */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div
@@ -451,7 +442,6 @@ export default function TracarRotaDisplay({
                   </button>
                 </div>
 
-                {/* QR Code */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ padding: '0.75rem', borderRadius: '0.75rem', backgroundColor: '#fff' }}>
                     {qrCodeUrl ? (
@@ -468,7 +458,6 @@ export default function TracarRotaDisplay({
             </div>
           )}
 
-          {/* ERROR */}
           {stage === 'error' && (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <p style={{ color: '#ef4444', marginBottom: '1rem' }}>{error}</p>

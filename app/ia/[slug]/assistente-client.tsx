@@ -714,7 +714,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         {/* Seta esquerda */}
         <button
           onClick={() => navigateMode('left')}
-          className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full transition-all ${
+          className={`fixed left-4 top-1/2 -translate-y-1/2 z-[60] p-3 rounded-full transition-all ${
             theme === 'dark'
               ? 'bg-white/10 hover:bg-white/20 text-white'
               : 'bg-black/10 hover:bg-black/20 text-gray-900'
@@ -729,7 +729,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         {/* Seta direita */}
         <button
           onClick={() => navigateMode('right')}
-          className={`fixed right-4 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full transition-all ${
+          className={`fixed right-4 top-1/2 -translate-y-1/2 z-[60] p-3 rounded-full transition-all ${
             theme === 'dark'
               ? 'bg-white/10 hover:bg-white/20 text-white'
               : 'bg-black/10 hover:bg-black/20 text-gray-900'
@@ -907,7 +907,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
           {/* CategoryCarousel no modo FULL */}
           {assistantStarted && (
-            <div data-role="carousel" className="fixed bottom-0 left-0 right-0 w-full z-30">
+            <div data-role="carousel" className="fixed bottom-8 left-0 right-0 w-full z-[55]">
               <CategoryCarousel
                 companyId={company.id}
                 onFunctionClick={(functionKey) => {
@@ -923,7 +923,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           )}
 
           {/* SlugFooter - igual aos outros modos */}
-          <SlugFooter theme={theme} />
+          <div className="z-[60] relative">
+            <SlugFooter theme={theme} />
+          </div>
 
           <style jsx>{`
             @keyframes slide-down {

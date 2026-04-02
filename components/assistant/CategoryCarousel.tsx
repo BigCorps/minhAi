@@ -224,19 +224,20 @@ export default function CategoryCarousel({
       onMouseLeave={() => setHoveredFunction(null)}
       onClick={() => handleFunctionClick(fn.function_key)}
     >
-      {/* Removido o ícone */}
+      {/* Nome da função (sem ícone) */}
       <span className="font-medium text-sm">{fn.function_name}</span>
-                    </div>
-                    {hoveredFunction === fn.function_key && fn.short_description && (
-                      <div
-                        className="mt-2 text-xs opacity-70"
-                        style={{ color: isDark ? 'rgb(203, 213, 225)' : 'rgb(71, 85, 105)' }}
-                      >
-                        {fn.short_description}
-                      </div>
-                    )}
-                  </div>
-                ))}
+      
+      {/* Descrição ao hover */}
+      {hoveredFunction === fn.function_key && fn.short_description && (
+        <div
+          className="mt-2 text-xs opacity-70"
+          style={{ color: isDark ? 'rgb(203, 213, 225)' : 'rgb(71, 85, 105)' }}
+        >
+          {fn.short_description}
+        </div>
+      )}
+    </div>
+  ))}
             </div>
           </div>
         </div>

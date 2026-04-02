@@ -1009,7 +1009,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
           {/* G. CONTEÚDO VARIÁVEL POR MODO */}
           {mode === 'padrao' && (
-            <div className="flex-1 flex flex-col items-center justify-center py-8">
+            <div className="flex-1 flex flex-col items-center justify-center py-8 pb-32">
               <div className="relative w-full max-w-5xl px-4">
                 <VoiceAssistantWithWakeWord 
                   companyId={company.id} 

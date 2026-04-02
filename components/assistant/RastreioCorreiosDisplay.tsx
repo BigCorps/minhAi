@@ -136,15 +136,23 @@ export default function RastreioCorreiosDisplay({
         throw new Error('Nenhuma informação encontrada para este código.');
       }
 
-      const objeto = rastreioResponse.objetos[0];
-      const eventos = objeto.eventos || [];
+const eventos = rastreioResponse.tracking || [];
 
-      if (eventos.length === 0) {
-        throw new Error('Nenhum evento de rastreamento disponível.');
-      }
+if (eventos.length === 0) {
+  throw new Error('Nenhum evento de rastreamento disponível.');
+}
 
-      // Último evento (mais recente)
-      const ultimo = eventos[0];
+// Último evento (mais recente)
+const ultimo = eventos[0];
+
+const rastreioInfo: RastreioData = {
+  codigo: codigoLimpo,
+  status: ultimo.status || 'Status não disponível',
+  data: ultimo.data || '-',
+  hora: ultimo.hora || '-',
+  local: ultimo.local || 'Local não informado',
+  mensagem: ultimo.observacao || undefined,
+};
 
       const rastreioInfo: RastreioData = {
         codigo: codigoLimpo,

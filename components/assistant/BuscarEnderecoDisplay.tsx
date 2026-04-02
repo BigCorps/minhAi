@@ -97,8 +97,6 @@ export default function BuscarEnderecoDisplay({
         handleOpenMaps();
       } else if (cmd.includes('copiar')) {
         handleCopy();
-      } else if (cmd.includes('traçar') || cmd.includes('rota')) {
-        handleTracarRota();
       } else if (stage === 'input') {
         setTermo(command);
       }
@@ -169,23 +167,12 @@ const handleBuscar = async () => {
 
     // QR Code
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23800080${
+    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}${
       data.companyId ? `&company_id=${data.companyId}` : ''
     }`;
     setQrCodeUrl(qrUrl);
 
     setStage('result');
-
-    // Cobrar crédito
-    await fetch('/api/companies/deduct-credit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        companyId: data.companyId,
-        credits: 1,
-        functionKey: 'buscar_endereco',
-      }),
-    });
 
     playText(`Endereço encontrado: ${endData.formatted}`);
   } catch (err: any) {
@@ -210,20 +197,6 @@ const handleBuscar = async () => {
     } catch (err) {
       console.error('Erro ao copiar:', err);
     }
-  };
-
-  const handleTracarRota = () => {
-    if (!endereco) return;
-    window.speechSynthesis?.cancel();
-    
-    const event = new CustomEvent('openModal', {
-      detail: {
-        type: 'TracarRotaDisplay',
-        data: { companyId: data.companyId, destinoInicial: endereco.formatted },
-      },
-    });
-    window.dispatchEvent(event);
-    onClose();
   };
 
   const getMapEmbedUrl = () => {
@@ -433,22 +406,6 @@ const handleBuscar = async () => {
                       Abrir no Maps
                     </button>
                   </div>
-
-                  <button
-                    onClick={handleTracarRota}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      borderRadius: '0.75rem',
-                      backgroundColor: palette.buttonBg,
-                      color: '#fff',
-                      fontWeight: '600',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Traçar Rota até Aqui
-                  </button>
                 </div>
 
                 {/* QR Code */}

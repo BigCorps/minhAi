@@ -195,17 +195,6 @@ export default function TracarRotaDisplay({
 
       setStage('result');
 
-      // Cobrar crédito
-      await fetch('/api/companies/deduct-credit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId: data.companyId,
-          credits: 1,
-          functionKey: 'tracar_rota',
-        }),
-      });
-
       playText(`Rota calculada. Distância: ${routeInfo.distance}. Tempo estimado: ${routeInfo.duration}.`);
     } catch (err: any) {
       setError(err.message || 'Erro ao calcular rota.');

@@ -347,34 +347,13 @@ export default function TextAssistant({
             onKeyDown={handleKeyDown}
             placeholder={isRecording ? 'Ouvindo...' : 'Clique no microfone ou digite sua mensagem...'}
             disabled={isProcessing || isRecording}
-            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-24"
+            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
             style={styles.textarea}
             rows={1}
           />
 
-          {/* Botão de microfone */}
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={isProcessing}
-            className={`absolute right-14 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:scale-110 disabled:opacity-50 ${
-              isRecording ? 'text-red-500' : ''
-            }`}
-            style={
-              isRecording
-                ? {}
-                : { color: isDark ? 'rgb(148, 163, 184)' : 'rgb(100, 116, 139)' }
-            }
-            title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
-          >
-            {isRecording ? (
-              <MicOff className="h-4 w-4 animate-pulse" />
-            ) : (
-              <Mic className="h-4 w-4" />
-            )}
-          </button>
-
-          {/* Botão de enviar — visível apenas quando há texto */}
-          {inputText.trim() && (
+          {/* Botão único: microfone sem texto, enviar com texto */}
+          {inputText.trim() ? (
             <button
               onClick={() => handleSendMessage()}
               disabled={isProcessing}
@@ -382,6 +361,26 @@ export default function TextAssistant({
               title="Enviar mensagem"
             >
               <Send className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isProcessing}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:scale-110 disabled:opacity-50 ${
+                isRecording ? 'text-red-500' : ''
+              }`}
+              style={
+                isRecording
+                  ? {}
+                  : { color: isDark ? 'rgb(148, 163, 184)' : 'rgb(100, 116, 139)' }
+              }
+              title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+            >
+              {isRecording ? (
+                <MicOff className="h-4 w-4 animate-pulse" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
             </button>
           )}
         </div>

@@ -714,14 +714,14 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         {/* Seta esquerda */}
         <button
           onClick={() => navigateMode('left')}
-          className={`fixed left-4 top-1/2 -translate-y-1/2 z-[60] p-3 rounded-full transition-all ${
+          className={`fixed left-2 md:left-4 top-1/2 -translate-y-1/2 z-[60] p-1.5 md:p-3 rounded-full transition-all ${
             theme === 'dark'
-              ? 'bg-white/10 hover:bg-white/20 text-white'
-              : 'bg-black/10 hover:bg-black/20 text-gray-900'
+              ? 'bg-white/5 hover:bg-white/20 text-white/40 hover:text-white md:bg-white/10'
+              : 'bg-black/5 hover:bg-black/20 text-gray-900/40 hover:text-gray-900 md:bg-black/10'
           }`}
           title="Modo anterior (←)"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
@@ -729,14 +729,14 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         {/* Seta direita */}
         <button
           onClick={() => navigateMode('right')}
-          className={`fixed right-4 top-1/2 -translate-y-1/2 z-[60] p-3 rounded-full transition-all ${
+          className={`fixed right-2 md:right-4 top-1/2 -translate-y-1/2 z-[60] p-1.5 md:p-3 rounded-full transition-all ${
             theme === 'dark'
-              ? 'bg-white/10 hover:bg-white/20 text-white'
-              : 'bg-black/10 hover:bg-black/20 text-gray-900'
+              ? 'bg-white/5 hover:bg-white/20 text-white/40 hover:text-white md:bg-white/10'
+              : 'bg-black/5 hover:bg-black/20 text-gray-900/40 hover:text-gray-900 md:bg-black/10'
           }`}
           title="Próximo modo (→)"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>

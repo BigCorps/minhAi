@@ -1451,6 +1451,13 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
       currentAudioRef.current = null;
     }
 
+    // playText silencioso: captura o texto sem reproduzir áudio
+    let capturedSilentText = '';
+    const silentPlayText = (text: string): Promise<void> => {
+      if (text && text.trim()) capturedSilentText = text.trim();
+      return Promise.resolve();
+    };
+
     setIsProcessing(true);
 
     try {
@@ -1460,7 +1467,7 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
         setIsProcessing,
         setQrCodeData,
         setPixConfirmationData,
-        playText,
+        playText: silentPlayText,
         sessionId,
         commandProcessor,
         pixStateRef,
@@ -1469,7 +1476,10 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
         groqContextRef,
       });
 
-      if (isCommand) return { text: '', functionKey: undefined };
+      if (isCommand) {
+        // Se detectVoiceCommand ativou uma função, retorna o texto capturado ou indicador
+        return { text: capturedSilentText || '', functionKey: undefined };
+      }
 
       const formData = new FormData();
       formData.append('audio', new Blob([message], { type: 'text/plain' }));
@@ -1489,8 +1499,10 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
       const hintFunctionKey = response.headers.get('X-Function-Key');
       if (hintFunctionKey) {
         setIsProcessing(false);
-        handleFunctionClick(hintFunctionKey);
-        return { text: responseText, functionKey: hintFunctionKey };
+        // Abre o modal da função sem reproduzir áudio — usa silentPlayText internamente
+        // handleFunctionClick usa playText global; sobrescrevemos temporariamente via flag
+        handleFunctionClickSilent(hintFunctionKey);
+        return { text: responseText || 'Função executada.', functionKey: hintFunctionKey };
       }
 
       if (!response.ok) throw new Error(`Erro: ${response.status}`);
@@ -1501,6 +1513,64 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
       return { text: 'Desculpe, ocorreu um erro ao processar sua mensagem.', functionKey: undefined };
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // ── handleFunctionClickSilent: abre modal sem reproduzir áudio ───────────
+  const handleFunctionClickSilent = (functionKey: string) => {
+    // Para funções que apenas abrem modal, define activeModal diretamente
+    // sem chamar playText. Reutiliza a lógica do switch de handleFunctionClick
+    // para os casos que só fazem setActiveModal.
+    const modalOnlyFunctions: Record<string, ActiveModal> = {
+      tocar_video:      { type: 'TocarVideoDisplay', data: { companyId, query: '' } },
+      meu_sistema:      { type: 'MeuSistemaDisplay', data: { companyId } },
+      consultar_cambio: { type: 'CotacaoMoedasDisplay', data: { companyId } },
+      consultar_cep:    { type: 'ConsultarCEPDisplay', data: { companyId } },
+      consultar_cnpj:   { type: 'ConsultarCnpjModal', data: { companyId } },
+      consultar_cpf:    { type: 'ConsultarCpfModal', data: { companyId } },
+      restricoes_cpf:   { type: 'RestricoesCPFDisplay', data: { companyId } },
+      restricoes_cnpj:  { type: 'RestricoesCNPJDisplay', data: { companyId } },
+      consultar_feriados: { type: 'FeriadosNacionaisDisplay', data: { companyId } },
+      consultar_ddd:    { type: 'ConsultarDDDDisplay', data: { companyId } },
+      consultar_placa:  { type: 'ConsultarPlacaModal', data: { companyId } },
+      consultar_leilao: { type: 'ConsultarLeilaoModal', data: { companyId } },
+      enviar_arquivo:   { type: 'EnviarArquivoDisplay', data: { companyId } },
+      gerar_qrcode:     { type: 'GerarQRCodeDisplay', data: { companyId } },
+      gerar_codigo_barras: { type: 'GerarCodigoBarrasDisplay', data: { companyId } },
+      tocar_musica:     { type: 'TocarMusicaDisplay', data: { companyId, query: '' } },
+      playlist:         { type: 'PlaylistDisplay', data: { companyId } },
+      porta_retrato:    { type: 'PortaRetratoDisplay', data: { companyId } },
+      painel_ofertas:   { type: 'PainelOfertasDisplay', data: { companyId } },
+      aparelhos_smart:  { type: 'AparelhosSmartDisplay', data: { companyId, transcript: '' } },
+      confirmar_presenca: { type: 'ConfirmPresenceModal', data: { companyId } },
+      reagendar_compromisso: { type: 'RescheduleModal', data: { companyId } },
+      cancelar_agendamento: { type: 'CancelAppointmentModal', data: { companyId } },
+      meu_cupom:        { type: 'MeuCupomDisplay', data: { companyId, prefillName: '' } },
+      traduzir_texto:   { type: 'TranslateTextModal', data: { companyId } },
+      transcrever_audio: { type: 'TranscribeAudioModal', data: { companyId } },
+      ver_noticias:     { type: 'VerNoticiasDisplay', data: { companyId } },
+      procurar_produto: { type: 'ProcurarProdutoDisplay', data: { companyId } },
+      segunda_via_boleto: { type: 'SegundaViaBoletoDisplay', data: { companyId } },
+      identificar_fraude: { type: 'IdentificarFraudeDisplay', data: { companyId } },
+      clima_tempo:      { type: 'ClimaTempoDisplay', data: { companyId, city: null } },
+      cadastrar_produto: { type: 'CadastrarProdutoDisplay', data: { companyId } },
+      enviar_email:     { type: 'SendEmailModal', data: { companyId } },
+      agendar_compromisso: { type: 'CreateEventModal', data: { companyId, prefilledData: {} } },
+      ver_agenda:       { type: 'ViewAgendaModal', data: { companyId, initialView: 'month' } },
+      relogio_mundial:  { type: 'RelogioMundialDisplay', data: { companyId } },
+      rastreio_correios: { type: 'RastreioCorreiosDisplay', data: { companyId } },
+      tracar_rota:      { type: 'TracarRotaDisplay', data: { companyId, destinoInicial: '' } },
+      buscar_endereco:  { type: 'BuscarEnderecoDisplay', data: { companyId, termoInicial: '' } },
+      fichas_producao_conversacional: { type: 'FichaProducaoConversacionalDisplay', data: { companyId, fichaType: 'produto' } },
+      minha_conta:      { type: 'LoginClienteDisplay', data: { profile, companyId, slug: slug ?? '' } },
+    };
+
+    const modal = modalOnlyFunctions[functionKey];
+    if (modal) {
+      setActiveModal(modal);
+    } else {
+      // Para funções não mapeadas aqui, delega para o handleFunctionClick normal
+      handleFunctionClick(functionKey);
     }
   };
 

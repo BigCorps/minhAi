@@ -974,10 +974,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         }`}>
 
           {/* SlugHeader */}
-          <SlugHeaderWrapper
-            company={company}
-            overlayMode={false}
-          />
+          <div className={mode === 'texto' ? 'fixed top-0 left-0 right-0 z-50' : ''}>
+  <SlugHeaderWrapper company={company} overlayMode={false} />
+</div>
 
           {/* Toast */}
           {showToast && (

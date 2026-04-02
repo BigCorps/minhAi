@@ -121,73 +121,83 @@ export default function BuscarEnderecoDisplay({
     setQrCodeUrl('');
   };
 
-  const handleBuscar = async () => {
-    if (!termo.trim()) {
-      setError('Por favor, informe um CEP ou endereço.');
-      return;
+const handleBuscar = async () => {
+  if (!termo.trim()) {
+    setError('Por favor, informe um CEP ou endereço.');
+    return;
+  }
+
+  setStage('processing');
+  setError('');
+
+  try {
+    // ✅ USAR GEOCODING API via proxy
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      termo
+    )}&key=${apiKey}`;
+
+    const { data: geocodeResponse, error: edgeError } = await supabase.functions.invoke(
+      'google-maps-proxy',
+      {
+        body: { url },
+      }
+    );
+
+    console.log('Geocoding Response:', geocodeResponse); // ✅ DEBUG
+
+    if (edgeError) {
+      throw new Error(edgeError.message || 'Erro ao buscar endereço');
     }
 
-    setStage('processing');
-    setError('');
-
-    try {
-      // ✅ USAR EDGE FUNCTION
-      const { data: geocodeResponse, error: edgeError } = await supabase.functions.invoke(
-        'buscar-endereco',
-        {
-          body: {
-            termo,
-          },
-        }
-      );
-
-      if (edgeError || !geocodeResponse) {
-        throw new Error(edgeError?.message || 'Erro ao buscar endereço');
-      }
-
-      if (geocodeResponse.error) {
-        throw new Error(geocodeResponse.error);
-      }
-
-      const result = geocodeResponse.results[0];
-      const { lat, lng } = result.geometry.location;
-
-      const endData: EnderecoData = {
-        formatted: result.formatted_address,
-        latitude: lat,
-        longitude: lng,
-        placeId: result.place_id,
-      };
-
-      setEndereco(endData);
-
-      // QR Code
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23800080${
-        data.companyId ? `&company_id=${data.companyId}` : ''
-      }`;
-      setQrCodeUrl(qrUrl);
-
-      setStage('result');
-
-      // Cobrar crédito
-      await fetch('/api/companies/deduct-credit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId: data.companyId,
-          credits: 1,
-          functionKey: 'buscar_endereco',
-        }),
-      });
-
-      // ✅ USAR playText DO SISTEMA
-      playText(`Endereço encontrado: ${endData.formatted}`);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao buscar endereço.');
-      setStage('error');
+    // ✅ VALIDAÇÃO CORRIGIDA
+    if (!geocodeResponse || geocodeResponse.status !== 'OK') {
+      throw new Error('Endereço não encontrado');
     }
-  };
+
+    if (!geocodeResponse.results || geocodeResponse.results.length === 0) {
+      throw new Error('Nenhum resultado encontrado para este endereço');
+    }
+
+    const result = geocodeResponse.results[0];
+    const { lat, lng } = result.geometry.location;
+
+    const endData: EnderecoData = {
+      formatted: result.formatted_address,
+      latitude: lat,
+      longitude: lng,
+      placeId: result.place_id,
+    };
+
+    setEndereco(endData);
+
+    // QR Code
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23800080${
+      data.companyId ? `&company_id=${data.companyId}` : ''
+    }`;
+    setQrCodeUrl(qrUrl);
+
+    setStage('result');
+
+    // Cobrar crédito
+    await fetch('/api/companies/deduct-credit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        companyId: data.companyId,
+        credits: 1,
+        functionKey: 'buscar_endereco',
+      }),
+    });
+
+    playText(`Endereço encontrado: ${endData.formatted}`);
+  } catch (err: any) {
+    console.error('Erro ao buscar endereço:', err); // ✅ DEBUG
+    setError(err.message || 'Erro ao buscar endereço.');
+    setStage('error');
+  }
+};
 
   const handleOpenMaps = () => {
     if (!endereco) return;

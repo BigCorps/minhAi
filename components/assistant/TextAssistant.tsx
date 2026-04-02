@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { Mic, MicOff, Send } from 'lucide-react';
+import { getFunctionByKey } from '@/lib/functions-registry';
 
 interface TextAssistantProps {
   companyId: string;
@@ -41,17 +42,21 @@ export default function TextAssistant({
   const [isProcessing, setIsProcessing] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
 
+  // ── FIX 1: scroll para o fim após cada mensagem ────────────────
+  // Não usamos flex-col-reverse — as mensagens ficam em ordem normal
+  // e scrollamos programaticamente para o fim
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   const isDark = theme === 'dark';
 
-  // Auto-scroll para última mensagem
+  // Scroll para o fim sempre que novas mensagens chegam
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isProcessing]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -100,34 +105,76 @@ export default function TextAssistant({
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
-
       const formData = new FormData();
-      formData.append('audio', audioBlob);
+      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('companyId', companyId);
 
-      const response = await fetch('/api/transcribe', {
+      const response = await fetch('/api/voice/transcribe', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await response.json();
-
-      if (data.transcript) {
-        setInputText(data.transcript);
-        setTimeout(() => {
-          handleSendMessage(data.transcript);
-        }, 500);
+      if (response.ok) {
+        const { text } = await response.json();
+        if (text?.trim()) {
+          // Preenche o campo e envia automaticamente
+          setInputText(text.trim());
+          setTimeout(() => {
+            handleSendMessage(text.trim());
+          }, 300);
+        }
       }
     } catch (error) {
-      console.error('Erro na transcrição:', error);
+      console.error('Erro ao transcrever:', error);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Processar mensagem enviada
-  const handleSendMessage = async (text?: string) => {
-    const messageText = text || inputText.trim();
-    if (!messageText) return;
+  // ── FIX 2: executar funções diretamente pelo registry ──────────
+  // O voiceAssistantFunctionClick não funciona no modo texto porque
+  // o VoiceAssistantWithWakeWord não está montado.
+  // Aqui chamamos o handler do registry diretamente.
+  const executeFunction = async (functionKey: string) => {
+    const fn = getFunctionByKey(functionKey);
+    if (!fn?.handler) {
+      // Fallback: dispara o evento global mesmo assim
+      // (útil para funções que abrem modais via ActionModals)
+      window.dispatchEvent(
+        new CustomEvent('voiceAssistantFunctionClick', {
+          detail: { functionKey },
+        })
+      );
+      return `Função ${functionKey.replace(/_/g, ' ')} ativada.`;
+    }
+
+    try {
+      await fn.handler({
+        companyId,
+        playText: playText ?? (async () => {}),
+        // Para funções que abrem modais, disparamos o evento global
+        // pois o ActionModals está sempre montado no assistente-client
+        setActiveModal: (modal: any) => {
+          window.dispatchEvent(
+            new CustomEvent('voiceAssistantFunctionClick', {
+              detail: { functionKey: modal?.type ?? functionKey },
+            })
+          );
+        },
+        functionSettings: {},
+        commandProcessor: null,
+      });
+      return `${fn.functionName} executado com sucesso.`;
+    } catch (err) {
+      console.error('Erro ao executar função:', err);
+      return `Erro ao executar ${fn.functionName}.`;
+    }
+  };
+
+  // Enviar mensagem
+  const handleSendMessage = async (overrideText?: string) => {
+    const messageText = (overrideText ?? inputText).trim();
+    if (!messageText || isProcessing) return;
 
     const userMessage: TextMessage = {
       id: `user-${Date.now()}`,
@@ -135,6 +182,7 @@ export default function TextAssistant({
       content: messageText,
       timestamp: new Date(),
     };
+
     setMessages((prev) => [...prev, userMessage]);
     setInputText('');
     setIsProcessing(true);
@@ -150,19 +198,16 @@ export default function TextAssistant({
         body: formData,
       });
 
-      // Verifica se uma função foi ativada via header
+      // ── FIX 2: verificar X-Function-Key e executar via registry ──
       const hintFunctionKey = response.headers.get('X-Function-Key');
       if (hintFunctionKey) {
-        window.dispatchEvent(
-          new CustomEvent('voiceAssistantFunctionClick', {
-            detail: { functionKey: hintFunctionKey },
-          })
-        );
-        onFunctionExecuted?.(hintFunctionKey, '');
+        const result = await executeFunction(hintFunctionKey);
+        onFunctionExecuted?.(hintFunctionKey, result);
+
         const functionMessage: TextMessage = {
           id: `function-${Date.now()}`,
           role: 'assistant',
-          content: `Função executada: ${hintFunctionKey.replace(/_/g, ' ')}`,
+          content: result,
           functionKey: hintFunctionKey,
           timestamp: new Date(),
         };
@@ -172,7 +217,7 @@ export default function TextAssistant({
 
       if (!response.ok) throw new Error(`Erro: ${response.status}`);
 
-      // Extrai texto da resposta do header X-Response-Text
+      // Extrair texto da resposta
       const responseText = response.headers.get('X-Response-Text');
       const displayText = responseText
         ? decodeURIComponent(responseText)
@@ -186,13 +231,17 @@ export default function TextAssistant({
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Toca o áudio da resposta se playText estiver disponível
+      // Tocar o áudio da resposta
       if (playText) {
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.playbackRate = 1.05;
-        audio.play().catch(() => {});
+        try {
+          const audioBlob = await response.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          audio.playbackRate = 1.05;
+          audio.play().catch(() => {});
+        } catch {
+          // Ignorar erro de áudio — resposta de texto já foi mostrada
+        }
       }
     } catch (error) {
       console.error('Erro ao processar mensagem:', error);
@@ -208,10 +257,9 @@ export default function TextAssistant({
     }
   };
 
-  // TTS para mensagem
+  // TTS para mensagem individual
   const handlePlayMessage = async (message: TextMessage) => {
     if (!playText) return;
-
     if (playingMessageId === message.id) {
       setPlayingMessageId(null);
     } else {
@@ -221,7 +269,7 @@ export default function TextAssistant({
     }
   };
 
-  // Handler de tecla Enter
+  // Enter envia, Shift+Enter quebra linha
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -262,13 +310,14 @@ export default function TextAssistant({
       className="fixed inset-0 flex flex-col pt-[72px]"
       style={styles.container}
     >
-      {/* Área de mensagens com scroll */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col-reverse mb-[180px]">
-        <div ref={messagesEndRef} />
-
-        {messages.length === 0 && !isProcessing ? (
-          /* Texto central quando não há mensagens */
-          <div className="flex h-full items-center justify-center absolute inset-0 pointer-events-none">
+      {/* ── FIX 1: área de mensagens em ordem normal (sem flex-col-reverse) */}
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col mb-[180px]"
+      >
+        {/* Mensagem de boas-vindas quando vazio */}
+        {messages.length === 0 && !isProcessing && (
+          <div className="flex h-full items-center justify-center flex-1">
             <p
               className="text-xl font-bold"
               style={{ color: isDark ? 'rgb(226, 232, 240)' : 'rgb(30, 41, 59)' }}
@@ -276,65 +325,67 @@ export default function TextAssistant({
               Como Posso te Ajudar Hoje?
             </p>
           </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`mb-4 flex ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              <div
-                className="max-w-[80%] rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm"
-                style={
-                  message.role === 'user'
-                    ? styles.messageUser
-                    : message.functionKey
-                    ? styles.messageFunction
-                    : styles.messageAssistant
-                }
-              >
-                {/* Conteúdo da mensagem */}
-                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-
-                {/* Badge de função executada */}
-                {message.functionKey && (
-                  <div className="mt-2 text-xs opacity-80">
-                    ✓ {message.functionKey.replace(/_/g, ' ')}
-                  </div>
-                )}
-
-                {/* Botão de TTS apenas para mensagens do assistente */}
-                {message.role === 'assistant' && playText && (
-                  <button
-                    onClick={() => handlePlayMessage(message)}
-                    className="mt-2 text-lg hover:scale-110 transition-transform"
-                    title={playingMessageId === message.id ? 'Parar' : 'Ouvir'}
-                  >
-                    {playingMessageId === message.id ? '🔇' : '🔊'}
-                  </button>
-                )}
-
-                {/* Timestamp */}
-                <div className="mt-1 text-xs opacity-50">
-                  {message.timestamp.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
-              </div>
-            </div>
-          ))
         )}
 
-        {/* Indicador de processamento */}
+        {/* Lista de mensagens em ordem cronológica normal */}
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`mb-4 flex ${
+              message.role === 'user' ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <div
+              className="max-w-[80%] rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm"
+              style={
+                message.role === 'user'
+                  ? styles.messageUser
+                  : message.functionKey
+                  ? styles.messageFunction
+                  : styles.messageAssistant
+              }
+            >
+              {/* Conteúdo */}
+              <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+
+              {/* Badge de função */}
+              {message.functionKey && (
+                <div className="mt-2 text-xs opacity-80 flex items-center gap-1">
+                  <span>✓</span>
+                  <span>{message.functionKey.replace(/_/g, ' ')}</span>
+                </div>
+              )}
+
+              {/* Botão TTS — só para respostas do assistente */}
+              {message.role === 'assistant' && !message.functionKey && playText && (
+                <button
+                  onClick={() => handlePlayMessage(message)}
+                  className="mt-2 text-lg hover:scale-110 transition-transform"
+                  title={playingMessageId === message.id ? 'Parar' : 'Ouvir'}
+                >
+                  {playingMessageId === message.id ? '🔇' : '🔊'}
+                </button>
+              )}
+
+              {/* Timestamp */}
+              <div className="mt-1 text-xs opacity-50">
+                {message.timestamp.toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Indicador de digitação */}
         {isProcessing && (
           <div className="mb-4 flex justify-start">
             <div
               className="rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm"
               style={styles.messageAssistant}
             >
-              <div className="flex gap-1">
+              <div className="flex gap-1 items-center">
                 <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
                 <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
                 <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -342,9 +393,12 @@ export default function TextAssistant({
             </div>
           </div>
         )}
+
+        {/* Âncora de scroll — sempre no fim */}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input box flutuando - sem borda superior, com sombra */}
+      {/* Input box */}
       <div
         className="fixed left-4 right-4 rounded-2xl shadow-xl backdrop-blur-xl z-40 px-3 py-3"
         style={{
@@ -354,7 +408,6 @@ export default function TextAssistant({
         }}
       >
         <div className="relative flex items-center gap-2">
-          {/* Textarea */}
           <textarea
             ref={textareaRef}
             value={inputText}
@@ -367,7 +420,7 @@ export default function TextAssistant({
             rows={1}
           />
 
-          {/* Botão único: microfone sem texto, enviar com texto */}
+          {/* Botão: enviar se tem texto, microfone se não tem */}
           {inputText.trim() ? (
             <button
               onClick={() => handleSendMessage()}

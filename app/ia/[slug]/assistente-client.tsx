@@ -10,7 +10,6 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
-import DigitalClock from '@/components/ui/DigitalClock';
 import SlugHeaderWrapper from './SlugHeaderWrapper';
 
 interface AssistenteClientProps {
@@ -720,43 +719,41 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       )}
 
-      {/* H. Setas laterais de navegação entre modos */}
-      {mode !== 'full' && (
-        <>
-          {/* Seta esquerda */}
-          <button
-            onClick={() => navigateMode('left')}
-            className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full transition-all ${
-              theme === 'dark'
-                ? 'bg-white/10 hover:bg-white/20 text-white'
-                : 'bg-black/10 hover:bg-black/20 text-gray-900'
-            }`}
-            title="Modo anterior (←)"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+{/* H. Setas laterais de navegação entre modos */}
+      <>
+        {/* Seta esquerda */}
+        <button
+          onClick={() => navigateMode('left')}
+          className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full transition-all ${
+            theme === 'dark'
+              ? 'bg-white/10 hover:bg-white/20 text-white'
+              : 'bg-black/10 hover:bg-black/20 text-gray-900'
+          }`}
+          title="Modo anterior (←)"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-          {/* Seta direita */}
-          <button
-            onClick={() => navigateMode('right')}
-            className={`fixed right-4 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full transition-all ${
-              theme === 'dark'
-                ? 'bg-white/10 hover:bg-white/20 text-white'
-                : 'bg-black/10 hover:bg-black/20 text-gray-900'
-            }`}
-            title="Próximo modo (→)"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </>
-      )}
+        {/* Seta direita */}
+        <button
+          onClick={() => navigateMode('right')}
+          className={`fixed right-4 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full transition-all ${
+            theme === 'dark'
+              ? 'bg-white/10 hover:bg-white/20 text-white'
+              : 'bg-black/10 hover:bg-black/20 text-gray-900'
+          }`}
+          title="Próximo modo (→)"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </>
 
       {/* ========================================== */}
-      {/* D. VERSÃO FULL (era: isMaximized) */}
+      {/* D. VERSÃO FULL */}
       {/* ========================================== */}
       {mode === 'full' && (
         <div 
@@ -883,7 +880,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                 wakeWord={company.wake_word || 'olá assistente'}
                 greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                 theme={theme}
-                isMaximized={true} // D. props do VoiceAssistantWithWakeWord mantidas
+                isMaximized={true}
                 onAssistantStart={() => setAssistantStarted(true)}
                 hideDisabledFunctions={company.hide_disabled_functions_carousel}
                 autoScroll={company.carousel_auto_scroll}
@@ -919,7 +916,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* F. CategoryCarousel no modo FULL (era: FunctionCarousel) */}
+          {/* CategoryCarousel no modo FULL */}
           {assistantStarted && (
             <div data-role="carousel" className="fixed bottom-0 left-0 right-0 w-full z-30">
               <CategoryCarousel
@@ -1023,7 +1020,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   wakeWord={company.wake_word || 'olá assistente'}
                   greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
                   theme={theme}
-                  isMaximized={false} // D. props do VoiceAssistantWithWakeWord mantidas
+                  isMaximized={false}
                   onAssistantStart={() => setAssistantStarted(true)}
                   hideDisabledFunctions={company.hide_disabled_functions_carousel}
                   autoScroll={company.carousel_auto_scroll}
@@ -1057,37 +1054,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* G. SlugFooter - NOVO (substitui o bloco Footer antigo) */}
+          {/* G. SlugFooter - NOVO */}
           <SlugFooter theme={theme} />
 
-          <style jsx>{`
-            @keyframes slide-down {
-              from {
-                transform: translate(-50%, -100%);
-                opacity: 0;
-              }
-              to {
-                transform: translate(-50%, 0);
-                opacity: 1;
-              }
-            }
-            @keyframes fade-in {
-              from {
-                opacity: 0;
-                transform: translate(-50%, -10px);
-              }
-              to {
-                opacity: 1;
-                transform: translate(-50%, 0);
-              }
-            }
-            .animate-slide-down {
-              animation: slide-down 0.3s ease-out;
-            }
-            .animate-fade-in {
-              animation: fade-in 0.3s ease-out;
-            }
-          `}</style>
         </div>
       )}
     </>

@@ -131,76 +131,94 @@ export default function TracarRotaDisplay({
     setQrCodeUrl('');
   };
 
-  const handleCalcularRota = async () => {
-    if (!destino.trim()) {
-      setError('Por favor, informe o destino.');
-      return;
+const handleCalcularRota = async () => {
+  if (!destino.trim()) {
+    setError('Por favor, informe o destino.');
+    return;
+  }
+
+  if (!origem) {
+    setError('Não foi possível obter sua localização. Digite o endereço de origem.');
+    return;
+  }
+
+  setStage('processing');
+  setError('');
+
+  try {
+    // ✅ USAR DISTANCE MATRIX API
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
+      origem
+    )}&destinations=${encodeURIComponent(destino)}&key=${apiKey}`;
+
+    const { data: distanceResponse, error: edgeError } = await supabase.functions.invoke(
+      'google-maps-proxy',
+      {
+        body: { url },
+      }
+    );
+
+    console.log('Distance Matrix Response:', distanceResponse); // ✅ DEBUG
+
+    if (edgeError) {
+      throw new Error(edgeError.message || 'Erro ao calcular rota');
     }
 
-    if (!origem) {
-      setError('Não foi possível obter sua localização. Digite o endereço de origem.');
-      return;
+    // ✅ VALIDAÇÃO CORRIGIDA
+    if (!distanceResponse || distanceResponse.status !== 'OK') {
+      throw new Error('Serviço indisponível. Tente novamente.');
     }
 
-    setStage('processing');
-    setError('');
-
-    try {
-      // ✅ USAR DISTANCE MATRIX API (funciona via CORS no frontend)
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
-        origem
-      )}&destinations=${encodeURIComponent(destino)}&key=${apiKey}`;
-
-      // ✅ Chamar via Edge Function proxy genérica
-      const { data: distanceResponse, error: edgeError } = await supabase.functions.invoke(
-        'google-maps-proxy',
-        {
-          body: { url },
-        }
-      );
-
-      if (edgeError || !distanceResponse) {
-        throw new Error('Erro ao calcular rota');
-      }
-
-      if (distanceResponse.status !== 'OK' || !distanceResponse.rows[0]?.elements[0]) {
-        throw new Error('Rota não encontrada');
-      }
-
-      const element = distanceResponse.rows[0].elements[0];
-
-      if (element.status !== 'OK') {
-        throw new Error('Rota não encontrada');
-      }
-
-      const routeInfo: RouteData = {
-        distance: element.distance.text,
-        duration: element.duration.text,
-        startAddress: distanceResponse.origin_addresses[0],
-        endAddress: distanceResponse.destination_addresses[0],
-      };
-
-      setRouteData(routeInfo);
-
-      // Gerar QR Code
-      const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
-        origem
-      )}&destination=${encodeURIComponent(destino)}`;
-      
-      const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23800080${
-        data.companyId ? `&company_id=${data.companyId}` : ''
-      }`;
-      setQrCodeUrl(qrUrl);
-
-      setStage('result');
-
-      playText(`Rota calculada. Distância: ${routeInfo.distance}. Tempo estimado: ${routeInfo.duration}.`);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao calcular rota.');
-      setStage('error');
+    if (!distanceResponse.rows || distanceResponse.rows.length === 0) {
+      throw new Error('Rota não encontrada');
     }
-  };
+
+    const element = distanceResponse.rows[0].elements[0];
+
+    if (!element || element.status !== 'OK') {
+      throw new Error('Rota não encontrada para este destino');
+    }
+
+    const routeInfo: RouteData = {
+      distance: element.distance.text,
+      duration: element.duration.text,
+      startAddress: distanceResponse.origin_addresses[0] || origem,
+      endAddress: distanceResponse.destination_addresses[0] || destino,
+    };
+
+    setRouteData(routeInfo);
+
+    // Gerar QR Code
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+      origem
+    )}&destination=${encodeURIComponent(destino)}`;
+    
+    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23800080${
+      data.companyId ? `&company_id=${data.companyId}` : ''
+    }`;
+    setQrCodeUrl(qrUrl);
+
+    setStage('result');
+
+    // Cobrar crédito
+    await fetch('/api/companies/deduct-credit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        companyId: data.companyId,
+        credits: 1,
+        functionKey: 'tracar_rota',
+      }),
+    });
+
+    playText(`Rota calculada. Distância: ${routeInfo.distance}. Tempo estimado: ${routeInfo.duration}.`);
+  } catch (err: any) {
+    console.error('Erro ao calcular rota:', err); // ✅ DEBUG
+    setError(err.message || 'Erro ao calcular rota.');
+    setStage('error');
+  }
+};
 
   const handleOpenMaps = () => {
     if (!routeData) return;

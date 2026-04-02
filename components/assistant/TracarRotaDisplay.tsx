@@ -146,16 +146,11 @@ const handleCalcularRota = async () => {
   setError('');
 
   try {
-    // ✅ USAR DISTANCE MATRIX API
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
-      origem
-    )}&destinations=${encodeURIComponent(destino)}&key=${apiKey}`;
-
+    // ✅ Enviamos apenas origem e destino. A API Key fica segura no Supabase!
     const { data: distanceResponse, error: edgeError } = await supabase.functions.invoke(
       'google-maps-proxy',
       {
-        body: { url },
+        body: { origem, destino }, // <-- Mudança aqui
       }
     );
 
@@ -165,9 +160,9 @@ const handleCalcularRota = async () => {
       throw new Error(edgeError.message || 'Erro ao calcular rota');
     }
 
-    // ✅ VALIDAÇÃO CORRIGIDA
+    // ✅ VALIDAÇÃO CORRIGIDA (com repasse do erro do Google, se houver)
     if (!distanceResponse || distanceResponse.status !== 'OK') {
-      throw new Error('Serviço indisponível. Tente novamente.');
+      throw new Error(distanceResponse?.error_message || 'Serviço indisponível. Tente novamente.');
     }
 
     if (!distanceResponse.rows || distanceResponse.rows.length === 0) {
@@ -188,6 +183,14 @@ const handleCalcularRota = async () => {
     };
 
     setRouteData(routeInfo);
+    setStage('result'); // Certifique-se de avançar o stage aqui
+    
+  } catch (err: any) {
+    console.error('Erro ao calcular rota:', err);
+    setError(err.message || 'Erro ao calcular rota.');
+    setStage('error');
+  }
+};
 
     // Gerar QR Code
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(

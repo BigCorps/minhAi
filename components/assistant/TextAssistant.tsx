@@ -33,6 +33,7 @@ export default function TextAssistant({
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+  
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -55,7 +56,7 @@ export default function TextAssistant({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 96)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [inputText]);
 
@@ -111,7 +112,6 @@ export default function TextAssistant({
       
       if (data.transcript) {
         setInputText(data.transcript);
-        // Enviar automaticamente após 500ms
         setTimeout(() => {
           handleSendMessage(data.transcript);
         }, 500);
@@ -128,7 +128,6 @@ export default function TextAssistant({
     const messageText = text || inputText.trim();
     if (!messageText) return;
 
-    // Adicionar mensagem do usuário
     const userMessage: TextMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -140,7 +139,6 @@ export default function TextAssistant({
     setIsProcessing(true);
 
     try {
-      // Chamar API do assistente
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,9 +151,7 @@ export default function TextAssistant({
 
       const data = await response.json();
 
-      // Verificar se é uma função ou resposta de texto
       if (data.functionKey) {
-        // Executar função
         const functionMessage: TextMessage = {
           id: `function-${Date.now()}`,
           role: 'assistant',
@@ -166,7 +162,6 @@ export default function TextAssistant({
         };
         setMessages((prev) => [...prev, functionMessage]);
 
-        // Disparar evento para executar a função
         window.dispatchEvent(
           new CustomEvent('voiceAssistantFunctionClick', {
             detail: { functionKey: data.functionKey },
@@ -175,7 +170,6 @@ export default function TextAssistant({
 
         onFunctionExecuted?.(data.functionKey, data.response || '');
       } else {
-        // Resposta de texto normal
         const assistantMessage: TextMessage = {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
@@ -203,7 +197,6 @@ export default function TextAssistant({
     if (!playText) return;
 
     if (playingMessageId === message.id) {
-      // Parar reprodução (implementar cancelamento no playText se necessário)
       setPlayingMessageId(null);
     } else {
       setPlayingMessageId(message.id);
@@ -223,7 +216,7 @@ export default function TextAssistant({
   const styles = {
     container: {
       background: isDark
-        ? 'linear-gradient(to bottom, rgb(15, 23, 42), rgb(30, 41, 59))'
+        ? 'linear-gradient(to bottom, rgb(2, 6, 23), rgb(15, 23, 42))'
         : 'linear-gradient(to bottom, rgb(248, 250, 252), rgb(241, 245, 249))',
     },
     messageUser: {
@@ -250,11 +243,11 @@ export default function TextAssistant({
 
   return (
     <div
-      className="flex flex-col min-h-screen pt-20 pb-40"
+      className="fixed inset-0 flex flex-col pt-[72px]"
       style={styles.container}
     >
-      {/* Área de mensagens */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col-reverse">
+      {/* Área de mensagens com scroll */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col-reverse mb-[180px]">
         <div ref={messagesEndRef} />
         {messages.map((message) => (
           <div
@@ -322,13 +315,16 @@ export default function TextAssistant({
         )}
       </div>
 
-      {/* Input box fixo na parte inferior */}
+      {/* Input box fixo - MAIOR E MAIS ACIMA */}
       <div
-        className="fixed bottom-8 left-0 right-0 px-4 py-3 border-t backdrop-blur-xl"
-        style={styles.inputContainer}
+        className="fixed left-0 right-0 px-4 py-4 border-t backdrop-blur-xl z-40"
+        style={{
+          ...styles.inputContainer,
+          bottom: '120px', // Acima do carrossel (que está em bottom-8 = 32px) + rodapé (32px) + margem
+        }}
       >
-        <div className="max-w-4xl mx-auto flex items-end gap-2">
-          {/* Textarea */}
+        <div className="max-w-4xl mx-auto flex items-end gap-3">
+          {/* Textarea maior */}
           <textarea
             ref={textareaRef}
             value={inputText}
@@ -336,27 +332,25 @@ export default function TextAssistant({
             onKeyDown={handleKeyDown}
             placeholder="Digite sua mensagem..."
             disabled={isProcessing || isRecording}
-            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 resize-none rounded-xl px-5 py-4 text-base border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
             style={styles.textarea}
             rows={1}
           />
 
-          {/* Botão dinâmico */}
+          {/* Botão dinâmico maior */}
           {inputText.trim() ? (
-            // Botão enviar
             <button
               onClick={() => handleSendMessage()}
               disabled={isProcessing}
-              className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-green-500 text-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50"
+              className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-r from-blue-500 to-green-500 text-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 text-xl font-bold"
             >
               →
             </button>
           ) : (
-            // Botão microfone
             <button
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isProcessing}
-              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 ${
+              className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 text-2xl ${
                 isRecording
                   ? 'bg-red-500 text-white animate-pulse'
                   : 'bg-gradient-to-r from-blue-500 to-green-500 text-white'

@@ -1,62 +1,52 @@
 // components/assistant/TextAssistant.tsx
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import { Mic, MicOff, Send } from 'lucide-react';
-import { getFunctionByKey } from '@/lib/functions-registry';
+
+export interface TextMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  functionKey?: string;
+  timestamp: Date;
+}
 
 interface TextAssistantProps {
   companyId: string;
   theme: 'dark' | 'light';
   slug: string;
-  onFunctionExecuted?: (functionKey: string, result: string) => void;
-  playText?: (text: string) => Promise<void>;
-}
-
-interface TextMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  functionKey?: string;
-  functionResult?: string;
-  timestamp: Date;
+  // Callback que delega para o handleTextMessage do VoiceAssistantWithWakeWord
+  // Retorna { text, functionKey } com a resposta para exibir no histórico
+  onSendMessage: (text: string) => Promise<{ text: string; functionKey?: string } | null>;
+  // Passado pelo VoiceAssistant — indica que está processando
+  isProcessing?: boolean;
 }
 
 export default function TextAssistant({
   companyId,
   theme,
   slug,
-  onFunctionExecuted,
-  playText,
+  onSendMessage,
+  isProcessing = false,
 }: TextAssistantProps) {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
 
-  // ── FIX 1: scroll para o fim após cada mensagem ────────────────
-  // Não usamos flex-col-reverse — as mensagens ficam em ordem normal
-  // e scrollamos programaticamente para o fim
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   const isDark = theme === 'dark';
 
-  // Scroll para o fim sempre que novas mensagens chegam
+  // Scroll para o fim após cada mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isProcessing]);
+  }, [messages, isProcessing, isSending]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -66,7 +56,7 @@ export default function TextAssistant({
     }
   }, [inputText]);
 
-  // Iniciar gravação de áudio
+  // ── Gravação de áudio ──────────────────────────────────────────────────────
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -74,26 +64,23 @@ export default function TextAssistant({
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        await transcribeAudio(audioBlob);
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach((t) => t.stop());
+        await transcribeAndSend(audioBlob);
       };
 
       mediaRecorder.start();
       setIsRecording(true);
-    } catch (error) {
-      console.error('Erro ao iniciar gravação:', error);
+    } catch (err) {
+      console.error('Erro ao iniciar gravação:', err);
     }
   };
 
-  // Parar gravação
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -101,10 +88,9 @@ export default function TextAssistant({
     }
   };
 
-  // Transcrever áudio via Google Speech
-  const transcribeAudio = async (audioBlob: Blob) => {
+  const transcribeAndSend = async (audioBlob: Blob) => {
     try {
-      setIsProcessing(true);
+      setIsSending(true);
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
       formData.append('companyId', companyId);
@@ -117,159 +103,63 @@ export default function TextAssistant({
       if (response.ok) {
         const { text } = await response.json();
         if (text?.trim()) {
-          // Preenche o campo e envia automaticamente
-          setInputText(text.trim());
-          setTimeout(() => {
-            handleSendMessage(text.trim());
-          }, 300);
+          await handleSendMessage(text.trim());
         }
       }
-    } catch (error) {
-      console.error('Erro ao transcrever:', error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // ── FIX 2: executar funções diretamente pelo registry ──────────
-  // O voiceAssistantFunctionClick não funciona no modo texto porque
-  // o VoiceAssistantWithWakeWord não está montado.
-  // Aqui chamamos o handler do registry diretamente.
-  const executeFunction = async (functionKey: string) => {
-    const fn = getFunctionByKey(functionKey);
-    if (!fn?.handler) {
-      // Fallback: dispara o evento global mesmo assim
-      // (útil para funções que abrem modais via ActionModals)
-      window.dispatchEvent(
-        new CustomEvent('voiceAssistantFunctionClick', {
-          detail: { functionKey },
-        })
-      );
-      return `Função ${functionKey.replace(/_/g, ' ')} ativada.`;
-    }
-
-    try {
-      await fn.handler({
-        companyId,
-        playText: playText ?? (async () => {}),
-        // Para funções que abrem modais, disparamos o evento global
-        // pois o ActionModals está sempre montado no assistente-client
-        setActiveModal: (modal: any) => {
-          window.dispatchEvent(
-            new CustomEvent('voiceAssistantFunctionClick', {
-              detail: { functionKey: modal?.type ?? functionKey },
-            })
-          );
-        },
-        functionSettings: {},
-        commandProcessor: null,
-      });
-      return `${fn.functionName} executado com sucesso.`;
     } catch (err) {
-      console.error('Erro ao executar função:', err);
-      return `Erro ao executar ${fn.functionName}.`;
+      console.error('Erro ao transcrever:', err);
+    } finally {
+      setIsSending(false);
     }
   };
 
-  // Enviar mensagem
+  // ── Envio de mensagem — delega para VoiceAssistant via onSendMessage ───────
   const handleSendMessage = async (overrideText?: string) => {
     const messageText = (overrideText ?? inputText).trim();
-    if (!messageText || isProcessing) return;
+    if (!messageText || isSending || isProcessing) return;
 
+    // Adiciona mensagem do usuário no histórico
     const userMessage: TextMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: messageText,
       timestamp: new Date(),
     };
-
     setMessages((prev) => [...prev, userMessage]);
     setInputText('');
-    setIsProcessing(true);
+    setIsSending(true);
 
     try {
-      const formData = new FormData();
-      formData.append('audio', new Blob([messageText], { type: 'text/plain' }));
-      formData.append('companyId', companyId);
-      formData.append('directQuestion', messageText);
+      // Delega para handleTextMessage do VoiceAssistantWithWakeWord
+      // que já tem: GROQ, detectVoiceCommand, handleFunctionClick, modais, sessionId
+      const result = await onSendMessage(messageText);
 
-      const response = await fetch('/api/voice/process', {
-        method: 'POST',
-        body: formData,
-      });
-
-      // ── FIX 2: verificar X-Function-Key e executar via registry ──
-      const hintFunctionKey = response.headers.get('X-Function-Key');
-      if (hintFunctionKey) {
-        const result = await executeFunction(hintFunctionKey);
-        onFunctionExecuted?.(hintFunctionKey, result);
-
-        const functionMessage: TextMessage = {
-          id: `function-${Date.now()}`,
+      if (result) {
+        const assistantMessage: TextMessage = {
+          id: `assistant-${Date.now()}`,
           role: 'assistant',
-          content: result,
-          functionKey: hintFunctionKey,
+          content: result.text,
+          functionKey: result.functionKey,
           timestamp: new Date(),
         };
-        setMessages((prev) => [...prev, functionMessage]);
-        return;
+        setMessages((prev) => [...prev, assistantMessage]);
       }
-
-      if (!response.ok) throw new Error(`Erro: ${response.status}`);
-
-      // Extrair texto da resposta
-      const responseText = response.headers.get('X-Response-Text');
-      const displayText = responseText
-        ? decodeURIComponent(responseText)
-        : 'Resposta recebida.';
-
-      const assistantMessage: TextMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: displayText,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-
-      // Tocar o áudio da resposta
-      if (playText) {
-        try {
-          const audioBlob = await response.blob();
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
-          audio.playbackRate = 1.05;
-          audio.play().catch(() => {});
-        } catch {
-          // Ignorar erro de áudio — resposta de texto já foi mostrada
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao processar mensagem:', error);
-      const errorMessage: TextMessage = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem.',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+    } catch (err) {
+      console.error('Erro ao enviar mensagem:', err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: 'Desculpe, ocorreu um erro ao processar sua mensagem.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
-      setIsProcessing(false);
+      setIsSending(false);
     }
   };
 
-  // TTS para mensagem individual
-  const handlePlayMessage = async (message: TextMessage) => {
-    if (!playText) return;
-    if (playingMessageId === message.id) {
-      setPlayingMessageId(null);
-    } else {
-      setPlayingMessageId(message.id);
-      await playText(message.content);
-      setPlayingMessageId(null);
-    }
-  };
-
-  // Enter envia, Shift+Enter quebra linha
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -277,6 +167,7 @@ export default function TextAssistant({
     }
   };
 
+  // ── Estilos ────────────────────────────────────────────────────────────────
   const styles = {
     container: {
       background: isDark
@@ -297,7 +188,7 @@ export default function TextAssistant({
     },
     inputContainer: {
       background: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+      border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
     },
     textarea: {
       background: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(248, 250, 252, 0.8)',
@@ -305,21 +196,20 @@ export default function TextAssistant({
     },
   };
 
+  const busy = isSending || isProcessing;
+
   return (
-    <div
-      className="fixed inset-0 flex flex-col pt-[72px]"
-      style={styles.container}
-    >
-      {/* ── FIX 1: área de mensagens em ordem normal (sem flex-col-reverse) */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col mb-[180px]"
-      >
-        {/* Mensagem de boas-vindas quando vazio */}
-        {messages.length === 0 && !isProcessing && (
-          <div className="flex h-full items-center justify-center flex-1">
+    <div className="fixed inset-0 flex flex-col" style={styles.container}>
+      {/* ── Área de mensagens ────────────────────────────────────────────────
+          pt-[120px] mobile (header 2 linhas) / md:pt-[72px] desktop (header 1 linha)
+          pb cobre o input + carrossel + footer ──────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-4 pt-[120px] pb-[220px] md:pt-[80px] flex flex-col">
+
+        {/* Boas-vindas quando vazio */}
+        {messages.length === 0 && !busy && (
+          <div className="flex flex-1 items-center justify-center">
             <p
-              className="text-xl font-bold"
+              className="text-xl font-bold text-center"
               style={{ color: isDark ? 'rgb(226, 232, 240)' : 'rgb(30, 41, 59)' }}
             >
               Como Posso te Ajudar Hoje?
@@ -327,13 +217,11 @@ export default function TextAssistant({
           </div>
         )}
 
-        {/* Lista de mensagens em ordem cronológica normal */}
+        {/* Mensagens em ordem cronológica */}
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`mb-4 flex ${
-              message.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+            className={`mb-4 flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
               className="max-w-[80%] rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm"
@@ -345,10 +233,8 @@ export default function TextAssistant({
                   : styles.messageAssistant
               }
             >
-              {/* Conteúdo */}
               <div className="text-sm whitespace-pre-wrap">{message.content}</div>
 
-              {/* Badge de função */}
               {message.functionKey && (
                 <div className="mt-2 text-xs opacity-80 flex items-center gap-1">
                   <span>✓</span>
@@ -356,18 +242,6 @@ export default function TextAssistant({
                 </div>
               )}
 
-              {/* Botão TTS — só para respostas do assistente */}
-              {message.role === 'assistant' && !message.functionKey && playText && (
-                <button
-                  onClick={() => handlePlayMessage(message)}
-                  className="mt-2 text-lg hover:scale-110 transition-transform"
-                  title={playingMessageId === message.id ? 'Parar' : 'Ouvir'}
-                >
-                  {playingMessageId === message.id ? '🔇' : '🔊'}
-                </button>
-              )}
-
-              {/* Timestamp */}
               <div className="mt-1 text-xs opacity-50">
                 {message.timestamp.toLocaleTimeString('pt-BR', {
                   hour: '2-digit',
@@ -379,7 +253,7 @@ export default function TextAssistant({
         ))}
 
         {/* Indicador de digitação */}
-        {isProcessing && (
+        {busy && (
           <div className="mb-4 flex justify-start">
             <div
               className="rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm"
@@ -394,18 +268,15 @@ export default function TextAssistant({
           </div>
         )}
 
-        {/* Âncora de scroll — sempre no fim */}
+        {/* Âncora de scroll */}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input box */}
+      {/* ── Input box ────────────────────────────────────────────────────────
+          Fica acima do carrossel (bottom-[136px]) ───────────────────────── */}
       <div
         className="fixed left-4 right-4 rounded-2xl shadow-xl backdrop-blur-xl z-40 px-3 py-3"
-        style={{
-          ...styles.inputContainer,
-          bottom: '136px',
-          border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
-        }}
+        style={{ ...styles.inputContainer, bottom: '136px' }}
       >
         <div className="relative flex items-center gap-2">
           <textarea
@@ -413,42 +284,33 @@ export default function TextAssistant({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isRecording ? 'Ouvindo...' : 'Clique no microfone ou digite sua mensagem...'}
-            disabled={isProcessing || isRecording}
+            placeholder={isRecording ? 'Ouvindo...' : 'Digite sua mensagem...'}
+            disabled={busy || isRecording}
             className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
             style={styles.textarea}
             rows={1}
           />
 
-          {/* Botão: enviar se tem texto, microfone se não tem */}
           {inputText.trim() ? (
             <button
               onClick={() => handleSendMessage()}
-              disabled={isProcessing}
+              disabled={busy}
               className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-green-500 text-white hover:scale-110 transition-transform disabled:opacity-50"
-              title="Enviar mensagem"
+              title="Enviar"
             >
               <Send className="h-4 w-4" />
             </button>
           ) : (
             <button
               onClick={isRecording ? stopRecording : startRecording}
-              disabled={isProcessing}
+              disabled={busy}
               className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:scale-110 disabled:opacity-50 ${
                 isRecording ? 'text-red-500' : ''
               }`}
-              style={
-                isRecording
-                  ? {}
-                  : { color: isDark ? 'rgb(148, 163, 184)' : 'rgb(100, 116, 139)' }
-              }
-              title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+              style={isRecording ? {} : { color: isDark ? 'rgb(148, 163, 184)' : 'rgb(100, 116, 139)' }}
+              title={isRecording ? 'Parar' : 'Gravar'}
             >
-              {isRecording ? (
-                <MicOff className="h-4 w-4 animate-pulse" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
+              {isRecording ? <MicOff className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
             </button>
           )}
         </div>

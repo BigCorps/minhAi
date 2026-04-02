@@ -166,8 +166,8 @@ const handleBuscar = async () => {
     setEndereco(endData);
 
     // QR Code
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}${
+    const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`; // (Ajustei o link do maps pra garantir que abra certinho)
+    const qrUrl = `/api/qrcode?size=280&data=${encodeURIComponent(mapsUrl)}&color=%23000080${
       data.companyId ? `&company_id=${data.companyId}` : ''
     }`;
     setQrCodeUrl(qrUrl);

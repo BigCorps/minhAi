@@ -44,8 +44,15 @@ export default function SlugFooter({ theme }: SlugFooterProps) {
     >
       {/* Layout Desktop */}
       <div className="hidden md:flex h-full items-center justify-between px-4 text-xs">
-        {/* Esquerda: Logo/Nome */}
-        <div className="font-medium">minhAi.app</div>
+        {/* Esquerda: Logo/Nome clicável */}
+        <a
+          href="https://minhai.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium hover:underline"
+        >
+          minhAi.app
+        </a>
 
         {/* Centro: Slogan */}
         <div className="text-center opacity-70">Uma IA pra chamar de sua!</div>
@@ -56,7 +63,14 @@ export default function SlugFooter({ theme }: SlugFooterProps) {
 
       {/* Layout Mobile */}
       <div className="flex md:hidden h-full items-center justify-center px-4 text-xs">
-        <div className="font-medium">minhAi.app</div>
+        <a
+          href="https://minhai.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium hover:underline text-center"
+        >
+          minhAi.app — Uma IA pra chamar de sua!
+        </a>
       </div>
     </div>
   );

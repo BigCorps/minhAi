@@ -21,12 +21,14 @@ interface AssistantFunction {
   icon: string;
   color: string;
   display_order: number;
+  is_enabled_for_company?: boolean;
 }
 
 interface Category {
   key: string;
   name: string;
   functions: AssistantFunction[];
+  hasEnabledFunctions: boolean;
 }
 
 const CATEGORIES = [
@@ -104,19 +106,31 @@ export default function CategoryCarousel({
         settings?.map((s) => [s.function_key, s.is_enabled]) || []
       );
 
-      let filteredFunctions = functions;
+      // Marcar funções como enabled/disabled
+      const processedFunctions = functions.map((fn) => ({
+        ...fn,
+        is_enabled_for_company: settingsMap.get(fn.function_key) ?? true,
+      }));
+
+      // Filtrar funções desabilitadas se necessário
+      let filteredFunctions = processedFunctions;
       if (hideDisabledFunctions) {
-        filteredFunctions = functions.filter(
-          (fn) => settingsMap.get(fn.function_key) !== false
-        );
+        filteredFunctions = processedFunctions.filter((fn) => fn.is_enabled_for_company);
       }
 
-      const grouped = CATEGORIES.map((cat) => ({
-        ...cat,
-        functions: filteredFunctions.filter(
+      // Agrupar por categoria
+      const grouped = CATEGORIES.map((cat) => {
+        const categoryFunctions = filteredFunctions.filter(
           (fn) => fn.function_category === cat.key
-        ),
-      })).filter((cat) => cat.functions.length > 0);
+        );
+        const hasEnabledFunctions = categoryFunctions.some((fn) => fn.is_enabled_for_company);
+        
+        return {
+          ...cat,
+          functions: categoryFunctions,
+          hasEnabledFunctions,
+        };
+      }).filter((cat) => cat.functions.length > 0);
 
       setCategories(grouped);
     }
@@ -130,8 +144,6 @@ export default function CategoryCarousel({
 
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
-      
-      // Verifica se clicou fora do painel E fora dos chips
       const clickedOutsidePanel = panelRef.current && !panelRef.current.contains(target);
       const clickedOutsideChips = carouselRef.current && !carouselRef.current.contains(target);
       
@@ -146,47 +158,49 @@ export default function CategoryCarousel({
   }, [activeCategory]);
 
   const scrollDuration = calcScrollDuration(categories.length, isMobile);
-  const duplicatedCategories = [...categories, ...categories];
+  const duplicatedCategories = autoScroll ? [...categories, ...categories] : categories;
 
   const getChipColor = (index: number) => {
     const colors = ['#3B82F6', '#10B981'];
     return colors[index % 2];
   };
 
-  const handleCategoryClick = (categoryKey: string, e: React.MouseEvent<HTMLButtonElement>) => {
-    const chipElement = chipRefs.current.get(categoryKey);
+  const handleCategoryClick = (category: Category, e: React.MouseEvent<HTMLButtonElement>) => {
+    // Não abrir se todas as funções estão desabilitadas
+    if (!category.hasEnabledFunctions) return;
     
-    if (activeCategory === categoryKey) {
-      // Fecha se clicar novamente
+    const chipElement = chipRefs.current.get(category.key);
+    
+    if (activeCategory === category.key) {
       setActiveCategory(null);
       setClickedChipRect(null);
     } else {
-      // Abre e captura posição do chip
-      setActiveCategory(categoryKey);
+      setActiveCategory(category.key);
       if (chipElement) {
         setClickedChipRect(chipElement.getBoundingClientRect());
       }
     }
   };
 
-  const handleFunctionClick = (functionKey: string) => {
-    onFunctionClick(functionKey);
+  const handleFunctionClick = (fn: AssistantFunction) => {
+    if (!fn.is_enabled_for_company) return;
+    onFunctionClick(fn.function_key);
     setActiveCategory(null);
     setClickedChipRect(null);
   };
 
   // Handlers centralizados de pause/resume
   const pauseAnimation = useCallback(() => {
-    if (carouselRef.current) {
+    if (carouselRef.current && autoScroll) {
       carouselRef.current.style.animationPlayState = 'paused';
     }
-  }, []);
+  }, [autoScroll]);
 
   const resumeAnimation = useCallback(() => {
-    if (carouselRef.current && !activeCategory) {
+    if (carouselRef.current && autoScroll && !activeCategory) {
       carouselRef.current.style.animationPlayState = 'running';
     }
-  }, [activeCategory]);
+  }, [activeCategory, autoScroll]);
 
   const styles = {
     panel: {
@@ -207,17 +221,14 @@ export default function CategoryCarousel({
     },
   };
 
-  // Calcular posição do painel baseado no chip clicado
   const getPanelPosition = () => {
     if (!clickedChipRect) return {};
     
     const panelWidth = 280;
     const viewportWidth = window.innerWidth;
     
-    // Centralizar o painel com o chip clicado
     let left = clickedChipRect.left + (clickedChipRect.width / 2) - (panelWidth / 2);
     
-    // Ajustar se sair da tela
     if (left < 10) left = 10;
     if (left + panelWidth > viewportWidth - 10) left = viewportWidth - panelWidth - 10;
     
@@ -245,7 +256,6 @@ export default function CategoryCarousel({
               maxHeight: '350px',
             }}
           >
-            {/* Header do painel */}
             <div
               className="px-3 py-1.5 font-semibold border-b text-xs"
               style={{
@@ -256,53 +266,56 @@ export default function CategoryCarousel({
               {CATEGORIES.find((c) => c.key === activeCategory)?.name}
             </div>
 
-            {/* Lista de funções - SEM SCROLL */}
             <div className="overflow-hidden">
               {categories
                 .find((c) => c.key === activeCategory)
-                ?.functions.map((fn) => (
-                  <div
-                    key={fn.function_key}
-                    className="px-3 py-1.5 cursor-pointer transition-all border-b border-white/5"
-                    style={
-                      hoveredFunction === fn.function_key
-                        ? styles.functionItemHover
-                        : styles.functionItem
-                    }
-                    onMouseEnter={() => setHoveredFunction(fn.function_key)}
-                    onMouseLeave={() => setHoveredFunction(null)}
-                    onClick={() => handleFunctionClick(fn.function_key)}
-                  >
-                    {/* Nome da função */}
-                    <span className="font-medium text-[11px] leading-tight block">
-                      {fn.function_name}
-                    </span>
-                    
-                    {/* Descrição ao hover */}
-                    {hoveredFunction === fn.function_key && fn.short_description && (
-                      <div
-                        className="mt-0.5 text-[9px] leading-tight opacity-70"
-                        style={{ color: isDark ? 'rgb(203, 213, 225)' : 'rgb(71, 85, 105)' }}
-                      >
-                        {fn.short_description}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                ?.functions.map((fn) => {
+                  const isEnabled = fn.is_enabled_for_company;
+                  
+                  return (
+                    <div
+                      key={fn.function_key}
+                      className={`px-3 py-1.5 transition-all border-b border-white/5 ${
+                        isEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'
+                      }`}
+                      style={
+                        isEnabled && hoveredFunction === fn.function_key
+                          ? styles.functionItemHover
+                          : styles.functionItem
+                      }
+                      onMouseEnter={() => isEnabled && setHoveredFunction(fn.function_key)}
+                      onMouseLeave={() => setHoveredFunction(null)}
+                      onClick={() => handleFunctionClick(fn)}
+                    >
+                      <span className="font-medium text-[11px] leading-tight block">
+                        {fn.function_name}
+                      </span>
+                      
+                      {isEnabled && hoveredFunction === fn.function_key && fn.short_description && (
+                        <div
+                          className="mt-0.5 text-[9px] leading-tight opacity-70"
+                          style={{ color: isDark ? 'rgb(203, 213, 225)' : 'rgb(71, 85, 105)' }}
+                        >
+                          {fn.short_description}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
       )}
 
-      {/* Container do carrossel - FUNDO TRANSPARENTE */}
+      {/* Container do carrossel */}
       <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           <div
-            onMouseEnter={autoScroll ? pauseAnimation : undefined}
-            onMouseLeave={autoScroll ? resumeAnimation : undefined}
-            onTouchStart={autoScroll ? pauseAnimation : undefined}
-            onTouchEnd={autoScroll ? resumeAnimation : undefined}
-            onTouchCancel={autoScroll ? resumeAnimation : undefined}
+            onMouseEnter={pauseAnimation}
+            onMouseLeave={resumeAnimation}
+            onTouchStart={pauseAnimation}
+            onTouchEnd={resumeAnimation}
+            onTouchCancel={resumeAnimation}
           >
             <div
               ref={carouselRef}
@@ -319,21 +332,23 @@ export default function CategoryCarousel({
               {duplicatedCategories.map((category, index) => {
                 const borderColor = getChipColor(index);
                 const isActive = activeCategory === category.key;
+                const hasEnabled = category.hasEnabledFunctions;
 
                 return (
                   <button
                     key={`${category.key}-${index}`}
                     ref={(el) => {
-                      if (el && index < categories.length) {
+                      if (el && (!autoScroll || index < categories.length)) {
                         chipRefs.current.set(category.key, el);
                       }
                     }}
-                    onClick={(e) => handleCategoryClick(category.key, e)}
+                    onClick={(e) => handleCategoryClick(category, e)}
+                    disabled={!hasEnabled}
                     className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
                       theme === 'dark'
                         ? 'bg-white/10 hover:bg-white/20 text-white'
                         : 'bg-white hover:bg-gray-50 text-gray-900'
-                    }`}
+                    } ${!hasEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                     style={{
                       borderLeft: `4px solid ${borderColor}`,
                       boxShadow: theme === 'dark'
@@ -356,7 +371,6 @@ export default function CategoryCarousel({
         </div>
       </div>
 
-      {/* CSS da animação */}
       <style jsx>{`
         @keyframes scroll-infinite {
           0% { transform: translateX(0); }

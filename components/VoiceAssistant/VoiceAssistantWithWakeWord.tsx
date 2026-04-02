@@ -1579,14 +1579,10 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
         <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
           }`}
-          onClick={() => window.dispatchEvent(new CustomEvent('eai:avatarClick'))}
-          title="Clique para expandir"
         >
           
           <div
-            className="relative h-96 cursor-pointer"
-            onClick={() => window.dispatchEvent(new CustomEvent('eai:setMaximized', { detail: { value: true } }))}
-            title="Clique para expandir"
+            className="relative h-96"
           >
             <AvatarFace
               isListening={isListening}

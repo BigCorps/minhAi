@@ -84,7 +84,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
 
     // Busca configuração da função para pegar modo_lembrete
     supabase
-      .from('function_configs')
+      .from('company_function_settings')
       .select('config')
       .eq('company_id', companyId)
       .eq('function_key', 'lembrete_remedios')
@@ -257,7 +257,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
       });
 
       setToast({ message: '✅ Lembrete salvo com sucesso!', type: 'success' });
-      playText?.('Lembrete salvo!').catch(() => {});
+      playText?.('Lembrete de remédio configurado com sucesso!').catch(() => {});
       setTimeout(() => onClose(), 2000);
     } catch (error: any) {
       console.error('Erro ao salvar lembrete:', error);
@@ -499,7 +499,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
               }}
             >
               <h4 className="text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>
-                📋 Resumo do tratamento
+                Resumo do tratamento
               </h4>
               <div className="space-y-2 text-sm" style={{ color: colors.textSecondary }}>
                 <p>• <strong>Horários diários:</strong> {horariosDiarios.join(', ')}</p>

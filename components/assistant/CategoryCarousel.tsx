@@ -57,6 +57,7 @@ export default function CategoryCarousel({
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+  
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -69,7 +70,6 @@ export default function CategoryCarousel({
   // Carregar funções e agrupar por categoria
   useEffect(() => {
     async function loadFunctions() {
-      // 1. Buscar todas as funções ativas
       const { data: functions } = await supabase
         .from('assistant_functions')
         .select('*')
@@ -79,7 +79,6 @@ export default function CategoryCarousel({
 
       if (!functions) return;
 
-      // 2. Buscar settings da empresa
       const { data: settings } = await supabase
         .from('company_function_settings')
         .select('function_key, is_enabled')
@@ -89,7 +88,6 @@ export default function CategoryCarousel({
         settings?.map((s) => [s.function_key, s.is_enabled]) || []
       );
 
-      // 3. Filtrar funções desabilitadas se necessário
       let filteredFunctions = functions;
       if (hideDisabledFunctions) {
         filteredFunctions = functions.filter(
@@ -97,7 +95,6 @@ export default function CategoryCarousel({
         );
       }
 
-      // 4. Agrupar por categoria
       const grouped = CATEGORIES.map((cat) => ({
         ...cat,
         functions: filteredFunctions.filter(
@@ -131,24 +128,24 @@ export default function CategoryCarousel({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [activeCategory]);
 
-  // Calcular duração do scroll baseado no número de categorias
-  const scrollDuration = categories.length * 3; // 3s por categoria
-
-  // Chips duplicados 2x para scroll infinito
+  const scrollDuration = categories.length * 3;
   const duplicatedCategories = [...categories, ...categories];
 
-  // Alternar cores dos chips
   const getChipColor = (index: number) => {
-    return index % 2 === 0 ? '#3B82F6' : '#10B981'; // azul / verde
+    return index % 2 === 0 ? '#3B82F6' : '#10B981';
   };
 
-  // Handler de click no chip
   const handleCategoryClick = (categoryKey: string) => {
-    setActiveCategory(categoryKey);
-    setIsPaused(true);
+    // Toggle: se clicar na mesma categoria, fecha
+    if (activeCategory === categoryKey) {
+      setActiveCategory(null);
+      setIsPaused(false);
+    } else {
+      setActiveCategory(categoryKey);
+      setIsPaused(true);
+    }
   };
 
-  // Handler de click na função
   const handleFunctionClick = (functionKey: string) => {
     onFunctionClick(functionKey);
     setActiveCategory(null);
@@ -193,12 +190,12 @@ export default function CategoryCarousel({
               ...styles.panel,
               width: '280px',
               maxWidth: '100vw',
-              maxHeight: '60vh',
+              maxHeight: '400px', // Reduzido de 60vh
             }}
           >
             {/* Header do painel */}
             <div
-              className="px-4 py-3 font-semibold border-b"
+              className="px-4 py-2 font-semibold border-b text-sm"
               style={{
                 borderColor: styles.panel.borderColor,
                 color: isDark ? 'rgb(226, 232, 240)' : 'rgb(30, 41, 59)',
@@ -207,49 +204,48 @@ export default function CategoryCarousel({
               {CATEGORIES.find((c) => c.key === activeCategory)?.name}
             </div>
 
-            {/* Lista de funções */}
-            <div className="overflow-y-auto" style={{ maxHeight: 'calc(60vh - 52px)' }}>
-{categories
-  .find((c) => c.key === activeCategory)
-  ?.functions.map((fn) => (
-    <div
-      key={fn.function_key}
-      className="px-4 py-3 cursor-pointer transition-all border-b border-white/5"
-      style={
-        hoveredFunction === fn.function_key
-          ? styles.functionItemHover
-          : styles.functionItem
-      }
-      onMouseEnter={() => setHoveredFunction(fn.function_key)}
-      onMouseLeave={() => setHoveredFunction(null)}
-      onClick={() => handleFunctionClick(fn.function_key)}
-    >
-      {/* Nome da função (sem ícone) */}
-      <span className="font-medium text-sm">{fn.function_name}</span>
-      
-      {/* Descrição ao hover */}
-      {hoveredFunction === fn.function_key && fn.short_description && (
-        <div
-          className="mt-2 text-xs opacity-70"
-          style={{ color: isDark ? 'rgb(203, 213, 225)' : 'rgb(71, 85, 105)' }}
-        >
-          {fn.short_description}
-        </div>
-      )}
-    </div>
-  ))}
+            {/* Lista de funções - SEM SCROLL */}
+            <div className="overflow-hidden">
+              {categories
+                .find((c) => c.key === activeCategory)
+                ?.functions.map((fn) => (
+                  <div
+                    key={fn.function_key}
+                    className="px-4 py-2 cursor-pointer transition-all border-b border-white/5"
+                    style={
+                      hoveredFunction === fn.function_key
+                        ? styles.functionItemHover
+                        : styles.functionItem
+                    }
+                    onMouseEnter={() => setHoveredFunction(fn.function_key)}
+                    onMouseLeave={() => setHoveredFunction(null)}
+                    onClick={() => handleFunctionClick(fn.function_key)}
+                  >
+                    {/* Nome da função (sem ícone) */}
+                    <span className="font-medium text-xs">{fn.function_name}</span>
+                    
+                    {/* Descrição ao hover */}
+                    {hoveredFunction === fn.function_key && fn.short_description && (
+                      <div
+                        className="mt-1 text-[10px] opacity-70"
+                        style={{ color: isDark ? 'rgb(203, 213, 225)' : 'rgb(71, 85, 105)' }}
+                      >
+                        {fn.short_description}
+                      </div>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         </div>
       )}
 
       {/* Container do carrossel */}
-<div
-  ref={carouselRef}
-  className="relative overflow-hidden py-3 backdrop-blur-xl"
-  style={styles.container}
-  // Removemos os handlers de mouse - pausa controlada apenas por click
->
+      <div
+        ref={carouselRef}
+        className="relative overflow-hidden py-3 backdrop-blur-xl"
+        style={styles.container}
+      >
         <div
           className="flex gap-3 px-4"
           style={{
@@ -263,16 +259,15 @@ export default function CategoryCarousel({
           {duplicatedCategories.map((category, index) => (
             <button
               key={`${category.key}-${index}`}
-              className="flex-shrink-0 px-4 py-2 rounded-full font-medium text-sm transition-all hover:scale-105"
+              className="flex-shrink-0 px-6 py-2.5 rounded-full font-medium text-sm transition-all hover:scale-105 active:scale-95"
               style={{
                 borderWidth: '2px',
                 borderStyle: 'solid',
                 borderColor: getChipColor(index),
-                color: getChipColor(index),
-                background: activeCategory === category.key ? getChipColor(index) : 'transparent',
-                ...(activeCategory === category.key && {
-                  color: '#ffffff',
-                }),
+                color: activeCategory === category.key ? '#ffffff' : getChipColor(index),
+                background: activeCategory === category.key 
+                  ? getChipColor(index) 
+                  : 'transparent',
               }}
               onClick={() => handleCategoryClick(category.key)}
             >

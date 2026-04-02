@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { Mic, MicOff, Send } from 'lucide-react';
 
 interface TextAssistantProps {
   companyId: string;
@@ -33,13 +34,13 @@ export default function TextAssistant({
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-  
+
   const [messages, setMessages] = useState<TextMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -99,7 +100,7 @@ export default function TextAssistant({
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
-      
+
       const formData = new FormData();
       formData.append('audio', audioBlob);
 
@@ -109,7 +110,7 @@ export default function TextAssistant({
       });
 
       const data = await response.json();
-      
+
       if (data.transcript) {
         setInputText(data.transcript);
         setTimeout(() => {
@@ -249,54 +250,67 @@ export default function TextAssistant({
       {/* Área de mensagens com scroll */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col-reverse mb-[180px]">
         <div ref={messagesEndRef} />
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`mb-4 flex ${
-              message.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
-          >
-            <div
-              className="max-w-[80%] rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm"
-              style={
-                message.role === 'user'
-                  ? styles.messageUser
-                  : message.functionKey
-                  ? styles.messageFunction
-                  : styles.messageAssistant
-              }
+
+        {messages.length === 0 && !isProcessing ? (
+          /* Texto central quando não há mensagens */
+          <div className="flex h-full items-center justify-center absolute inset-0 pointer-events-none">
+            <p
+              className="text-xl font-bold"
+              style={{ color: isDark ? 'rgb(226, 232, 240)' : 'rgb(30, 41, 59)' }}
             >
-              {/* Conteúdo da mensagem */}
-              <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+              Como Posso te Ajudar Hoje?
+            </p>
+          </div>
+        ) : (
+          messages.map((message) => (
+            <div
+              key={message.id}
+              className={`mb-4 flex ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              <div
+                className="max-w-[80%] rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm"
+                style={
+                  message.role === 'user'
+                    ? styles.messageUser
+                    : message.functionKey
+                    ? styles.messageFunction
+                    : styles.messageAssistant
+                }
+              >
+                {/* Conteúdo da mensagem */}
+                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
 
-              {/* Badge de função executada */}
-              {message.functionKey && (
-                <div className="mt-2 text-xs opacity-80">
-                  ✓ {message.functionKey.replace(/_/g, ' ')}
+                {/* Badge de função executada */}
+                {message.functionKey && (
+                  <div className="mt-2 text-xs opacity-80">
+                    ✓ {message.functionKey.replace(/_/g, ' ')}
+                  </div>
+                )}
+
+                {/* Botão de TTS apenas para mensagens do assistente */}
+                {message.role === 'assistant' && playText && (
+                  <button
+                    onClick={() => handlePlayMessage(message)}
+                    className="mt-2 text-lg hover:scale-110 transition-transform"
+                    title={playingMessageId === message.id ? 'Parar' : 'Ouvir'}
+                  >
+                    {playingMessageId === message.id ? '🔇' : '🔊'}
+                  </button>
+                )}
+
+                {/* Timestamp */}
+                <div className="mt-1 text-xs opacity-50">
+                  {message.timestamp.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </div>
-              )}
-
-              {/* Botão de TTS apenas para mensagens do assistente */}
-              {message.role === 'assistant' && playText && (
-                <button
-                  onClick={() => handlePlayMessage(message)}
-                  className="mt-2 text-lg hover:scale-110 transition-transform"
-                  title={playingMessageId === message.id ? 'Parar' : 'Ouvir'}
-                >
-                  {playingMessageId === message.id ? '🔇' : '🔊'}
-                </button>
-              )}
-
-              {/* Timestamp */}
-              <div className="mt-1 text-xs opacity-50">
-                {message.timestamp.toLocaleTimeString('pt-BR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
 
         {/* Indicador de processamento */}
         {isProcessing && (
@@ -315,48 +329,59 @@ export default function TextAssistant({
         )}
       </div>
 
-      {/* Input box fixo - MAIOR E MAIS ACIMA */}
+      {/* Input box flutuando - sem borda superior, com sombra */}
       <div
-        className="fixed left-0 right-0 px-4 py-4 border-t backdrop-blur-xl z-40"
+        className="fixed left-4 right-4 rounded-2xl shadow-xl backdrop-blur-xl z-40 px-3 py-3"
         style={{
           ...styles.inputContainer,
-          bottom: '120px', // Acima do carrossel (que está em bottom-8 = 32px) + rodapé (32px) + margem
+          bottom: '136px',
+          border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
         }}
       >
-        <div className="max-w-4xl mx-auto flex items-end gap-3">
-          {/* Textarea maior */}
+        <div className="relative flex items-center gap-2">
+          {/* Textarea */}
           <textarea
             ref={textareaRef}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem..."
+            placeholder={isRecording ? 'Ouvindo...' : 'Clique no microfone ou digite sua mensagem...'}
             disabled={isProcessing || isRecording}
-            className="flex-1 resize-none rounded-xl px-5 py-4 text-base border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-24"
             style={styles.textarea}
             rows={1}
           />
 
-          {/* Botão dinâmico maior */}
-          {inputText.trim() ? (
+          {/* Botão de microfone */}
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isProcessing}
+            className={`absolute right-14 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:scale-110 disabled:opacity-50 ${
+              isRecording ? 'text-red-500' : ''
+            }`}
+            style={
+              isRecording
+                ? {}
+                : { color: isDark ? 'rgb(148, 163, 184)' : 'rgb(100, 116, 139)' }
+            }
+            title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+          >
+            {isRecording ? (
+              <MicOff className="h-4 w-4 animate-pulse" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </button>
+
+          {/* Botão de enviar — visível apenas quando há texto */}
+          {inputText.trim() && (
             <button
               onClick={() => handleSendMessage()}
               disabled={isProcessing}
-              className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-r from-blue-500 to-green-500 text-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 text-xl font-bold"
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-green-500 text-white hover:scale-110 transition-transform disabled:opacity-50"
+              title="Enviar mensagem"
             >
-              →
-            </button>
-          ) : (
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isProcessing}
-              className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 text-2xl ${
-                isRecording
-                  ? 'bg-red-500 text-white animate-pulse'
-                  : 'bg-gradient-to-r from-blue-500 to-green-500 text-white'
-              }`}
-            >
-              {isRecording ? '🔴' : '🎤'}
+              <Send className="h-4 w-4" />
             </button>
           )}
         </div>

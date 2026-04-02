@@ -282,7 +282,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
       }
 
       setToast({ message: '✅ Lembrete salvo com sucesso!', type: 'success' });
-      playText?.('Lembrete de remédio configurado com sucesso!').catch(() => {});
+      playText?.('Lembretes salvos!').catch(() => {});
       setTimeout(() => onClose(), 2000);
     } catch (error: any) {
       console.error('Erro ao salvar lembrete:', error);

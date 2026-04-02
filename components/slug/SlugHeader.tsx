@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import DigitalClock from '@/components/ui/DigitalClock';
 
 interface SlugHeaderProps {
   company: {
@@ -239,17 +238,6 @@ export default function SlugHeader({
             </div>
           ) : (
             <div />
-          )}
-
-          {/* CENTRO: relógio (só landscape) */}
-          {!isPortrait && (
-            <DigitalClock
-              className={overlayMode
-                ? 'fixed left-1/2 -translate-x-1/2 top-4'
-                : 'absolute left-1/2 -translate-x-1/2'
-              }
-              theme={theme}
-            />
           )}
 
           {/* DIREITA: botões + logo minhAi */}

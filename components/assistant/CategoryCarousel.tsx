@@ -186,7 +186,6 @@ export default function CategoryCarousel({
         <div
           ref={panelRef}
           className="absolute bottom-full left-0 right-0 mb-2 z-40"
-          style={styles.panel}
         >
           <div
             className="mx-auto rounded-2xl border-2 backdrop-blur-xl overflow-hidden"
@@ -210,24 +209,23 @@ export default function CategoryCarousel({
 
             {/* Lista de funções */}
             <div className="overflow-y-auto" style={{ maxHeight: 'calc(60vh - 52px)' }}>
-              {categories
-                .find((c) => c.key === activeCategory)
-                ?.functions.map((fn) => (
-                  <div
-                    key={fn.function_key}
-                    className="px-4 py-3 cursor-pointer transition-all border-b border-white/5"
-                    style={
-                      hoveredFunction === fn.function_key
-                        ? styles.functionItemHover
-                        : styles.functionItem
-                    }
-                    onMouseEnter={() => setHoveredFunction(fn.function_key)}
-                    onMouseLeave={() => setHoveredFunction(null)}
-                    onClick={() => handleFunctionClick(fn.function_key)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontSize: '20px' }}>{fn.icon}</span>
-                      <span className="font-medium text-sm">{fn.function_name}</span>
+{categories
+  .find((c) => c.key === activeCategory)
+  ?.functions.map((fn) => (
+    <div
+      key={fn.function_key}
+      className="px-4 py-3 cursor-pointer transition-all border-b border-white/5"
+      style={
+        hoveredFunction === fn.function_key
+          ? styles.functionItemHover
+          : styles.functionItem
+      }
+      onMouseEnter={() => setHoveredFunction(fn.function_key)}
+      onMouseLeave={() => setHoveredFunction(null)}
+      onClick={() => handleFunctionClick(fn.function_key)}
+    >
+      {/* Removido o ícone */}
+      <span className="font-medium text-sm">{fn.function_name}</span>
                     </div>
                     {hoveredFunction === fn.function_key && fn.short_description && (
                       <div
@@ -245,13 +243,12 @@ export default function CategoryCarousel({
       )}
 
       {/* Container do carrossel */}
-      <div
-        ref={carouselRef}
-        className="relative overflow-hidden py-3 backdrop-blur-xl"
-        style={styles.container}
-        onMouseEnter={() => autoScroll && setIsPaused(true)}
-        onMouseLeave={() => autoScroll && !activeCategory && setIsPaused(false)}
-      >
+<div
+  ref={carouselRef}
+  className="relative overflow-hidden py-3 backdrop-blur-xl"
+  style={styles.container}
+  // Removemos os handlers de mouse - pausa controlada apenas por click
+>
         <div
           className="flex gap-3 px-4"
           style={{

@@ -136,6 +136,7 @@ export default function RastreioCorreiosDisplay({
         throw new Error('Nenhuma informação encontrada para este código.');
       }
 
+      const objeto = rastreioResponse.objetos[0];
 const eventos = rastreioResponse.tracking || [];
 
 if (eventos.length === 0) {
@@ -154,28 +155,8 @@ const rastreioInfo: RastreioData = {
   mensagem: ultimo.observacao || undefined,
 };
 
-      const rastreioInfo: RastreioData = {
-        codigo: codigoLimpo,
-        status: ultimo.descricao || 'Status não disponível',
-        data: ultimo.dtHrCriado?.split('T')[0] || '-',
-        hora: ultimo.dtHrCriado?.split('T')[1]?.slice(0, 5) || '-',
-        local: ultimo.unidade?.endereco?.cidade || 'Local não informado',
-        mensagem: ultimo.detalhe || undefined,
-      };
-
       setRastreio(rastreioInfo);
       setStage('result');
-
-      // Cobrar crédito
-      await fetch('/api/companies/deduct-credit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyId: data.companyId,
-          credits: 1,
-          functionKey: 'rastreio_correios',
-        }),
-      });
 
       // ✅ USAR playText DO SISTEMA
       playText(`Rastreamento encontrado. Status atual: ${rastreioInfo.status}. Local: ${rastreioInfo.local}.`);

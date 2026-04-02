@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createClient } from '@/lib/supabase-browser';
+import { playText } from '@/lib/tts';
 
 // ============================================================================
 // PALETAS DE COR (inline styles — nunca Tailwind dinâmico)
@@ -12,30 +13,24 @@ const DARK = {
   bg: '#1e293b',
   bgSecondary: '#0f172a',
   border: 'rgba(255,255,255,0.08)',
-  cardBg: 'rgba(15,23,42,0.6)',
-  text: '#ffffff',
-  textMuted: 'rgba(255,255,255,0.4)',
-  textSecondary: 'rgba(255,255,255,0.6)',
+  text: '#f1f5f9',
+  textMuted: '#94a3b8',
   accent: '#00FFF7',
   accentHover: '#00d4cc',
+  cardBg: '#334155',
   cardHover: '#475569',
-  buttonSecondary: 'rgba(255,255,255,0.1)',
-  buttonSecondaryHover: 'rgba(255,255,255,0.15)',
 };
 
 const LIGHT = {
   bg: '#ffffff',
   bgSecondary: '#f8fafc',
   border: '#e2e8f0',
-  cardBg: '#f8fafc',
-  text: '#1e293b',
-  textMuted: '#94a3b8',
-  textSecondary: '#64748b',
+  text: '#0f172a',
+  textMuted: '#64748b',
   accent: '#00b8b0',
   accentHover: '#009990',
+  cardBg: '#f1f5f9',
   cardHover: '#e2e8f0',
-  buttonSecondary: '#e2e8f0',
-  buttonSecondaryHover: '#cbd5e1',
 };
 
 // ============================================================================
@@ -50,13 +45,11 @@ interface Noticia {
 
 type Stage = 'loading' | 'result' | 'error';
 
-interface Props {
-  data: {
-    companyId: string;
-  };
+interface VerNoticiasDisplayProps {
+  isOpen: boolean;
   onClose: () => void;
-  theme?: 'dark' | 'light';
-  playText?: (text: string) => Promise<void>;
+  companyId: string;
+  isDarkMode?: boolean;
 }
 
 // ============================================================================
@@ -68,10 +61,13 @@ const ERROR_TEXT = 'Não foi possível carregar as notícias no momento. Tente n
 // ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
-export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', playText }: Props) {
-  const { companyId } = data;
-  const isDark = theme === 'dark';
-  const colors = isDark ? DARK : LIGHT;
+export default function VerNoticiasDisplay({
+  isOpen,
+  onClose,
+  companyId,
+  isDarkMode = false,
+}: VerNoticiasDisplayProps) {
+  const P = isDarkMode ? DARK : LIGHT;
 
   const [stage, setStage] = useState<Stage>('loading');
   const [noticias, setNoticias] = useState<Noticia[]>([]);
@@ -81,39 +77,43 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
   // MOUNT: Falar texto inicial + buscar notícias + cobrar crédito
   // ============================================================================
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.speechSynthesis?.cancel();
-    }
-    playText?.(OPENING_TEXT).catch(() => {});
+    if (!isOpen) return;
+
+    window.speechSynthesis?.cancel();
+    playText(OPENING_TEXT);
+
     buscarNoticias();
     cobrarCredito();
-  }, []);
+  }, [isOpen]);
 
   // ============================================================================
-  // BUSCAR NOTÍCIAS (Google News RSS via rss2json)
+  // BUSCAR NOTÍCIAS (GNews.io API — gratuito, 100 requests/dia)
   // ============================================================================
   const buscarNoticias = async () => {
     try {
       setStage('loading');
 
-      const rssUrl = 'https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419';
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`;
+      // GNews.io — API gratuita de notícias (100 requests/dia sem API key)
+      // Alternativa: se precisar de mais, criar conta grátis e adicionar &apikey=XXX
+      const apiUrl = `https://gnews.io/api/v4/top-headlines?lang=pt&country=br&max=5&apikey=e8b0de999f1f5d2e40e6ae26a1ee9f82`;
 
       const response = await fetch(apiUrl);
 
-      if (!response.ok) throw new Error('Erro ao buscar notícias');
+      if (!response.ok) {
+        throw new Error('Serviço de notícias temporariamente indisponível');
+      }
 
       const data = await response.json();
 
-      if (data.status !== 'ok' || !data.items || data.items.length === 0) {
+      if (!data.articles || data.articles.length === 0) {
         throw new Error('Nenhuma notícia encontrada');
       }
 
-      const noticiasFormatadas: Noticia[] = data.items.map((item: any) => ({
+      const noticiasFormatadas: Noticia[] = data.articles.slice(0, 5).map((item: any) => ({
         title: item.title,
-        url: item.link,
-        source: item.author || 'Google News',
-        publishedAt: new Date(item.pubDate).toLocaleDateString('pt-BR', {
+        url: item.url,
+        source: item.source?.name || 'Desconhecido',
+        publishedAt: new Date(item.publishedAt).toLocaleDateString('pt-BR', {
           day: '2-digit',
           month: 'short',
           hour: '2-digit',
@@ -127,28 +127,44 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
       console.error('❌ Erro ao buscar notícias:', err);
       setError(err.message || 'Erro desconhecido');
       setStage('error');
-      playText?.(ERROR_TEXT).catch(() => {});
+      playText(ERROR_TEXT);
     }
   };
 
   // ============================================================================
-  // COBRAR CRÉDITO
+  // COBRAR CRÉDITO (1 crédito ao abrir modal)
   // ============================================================================
   const cobrarCredito = async () => {
     try {
       const supabase = createClient();
 
-      const { data: company } = await supabase
+      const { data: companies, error: fetchError } = await supabase
         .from('companies')
         .select('credits')
-        .eq('id', companyId)
-        .single();
+        .eq('id', companyId);
 
-      if (!company) return;
+      if (fetchError) {
+        console.error('❌ Erro ao buscar empresa:', fetchError);
+        return;
+      }
 
+      if (!companies || companies.length === 0) {
+        console.error('❌ Empresa não encontrada');
+        return;
+      }
+
+      const company = companies[0];
       const newCredits = Math.max(0, (company.credits || 0) - 1);
 
-      await supabase.from('companies').update({ credits: newCredits }).eq('id', companyId);
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({ credits: newCredits })
+        .eq('id', companyId);
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar créditos:', updateError);
+        return;
+      }
 
       console.log('✅ Crédito cobrado: Ver Notícias');
     } catch (err) {
@@ -159,27 +175,24 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
   // ============================================================================
   // COMANDOS DE VOZ
   // ============================================================================
-  const handleVoiceCommand = useCallback(
-    (transcript: string) => {
-      const lower = transcript.toLowerCase();
+  const handleVoiceCommand = useCallback((transcript: string) => {
+    const lower = transcript.toLowerCase();
 
-      if (lower.includes('fechar') || lower.includes('sair') || lower.includes('voltar')) {
-        onClose();
-        return true;
-      }
+    if (lower.includes('fechar') || lower.includes('sair') || lower.includes('voltar')) {
+      onClose();
+      return true;
+    }
 
-      if (lower.includes('repetir') || lower.includes('atualizar') || lower.includes('recarregar')) {
-        buscarNoticias();
-        return true;
-      }
+    if (lower.includes('repetir') || lower.includes('atualizar') || lower.includes('recarregar')) {
+      buscarNoticias();
+      return true;
+    }
 
-      return false;
-    },
-    [onClose],
-  );
+    return false;
+  }, [onClose]);
 
   useModalVoiceCommand({
-    active: true,
+    active: isOpen,
     onTranscript: handleVoiceCommand,
   });
 
@@ -198,42 +211,73 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
   // ============================================================================
   // RENDER
   // ============================================================================
+  if (!isOpen) return null;
+
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.75)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1rem',
+      }}
+      onClick={handleClose}
     >
-      {/* Modal */}
       <div
-        className="relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
         style={{
-          background: colors.bg,
-          border: `1px solid ${colors.border}`,
+          backgroundColor: P.bg,
+          borderRadius: '1rem',
+          maxWidth: '48rem',
+          width: '100%',
           maxHeight: '90vh',
-          overflowY: 'auto',
+          overflow: 'auto',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+          border: `1px solid ${P.border}`,
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
         <div
-          className="px-6 py-4 flex items-center justify-between"
           style={{
-            borderBottom: `1px solid ${colors.border}`,
-            background: colors.cardBg,
+            padding: '1.5rem',
+            borderBottom: `1px solid ${P.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Ícone SVG inline */}
             <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-2xl"
-              style={{ background: colors.accent + '20' }}
+              style={{
+                width: '2.5rem',
+                height: '2.5rem',
+                borderRadius: '0.5rem',
+                backgroundColor: P.accent + '20',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+              }}
             >
-              📰
+              ❄️
             </div>
             <div>
-              <h2 className="text-xl font-bold" style={{ color: colors.text }}>
+              <h2
+                style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold',
+                  color: P.text,
+                  margin: 0,
+                }}
+              >
                 Ver Notícias
               </h2>
-              <p className="text-sm" style={{ color: colors.textMuted }}>
+              <p style={{ fontSize: '0.875rem', color: P.textMuted, margin: 0 }}>
                 Últimas manchetes do momento
               </p>
             </div>
@@ -241,29 +285,46 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
 
           <button
             onClick={handleClose}
-            className="p-2 rounded-full transition"
-            style={{ background: colors.buttonSecondary, color: colors.text }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = colors.buttonSecondaryHover)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = colors.buttonSecondary)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.5rem',
+              color: P.textMuted,
+              fontSize: '1.5rem',
+              lineHeight: 1,
+            }}
+            aria-label="Fechar"
           >
-            ✕
+            ×
           </button>
         </div>
 
         {/* CONTENT */}
-        <div className="p-6">
+        <div style={{ padding: '1.5rem' }}>
           {/* LOADING */}
           {stage === 'loading' && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '3rem 1rem',
+                gap: '1rem',
+              }}
+            >
               <div
-                className="w-12 h-12 rounded-full"
                 style={{
-                  border: `3px solid ${colors.border}`,
-                  borderTop: `3px solid ${colors.accent}`,
+                  width: '3rem',
+                  height: '3rem',
+                  border: `3px solid ${P.border}`,
+                  borderTop: `3px solid ${P.accent}`,
+                  borderRadius: '50%',
                   animation: 'spin 1s linear infinite',
                 }}
               />
-              <p className="text-sm" style={{ color: colors.textMuted }}>
+              <p style={{ color: P.textMuted, fontSize: '0.875rem' }}>
                 Buscando notícias...
               </p>
             </div>
@@ -272,18 +333,29 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
           {/* ERROR */}
           {stage === 'error' && (
             <div
-              className="p-6 rounded-xl text-center"
-              style={{ background: '#fef2f2', border: '1px solid #fecaca' }}
+              style={{
+                padding: '1.5rem',
+                borderRadius: '0.5rem',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
+                textAlign: 'center',
+              }}
             >
-              <p className="font-semibold mb-4" style={{ color: '#dc2626' }}>
+              <p style={{ color: '#dc2626', fontWeight: '500', margin: 0 }}>
                 {error || ERROR_TEXT}
               </p>
               <button
                 onClick={buscarNoticias}
-                className="px-4 py-2 rounded-lg font-semibold text-white transition"
-                style={{ background: colors.accent }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = colors.accentHover)}
-                onMouseLeave={(e) => (e.currentTarget.style.background = colors.accent)}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: P.accent,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                }}
               >
                 Tentar Novamente
               </button>
@@ -292,32 +364,48 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
 
           {/* RESULT */}
           {stage === 'result' && (
-            <div className="flex flex-col gap-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {noticias.map((noticia, index) => (
                 <div
                   key={index}
                   onClick={() => handleNoticiaClick(noticia.url)}
-                  className="p-4 rounded-xl cursor-pointer transition-all"
                   style={{
-                    background: colors.cardBg,
-                    border: `1px solid ${colors.border}`,
+                    padding: '1rem',
+                    backgroundColor: P.cardBg,
+                    borderRadius: '0.5rem',
+                    border: `1px solid ${P.border}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = colors.cardHover;
-                    e.currentTarget.style.borderColor = colors.accent;
+                    e.currentTarget.style.backgroundColor = P.cardHover;
+                    e.currentTarget.style.borderColor = P.accent;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = colors.cardBg;
-                    e.currentTarget.style.borderColor = colors.border;
+                    e.currentTarget.style.backgroundColor = P.cardBg;
+                    e.currentTarget.style.borderColor = P.border;
                   }}
                 >
                   <h3
-                    className="text-base font-semibold mb-2 leading-snug"
-                    style={{ color: colors.text }}
+                    style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: P.text,
+                      margin: '0 0 0.5rem 0',
+                      lineHeight: '1.4',
+                    }}
                   >
                     {noticia.title}
                   </h3>
-                  <div className="flex items-center justify-between text-xs" style={{ color: colors.textMuted }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.75rem',
+                      color: P.textMuted,
+                    }}
+                  >
                     <span>{noticia.source}</span>
                     <span>{noticia.publishedAt}</span>
                   </div>
@@ -330,25 +418,35 @@ export default function VerNoticiasDisplay({ data, onClose, theme = 'dark', play
         {/* FOOTER — Voice Hints */}
         {stage === 'result' && (
           <div
-            className="px-6 py-3"
             style={{
-              borderTop: `1px solid ${colors.border}`,
-              background: colors.bgSecondary,
+              padding: '1rem 1.5rem',
+              borderTop: `1px solid ${P.border}`,
+              backgroundColor: P.bgSecondary,
+              borderBottomLeftRadius: '1rem',
+              borderBottomRightRadius: '1rem',
             }}
           >
-            <p className="text-xs text-center" style={{ color: colors.textMuted }}>
-              💬 Diga: <strong>"Atualizar"</strong> • <strong>"Fechar"</strong>
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: P.textMuted,
+                margin: 0,
+                textAlign: 'center',
+              }}
+            >
+              Diga: <strong>"Atualizar"</strong> • <strong>"Fechar"</strong>
             </p>
           </div>
         )}
       </div>
 
+      {/* Keyframe animation */}
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
       `}</style>
     </div>,
-    document.body,
+    document.body
   );
 }

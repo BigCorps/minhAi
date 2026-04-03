@@ -2924,6 +2924,345 @@ restricoes_cpf: {
   },
 },
 
+  // ── MODO VENDAS - 7 FUNÇÕES ──────────────────────────────────
+  
+  registrar_venda: {
+    functionKey: 'registrar_venda',
+    functionName: 'Registrar Venda',
+    category: 'payment',
+    responseType: 'voice+modal',
+ 
+    voiceTriggers: [
+      'registrar venda',
+      'nova venda',
+      'fazer venda',
+      'vender',
+      'vendendo',
+      'abrir venda',
+      'iniciar venda',
+    ],
+ 
+    examplePhrases: [
+      'Registrar venda',
+      'Nova venda',
+      'Fazer uma venda',
+      'Quero vender',
+    ],
+ 
+    requiresInput: false,
+    description: 'Abre o PDV para registrar uma venda manual. Permite adicionar produtos, calcular total, aplicar descontos e finalizar com PIX, dinheiro ou cartão.',
+    shortDescription: 'Abrir PDV para registrar venda',
+    icon: '🛒',
+    color: '#10b981',
+ 
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+ 
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      await playText('Abrindo o PDV...');
+      
+      setActiveModal?.({
+        type: 'RegistrarVendaDisplay',
+        data: {
+          companyId,
+        },
+      });
+ 
+      return true;
+    },
+  },
+ 
+  ver_clientes: {
+    functionKey: 'ver_clientes',
+    functionName: 'Ver Clientes',
+    category: 'information',
+    responseType: 'voice+modal',
+ 
+    voiceTriggers: [
+      'ver clientes',
+      'lista de clientes',
+      'clientes cadastrados',
+      'buscar cliente',
+      'encontrar cliente',
+      'procurar cliente',
+    ],
+ 
+    examplePhrases: [
+      'Ver clientes',
+      'Lista de clientes',
+      'Buscar cliente',
+      'Mostrar clientes cadastrados',
+    ],
+ 
+    requiresInput: false,
+    description: 'Lista todos os clientes cadastrados no sistema com histórico de compras e dados de contato.',
+    shortDescription: 'Ver clientes cadastrados',
+    icon: '👥',
+    color: '#3b82f6',
+ 
+    saveToHistory: false,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+ 
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      await playText('Carregando lista de clientes...');
+      
+      setActiveModal?.({
+        type: 'VerClientesDisplay',
+        data: {
+          companyId,
+        },
+      });
+ 
+      return true;
+    },
+  },
+ 
+  fechar_caixa: {
+    functionKey: 'fechar_caixa',
+    functionName: 'Fechar Caixa',
+    category: 'payment',
+    responseType: 'voice+modal',
+ 
+    voiceTriggers: [
+      'fechar caixa',
+      'fechamento de caixa',
+      'conferir caixa',
+      'encerrar caixa',
+      'fechar o caixa',
+    ],
+ 
+    examplePhrases: [
+      'Fechar caixa',
+      'Fechamento do caixa',
+      'Conferir caixa',
+      'Encerrar o caixa',
+    ],
+ 
+    requiresInput: false,
+    description: 'Fecha o caixa do turno atual mostrando resumo de vendas, formas de pagamento e divergências.',
+    shortDescription: 'Fechar o caixa do turno',
+    icon: '🔒',
+    color: '#f59e0b',
+ 
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+ 
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      await playText('Preparando fechamento de caixa...');
+      
+      setActiveModal?.({
+        type: 'FecharCaixaDisplay',
+        data: {
+          companyId,
+        },
+      });
+ 
+      return true;
+    },
+  },
+ 
+  trocar_turno: {
+    functionKey: 'trocar_turno',
+    functionName: 'Trocar Turno',
+    category: 'configuration',
+    responseType: 'voice+modal',
+ 
+    voiceTriggers: [
+      'trocar turno',
+      'mudar turno',
+      'encerrar turno',
+      'fechar turno',
+      'sair do turno',
+      'finalizar turno',
+    ],
+ 
+    examplePhrases: [
+      'Trocar turno',
+      'Encerrar turno',
+      'Fechar turno',
+      'Quero trocar de turno',
+    ],
+ 
+    requiresInput: false,
+    description: 'Fecha o turno atual e inicia um novo. Gera relatório do turno encerrado.',
+    shortDescription: 'Trocar de turno',
+    icon: '🔄',
+    color: '#8b5cf6',
+ 
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+ 
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      await playText('Preparando troca de turno...');
+      
+      setActiveModal?.({
+        type: 'TrocarTurnoDisplay',
+        data: {
+          companyId,
+        },
+      });
+ 
+      return true;
+    },
+  },
+ 
+  relatorio_vendas: {
+    functionKey: 'relatorio_vendas',
+    functionName: 'Relatório de Vendas',
+    category: 'information',
+    responseType: 'voice+modal',
+ 
+    voiceTriggers: [
+      'relatório de vendas',
+      'relatorio de vendas',
+      'vendas do dia',
+      'vendas hoje',
+      'vendas do mês',
+      'minhas vendas',
+      'relatório',
+      'relatorio',
+    ],
+ 
+    examplePhrases: [
+      'Relatório de vendas',
+      'Vendas hoje',
+      'Minhas vendas',
+      'Vendas do mês',
+    ],
+ 
+    requiresInput: false,
+    description: 'Gera relatório de vendas do período. Colaboradores veem apenas suas vendas, gerentes veem todas.',
+    shortDescription: 'Ver relatório de vendas',
+    icon: '📊',
+    color: '#06b6d4',
+ 
+    saveToHistory: false,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+ 
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      await playText('Gerando relatório de vendas...');
+      
+      setActiveModal?.({
+        type: 'RelatorioVendasDisplay',
+        data: {
+          companyId,
+        },
+      });
+ 
+      return true;
+    },
+  },
+ 
+  minhas_compras: {
+    functionKey: 'minhas_compras',
+    functionName: 'Minhas Compras',
+    category: 'information',
+    responseType: 'voice+modal',
+ 
+    voiceTriggers: [
+      'minhas compras',
+      'meus pedidos',
+      'histórico de compras',
+      'historico de compras',
+      'compras anteriores',
+      'pedidos anteriores',
+      'ver compras',
+      'ver pedidos',
+    ],
+ 
+    examplePhrases: [
+      'Minhas compras',
+      'Meus pedidos',
+      'Histórico de compras',
+      'Ver meus pedidos',
+    ],
+ 
+    requiresInput: false,
+    description: 'Mostra o histórico completo de pedidos do cliente logado com status de pagamento e detalhes.',
+    shortDescription: 'Ver histórico de compras',
+    icon: '🛍️',
+    color: '#ec4899',
+ 
+    saveToHistory: false,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+ 
+    handler: async ({ playText, setActiveModal, companyId }) => {
+      await playText('Carregando seu histórico de compras...');
+      
+      setActiveModal?.({
+        type: 'MinhasComprasDisplay',
+        data: {
+          companyId,
+        },
+      });
+ 
+      return true;
+    },
+  },
+ 
+  chamar_gerente: {
+    functionKey: 'chamar_gerente',
+    functionName: 'Chamar Gerente',
+    category: 'services',
+    responseType: 'voice+modal',
+ 
+    voiceTriggers: [
+      'chamar gerente',
+      'chamar o gerente',
+      'preciso do gerente',
+      'gerente',
+      'ajuda gerente',
+      'solicitar gerente',
+      'quero falar com gerente',
+    ],
+ 
+    examplePhrases: [
+      'Chamar gerente',
+      'Preciso do gerente',
+      'Solicitar gerente',
+      'Quero falar com o gerente',
+    ],
+ 
+    requiresInput: false,
+    description: 'Envia notificação para o gerente quando colaboradores ou clientes precisam de autorização ou ajuda.',
+    shortDescription: 'Solicitar ajuda do gerente',
+    icon: '🔔',
+    color: '#ef4444',
+ 
+    saveToHistory: true,
+    creditsPerUse: 1,
+    requiresPayment: false,
+    isPremium: false,
+ 
+    handler: async ({ playText, setActiveModal, companyId, transcript }) => {
+      const motivo = extractMotivo(transcript ?? '');
+      
+      await playText('Chamando o gerente...');
+      
+      setActiveModal?.({
+        type: 'ChamarGerenteDisplay',
+        data: {
+          companyId,
+          motivo,
+        },
+      });
+ 
+      return true;
+    },
+  },
+ 
 // ── Restrições CNPJ ───────────────────────────────────────────
 restricoes_cnpj: {
   functionKey: 'restricoes_cnpj',
@@ -5192,6 +5531,16 @@ function extractNumberFromText(text: string): number | null {
   }
   
   return null;
+}
+
+function extractMotivo(text: string): string {
+  // Remove a parte do comando e pega o resto
+  const motivoMatch = text
+    .replace(/chamar (o )?gerente/gi, '')
+    .replace(/preciso (do|da) gerente/gi, '')
+    .trim();
+  
+  return motivoMatch || '';
 }
 
 function convertWordsToNumbers(text: string): string {

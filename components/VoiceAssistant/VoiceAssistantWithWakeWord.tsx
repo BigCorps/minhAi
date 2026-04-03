@@ -1790,13 +1790,13 @@ const handleTextMessageForText = async (
   };
 
   // ── Registra handler para uso externo (modo texto) ────────
-  useEffect(() => {
-    if (onTextMessage) {
-      onTextMessage(async (text: string) => {
-        return await handleTextMessageForText(text);
-      });
-    }
-  }, [onTextMessage]);
+useEffect(() => {
+  if (onTextMessage) {
+    onTextMessage(async (text: string) => {
+      return await handleTextMessageForText(text);
+    });
+  }
+}, [onTextMessage, commandProcessor]); 
 
   useEffect(() => {
     function handleOpenListaCompras(event: CustomEvent) {

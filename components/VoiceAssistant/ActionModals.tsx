@@ -171,22 +171,25 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'ProcurarProdutoDisplay': ProcurarProdutoDisplay,
   'ListaComprasDisplay': ListaComprasDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
-  <SaleModeModal
-    companyId={data.companyId}
-    theme={theme}
-    onClose={onClose}
-    playText={playText}
-    produtoDestaque={data.produtoDestaque}
-    isListening={data.isListening}
-    isProcessing={data.isProcessing}
-    isPlayingAudio={data.isPlayingAudio}
-    isTranscribing={data.isTranscribing}
-    onMicDown={data.onMicDown}
-    onMicUp={data.onMicUp}
-    onTextMessage={data.onTextMessage}
-    isMaximized={data.isMaximized}
-    profile={data.profile}
-  />
+<SaleModeModal
+  companyId={data.companyId}
+  theme={theme}
+  onClose={onClose}
+  // Props de áudio/estado que você já tem:
+  playText={playText}
+  produtoDestaque={data.produtoDestaque}
+  isListening={data.isListening}
+  isProcessing={data.isProcessing}
+  isPlayingAudio={data.isPlayingAudio}
+  isTranscribing={data.isTranscribing}
+  onMicDown={data.onMicDown}
+  onMicUp={data.onMicUp}
+  onTextMessage={data.onTextMessage}
+  isMaximized={data.isMaximized}
+  profile={data.profile}
+  // Garantindo o modo da v8:
+  isFullscreen={false} 
+/>
 ),
 'VerProdutoDisplay': ({ data, onClose, theme, playText }: any) => (
   <VerProdutoDisplay

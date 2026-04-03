@@ -208,7 +208,7 @@ const handleSendMessage = async (overrideText?: string) => {
         pt-[120px] mobile (header 2 linhas) / md:pt-[72px] desktop (header 1 linha)
         pb cobre o input + carrossel + footer
       */}
-      <div className="flex-1 overflow-y-auto px-12 pt-[140px] pb-[220px] md:pt-[96px] flex flex-col">
+      <div className="flex-1 overflow-y-auto px-10 md:px-16 pt-[140px] pb-[220px] md:pt-[96px] flex flex-col">
 
         {/* Boas-vindas quando vazio */}
         {messages.length === 0 && !busy && (
@@ -282,7 +282,7 @@ const handleSendMessage = async (overrideText?: string) => {
         Input box — fica acima do carrossel (bottom-[136px])
       */}
       <div
-        className="fixed left-12 right-12 rounded-2xl shadow-xl backdrop-blur-xl z-40 px-3 py-3"
+        className="fixed left-10 right-10 md:left-16 md:right-16 rounded-2xl shadow-xl backdrop-blur-xl z-40 px-3 py-3"
         style={{ ...styles.inputContainer, bottom: '136px' }}
       >
         <div className="relative flex items-center gap-2">

@@ -85,6 +85,7 @@ import EditarImagemDisplay from '@/components/assistant/EditarImagemDisplay';
 import RemoverFundoDisplay from '@/components/assistant/RemoverFundoDisplay';
 import VerNoticiasDisplay from '@/components/assistant/VerNoticiasDisplay';
 import ProcurarProdutoDisplay from '@/components/assistant/ProcurarProdutoDisplay';
+import ListaComprasDisplay from '@/components/assistant/ListaComprasDisplay';
 
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
@@ -168,6 +169,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'RemoverFundoDisplay': RemoverFundoDisplay,
   'VerNoticiasDisplay': VerNoticiasDisplay,
   'ProcurarProdutoDisplay': ProcurarProdutoDisplay,
+  'ListaComprasDisplay': ListaComprasDisplay,
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
   <SaleModeModal
     companyId={data.companyId}

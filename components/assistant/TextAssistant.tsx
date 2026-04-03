@@ -11,129 +11,6 @@ export interface TextMessage {
   timestamp: Date;
 }
 
-// Mapeamento de functionKey → mensagem de feedback amigável
-// Usado quando a função abre um modal mas não retorna texto descritivo
-const FUNCTION_FEEDBACK: Record<string, string> = {
-  // Pagamentos
-  cobrar_debito: '💳 Cobrança no débito iniciada.',
-  cobrar_credito: '💳 Cobrança no crédito iniciada.',
-  link_pagamento: '🔗 Gerando link de pagamento...',
-  nfc_debito: '📲 Pagamento NFC débito iniciado.',
-  nfc_credito: '📲 Pagamento NFC crédito iniciado.',
-  tef_debito: '🔴 TEF débito na maquininha iniciado.',
-  tef_credito: '🔴 TEF crédito na maquininha iniciado.',
-  // Pagamento PIX legado
-  pix_generate: '⚡ Gerando QR Code PIX...',
-  // Contatos / QR Code
-  qrcode_whatsapp: '💬 Exibindo QR Code do WhatsApp.',
-  qrcode_instagram: '📸 Exibindo QR Code do Instagram.',
-  qrcode_website: '🌐 Exibindo QR Code do site.',
-  qrcode_facebook: '👍 Exibindo QR Code do Facebook.',
-  qrcode_email: '📧 Exibindo QR Code do e-mail.',
-  qrcode_linkedin: '💼 Exibindo QR Code do LinkedIn.',
-  qrcode_tiktok: '🎵 Exibindo QR Code do TikTok.',
-  qrcode_twitter: '🐦 Exibindo QR Code do Twitter/X.',
-  qrcode_telefone: '📞 Exibindo QR Code do telefone.',
-  // Ferramentas
-  converter_arquivo: '🔄 Abrindo conversor de arquivos.',
-  editar_imagem: '✏️ Abrindo editor de imagens.',
-  remover_fundo: '🖼️ Abrindo remoção de fundo.',
-  duplicar_imagem: '📑 Abrindo duplicador de imagem.',
-  enviar_arquivo: '📁 Abrindo envio de arquivo.',
-  gerar_qrcode: '🔲 Abrindo gerador de QR Code.',
-  gerar_codigo_barras: '📊 Abrindo gerador de código de barras.',
-  imagem_em_texto: '📝 Abrindo extração de texto (OCR).',
-  tabela_em_texto: '📋 Abrindo conversor de tabela.',
-  contrato_em_texto: '📄 Abrindo digitalização de contrato.',
-  ler_qrcode: '📷 Abrindo leitor de QR Code.',
-  ler_codigo_barras: '📊 Abrindo leitor de código de barras.',
-  validar_cupom: '🎟️ Abrindo validação de cupom.',
-  identificar_fraude: '🔍 Abrindo análise de fraude.',
-  // Utilities
-  criar_nota: '📓 Abrindo criador de notas.',
-  lembrete_remedios: '💊 Abrindo lembrete de remédios.',
-  criar_lembrete: '🔔 Abrindo criador de lembretes.',
-  cronometro: '⏱️ Cronômetro iniciado!',
-  temporizador: '⏲️ Abrindo temporizador.',
-  relogio_mundial: '🌍 Abrindo relógio mundial.',
-  alarme: '⏰ Abrindo alarme.',
-  lista_compras: '🛒 Abrindo lista de compras.',
-  segunda_via_boleto: '🧾 Abrindo geração de segunda via.',
-  // Informação
-  consultar_cambio: '💱 Abrindo cotação de câmbio.',
-  consultar_cep: '📍 Abrindo consulta de CEP.',
-  consultar_cnpj: '🏢 Abrindo consulta de CNPJ.',
-  consultar_cpf: '👤 Abrindo consulta de CPF.',
-  restricoes_cpf: '📋 Abrindo restrições de CPF.',
-  restricoes_cnpj: '📋 Abrindo restrições de CNPJ.',
-  consultar_feriados: '📅 Abrindo calendário de feriados.',
-  consultar_ddd: '📱 Abrindo consulta de DDD.',
-  consultar_placa: '🚗 Abrindo consulta de placa.',
-  consultar_leilao: '⚖️ Abrindo consulta de protestos.',
-  rastreio_correios: '📦 Abrindo rastreio dos Correios.',
-  tracar_rota: '🗺️ Abrindo traçador de rota.',
-  buscar_endereco: '📍 Abrindo busca de endereço.',
-  ver_noticias: '📰 Abrindo notícias.',
-  procurar_produto: '🔍 Abrindo busca de produto.',
-  // Agendamentos
-  confirmar_presenca: '✅ Buscando seu agendamento.',
-  reagendar_compromisso: '🔄 Buscando seu agendamento para reagendar.',
-  cancelar_agendamento: '❌ Buscando seu agendamento para cancelar.',
-  horarios_disponiveis: '🕐 Consultando horários disponíveis.',
-  agendar_compromisso: '📅 Abrindo agendamento.',
-  ver_agenda: '📆 Abrindo agenda.',
-  // Vídeo / Mídia
-  tocar_musica: '🎵 Buscando música...',
-  tocar_video: '🎥 Buscando vídeo...',
-  sequencia_videos: '🎬 Abrindo sequência de vídeos.',
-  playlist: '📚 Abrindo playlist.',
-  porta_retrato: '🖼️ Abrindo porta-retrato.',
-  painel_ofertas: '📢 Abrindo painel de ofertas.',
-  video_instrucoes: '🎓 Abrindo vídeo de instruções.',
-  canal_youtube: '🔴 Abrindo canal do YouTube.',
-  // Produtividade
-  enviar_email: '📧 Abrindo envio de e-mail.',
-  fichas_producao_conversacional: '💬 Abrindo fichas de produção.',
-  // Smart home / Serviços
-  aparelhos_smart: '🏠 Abrindo controle de dispositivos.',
-  wifi_qrcode: '📶 Exibindo QR Code do Wi-Fi.',
-  cardapio: '🍽️ Abrindo cardápio.',
-  nosso_qrcode: '📲 Exibindo QR Code.',
-  impressao_remota: '🖨️ Abrindo impressão remota.',
-  impressao_local: '🖨️ Abrindo impressão local.',
-  impressao_recibo: '🖨️ Abrindo impressão de recibo.',
-  // Biometria / Conta
-  minha_conta: '👤 Abrindo sua conta.',
-  cadastro: '📋 Abrindo cadastro.',
-  meu_cupom: '🎟️ Abrindo gerador de cupom.',
-  // Empresa
-  nossa_marca: '🏢 Exibindo informações da marca.',
-  meu_sistema: '🤖 Exibindo informações do sistema.',
-  endereco: '📍 Exibindo endereço no mapa.',
-  // Produtos / Vendas
-  modo_venda: '🛒 Abrindo modo de venda.',
-  ver_produtos: '🛍️ Abrindo catálogo de produtos.',
-  fazer_pedido: '📋 Abrindo pedido.',
-  cadastrar_produto: '📦 Abrindo cadastro de produto.',
-  consultar_estoque: '📦 Consultando estoque...',
-  // Segurança
-  identificar_fraude_modal: '🔍 Abrindo análise de fraude.',
-  // Códigos
-  imagem_em_texto_modal: '📝 Abrindo extração de texto.',
-  // AI
-  traduzir_texto: '🔵 Abrindo tradução.',
-  transcrever_audio: '🔵 Abrindo transcrição de áudio.',
-  clima_tempo: '🌤️ Consultando clima...',
-  // Outros
-  orcamento: '💰 Gerando orçamento...',
-};
-
-// Fallback genérico para qualquer functionKey não mapeado
-function getFunctionFeedback(functionKey?: string): string {
-  if (!functionKey) return '';
-  return FUNCTION_FEEDBACK[functionKey] ?? `⚡ Função "${functionKey.replace(/_/g, ' ')}" executada.`;
-}
-
 interface TextAssistantProps {
   companyId: string;
   theme: 'dark' | 'light';
@@ -231,67 +108,60 @@ export default function TextAssistant({
     }
   };
 
-  // ── Envio de mensagem ──────────────────────────────────────────────────────
-  const handleSendMessage = async (overrideText?: string) => {
-    const messageText = (overrideText ?? inputText).trim();
-    if (!messageText || isSending || isProcessing) return;
+const handleSendMessage = async (overrideText?: string) => {
+  const messageText = (overrideText ?? inputText).trim();
+  if (!messageText || isSending || isProcessing) return;
 
-    // Adiciona mensagem do usuário
-    const userMessage: TextMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: messageText,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setInputText('');
-    setIsSending(true);
-
-    try {
-      const result = await onSendMessage(messageText);
-
-      // ── Determinar o texto a exibir na bolha do assistente ──────────────
-      let displayText = '';
-      let functionKey: string | undefined;
-
-      if (result) {
-        functionKey = result.functionKey;
-
-        if (result.text && result.text.trim()) {
-          // A função retornou texto descritivo (ex: FAQ, ChatGPT, orçamento, clima)
-          displayText = result.text.trim();
-        } else if (result.functionKey) {
-          // A função abriu um modal mas não retornou texto → usa mapeamento
-          displayText = getFunctionFeedback(result.functionKey);
-        }
-      }
-
-      // Só adiciona bolha do assistente se houver algo para mostrar
-      if (displayText) {
-        const assistantMessage: TextMessage = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: displayText,
-          functionKey,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      }
-    } catch (err) {
-      console.error('Erro ao enviar mensagem:', err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: 'Desculpe, ocorreu um erro ao processar sua mensagem.',
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      setIsSending(false);
-    }
+  const userMessage: TextMessage = {
+    id: `user-${Date.now()}`,
+    role: 'user',
+    content: messageText,
+    timestamp: new Date(),
   };
+  setMessages((prev) => [...prev, userMessage]);
+  setInputText('');
+  setIsSending(true);
+
+  try {
+    const result = await onSendMessage(messageText);
+
+    let displayText = '';
+    let functionKey: string | undefined;
+
+    if (result) {
+      functionKey = result.functionKey;
+      if (result.text && result.text.trim()) {
+        displayText = result.text.trim();
+      } else {
+        displayText = '✅ Função executada.';
+      }
+    }
+
+    if (displayText) {
+      const assistantMessage: TextMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: displayText,
+        functionKey,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    }
+  } catch (err) {
+    console.error('Erro ao enviar mensagem:', err);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'Desculpe, ocorreu um erro ao processar sua mensagem.',
+        timestamp: new Date(),
+      },
+    ]);
+  } finally {
+    setIsSending(false);
+  }
+};
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import Link from 'next/link';
 import {
-  ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw,
+  Ticket, ToggleLeft, ToggleRight, RefreshCw,
   FileText, Download, CheckCircle, Upload, File, Image, Printer, Receipt,
   ShoppingCart,
 } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
+import { usePlayText } from '@/hooks/usePlayText';
 import { useRouter } from 'next/navigation';
+import ListaComprasDisplay from '@/components/assistant/ListaComprasDisplay';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -29,8 +30,8 @@ interface ArquivosCompanyClientProps {
   };
 }
 
-type TabKey          = 'notas' | 'boletos' | 'enviados' | 'cupons' | 'consultas' | 'impressoes';
-type FiltroKey       = 'todos' | 'ativos' | 'expirados' | 'esgotados';
+type TabKey           = 'notas' | 'boletos' | 'enviados' | 'cupons' | 'consultas' | 'impressoes';
+type FiltroKey        = 'todos' | 'ativos' | 'expirados' | 'esgotados';
 type FiltroImpressoes = 'todos' | 'pendentes' | 'concluidas' | 'erro';
 
 interface Consulta {
@@ -58,8 +59,6 @@ interface Enviado {
   created_at: string;
   expires_at: string | null;
 }
-
-interface Company { id: string; name: string; slug: string; }
 
 interface ListaCompras {
   id: string;
@@ -100,14 +99,14 @@ export default function ArquivosCompanyClient({
 }: ArquivosCompanyClientProps) {
   const supabase = createClient();
 
-  const [activeTab,          setActiveTab]          = useState<TabKey>('notas');
-  const [cupons,             setCupons]             = useState(initialCupons);
-  const [consultas,          setConsultas]          = useState<Consulta[]>(initialConsultas);
-  const [enviados,           setEnviados]           = useState<Enviado[]>(initialEnviados);
-  const [impressoes,         setImpressoes]         = useState<any[]>(initialImpressoes);
-  const [boletos,            setBoletos]            = useState<any[]>(initialBoletos);
-  const [stats,              setStats]              = useState(initialStats);
-  const [filtroImpressoes,   setFiltroImpressoes]   = useState<FiltroImpressoes>('todos');
+  const [activeTab,        setActiveTab]        = useState<TabKey>('notas');
+  const [cupons,           setCupons]           = useState(initialCupons);
+  const [consultas,        setConsultas]        = useState<Consulta[]>(initialConsultas);
+  const [enviados,         setEnviados]         = useState<Enviado[]>(initialEnviados);
+  const [impressoes,       setImpressoes]       = useState<any[]>(initialImpressoes);
+  const [boletos,          setBoletos]          = useState<any[]>(initialBoletos);
+  const [stats,            setStats]            = useState(initialStats);
+  const [filtroImpressoes, setFiltroImpressoes] = useState<FiltroImpressoes>('todos');
   const [filtro,           setFiltro]           = useState<FiltroKey>('todos');
   const [loadingId,        setLoadingId]        = useState<string | null>(null);
   const [loadingConsultas, setLoadingConsultas] = useState(false);
@@ -115,28 +114,54 @@ export default function ArquivosCompanyClient({
   const [downloadingId,    setDownloadingId]    = useState<string | null>(null);
   const [deletingId,       setDeletingId]       = useState<string | null>(null);
 
-  // ── States de Notas ─────────────────────────────────────────────────────────
-  const [notas,         setNotas]         = useState<any[]>([]);
-  const [loadingNotas,  setLoadingNotas]  = useState(false);
-  const [editingNota,   setEditingNota]   = useState<string | null>(null);
-  const [editTitulo,    setEditTitulo]    = useState('');
-  const [editConteudo,  setEditConteudo]  = useState('');
+  // ── States de Notas ──────────────────────────────────────────────────────────
+  const [notas,        setNotas]        = useState<any[]>([]);
+  const [loadingNotas, setLoadingNotas] = useState(false);
+  const [editingNota,  setEditingNota]  = useState<string | null>(null);
+  const [editTitulo,   setEditTitulo]   = useState('');
+  const [editConteudo, setEditConteudo] = useState('');
 
-  // ── States de Listas de Compras ─────────────────────────────────────────────
+  // ── States de Listas de Compras ──────────────────────────────────────────────
   const [listas,        setListas]        = useState<ListaCompras[]>([]);
   const [loadingListas, setLoadingListas] = useState(false);
-  const [tipoNotas,     setTipoNotas]     = useState<'notas' | 'listas'>('notas');
+
+  // ── Modal de lista (mesmo padrão do ProducaoCompanyClient) ────────────────────
+  const [listaAberta, setListaAberta] = useState<string | null>(null);
+
+  // ── Tema da página ────────────────────────────────────────────────────────────
+  const [pageTheme, setPageTheme] = useState<'dark' | 'light'>('light');
 
   const { selectedAssistantId, selectedAssistantName } = useAssistant();
+  const { playText, stopAudio } = usePlayText();
   const router = useRouter();
 
+  // ── Detectar tema ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const detectTheme = () => {
+      setPageTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    };
+    detectTheme();
+    const observer = new MutationObserver(detectTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  // ── Redirecionar ao trocar assistente ────────────────────────────────────────
   useEffect(() => {
     if (selectedAssistantId && selectedAssistantId !== initialCompany.id) {
       router.replace(`/dashboard/arquivos/${selectedAssistantId}`);
     }
-  }, [selectedAssistantId]);
+  }, [selectedAssistantId]); // eslint-disable-line
 
-  // ── Consultas: lazy load ────────────────────────────────────────────────────
+  // ── Notas + Listas: carregar ao entrar na aba ────────────────────────────────
+  useEffect(() => {
+    if (activeTab === 'notas') {
+      if (notas.length === 0) fetchNotas();
+      if (listas.length === 0) fetchListas();
+    }
+  }, [activeTab]); // eslint-disable-line
+
+  // ── Consultas: lazy load ─────────────────────────────────────────────────────
   useEffect(() => {
     if (activeTab === 'consultas' && initialConsultas.length > 0 && consultas.length === 0) {
       setConsultas(initialConsultas);
@@ -145,7 +170,7 @@ export default function ArquivosCompanyClient({
     }
   }, [activeTab]); // eslint-disable-line
 
-  // ── Notas: fetch ────────────────────────────────────────────────────────────
+  // ── Notas: fetch ─────────────────────────────────────────────────────────────
   const fetchNotas = useCallback(async () => {
     setLoadingNotas(true);
     try {
@@ -154,14 +179,7 @@ export default function ArquivosCompanyClient({
         .select('id, titulo, conteudo, created_at, updated_at')
         .eq('company_id', initialCompany.id)
         .order('created_at', { ascending: false });
-
-      if (data) {
-        setNotas(data);
-        setStats(prev => ({
-          ...prev,
-          totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + data.length,
-        }));
-      }
+      if (data) setNotas(data);
     } catch (error) {
       console.error('Erro ao buscar notas:', error);
     } finally {
@@ -169,7 +187,7 @@ export default function ArquivosCompanyClient({
     }
   }, [initialCompany.id, supabase]);
 
-  // ── Listas de Compras: fetch ─────────────────────────────────────────────────
+  // ── Listas: fetch ────────────────────────────────────────────────────────────
   const fetchListas = useCallback(async () => {
     setLoadingListas(true);
     try {
@@ -178,53 +196,23 @@ export default function ArquivosCompanyClient({
         .select('id, nome, status, total_itens, itens_pegos, created_at, updated_at')
         .eq('company_id', initialCompany.id)
         .order('created_at', { ascending: false });
-
-      if (data) {
-        setListas(data);
-        setStats(prev => ({
-          ...prev,
-          totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + notas.length + data.length,
-        }));
-      }
+      if (data) setListas(data);
     } catch (error) {
       console.error('Erro ao buscar listas:', error);
     } finally {
       setLoadingListas(false);
     }
-  }, [initialCompany.id, supabase, notas.length]);
+  }, [initialCompany.id, supabase]);
 
-  // ── Notas/Listas: carregar quando aba ou toggle é ativado ───────────────────
-  useEffect(() => {
-    if (activeTab === 'notas') {
-      if (tipoNotas === 'notas' && notas.length === 0) {
-        fetchNotas();
-      } else if (tipoNotas === 'listas' && listas.length === 0) {
-        fetchListas();
-      }
-    }
-  }, [activeTab, tipoNotas, fetchNotas, fetchListas]); // eslint-disable-line
-
-  // ── Cupons: toggle ──────────────────────────────────────────────────────────
+  // ── Cupons: toggle ───────────────────────────────────────────────────────────
   async function handleToggleAtivo(cupomId: string, current: boolean) {
     setLoadingId(cupomId);
-    const { error } = await supabase
-      .from('cupons')
-      .update({ is_active: !current })
-      .eq('id', cupomId);
-
-    if (!error) {
-      const updated = cupons.map(c => c.id === cupomId ? { ...c, is_active: !current } : c);
-      setCupons(updated);
-      setStats(prev => ({
-        ...prev,
-        totalCupons: updated.length,
-        totalArquivos: updated.length + prev.totalConsultas + prev.totalEnviados,
-      }));
-    }
+    const { error } = await supabase.from('cupons').update({ is_active: !current }).eq('id', cupomId);
+    if (!error) setCupons(cupons.map(c => c.id === cupomId ? { ...c, is_active: !current } : c));
     setLoadingId(null);
   }
 
-  // ── Consultas: fetch ────────────────────────────────────────────────────────
+  // ── Consultas: fetch ─────────────────────────────────────────────────────────
   async function fetchConsultas() {
     setLoadingConsultas(true);
     try {
@@ -238,7 +226,7 @@ export default function ArquivosCompanyClient({
     }
   }
 
-  // ── Notas: editar ───────────────────────────────────────────────────────────
+  // ── Notas: editar ────────────────────────────────────────────────────────────
   const handleEditNota = (nota: any) => {
     setEditingNota(nota.id);
     setEditTitulo(nota.titulo || '');
@@ -247,18 +235,12 @@ export default function ArquivosCompanyClient({
 
   const handleSaveEdit = async () => {
     if (!editingNota) return;
-
     try {
       const { error } = await supabase
         .from('notas')
-        .update({
-          titulo: editTitulo.trim() || null,
-          conteudo: editConteudo.trim(),
-        })
+        .update({ titulo: editTitulo.trim() || null, conteudo: editConteudo.trim() })
         .eq('id', editingNota);
-
       if (error) throw error;
-
       setNotas(notas.map(n =>
         n.id === editingNota
           ? { ...n, titulo: editTitulo.trim() || null, conteudo: editConteudo.trim(), updated_at: new Date().toISOString() }
@@ -273,67 +255,35 @@ export default function ArquivosCompanyClient({
     }
   };
 
-  // ── Notas: deletar ──────────────────────────────────────────────────────────
+  // ── Notas: deletar ───────────────────────────────────────────────────────────
   const handleDeleteNota = async (notaId: string) => {
     if (!confirm('Deletar esta nota?')) return;
-
     try {
-      const { error } = await supabase
-        .from('notas')
-        .delete()
-        .eq('id', notaId);
-
+      const { error } = await supabase.from('notas').delete().eq('id', notaId);
       if (error) throw error;
-
-      const updated = notas.filter(n => n.id !== notaId);
-      setNotas(updated);
-      setStats(prev => ({
-        ...prev,
-        totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + updated.length,
-      }));
+      setNotas(notas.filter(n => n.id !== notaId));
     } catch (error) {
       console.error('Erro ao deletar nota:', error);
       alert('Erro ao deletar nota');
     }
   };
 
-  // ── Listas: deletar ─────────────────────────────────────────────────────────
+  // ── Listas: deletar ──────────────────────────────────────────────────────────
   async function deleteLista(listaId: string) {
     if (!confirm('Deseja realmente excluir esta lista?')) return;
-
     setDeletingId(listaId);
     const { error } = await supabase.from('lista_compras').delete().eq('id', listaId);
-
-    if (!error) {
-      const updated = listas.filter(l => l.id !== listaId);
-      setListas(updated);
-      setStats(prev => ({
-        ...prev,
-        totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + notas.length + updated.length,
-      }));
-    }
+    if (!error) setListas(listas.filter(l => l.id !== listaId));
     setDeletingId(null);
   }
 
-  // ── Listas: abrir modal via CustomEvent ─────────────────────────────────────
-  function abrirLista(listaId: string) {
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('openListaCompras', { detail: { listaId, companyId: initialCompany.id } });
-      window.dispatchEvent(event);
-    }
-  }
-
-  // ── Consultas: baixar PDF ───────────────────────────────────────────────────
+  // ── Consultas: baixar PDF ────────────────────────────────────────────────────
   async function handleBaixarPDF(consultaId: string) {
     setDownloadingId(consultaId);
     try {
       const consulta = consultas.find(c => c.id === consultaId);
       if (!consulta) throw new Error('Consulta não encontrada');
-
-      if (consulta.download_token) {
-        window.open(`/download/${consulta.download_token}`, '_blank');
-        return;
-      }
+      if (consulta.download_token) { window.open(`/download/${consulta.download_token}`, '_blank'); return; }
       if (consulta.file_base64) {
         let base64Clean = consulta.file_base64;
         if (base64Clean.includes(',')) base64Clean = base64Clean.split(',')[1];
@@ -358,7 +308,7 @@ export default function ArquivosCompanyClient({
     }
   }
 
-  // ── Enviados: fetch ─────────────────────────────────────────────────────────
+  // ── Enviados: fetch ──────────────────────────────────────────────────────────
   const fetchEnviados = useCallback(async () => {
     setLoadingEnviados(true);
     try {
@@ -368,14 +318,7 @@ export default function ArquivosCompanyClient({
         .eq('company_id', initialCompany.id)
         .eq('status', 'uploaded')
         .order('created_at', { ascending: false });
-      if (data) {
-        setEnviados(data);
-        setStats(prev => ({
-          ...prev,
-          totalEnviados: data.length,
-          totalArquivos: prev.totalCupons + prev.totalConsultas + data.length,
-        }));
-      }
+      if (data) setEnviados(data);
     } catch (error) {
       console.error('Erro ao buscar arquivos enviados:', error);
     } finally {
@@ -383,20 +326,17 @@ export default function ArquivosCompanyClient({
     }
   }, [initialCompany.id, supabase]);
 
-  // ── Enviados: download via signed URL ───────────────────────────────────────
+  // ── Enviados: download ───────────────────────────────────────────────────────
   async function handleBaixarEnviado(enviado: Enviado) {
     if (!enviado.storage_path) { alert('Arquivo sem path no Storage.'); return; }
     setDownloadingId(enviado.id);
     try {
-      const { data, error } = await supabase
-        .storage
-        .from('companion-uploads')
-        .createSignedUrl(enviado.storage_path, 60);
+      const { data, error } = await supabase.storage.from('companion-uploads').createSignedUrl(enviado.storage_path, 60);
       if (error || !data?.signedUrl) throw new Error(error?.message || 'Erro ao gerar link');
-      const a    = document.createElement('a');
-      a.href     = data.signedUrl;
+      const a = document.createElement('a');
+      a.href = data.signedUrl;
       a.download = enviado.file_name || 'arquivo';
-      a.target   = '_blank';
+      a.target = '_blank';
       a.click();
     } catch (error) {
       console.error('Erro ao baixar arquivo:', error);
@@ -406,22 +346,14 @@ export default function ArquivosCompanyClient({
     }
   }
 
-  // ── Enviados: deletar ───────────────────────────────────────────────────────
+  // ── Enviados: deletar ────────────────────────────────────────────────────────
   async function handleDeletarEnviado(enviado: Enviado) {
     if (!confirm(`Deletar "${enviado.file_name || 'arquivo'}"?`)) return;
     setDeletingId(enviado.id);
     try {
-      if (enviado.storage_path) {
-        await supabase.storage.from('companion-uploads').remove([enviado.storage_path]);
-      }
+      if (enviado.storage_path) await supabase.storage.from('companion-uploads').remove([enviado.storage_path]);
       await supabase.from('companion_uploads').delete().eq('id', enviado.id);
-      const updated = enviados.filter(e => e.id !== enviado.id);
-      setEnviados(updated);
-      setStats(prev => ({
-        ...prev,
-        totalEnviados: updated.length,
-        totalArquivos: prev.totalCupons + prev.totalConsultas + updated.length,
-      }));
+      setEnviados(enviados.filter(e => e.id !== enviado.id));
     } catch (error) {
       console.error('Erro ao deletar arquivo:', error);
       alert('Erro ao deletar arquivo.');
@@ -430,7 +362,19 @@ export default function ArquivosCompanyClient({
     }
   }
 
-  // ── Helpers de cupom ────────────────────────────────────────────────────────
+  // ── Impressões: download ─────────────────────────────────────────────────────
+  const handleBaixarImpressao = async (impressao: any) => {
+    try {
+      const { data } = supabase.storage.from('print-files').getPublicUrl(impressao.file_url);
+      if (data?.publicUrl) { window.open(data.publicUrl, '_blank'); }
+      else throw new Error('Arquivo não disponível');
+    } catch (error) {
+      console.error('Erro ao baixar impressão:', error);
+      alert('Erro ao baixar arquivo. Tente novamente.');
+    }
+  };
+
+  // ── Helpers de cupom ─────────────────────────────────────────────────────────
   const now = new Date();
   const cuponsFiltered = cupons.filter(c => {
     if (filtro === 'ativos')    return c.is_active && (!c.expires_at || new Date(c.expires_at) > now);
@@ -438,41 +382,17 @@ export default function ArquivosCompanyClient({
     if (filtro === 'esgotados') return c.max_uses && c.times_used >= c.max_uses;
     return true;
   });
-
-  function getClienteName(cupom: any): string {
-    return cupom.metadata?.referred_by_identifier || '—';
-  }
+  function getClienteName(cupom: any): string { return cupom.metadata?.referred_by_identifier || '—'; }
   function formatDesconto(cupom: any): string {
     if (cupom.discount_type === 'percentage') return `${cupom.discount_value}%`;
     return `R$ ${Number(cupom.discount_value).toFixed(2).replace('.', ',')}`;
   }
   function getStatusBadge(cupom: any) {
-    if (!cupom.is_active)
-      return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-white/50">Inativo</span>;
-    if (cupom.expires_at && new Date(cupom.expires_at) <= now)
-      return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Expirado</span>;
-    if (cupom.max_uses && cupom.times_used >= cupom.max_uses)
-      return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">Esgotado</span>;
+    if (!cupom.is_active) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-white/50">Inativo</span>;
+    if (cupom.expires_at && new Date(cupom.expires_at) <= now) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Expirado</span>;
+    if (cupom.max_uses && cupom.times_used >= cupom.max_uses) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">Esgotado</span>;
     return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Ativo</span>;
   }
-
-  // ── Download de arquivo de impressão ────────────────────────────────────────
-  const handleBaixarImpressao = async (impressao: any) => {
-    try {
-      const { data } = supabase.storage
-        .from('print-files')
-        .getPublicUrl(impressao.file_url);
-
-      if (data?.publicUrl) {
-        window.open(data.publicUrl, '_blank');
-      } else {
-        throw new Error('Arquivo não disponível');
-      }
-    } catch (error) {
-      console.error('Erro ao baixar impressão:', error);
-      alert('Erro ao baixar arquivo. Tente novamente.');
-    }
-  };
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -482,30 +402,21 @@ export default function ArquivosCompanyClient({
 
         {/* Cabeçalho */}
         <div className="mb-8">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Arquivos
-              </h2>
-              <p className="text-gray-600 dark:text-white/60 mt-1">
-                Gerencie todos os arquivos gerados e recebidos no assistente {selectedAssistantName} .
-              </p>
-            </div>
-          </div>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Arquivos</h2>
+          <p className="text-gray-600 dark:text-white/60 mt-1">
+            Gerencie todos os arquivos gerados e recebidos no assistente {selectedAssistantName}.
+          </p>
         </div>
 
-        {/* Cards de stats — 4 colunas */}
+        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Arquivos Enviados', value: stats.totalEnviados,    color: 'text-indigo-600 dark:text-indigo-400' },
-            { label: 'Cupons',            value: stats.totalCupons,      color: 'text-blue-600 dark:text-blue-400'    },
-            { label: 'Total de Consultas',value: stats.totalConsultas,   color: 'text-green-600 dark:text-green-400'  },
-            { label: 'Impressões',        value: stats.totalImpressoes,  color: 'text-orange-600 dark:text-orange-400'},
+            { label: 'Arquivos Enviados', value: stats.totalEnviados,   color: 'text-indigo-600 dark:text-indigo-400' },
+            { label: 'Cupons',            value: stats.totalCupons,     color: 'text-blue-600 dark:text-blue-400'    },
+            { label: 'Total Consultas',   value: stats.totalConsultas,  color: 'text-green-600 dark:text-green-400'  },
+            { label: 'Impressões',        value: stats.totalImpressoes, color: 'text-orange-600 dark:text-orange-400'},
           ].map(s => (
-            <div
-              key={s.label}
-              className="rounded-xl p-5 bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm"
-            >
+            <div key={s.label} className="rounded-xl p-5 bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm">
               <p className="text-sm text-gray-500 dark:text-white/50 mb-1">{s.label}</p>
               <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
             </div>
@@ -516,12 +427,12 @@ export default function ArquivosCompanyClient({
         <div className="mb-4 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
           <div className="grid grid-cols-3 sm:flex border-b border-gray-200 dark:border-white/10">
             {([
-              { key: 'notas',      label: 'Nota/Lista',      icon: <FileText className="w-4 h-4" /> },
-              { key: 'boletos',    label: 'Boletos',    icon: <Receipt  className="w-4 h-4" /> },
-              { key: 'enviados',   label: 'Enviados',   icon: <Upload   className="w-4 h-4" /> },
-              { key: 'cupons',     label: 'Cupons',     icon: <Ticket   className="w-4 h-4" /> },
-              { key: 'consultas',  label: 'Consultas',  icon: <FileText className="w-4 h-4" /> },
-              { key: 'impressoes', label: 'Impressões', icon: <Printer  className="w-4 h-4" /> },
+              { key: 'notas',      label: 'Nota/Lista',  icon: <FileText className="w-4 h-4" /> },
+              { key: 'boletos',    label: 'Boletos',     icon: <Receipt  className="w-4 h-4" /> },
+              { key: 'enviados',   label: 'Enviados',    icon: <Upload   className="w-4 h-4" /> },
+              { key: 'cupons',     label: 'Cupons',      icon: <Ticket   className="w-4 h-4" /> },
+              { key: 'consultas',  label: 'Consultas',   icon: <FileText className="w-4 h-4" /> },
+              { key: 'impressoes', label: 'Impressões',  icon: <Printer  className="w-4 h-4" /> },
             ] as { key: TabKey; label: string; icon: React.ReactNode }[]).map(tab => (
               <button
                 key={tab.key}
@@ -538,264 +449,175 @@ export default function ArquivosCompanyClient({
           </div>
         </div>
 
-        {/* ── Aba: Notas / Listas de Compras ── */}
+        {/* ── Aba: Notas + Listas (unificadas) ─────────────────────────────────── */}
         {activeTab === 'notas' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 
-            {/* Header com Toggle Notas/Listas */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {tipoNotas === 'notas' ? 'Minhas Notas' : 'Listas de Compras'}
-                </h3>
-
-                {/* Toggle Notas/Listas */}
-                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-white/10 rounded-lg">
-                  <button
-                    onClick={() => setTipoNotas('notas')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      tipoNotas === 'notas'
-                        ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    📝 Notas
-                  </button>
-                  <button
-                    onClick={() => setTipoNotas('listas')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      tipoNotas === 'listas'
-                        ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    🛒 Listas
-                  </button>
-                </div>
-              </div>
-
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notas e Listas</h3>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 dark:text-white/40">
-                  {tipoNotas === 'notas'
-                    ? `${notas.length} nota${notas.length !== 1 ? 's' : ''}`
-                    : `${listas.length} lista${listas.length !== 1 ? 's' : ''}`
-                  }
+                  {notas.length} nota{notas.length !== 1 ? 's' : ''} · {listas.length} lista{listas.length !== 1 ? 's' : ''}
                 </span>
                 <button
-                  onClick={tipoNotas === 'notas' ? fetchNotas : fetchListas}
-                  disabled={tipoNotas === 'notas' ? loadingNotas : loadingListas}
+                  onClick={() => { fetchNotas(); fetchListas(); }}
+                  disabled={loadingNotas || loadingListas}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-4 h-4 ${(tipoNotas === 'notas' ? loadingNotas : loadingListas) ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${(loadingNotas || loadingListas) ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
 
-            {/* Conteúdo - NOTAS */}
-            {tipoNotas === 'notas' && (
-              <>
-                {loadingNotas && notas.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
-                    <p className="text-gray-500 dark:text-white/40 font-medium">Carregando notas...</p>
-                  </div>
-                ) : notas.length === 0 ? (
-                  <div className="flex flex-col items-center gap-3 py-12 text-center">
-                    <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma nota criada ainda</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
-                      As notas e listas criadas pelo assistente aparecerão aqui
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100 dark:divide-white/5">
-                    {notas.map((nota) => (
-                      <div key={nota.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+            {(loadingNotas || loadingListas) && notas.length === 0 && listas.length === 0 ? (
+              <div className="py-16 text-center">
+                <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
+                <p className="text-gray-500 dark:text-white/40 font-medium">Carregando...</p>
+              </div>
+            ) : notas.length === 0 && listas.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma nota ou lista criada ainda</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
+                  As notas e listas criadas pelo assistente aparecerão aqui
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-white/5">
 
-                        {editingNota === nota.id ? (
-                          // Modo de edição
-                          <div className="space-y-3">
-                            <input
-                              type="text"
-                              value={editTitulo}
-                              onChange={(e) => setEditTitulo(e.target.value)}
-                              placeholder="Título (opcional)"
-                              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
-                            />
-                            <textarea
-                              value={editConteudo}
-                              onChange={(e) => setEditConteudo(e.target.value)}
-                              rows={6}
-                              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 resize-none bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={handleSaveEdit}
-                                className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition text-sm font-medium"
-                              >
-                                Salvar
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingNota(null);
-                                  setEditTitulo('');
-                                  setEditConteudo('');
-                                }}
-                                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-white/15 transition text-sm font-medium"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
+                {/* ── LISTAS DE COMPRAS ── */}
+                {listas.map(lista => {
+                  const progresso = lista.total_itens > 0 ? Math.round((lista.itens_pegos / lista.total_itens) * 100) : 0;
+                  return (
+                    <div key={lista.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+
+                      {/* Linha superior: ícone + nome + badge */}
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+                            <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </div>
-                        ) : (
-                          // Modo de visualização
                           <div>
-                            <div className="flex items-start justify-between gap-4 mb-3">
-                              <div className="flex-1 min-w-0">
-                                {nota.titulo && (
-                                  <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-                                    {nota.titulo}
-                                  </h4>
-                                )}
-                                <p className="text-xs text-gray-400 dark:text-gray-500">
-                                  Criada em {new Date(nota.created_at).toLocaleString('pt-BR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </p>
-                              </div>
-                              <div className="flex gap-2 shrink-0">
-                                <button
-                                  onClick={() => handleEditNota(nota)}
-                                  className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-500/25 transition"
-                                  title="Editar nota"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                  </svg>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteNota(nota.id)}
-                                  className="p-2 rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/25 transition"
-                                  title="Deletar nota"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                  </svg>
-                                </button>
-                              </div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{lista.nome}</h4>
+                            <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">
+                              {new Date(lista.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
+                          lista.status === 'concluida'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                        }`}>
+                          {lista.status === 'concluida' ? '✓ Concluída' : 'Ativa'}
+                        </span>
+                      </div>
+
+                      {/* Barra de progresso + botões na mesma linha */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-white/60 mb-1">
+                            <span>{lista.itens_pegos} de {lista.total_itens} itens</span>
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{progresso}%</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-all duration-300"
+                              style={{ width: `${progresso}%` }}
+                            />
+                          </div>
+                        </div>
+                        {/* Botões alinhados com a barra */}
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => setListaAberta(lista.id)}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-all"
+                          >
+                            {lista.status === 'concluida' ? 'Ver' : 'Continuar'}
+                          </button>
+                          <button
+                            onClick={() => deleteLista(lista.id)}
+                            disabled={deletingId === lista.id}
+                            className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-600 dark:text-red-400 text-xs font-medium transition-all disabled:opacity-50"
+                          >
+                            {deletingId === lista.id ? '...' : 'Excluir'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* ── NOTAS ── */}
+                {notas.map((nota) => (
+                  <div key={nota.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                    {editingNota === nota.id ? (
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={editTitulo}
+                          onChange={(e) => setEditTitulo(e.target.value)}
+                          placeholder="Título (opcional)"
+                          className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
+                        />
+                        <textarea
+                          value={editConteudo}
+                          onChange={(e) => setEditConteudo(e.target.value)}
+                          rows={6}
+                          className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 resize-none bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={handleSaveEdit} className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition text-sm font-medium">Salvar</button>
+                          <button onClick={() => { setEditingNota(null); setEditTitulo(''); setEditConteudo(''); }} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-white/15 transition text-sm font-medium">Cancelar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center shrink-0">
+                              <FileText className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                             </div>
-                            <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-100 dark:border-white/10">
-                              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                                {nota.conteudo}
+                            <div className="min-w-0">
+                              {nota.titulo && <h4 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{nota.titulo}</h4>}
+                              <p className="text-xs text-gray-400 dark:text-gray-500">
+                                {new Date(nota.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Conteúdo - LISTAS DE COMPRAS */}
-            {tipoNotas === 'listas' && (
-              <>
-                {loadingListas && listas.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
-                    <p className="text-gray-500 dark:text-white/40 font-medium">Carregando listas...</p>
-                  </div>
-                ) : listas.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
-                    <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma lista encontrada</p>
-                    <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                      Diga "lista de compras" para o assistente criar sua primeira lista
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100 dark:divide-white/5">
-                    {listas.map(lista => {
-                      const progresso = lista.total_itens > 0
-                        ? Math.round((lista.itens_pegos / lista.total_itens) * 100)
-                        : 0;
-
-                      return (
-                        <div key={lista.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-                          <div className="flex items-start justify-between gap-4 mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
-                                <ShoppingCart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-900 dark:text-white text-base">
-                                  {lista.nome}
-                                </h4>
-                                <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">
-                                  {new Date(lista.created_at).toLocaleDateString('pt-BR', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric'
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Status Badge */}
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              lista.status === 'concluida'
-                                ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
-                                : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
-                            }`}>
-                              {lista.status === 'concluida' ? '✓ Concluída' : 'Ativa'}
-                            </span>
-                          </div>
-
-                          {/* Barra de Progresso */}
-                          <div className="mb-3">
-                            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-white/60 mb-1.5">
-                              <span>{lista.itens_pegos} de {lista.total_itens} itens</span>
-                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{progresso}%</span>
-                            </div>
-                            <div className="h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-all duration-300"
-                                style={{ width: `${progresso}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Ações */}
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 shrink-0">
                             <button
-                              onClick={() => abrirLista(lista.id)}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-all"
+                              onClick={() => handleEditNota(nota)}
+                              className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-500/25 transition"
+                              title="Editar nota"
                             >
-                              {lista.status === 'concluida' ? 'Ver Lista' : 'Continuar'}
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
                             </button>
                             <button
-                              onClick={() => deleteLista(lista.id)}
-                              disabled={deletingId === lista.id}
-                              className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-600 dark:text-red-400 text-xs font-medium transition-all disabled:opacity-50"
+                              onClick={() => handleDeleteNota(nota.id)}
+                              className="p-2 rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/25 transition"
+                              title="Deletar nota"
                             >
-                              {deletingId === lista.id ? 'Excluindo...' : 'Excluir'}
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
                             </button>
                           </div>
                         </div>
-                      );
-                    })}
+                        <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-100 dark:border-white/10 ml-12">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{nota.conteudo}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </>
-            )}
+                ))}
 
+              </div>
+            )}
           </div>
         )}
 
@@ -806,14 +628,11 @@ export default function ArquivosCompanyClient({
               <h3 className="font-semibold text-gray-900 dark:text-white">Segundas Vias de Boleto</h3>
               <span className="text-xs text-gray-400 dark:text-gray-500">{boletos.length} registro{boletos.length !== 1 ? 's' : ''}</span>
             </div>
-
             {boletos.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
                 <Receipt className="w-10 h-10 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma segunda via gerada ainda</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
-                  As segundas vias geradas pelo assistente aparecerão aqui.
-                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">As segundas vias geradas pelo assistente aparecerão aqui.</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-white/5">
@@ -822,21 +641,15 @@ export default function ArquivosCompanyClient({
                     <div className="flex items-start gap-3 min-w-0">
                       <Receipt className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {b.metadata?.banco ?? 'Boleto'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-mono truncate">
-                          {b.metadata?.codigo_barras?.slice(0, 24)}...
-                        </p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{b.metadata?.banco ?? 'Boleto'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-mono truncate">{b.metadata?.codigo_barras?.slice(0, 24)}...</p>
                         <div className="flex gap-3 mt-1 text-xs text-gray-400 dark:text-gray-500">
                           {b.metadata?.valor      && <span>Valor: {b.metadata.valor}</span>}
                           {b.metadata?.vencimento && <span>Venc: {b.metadata.vencimento}</span>}
                         </div>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5">
-                      {new Date(b.executed_at).toLocaleDateString('pt-BR')}
-                    </span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 mt-0.5">{new Date(b.executed_at).toLocaleDateString('pt-BR')}</span>
                   </div>
                 ))}
               </div>
@@ -844,28 +657,18 @@ export default function ArquivosCompanyClient({
           </div>
         )}
 
-        {/* ── Aba: Enviados ───────────────────────────────────────────────────── */}
+        {/* ── Aba: Enviados ── */}
         {activeTab === 'enviados' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
-
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Arquivos Enviados pelos Clientes
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Arquivos Enviados pelos Clientes</h3>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400 dark:text-white/40">
-                  {enviados.length} arquivo{enviados.length !== 1 ? 's' : ''}
-                </span>
-                <button
-                  onClick={fetchEnviados}
-                  disabled={loadingEnviados}
-                  className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50"
-                >
+                <span className="text-xs text-gray-400 dark:text-white/40">{enviados.length} arquivo{enviados.length !== 1 ? 's' : ''}</span>
+                <button onClick={fetchEnviados} disabled={loadingEnviados} className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50">
                   <RefreshCw className={`w-4 h-4 ${loadingEnviados ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
-
             {loadingEnviados && enviados.length === 0 ? (
               <div className="py-16 text-center">
                 <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
@@ -875,9 +678,7 @@ export default function ArquivosCompanyClient({
               <div className="py-16 text-center">
                 <Upload className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
                 <p className="text-gray-500 dark:text-white/40 font-medium">Nenhum arquivo enviado</p>
-                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                  Os arquivos enviados pelos clientes via assistente aparecem aqui
-                </p>
+                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">Os arquivos enviados pelos clientes via assistente aparecem aqui</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -885,67 +686,34 @@ export default function ArquivosCompanyClient({
                   <thead>
                     <tr className="border-b border-gray-100 dark:border-white/10">
                       {['Arquivo', 'Tipo', 'Tamanho', 'Recebido em', 'Ações'].map(h => (
-                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">
-                          {h}
-                        </th>
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                     {enviados.map(enviado => (
                       <tr key={enviado.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <FileTypeIcon mimeType={enviado.file_type} />
-                            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[200px]">
-                              {enviado.file_name || 'sem nome'}
-                            </span>
+                            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[200px]">{enviado.file_name || 'sem nome'}</span>
                           </div>
                         </td>
-
-                        <td className="px-6 py-4 text-gray-600 dark:text-white/60 text-xs font-mono">
-                          {enviado.file_type || '—'}
-                        </td>
-
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60 text-xs font-mono">{enviado.file_type || '—'}</td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">{formatBytes(enviado.file_size)}</td>
                         <td className="px-6 py-4 text-gray-600 dark:text-white/60">
-                          {formatBytes(enviado.file_size)}
+                          {new Date(enviado.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </td>
-
-                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">
-                          {new Date(enviado.created_at).toLocaleString('pt-BR', {
-                            day: '2-digit', month: '2-digit', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
-                        </td>
-
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            {/* Baixar */}
-                            <button
-                              onClick={() => handleBaixarEnviado(enviado)}
-                              disabled={downloadingId === enviado.id || !enviado.storage_path}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-medium"
-                            >
-                              {downloadingId === enviado.id
-                                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                : <Download className="w-3.5 h-3.5" />}
-                              Baixar
+                            <button onClick={() => handleBaixarEnviado(enviado)} disabled={downloadingId === enviado.id || !enviado.storage_path} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-medium">
+                              {downloadingId === enviado.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}Baixar
                             </button>
-                            {/* Deletar */}
-                            <button
-                              onClick={() => handleDeletarEnviado(enviado)}
-                              disabled={deletingId === enviado.id}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-medium"
-                            >
-                              {deletingId === enviado.id
-                                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                : '✕'}
-                              Deletar
+                            <button onClick={() => handleDeletarEnviado(enviado)} disabled={deletingId === enviado.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-medium">
+                              {deletingId === enviado.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : '✕'}Deletar
                             </button>
                           </div>
                         </td>
-
                       </tr>
                     ))}
                   </tbody>
@@ -955,38 +723,22 @@ export default function ArquivosCompanyClient({
           </div>
         )}
 
-        {/* ── Aba: Cupons ─────────────────────────────────────────────────────── */}
+        {/* ── Aba: Cupons ── */}
         {activeTab === 'cupons' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
-
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
               <div className="flex gap-2">
                 {(['todos', 'ativos', 'expirados', 'esgotados'] as FiltroKey[]).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFiltro(f)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                      filtro === f
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
-                    }`}
-                  >
-                    {f}
-                  </button>
+                  <button key={f} onClick={() => setFiltro(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${filtro === f ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'}`}>{f}</button>
                 ))}
               </div>
-              <span className="text-xs text-gray-400 dark:text-white/40">
-                {cuponsFiltered.length} cupom{cuponsFiltered.length !== 1 ? 's' : ''}
-              </span>
+              <span className="text-xs text-gray-400 dark:text-white/40">{cuponsFiltered.length} cupom{cuponsFiltered.length !== 1 ? 's' : ''}</span>
             </div>
-
             {cuponsFiltered.length === 0 ? (
               <div className="py-16 text-center">
                 <Ticket className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
                 <p className="text-gray-500 dark:text-white/40 font-medium">Nenhum cupom encontrado</p>
-                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                  Os cupons são gerados pelos clientes via assistente de voz
-                </p>
+                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">Os cupons são gerados pelos clientes via assistente de voz</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -994,47 +746,22 @@ export default function ArquivosCompanyClient({
                   <thead>
                     <tr className="border-b border-gray-100 dark:border-white/10">
                       {['Código', 'Cliente', 'Desconto', 'Usos', 'Validade', 'Status', 'Ações'].map(h => (
-                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">
-                          {h}
-                        </th>
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                     {cuponsFiltered.map(cupom => (
                       <tr key={cupom.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4">
-                          <span className="font-mono font-bold tracking-wider text-gray-900 dark:text-white">{cupom.code}</span>
-                        </td>
+                        <td className="px-6 py-4"><span className="font-mono font-bold tracking-wider text-gray-900 dark:text-white">{cupom.code}</span></td>
                         <td className="px-6 py-4 text-gray-700 dark:text-white/80">{getClienteName(cupom)}</td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 font-semibold text-xs">
-                            {formatDesconto(cupom)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">
-                          {cupom.times_used}{cupom.max_uses ? ` / ${cupom.max_uses}` : ' / ∞'}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">
-                          {cupom.expires_at ? new Date(cupom.expires_at).toLocaleDateString('pt-BR') : '—'}
-                        </td>
+                        <td className="px-6 py-4"><span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 font-semibold text-xs">{formatDesconto(cupom)}</span></td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">{cupom.times_used}{cupom.max_uses ? ` / ${cupom.max_uses}` : ' / ∞'}</td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">{cupom.expires_at ? new Date(cupom.expires_at).toLocaleDateString('pt-BR') : '—'}</td>
                         <td className="px-6 py-4">{getStatusBadge(cupom)}</td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleToggleAtivo(cupom.id, cupom.is_active)}
-                            disabled={loadingId === cupom.id}
-                            title={cupom.is_active ? 'Desativar cupom' : 'Ativar cupom'}
-                            className={`p-1.5 rounded-lg transition-all ${
-                              loadingId === cupom.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-white/10'
-                            }`}
-                          >
-                            {loadingId === cupom.id ? (
-                              <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
-                            ) : cupom.is_active ? (
-                              <ToggleRight className="w-5 h-5 text-green-500" />
-                            ) : (
-                              <ToggleLeft className="w-5 h-5 text-gray-400" />
-                            )}
+                          <button onClick={() => handleToggleAtivo(cupom.id, cupom.is_active)} disabled={loadingId === cupom.id} className={`p-1.5 rounded-lg transition-all ${loadingId === cupom.id ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-white/10'}`}>
+                            {loadingId === cupom.id ? <RefreshCw className="w-4 h-4 animate-spin text-gray-400" /> : cupom.is_active ? <ToggleRight className="w-5 h-5 text-green-500" /> : <ToggleLeft className="w-5 h-5 text-gray-400" />}
                           </button>
                         </td>
                       </tr>
@@ -1046,41 +773,24 @@ export default function ArquivosCompanyClient({
           </div>
         )}
 
-        {/* ── Aba: Impressões ──────────────────────────────────────────────── */}
+        {/* ── Aba: Impressões ── */}
         {activeTab === 'impressoes' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
-
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Histórico de Impressões
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Histórico de Impressões</h3>
               <div className="flex items-center gap-2">
                 {(['todos', 'pendentes', 'concluidas', 'erro'] as FiltroImpressoes[]).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFiltroImpressoes(f)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      filtroImpressoes === f
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'
-                    }`}
-                  >
-                    {f === 'todos' && 'Todos'}
-                    {f === 'pendentes' && 'Pendentes'}
-                    {f === 'concluidas' && 'Concluídas'}
-                    {f === 'erro' && 'Erro'}
+                  <button key={f} onClick={() => setFiltroImpressoes(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroImpressoes === f ? 'bg-orange-600 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/15'}`}>
+                    {f === 'todos' && 'Todos'}{f === 'pendentes' && 'Pendentes'}{f === 'concluidas' && 'Concluídas'}{f === 'erro' && 'Erro'}
                   </button>
                 ))}
               </div>
             </div>
-
             {impressoes.length === 0 ? (
               <div className="py-16 text-center">
                 <Printer className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
                 <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma impressão realizada</p>
-                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                  As impressões aparecem aqui após serem realizadas via assistente
-                </p>
+                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">As impressões aparecem aqui após serem realizadas via assistente</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1088,90 +798,42 @@ export default function ArquivosCompanyClient({
                   <thead>
                     <tr className="border-b border-gray-100 dark:border-white/10">
                       {['Arquivo', 'Tipo', 'Páginas', 'Modo', 'Valor', 'Status', 'Data', 'Ações'].map(h => (
-                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">
-                          {h}
-                        </th>
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                    {impressoes
-                      .filter(imp => {
-                        if (filtroImpressoes === 'pendentes') return imp.print_status === 'pending' || imp.print_status === 'printing';
-                        if (filtroImpressoes === 'concluidas') return imp.print_status === 'completed';
-                        if (filtroImpressoes === 'erro') return imp.print_status === 'failed';
-                        return true;
-                      })
-                      .map(impressao => (
-                        <tr key={impressao.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <FileTypeIcon mimeType={impressao.file_type} />
-                              <span className="font-medium text-gray-900 dark:text-white truncate max-w-[160px]">
-                                {impressao.file_name || 'Documento'}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                              {impressao.function_key === 'impressao_remota' ? 'Remota' : impressao.function_key === 'impressao_local' ? 'Local' : 'Recibo'}
-                            </span>
-                          </td>
-
-                          <td className="px-6 py-4 text-gray-600 dark:text-white/60">
-                            {impressao.pages_count} pág
-                          </td>
-
-                          <td className="px-6 py-4">
-                            <span className={`text-xs font-medium ${
-                              impressao.print_mode === 'bw'
-                                ? 'text-gray-600 dark:text-gray-400'
-                                : 'text-purple-600 dark:text-purple-400'
-                            }`}>
-                              {impressao.print_mode === 'bw' ? '⚫ P&B' : '🖨️ Color'}
-                            </span>
-                          </td>
-
-                          <td className="px-6 py-4 text-gray-900 dark:text-white font-semibold">
-                            {(impressao.total_amount ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {impressao.print_status === 'completed' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Concluída</span>
-                            )}
-                            {impressao.print_status === 'pending' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400">Pendente</span>
-                            )}
-                            {impressao.print_status === 'printing' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">Imprimindo</span>
-                            )}
-                            {impressao.print_status === 'failed' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Erro</span>
-                            )}
-                          </td>
-
-                          <td className="px-6 py-4 text-gray-600 dark:text-white/60 text-xs">
-                            {new Date(impressao.created_at).toLocaleString('pt-BR', {
-                              day: '2-digit', month: '2-digit', year: '2-digit',
-                              hour: '2-digit', minute: '2-digit',
-                            })}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => handleBaixarImpressao(impressao)}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-all text-xs font-medium"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              Baixar
-                            </button>
-                          </td>
-
-                        </tr>
-                      ))}
+                    {impressoes.filter(imp => {
+                      if (filtroImpressoes === 'pendentes')  return imp.print_status === 'pending' || imp.print_status === 'printing';
+                      if (filtroImpressoes === 'concluidas') return imp.print_status === 'completed';
+                      if (filtroImpressoes === 'erro')       return imp.print_status === 'failed';
+                      return true;
+                    }).map(impressao => (
+                      <tr key={impressao.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <FileTypeIcon mimeType={impressao.file_type} />
+                            <span className="font-medium text-gray-900 dark:text-white truncate max-w-[160px]">{impressao.file_name || 'Documento'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">{impressao.function_key === 'impressao_remota' ? 'Remota' : impressao.function_key === 'impressao_local' ? 'Local' : 'Recibo'}</span></td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">{impressao.pages_count} pág</td>
+                        <td className="px-6 py-4"><span className={`text-xs font-medium ${impressao.print_mode === 'bw' ? 'text-gray-600 dark:text-gray-400' : 'text-purple-600 dark:text-purple-400'}`}>{impressao.print_mode === 'bw' ? '⚫ P&B' : '🖨️ Color'}</span></td>
+                        <td className="px-6 py-4 text-gray-900 dark:text-white font-semibold">{(impressao.total_amount ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td className="px-6 py-4">
+                          {impressao.print_status === 'completed' && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Concluída</span>}
+                          {impressao.print_status === 'pending'   && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400">Pendente</span>}
+                          {impressao.print_status === 'printing'  && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">Imprimindo</span>}
+                          {impressao.print_status === 'failed'    && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Erro</span>}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60 text-xs">{new Date(impressao.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="px-6 py-4">
+                          <button onClick={() => handleBaixarImpressao(impressao)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-all text-xs font-medium">
+                            <Download className="w-3.5 h-3.5" />Baixar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1179,27 +841,18 @@ export default function ArquivosCompanyClient({
           </div>
         )}
 
+        {/* ── Aba: Consultas ── */}
         {activeTab === 'consultas' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
-
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Histórico de Consultas
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Histórico de Consultas</h3>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400 dark:text-white/40">
-                  {consultas.length} consulta{consultas.length !== 1 ? 's' : ''}
-                </span>
-                <button
-                  onClick={fetchConsultas}
-                  disabled={loadingConsultas}
-                  className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50"
-                >
+                <span className="text-xs text-gray-400 dark:text-white/40">{consultas.length} consulta{consultas.length !== 1 ? 's' : ''}</span>
+                <button onClick={fetchConsultas} disabled={loadingConsultas} className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50">
                   <RefreshCw className={`w-4 h-4 ${loadingConsultas ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
-
             {loadingConsultas && consultas.length === 0 ? (
               <div className="py-16 text-center">
                 <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
@@ -1209,9 +862,7 @@ export default function ArquivosCompanyClient({
               <div className="py-16 text-center">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
                 <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma consulta realizada</p>
-                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
-                  As consultas aparecem aqui após serem realizadas via assistente
-                </p>
+                <p className="text-sm text-gray-400 dark:text-white/30 mt-1">As consultas aparecem aqui após serem realizadas via assistente</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1219,71 +870,32 @@ export default function ArquivosCompanyClient({
                   <thead>
                     <tr className="border-b border-gray-100 dark:border-white/10">
                       {['Tipo', 'Data', 'Status', 'PDF', 'Ações'].map(h => (
-                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">
-                          {h}
-                        </th>
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white/40 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                     {consultas.map(consulta => (
                       <tr key={consulta.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-
+                        <td className="px-6 py-4"><span className="font-medium text-gray-900 dark:text-white">{consulta.tipo_consulta.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span></td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">{new Date(consulta.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                         <td className="px-6 py-4">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {consulta.tipo_consulta.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                          </span>
+                          {consulta.status_pagamento === 'PAGO'
+                            ? <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">Realizado</span>
+                            : <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Erro</span>}
                         </td>
-
-                        <td className="px-6 py-4 text-gray-600 dark:text-white/60">
-                          {new Date(consulta.created_at).toLocaleString('pt-BR', {
-                            day: '2-digit', month: '2-digit', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
-                        </td>
-
                         <td className="px-6 py-4">
-                          {consulta.status_pagamento === 'PAGO' ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
-                              Realizado
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-                              Erro
-                            </span>
-                          )}
+                          {consulta.pdf_disponivel
+                            ? <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-xs text-gray-600 dark:text-white/60">Disponível ({Math.floor(consulta.minutos_restantes)} min)</span></div>
+                            : <span className="text-xs text-gray-400 dark:text-white/40">—</span>}
                         </td>
-
                         <td className="px-6 py-4">
-                          {consulta.pdf_disponivel ? (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span className="text-xs text-gray-600 dark:text-white/60">
-                                Disponível ({Math.floor(consulta.minutos_restantes)} min)
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400 dark:text-white/40">—</span>
-                          )}
+                          {consulta.pdf_disponivel
+                            ? <button onClick={() => handleBaixarPDF(consulta.id)} disabled={downloadingId === consulta.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-medium">
+                                {downloadingId === consulta.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}Baixar
+                              </button>
+                            : <span className="text-xs text-gray-400 dark:text-white/30">—</span>}
                         </td>
-
-                        <td className="px-6 py-4">
-                          {consulta.pdf_disponivel ? (
-                            <button
-                              onClick={() => handleBaixarPDF(consulta.id)}
-                              disabled={downloadingId === consulta.id}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-medium"
-                            >
-                              {downloadingId === consulta.id
-                                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                : <Download className="w-3.5 h-3.5" />}
-                              Baixar
-                            </button>
-                          ) : (
-                            <span className="text-xs text-gray-400 dark:text-white/30">—</span>
-                          )}
-                        </td>
-
                       </tr>
                     ))}
                   </tbody>
@@ -1294,6 +906,20 @@ export default function ArquivosCompanyClient({
         )}
 
       </div>
+
+      {/* ── Modal de Lista de Compras ─────────────────────────────────────────── */}
+      {listaAberta && (
+        <ListaComprasDisplay
+          data={{ companyId: initialCompany.id, listaId: listaAberta }}
+          onClose={() => {
+            stopAudio();
+            setListaAberta(null);
+            fetchListas(); // Atualiza progresso após fechar
+          }}
+          playText={playText}
+          theme={pageTheme}
+        />
+      )}
     </div>
   );
 }

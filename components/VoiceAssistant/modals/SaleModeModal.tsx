@@ -1,14 +1,17 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v7
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v8 FINAL
 //
-// CORREÇÃO PRINCIPAL: usa createPortal para renderizar direto no document.body
-// quando isMaximized=true, escapando do transform:scale() do container pai no kiosk.
-// position:fixed é quebrado por transform — portal é a única solução real.
+// VERSÃO HÍBRIDA: Suporta dois modos de renderização
+// 
+// isFullscreen=false (padrão) → Modal normal dentro do VoiceAssistant
+//   - absolute inset-0 z-40 rounded-2xl
+//   - Sem header/footer
+//   - Usado quando chamado via função (carrossel/voz)
 //
-// - isMaximized=false → absolute inset-0 z-40 rounded-2xl (modo normal, dentro do container)
-// - isMaximized=true  → portal no body, fixed inset-0 z-[200] (kiosk, tela toda)
-// Layout por orientação:
-//   landscape → produtos esquerda / avatar+carrinho direita
-//   portrait  → produtos em cima / avatar+carrinho em linha abaixo
+// isFullscreen=true → Tela cheia via portal
+//   - fixed inset-0 z-[200] via createPortal
+//   - Com SlugHeader completo (pageType='vendas')
+//   - Com footer (contador)
+//   - Usado na página /vendas/[slug]
 
 'use client';
 
@@ -23,9 +26,16 @@ import { AvatarFace } from '@/components/AvatarFace';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
+import SlugHeader from '@/components/slug/SlugHeader';
 
 export interface SaleModeModalProps {
   companyId: string;
+  slug?: string;
+  companyName?: string;
+  companyLogo?: string | null;
+  assistantRole?: string;
+  modo_vendas_enabled?: boolean;
+  modo_fila_enabled?: boolean;
   theme: 'dark' | 'light';
   onClose: () => void;
   playText?: (text: string) => Promise<void>;
@@ -37,11 +47,11 @@ export interface SaleModeModalProps {
   onMicDown?: () => void;
   onMicUp?: () => void;
   onTextMessage?: (msg: string) => Promise<void>;
-  isMaximized?: boolean;
+  isFullscreen?: boolean;
   produtoInicial?: ProdutoVenda & { _opcoes_selecionadas?: any[]; _quantidade?: number };
   quantidadeInicial?: number;
   opcoesIniciais?: any[];
-  profile?: { nome: string; email?: string | null; identificador?: string | null } | null; // ← adicionado
+  profile?: { nome: string; email?: string | null; identificador?: string | null } | null;
 }
 
 function getIsPortrait() {
@@ -53,6 +63,12 @@ function getIsPortrait() {
 
 function SaleModeInner({
   companyId,
+  slug,
+  companyName = 'Modo Vendas',
+  companyLogo,
+  assistantRole,
+  modo_vendas_enabled = true,
+  modo_fila_enabled = false,
   theme,
   onClose,
   playText,
@@ -64,10 +80,10 @@ function SaleModeInner({
   onMicDown,
   onMicUp,
   onTextMessage,
-  isMaximized = false,
+  isFullscreen = false,
   produtoInicial,
   quantidadeInicial,
-  profile, // ← adicionado
+  profile,
 }: SaleModeModalProps) {
   const isDark = theme === 'dark';
   const { totalItens, addItem } = useCart();
@@ -80,14 +96,15 @@ function SaleModeInner({
   );
   const [showCheckout, setShowCheckout] = useState(false);
   const [isPortrait, setIsPortrait] = useState(false);
-  // Garante que o portal só monta no cliente (evita erro de hidratação)
   const [mounted, setMounted] = useState(false);
-
-  // Métodos de pagamento ativos carregados do banco
   const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    window.dispatchEvent(new CustomEvent('eai:modalOpen'));
+    return () => {
+      window.dispatchEvent(new CustomEvent('eai:modalClose'));
+    };
   }, []);
 
   useEffect(() => {
@@ -133,7 +150,6 @@ function SaleModeInner({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, showCheckout]);
 
-  // Carregar métodos de pagamento ativos do banco
   useEffect(() => {
     async function loadMetodos() {
       try {
@@ -156,21 +172,18 @@ function SaleModeInner({
 
         setMetodosAtivos(ativos);
       } catch {
-        // Em caso de erro, deixa undefined (fallback mostra todos)
         setMetodosAtivos([]);
       }
     }
     loadMetodos();
   }, [companyId]);
 
-  // Adicionar produto inicial ao carrinho ao montar
   useEffect(() => {
     if (!produtoInicial) return;
     const qty = quantidadeInicial ?? produtoInicial._quantidade ?? 1;
     for (let i = 0; i < qty; i++) {
       addItem(produtoInicial as any);
     }
-    // Garante que está no carrinho (não abre checkout ainda)
     setTimeout(() => setShowCheckout(false), 100);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -179,30 +192,226 @@ function SaleModeInner({
     setShowCheckout(true);
   }, [totalItens]);
 
-  const content = (
-    <div className={
-      isMaximized
-        // Portal: fixed inset-0 diretamente no body — escapa do transform:scale()
-        ? `fixed inset-0 z-[200] flex overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-white'}`
-        // Normal: absolute relativo ao container do VoiceAssistant
-        : `absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-white'}`
-    }>
-      <div className={`flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3 ${
-        isPortrait ? 'flex-col' : 'flex-row'
-      }`}>
+  // ============================================================
+  // MODO FULLSCREEN - Com SlugHeader completo
+  // ============================================================
+  if (isFullscreen && mounted) {
+    const fullscreenContent = (
+      <div
+        className={`fixed inset-0 z-[200] flex flex-col overflow-hidden ${
+          isDark ? 'bg-slate-900' : 'bg-white'
+        }`}
+      >
+        {/* SLUGHEADER - pageType='vendas' faz o botão vendas virar botão assistente */}
+        <SlugHeader
+          slug={slug || ''}
+          companyName={companyName}
+          companyLogo={companyLogo}
+          assistantRole={assistantRole}
+          modo_vendas_enabled={modo_vendas_enabled}
+          modo_fila_enabled={modo_fila_enabled}
+          theme={theme}
+          onThemeToggle={() => {}} // Será implementado se necessário
+          isKioskMode={false}
+          onKioskToggle={() => {}}
+          wakeLockActive={false}
+          onWakeLockToggle={() => {}}
+          pageType="vendas"  // ← KEY: transforma botão vendas em botão assistente
+        />
 
+        {/* CONTEÚDO */}
+        <div className="flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3">
+          <div
+            className={`flex-1 flex overflow-hidden gap-3 ${
+              isPortrait ? 'flex-col' : 'flex-row'
+            }`}
+          >
+            {showCheckout ? (
+              <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4 pb-20">
+                <div
+                  className={`w-full max-w-sm rounded-2xl border p-5 ${
+                    isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
+                  }`}
+                >
+                  <CheckoutFlow
+                    companyId={companyId}
+                    theme={theme}
+                    onClose={() => {
+                      setShowCheckout(false);
+                      onClose();
+                    }}
+                    playText={playText}
+                    metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
+                    profile={profile}
+                  />
+                  <button
+                    onClick={() => setShowCheckout(false)}
+                    className={`w-full mt-3 py-2 rounded-xl text-xs transition-colors ${
+                      isDark ? 'text-white/30 hover:text-white/60' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    ← Voltar ao carrinho
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Produtos */}
+                <div
+                  className={`flex flex-col min-w-0 overflow-hidden ${
+                    isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
+                  }`}
+                >
+                  <ProductGrid
+                    produtos={produtos}
+                    categorias={categorias}
+                    loading={loadingProdutos}
+                    theme={theme}
+                    produtoDestaque={produtoDestaque}
+                    onProdutoDestaqueClear={() => setProdutoDestaque(null)}
+                    hideBusca
+                  />
+                </div>
+
+                {/* Avatar + Carrinho */}
+                <div
+                  className={`flex min-w-0 overflow-hidden gap-2 ${
+                    isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[3]'
+                  }`}
+                >
+                  {/* Card do avatar */}
+                  <div
+                    className={`rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 ${
+                      isPortrait ? 'w-[160px] flex-shrink-0' : 'flex-shrink-0'
+                    } ${isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'}`}
+                  >
+                    <div
+                      className="relative cursor-pointer select-none mt-1"
+                      style={{ width: 80, height: 80 }}
+                      onMouseDown={onMicDown}
+                      onMouseUp={onMicUp}
+                      onTouchStart={(e) => {
+                        e.preventDefault();
+                        onMicDown?.();
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        onMicUp?.();
+                      }}
+                    >
+                      {isListening && (
+                        <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
+                      )}
+                      <div className="w-full h-full overflow-hidden rounded-full">
+                        <div
+                          style={{
+                            transform: 'scale(0.417)',
+                            transformOrigin: 'top left',
+                            width: 192,
+                            height: 192,
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          <AvatarFace
+                            isListening={isListening}
+                            isSpeaking={isPlayingAudio}
+                            isProcessing={isProcessing || isTranscribing}
+                            theme={theme}
+                            qrCodeData={null}
+                            pixConfirmationData={null}
+                            onCloseQRCode={() => {}}
+                            onCopyQRCode={() => {}}
+                            onConfirmPix={() => {}}
+                            onCancelPix={() => {}}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <p
+                      className={`text-[9px] text-center leading-tight ${
+                        isDark ? 'text-white/35' : 'text-gray-400'
+                      }`}
+                    >
+                      {isListening
+                        ? 'Ouvindo...'
+                        : isTranscribing
+                        ? 'Transcrevendo...'
+                        : isProcessing || isPlayingAudio
+                        ? 'Processando...'
+                        : 'Segure para falar'}
+                    </p>
+
+                    {onTextMessage && (
+                      <div className="w-full mt-0.5">
+                        <TextInputChat
+                          onSendMessage={onTextMessage}
+                          isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+                          theme={theme}
+                          disabled={false}
+                          compact
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CartPanel */}
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <CartPanel theme={theme} onCheckout={handleCheckout} />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* FOOTER */}
+        <div
+          className={`flex-shrink-0 h-8 border-t flex items-center justify-center ${
+            isDark ? 'bg-slate-800/50 border-white/10' : 'bg-white border-gray-200'
+          }`}
+        >
+          <p className={`text-xs ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
+            {totalItens > 0 ? `${totalItens} ${totalItens === 1 ? 'item' : 'itens'} no carrinho` : 'Carrinho vazio'}
+          </p>
+        </div>
+      </div>
+    );
+
+    return createPortal(fullscreenContent, document.body);
+  }
+
+  // ============================================================
+  // MODO NORMAL - Modal dentro do VoiceAssistant (sem header/footer)
+  // ============================================================
+  const normalContent = (
+    <div
+      className={`absolute inset-0 z-40 flex overflow-hidden rounded-2xl ${
+        isDark ? 'bg-slate-900' : 'bg-white'
+      }`}
+    >
+      <div
+        className={`flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3 ${
+          isPortrait ? 'flex-col' : 'flex-row'
+        }`}
+      >
         {showCheckout ? (
           <div className="flex-1 flex items-start justify-center overflow-y-auto pt-4">
-            <div className={`w-full max-w-sm rounded-2xl border p-5 ${
-              isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
-            }`}>
+            <div
+              className={`w-full max-w-sm rounded-2xl border p-5 ${
+                isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200 shadow-xl'
+              }`}
+            >
               <CheckoutFlow
                 companyId={companyId}
                 theme={theme}
-                onClose={() => { setShowCheckout(false); onClose(); }}
+                onClose={() => {
+                  setShowCheckout(false);
+                  onClose();
+                }}
                 playText={playText}
                 metodosAtivos={metodosAtivos.length > 0 ? metodosAtivos : undefined}
-                profile={profile} // ← adicionado
+                profile={profile}
               />
               <button
                 onClick={() => setShowCheckout(false)}
@@ -216,10 +425,12 @@ function SaleModeInner({
           </div>
         ) : (
           <>
-            {/* Produtos: landscape=flex-[7] | portrait=flex-1 topo */}
-            <div className={`flex flex-col min-w-0 overflow-hidden ${
-              isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
-            }`}>
+            {/* Produtos */}
+            <div
+              className={`flex flex-col min-w-0 overflow-hidden ${
+                isPortrait ? 'flex-1 min-h-0' : 'flex-[7]'
+              }`}
+            >
               <ProductGrid
                 produtos={produtos}
                 categorias={categorias}
@@ -231,17 +442,18 @@ function SaleModeInner({
               />
             </div>
 
-            {/* Avatar + carrinho: landscape=flex-[3] coluna | portrait=linha h-[200px] */}
-            <div className={`flex min-w-0 overflow-hidden gap-2 ${
-              isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[3]'
-            }`}>
-
+            {/* Avatar + Carrinho */}
+            <div
+              className={`flex min-w-0 overflow-hidden gap-2 ${
+                isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[3]'
+              }`}
+            >
               {/* Card do avatar */}
-              <div className={`rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 relative ${
-                isPortrait ? 'w-[160px] flex-shrink-0' : 'flex-shrink-0'
-              } ${
-                isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
-              }`}>
+              <div
+                className={`rounded-2xl border flex flex-col items-center gap-1 pt-2 pb-2 px-2 relative ${
+                  isPortrait ? 'w-[160px] flex-shrink-0' : 'flex-shrink-0'
+                } ${isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'}`}
+              >
                 <button
                   onClick={onClose}
                   className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 ${
@@ -260,20 +472,28 @@ function SaleModeInner({
                   style={{ width: 80, height: 80 }}
                   onMouseDown={onMicDown}
                   onMouseUp={onMicUp}
-                  onTouchStart={(e) => { e.preventDefault(); onMicDown?.(); }}
-                  onTouchEnd={(e) => { e.preventDefault(); onMicUp?.(); }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    onMicDown?.();
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    onMicUp?.();
+                  }}
                 >
                   {isListening && (
                     <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
                   )}
                   <div className="w-full h-full overflow-hidden rounded-full">
-                    <div style={{
-                      transform: 'scale(0.417)',
-                      transformOrigin: 'top left',
-                      width: 192,
-                      height: 192,
-                      pointerEvents: 'none',
-                    }}>
+                    <div
+                      style={{
+                        transform: 'scale(0.417)',
+                        transformOrigin: 'top left',
+                        width: 192,
+                        height: 192,
+                        pointerEvents: 'none',
+                      }}
+                    >
                       <AvatarFace
                         isListening={isListening}
                         isSpeaking={isPlayingAudio}
@@ -290,12 +510,17 @@ function SaleModeInner({
                   </div>
                 </div>
 
-                <p className={`text-[9px] text-center leading-tight ${
-                  isDark ? 'text-white/35' : 'text-gray-400'
-                }`}>
-                  {isListening ? 'Ouvindo...'
-                    : isTranscribing ? 'Transcrevendo...'
-                    : isProcessing || isPlayingAudio ? 'Processando...'
+                <p
+                  className={`text-[9px] text-center leading-tight ${
+                    isDark ? 'text-white/35' : 'text-gray-400'
+                  }`}
+                >
+                  {isListening
+                    ? 'Ouvindo...'
+                    : isTranscribing
+                    ? 'Transcrevendo...'
+                    : isProcessing || isPlayingAudio
+                    ? 'Processando...'
                     : 'Segure para falar'}
                 </p>
 
@@ -323,14 +548,7 @@ function SaleModeInner({
     </div>
   );
 
-  // No modo kiosk: renderiza via portal diretamente no body,
-  // escapando do transform:scale() que quebra position:fixed
-  if (isMaximized && mounted) {
-    return createPortal(content, document.body);
-  }
-
-  // Modo normal: renderiza inline dentro do container do VoiceAssistant
-  return content;
+  return normalContent;
 }
 
 export default function SaleModeModal(props: SaleModeModalProps) {

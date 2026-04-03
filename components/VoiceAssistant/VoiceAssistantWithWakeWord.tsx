@@ -743,6 +743,11 @@ case 'procurar_produto':
   // SEM playText — o modal fala no useEffect
   break;
 
+case 'lista_compras':
+  await stopGoogleSpeech();
+  setActiveModal({ type: 'ListaComprasDisplay', data: { companyId } });
+  break;
+
         case 'meu_sistema':
           await stopGoogleSpeech();
           setActiveModal({ type: 'MeuSistemaDisplay', data: { companyId } });
@@ -1582,6 +1587,23 @@ if (!response.ok) throw new Error(`Erro: ${response.status}`);
       });
     }
   }, [onTextMessage]);
+
+useEffect(() => {
+  // Ouvir evento customizado para abrir lista de compras do dashboard
+  function handleOpenListaCompras(event: CustomEvent) {
+    const { listaId, companyId } = event.detail;
+    setActiveModal({ 
+      type: 'ListaComprasDisplay', 
+      data: { companyId, listaId } 
+    });
+  }
+ 
+  window.addEventListener('openListaCompras', handleOpenListaCompras as EventListener);
+ 
+  return () => {
+    window.removeEventListener('openListaCompras', handleOpenListaCompras as EventListener);
+  };
+}, [setActiveModal]);
 
   // ── Misc helpers ──────────────────────────────────────────
   async function playGoodbye() {

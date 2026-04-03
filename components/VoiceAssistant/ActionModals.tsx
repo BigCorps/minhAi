@@ -1,280 +1,239 @@
 // ============================================================
-// ActionModals.tsx  ← ARQUIVO NOVO (não existia antes)
+// ActionModals.tsx
 // Caminho: components/assistant/VoiceAssistant/ActionModals.tsx
 //
-// Substitui os ~300 linhas de condicionais de modal que estavam
-// no VoiceAssistantWithWakeWord.tsx. Para adicionar uma nova
-// função com modal, basta: importar o componente + adicionar
-// UMA linha no MODAL_COMPONENTS abaixo.
+// ✅ Todos os modais usam dynamic() — carregam apenas quando abertos.
+// Isso reduz o bundle inicial e o CPU spike no carregamento da página.
+//
+// Para adicionar nova função com modal:
+//   1. Adicionar UMA linha no MODAL_COMPONENTS com dynamic()
+//   2. NÃO adicionar import estático no topo — usar o padrão abaixo
+//
+// Padrão para nova função:
+//   'MinhaNovaFuncaoDisplay': dynamic(
+//     () => import('@/components/assistant/MinhaNovaFuncaoDisplay'),
+//     { ssr: false }
+//   ),
 // ============================================================
 
+'use client';
+
 import React from 'react';
-import MeuSistemaDisplay from '@/components/assistant/MeuSistemaDisplay';
-import NossaMarcaDisplay from '@/components/assistant/NossaMarcaDisplay';
-import EnderecoDisplay from '@/components/assistant/EnderecoDisplay';
-import QRCodeDisplay from '@/components/assistant/QRCodeDisplay';
-import PIXConfirmationModal from '@/components/assistant/PixConfirmationModal';
-import VideoInstrucoesDisplay from '@/components/assistant/VideoInstrucoesDisplay';
-import SendEmailModal from '@/components/assistant/SendEmailModal';
-import CreateEventModal from '@/components/assistant/CreateEventModal';
-import ViewAgendaModal from '@/components/assistant/ViewAgendaModal';
-import SequenciaVideosDisplay from '@/components/assistant/SequenciaVideosDisplay';
-import InfinitePayDisplay from '@/components/assistant/InfinitePayDisplay';
-import CriarLembreteDisplay from '@/components/assistant/CriarLembreteDisplay';
-import CronometroDisplay from '@/components/assistant/CronometroDisplay';
-import TemporizadorDisplay from '@/components/assistant/TemporizadorDisplay';
-import RelogioMundialDisplay from '@/components/assistant/RelogioMundialDisplay';
-import AlarmeDisplay from '@/components/assistant/AlarmeDisplay';
-import WifiQRCodeDisplay from '@/components/assistant/WifiQRCodeDisplay';
-import CardapioDisplay from '@/components/assistant/CardapioDisplay';
-import NossoQRCodeDisplay from '@/components/assistant/NossoQRCodeDisplay';
-import LerQRCodeDisplay from '@/components/assistant/LerQRCodeDisplay';
-import LerCodigoBarrasDisplay from '@/components/assistant/LerCodigoBarrasDisplay';
-import ValidarCupomDisplay from '@/components/assistant/ValidarCupomDisplay';
-import ImagemEmTextoDisplay from '@/components/assistant/ImagemEmTextoDisplay';
-import TabelaEmTextoDisplay from '@/components/assistant/TabelaEmTextoDisplay';
-import ContratoEmTextoDisplay from '@/components/assistant/ContratoEmTextoDisplay';
-import FichaProducaoDisplay from '@/components/assistant/FichaProducaoDisplay';
-import MeuCupomDisplay from '@/components/assistant/MeuCupomDisplay';
-import ConfirmPresenceModal from '@/components/assistant/ConfirmPresenceModal';
-import RescheduleModal from '@/components/assistant/RescheduleModal';
-import CancelAppointmentModal from '@/components/assistant/CancelAppointmentModal';
-import EnviarArquivoDisplay from '@/components/assistant/EnviarArquivoDisplay';
-import GerarQRCodeDisplay       from '@/components/assistant/GerarQRCodeDisplay';
-import GerarCodigoBarrasDisplay  from '@/components/assistant/GerarCodigoBarrasDisplay';
-import FichaConversacionalDisplay from '@/components/assistant/FichaConversacionalDisplay';
-import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
-import ConsultarCpfModal from '@/components/assistant/ConsultarCpfModal';
-import ConsultarCnpjModal from '@/components/assistant/ConsultarCnpjModal';
-import ConsultarPlacaModal from '@/components/assistant/ConsultarPlacaModal';
-import ConsultarLeilaoModal from '@/components/assistant/ConsultarLeilaoModal';
-import CotacaoMoedasDisplay from '@/components/assistant/CotacaoMoedasDisplay';
-import ConsultarCEPDisplay from '@/components/assistant/ConsultarCEPDisplay';
-import RestricoesCPFDisplay from '@/components/assistant/RestricoesCPFDisplay';
-import RestricoesCNPJDisplay from '@/components/assistant/RestricoesCNPJDisplay';
-import FeriadosNacionaisDisplay from '@/components/assistant/FeriadosNacionaisDisplay';
-import ConsultarDDDDisplay from '@/components/assistant/ConsultarDDDDisplay';
-import MercadoPagoPointDisplay from '@/components/assistant/MercadoPagoPointDisplay';
-import ClimaTempoDisplay from '@/components/assistant/ClimaTempoDisplay';
-import TocarVideoDisplay from '@/components/assistant/TocarVideoDisplay';
-import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
-import CadastrarProdutoDisplay from '@/components/assistant/CadastrarProdutoDisplay';
-import VerProdutoDisplay from '@/components/assistant/VerProdutoDisplay';
-import TocarMusicaDisplay from '@/components/assistant/TocarMusicaDisplay';
-import ImpressaoLocalDisplay from '@/components/assistant/ImpressaoLocalDisplay';
-import ImpressaoRemotaDisplay from '@/components/assistant/ImpressaoRemotaDisplay';
-import ImpressaoReciboDisplay from '@/components/assistant/ImpressaoReciboDisplay';
-import PlaylistDisplay from '@/components/assistant/PlaylistDisplay';
-import PortaRetratoDisplay from '@/components/assistant/PortaRetratoDisplay';
-import PainelOfertasDisplay from '@/components/assistant/PainelOfertasDisplay';
-import AparelhosSmartDisplay from '@/components/assistant/AparelhosSmartDisplay';
-import CanalYoutubeDisplay from '@/components/assistant/CanalYoutubeDisplay';
-import IdentificarFraudeDisplay from '@/components/assistant/IdentificarFraudeDisplay';
-import LoginClienteDisplay from '@/components/assistant/LoginClienteDisplay';
-import TranslateTextModal from '@/components/assistant/TranslateTextModal';
-import TranscribeAudioModal from '@/components/assistant/TranscribeAudioModal';
-import SegundaViaBoletoDisplay from '@/components/assistant/SegundaViaBoletoDisplay';
-import RastreioCorreiosDisplay from '@/components/assistant/RastreioCorreiosDisplay';
-import BuscarEnderecoDisplay from '@/components/assistant/BuscarEnderecoDisplay';
-import TracarRotaDisplay from '@/components/assistant/TracarRotaDisplay';
-import CriarNotaDisplay from '@/components/assistant/CriarNotaDisplay';
-import LembreteRemediosDisplay from '@/components/assistant/LembreteRemediosDisplay';
-import ConverterArquivoDisplay from '@/components/assistant/ConverterArquivoDisplay';
-import DuplicarImagemDisplay from '@/components/assistant/DuplicarImagemDisplay';
-import EditarImagemDisplay from '@/components/assistant/EditarImagemDisplay';
-import RemoverFundoDisplay from '@/components/assistant/RemoverFundoDisplay';
-import VerNoticiasDisplay from '@/components/assistant/VerNoticiasDisplay';
-import ProcurarProdutoDisplay from '@/components/assistant/ProcurarProdutoDisplay';
-import ListaComprasDisplay from '@/components/assistant/ListaComprasDisplay';
-import RegistrarVendaDisplay from '@/components/assistant/RegistrarVendaDisplay';
-import VerClientesDisplay from '@/components/assistant/VerClientesDisplay';
-import FecharCaixaDisplay from '@/components/assistant/FecharCaixaDisplay';
-import TrocarTurnoDisplay from '@/components/assistant/TrocarTurnoDisplay';
-import RelatorioVendasDisplay from '@/components/assistant/RelatorioVendasDisplay';
-import MinhasComprasDisplay from '@/components/assistant/MinhasComprasDisplay';
-import ChamarGerenteDisplay from '@/components/assistant/ChamarGerenteDisplay';
+import dynamic from 'next/dynamic';
 
-// ⬇️ Importe aqui cada novo componente Display criado para novas funções
-// import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
-
-// ── Mapa de Componentes ───────────────────────────────────────
-// Para adicionar nova função com modal: inclua UMA linha aqui.
-// A chave (string) deve ser EXATAMENTE o valor passado em:
-//   setActiveModal({ type: 'ESSA_CHAVE_AQUI', data: {...} })
-// E deve coincidir com o campo ui_component no SQL do Supabase.
+// ── Mapa de Componentes (todos lazy loaded) ───────────────────
 const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  'MeuSistemaDisplay': MeuSistemaDisplay,
-  'NossaMarcaDisplay': NossaMarcaDisplay,
-  'EnderecoDisplay': EnderecoDisplay,
-  'QRCodeDisplay': QRCodeDisplay,
-  'PIXConfirmationModal': PIXConfirmationModal,
-  'VideoInstrucoesDisplay': VideoInstrucoesDisplay,
-  'SendEmailModal': SendEmailModal,
-  'CreateEventModal': CreateEventModal,
-  'ViewAgendaModal': ViewAgendaModal, 
-  'SequenciaVideosDisplay': SequenciaVideosDisplay, 
-  'InfinitePayDisplay': InfinitePayDisplay,
-  'CriarLembreteDisplay': CriarLembreteDisplay,
-  'CronometroDisplay': CronometroDisplay,
-  'TemporizadorDisplay': TemporizadorDisplay,
-  'RelogioMundialDisplay': RelogioMundialDisplay,
-  'AlarmeDisplay': AlarmeDisplay,
-  'WifiQRCodeDisplay': WifiQRCodeDisplay,
-  'CardapioDisplay': CardapioDisplay,
-  'NossoQRCodeDisplay': NossoQRCodeDisplay,
-  'LerQRCodeDisplay': LerQRCodeDisplay,
-  'LerCodigoBarrasDisplay': LerCodigoBarrasDisplay,
-  'ValidarCupomDisplay': ValidarCupomDisplay,
-  'ImagemEmTextoDisplay': ImagemEmTextoDisplay,
-  'TabelaEmTextoDisplay': TabelaEmTextoDisplay,
-  'ContratoEmTextoDisplay': ContratoEmTextoDisplay,
-  'FichaProducaoDisplay': FichaProducaoDisplay,
-  'MeuCupomDisplay': MeuCupomDisplay,
-  'ConfirmPresenceModal': ConfirmPresenceModal,
-  'RescheduleModal': RescheduleModal,
-  'CancelAppointmentModal': CancelAppointmentModal,
-  'EnviarArquivoDisplay': EnviarArquivoDisplay,
-  'GerarQRCodeDisplay':      GerarQRCodeDisplay,
-  'GerarCodigoBarrasDisplay': GerarCodigoBarrasDisplay,
-  'fichas_producao_conversacional': FichaConversacionalDisplay,
-  'FichaProducaoConversacionalDisplay': FichaConversacionalDisplay,
-  'RegistrationDisplay': RegistrationDisplay,
-  'ConsultarCpfModal': ConsultarCpfModal,
-  'ConsultarCnpjModal': ConsultarCnpjModal,
-  'ConsultarPlacaModal': ConsultarPlacaModal,
-  'ConsultarLeilaoModal': ConsultarLeilaoModal,
-  'CotacaoMoedasDisplay': CotacaoMoedasDisplay,
-  'ConsultarCEPDisplay': ConsultarCEPDisplay,
-  'RestricoesCPFDisplay': RestricoesCPFDisplay,
-  'RestricoesCNPJDisplay': RestricoesCNPJDisplay,
-  'FeriadosNacionaisDisplay': FeriadosNacionaisDisplay,
-  'ConsultarDDDDisplay': ConsultarDDDDisplay,
-  'ClimaTempoDisplay': ClimaTempoDisplay,
-  'TocarVideoDisplay': TocarVideoDisplay,
-  'TocarMusicaDisplay': TocarMusicaDisplay,
-  'ImpressaoLocalDisplay': ImpressaoLocalDisplay,
-  'ImpressaoRemotaDisplay': ImpressaoRemotaDisplay,
-  'ImpressaoReciboDisplay': ImpressaoReciboDisplay,
-  'PlaylistDisplay': PlaylistDisplay,
-  'PortaRetratoDisplay': PortaRetratoDisplay,
-  'PainelOfertasDisplay': PainelOfertasDisplay,
-  'AparelhosSmartDisplay': AparelhosSmartDisplay,
-  'CanalYoutubeDisplay': CanalYoutubeDisplay,
-  'IdentificarFraudeDisplay': IdentificarFraudeDisplay,
-  'LoginClienteDisplay': LoginClienteDisplay,
-  'TranslateTextModal': TranslateTextModal,
-  'TranscribeAudioModal': TranscribeAudioModal,
-  'SegundaViaBoletoDisplay': SegundaViaBoletoDisplay,
-  'RastreioCorreiosDisplay': RastreioCorreiosDisplay,
-  'BuscarEnderecoDisplay': BuscarEnderecoDisplay,
-  'TracarRotaDisplay': TracarRotaDisplay,
-  'CriarNotaDisplay': CriarNotaDisplay,
-  'LembreteRemediosDisplay': LembreteRemediosDisplay,
-  'ConverterArquivoDisplay': ConverterArquivoDisplay,
-  'DuplicarImagemDisplay': DuplicarImagemDisplay,
-  'EditarImagemDisplay': EditarImagemDisplay,
-  'RemoverFundoDisplay': RemoverFundoDisplay,
-  'VerNoticiasDisplay': VerNoticiasDisplay,
-  'ProcurarProdutoDisplay': ProcurarProdutoDisplay,
-  'ListaComprasDisplay': ListaComprasDisplay,
-  'RegistrarVendaDisplay': RegistrarVendaDisplay,
-  'VerClientesDisplay': VerClientesDisplay,
-  'FecharCaixaDisplay': FecharCaixaDisplay,
-  'TrocarTurnoDisplay': TrocarTurnoDisplay,
-  'RelatorioVendasDisplay': RelatorioVendasDisplay,
-  'MinhasComprasDisplay': MinhasComprasDisplay,
-  'ChamarGerenteDisplay': ChamarGerenteDisplay,
-  'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
-<SaleModeModal
-  companyId={data.companyId}
-  theme={theme}
-  onClose={onClose}
-  // Props de áudio/estado que você já tem:
-  playText={playText}
-  produtoDestaque={data.produtoDestaque}
-  isListening={data.isListening}
-  isProcessing={data.isProcessing}
-  isPlayingAudio={data.isPlayingAudio}
-  isTranscribing={data.isTranscribing}
-  onMicDown={data.onMicDown}
-  onMicUp={data.onMicUp}
-  onTextMessage={data.onTextMessage}
-  isMaximized={data.isMaximized}
-  profile={data.profile}
-  // Garantindo o modo da v8:
-  isFullscreen={false} 
-/>
-),
-'VerProdutoDisplay': ({ data, onClose, theme, playText }: any) => (
-  <VerProdutoDisplay
-    data={data}
-    onClose={onClose}
-    theme={theme}
-    playText={playText}
 
-    // PIX direto: gera cobrança com o produto sem passar pelo carrinho
-    onComprarPix={(produto, opcoes, totalAdicional) => {
-      onClose();
-      // Dispara o modal PIX com o valor total (produto + adicionais) × quantidade
-      const quantidade = (produto as any)._quantidade ?? 1;
-      const valorCents = Math.round(produto.preco_venda * quantidade * 100);
-      window.dispatchEvent(new CustomEvent('verProdutoPix', {
-        detail: {
-          companyId: data.companyId,
-          produto,
-          opcoes,
-          quantidade,
-          valorCents,
-        },
-      }));
-    }}
+  // ── Informações da empresa ────────────────────────────────
+  'MeuSistemaDisplay': dynamic(() => import('@/components/assistant/MeuSistemaDisplay'), { ssr: false }),
+  'NossaMarcaDisplay': dynamic(() => import('@/components/assistant/NossaMarcaDisplay'), { ssr: false }),
+  'EnderecoDisplay': dynamic(() => import('@/components/assistant/EnderecoDisplay'), { ssr: false }),
+  'VideoInstrucoesDisplay': dynamic(() => import('@/components/assistant/VideoInstrucoesDisplay'), { ssr: false }),
 
-    // Carrinho: abre SaleModeModal com produto pré-adicionado
-    onAdicionarCarrinho={(produto, opcoes, totalAdicional) => {
-      onClose();
-      const quantidade = (produto as any)._quantidade ?? 1;
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
-          detail: {
-            functionKey: 'modo_venda',
-            produtoInicial: produto,
-            quantidadeInicial: quantidade,
-            opcoesIniciais: opcoes,
-          },
-        }));
-      }, 150);
-    }}
-  />
-),
-'CadastrarProdutoDisplay': ({ data, onClose, theme, playText }: any) => (
-  <CadastrarProdutoDisplay
-    data={data}
-    onClose={onClose}
-    theme={theme}
-    playText={playText}
-    onSalvo={(produto) => {
-      // Crédito cobrado aqui, após salvar com sucesso
-      import('@/components/VoiceAssistant/handlers/functionUsage').then(({ registerFunctionUsage }) => {
-        registerFunctionUsage(data.companyId, 'cadastrar_produto', 1);
-      });
-    }}
-  />
-),
-  'MercadoPagoPointDisplay': ({ data, onClose, playText }: any) => (
-  <MercadoPagoPointDisplay
-    companyId={data.companyId}
-    paymentType={data.paymentType}
-    initialAmount={data.initialAmount}
-    initialInstallments={data.initialInstallments}
-    maxInstallments={data.maxInstallments}
-    minInstallmentValueCents={data.minInstallmentValueCents}
-    installmentsCost={data.installmentsCost}
-    playText={playText}
-    onClose={onClose}
-  />
-),
-  // ⬇️ Novas funções — adicione aqui
-  // 'MinhaNovaFuncaoDisplay': MinhaNovaFuncaoDisplay,
+  // ── QR Codes e contato ────────────────────────────────────
+  'QRCodeDisplay': dynamic(() => import('@/components/assistant/QRCodeDisplay'), { ssr: false }),
+  'WifiQRCodeDisplay': dynamic(() => import('@/components/assistant/WifiQRCodeDisplay'), { ssr: false }),
+  'NossoQRCodeDisplay': dynamic(() => import('@/components/assistant/NossoQRCodeDisplay'), { ssr: false }),
+  'GerarQRCodeDisplay': dynamic(() => import('@/components/assistant/GerarQRCodeDisplay'), { ssr: false }),
+  'GerarCodigoBarrasDisplay': dynamic(() => import('@/components/assistant/GerarCodigoBarrasDisplay'), { ssr: false }),
+  'CanalYoutubeDisplay': dynamic(() => import('@/components/assistant/CanalYoutubeDisplay'), { ssr: false }),
+
+  // ── Pagamentos ────────────────────────────────────────────
+  'PIXConfirmationModal': dynamic(() => import('@/components/assistant/PixConfirmationModal'), { ssr: false }),
+  'InfinitePayDisplay': dynamic(() => import('@/components/assistant/InfinitePayDisplay'), { ssr: false }),
+  'ImpressaoLocalDisplay': dynamic(() => import('@/components/assistant/ImpressaoLocalDisplay'), { ssr: false }),
+  'ImpressaoRemotaDisplay': dynamic(() => import('@/components/assistant/ImpressaoRemotaDisplay'), { ssr: false }),
+  'ImpressaoReciboDisplay': dynamic(() => import('@/components/assistant/ImpressaoReciboDisplay'), { ssr: false }),
+
+  // ── Agenda e email ────────────────────────────────────────
+  'SendEmailModal': dynamic(() => import('@/components/assistant/SendEmailModal'), { ssr: false }),
+  'CreateEventModal': dynamic(() => import('@/components/assistant/CreateEventModal'), { ssr: false }),
+  'ViewAgendaModal': dynamic(() => import('@/components/assistant/ViewAgendaModal'), { ssr: false }),
+  'ConfirmPresenceModal': dynamic(() => import('@/components/assistant/ConfirmPresenceModal'), { ssr: false }),
+  'RescheduleModal': dynamic(() => import('@/components/assistant/RescheduleModal'), { ssr: false }),
+  'CancelAppointmentModal': dynamic(() => import('@/components/assistant/CancelAppointmentModal'), { ssr: false }),
+
+  // ── Utilitários de tempo ──────────────────────────────────
+  'CriarLembreteDisplay': dynamic(() => import('@/components/assistant/CriarLembreteDisplay'), { ssr: false }),
+  'CronometroDisplay': dynamic(() => import('@/components/assistant/CronometroDisplay'), { ssr: false }),
+  'TemporizadorDisplay': dynamic(() => import('@/components/assistant/TemporizadorDisplay'), { ssr: false }),
+  'RelogioMundialDisplay': dynamic(() => import('@/components/assistant/RelogioMundialDisplay'), { ssr: false }),
+  'AlarmeDisplay': dynamic(() => import('@/components/assistant/AlarmeDisplay'), { ssr: false }),
+  'LembreteRemediosDisplay': dynamic(() => import('@/components/assistant/LembreteRemediosDisplay'), { ssr: false }),
+  'CriarNotaDisplay': dynamic(() => import('@/components/assistant/CriarNotaDisplay'), { ssr: false }),
+
+  // ── Câmera e leitura ──────────────────────────────────────
+  'LerQRCodeDisplay': dynamic(() => import('@/components/assistant/LerQRCodeDisplay'), { ssr: false }),
+  'LerCodigoBarrasDisplay': dynamic(() => import('@/components/assistant/LerCodigoBarrasDisplay'), { ssr: false }),
+  'ValidarCupomDisplay': dynamic(() => import('@/components/assistant/ValidarCupomDisplay'), { ssr: false }),
+  'ImagemEmTextoDisplay': dynamic(() => import('@/components/assistant/ImagemEmTextoDisplay'), { ssr: false }),
+  'TabelaEmTextoDisplay': dynamic(() => import('@/components/assistant/TabelaEmTextoDisplay'), { ssr: false }),
+  'ContratoEmTextoDisplay': dynamic(() => import('@/components/assistant/ContratoEmTextoDisplay'), { ssr: false }),
+  'IdentificarFraudeDisplay': dynamic(() => import('@/components/assistant/IdentificarFraudeDisplay'), { ssr: false }),
+
+  // ── Imagem e arquivo ──────────────────────────────────────
+  'EnviarArquivoDisplay': dynamic(() => import('@/components/assistant/EnviarArquivoDisplay'), { ssr: false }),
+  'ConverterArquivoDisplay': dynamic(() => import('@/components/assistant/ConverterArquivoDisplay'), { ssr: false }),
+  'DuplicarImagemDisplay': dynamic(() => import('@/components/assistant/DuplicarImagemDisplay'), { ssr: false }),
+  'EditarImagemDisplay': dynamic(() => import('@/components/assistant/EditarImagemDisplay'), { ssr: false }),
+  'RemoverFundoDisplay': dynamic(() => import('@/components/assistant/RemoverFundoDisplay'), { ssr: false }),
+
+  // ── Consultas ─────────────────────────────────────────────
+  'ConsultarCpfModal': dynamic(() => import('@/components/assistant/ConsultarCpfModal'), { ssr: false }),
+  'ConsultarCnpjModal': dynamic(() => import('@/components/assistant/ConsultarCnpjModal'), { ssr: false }),
+  'ConsultarPlacaModal': dynamic(() => import('@/components/assistant/ConsultarPlacaModal'), { ssr: false }),
+  'ConsultarLeilaoModal': dynamic(() => import('@/components/assistant/ConsultarLeilaoModal'), { ssr: false }),
+  'CotacaoMoedasDisplay': dynamic(() => import('@/components/assistant/CotacaoMoedasDisplay'), { ssr: false }),
+  'ConsultarCEPDisplay': dynamic(() => import('@/components/assistant/ConsultarCEPDisplay'), { ssr: false }),
+  'RestricoesCPFDisplay': dynamic(() => import('@/components/assistant/RestricoesCPFDisplay'), { ssr: false }),
+  'RestricoesCNPJDisplay': dynamic(() => import('@/components/assistant/RestricoesCNPJDisplay'), { ssr: false }),
+  'FeriadosNacionaisDisplay': dynamic(() => import('@/components/assistant/FeriadosNacionaisDisplay'), { ssr: false }),
+  'ConsultarDDDDisplay': dynamic(() => import('@/components/assistant/ConsultarDDDDisplay'), { ssr: false }),
+  'ClimaTempoDisplay': dynamic(() => import('@/components/assistant/ClimaTempoDisplay'), { ssr: false }),
+  'SegundaViaBoletoDisplay': dynamic(() => import('@/components/assistant/SegundaViaBoletoDisplay'), { ssr: false }),
+  'RastreioCorreiosDisplay': dynamic(() => import('@/components/assistant/RastreioCorreiosDisplay'), { ssr: false }),
+  'BuscarEnderecoDisplay': dynamic(() => import('@/components/assistant/BuscarEnderecoDisplay'), { ssr: false }),
+  'TracarRotaDisplay': dynamic(() => import('@/components/assistant/TracarRotaDisplay'), { ssr: false }),
+  'VerNoticiasDisplay': dynamic(() => import('@/components/assistant/VerNoticiasDisplay'), { ssr: false }),
+
+  // ── Mídia ─────────────────────────────────────────────────
+  'TocarVideoDisplay': dynamic(() => import('@/components/assistant/TocarVideoDisplay'), { ssr: false }),
+  'TocarMusicaDisplay': dynamic(() => import('@/components/assistant/TocarMusicaDisplay'), { ssr: false }),
+  'PlaylistDisplay': dynamic(() => import('@/components/assistant/PlaylistDisplay'), { ssr: false }),
+  'PortaRetratoDisplay': dynamic(() => import('@/components/assistant/PortaRetratoDisplay'), { ssr: false }),
+  'PainelOfertasDisplay': dynamic(() => import('@/components/assistant/PainelOfertasDisplay'), { ssr: false }),
+  'SequenciaVideosDisplay': dynamic(() => import('@/components/assistant/SequenciaVideosDisplay'), { ssr: false }),
+  'CardapioDisplay': dynamic(() => import('@/components/assistant/CardapioDisplay'), { ssr: false }),
+
+  // ── Smart home ────────────────────────────────────────────
+  'AparelhosSmartDisplay': dynamic(() => import('@/components/assistant/AparelhosSmartDisplay'), { ssr: false }),
+
+  // ── Fichas de produção ────────────────────────────────────
+  'FichaProducaoDisplay': dynamic(() => import('@/components/assistant/FichaProducaoDisplay'), { ssr: false }),
+  'fichas_producao_conversacional': dynamic(() => import('@/components/assistant/FichaConversacionalDisplay'), { ssr: false }),
+  'FichaProducaoConversacionalDisplay': dynamic(() => import('@/components/assistant/FichaConversacionalDisplay'), { ssr: false }),
+
+  // ── Cadastro e perfil ─────────────────────────────────────
+  'RegistrationDisplay': dynamic(() => import('@/components/assistant/RegistrationDisplay'), { ssr: false }),
+  'LoginClienteDisplay': dynamic(() => import('@/components/assistant/LoginClienteDisplay'), { ssr: false }),
+  'MeuCupomDisplay': dynamic(() => import('@/components/assistant/MeuCupomDisplay'), { ssr: false }),
+
+  // ── Tradução e transcrição ────────────────────────────────
+  'TranslateTextModal': dynamic(() => import('@/components/assistant/TranslateTextModal'), { ssr: false }),
+  'TranscribeAudioModal': dynamic(() => import('@/components/assistant/TranscribeAudioModal'), { ssr: false }),
+
+  // ── Vendas e estoque ──────────────────────────────────────
+  'ProcurarProdutoDisplay': dynamic(() => import('@/components/assistant/ProcurarProdutoDisplay'), { ssr: false }),
+  'ListaComprasDisplay': dynamic(() => import('@/components/assistant/ListaComprasDisplay'), { ssr: false }),
+  'RegistrarVendaDisplay': dynamic(() => import('@/components/assistant/RegistrarVendaDisplay'), { ssr: false }),
+  'VerClientesDisplay': dynamic(() => import('@/components/assistant/VerClientesDisplay'), { ssr: false }),
+  'FecharCaixaDisplay': dynamic(() => import('@/components/assistant/FecharCaixaDisplay'), { ssr: false }),
+  'TrocarTurnoDisplay': dynamic(() => import('@/components/assistant/TrocarTurnoDisplay'), { ssr: false }),
+  'RelatorioVendasDisplay': dynamic(() => import('@/components/assistant/RelatorioVendasDisplay'), { ssr: false }),
+  'MinhasComprasDisplay': dynamic(() => import('@/components/assistant/MinhasComprasDisplay'), { ssr: false }),
+  'ChamarGerenteDisplay': dynamic(() => import('@/components/assistant/ChamarGerenteDisplay'), { ssr: false }),
+
+  // ── Modais com props customizadas ─────────────────────────
+  // Estes precisam de wrapper inline pois recebem props além do padrão
+  'SaleModeModal': dynamic(
+    () => import('@/components/VoiceAssistant/modals/SaleModeModal').then(mod => ({
+      default: ({ data, onClose, theme, playText }: any) => (
+        <mod.default
+          companyId={data.companyId}
+          theme={theme}
+          onClose={onClose}
+          playText={playText}
+          produtoDestaque={data.produtoDestaque}
+          isListening={data.isListening}
+          isProcessing={data.isProcessing}
+          isPlayingAudio={data.isPlayingAudio}
+          isTranscribing={data.isTranscribing}
+          onMicDown={data.onMicDown}
+          onMicUp={data.onMicUp}
+          onTextMessage={data.onTextMessage}
+          isMaximized={data.isMaximized}
+          profile={data.profile}
+          isFullscreen={false}
+        />
+      )
+    })),
+    { ssr: false }
+  ),
+
+  'VerProdutoDisplay': dynamic(
+    () => import('@/components/assistant/VerProdutoDisplay').then(mod => ({
+      default: ({ data, onClose, theme, playText }: any) => (
+        <mod.default
+          data={data}
+          onClose={onClose}
+          theme={theme}
+          playText={playText}
+          onComprarPix={(produto: any, opcoes: any) => {
+            onClose();
+            const quantidade = (produto as any)._quantidade ?? 1;
+            const valorCents = Math.round(produto.preco_venda * quantidade * 100);
+            window.dispatchEvent(new CustomEvent('verProdutoPix', {
+              detail: { companyId: data.companyId, produto, opcoes, quantidade, valorCents },
+            }));
+          }}
+          onAdicionarCarrinho={(produto: any, opcoes: any) => {
+            onClose();
+            const quantidade = (produto as any)._quantidade ?? 1;
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+                detail: { functionKey: 'modo_venda', produtoInicial: produto, quantidadeInicial: quantidade, opcoesIniciais: opcoes },
+              }));
+            }, 150);
+          }}
+        />
+      )
+    })),
+    { ssr: false }
+  ),
+
+  'CadastrarProdutoDisplay': dynamic(
+    () => import('@/components/assistant/CadastrarProdutoDisplay').then(mod => ({
+      default: ({ data, onClose, theme, playText }: any) => (
+        <mod.default
+          data={data}
+          onClose={onClose}
+          theme={theme}
+          playText={playText}
+          onSalvo={() => {
+            import('@/components/VoiceAssistant/handlers/functionUsage').then(({ registerFunctionUsage }) => {
+              registerFunctionUsage(data.companyId, 'cadastrar_produto', 1);
+            });
+          }}
+        />
+      )
+    })),
+    { ssr: false }
+  ),
+
+  'MercadoPagoPointDisplay': dynamic(
+    () => import('@/components/assistant/MercadoPagoPointDisplay').then(mod => ({
+      default: ({ data, onClose, playText }: any) => (
+        <mod.default
+          companyId={data.companyId}
+          paymentType={data.paymentType}
+          initialAmount={data.initialAmount}
+          initialInstallments={data.initialInstallments}
+          maxInstallments={data.maxInstallments}
+          minInstallmentValueCents={data.minInstallmentValueCents}
+          installmentsCost={data.installmentsCost}
+          playText={playText}
+          onClose={onClose}
+        />
+      )
+    })),
+    { ssr: false }
+  ),
+
+  // ⬇️ NOVAS FUNÇÕES — adicione aqui seguindo o padrão:
+  // 'MinhaNovaFuncaoDisplay': dynamic(
+  //   () => import('@/components/assistant/MinhaNovaFuncaoDisplay'),
+  //   { ssr: false }
+  // ),
 };
 
 // ── Props ─────────────────────────────────────────────────────
@@ -285,7 +244,6 @@ interface ActionModalsProps {
   } | null;
   onClose: () => void;
   theme: 'dark' | 'light';
-  // Handlers de PIX (passados diretamente pois têm lógica própria)
   onConfirmPix?: (data: any) => void;
   onCancelPix?: () => void;
   playText?: (text: string) => Promise<void>;

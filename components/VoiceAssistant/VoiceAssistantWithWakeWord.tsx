@@ -1700,8 +1700,15 @@ const handleTextMessageForText = async (
       responseText = headerText ? decodeURIComponent(headerText) : '';
     }
 
-    if (responseText) setLastResponse(responseText);
-    return { text: responseText, functionKey: undefined };
+if (responseText) setLastResponse(responseText);
+
+// Salva como hint não reconhecido — igual ao modo padrão
+// Isso alimenta a tabela function_hints para aprendizado futuro
+if (!usedFAQ && commandProcessor) {
+  commandProcessor.saveUnrecognizedHint(message);
+}
+
+return { text: responseText, functionKey: undefined };
 
   } catch (error: any) {
     console.error('❌ Erro modo texto:', error);

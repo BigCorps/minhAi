@@ -779,6 +779,80 @@ export function VoiceAssistantWithWakeWord({
           await handleCadastro({ companyId, setIsProcessing, setActiveModal });
           break;
 
+case 'registrar_venda':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'RegistrarVendaDisplay',
+    data: { companyId },
+  });
+  playText('Abrindo o PDV...').catch(() => {});
+  break;
+
+case 'ver_clientes':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'VerClientesDisplay',
+    data: { companyId },
+  });
+  playText('Carregando lista de clientes...').catch(() => {});
+  break;
+
+case 'fechar_caixa':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'FecharCaixaDisplay',
+    data: { companyId },
+  });
+  playText('Preparando fechamento de caixa...').catch(() => {});
+  break;
+
+case 'trocar_turno':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'TrocarTurnoDisplay',
+    data: { companyId },
+  });
+  playText('Preparando troca de turno...').catch(() => {});
+  break;
+
+case 'relatorio_vendas':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'RelatorioVendasDisplay',
+    data: { companyId },
+  });
+  playText('Gerando relatório de vendas...').catch(() => {});
+  break;
+
+case 'minhas_compras':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'MinhasComprasDisplay',
+    data: { companyId },
+  });
+  playText('Carregando seu histórico de compras...').catch(() => {});
+  break;
+
+case 'chamar_gerente':
+  await stopGoogleSpeech();
+  // Extrai motivo do transcript (se houver)
+  const motivo = event?.detail?.transcript 
+    ? event.detail.transcript
+        .replace(/chamar (o )?gerente/gi, '')
+        .replace(/preciso (do|da) gerente/gi, '')
+        .trim()
+    : '';
+  
+  setActiveModal({
+    type: 'ChamarGerenteDisplay',
+    data: {
+      companyId,
+      motivo: motivo || undefined,
+    },
+  });
+  playText('Chamando o gerente...').catch(() => {});
+  break;
+
         case 'identificar_fraude':
           setActiveModal({
             type: 'IdentificarFraudeDisplay',

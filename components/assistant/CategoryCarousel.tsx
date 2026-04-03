@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@/lib/supabase-browser';
 
 interface CategoryCarouselProps {
   companyId: string;
@@ -58,17 +58,15 @@ export default function CategoryCarousel({
   hideDisabledFunctions = false,
   autoScroll = true,
 }: CategoryCarouselProps) {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  
+  // ✅ Usa o client singleton do projeto em vez de criar um novo a cada render
+  const supabase = createClient();
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [hoveredFunction, setHoveredFunction] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [clickedChipRect, setClickedChipRect] = useState<DOMRect | null>(null);
-  
+
   const panelRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const chipRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -122,7 +120,7 @@ export default function CategoryCarousel({
           (fn) => fn.function_category === cat.key
         );
         const hasEnabledFunctions = categoryFunctions.some((fn) => fn.is_enabled_for_company);
-        
+
         return {
           ...cat,
           functions: categoryFunctions,
@@ -134,7 +132,7 @@ export default function CategoryCarousel({
     }
 
     loadFunctions();
-  }, [companyId, hideDisabledFunctions, supabase]);
+  }, [companyId, hideDisabledFunctions]);
 
   // Click outside detection
   useEffect(() => {
@@ -144,7 +142,7 @@ export default function CategoryCarousel({
       const target = e.target as Node;
       const clickedOutsidePanel = panelRef.current && !panelRef.current.contains(target);
       const clickedOutsideChips = carouselRef.current && !carouselRef.current.contains(target);
-      
+
       if (clickedOutsidePanel && clickedOutsideChips) {
         setActiveCategory(null);
         setClickedChipRect(null);
@@ -164,11 +162,10 @@ export default function CategoryCarousel({
   };
 
   const handleCategoryClick = (category: Category, e: React.MouseEvent<HTMLButtonElement>) => {
-    // Não abrir se todas as funções estão desabilitadas
     if (!category.hasEnabledFunctions) return;
-    
+
     const chipElement = chipRefs.current.get(category.key);
-    
+
     if (activeCategory === category.key) {
       setActiveCategory(null);
       setClickedChipRect(null);
@@ -221,15 +218,15 @@ export default function CategoryCarousel({
 
   const getPanelPosition = () => {
     if (!clickedChipRect) return {};
-    
+
     const panelWidth = 280;
     const viewportWidth = window.innerWidth;
-    
+
     let left = clickedChipRect.left + (clickedChipRect.width / 2) - (panelWidth / 2);
-    
+
     if (left < 10) left = 10;
     if (left + panelWidth > viewportWidth - 10) left = viewportWidth - panelWidth - 10;
-    
+
     return {
       position: 'fixed' as const,
       left: `${left}px`,
@@ -269,7 +266,7 @@ export default function CategoryCarousel({
                 .find((c) => c.key === activeCategory)
                 ?.functions.map((fn) => {
                   const isEnabled = fn.is_enabled_for_company;
-                  
+
                   return (
                     <div
                       key={fn.function_key}
@@ -288,7 +285,7 @@ export default function CategoryCarousel({
                       <span className="font-medium text-[11px] leading-tight block">
                         {fn.function_name}
                       </span>
-                      
+
                       {hoveredFunction === fn.function_key && fn.short_description && (
                         <div
                           className="mt-0.5 text-[9px] leading-tight opacity-70"

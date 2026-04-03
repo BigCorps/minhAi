@@ -1671,6 +1671,42 @@ minha_conta: {
       }
     },
   },
+
+lista_compras: {
+  functionKey: 'lista_compras',
+  functionName: 'Lista de Compras',
+  category: 'utylities',
+  icon: '🛒',
+  color: '#10B981',
+  voiceTriggers: [
+    'lista de compras',
+    'lista compras',
+    'fazer lista',
+    'criar lista',
+    'minha lista',
+    'abrir lista',
+    'lista do mercado',
+    'ir ao mercado',
+    'compras',
+  ],
+  examplePhrases: [
+    'Fazer lista de compras',
+    'Adicionar leite na lista',
+    'Abrir minha lista',
+  ],
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  saveToHistory: true,
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      setActiveModal?.({ type: 'ListaComprasDisplay', data: { companyId } });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
   
 agendar_compromisso: {
   functionKey: 'agendar_compromisso',

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Ticket, ToggleLeft, ToggleRight, RefreshCw,
   FileText, Download, CheckCircle, Upload, File, Image, Printer, Receipt,
+  ShoppingCart,
 } from 'lucide-react';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
@@ -60,6 +61,16 @@ interface Enviado {
 
 interface Company { id: string; name: string; slug: string; }
 
+interface ListaCompras {
+  id: string;
+  nome: string;
+  status: string;
+  total_itens: number;
+  itens_pegos: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatBytes(bytes: number | null): string {
@@ -111,6 +122,11 @@ export default function ArquivosCompanyClient({
   const [editTitulo,    setEditTitulo]    = useState('');
   const [editConteudo,  setEditConteudo]  = useState('');
 
+  // ── States de Listas de Compras ─────────────────────────────────────────────
+  const [listas,        setListas]        = useState<ListaCompras[]>([]);
+  const [loadingListas, setLoadingListas] = useState(false);
+  const [tipoNotas,     setTipoNotas]     = useState<'notas' | 'listas'>('notas');
+
   const { selectedAssistantId, selectedAssistantName } = useAssistant();
   const router = useRouter();
 
@@ -153,12 +169,40 @@ export default function ArquivosCompanyClient({
     }
   }, [initialCompany.id, supabase]);
 
-  // ── Notas: carregar quando aba é ativada ────────────────────────────────────
-  useEffect(() => {
-    if (activeTab === 'notas' && notas.length === 0) {
-      fetchNotas();
+  // ── Listas de Compras: fetch ─────────────────────────────────────────────────
+  const fetchListas = useCallback(async () => {
+    setLoadingListas(true);
+    try {
+      const { data } = await supabase
+        .from('lista_compras')
+        .select('id, nome, status, total_itens, itens_pegos, created_at, updated_at')
+        .eq('company_id', initialCompany.id)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setListas(data);
+        setStats(prev => ({
+          ...prev,
+          totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + notas.length + data.length,
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar listas:', error);
+    } finally {
+      setLoadingListas(false);
     }
-  }, [activeTab, fetchNotas]); // eslint-disable-line
+  }, [initialCompany.id, supabase, notas.length]);
+
+  // ── Notas/Listas: carregar quando aba ou toggle é ativado ───────────────────
+  useEffect(() => {
+    if (activeTab === 'notas') {
+      if (tipoNotas === 'notas' && notas.length === 0) {
+        fetchNotas();
+      } else if (tipoNotas === 'listas' && listas.length === 0) {
+        fetchListas();
+      }
+    }
+  }, [activeTab, tipoNotas, fetchNotas, fetchListas]); // eslint-disable-line
 
   // ── Cupons: toggle ──────────────────────────────────────────────────────────
   async function handleToggleAtivo(cupomId: string, current: boolean) {
@@ -252,6 +296,32 @@ export default function ArquivosCompanyClient({
       alert('Erro ao deletar nota');
     }
   };
+
+  // ── Listas: deletar ─────────────────────────────────────────────────────────
+  async function deleteLista(listaId: string) {
+    if (!confirm('Deseja realmente excluir esta lista?')) return;
+
+    setDeletingId(listaId);
+    const { error } = await supabase.from('lista_compras').delete().eq('id', listaId);
+
+    if (!error) {
+      const updated = listas.filter(l => l.id !== listaId);
+      setListas(updated);
+      setStats(prev => ({
+        ...prev,
+        totalArquivos: prev.totalCupons + prev.totalConsultas + prev.totalEnviados + notas.length + updated.length,
+      }));
+    }
+    setDeletingId(null);
+  }
+
+  // ── Listas: abrir modal via CustomEvent ─────────────────────────────────────
+  function abrirLista(listaId: string) {
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('openListaCompras', { detail: { listaId, companyId: initialCompany.id } });
+      window.dispatchEvent(event);
+    }
+  }
 
   // ── Consultas: baixar PDF ───────────────────────────────────────────────────
   async function handleBaixarPDF(consultaId: string) {
@@ -468,133 +538,264 @@ export default function ArquivosCompanyClient({
           </div>
         </div>
 
-        {/* ── Aba: Notas ── */}
+        {/* ── Aba: Notas / Listas de Compras ── */}
         {activeTab === 'notas' && (
           <div className="rounded-xl bg-white/80 dark:bg-white/5 dark:border dark:border-white/10 backdrop-blur-sm shadow-sm overflow-hidden">
 
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Notas e Listas de Compras</h3>
+            {/* Header com Toggle Notas/Listas */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {tipoNotas === 'notas' ? 'Minhas Notas' : 'Listas de Compras'}
+                </h3>
+
+                {/* Toggle Notas/Listas */}
+                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-white/10 rounded-lg">
+                  <button
+                    onClick={() => setTipoNotas('notas')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      tipoNotas === 'notas'
+                        ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    📝 Notas
+                  </button>
+                  <button
+                    onClick={() => setTipoNotas('listas')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      tipoNotas === 'listas'
+                        ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    🛒 Listas
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 dark:text-white/40">
-                  {notas.length} nota{notas.length !== 1 ? 's' : ''}
+                  {tipoNotas === 'notas'
+                    ? `${notas.length} nota${notas.length !== 1 ? 's' : ''}`
+                    : `${listas.length} lista${listas.length !== 1 ? 's' : ''}`
+                  }
                 </span>
                 <button
-                  onClick={fetchNotas}
-                  disabled={loadingNotas}
+                  onClick={tipoNotas === 'notas' ? fetchNotas : fetchListas}
+                  disabled={tipoNotas === 'notas' ? loadingNotas : loadingListas}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-all disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-4 h-4 ${loadingNotas ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${(tipoNotas === 'notas' ? loadingNotas : loadingListas) ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
 
-            {loadingNotas && notas.length === 0 ? (
-              <div className="py-16 text-center">
-                <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
-                <p className="text-gray-500 dark:text-white/40 font-medium">Carregando notas...</p>
-              </div>
-            ) : notas.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma nota criada ainda</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
-                  As notas e listas criadas pelo assistente aparecerão aqui
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100 dark:divide-white/5">
-                {notas.map((nota) => (
-                  <div key={nota.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-
-                    {editingNota === nota.id ? (
-                      // Modo de edição
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          value={editTitulo}
-                          onChange={(e) => setEditTitulo(e.target.value)}
-                          placeholder="Título (opcional)"
-                          className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
-                        />
-                        <textarea
-                          value={editConteudo}
-                          onChange={(e) => setEditConteudo(e.target.value)}
-                          rows={6}
-                          className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 resize-none bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleSaveEdit}
-                            className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition text-sm font-medium"
-                          >
-                            Salvar
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingNota(null);
-                              setEditTitulo('');
-                              setEditConteudo('');
-                            }}
-                            className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-white/15 transition text-sm font-medium"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Modo de visualização
-                      <div>
-                        <div className="flex items-start justify-between gap-4 mb-3">
-                          <div className="flex-1 min-w-0">
-                            {nota.titulo && (
-                              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-                                {nota.titulo}
-                              </h4>
-                            )}
-                            <p className="text-xs text-gray-400 dark:text-gray-500">
-                              Criada em {new Date(nota.created_at).toLocaleString('pt-BR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <button
-                              onClick={() => handleEditNota(nota)}
-                              className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-500/25 transition"
-                              title="Editar nota"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteNota(nota.id)}
-                              className="p-2 rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/25 transition"
-                              title="Deletar nota"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-100 dark:border-white/10">
-                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                            {nota.conteudo}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+            {/* Conteúdo - NOTAS */}
+            {tipoNotas === 'notas' && (
+              <>
+                {loadingNotas && notas.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
+                    <p className="text-gray-500 dark:text-white/40 font-medium">Carregando notas...</p>
                   </div>
-                ))}
-              </div>
+                ) : notas.length === 0 ? (
+                  <div className="flex flex-col items-center gap-3 py-12 text-center">
+                    <FileText className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma nota criada ainda</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
+                      As notas e listas criadas pelo assistente aparecerão aqui
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-white/5">
+                    {notas.map((nota) => (
+                      <div key={nota.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+
+                        {editingNota === nota.id ? (
+                          // Modo de edição
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              value={editTitulo}
+                              onChange={(e) => setEditTitulo(e.target.value)}
+                              placeholder="Título (opcional)"
+                              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
+                            />
+                            <textarea
+                              value={editConteudo}
+                              onChange={(e) => setEditConteudo(e.target.value)}
+                              rows={6}
+                              className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-orange-400 resize-none bg-white dark:bg-slate-800 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleSaveEdit}
+                                className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition text-sm font-medium"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingNota(null);
+                                  setEditTitulo('');
+                                  setEditConteudo('');
+                                }}
+                                className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-white/15 transition text-sm font-medium"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          // Modo de visualização
+                          <div>
+                            <div className="flex items-start justify-between gap-4 mb-3">
+                              <div className="flex-1 min-w-0">
+                                {nota.titulo && (
+                                  <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+                                    {nota.titulo}
+                                  </h4>
+                                )}
+                                <p className="text-xs text-gray-400 dark:text-gray-500">
+                                  Criada em {new Date(nota.created_at).toLocaleString('pt-BR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </p>
+                              </div>
+                              <div className="flex gap-2 shrink-0">
+                                <button
+                                  onClick={() => handleEditNota(nota)}
+                                  className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-500/25 transition"
+                                  title="Editar nota"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteNota(nota.id)}
+                                  className="p-2 rounded-lg bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/25 transition"
+                                  title="Deletar nota"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-100 dark:border-white/10">
+                              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                {nota.conteudo}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
+
+            {/* Conteúdo - LISTAS DE COMPRAS */}
+            {tipoNotas === 'listas' && (
+              <>
+                {loadingListas && listas.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <RefreshCw className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20 animate-spin" />
+                    <p className="text-gray-500 dark:text-white/40 font-medium">Carregando listas...</p>
+                  </div>
+                ) : listas.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-white/20" />
+                    <p className="text-gray-500 dark:text-white/40 font-medium">Nenhuma lista encontrada</p>
+                    <p className="text-sm text-gray-400 dark:text-white/30 mt-1">
+                      Diga "lista de compras" para o assistente criar sua primeira lista
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-white/5">
+                    {listas.map(lista => {
+                      const progresso = lista.total_itens > 0
+                        ? Math.round((lista.itens_pegos / lista.total_itens) * 100)
+                        : 0;
+
+                      return (
+                        <div key={lista.id} className="p-6 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                                <ShoppingCart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900 dark:text-white text-base">
+                                  {lista.nome}
+                                </h4>
+                                <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">
+                                  {new Date(lista.created_at).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Status Badge */}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              lista.status === 'concluida'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                            }`}>
+                              {lista.status === 'concluida' ? '✓ Concluída' : 'Ativa'}
+                            </span>
+                          </div>
+
+                          {/* Barra de Progresso */}
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-white/60 mb-1.5">
+                              <span>{lista.itens_pegos} de {lista.total_itens} itens</span>
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{progresso}%</span>
+                            </div>
+                            <div className="h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full transition-all duration-300"
+                                style={{ width: `${progresso}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Ações */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => abrirLista(lista.id)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-all"
+                            >
+                              {lista.status === 'concluida' ? 'Ver Lista' : 'Continuar'}
+                            </button>
+                            <button
+                              onClick={() => deleteLista(lista.id)}
+                              disabled={deletingId === lista.id}
+                              className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-600 dark:text-red-400 text-xs font-medium transition-all disabled:opacity-50"
+                            >
+                              {deletingId === lista.id ? 'Excluindo...' : 'Excluir'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
           </div>
         )}
 

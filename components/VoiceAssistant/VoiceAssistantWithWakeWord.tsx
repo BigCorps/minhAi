@@ -1604,25 +1604,31 @@ if (activeFunction) {
   activeFunctionContextRef.current = null;
 }
 
-    // ── ETAPA 2: detectVoiceCommand ───────────────────────────────────────────
-    const isCommand = await detectVoiceCommand(message, {
-      companyId,
-      functionSettings,
-      setIsProcessing,
-      setQrCodeData,
-      setPixConfirmationData,
-      playText: silentPlayText,
-      sessionId,
-      commandProcessor,
-      pixStateRef,
-      setActiveModal,
-      activeFunctionContextRef,
-      groqContextRef,
-    });
+// ── ETAPA 2: detectVoiceCommand ───────────────────────────────────────────
+// Usa ref dummy para impedir que o commandProcessor sete contexto ativo
+// no modo texto (cada mensagem é independente, não há fluxo conversacional)
+const dummyContextRef = { current: null };
 
-    if (isCommand) {
-      return { text: capturedText || '', functionKey: undefined };
-    }
+const isCommand = await detectVoiceCommand(message, {
+  companyId,
+  functionSettings,
+  setIsProcessing,
+  setQrCodeData,
+  setPixConfirmationData,
+  playText: silentPlayText,
+  sessionId,
+  commandProcessor,
+  pixStateRef,
+  setActiveModal,
+  activeFunctionContextRef: dummyContextRef, // ← não polui o ref real
+  groqContextRef,
+});
+
+if (isCommand) {
+  // Garante limpeza do ref real caso algo tenha escrito nele
+  activeFunctionContextRef.current = null;
+  return { text: capturedText || '', functionKey: undefined };
+}
 
 // ── ETAPA 3: detectRegistryFunction ──────────────────────────────────────
 const registryFunc = detectRegistryFunction(message);

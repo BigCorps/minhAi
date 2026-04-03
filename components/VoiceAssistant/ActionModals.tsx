@@ -87,6 +87,14 @@ import VerNoticiasDisplay from '@/components/assistant/VerNoticiasDisplay';
 import ProcurarProdutoDisplay from '@/components/assistant/ProcurarProdutoDisplay';
 import ListaComprasDisplay from '@/components/assistant/ListaComprasDisplay';
 
+import RegistrarVendaDisplay from '@/components/assistant/RegistrarVendaDisplay';
+import VerClientesDisplay from '@/components/assistant/VerClientesDisplay';
+import FecharCaixaDisplay from '@/components/assistant/FecharCaixaDisplay';
+import TrocarTurnoDisplay from '@/components/assistant/TrocarTurnoDisplay';
+// import RelatorioVendasDisplay from '@/components/assistant/RelatorioVendasDisplay';
+import MinhasComprasDisplay from '@/components/assistant/MinhasComprasDisplay';
+import ChamarGerenteDisplay from '@/components/assistant/ChamarGerenteDisplay';
+
 // ⬇️ Importe aqui cada novo componente Display criado para novas funções
 // import MinhaNovaFuncaoDisplay from '@/components/assistant/MinhaNovaFuncaoDisplay';
 
@@ -170,6 +178,15 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'VerNoticiasDisplay': VerNoticiasDisplay,
   'ProcurarProdutoDisplay': ProcurarProdutoDisplay,
   'ListaComprasDisplay': ListaComprasDisplay,
+
+  'RegistrarVendaDisplay': RegistrarVendaDisplay,
+  'VerClientesDisplay': VerClientesDisplay,
+  'FecharCaixaDisplay': FecharCaixaDisplay,
+  'TrocarTurnoDisplay': TrocarTurnoDisplay,
+  // 'RelatorioVendasDisplay': RelatorioVendasDisplay,
+  'MinhasComprasDisplay': MinhasComprasDisplay,
+  'ChamarGerenteDisplay': ChamarGerenteDisplay,
+
   'SaleModeModal': ({ data, onClose, theme, playText }: any) => (
 <SaleModeModal
   companyId={data.companyId}

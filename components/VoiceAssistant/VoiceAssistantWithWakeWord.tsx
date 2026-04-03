@@ -1572,38 +1572,37 @@ const handleTextMessageForText = async (
 
   try {
     // ── ETAPA 1: Contexto de função ativa ────────────────────────────────────
-    const activeFunction = getActiveFunctionContext();
-    if (activeFunction) {
-      const func = getFunctionByKey(activeFunction);
-      if (func?.handler) {
-        const handlerSuccess = await func.handler({
-          transcript: message,
-          companyId,
-          functionSettings,
-          playText: silentPlayText,
-          setIsProcessing,
-          sessionId,
-          setActiveModal,
-          registerFunctionUsage: async (key: string, credits: number) =>
-            registerFunctionUsage(companyId, key, credits),
-          checkIfFunctionIsEnabled: async (key: string) =>
-            checkIfFunctionIsEnabled(companyId, key),
-        });
-        if (handlerSuccess) {
-          activeFunctionContextRef.current = {
-            functionKey: func.functionKey,
-            activatedAt: Date.now(),
-            expiresIn: 5 * 60 * 1000,
-          };
-          await registerFunctionUsage(
-            companyId,
-            activeFunction,
-            functionSettings[activeFunction]?.creditsPerUse ?? 2
-          );
-          return { text: capturedText || '', functionKey: activeFunction };
-        }
-      }
+// ── ETAPA 1: Contexto de função ativa ────────────────────────────────────
+const activeFunction = getActiveFunctionContext();
+if (activeFunction) {
+  const func = getFunctionByKey(activeFunction);
+  if (func?.handler) {
+    const handlerSuccess = await func.handler({
+      transcript: message,
+      companyId,
+      functionSettings,
+      playText: silentPlayText,
+      setIsProcessing,
+      sessionId,
+      setActiveModal,
+      registerFunctionUsage: async (key: string, credits: number) =>
+        registerFunctionUsage(companyId, key, credits),
+      checkIfFunctionIsEnabled: async (key: string) =>
+        checkIfFunctionIsEnabled(companyId, key),
+    });
+    if (handlerSuccess) {
+      activeFunctionContextRef.current = null; // ← limpa em vez de re-setar
+      await registerFunctionUsage(
+        companyId,
+        activeFunction,
+        functionSettings[activeFunction]?.creditsPerUse ?? 2
+      );
+      return { text: capturedText || '', functionKey: activeFunction };
     }
+  }
+  // Handler não tratou a mensagem — limpa contexto para não ficar preso
+  activeFunctionContextRef.current = null;
+}
 
     // ── ETAPA 2: detectVoiceCommand ───────────────────────────────────────────
     const isCommand = await detectVoiceCommand(message, {
@@ -1625,38 +1624,39 @@ const handleTextMessageForText = async (
       return { text: capturedText || '', functionKey: undefined };
     }
 
-    // ── ETAPA 3: detectRegistryFunction ──────────────────────────────────────
-    const registryFunc = detectRegistryFunction(message);
-    if (registryFunc?.handler) {
-      const isEnabled = await checkIfFunctionIsEnabled(companyId, registryFunc.functionKey);
-      if (isEnabled) {
-        try {
-          const success = await registryFunc.handler({
-            transcript: message,
-            companyId,
-            functionSettings,
-            playText: silentPlayText,
-            setIsProcessing,
-            sessionId,
-            setActiveModal,
-            registerFunctionUsage: async (key: string, credits: number) =>
-              registerFunctionUsage(companyId, key, credits),
-            checkIfFunctionIsEnabled: async (key: string) =>
-              checkIfFunctionIsEnabled(companyId, key),
-          });
-          if (success) {
-            await registerFunctionUsage(
-              companyId,
-              registryFunc.functionKey,
-              registryFunc.creditsPerUse ?? 0
-            );
-            return { text: capturedText || '', functionKey: registryFunc.functionKey };
-          }
-        } catch (err) {
-          console.error(`❌ [TextMode] Registry error:`, err);
-        }
+// ── ETAPA 3: detectRegistryFunction ──────────────────────────────────────
+const registryFunc = detectRegistryFunction(message);
+if (registryFunc?.handler) {
+  const isEnabled = await checkIfFunctionIsEnabled(companyId, registryFunc.functionKey);
+  if (isEnabled) {
+    try {
+      const success = await registryFunc.handler({
+        transcript: message,
+        companyId,
+        functionSettings,
+        playText: silentPlayText,
+        setIsProcessing,
+        sessionId,
+        setActiveModal,
+        registerFunctionUsage: async (key: string, credits: number) =>
+          registerFunctionUsage(companyId, key, credits),
+        checkIfFunctionIsEnabled: async (key: string) =>
+          checkIfFunctionIsEnabled(companyId, key),
+      });
+      if (success) {
+        activeFunctionContextRef.current = null; // ← limpa contexto
+        await registerFunctionUsage(
+          companyId,
+          registryFunc.functionKey,
+          registryFunc.creditsPerUse ?? 0
+        );
+        return { text: capturedText || '', functionKey: registryFunc.functionKey };
       }
+    } catch (err) {
+      console.error(`❌ [TextMode] Registry error:`, err);
     }
+  }
+}
 
     // ── ETAPA 4: Backend — Hints → FAQ → GPT ─────────────────────────────────
     const formData = new FormData();

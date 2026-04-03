@@ -1540,53 +1540,171 @@ case 'chamar_gerente':
     return bestScore >= 8 ? bestMatch : null;
   }
 
-  // ── handleTextMessageForText: versão sem áudio, retorna { text, functionKey } ──
-  const handleTextMessageForText = async (message: string): Promise<{ text: string; functionKey?: string } | null> => {
-    if (detectStopCommand(message)) { stopEverything(); return null; }
+// ── handleTextMessageForText: segue EXATAMENTE a mesma ordem do processQuestion ──
+const handleTextMessageForText = async (
+  message: string
+): Promise<{ text: string; functionKey?: string } | null> => {
+  if (detectStopCommand(message)) {
+    stopEverything();
+    return null;
+  }
 
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
+  if (currentAudioRef.current) {
+    currentAudioRef.current.pause();
+    currentAudioRef.current.currentTime = 0;
+    currentAudioRef.current = null;
+  }
+
+  // playText silencioso — captura o texto sem reproduzir áudio
+  let capturedSilentText = '';
+  const silentPlayText = (text: string): Promise<void> => {
+    if (text && text.trim()) capturedSilentText = text.trim();
+    return Promise.resolve();
+  };
+
+  setIsProcessing(true);
+
+  try {
+    // ── ETAPA 1: Contexto de função ativa (igual ao processQuestion) ─────────
+    // Garante que fluxos conversacionais em andamento (PIX, temporizador, etc.)
+    // continuem sendo atendidos no modo texto
+    const activeFunction = getActiveFunctionContext();
+    if (activeFunction) {
+      const func = getFunctionByKey(activeFunction);
+      if (func?.handler) {
+        const handlerSuccess = await func.handler({
+          transcript: message,
+          companyId,
+          functionSettings,
+          playText: silentPlayText,
+          setIsProcessing,
+          sessionId,
+          setActiveModal,
+          registerFunctionUsage: async (key: string, credits: number) =>
+            registerFunctionUsage(companyId, key, credits),
+          checkIfFunctionIsEnabled: async (key: string) =>
+            checkIfFunctionIsEnabled(companyId, key),
+        });
+
+        if (handlerSuccess) {
+          activeFunctionContextRef.current = {
+            functionKey: func.functionKey,
+            activatedAt: Date.now(),
+            expiresIn: 5 * 60 * 1000,
+          };
+          await registerFunctionUsage(
+            companyId,
+            activeFunction,
+            functionSettings[activeFunction]?.creditsPerUse ?? 2
+          );
+          return {
+            text: capturedSilentText || '',
+            functionKey: activeFunction,
+          };
+        }
+      }
     }
 
-    // playText silencioso: captura o texto sem reproduzir áudio
-    let capturedSilentText = '';
-    const silentPlayText = (text: string): Promise<void> => {
-      if (text && text.trim()) capturedSilentText = text.trim();
-      return Promise.resolve();
-    };
+    // ── ETAPA 2: detectVoiceCommand (PIX, QR Code hardcoded, etc.) ───────────
+    const isCommand = await detectVoiceCommand(message, {
+      companyId,
+      functionSettings,
+      setIsProcessing,
+      setQrCodeData,
+      setPixConfirmationData,
+      playText: silentPlayText,
+      sessionId,
+      commandProcessor,
+      pixStateRef,
+      setActiveModal,
+      activeFunctionContextRef,
+      groqContextRef,
+    });
 
-    setIsProcessing(true);
+    if (isCommand) {
+      return {
+        text: capturedSilentText || '',
+        functionKey: undefined,
+      };
+    }
 
-    try {
-      // ── 1. Tenta detectVoiceCommand (funções hardcoded: PIX, QR Code, etc.) ──
-      const isCommand = await detectVoiceCommand(message, {
-        companyId,
-        functionSettings,
-        setIsProcessing,
-        setQrCodeData,
-        setPixConfirmationData,
-        playText: silentPlayText,
-        sessionId,
-        commandProcessor,
-        pixStateRef,
-        setActiveModal,
-        activeFunctionContextRef,
-        groqContextRef,
-      });
+    // ── ETAPA 3: Backend — Hints → FAQ → GPT (mesma ordem do servidor) ───────
+    const formData = new FormData();
+    formData.append(
+      'audio',
+      new Blob([message], { type: 'text/plain' }),
+      'question.txt'
+    );
+    formData.append('companyId', companyId);
+    formData.append('directQuestion', message);
+    formData.append('returnText', 'true'); // instrui backend a retornar JSON
+    if (sessionId) formData.append('sessionId', sessionId);
 
-      if (isCommand) {
-        return { text: capturedSilentText || '', functionKey: undefined };
-      }
+    const response = await fetch('/api/voice/process', {
+      method: 'POST',
+      body: formData,
+    });
 
-      // ── 2. NOVO: Tenta detectar via FUNCTIONS_REGISTRY (voiceTriggers) ──────
+    const newSessionId = response.headers.get('X-Session-Id');
+    if (newSessionId && !sessionId) setSessionId(newSessionId);
+
+    // ── X-Function-Key: hint do servidor ativou uma função ───────────────────
+    // O backend retorna isso ANTES de processar FAQ/GPT quando encontra um hint
+    // confirmado. Nesse caso o corpo ainda é um blob de áudio ("Um momento..."),
+    // então NÃO tentamos fazer response.json().
+    const hintFunctionKey = response.headers.get('X-Function-Key');
+    if (hintFunctionKey) {
+      setIsProcessing(false);
+      handleFunctionClickSilent(hintFunctionKey);
+
+      // O hint retorna blob de áudio, texto vem só via header X-Response-Text
+      const responseTextHeader = response.headers.get('X-Response-Text');
+      const hintText = responseTextHeader
+        ? decodeURIComponent(responseTextHeader)
+        : '';
+
+      if (hintText) setLastResponse(hintText);
+
+      return {
+        text: hintText || '',
+        functionKey: hintFunctionKey,
+      };
+    }
+
+    if (!response.ok) throw new Error(`Erro: ${response.status}`);
+
+    // ── Lê corpo JSON (returnText: true garante que o backend retorna JSON) ───
+    let responseText = '';
+    let usedFAQ = false;
+
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('application/json')) {
+      const data = await response.json();
+      responseText = data.response || data.text || '';
+      usedFAQ = !!data.usedFAQ;
+    } else {
+      // Fallback: backend não retornou JSON — lê header como último recurso
+      const responseTextHeader = response.headers.get('X-Response-Text');
+      responseText = responseTextHeader
+        ? decodeURIComponent(responseTextHeader)
+        : '';
+    }
+
+    if (responseText) setLastResponse(responseText);
+
+    // ── ETAPA 4: detectRegistryFunction — SOMENTE se backend não respondeu ───
+    // Fica como último recurso, nunca como primeira opção (evita falsos positivos
+    // interrompendo FAQ e GPT do backend)
+    if (!responseText && !usedFAQ) {
       const registryFunc = detectRegistryFunction(message);
-
       if (registryFunc?.handler) {
-        console.log(`🔌 [TextMode] Função detectada via REGISTRY: ${registryFunc.functionKey}`);
-
-        const isEnabled = await checkIfFunctionIsEnabled(companyId, registryFunc.functionKey);
+        console.log(
+          `🔌 [TextMode] Fallback REGISTRY: ${registryFunc.functionKey}`
+        );
+        const isEnabled = await checkIfFunctionIsEnabled(
+          companyId,
+          registryFunc.functionKey
+        );
         if (isEnabled) {
           try {
             const success = await registryFunc.handler({
@@ -1615,45 +1733,27 @@ case 'chamar_gerente':
               };
             }
           } catch (err) {
-            console.error(`❌ [TextMode] Erro ao executar ${registryFunc.functionKey}:`, err);
+            console.error(
+              `❌ [TextMode] Erro ao executar ${registryFunc.functionKey}:`,
+              err
+            );
           }
         }
       }
-
-      // ── 3. Tenta via X-Function-Key header (hint do servidor) ───────────────
-      const formData = new FormData();
-      formData.append('audio', new Blob([message], { type: 'text/plain' }));
-      formData.append('companyId', companyId);
-      formData.append('directQuestion', message);
-      if (sessionId) formData.append('sessionId', sessionId);
-
-      const response = await fetch('/api/voice/process', { method: 'POST', body: formData });
-
-      const newSessionId = response.headers.get('X-Session-Id');
-      if (newSessionId && !sessionId) setSessionId(newSessionId);
-
-      const responseTextHeader = response.headers.get('X-Response-Text');
-      const responseText = responseTextHeader ? decodeURIComponent(responseTextHeader) : '';
-      if (responseText) setLastResponse(responseText);
-
-      const hintFunctionKey = response.headers.get('X-Function-Key');
-      if (hintFunctionKey) {
-        setIsProcessing(false);
-        handleFunctionClickSilent(hintFunctionKey);
-        return { text: responseText || 'Função executada.', functionKey: hintFunctionKey };
-      }
-
-      if (!response.ok) throw new Error(`Erro: ${response.status}`);
-
-      return { text: responseText, functionKey: undefined };
-
-    } catch (error: any) {
-      console.error('❌ Erro ao processar mensagem texto:', error);
-      return { text: 'Desculpe, ocorreu um erro ao processar sua mensagem.', functionKey: undefined };
-    } finally {
-      setIsProcessing(false);
     }
-  };
+
+    return { text: responseText, functionKey: undefined };
+
+  } catch (error: any) {
+    console.error('❌ Erro ao processar mensagem texto:', error);
+    return {
+      text: 'Desculpe, ocorreu um erro ao processar sua mensagem.',
+      functionKey: undefined,
+    };
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   // ── handleFunctionClickSilent: abre modal sem reproduzir áudio ───────────
   const handleFunctionClickSilent = (functionKey: string) => {

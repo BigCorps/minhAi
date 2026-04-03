@@ -54,7 +54,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [assistantStarted, setAssistantStarted] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const textMessageHandlerRef = useRef<((text: string) => Promise<{ text: string; functionKey?: string } | null>) | null>(null);
+  const textMessageHandlerRef = useRef
+    ((text: string) => Promise<{ text: string; functionKey?: string } | null>) | null
+  >(null);
   
   const [isPortrait, setIsPortrait] = useState(false);
   
@@ -1022,43 +1024,48 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
                   onAssistantStart={() => setAssistantStarted(true)}
                   hideDisabledFunctions={company.hide_disabled_functions_carousel}
                   autoScroll={company.carousel_auto_scroll}
+                  onTextMessage={(handler) => {
+                    textMessageHandlerRef.current = handler;
+                  }}
                 />
               </div>
             </div>
           )}
 
-          {/* Modo texto — VoiceAssistant oculto mas montado para processar mensagens */}
-          {mode === 'texto' && (
-            <div className="hidden">
-              <VoiceAssistantWithWakeWord
-                companyId={company.id}
-                companyName={company.name}
-                slug={company.slug}
-                wakeWord={company.wake_word || 'olá assistente'}
-                greetingMessage={company.greeting_message || 'Olá!'}
-                theme={theme}
-                isMaximized={false}
-                onAssistantStart={() => setAssistantStarted(true)}
-                hideDisabledFunctions={company.hide_disabled_functions_carousel}
-                autoScroll={company.carousel_auto_scroll}
-                onTextMessage={(fn) => { textMessageHandlerRef.current = fn; }}
-              />
-            </div>
-          )}
+{/* VoiceAssistant oculto no modo texto — processa mensagens, mantém modais e GROQ ativos */}
+{mode === 'texto' && (
+  <div className="hidden">
+    <VoiceAssistantWithWakeWord
+      companyId={company.id}
+      companyName={company.name}
+      slug={company.slug}
+      wakeWord={company.wake_word || 'olá assistente'}
+      greetingMessage={company.greeting_message || 'Olá! Como posso ajudar você hoje?'}
+      theme={theme}
+      isMaximized={false}
+      onAssistantStart={() => setAssistantStarted(true)}
+      hideDisabledFunctions={company.hide_disabled_functions_carousel}
+      autoScroll={company.carousel_auto_scroll}
+      onTextMessage={(handler) => {
+        textMessageHandlerRef.current = handler;
+      }}
+    />
+  </div>
+)}
 
-          {mode === 'texto' && (
-            <TextAssistant
-              companyId={company.id}
-              theme={theme}
-              slug={company.slug}
-              onSendMessage={async (text) => {
-                if (textMessageHandlerRef.current) {
-                  return await textMessageHandlerRef.current(text);
-                }
-                return null;
-              }}
-            />
-          )}
+{mode === 'texto' && (
+  <TextAssistant
+    companyId={company.id}
+    theme={theme}
+    slug={company.slug}
+    onSendMessage={async (text) => {
+      if (textMessageHandlerRef.current) {
+        return await textMessageHandlerRef.current(text);
+      }
+      return null;
+    }}
+  />
+)}
 
           {/* G. CategoryCarousel fixo no rodapé em AMBOS os modos (padrao + texto) */}
           {assistantStarted && (

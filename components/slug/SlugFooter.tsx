@@ -1,14 +1,14 @@
-// components/slug/SlugFooter.tsx
-
 'use client';
 
 import { useState, useEffect } from 'react';
 
 interface SlugFooterProps {
   theme: 'dark' | 'light';
+  slug?: string;
+  webapp_enabled?: boolean;
 }
 
-export default function SlugFooter({ theme }: SlugFooterProps) {
+export default function SlugFooter({ theme, slug, webapp_enabled }: SlugFooterProps) {
   const [time, setTime] = useState<string>('');
 
   useEffect(() => {
@@ -27,6 +27,20 @@ export default function SlugFooter({ theme }: SlugFooterProps) {
 
   const isDark = theme === 'dark';
 
+  // Se o webapp estiver ativo e o slug disponível, aponta para o subdomínio próprio
+  const hasWebapp = webapp_enabled && slug;
+  const href = hasWebapp ? `https://${slug}.minhai.app` : 'https://minhai.app';
+
+  // Texto do link: "[slug].minhAi.app" ou "minhAi.app"
+  const linkLabel = hasWebapp ? (
+    <>
+      <span className="opacity-50">{slug}</span>
+      <span>.minhAi.app</span>
+    </>
+  ) : (
+    'minhAi.app'
+  );
+
   const styles = {
     container: {
       background: isDark
@@ -44,14 +58,14 @@ export default function SlugFooter({ theme }: SlugFooterProps) {
     >
       {/* Layout Desktop */}
       <div className="hidden md:flex h-full items-center justify-between px-4 text-xs">
-        {/* Esquerda: Logo/Nome clicável */}
+        {/* Esquerda: Link clicável */}
         <a
-          href="https://minhai.app"
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="font-medium hover:underline"
         >
-          minhAi.app
+          {linkLabel}
         </a>
 
         {/* Centro: Slogan */}
@@ -64,12 +78,13 @@ export default function SlugFooter({ theme }: SlugFooterProps) {
       {/* Layout Mobile */}
       <div className="flex md:hidden h-full items-center justify-center px-4 text-xs">
         <a
-          href="https://minhai.app"
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="font-medium hover:underline text-center"
         >
-          minhAi.app — Uma IA pra chamar de sua!
+          {linkLabel}
+          <span className="opacity-70"> — Uma IA pra chamar de sua!</span>
         </a>
       </div>
     </div>

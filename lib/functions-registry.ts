@@ -5143,36 +5143,31 @@ ver_produtos: {
   functionName: 'Ver Produtos',
   category: 'products',
   responseType: 'voice+modal',
-
-voiceTriggers: [
-  'detalhes do produto',
-  'detalhes de produto', 
-  'ver o produto',
-  'quanto custa o produto',
-  'quanto custa',
-  'ver produtos',
-  'catálogo de produtos',
-  'produto no cardápio',
-],
-
+  voiceTriggers: [
+    'detalhes do produto',
+    'detalhes de produto', 
+    'ver o produto',
+    'quanto custa o produto',
+    'quanto custa',
+    'ver produtos',
+    'catálogo de produtos',
+    'produto no cardápio',
+  ],
   examplePhrases: [
     'Me mostra a pizza de calabresa',
     'Detalhes do hambúrguer artesanal',
     'O que é o suco de laranja?',
     'Quanto custa a pizza grande?',
   ],
-
   requiresInput: false,
   description: 'Abre o catálogo de produtos. Pode receber um termo de busca para filtrar.',
   shortDescription: 'Ver catálogo de produtos',
   icon: '🛍️',
   color: '#10b981',
-
   saveToHistory: true,
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
-
   handler: async ({ transcript, playText, setActiveModal, companyId }) => {
     try {
       // Extrai o nome do produto removendo os triggers
@@ -5180,7 +5175,7 @@ voiceTriggers: [
         .replace(/me mostra|quero ver|detalhes do|detalhes de|o que é|o que e|como é|como e|informações sobre|informacoes sobre|mostra o|mostra a|ver o produto|ver a|quanto custa o|quanto custa a|qual o preco do|qual o preço do/gi, '')
         .replace(/\?/g, '')
         .trim();
-
+      
       if (!nomeProduto || nomeProduto.length < 2) {
         await playText('Qual produto você quer ver? Me diga o nome.');
         return false;
@@ -5188,7 +5183,7 @@ voiceTriggers: [
 
       const { buscarProdutoPorNome } = await import('@/lib/produtos-venda');
       let produtos = await buscarProdutoPorNome(companyId, nomeProduto);
-
+      
       // Fallback com primeira palavra relevante
       if (!produtos.length) {
         const primeiraPalavra = nomeProduto.split(' ').find(w => w.length >= 3);
@@ -5204,12 +5199,13 @@ voiceTriggers: [
 
       // Usa o primeiro por display_order (já ordenado pela query)
       const produto = produtos[0];
-
+      
+      // ✅ MANTÉM MODAL — VerProdutoDisplay tem botões importantes
       setActiveModal?.({
         type: 'VerProdutoDisplay',
         data: { companyId, produto },
       });
-
+      
       return true;
     } catch (err) {
       console.error('Erro ver_produto:', err);
@@ -5300,104 +5296,74 @@ fazer_pedido: {
   functionKey: 'fazer_pedido',
   functionName: 'Fazer Pedido',
   category: 'products',
-  responseType: 'voice+modal',
-
+  responseType: 'navigation',
   voiceTriggers: [
     'quero pedir', 'fazer pedido', 'pedir agora',
     'adicionar ao carrinho', 'quero comprar',
     'adiciona', 'coloca no carrinho',
   ],
-
   examplePhrases: [
     'Quero 2 sucos de laranja',
     'Adicionar uma pizza ao pedido',
     'Pedir agora',
     'Coloca no carrinho',
   ],
-
   requiresInput: false,
   description: 'Abre o modo venda e conduz o cliente pelo pedido por voz.',
   shortDescription: 'Fazer pedido por voz',
   icon: '📋',
   color: '#f97316',
-
   saveToHistory: true,
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
-
-handler: async ({ transcript, playText, setActiveModal, companyId }) => {
-  try {
-    // ── Extrai itens do transcript via regex (sem GPT, roda no cliente) ──
-    const numerais: Record<string, string> = {
-      'um': '1', 'uma': '1', 'dois': '2', 'duas': '2',
-      'três': '3', 'tres': '3', 'quatro': '4', 'cinco': '5',
-      'seis': '6', 'sete': '7', 'oito': '8', 'nove': '9', 'dez': '10',
-    };
-
-    let textoNorm = (transcript ?? '').toLowerCase();
-    for (const [palavra, num] of Object.entries(numerais)) {
-      textoNorm = textoNorm.replace(new RegExp(`\\b${palavra}\\b`, 'g'), num);
-    }
-
-    // Padrão: "2 pizzas", "1 suco de laranja", "3 cafés"
-    const regex = /(\d+)\s+([a-záéíóúãõâêîôûç][a-záéíóúãõâêîôûç\s]{2,40?}?)(?=\s*(?:e\s|\s*,|\s*$))/gi;
-    const itensBrutos: { nome: string; quantidade: number }[] = [];
-    let match;
-    while ((match = regex.exec(textoNorm)) !== null) {
-      const nome = match[2].replace(/\b(de|do|da|um|uma|o|a)\s*$/i, '').trim();
-      if (nome.length >= 3) {
-        itensBrutos.push({ nome, quantidade: parseInt(match[1]) });
+  handler: async ({ transcript, playText, slug }) => {
+    try {
+      // ── Extrai itens do transcript via regex (sem GPT, roda no cliente) ──
+      const numerais: Record<string, string> = {
+        'um': '1', 'uma': '1', 'dois': '2', 'duas': '2',
+        'três': '3', 'tres': '3', 'quatro': '4', 'cinco': '5',
+        'seis': '6', 'sete': '7', 'oito': '8', 'nove': '9', 'dez': '10',
+      };
+      let textoNorm = (transcript ?? '').toLowerCase();
+      for (const [palavra, num] of Object.entries(numerais)) {
+        textoNorm = textoNorm.replace(new RegExp(`\\b${palavra}\\b`, 'g'), num);
       }
-    }
+      
+      // Padrão: "2 pizzas", "1 suco de laranja", "3 cafés"
+      const regex = /(\d+)\s+([a-záéíóúãõâêîôûç][a-záéíóúãõâêîôûç\s]{2,40?}?)(?=\s*(?:e\s|\s*,|\s*$))/gi;
+      const itensBrutos: { nome: string; quantidade: number }[] = [];
+      let match;
+      while ((match = regex.exec(textoNorm)) !== null) {
+        const nome = match[2].replace(/\b(de|do|da|um|uma|o|a)\s*$/i, '').trim();
+        if (nome.length >= 3) {
+          itensBrutos.push({ nome, quantidade: parseInt(match[1]) });
+        }
+      }
 
-    // Sem itens identificados → abre modo venda normal
-    if (itensBrutos.length === 0) {
-      setActiveModal?.({ type: 'SaleModeModal', data: { companyId } });
-      await playText('Abrindo o cardápio. Escolha os produtos.');
+      const baseUrl = getContextualRoute('vendas', slug);
+
+      // Sem itens identificados → abre modo venda normal
+      if (itensBrutos.length === 0) {
+        window.location.href = baseUrl;
+        await playText('Abrindo o cardápio. Escolha os produtos.');
+        return true;
+      }
+
+      // Serializa itens como query param
+      const params = new URLSearchParams({
+        itens: JSON.stringify(itensBrutos),
+      });
+
+      await playText('Buscando os produtos. Aguarde...');
+      window.location.href = `${baseUrl}?${params.toString()}`;
+      return true;
+    } catch {
+      const baseUrl = getContextualRoute('vendas', slug);
+      window.location.href = baseUrl;
       return true;
     }
-
-    // Busca os produtos no banco
-    const { buscarProdutoPorNome } = await import('@/lib/produtos-venda');
-    const itensResolvidos: { produto: any; quantidade: number }[] = [];
-
-    for (const item of itensBrutos) {
-      const produtos = await buscarProdutoPorNome(companyId, item.nome);
-      if (produtos.length > 0) {
-        itensResolvidos.push({ produto: produtos[0], quantidade: item.quantidade });
-      }
-    }
-
-    if (itensResolvidos.length === 0) {
-      setActiveModal?.({ type: 'SaleModeModal', data: { companyId } });
-      await playText('Não encontrei os produtos. Abrindo o cardápio.');
-      return true;
-    }
-
-    // Fala o resumo e abre o modo venda com os itens já no carrinho
-    const resumo = itensResolvidos
-      .map(i => `${i.quantidade} ${i.produto.nome}`)
-      .join(', ');
-    await playText(`Adicionando ao carrinho: ${resumo}. Confirme o pedido.`);
-
-    setActiveModal?.({
-      type: 'SaleModeModal',
-      data: {
-        companyId,
-        // Passa o primeiro produto como destaque e a lista para o carrinho
-        produtoInicial:    itensResolvidos[0].produto,
-        quantidadeInicial: itensResolvidos[0].quantidade,
-        // Itens adicionais ficam como termoBusca (para versões futuras)
-        itensAdicionais:   itensResolvidos.slice(1),
-      },
-    });
-    return true;
-  } catch {
-    setActiveModal?.({ type: 'SaleModeModal', data: { companyId } });
-    return true;
-  }
-},
+  },
 },
 
 cadastrar_produto: {

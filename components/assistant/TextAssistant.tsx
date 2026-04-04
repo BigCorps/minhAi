@@ -291,7 +291,7 @@ const handleSendMessage = async (overrideText?: string) => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isRecording ? 'Ouvindo...' : 'Digite sua mensagem...'}
+            placeholder={isRecording ? 'Ouvindo...' : 'Use o microfone para áudio ou digite sua mensagem...'}
             disabled={busy || isRecording}
             className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
             style={styles.textarea}

@@ -91,10 +91,13 @@ export default function VendasPage({ params }: VendasPageProps) {
   return (
     <div className="min-h-screen bg-slate-900">
       <SaleModeModal
-        data={{ 
-          companyId,
-          company: companyData
-        }}
+        companyId={companyId!}
+        slug={slug}
+        companyName={companyData?.name}
+        companyLogo={companyData?.logo_url}
+        assistantRole={companyData?.assistant_role}
+        modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
+        modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
         isFullscreen={true}
         onClose={handleClose}
         theme="dark"

@@ -113,6 +113,52 @@ export default function VendasPage({ params }: VendasPageProps) {
     fetchProduto();
   }, [companyId]);
 
+  // Detectar múltiplos itens via query param (fazer_pedido)
+useEffect(() => {
+  if (!companyId || typeof window === 'undefined') return;
+
+  const params = new URLSearchParams(window.location.search);
+  const itensJson = params.get('itens');
+
+  if (!itensJson) return;
+
+  async function buscarItens() {
+    try {
+      const itensBrutos = JSON.parse(itensJson);
+      const { buscarProdutoPorNome } = await import('@/lib/produtos-venda');
+      
+      const itensResolvidos: { produto: any; quantidade: number }[] = [];
+      
+      for (const item of itensBrutos) {
+        const produtos = await buscarProdutoPorNome(companyId, item.nome);
+        if (produtos.length > 0) {
+          itensResolvidos.push({ 
+            produto: produtos[0], 
+            quantidade: item.quantidade 
+          });
+        }
+      }
+
+      if (itensResolvidos.length > 0) {
+        // Primeiro item vira produtoInicial
+        setProdutoInicial(itensResolvidos[0].produto);
+        setQuantidadeInicial(itensResolvidos[0].quantidade);
+        
+        // Itens adicionais ficam em state separado (para passar ao modal)
+        // Você pode criar um state adicional se quiser adicionar todos de vez
+      }
+
+      // Limpar query params
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    } catch (e) {
+      console.error('Erro ao buscar itens:', e);
+    }
+  }
+
+  buscarItens();
+}, [companyId]);
+
   const handleClose = () => {
     if (slug) {
       router.push(`/ia/${slug}`);

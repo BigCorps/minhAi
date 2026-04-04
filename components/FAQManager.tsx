@@ -334,7 +334,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                   {faq.variations.length > 0 && (
                     <div className="mt-3">
                       <p className={`text-sm mb-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
-                        Variações da pergunta:
+                        Variações do comando:
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {faq.variations.map((variation, idx) => (
@@ -419,7 +419,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
               {/* Pergunta */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                  Pergunta *
+                  Comando *
                 </label>
                 <input
                   type="text"
@@ -457,7 +457,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
               {/* Variações */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                  Variações da Pergunta (uma por linha)
+                  Variações do Comando (uma por linha)
                 </label>
                 <textarea
                   value={formData.variations}
@@ -547,26 +547,6 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                   </button>
                 )}
               </div>
-
-              {/* Parâmetros da função — só aparece se tiver function_key */}
-              {formData.function_key && (
-                <div>
-                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                    Parâmetros da função (JSON, opcional)
-                  </label>
-                  <textarea
-                    value={formData.function_params_raw}
-                    onChange={(e) => setFormData({ ...formData, function_params_raw: e.target.value })}
-                    className={`w-full px-4 py-2 rounded-lg border font-mono text-sm transition-colors focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                      isDark
-                        ? 'bg-slate-800 border-white/10 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                    rows={3}
-                    placeholder={'{ "valor": 100, "descricao": "Pedido" }'}
-                  />
-                </div>
-              )}
 
               {/* FAQ ativa */}
               <div className="flex items-center gap-2">

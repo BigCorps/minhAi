@@ -18,7 +18,8 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 
 // ── Mapa de Componentes (todos lazy loaded) ───────────────────
@@ -258,7 +259,13 @@ export function ActionModals({
   onCancelPix,
   playText,
 }: ActionModalsProps) {
-  if (!activeModal) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!activeModal || !mounted) return null;
 
   const Component = MODAL_COMPONENTS[activeModal.type];
 
@@ -267,7 +274,7 @@ export function ActionModals({
     return null;
   }
 
-  return (
+  return createPortal(
     <Component
       data={activeModal.data}
       onClose={onClose}
@@ -275,6 +282,7 @@ export function ActionModals({
       playText={playText}
       onConfirmPix={onConfirmPix}
       onCancelPix={onCancelPix}
-    />
+    />,
+    document.body
   );
 }

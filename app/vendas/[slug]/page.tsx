@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import SaleModeModal from '@/components/modals/SaleModeModal';
+import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;

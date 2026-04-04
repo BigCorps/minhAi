@@ -30,7 +30,7 @@ const menuItems = [
   { href: '/dashboard/producao',     label: 'Linha de Produção',                icon: ClipboardList },
   { href: '/dashboard/agenda',       label: 'Serviços Google',                  icon: Calendar },
   { href: '/dashboard/atendimentos', label: 'Serviços Meta',                    icon: Share2 },
-  { href: '/dashboard/faqs',         label: 'Comandos e Execuções',            icon: HelpCircle },
+  { href: '/dashboard/faqs',         label: 'Respostas Rápidas',            icon: HelpCircle },
   { href: '/dashboard/arquivos',     label: 'Arquivos',                icon: FolderOpen },
 ];
 

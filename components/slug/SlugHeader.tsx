@@ -8,7 +8,7 @@ interface SlugHeaderProps {
     name: string;
     logo_url?: string | null;
     assistant_role?: string | null;
-    webapp_enabled?: boolean; //
+    webapp_enabled?: boolean;
   };
   theme: 'dark' | 'light';
   overlayMode?: boolean;
@@ -68,6 +68,30 @@ export default function SlugHeader({
           ? 'bg-white/5 border-white/10 text-white hover:bg-emerald-500/20 hover:border-emerald-500/40'
           : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50 hover:border-emerald-300'
       }`;
+
+  // Badge de verificado (verde limão) — aparece quando webapp_enabled = true
+  const VerifiedBadge = ({ size = 'md' }: { size?: 'sm' | 'md' }) => {
+    if (!company.webapp_enabled) return null;
+    const wh = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+    const iconWh = size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3';
+    return (
+      <span
+        title="Assistente Verificado"
+        className={`inline-flex items-center justify-center ${wh} rounded-full flex-shrink-0`}
+        style={{ background: 'linear-gradient(135deg, #84cc16, #22c55e)' }}
+      >
+        <svg
+          className={`${iconWh} text-white`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={3}
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
+    );
+  };
 
   // Botões do overlay — visibilidade controlada por showControls
   const overlayButtons = (
@@ -225,11 +249,15 @@ export default function SlugHeader({
                 />
               )}
               <div className="flex flex-col">
-                <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {company.name}
-                </h1>
+                {/* Nome + badge */}
+                <div className="flex items-center gap-2">
+                  <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {company.name}
+                  </h1>
+                  <VerifiedBadge size="md" />
+                </div>
                 <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
                   theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                 }`}>
@@ -280,11 +308,15 @@ export default function SlugHeader({
                 </div>
               )}
               <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center">
-                <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {company.name}
-                </h1>
+                {/* Nome + badge */}
+                <div className="flex items-center gap-1.5">
+                  <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {company.name}
+                  </h1>
+                  <VerifiedBadge size="sm" />
+                </div>
                 <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${
                   theme === 'dark' ? 'text-white/40' : 'text-gray-500'
                 }`}>
@@ -387,7 +419,6 @@ export default function SlugHeader({
         )}
 
         {/* ── Mobile Overlay ─────────────────────────────────── */}
-        {/* Logo fixo à direita, botões sobrepostos aparecem via showControls */}
         {overlayMode && (
           <div className="md:hidden relative flex items-center justify-end min-h-[48px] py-2">
 

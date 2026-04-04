@@ -22,6 +22,10 @@ import { useGroqContext } from '@/hooks/useGroqContext';
 import { useProfile } from '@/hooks/useProfile';
 import { getContextualRoute } from '@/lib/routing-utils';
 
+// ── Ponto 1: Novos imports ─────────────────────────────────
+import { useFAQs } from './hooks/useFAQs';
+import { findMatchingFAQLocal } from './utils/faqUtils';
+
 // ── Tipos ──────────────────────────────────────────────────
 import {
   VoiceAssistantProps,
@@ -146,6 +150,9 @@ export function VoiceAssistantWithWakeWord({
   const isMobile = useIsMobile();
   const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
   const groqContextRef = useGroqContext(companyId, profile);
+
+  // ── Ponto 2: Hook de FAQs ─────────────────────────────────
+  const faqs = useFAQs(companyId);
 
   // ── Push-to-talk ───────────────────────────────────────────
   const voiceRecorder = useVoiceRecorder();
@@ -947,9 +954,35 @@ export function VoiceAssistantWithWakeWord({
     processQuestion(clean);
   }
 
+  // ── Ponto 3: processQuestion com FAQ FIRST ────────────────
   async function processQuestion(questionText: string) {
+    console.log('⚡ Processando:', questionText);
     shouldProcessAudio.current = false;
     await stopGoogleSpeech();
+
+    // ── FAQ FIRST ─────────────────────────────────────────────
+    const matchedFAQ = findMatchingFAQLocal(faqs, questionText);
+    if (matchedFAQ) {
+      console.log('📚 FAQ resolvida localmente:', matchedFAQ.question);
+
+      if (matchedFAQ.function_key) {
+        // FAQ com função vinculada — falar introdução e disparar função
+        if (matchedFAQ.answer) await playText(matchedFAQ.answer);
+        handleFunctionClickSilent(matchedFAQ.function_key);
+      } else {
+        // FAQ simples — apenas responder
+        await playText(matchedFAQ.answer);
+      }
+
+      await registerFunctionUsage(companyId, 'faq', 1);
+      processingQuestion.current = false;
+      setTimeout(async () => {
+        shouldProcessAudio.current = true;
+        await startGoogleSpeech();
+      }, 500);
+      return;
+    }
+    // ── FIM FAQ FIRST ─────────────────────────────────────────
 
     const activeFunction = getActiveFunctionContext();
     if (activeFunction) {
@@ -1209,7 +1242,7 @@ export function VoiceAssistantWithWakeWord({
     return bestScore >= 8 ? bestMatch : null;
   }
 
-  // ── handleTextMessageForText (modo texto) ─────────────────
+  // ── Ponto 4: handleTextMessageForText com FAQ FIRST ───────
   const handleTextMessageForText = async (
     message: string
   ): Promise<{ text: string; functionKey?: string } | null> => {
@@ -1230,7 +1263,25 @@ export function VoiceAssistantWithWakeWord({
     setIsProcessing(true);
 
     try {
-      // ETAPA 1: Contexto de função ativa
+      // ── FAQ FIRST ─────────────────────────────────────────────
+      const matchedFAQ = findMatchingFAQLocal(faqs, message);
+      if (matchedFAQ) {
+        console.log('📚 FAQ resolvida localmente (texto):', matchedFAQ.question);
+
+        if (matchedFAQ.function_key) {
+          if (matchedFAQ.answer) capturedText = matchedFAQ.answer;
+          handleFunctionClickSilent(matchedFAQ.function_key);
+        } else {
+          capturedText = matchedFAQ.answer;
+        }
+
+        await registerFunctionUsage(companyId, 'faq', 1);
+        setIsProcessing(false);
+        return { text: capturedText, functionKey: matchedFAQ.function_key ?? undefined };
+      }
+      // ── FIM FAQ FIRST ─────────────────────────────────────────
+
+      // ── ETAPA 1: Contexto de função ativa
       const activeFunction = getActiveFunctionContext();
       if (activeFunction) {
         const func = getFunctionByKey(activeFunction);

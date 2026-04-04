@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes'; // ← Usando next-themes igual ao layout
+import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 import SlugFooter from '@/components/slug/SlugFooter';
@@ -14,19 +14,19 @@ interface VendasPageProps {
 
 export default function VendasPage({ params }: VendasPageProps) {
   const router = useRouter();
-  const { theme: globalTheme, resolvedTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [companyData, setCompanyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Mounted state para evitar hydration mismatch
+  // Mounted state
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Await params (Next.js 15 requirement)
+  // Await params
   useEffect(() => {
     async function unwrapParams() {
       const resolvedParams = await params;
@@ -35,7 +35,7 @@ export default function VendasPage({ params }: VendasPageProps) {
     unwrapParams();
   }, [params]);
 
-  // Buscar dados completos da company pelo slug
+  // Fetch company data
   useEffect(() => {
     if (!slug) return;
 
@@ -62,19 +62,17 @@ export default function VendasPage({ params }: VendasPageProps) {
     fetchCompany();
   }, [slug, router]);
 
-  // Função para fechar e voltar ao assistente
   const handleClose = () => {
     if (slug) {
       router.push(`/ia/${slug}`);
     }
   };
 
-  // TTS placeholder
   const handlePlayText = async (text: string) => {
     console.log('TTS:', text);
   };
 
-  // Tema resolvido (evita flash)
+  // Tema resolvido
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
   // Loading state
@@ -99,16 +97,14 @@ export default function VendasPage({ params }: VendasPageProps) {
     );
   }
 
-  // Se não encontrou companyId
   if (!companyId) {
     return null;
   }
 
-  // Renderiza o modal em fullscreen com footer e carousel
   return (
-    <>
-      {/* Container principal */}
-      <div className={`min-h-screen ${
+    <div className="relative min-h-screen">
+      {/* Modal - z-[50] para ficar abaixo do carousel */}
+      <div className={`fixed inset-0 z-[50] ${
         theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
       }`}>
         <SaleModeModal
@@ -126,7 +122,7 @@ export default function VendasPage({ params }: VendasPageProps) {
         />
       </div>
 
-      {/* CategoryCarousel fixo no rodapé - z-index ACIMA do modal */}
+      {/* CategoryCarousel - z-[300] para ficar acima de tudo */}
       <div className="fixed bottom-8 left-0 right-0 z-[300] pointer-events-none">
         <div className="pointer-events-auto">
           <CategoryCarousel
@@ -143,14 +139,14 @@ export default function VendasPage({ params }: VendasPageProps) {
         </div>
       </div>
 
-      {/* SlugFooter - z-index ACIMA do carousel */}
-      <div className="z-[310]">
+      {/* SlugFooter - z-[310] para ficar no topo */}
+      <div className="fixed bottom-0 left-0 right-0 z-[310]">
         <SlugFooter
           theme={theme}
           slug={slug}
           webapp_enabled={companyData?.webapp_enabled}
         />
       </div>
-    </>
+    </div>
   );
 }

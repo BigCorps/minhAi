@@ -70,8 +70,8 @@ export default function SlugHeader({
   // Lógica de visibilidade: nunca mostrar o botão da página atual
   // ─────────────────────────────────────────────────────────
   const showAssistenteButton = (!isLoggedIn || pageType === 'ia') && pageType !== 'ia';
-  const showVendasButton = (company.modo_vendas_enabled !== false) && pageType !== 'vendas';
-  const showFilaButton = (company.modo_fila_enabled !== false) && pageType !== 'fila';
+  const showVendasButton = (company.modo_vendas_enabled === true) && pageType !== 'vendas';
+  const showFilaButton = (company.modo_fila_enabled === true) && pageType !== 'fila';
 
   // ─────────────────────────────────────────────────────────
   // Handlers de navegação
@@ -116,7 +116,7 @@ const handleNavigateToFila = () => {
             ? 'bg-white/10 hover:bg-white/20 text-white'
             : 'bg-black/10 hover:bg-black/20 text-black'
         }`
-      : `p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
+      : `p-2 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
           theme === 'dark'
             ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
             : 'bg-black/5 border-black/10 text-black hover:bg-black/10'

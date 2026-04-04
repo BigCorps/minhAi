@@ -29,6 +29,7 @@ import { handleWifiQRCode, handleCardapio, handleCadastro, handleNossoQRCode } f
 import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
 import { useGroqContext } from '@/hooks/useGroqContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useRouter } from 'next/navigation';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -135,6 +136,7 @@ export function VoiceAssistantWithWakeWord({
   const shouldProcessAudio = useRef<boolean>(true);
   const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeFunctionContextRef = useRef<ActiveFunctionContext | null>(null);
+  const router = useRouter();
 
   // ── Ref de estado PIX ─────────────────────────────────────
   const pixStateRef = useRef<{ qrCodeData: any; pixConfirmationData: any } | null>(null);
@@ -1134,23 +1136,15 @@ case 'chamar_gerente':
           playText('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
           return;
 
-        case 'modo_venda':
-          await stopGoogleSpeech();
-          setActiveModal({
-            type: 'SaleModeModal',
-            data: {
-              companyId,
-              produtoInicial:    (event?.detail?.produtoInicial)   ?? undefined,
-              quantidadeInicial: (event?.detail?.quantidadeInicial) ?? undefined,
-              opcoesIniciais:    (event?.detail?.opcoesIniciais)   ?? undefined,
-              isListening, isProcessing, isPlayingAudio, isTranscribing,
-              onMicDown: handleMicButtonDown,
-              onMicUp:   handleMicButtonUp,
-              onTextMessage: handleTextMessage,
-            },
-          });
-          playText('Modo venda aberto!').catch(() => {});
-          break;
+case 'modo_venda':
+  await stopGoogleSpeech();
+  if (slug) {
+    router.push(`/vendas/${slug}`);
+  } else {
+    console.warn('Slug não disponível para navegação de vendas');
+  }
+  playText('Abrindo modo vendas!').catch(() => {});
+  break;
 
         case 'ver_produtos':
           break;

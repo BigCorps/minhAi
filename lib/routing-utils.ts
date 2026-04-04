@@ -53,9 +53,11 @@ export function detectSubdomainContext(): {
  * @example
  * // Em loja.minhai.com.br
  * getContextualRoute('vendas') → '/vendas'
+ * getContextualRoute('ia') → '/'  ← volta para home
  * 
  * // Em minhai.app
  * getContextualRoute('vendas', 'loja') → '/vendas/loja'
+ * getContextualRoute('ia', 'loja') → '/ia/loja'
  */
 export function getContextualRoute(
   route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk',
@@ -63,8 +65,13 @@ export function getContextualRoute(
 ): string {
   const { isSubdomain, currentSlug } = detectSubdomainContext();
 
-  // Se está em subdomínio, usa rota simples (sem slug na URL)
+  // Se está em subdomínio
   if (isSubdomain) {
+    // Se for 'ia', vai para a home (/) ao invés de /ia
+    if (route === 'ia') {
+      return '/';
+    }
+    // Outras rotas usam rota simples
     return `/${route}`;
   }
 

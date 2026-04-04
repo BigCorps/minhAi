@@ -46,7 +46,7 @@ export function detectSubdomainContext(): {
 /**
  * Gera a URL correta para navegação baseada no contexto atual.
  * 
- * @param route - Rota desejada (ex: 'vendas', 'fila', 'ia')
+ * @param route - Rota desejada (ex: 'vendas', 'fila', 'ia', 'cliente')
  * @param slug - Slug da empresa (opcional se estiver em subdomínio)
  * @returns URL completa para navegação
  * 
@@ -54,13 +54,15 @@ export function detectSubdomainContext(): {
  * // Em loja.minhai.com.br
  * getContextualRoute('vendas') → '/vendas'
  * getContextualRoute('ia') → '/'  ← volta para home
+ * getContextualRoute('cliente') → '/cliente'
  * 
  * // Em minhai.app
  * getContextualRoute('vendas', 'loja') → '/vendas/loja'
  * getContextualRoute('ia', 'loja') → '/ia/loja'
+ * getContextualRoute('cliente', 'loja') → '/cliente/loja'
  */
 export function getContextualRoute(
-  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk',
+  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente',
   slug?: string
 ): string {
   const { isSubdomain, currentSlug } = detectSubdomainContext();
@@ -98,7 +100,7 @@ export function getContextualRoute(
  */
 export function navigateContextual(
   router: any,
-  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk',
+  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente',
   slug?: string
 ): void {
   const url = getContextualRoute(route, slug);

@@ -2,130 +2,117 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { Loader2 } from 'lucide-react';
 
 interface ModoToggleProps {
   companyId: string;
-  modoType: 'vendas' | 'fila';
+  modoType: 'fila' | 'vendas';
   initialEnabled: boolean;
   onToggle?: (enabled: boolean) => void;
 }
 
-export default function ModoToggle({
-  companyId,
-  modoType,
-  initialEnabled,
-  onToggle,
-}: ModoToggleProps) {
+const CONFIG = {
+  fila: {
+    label: 'Modo Fila',
+    description: 'Habilita o módulo de gerenciamento de fila de atendimento',
+    column: 'modo_fila_enabled',
+    color: 'blue',
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  vendas: {
+    label: 'Modo Vendas',
+    description: 'Habilita a loja virtual e o módulo de pedidos',
+    column: 'modo_vendas_enabled',
+    color: 'emerald',
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+};
+
+export default function ModoToggle({ companyId, modoType, initialEnabled, onToggle }: ModoToggleProps) {
+  const supabase = createClient();
   const [enabled, setEnabled] = useState(initialEnabled);
-  const [updating, setUpdating] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const labels = {
-    vendas: {
-      title: 'Modo Vendas',
-      description: 'Habilita o módulo de vendas com catálogo de produtos e carrinho de compras',
-      icon: '🛒',
-      enabledText: 'Modo Vendas está ativo',
-      disabledText: 'Modo Vendas está desativado',
-    },
-    fila: {
-      title: 'Modo Fila',
-      description: 'Habilita o sistema de gerenciamento de filas e atendimento',
-      icon: '👥',
-      enabledText: 'Modo Fila está ativo',
-      disabledText: 'Modo Fila está desativado',
-    },
-  };
+  const cfg = CONFIG[modoType];
+  const isBlue = cfg.color === 'blue';
 
-  const config = labels[modoType];
-  const columnName = `modo_${modoType}_enabled`;
-
-  const handleToggle = async () => {
-    setUpdating(true);
-
+  async function handleToggle() {
+    setLoading(true);
+    const next = !enabled;
     try {
-      const supabase = createClient();
-      const newValue = !enabled;
-
       const { error } = await supabase
         .from('companies')
-        .update({ [columnName]: newValue })
+        .update({ [cfg.column]: next })
         .eq('id', companyId);
-
       if (error) throw error;
-
-      setEnabled(newValue);
-      onToggle?.(newValue);
-
-      // Feedback visual de sucesso
-      console.log(`✅ ${config.title} ${newValue ? 'ativado' : 'desativado'}`);
-    } catch (error) {
-      console.error(`Erro ao atualizar ${config.title}:`, error);
-      alert(`Erro ao atualizar ${config.title}. Tente novamente.`);
+      setEnabled(next);
+      onToggle?.(next);
+    } catch (e) {
+      console.error('Erro ao atualizar modo:', e);
     } finally {
-      setUpdating(false);
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-      <div className="flex items-start justify-between">
-        {/* Informações */}
-        <div className="flex items-start gap-4 flex-1">
-          <div className="text-4xl">{config.icon}</div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-              {config.title}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              {config.description}
-            </p>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  enabled ? 'bg-green-500' : 'bg-gray-400'
-                }`}
-              />
-              <span
-                className={`text-sm font-medium ${
-                  enabled
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}
-              >
-                {enabled ? config.enabledText : config.disabledText}
-              </span>
-            </div>
-          </div>
-        </div>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
 
-        {/* Toggle Switch */}
-        <button
-          onClick={handleToggle}
-          disabled={updating}
-          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-            enabled
-              ? 'bg-blue-600'
-              : 'bg-gray-300 dark:bg-gray-600'
-          } ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
-          <span className="sr-only">
-            {enabled ? 'Desativar' : 'Ativar'} {config.title}
-          </span>
-          <span
-            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
-              enabled ? 'translate-x-7' : 'translate-x-1'
-            }`}
-          />
-        </button>
+      {/* Linha 1 (mobile) / Esquerda (desktop): ícone + label + descrição */}
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`flex-shrink-0 ${
+          isBlue ? 'text-blue-500 dark:text-blue-400' : 'text-emerald-500 dark:text-emerald-400'
+        }`}>
+          {cfg.icon}
+        </span>
+        <span className="text-sm font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap">
+          {cfg.label}
+        </span>
+        <span className="hidden sm:inline text-xs text-gray-400 dark:text-gray-500 truncate">
+          — {cfg.description}
+        </span>
       </div>
 
-      {/* Mensagem de atualização */}
-      {updating && (
-        <div className="mt-4 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
-          <span>Atualizando...</span>
-        </div>
-      )}
+      {/* Linha 2 (mobile) / Direita (desktop): status + toggle */}
+      <div className="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
+        <span className={`text-xs font-medium ${
+          enabled
+            ? isBlue
+              ? 'text-blue-600 dark:text-blue-400'
+              : 'text-emerald-600 dark:text-emerald-400'
+            : 'text-gray-400 dark:text-gray-500'
+        }`}>
+          {enabled ? 'Ativo' : 'Inativo'}
+        </span>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={handleToggle}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+            enabled
+              ? isBlue ? 'bg-blue-500' : 'bg-emerald-500'
+              : 'bg-gray-300 dark:bg-slate-600'
+          }`}
+        >
+          {loading ? (
+            <Loader2 className="w-3 h-3 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
+          ) : (
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+              enabled ? 'translate-x-4' : 'translate-x-0.5'
+            }`} />
+          )}
+        </button>
+      </div>
     </div>
   );
 }

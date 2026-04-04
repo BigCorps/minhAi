@@ -13,6 +13,7 @@ export interface VoiceAssistantProps {
   onAssistantStart?: () => void;
   hideDisabledFunctions?: boolean;
   autoScroll?: boolean;
+  textMode?: boolean;
 }
 export interface QRCodeData {
   type: 'whatsapp' | 'instagram' | 'pix' | 'website' | 'facebook' | 'email' | 'linkedin' | 'tiktok' | 'twitter' | 'telefone';

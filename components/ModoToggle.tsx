@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { Loader2 } from 'lucide-react';
 
@@ -40,11 +40,25 @@ const CONFIG = {
 
 export default function ModoToggle({ companyId, modoType, initialEnabled, onToggle }: ModoToggleProps) {
   const supabase = createClient();
-  const [enabled, setEnabled] = useState(initialEnabled);
-  const [loading, setLoading] = useState(false);
-
   const cfg = CONFIG[modoType];
   const isBlue = cfg.color === 'blue';
+
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [loading, setLoading] = useState(true); // true enquanto busca valor real
+
+  // Busca o valor atual do banco ao montar
+  useEffect(() => {
+    if (!companyId) return;
+    supabase
+      .from('companies')
+      .select(cfg.column)
+      .eq('id', companyId)
+      .single()
+      .then(({ data }) => {
+        if (data) setEnabled(data[cfg.column] ?? false);
+        setLoading(false);
+      });
+  }, [companyId]);
 
   async function handleToggle() {
     setLoading(true);
@@ -91,7 +105,7 @@ export default function ModoToggle({ companyId, modoType, initialEnabled, onTogg
               : 'text-emerald-600 dark:text-emerald-400'
             : 'text-gray-400 dark:text-gray-500'
         }`}>
-          {enabled ? 'Ativo' : 'Inativo'}
+          {loading ? '...' : enabled ? 'Ativo' : 'Inativo'}
         </span>
 
         <button

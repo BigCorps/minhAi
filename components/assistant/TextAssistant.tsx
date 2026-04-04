@@ -83,30 +83,35 @@ export default function TextAssistant({
     }
   };
 
-  const transcribeAndSend = async (audioBlob: Blob) => {
-    try {
-      setIsSending(true);
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
-      formData.append('companyId', companyId);
+// ✅ DEPOIS — mesma lógica do arquivo 1 (base64 em JSON)
+const transcribeAndSend = async (audioBlob: Blob) => {
+  try {
+    setIsSending(true);
 
-      const response = await fetch('/api/voice/transcribe', {
-        method: 'POST',
-        body: formData,
-      });
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    const base64Audio = await new Promise<string>((resolve) => {
+      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+    });
 
-      if (response.ok) {
-        const { text } = await response.json();
-        if (text?.trim()) {
-          await handleSendMessage(text.trim());
-        }
+    const response = await fetch('/api/voice/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audio: base64Audio }),
+    });
+
+    if (response.ok) {
+      const { text } = await response.json();
+      if (text?.trim()) {
+        await handleSendMessage(text.trim());
       }
-    } catch (err) {
-      console.error('Erro ao transcrever:', err);
-    } finally {
-      setIsSending(false);
     }
-  };
+  } catch (err) {
+    console.error('Erro ao transcrever:', err);
+  } finally {
+    setIsSending(false);
+  }
+};
 
 const handleSendMessage = async (overrideText?: string) => {
   const messageText = (overrideText ?? inputText).trim();

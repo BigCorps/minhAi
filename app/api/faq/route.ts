@@ -39,7 +39,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { companyId, question, answer, variations, category } = body;
+    const {
+      companyId,
+      question,
+      answer,
+      variations,
+      category,
+      function_key,
+      function_params,
+    } = body;
 
     if (!companyId || !question || !answer) {
       return NextResponse.json(
@@ -58,6 +66,8 @@ export async function POST(request: NextRequest) {
         answer,
         variations: variations || [],
         category: category || null,
+        function_key: function_key || null,
+        function_params: function_params || null,
       })
       .select()
       .single();
@@ -79,7 +89,16 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, question, answer, variations, category, is_active } = body;
+    const {
+      id,
+      question,
+      answer,
+      variations,
+      category,
+      is_active,
+      function_key,
+      function_params,
+    } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -96,6 +115,8 @@ export async function PUT(request: NextRequest) {
     if (variations !== undefined) updateData.variations = variations;
     if (category !== undefined) updateData.category = category;
     if (is_active !== undefined) updateData.is_active = is_active;
+    if (function_key !== undefined) updateData.function_key = function_key || null;
+    if (function_params !== undefined) updateData.function_params = function_params || null;
 
     const { data: faq, error } = await supabase
       .from('faq_entries')

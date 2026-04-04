@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 import SlugFooter from '@/components/slug/SlugFooter';
 import CategoryCarousel from '@/components/assistant/CategoryCarousel';
+import { navigateContextual } from '@/lib/routing-utils';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -62,11 +63,9 @@ export default function VendasPage({ params }: VendasPageProps) {
     fetchCompany();
   }, [slug, router]);
 
-  const handleClose = () => {
-    if (slug) {
-      router.push(`/ia/${slug}`);
-    }
-  };
+const handleClose = () => {
+  navigateContextual(router, 'ia', slug || undefined);
+};
 
   const handlePlayText = async (text: string) => {
     console.log('TTS:', text);

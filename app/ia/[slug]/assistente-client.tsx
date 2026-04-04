@@ -5,6 +5,7 @@ import CategoryCarousel from '@/components/assistant/CategoryCarousel';
 import TextAssistant from '@/components/assistant/TextAssistant';
 import SlugFooter from '@/components/slug/SlugFooter';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useSwipe } from '@/hooks/useSwipe';
@@ -846,6 +847,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
               <div className="flex-shrink-0">
                 <SlugHeaderWrapper
                   company={company}
+                  slug={company.slug}    // ← ADICIONAR
+                  pageType="ia"     
                   overlayMode={true}
                   onClose={undefined}
                   showControls={showCloseButton}
@@ -980,6 +983,8 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           <div className={mode === 'texto' ? 'fixed top-0 left-0 right-0 z-50' : ''}>
             <SlugHeaderWrapper
               company={company}
+              slug={company.slug}    // ← ADICIONAR
+              pageType="ia"   
               overlayMode={false}
             />
           </div>

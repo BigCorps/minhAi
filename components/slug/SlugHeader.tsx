@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface SlugHeaderProps {
   company: {
@@ -10,7 +11,9 @@ interface SlugHeaderProps {
     assistant_role?: string | null;
     webapp_enabled?: boolean;
   };
+  slug?: string; // NOVA: necessária para navegação entre páginas
   theme: 'dark' | 'light';
+  pageType?: 'ia' | 'vendas' | 'fila'; // NOVA: controla qual página estamos
   overlayMode?: boolean;
   isKioskMode?: boolean;
   isWakeLockActive?: boolean;
@@ -26,7 +29,9 @@ interface SlugHeaderProps {
 
 export default function SlugHeader({
   company,
+  slug,
   theme,
+  pageType = 'ia', // Padrão: página do assistente
   overlayMode = false,
   isKioskMode = false,
   isWakeLockActive = false,
@@ -39,6 +44,29 @@ export default function SlugHeader({
   onToggleTheme,
   onClose,
 }: SlugHeaderProps) {
+  const router = useRouter();
+
+  // ─────────────────────────────────────────────────────────
+  // Lógica de visibilidade: nunca mostrar o botão da página atual
+  // ─────────────────────────────────────────────────────────
+  const showAssistenteButton = pageType !== 'ia';
+  const showVendasButton = pageType !== 'vendas';
+  const showFilaButton = pageType !== 'fila';
+
+  // ─────────────────────────────────────────────────────────
+  // Handlers de navegação
+  // ─────────────────────────────────────────────────────────
+  const handleNavigateToIA = () => {
+    if (slug) router.push(`/ia/${slug}`);
+  };
+
+  const handleNavigateToVendas = () => {
+    if (slug) router.push(`/vendas/${slug}`);
+  };
+
+  const handleNavigateToFila = () => {
+    if (slug) router.push(`/fila/${slug}`);
+  };
 
   const icon = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
 
@@ -93,19 +121,70 @@ export default function SlugHeader({
     );
   };
 
+  // ─────────────────────────────────────────────────────────
+  // BOTÕES DE NAVEGAÇÃO (novos)
+  // ─────────────────────────────────────────────────────────
+  const NavigationButtons = () => {
+    if (!slug) return null; // Não renderiza se não tiver slug
+
+    return (
+      <>
+        {/* Botão Assistente - só aparece quando NÃO estiver na página IA */}
+        {showAssistenteButton && (
+          <button
+            onClick={handleNavigateToIA}
+            className={btn()}
+            title="Ir para Assistente"
+          >
+            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Botão Vendas - só aparece quando NÃO estiver na página Vendas */}
+        {showVendasButton && (
+          <button
+            onClick={handleNavigateToVendas}
+            className={btnVenda()}
+            title="Ir para Vendas"
+          >
+            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Botão Fila - só aparece quando NÃO estiver na página Fila */}
+        {showFilaButton && (
+          <button
+            onClick={handleNavigateToFila}
+            className={btn()}
+            title="Ir para Fila de Atendimento"
+          >
+            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </button>
+        )}
+      </>
+    );
+  };
+
   // Botões do overlay — visibilidade controlada por showControls
   const overlayButtons = (
     <div className={`flex items-center space-x-1 transition-all duration-300 ${
       showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
     }`}>
-      {onToggleModoVenda && (
-        <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
-          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-        </button>
-      )}
+      {/* BOTÕES DE NAVEGAÇÃO */}
+      <NavigationButtons />
+      
+      {/* BOTÃO MODO VENDA (legacy - removido pois agora temos navegação) */}
+      {/* {onToggleModoVenda && (...)} */}
+      
       {onEnterKioskMode && !isKioskMode && (
         <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
           <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,7 +240,11 @@ export default function SlugHeader({
   // Botões do modo normal (sempre visíveis)
   const normalButtons = (
     <div className="flex items-center space-x-1">
-      {onToggleModoVenda && (
+      {/* BOTÕES DE NAVEGAÇÃO */}
+      <NavigationButtons />
+      
+      {/* BOTÃO MODO VENDA (legacy - mantido para compatibilidade com código existente) */}
+      {onToggleModoVenda && !slug && (
         <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
           <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -169,6 +252,7 @@ export default function SlugHeader({
           </svg>
         </button>
       )}
+      
       {onEnterKioskMode && !isKioskMode && (
         <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
           <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,6 +419,9 @@ export default function SlugHeader({
             </div>
 
             <div className="flex items-center justify-center space-x-2">
+              {/* BOTÕES DE NAVEGAÇÃO */}
+              <NavigationButtons />
+              
               {onEnterKioskMode && (
                 <button
                   onClick={onEnterKioskMode}
@@ -356,7 +443,8 @@ export default function SlugHeader({
                   )}
                 </button>
               )}
-              {onToggleModoVenda && (
+              {/* BOTÃO MODO VENDA (legacy - só aparece se não tiver slug) */}
+              {onToggleModoVenda && !slug && (
                 <button
                   onClick={onToggleModoVenda}
                   className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
@@ -426,14 +514,12 @@ export default function SlugHeader({
             <div className={`absolute right-9 flex items-center space-x-1 transition-all duration-300 ${
               showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}>
-              {onToggleModoVenda && (
-                <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </button>
-              )}
+              {/* BOTÕES DE NAVEGAÇÃO */}
+              <NavigationButtons />
+              
+              {/* BOTÃO MODO VENDA (legacy - removido do overlay) */}
+              {/* {onToggleModoVenda && (...)} */}
+              
               {onEnterKioskMode && !isKioskMode && (
                 <button onClick={onEnterKioskMode} className={btn()} title="Modo Kiosk">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

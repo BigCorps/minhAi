@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes'; // ← Usando next-themes igual ao layout
 import { createClient } from '@/lib/supabase-browser';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
+import SlugFooter from '@/components/slug/SlugFooter';
+import CategoryCarousel from '@/components/assistant/CategoryCarousel';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -11,10 +14,17 @@ interface VendasPageProps {
 
 export default function VendasPage({ params }: VendasPageProps) {
   const router = useRouter();
+  const { theme: globalTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [companyData, setCompanyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Mounted state para evitar hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Await params (Next.js 15 requirement)
   useEffect(() => {
@@ -59,24 +69,31 @@ export default function VendasPage({ params }: VendasPageProps) {
     }
   };
 
-  // TTS placeholder (você pode integrar com Web Speech API se quiser)
+  // TTS placeholder
   const handlePlayText = async (text: string) => {
     console.log('TTS:', text);
-    // Opcional: implementar TTS aqui
-    // if ('speechSynthesis' in window) {
-    //   const utterance = new SpeechSynthesisUtterance(text);
-    //   utterance.lang = 'pt-BR';
-    //   window.speechSynthesis.speak(utterance);
-    // }
   };
 
+  // Tema resolvido (evita flash)
+  const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
+
   // Loading state
-  if (loading || !slug) {
+  if (loading || !slug || !mounted) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className={`min-h-screen flex items-center justify-center ${
+        theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
+      }`}>
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-white text-lg">Carregando...</div>
+          <div className={`w-16 h-16 border-4 rounded-full animate-spin mx-auto mb-4 ${
+            theme === 'dark' 
+              ? 'border-blue-500/30 border-t-blue-500' 
+              : 'border-blue-600/30 border-t-blue-600'
+          }`}></div>
+          <div className={`text-lg ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Carregando...
+          </div>
         </div>
       </div>
     );
@@ -87,22 +104,53 @@ export default function VendasPage({ params }: VendasPageProps) {
     return null;
   }
 
-  // Renderiza o modal em fullscreen
+  // Renderiza o modal em fullscreen com footer e carousel
   return (
-    <div className="min-h-screen bg-slate-900">
-      <SaleModeModal
-        companyId={companyId!}
-        slug={slug}
-        companyName={companyData?.name}
-        companyLogo={companyData?.logo_url}
-        assistantRole={companyData?.assistant_role}
-        modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
-        modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
-        isFullscreen={true}
-        onClose={handleClose}
-        theme="dark"
-        playText={handlePlayText}
-      />
-    </div>
+    <>
+      {/* Container principal */}
+      <div className={`min-h-screen ${
+        theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
+      }`}>
+        <SaleModeModal
+          companyId={companyId}
+          slug={slug}
+          companyName={companyData?.name}
+          companyLogo={companyData?.logo_url}
+          assistantRole={companyData?.assistant_role}
+          modo_vendas_enabled={companyData?.modo_vendas_enabled ?? true}
+          modo_fila_enabled={companyData?.modo_fila_enabled ?? false}
+          isFullscreen={true}
+          onClose={handleClose}
+          theme={theme}
+          playText={handlePlayText}
+        />
+      </div>
+
+      {/* CategoryCarousel fixo no rodapé - z-index ACIMA do modal */}
+      <div className="fixed bottom-8 left-0 right-0 z-[300] pointer-events-none">
+        <div className="pointer-events-auto">
+          <CategoryCarousel
+            companyId={companyId}
+            onFunctionClick={(functionKey) => {
+              window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+                detail: { functionKey }
+              }));
+            }}
+            theme={theme}
+            hideDisabledFunctions={companyData?.hide_disabled_functions_carousel}
+            autoScroll={companyData?.carousel_auto_scroll}
+          />
+        </div>
+      </div>
+
+      {/* SlugFooter - z-index ACIMA do carousel */}
+      <div className="z-[310]">
+        <SlugFooter
+          theme={theme}
+          slug={slug}
+          webapp_enabled={companyData?.webapp_enabled}
+        />
+      </div>
+    </>
   );
 }

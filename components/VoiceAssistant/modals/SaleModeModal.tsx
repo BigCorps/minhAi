@@ -203,21 +203,28 @@ function SaleModeInner({
         }`}
       >
         {/* SLUGHEADER - pageType='vendas' faz o botão vendas virar botão assistente */}
-        <SlugHeader
-          slug={slug || ''}
-          companyName={companyName}
-          companyLogo={companyLogo}
-          assistantRole={assistantRole}
-          modo_vendas_enabled={modo_vendas_enabled}
-          modo_fila_enabled={modo_fila_enabled}
-          theme={theme}
-          onThemeToggle={() => {}} // Será implementado se necessário
-          isKioskMode={false}
-          onKioskToggle={() => {}}
-          wakeLockActive={false}
-          onWakeLockToggle={() => {}}
-          pageType="vendas"  // ← KEY: transforma botão vendas em botão assistente
-        />
+<SlugHeader
+  company={{
+    name: companyName,
+    logo_url: companyLogo,
+    assistant_role: assistantRole,
+    webapp_enabled: true,
+  }}
+  slug={slug}
+  pageType="vendas"
+  theme={theme}
+  overlayMode={false}
+  isKioskMode={false}
+  isWakeLockActive={false}
+  isWakeLockSupported={false}
+  isPortrait={isPortrait}
+  showControls={false}
+  onEnterKioskMode={() => {}}
+  onToggleWakeLock={() => {}}
+  onToggleModoVenda={() => {}}
+  onToggleTheme={() => {}}
+  onClose={undefined}
+/>
 
         {/* CONTEÚDO */}
         <div className="flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3">

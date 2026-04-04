@@ -1,577 +1,267 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { navigateContextual } from '@/lib/routing-utils';
+import { useProfile } from '@/hooks/useProfile';
+import dynamic from 'next/dynamic';
 
-interface SlugHeaderProps {
-  company: {
-    name: string;
-    logo_url?: string | null;
-    assistant_role?: string | null;
-    webapp_enabled?: boolean;
-  };
-  slug?: string; // NOVA: necessária para navegação entre páginas
-  theme: 'dark' | 'light';
-  pageType?: 'ia' | 'vendas' | 'fila'; // NOVA: controla qual página estamos
-  overlayMode?: boolean;
-  isKioskMode?: boolean;
-  isWakeLockActive?: boolean;
-  isWakeLockSupported?: boolean;
-  isPortrait?: boolean;
-  showControls?: boolean;
-  onEnterKioskMode?: () => void;
-  onToggleWakeLock?: () => void;
-  onToggleModoVenda?: () => void;
-  onToggleTheme?: () => void;
-  onClose?: () => void;
+// Importação dinâmica do LoginClienteDisplay
+const LoginClienteDisplay = dynamic(
+  () => import('@/components/assistant/LoginClienteDisplay'),
+  { ssr: false }
+);
+
+export interface SlugHeaderProps {
+  company: any;
+  slug?: string;
+  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente';
+  theme?: 'dark' | 'light';
+  modo_vendas_enabled?: boolean;
+  modo_fila_enabled?: boolean;
 }
 
 export default function SlugHeader({
   company,
   slug,
-  theme,
-  pageType = 'ia', // Padrão: página do assistente
-  overlayMode = false,
-  isKioskMode = false,
-  isWakeLockActive = false,
-  isWakeLockSupported = false,
-  isPortrait = false,
-  showControls = false,
-  onEnterKioskMode,
-  onToggleWakeLock,
-  onToggleModoVenda,
-  onToggleTheme,
-  onClose,
+  pageType = 'ia',
+  theme = 'dark',
+  modo_vendas_enabled = true,
+  modo_fila_enabled = false,
 }: SlugHeaderProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  // Hook de perfil do usuário
+  const { profile, logout } = useProfile(slug ?? '');
+  const isLoggedIn = !!profile;
 
-  // ─────────────────────────────────────────────────────────
-  // Lógica de visibilidade: nunca mostrar o botão da página atual
-  // ─────────────────────────────────────────────────────────
-  const showAssistenteButton = pageType !== 'ia';
-  const showVendasButton = pageType !== 'vendas';
-  const showFilaButton = pageType !== 'fila';
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // ─────────────────────────────────────────────────────────
+  if (!mounted) return null;
+
+  const isDark = theme === 'dark';
+
+  // Lógica de visibilidade dos botões
+  const showAssistantButton = !isLoggedIn || pageType === 'ia';
+  const showVendasButton = modo_vendas_enabled && pageType !== 'vendas';
+  const showFilaButton = modo_fila_enabled && pageType !== 'fila';
+
   // Handlers de navegação
-  // ─────────────────────────────────────────────────────────
-const handleNavigateToIA = () => {
-  navigateContextual(router, 'ia', slug);
-};
-
-const handleNavigateToVendas = () => {
-  navigateContextual(router, 'vendas', slug);
-};
-
-const handleNavigateToFila = () => {
-  navigateContextual(router, 'fila', slug);
-};
-
-  const icon = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
-
-  const btn = (extra = '') => {
-    const base = overlayMode
-      ? `p-2 rounded-full transition-all active:scale-95 ${
-          theme === 'dark'
-            ? 'bg-white/10 hover:bg-white/20 text-white'
-            : 'bg-black/10 hover:bg-black/20 text-black'
-        }`
-      : `p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
-          theme === 'dark'
-            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-            : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-        }`;
-    return `${base} ${extra}`;
+  const handleNavigateToIA = () => {
+    navigateContextual(router, 'ia', slug);
   };
 
-  const btnVenda = () => overlayMode
-    ? `p-2 rounded-full transition-all active:scale-95 ${
-        theme === 'dark'
-          ? 'bg-white/10 hover:bg-emerald-500/30 text-white'
-          : 'bg-black/10 hover:bg-emerald-100 text-black'
-      }`
-    : `p-2.5 rounded-lg backdrop-blur-xl border transition-all hover:scale-110 active:scale-95 ${
-        theme === 'dark'
-          ? 'bg-white/5 border-white/10 text-white hover:bg-emerald-500/20 hover:border-emerald-500/40'
-          : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50 hover:border-emerald-300'
-      }`;
-
-  // Badge de verificado (verde limão) — aparece quando webapp_enabled = true
-  const VerifiedBadge = ({ size = 'md' }: { size?: 'sm' | 'md' }) => {
-    if (!company.webapp_enabled) return null;
-    const wh = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
-    const iconWh = size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3';
-    return (
-      <span
-        title="Assistente Verificado"
-        className={`inline-flex items-center justify-center ${wh} rounded-full flex-shrink-0`}
-        style={{ background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)' }}
-      >
-        <svg
-          className={`${iconWh} text-white`}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      </span>
-    );
+  const handleNavigateToVendas = () => {
+    navigateContextual(router, 'vendas', slug);
   };
 
-  // ─────────────────────────────────────────────────────────
-  // BOTÕES DE NAVEGAÇÃO (novos)
-  // ─────────────────────────────────────────────────────────
-  const NavigationButtons = () => {
-    if (!slug) return null; // Não renderiza se não tiver slug
-
-    return (
-      <>
-        {/* Botão Assistente - só aparece quando NÃO estiver na página IA */}
-        {showAssistenteButton && (
-          <button
-            onClick={handleNavigateToIA}
-            className={btn()}
-            title="Ir para Assistente"
-          >
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </button>
-        )}
-
-        {/* Botão Vendas - só aparece quando NÃO estiver na página Vendas */}
-        {showVendasButton && (
-          <button
-            onClick={handleNavigateToVendas}
-            className={btnVenda()}
-            title="Ir para Vendas"
-          >
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </button>
-        )}
-
-        {/* Botão Fila - só aparece quando NÃO estiver na página Fila */}
-        {showFilaButton && (
-          <button
-            onClick={handleNavigateToFila}
-            className={btn()}
-            title="Ir para Fila de Atendimento"
-          >
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </button>
-        )}
-      </>
-    );
+  const handleNavigateToFila = () => {
+    navigateContextual(router, 'fila', slug);
   };
 
-  // Botões do overlay — visibilidade controlada por showControls
-  const overlayButtons = (
-    <div className={`flex items-center space-x-1 transition-all duration-300 ${
-      showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-    }`}>
-      {/* BOTÕES DE NAVEGAÇÃO */}
-      <NavigationButtons />
-      
-      {/* BOTÃO MODO VENDA (legacy - removido pois agora temos navegação) */}
-      {/* {onToggleModoVenda && (...)} */}
-      
-      {onEnterKioskMode && !isKioskMode && (
-        <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
-          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
-        </button>
-      )}
-      {isWakeLockSupported && onToggleWakeLock && (
-        <button
-          onClick={onToggleWakeLock}
-          className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-        >
-          {isWakeLockActive ? (
-            <svg className={`${icon} text-green-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-            </svg>
-          ) : (
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          )}
-        </button>
-      )}
-      {onToggleTheme && (
-        <button onClick={onToggleTheme} className={btn()} title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
-          {theme === 'dark' ? (
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          ) : (
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-          )}
-        </button>
-      )}
-      {onClose && (
-        <button onClick={onClose} className={btn()} title="Fechar">
-          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      )}
-    </div>
-  );
+  const handleClientesClick = () => {
+    if (isLoggedIn) {
+      // Usuário logado → vai para dashboard de cliente
+      navigateContextual(router, 'cliente', slug);
+    } else {
+      // Usuário não logado → abre modal de login
+      setShowLoginModal(true);
+    }
+  };
 
-  // Botões do modo normal (sempre visíveis)
-  const normalButtons = (
-    <div className="flex items-center space-x-1">
-      {/* BOTÕES DE NAVEGAÇÃO */}
-      <NavigationButtons />
-      
-      {/* BOTÃO MODO VENDA (legacy - mantido para compatibilidade com código existente) */}
-      {onToggleModoVenda && !slug && (
-        <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
-          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-        </button>
-      )}
-      
-      {onEnterKioskMode && !isKioskMode && (
-        <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
-          <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
-        </button>
-      )}
-      {isWakeLockSupported && onToggleWakeLock && (
-        <button
-          onClick={onToggleWakeLock}
-          className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-        >
-          {isWakeLockActive ? (
-            <svg className={`${icon} text-green-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-            </svg>
-          ) : (
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          )}
-        </button>
-      )}
-      {onToggleTheme && (
-        <button onClick={onToggleTheme} className={btn()} title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
-          {theme === 'dark' ? (
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          ) : (
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-          )}
-        </button>
-      )}
-    </div>
-  );
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
+  };
+
+  // Função para obter iniciais do nome
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
-    <header
-      data-role="slug-header"
-      className={`w-full transition-colors ${
-        overlayMode
-          ? 'bg-transparent border-transparent'
-          : `border-b ${
-              theme === 'dark'
-                ? 'bg-gradient-to-r from-slate-950/80 via-slate-900/70 to-slate-950/80 border-white/5 backdrop-blur-xl'
-                : 'bg-white/80 border-gray-200 backdrop-blur-xl'
-            }`
-      }`}
-    >
-      <div className={overlayMode
-        ? 'px-2 py-1'
-        : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
-      }>
-
-        {/* ── Desktop Layout ─────────────────────────────────── */}
-        <div className={`hidden md:flex md:items-center md:justify-between relative ${
-          overlayMode ? '' : 'py-4'
-        }`}>
-
-          {/* ESQUERDA */}
-          {!overlayMode ? (
-            <div className="flex items-center space-x-3">
-              {company.logo_url && (
+    <>
+      <header
+        className="sticky top-0 z-[400] border-b backdrop-blur-md"
+        style={{
+          background: isDark
+            ? 'rgba(15, 23, 42, 0.8)'
+            : 'rgba(255, 255, 255, 0.8)',
+          borderColor: isDark
+            ? 'rgba(148, 163, 184, 0.1)'
+            : 'rgba(203, 213, 225, 0.3)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo e Nome da Empresa */}
+            <div className="flex items-center gap-3">
+              {company?.logo_url && (
                 <img
                   src={company.logo_url}
-                  alt={`${company.name} logo`}
-                  className="rounded-lg object-contain flex-shrink-0"
-                  style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }}
+                  alt={company.name}
+                  className="h-10 w-10 rounded-lg object-cover"
                 />
               )}
-              <div className="flex flex-col">
-                {/* Nome + badge */}
-                <div className="flex items-center gap-2">
-                  <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {company.name}
-                  </h1>
-                  <VerifiedBadge size="md" />
-                </div>
-                <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
-                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-                }`}>
-                  {company.assistant_role || 'Uma IA pra chamar de sua!'}
-                </p>
-              </div>
+              <h1
+                className="text-lg font-bold truncate max-w-[200px] sm:max-w-none"
+                style={{
+                  color: isDark ? 'rgb(241, 245, 249)' : 'rgb(15, 23, 42)',
+                }}
+              >
+                {company?.name}
+              </h1>
             </div>
-          ) : (
-            <div />
-          )}
 
-          {/* DIREITA: botões + logo minhAi */}
-          <div className="relative flex items-center space-x-2">
-            {overlayMode ? overlayButtons : normalButtons}
-            {!overlayMode && (
-              <div className={`w-px h-10 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'}`} />
-            )}
-            <Link
-              href="https://minhai.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity"
-              title="Visite minhAi.app"
-            >
-              <Image
-                src="/logo-circle.png"
-                alt="minhAi logo"
-                width={overlayMode ? 36 : 40}
-                height={overlayMode ? 36 : 40}
-                className="rounded-lg"
-              />
-            </Link>
+            {/* Botões de Navegação */}
+            <nav className="flex items-center gap-2">
+              {/* Botão Assistente (oculto quando logado em Vendas/Fila) */}
+              {showAssistantButton && (
+                <button
+                  onClick={handleNavigateToIA}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: isDark
+                      ? 'rgba(59, 130, 246, 0.1)'
+                      : 'rgba(59, 130, 246, 0.05)',
+                    color: isDark ? 'rgb(147, 197, 253)' : 'rgb(29, 78, 216)',
+                    border: `1px solid ${
+                      isDark
+                        ? 'rgba(59, 130, 246, 0.3)'
+                        : 'rgba(59, 130, 246, 0.2)'
+                    }`,
+                  }}
+                >
+                  <span className="text-lg">🤖</span>
+                  <span className="hidden sm:inline">Assistente</span>
+                </button>
+              )}
+
+              {/* Botão Vendas */}
+              {showVendasButton && (
+                <button
+                  onClick={handleNavigateToVendas}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: isDark
+                      ? 'rgba(16, 185, 129, 0.1)'
+                      : 'rgba(16, 185, 129, 0.05)',
+                    color: isDark ? 'rgb(110, 231, 183)' : 'rgb(5, 150, 105)',
+                    border: `1px solid ${
+                      isDark
+                        ? 'rgba(16, 185, 129, 0.3)'
+                        : 'rgba(16, 185, 129, 0.2)'
+                    }`,
+                  }}
+                >
+                  <span className="text-lg">🛒</span>
+                  <span className="hidden sm:inline">Vendas</span>
+                </button>
+              )}
+
+              {/* Botão Fila */}
+              {showFilaButton && (
+                <button
+                  onClick={handleNavigateToFila}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: isDark
+                      ? 'rgba(251, 146, 60, 0.1)'
+                      : 'rgba(251, 146, 60, 0.05)',
+                    color: isDark ? 'rgb(253, 186, 116)' : 'rgb(194, 65, 12)',
+                    border: `1px solid ${
+                      isDark
+                        ? 'rgba(251, 146, 60, 0.3)'
+                        : 'rgba(251, 146, 60, 0.2)'
+                    }`,
+                  }}
+                >
+                  <span className="text-lg">👥</span>
+                  <span className="hidden sm:inline">Fila</span>
+                </button>
+              )}
+
+              {/* Botão Clientes/Perfil */}
+              <button
+                onClick={handleClientesClick}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: isLoggedIn
+                    ? isDark
+                      ? 'rgba(168, 85, 247, 0.1)'
+                      : 'rgba(168, 85, 247, 0.05)'
+                    : isDark
+                    ? 'rgba(148, 163, 184, 0.1)'
+                    : 'rgba(148, 163, 184, 0.05)',
+                  color: isLoggedIn
+                    ? isDark
+                      ? 'rgb(216, 180, 254)'
+                      : 'rgb(107, 33, 168)'
+                    : isDark
+                    ? 'rgb(203, 213, 225)'
+                    : 'rgb(51, 65, 85)',
+                  border: `1px solid ${
+                    isLoggedIn
+                      ? isDark
+                        ? 'rgba(168, 85, 247, 0.3)'
+                        : 'rgba(168, 85, 247, 0.2)'
+                      : isDark
+                      ? 'rgba(148, 163, 184, 0.3)'
+                      : 'rgba(148, 163, 184, 0.2)'
+                  }`,
+                }}
+              >
+                {isLoggedIn ? (
+                  <>
+                    {/* Avatar com iniciais */}
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                      style={{
+                        background: isDark
+                          ? 'rgba(168, 85, 247, 0.3)'
+                          : 'rgba(168, 85, 247, 0.2)',
+                        color: isDark ? 'rgb(216, 180, 254)' : 'rgb(107, 33, 168)',
+                      }}
+                    >
+                      {getInitials(profile.nome)}
+                    </div>
+                    <span className="hidden sm:inline truncate max-w-[100px]">
+                      {profile.nome.split(' ')[0]}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-lg">👤</span>
+                    <span className="hidden sm:inline">Login</span>
+                  </>
+                )}
+              </button>
+            </nav>
           </div>
         </div>
+      </header>
 
-        {/* ── Mobile Normal ──────────────────────────────────── */}
-        {!overlayMode && (
-          <div className="md:hidden py-4 space-y-4">
-            <div className="relative flex items-center justify-center min-h-[48px] px-4">
-              {company.logo_url && (
-                <div className="absolute left-4 flex-shrink-0">
-                  <img
-                    src={company.logo_url}
-                    alt={`${company.name} logo`}
-                    className="rounded-lg object-contain"
-                    style={{ maxHeight: '36px', height: 'auto', width: 'auto', maxWidth: '80px' }}
-                  />
-                </div>
-              )}
-              <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center">
-                {/* Nome + badge */}
-                <div className="flex items-center gap-1.5">
-                  <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {company.name}
-                  </h1>
-                  <VerifiedBadge size="sm" />
-                </div>
-                <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${
-                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-                }`}>
-                  {company.assistant_role || 'Uma IA para chamar de sua!'}
-                </p>
-              </div>
-              <Link
-                href="https://minhai.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity"
-                title="Visite minhAi.app"
-              >
-                <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
-              </Link>
-            </div>
-
-            <div className="flex items-center justify-center space-x-2">
-              {/* BOTÕES DE NAVEGAÇÃO */}
-              <NavigationButtons />
-              
-              {onEnterKioskMode && (
-                <button
-                  onClick={onEnterKioskMode}
-                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                  } ${isKioskMode ? 'ring-2 ring-red-500 ring-opacity-50' : ''}`}
-                  title="Modo Kiosk"
-                >
-                  {isKioskMode ? (
-                    <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                    </svg>
-                  )}
-                </button>
-              )}
-              {/* BOTÃO MODO VENDA (legacy - só aparece se não tiver slug) */}
-              {onToggleModoVenda && !slug && (
-                <button
-                  onClick={onToggleModoVenda}
-                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                    theme === 'dark'
-                      ? 'bg-white/5 border-white/10 text-white hover:bg-emerald-500/20'
-                      : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50'
-                  }`}
-                  title="Modo Venda"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </button>
-              )}
-              {isWakeLockSupported && onToggleWakeLock && (
-                <button
-                  onClick={onToggleWakeLock}
-                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                  } ${isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
-                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-                >
-                  {isWakeLockActive ? (
-                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-              {onToggleTheme && (
-                <button
-                  onClick={onToggleTheme}
-                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                  }`}
-                  title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-                >
-                  {theme === 'dark' ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Mobile Overlay ─────────────────────────────────── */}
-        {overlayMode && (
-          <div className="md:hidden relative flex items-center justify-end min-h-[48px] py-2">
-
-            {/* Botões — absolute para não empurrar o logo */}
-            <div className={`absolute right-9 flex items-center space-x-1 transition-all duration-300 ${
-              showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-            }`}>
-              {/* BOTÕES DE NAVEGAÇÃO */}
-              <NavigationButtons />
-              
-              {/* BOTÃO MODO VENDA (legacy - removido do overlay) */}
-              {/* {onToggleModoVenda && (...)} */}
-              
-              {onEnterKioskMode && !isKioskMode && (
-                <button onClick={onEnterKioskMode} className={btn()} title="Modo Kiosk">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
-                </button>
-              )}
-              {isWakeLockSupported && onToggleWakeLock && (
-                <button
-                  onClick={onToggleWakeLock}
-                  className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </button>
-              )}
-              {onToggleTheme && (
-                <button onClick={onToggleTheme} className={btn()} title="Tema">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </button>
-              )}
-              {onClose && (
-                <button onClick={onClose} className={btn()} title="Fechar">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* Logo minhAi — no fluxo flex, sempre visível */}
-            <Link
-              href="https://minhai.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity z-10"
-              title="Visite minhAi.app"
-            >
-              <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
-            </Link>
-          </div>
-        )}
-
-      </div>
-    </header>
+      {/* Modal de Login */}
+      {showLoginModal && (
+        <LoginClienteDisplay
+          data={{
+            companyId: company.id,
+            slug: slug ?? '',
+            profile,
+          }}
+          onClose={handleCloseLoginModal}
+          theme={theme}
+          playText={async () => {}} // Função vazia para compatibilidade
+        />
+      )}
+    </>
   );
 }

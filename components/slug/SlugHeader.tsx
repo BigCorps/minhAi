@@ -78,7 +78,7 @@ export default function SlugHeader({
       <span
         title="Assistente Verificado"
         className={`inline-flex items-center justify-center ${wh} rounded-full flex-shrink-0`}
-        style={{ background: 'linear-gradient(135deg, #84cc16, #22c55e)' }}
+        style={{ background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)' }}
       >
         <svg
           className={`${iconWh} text-white`}

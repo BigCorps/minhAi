@@ -132,13 +132,13 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
       closeModal();
       loadFAQs();
     } catch (error) {
-      console.error('Erro ao salvar FAQ:', error);
-      alert('Erro ao salvar FAQ. Tente novamente.');
+      console.error('Erro ao salvar resposta:', error);
+      alert('Erro ao salvar resposta. Tente novamente.');
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja excluir esta FAQ?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta resposta?')) return;
 
     try {
       const { error } = await supabase
@@ -149,8 +149,8 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
       if (error) throw error;
       loadFAQs();
     } catch (error) {
-      console.error('Erro ao excluir FAQ:', error);
-      alert('Erro ao excluir FAQ. Tente novamente.');
+      console.error('Erro ao excluir resposta:', error);
+      alert('Erro ao excluir resposta. Tente novamente.');
     }
   }
 
@@ -267,16 +267,16 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
         }`}>
           <MessageSquare className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`} />
           <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Nenhuma FAQ cadastrada
+            Nenhuma resposta cadastrada
           </h3>
           <p className={`mb-6 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-            Comece adicionando perguntas frequentes e suas respostas
+            Comece adicionando comandos e suas respostas
           </p>
           <button
             onClick={() => setShowAddModal(true)}
             className="px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl font-semibold transition-all shadow-lg active:scale-95"
           >
-            + Adicionar Primeira FAQ
+            + Adicionar Primeira Resposta
           </button>
         </div>
       ) : (
@@ -411,7 +411,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
           }`}>
             <div className={`p-6 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
               <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {editingFaq ? 'Editar FAQ' : 'Adicionar Nova FAQ'}
+                {editingFaq ? 'Editar Resposta' : 'Adicionar Nova Resposta'}
               </h3>
             </div>
 
@@ -578,7 +578,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                   className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
                 />
                 <label htmlFor="is_active" className={`text-sm ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-                  FAQ ativa (responderá automaticamente)
+                  Resposta ativa (responderá automaticamente)
                 </label>
               </div>
 
@@ -588,7 +588,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                   type="submit"
                   className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl font-semibold transition-all active:scale-95"
                 >
-                  {editingFaq ? 'Salvar Alterações' : 'Adicionar FAQ'}
+                  {editingFaq ? 'Salvar Alterações' : 'Adicionar resposta'}
                 </button>
                 <button
                   type="button"

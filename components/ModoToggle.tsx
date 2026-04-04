@@ -65,9 +65,9 @@ export default function ModoToggle({ companyId, modoType, initialEnabled, onTogg
   }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
+    <div className="flex flex-row items-center justify-between gap-4 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
 
-      {/* Linha 1 (mobile) / Esquerda (desktop): ícone + label + descrição */}
+      {/* Esquerda: ícone + label + descrição (descrição só desktop) */}
       <div className="flex items-center gap-2 min-w-0">
         <span className={`flex-shrink-0 ${
           isBlue ? 'text-blue-500 dark:text-blue-400' : 'text-emerald-500 dark:text-emerald-400'
@@ -82,8 +82,8 @@ export default function ModoToggle({ companyId, modoType, initialEnabled, onTogg
         </span>
       </div>
 
-      {/* Linha 2 (mobile) / Direita (desktop): status + toggle */}
-      <div className="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
+      {/* Direita: status + toggle */}
+      <div className="flex items-center gap-2 flex-shrink-0">
         <span className={`text-xs font-medium ${
           enabled
             ? isBlue

@@ -70,8 +70,8 @@ export default function SlugHeader({
   // Lógica de visibilidade: nunca mostrar o botão da página atual
   // ─────────────────────────────────────────────────────────
   const showAssistenteButton = (!isLoggedIn || pageType === 'ia') && pageType !== 'ia';
-  const showVendasButton = (company.modo_vendas_enabled ?? true) && pageType !== 'vendas';
-  const showFilaButton = (company.modo_fila_enabled ?? false) && pageType !== 'fila';
+  const showVendasButton = (company.modo_vendas_enabled !== false) && pageType !== 'vendas';
+  const showFilaButton = (company.modo_fila_enabled !== false) && pageType !== 'fila';
 
   // ─────────────────────────────────────────────────────────
   // Handlers de navegação
@@ -186,7 +186,7 @@ const handleNavigateToFila = () => {
         {showVendasButton && (
           <button
             onClick={handleNavigateToVendas}
-            className={btnVenda()}
+            className={btn()}
             title="Ir para Vendas"
           >
             <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,15 +217,9 @@ const handleNavigateToFila = () => {
           title={isLoggedIn ? 'Meu Perfil' : 'Fazer Login'}
         >
           {isLoggedIn ? (
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-              style={{
-                background: theme === 'dark'
-                  ? 'rgba(168, 85, 247, 0.3)'
-                  : 'rgba(168, 85, 247, 0.2)',
-                color: theme === 'dark' ? 'rgb(216, 180, 254)' : 'rgb(107, 33, 168)',
-              }}
-            >
+            <div className={`${icon} rounded-full flex items-center justify-center text-[10px] font-bold ${
+              theme === 'dark' ? 'bg-white/10 text-white' : 'bg-black/10 text-black'
+            }`}>
               {getInitials(profile.nome)}
             </div>
           ) : (

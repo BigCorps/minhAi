@@ -53,10 +53,24 @@ export async function middleware(request: NextRequest) {
         return NextResponse.rewrite(url);
       }
 
-      // ── Rewrite normal do slug ────────────────────────────────────────────
-      const url = request.nextUrl.clone();
-      url.pathname = `/ia/${slug}${pathname === '/' ? '' : pathname}`;
-      return NextResponse.rewrite(url);
+// ── Rewrite do slug com suporte a rotas específicas ───────────────────────
+const url = request.nextUrl.clone();
+
+// Se a rota já começa com /vendas, /fila, /atendimento, etc → manter e adicionar slug
+// Exemplo: /vendas → /vendas/sualoja
+const SPECIAL_ROUTES = ['/vendas', '/fila', '/clientes', '/link'];
+const isSpecialRoute = SPECIAL_ROUTES.some(route => pathname.startsWith(route));
+
+if (isSpecialRoute) {
+  // Remove a barra final se existir para evitar //
+  const cleanPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+  url.pathname = `${cleanPath}/${slug}`;
+} else {
+  // Rota padrão → /ia/slug
+  url.pathname = `/ia/${slug}${pathname === '/' ? '' : pathname}`;
+}
+
+return NextResponse.rewrite(url);
     }
   }
 

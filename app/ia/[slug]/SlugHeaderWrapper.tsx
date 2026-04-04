@@ -16,6 +16,7 @@ interface SlugHeaderWrapperProps {
     logo_url?: string | null;
     assistant_role?: string | null;
     webapp_theme_color?: string | null;
+    webapp_enabled?: boolean; //
   };
   overlayMode?: boolean;
   forceTheme?: 'dark' | 'light';

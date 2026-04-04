@@ -58,7 +58,7 @@ const url = request.nextUrl.clone();
 
 // Se a rota já começa com /vendas, /fila, /atendimento, etc → manter e adicionar slug
 // Exemplo: /vendas → /vendas/sualoja
-const SPECIAL_ROUTES = ['/vendas', '/fila', '/clientes', '/link'];
+const SPECIAL_ROUTES = ['/vendas', '/fila', '/cliente', '/link'];
 const isSpecialRoute = SPECIAL_ROUTES.some(route => pathname.startsWith(route));
 
 if (isSpecialRoute) {

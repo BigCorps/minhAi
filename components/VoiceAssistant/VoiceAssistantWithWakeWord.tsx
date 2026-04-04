@@ -30,7 +30,7 @@ import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
 import { useGroqContext } from '@/hooks/useGroqContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useRouter } from 'next/navigation';
-import { navigateContextual } from '@/lib/routing-utils';
+import { navigateContextual, getContextualRoute } from '@/lib/routing-utils'
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -1136,6 +1136,13 @@ case 'chamar_gerente':
           });
           playText('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
           return;
+
+        case 'modo_venda':
+          await stopGoogleSpeech();
+          const vendaUrl = getContextualRoute('vendas', slug);
+          window.location.href = vendaUrl;
+          playText('Abrindo modo vendas!').catch(() => {});
+          break;
 
         case 'ver_produtos':
           break;

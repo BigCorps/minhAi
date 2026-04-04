@@ -227,7 +227,7 @@ function SaleModeInner({
 />
 
         {/* CONTEÚDO */}
-        <div className="flex-1 flex overflow-hidden px-3 py-3 min-h-0 w-full gap-3">
+        <div className="flex-1 flex overflow-hidden px-3 py-3 pb-32 min-h-0 w-full gap-3">
           <div
             className={`flex-1 flex overflow-hidden gap-3 ${
               isPortrait ? 'flex-col' : 'flex-row'
@@ -370,17 +370,6 @@ function SaleModeInner({
               </>
             )}
           </div>
-        </div>
-
-        {/* FOOTER */}
-        <div
-          className={`flex-shrink-0 h-8 border-t flex items-center justify-center ${
-            isDark ? 'bg-slate-800/50 border-white/10' : 'bg-white border-gray-200'
-          }`}
-        >
-          <p className={`text-xs ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-            {totalItens > 0 ? `${totalItens} ${totalItens === 1 ? 'item' : 'itens'} no carrinho` : 'Carrinho vazio'}
-          </p>
         </div>
       </div>
     );

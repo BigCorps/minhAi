@@ -16,8 +16,10 @@ interface SlugHeaderWrapperProps {
     logo_url?: string | null;
     assistant_role?: string | null;
     webapp_theme_color?: string | null;
-    webapp_enabled?: boolean; //
+    webapp_enabled?: boolean;
   };
+  slug?: string;                          // NOVA: necessária para navegação
+  pageType?: 'ia' | 'vendas' | 'fila';   // NOVA: controla qual página estamos
   overlayMode?: boolean;
   forceTheme?: 'dark' | 'light';
   onClose?: () => void;
@@ -28,6 +30,8 @@ interface SlugHeaderWrapperProps {
 
 export default function SlugHeaderWrapper({
   company,
+  slug,
+  pageType,
   overlayMode = false,
   forceTheme,
   onClose,
@@ -94,6 +98,8 @@ export default function SlugHeaderWrapper({
     window.dispatchEvent(new CustomEvent('eai:requestKioskMode'));
   };
 
+  // LEGACY: mantido para retrocompatibilidade com código antigo
+  // Será ignorado pelo SlugHeader quando slug estiver presente
   const handleToggleModoVenda = () => {
     window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
       detail: { functionKey: 'modo_venda' },
@@ -116,6 +122,8 @@ export default function SlugHeaderWrapper({
     <>
       <SlugHeader
         company={company}
+        slug={slug}
+        pageType={pageType}
         theme={theme}
         overlayMode={overlayMode}
         isKioskMode={isKioskMode}

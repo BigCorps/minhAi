@@ -13,6 +13,7 @@ export default function VendasPage({ params }: VendasPageProps) {
   const router = useRouter();
   const [slug, setSlug] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyData, setCompanyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Await params (Next.js 15 requirement)
@@ -24,7 +25,7 @@ export default function VendasPage({ params }: VendasPageProps) {
     unwrapParams();
   }, [params]);
 
-  // Buscar companyId pelo slug
+  // Buscar dados completos da company pelo slug
   useEffect(() => {
     if (!slug) return;
 
@@ -33,7 +34,7 @@ export default function VendasPage({ params }: VendasPageProps) {
       
       const { data, error } = await supabase
         .from('companies')
-        .select('id')
+        .select('*')
         .eq('slug', slug)
         .single();
 
@@ -44,6 +45,7 @@ export default function VendasPage({ params }: VendasPageProps) {
       }
 
       setCompanyId(data.id);
+      setCompanyData(data);
       setLoading(false);
     }
 
@@ -89,7 +91,10 @@ export default function VendasPage({ params }: VendasPageProps) {
   return (
     <div className="min-h-screen bg-slate-900">
       <SaleModeModal
-        data={{ companyId }}
+        data={{ 
+          companyId,
+          company: companyData
+        }}
         isFullscreen={true}
         onClose={handleClose}
         theme="dark"

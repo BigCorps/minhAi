@@ -1137,12 +1137,6 @@ case 'chamar_gerente':
           playText('Vou te guiar no cadastro do produto. Qual o nome?').catch(() => {});
           return;
 
-case 'modo_venda':
-  await stopGoogleSpeech();
-  navigateContextual(router, 'vendas', slug);
-  playText('Abrindo modo vendas!').catch(() => {});
-  break;
-
         case 'ver_produtos':
           break;
 

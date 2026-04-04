@@ -164,18 +164,19 @@ export function VoiceAssistantWithWakeWord({
     return _playText(text);
   };
 
+  useLembreteWatcher({
+    setActiveModal,
+    playText,
+    companyId,
+  });
+
+  
   const effectivePlayText = textMode
   ? (text: string): Promise<void> => {
       if (text && text.trim()) setLastResponse(text.trim());
       return Promise.resolve();
     }
   : playText;
-
-  useLembreteWatcher({
-    setActiveModal,
-    playText,
-    companyId,
-  });
 
   // ── Timer 30s para sumir card de conversa ─────────────────
   useEffect(() => {

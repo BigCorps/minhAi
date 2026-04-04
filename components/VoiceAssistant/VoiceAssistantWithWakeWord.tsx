@@ -92,6 +92,7 @@ export function VoiceAssistantWithWakeWord({
   hideDisabledFunctions = false,
   autoScroll = true,
   onTextMessage,
+  textMode = false,
 }: VoiceAssistantProps & {
   onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
 }) {
@@ -162,6 +163,13 @@ export function VoiceAssistantWithWakeWord({
     }
     return _playText(text);
   };
+
+  const effectivePlayText = textMode
+  ? (text: string): Promise<void> => {
+      if (text && text.trim()) setLastResponse(text.trim());
+      return Promise.resolve();
+    }
+  : playText;
 
   useLembreteWatcher({
     setActiveModal,
@@ -620,6 +628,7 @@ export function VoiceAssistantWithWakeWord({
 
   // ── Function click (carrossel) ────────────────────────────
   async function handleFunctionClick(functionKey: string, event?: any) {
+    const playText = effectivePlayText; // ← adiciona esta linha
     console.log('🎯 Função clicada:', functionKey);
 
     const isEnabled = await checkIfFunctionIsEnabled(companyId, functionKey);

@@ -246,7 +246,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
             Respostas Rápidas
           </h2>
           <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-            {faqs.length} {faqs.length === 1 ? 'pergunta cadastrada' : 'perguntas cadastradas'}
+            {faqs.length} {faqs.length === 1 ? 'resposta registrada' : 'respostas registradas'}
           </p>
         </div>
         <button

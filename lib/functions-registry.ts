@@ -4996,38 +4996,41 @@ modo_venda: {
   functionKey: 'modo_venda',
   functionName: 'Modo Venda',
   category: 'products',
-  responseType: 'voice+modal',
-
+  responseType: 'navigation', // ← MUDOU de 'voice+modal' para 'navigation'
   voiceTriggers: [
     'modo venda', 'modo de venda', 'abrir loja',
     'quero comprar', 'comprar agora', 'escolher produtos',
     'fazer compras', 'abrir modo venda', 'loja virtual',
   ],
-
   examplePhrases: [
     'Quero comprar',
     'Abrir modo de venda',
     'Escolher produtos',
     'Comprar agora',
   ],
-
   requiresInput: false,
-  description: 'Abre o modo de venda com catálogo de produtos e carrinho de compras.',
+  description: 'Abre a página de vendas com catálogo de produtos e carrinho de compras.',
   shortDescription: 'Abrir loja virtual',
   icon: '🛒',
   color: '#10b981',
-
   saveToHistory: true,
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
-
-  handler: async ({ playText, setActiveModal, companyId }) => {
+  handler: async ({ playText, slug }) => {
     try {
-      setActiveModal?.({ type: 'SaleModeModal', data: { companyId } });
-      await playText('Modo venda aberto! Escolha os produtos.');
-      return true;
-    } catch {
+      // Navega para a página de vendas ao invés de abrir modal
+      if (slug) {
+        window.location.href = `/vendas/${slug}`;
+        await playText('Abrindo modo vendas!');
+        return true;
+      } else {
+        console.warn('Slug não disponível para navegação de vendas');
+        await playText('Erro ao abrir modo vendas.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro ao navegar para vendas:', error);
       return false;
     }
   },

@@ -35,7 +35,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [mode, setMode] = useState<AssistenteMode>('padrao');
 
   // Helper para navegar entre modos (roleta infinita)
-  const MODES: AssistenteMode[] = ['texto', 'padrao', 'full'];
+  const MODES: AssistenteMode[] = ['full', 'padrao', 'texto'];
   const navigateMode = (direction: 'left' | 'right') => {
     const currentIndex = MODES.indexOf(mode);
     if (direction === 'left') {

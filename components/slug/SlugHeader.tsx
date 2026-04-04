@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { navigateContextual } from '@/lib/routing-utils';
 
 interface SlugHeaderProps {
   company: {
@@ -56,17 +57,17 @@ export default function SlugHeader({
   // ─────────────────────────────────────────────────────────
   // Handlers de navegação
   // ─────────────────────────────────────────────────────────
-  const handleNavigateToIA = () => {
-    if (slug) router.push(`/ia/${slug}`);
-  };
+const handleNavigateToIA = () => {
+  navigateContextual(router, 'ia', slug);
+};
 
-  const handleNavigateToVendas = () => {
-    if (slug) router.push(`/vendas/${slug}`);
-  };
+const handleNavigateToVendas = () => {
+  navigateContextual(router, 'vendas', slug);
+};
 
-  const handleNavigateToFila = () => {
-    if (slug) router.push(`/fila/${slug}`);
-  };
+const handleNavigateToFila = () => {
+  navigateContextual(router, 'fila', slug);
+};
 
   const icon = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
 

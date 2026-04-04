@@ -30,6 +30,7 @@ import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
 import { useGroqContext } from '@/hooks/useGroqContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useRouter } from 'next/navigation';
+import { navigateContextual } from '@/lib/routing-utils';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -1138,11 +1139,7 @@ case 'chamar_gerente':
 
 case 'modo_venda':
   await stopGoogleSpeech();
-  if (slug) {
-    router.push(`/vendas/${slug}`);
-  } else {
-    console.warn('Slug não disponível para navegação de vendas');
-  }
+  navigateContextual(router, 'vendas', slug);
   playText('Abrindo modo vendas!').catch(() => {});
   break;
 

@@ -1,4 +1,3 @@
-// components/FAQManagerClient.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,6 +14,15 @@ interface FAQ {
   usage_count: number;
   created_at: string;
   updated_at: string;
+  function_key?: string | null;
+  function_params?: Record<string, unknown> | null;
+}
+
+interface AvailableFunction {
+  function_key: string;
+  function_name: string;
+  short_description?: string | null;
+  icon?: string | null;
 }
 
 interface FAQManagerClientProps {
@@ -33,13 +41,30 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
     variations: '',
     category: '',
     is_active: true,
+    function_key: '',
+    function_params_raw: '',
   });
+  const [availableFunctions, setAvailableFunctions] = useState<AvailableFunction[]>([]);
+  const [functionSuggestions, setFunctionSuggestions] = useState<AvailableFunction[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const supabase = createClient();
 
   useEffect(() => {
     loadFAQs();
   }, [companyId]);
+
+  useEffect(() => {
+    async function loadFunctions() {
+      const { data } = await supabase
+        .from('assistant_functions')
+        .select('function_key, function_name, short_description, icon')
+        .eq('is_active', true)
+        .order('function_name');
+      if (data) setAvailableFunctions(data);
+    }
+    loadFunctions();
+  }, []);
 
   async function loadFAQs() {
     try {
@@ -61,12 +86,22 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     try {
       const variations = formData.variations
         .split('\n')
         .map(v => v.trim())
         .filter(v => v.length > 0);
+
+      let parsedParams: Record<string, unknown> | null = null;
+      if (formData.function_params_raw.trim()) {
+        try {
+          parsedParams = JSON.parse(formData.function_params_raw);
+        } catch {
+          alert('JSON de parâmetros inválido. Verifique o formato.');
+          return;
+        }
+      }
 
       const faqData = {
         company_id: companyId,
@@ -75,6 +110,8 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
         variations,
         category: formData.category || null,
         is_active: formData.is_active,
+        function_key: formData.function_key || null,
+        function_params: parsedParams,
       };
 
       if (editingFaq) {
@@ -92,15 +129,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
         if (error) throw error;
       }
 
-      setFormData({
-        question: '',
-        answer: '',
-        variations: '',
-        category: '',
-        is_active: true,
-      });
-      setShowAddModal(false);
-      setEditingFaq(null);
+      closeModal();
       loadFAQs();
     } catch (error) {
       console.error('Erro ao salvar FAQ:', error);
@@ -147,6 +176,10 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
       variations: faq.variations.join('\n'),
       category: faq.category || '',
       is_active: faq.is_active,
+      function_key: faq.function_key || '',
+      function_params_raw: faq.function_params
+        ? JSON.stringify(faq.function_params, null, 2)
+        : '',
     });
     setShowAddModal(true);
   }
@@ -154,13 +187,41 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
   function closeModal() {
     setShowAddModal(false);
     setEditingFaq(null);
+    setShowSuggestions(false);
     setFormData({
       question: '',
       answer: '',
       variations: '',
       category: '',
       is_active: true,
+      function_key: '',
+      function_params_raw: '',
     });
+  }
+
+  function handleFunctionKeyChange(val: string) {
+    setFormData(prev => ({ ...prev, function_key: val }));
+    if (val.length > 0) {
+      const term = val.replace('/', '').toLowerCase();
+      const filtered = availableFunctions.filter(fn =>
+        fn.function_key.includes(term) ||
+        fn.function_name.toLowerCase().includes(term)
+      );
+      setFunctionSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  }
+
+  function selectFunction(fn: AvailableFunction) {
+    setFormData(prev => ({ ...prev, function_key: fn.function_key }));
+    setShowSuggestions(false);
+  }
+
+  function clearFunction() {
+    setFormData(prev => ({ ...prev, function_key: '', function_params_raw: '' }));
+    setShowSuggestions(false);
   }
 
   if (loading) {
@@ -182,7 +243,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
       }`}>
         <div>
           <h2 className={`text-2xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Respostas Rápidas (FAQs)
+            Respostas Rápidas
           </h2>
           <p className={`text-sm ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
             {faqs.length} {faqs.length === 1 ? 'pergunta cadastrada' : 'perguntas cadastradas'}
@@ -193,7 +254,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
           className="px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
-          Adicionar FAQ
+          Adicionar
         </button>
       </div>
 
@@ -231,7 +292,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
             >
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-3 mb-3 flex-wrap">
                     <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {faq.question}
                     </h3>
@@ -242,6 +303,15 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                           : 'bg-blue-100 text-blue-800'
                       }`}>
                         {faq.category}
+                      </span>
+                    )}
+                    {faq.function_key && (
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full flex items-center gap-1 ${
+                        isDark
+                          ? 'bg-purple-500/20 text-purple-300'
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        ⚡ {faq.function_key}
                       </span>
                     )}
                     <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
@@ -256,11 +326,11 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                       {faq.is_active ? 'Ativa' : 'Inativa'}
                     </span>
                   </div>
-                  
+
                   <p className={`mb-3 ${isDark ? 'text-white/70' : 'text-gray-700'}`}>
                     {faq.answer}
                   </p>
-                  
+
                   {faq.variations.length > 0 && (
                     <div className="mt-3">
                       <p className={`text-sm mb-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
@@ -282,14 +352,14 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                       </div>
                     </div>
                   )}
-                  
+
                   {faq.usage_count > 0 && (
                     <p className={`text-sm mt-3 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
                       Usada {faq.usage_count} {faq.usage_count === 1 ? 'vez' : 'vezes'}
                     </p>
                   )}
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => toggleActive(faq)}
@@ -344,8 +414,9 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                 {editingFaq ? 'Editar FAQ' : 'Adicionar Nova FAQ'}
               </h3>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {/* Pergunta */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
                   Pergunta *
@@ -364,6 +435,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                 />
               </div>
 
+              {/* Resposta */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
                   Resposta *
@@ -382,6 +454,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                 />
               </div>
 
+              {/* Variações */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
                   Variações da Pergunta (uma por linha)
@@ -395,10 +468,11 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                       : 'bg-white border-gray-300 text-gray-900'
                   }`}
                   rows={3}
-                  placeholder="Ex:&#10;Que horas vocês abrem?&#10;Horário de atendimento&#10;Quando posso ir aí?"
+                  placeholder={'Ex:\nQue horas vocês abrem?\nHorário de atendimento\nQuando posso ir aí?'}
                 />
               </div>
 
+              {/* Categoria */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
                   Categoria (opcional)
@@ -416,6 +490,85 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                 />
               </div>
 
+              {/* Função vinculada */}
+              <div className="relative">
+                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+                  Função vinculada (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.function_key}
+                  onChange={(e) => handleFunctionKeyChange(e.target.value)}
+                  onFocus={() => {
+                    if (formData.function_key.length > 0 && functionSuggestions.length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  className={`w-full px-4 py-2 rounded-lg border transition-colors focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                    isDark
+                      ? 'bg-slate-800 border-white/10 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                  placeholder="Digite para buscar uma função..."
+                />
+                {showSuggestions && (
+                  <div className={`absolute z-10 w-full mt-1 rounded-lg border shadow-lg max-h-48 overflow-y-auto ${
+                    isDark ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200'
+                  }`}>
+                    {functionSuggestions.map(fn => (
+                      <button
+                        key={fn.function_key}
+                        type="button"
+                        onMouseDown={() => selectFunction(fn)}
+                        className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                          isDark
+                            ? 'hover:bg-slate-700 text-white'
+                            : 'hover:bg-gray-50 text-gray-900'
+                        }`}
+                      >
+                        <span className="font-medium">{fn.function_name}</span>
+                        {fn.short_description && (
+                          <span className={`ml-2 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                            — {fn.short_description}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {formData.function_key && (
+                  <button
+                    type="button"
+                    onClick={clearFunction}
+                    className={`mt-1 text-xs ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
+                  >
+                    Remover função vinculada
+                  </button>
+                )}
+              </div>
+
+              {/* Parâmetros da função — só aparece se tiver function_key */}
+              {formData.function_key && (
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+                    Parâmetros da função (JSON, opcional)
+                  </label>
+                  <textarea
+                    value={formData.function_params_raw}
+                    onChange={(e) => setFormData({ ...formData, function_params_raw: e.target.value })}
+                    className={`w-full px-4 py-2 rounded-lg border font-mono text-sm transition-colors focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                      isDark
+                        ? 'bg-slate-800 border-white/10 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    rows={3}
+                    placeholder={'{ "valor": 100, "descricao": "Pedido" }'}
+                  />
+                </div>
+              )}
+
+              {/* FAQ ativa */}
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -429,6 +582,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                 </label>
               </div>
 
+              {/* Botões */}
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"

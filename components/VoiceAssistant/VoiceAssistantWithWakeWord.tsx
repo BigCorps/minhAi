@@ -1286,7 +1286,7 @@ case 'chamar_gerente':
       const textBlob = new Blob([questionText], { type: 'text/plain' });
       formData.append('audio', textBlob, 'question.txt');
       formData.append('companyId', companyId);
-      if (activeModal?.type === 'SaleModeModal') {
+      if (typeof window !== 'undefined' && window.location.pathname.includes('/vendas')) {
         formData.append('saleMode', 'true');
       }
       formData.append('directQuestion', questionText);

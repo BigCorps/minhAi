@@ -5018,14 +5018,36 @@ modo_venda: {
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
-handler: async ({ playText, slug }) => {
+handler: async ({ playText, slug, transcript, ...rest }: any) => {
   try {
-    const url = getContextualRoute('vendas', slug);
-    window.location.href = url;
-    await playText('Abrindo modo vendas!');
+    const baseUrl = getContextualRoute('vendas', slug);
+    
+    // Detecta se tem produto inicial (vindo do VerProdutoDisplay)
+    const produtoInicial = (rest as any)?.produtoInicial;
+    const quantidadeInicial = (rest as any)?.quantidadeInicial || 1;
+    
+    if (produtoInicial?.id) {
+      // Navega com produto no query param
+      const params = new URLSearchParams({
+        produto: produtoInicial.id,
+        quantidade: String(quantidadeInicial),
+      });
+      
+      // Se tem opções selecionadas, serializa como JSON
+      const opcoesIniciais = (rest as any)?.opcoesIniciais;
+      if (opcoesIniciais && opcoesIniciais.length > 0) {
+        params.set('opcoes', JSON.stringify(opcoesIniciais));
+      }
+      
+      window.location.href = `${baseUrl}?${params.toString()}`;
+    } else {
+      // Navega sem produto (modo venda normal)
+      window.location.href = baseUrl;
+    }
+    
     return true;
   } catch (error) {
-    console.error('Erro ao navegar:', error);
+    console.error('Erro ao navegar para vendas:', error);
     await playText('Erro ao abrir modo vendas.');
     return false;
   }

@@ -952,8 +952,8 @@ function CadastrosPageContent() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Controle de Usuários</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Gerencie cadastros, perfis e permissões
-              {selectedAssistantName && <span className="font-medium text-gray-900 dark:text-white"> — {selectedAssistantName}</span>}
+              Gerencie cadastros, perfis e permissões do assistente
+              {selectedAssistantName && <span className="font-medium text-gray-900 dark:text-white"> {selectedAssistantName}</span>}
             </p>
           </div>
 

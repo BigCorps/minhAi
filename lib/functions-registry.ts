@@ -16,6 +16,7 @@
 // ✅ ADICIONAR ESTE IMPORT NO TOPO
 import { createClient } from '@/lib/supabase-browser';
 import { cobrar_debito, cobrar_credito } from './paymentGatewayEntries'
+import { getContextualRoute } from '@/lib/routing-utils';
 
 export type ResponseType = 'voice' | 'modal' | 'page' | 'voice+modal' | 'voice+page';
 
@@ -5017,23 +5018,18 @@ modo_venda: {
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
-  handler: async ({ playText, slug }) => {
-    try {
-      // Navega para a página de vendas ao invés de abrir modal
-      if (slug) {
-        window.location.href = `/vendas/${slug}`;
-        await playText('Abrindo modo vendas!');
-        return true;
-      } else {
-        console.warn('Slug não disponível para navegação de vendas');
-        await playText('Erro ao abrir modo vendas.');
-        return false;
-      }
-    } catch (error) {
-      console.error('Erro ao navegar para vendas:', error);
-      return false;
-    }
-  },
+handler: async ({ playText, slug }) => {
+  try {
+    const url = getContextualRoute('vendas', slug);
+    window.location.href = url;
+    await playText('Abrindo modo vendas!');
+    return true;
+  } catch (error) {
+    console.error('Erro ao navegar:', error);
+    await playText('Erro ao abrir modo vendas.');
+    return false;
+  }
+},
 },
 
 ver_noticias: {

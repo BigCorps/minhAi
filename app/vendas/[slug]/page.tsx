@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase-browser';
 import SaleModeModal from '@/components/VoiceAssistant/modals/SaleModeModal';
 import SlugFooter from '@/components/slug/SlugFooter';
 import CategoryCarousel from '@/components/assistant/CategoryCarousel';
-import { navigateContextual } from '@/lib/routing-utils';
 
 interface VendasPageProps {
   params: Promise<{ slug: string }>;
@@ -21,6 +20,9 @@ export default function VendasPage({ params }: VendasPageProps) {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [companyData, setCompanyData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [produtoInicial, setProdutoInicial] = useState<any>(null);
+  const [quantidadeInicial, setQuantidadeInicial] = useState<number>(1);
+  const [opcoesIniciais, setOpcoesIniciais] = useState<any[]>([]);
 
   // Mounted state
   useEffect(() => {
@@ -63,9 +65,59 @@ export default function VendasPage({ params }: VendasPageProps) {
     fetchCompany();
   }, [slug, router]);
 
-const handleClose = () => {
-  navigateContextual(router, 'ia', slug || undefined);
-};
+  // Detectar produto inicial via query params
+  useEffect(() => {
+    if (!companyId || typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const produtoId = params.get('produto');
+    const quantidade = params.get('quantidade');
+    const opcoesJson = params.get('opcoes');
+
+    if (!produtoId) return;
+
+    // Buscar dados do produto
+    async function fetchProduto() {
+      const supabase = createClient();
+      
+      const { data: produto, error } = await supabase
+        .from('produtos_venda')
+        .select('*')
+        .eq('id', produtoId)
+        .eq('company_id', companyId)
+        .single();
+
+      if (error || !produto) {
+        console.error('Produto não encontrado:', error);
+        return;
+      }
+
+      setProdutoInicial(produto);
+      setQuantidadeInicial(quantidade ? parseInt(quantidade) : 1);
+      
+      // Parse opções se existirem
+      if (opcoesJson) {
+        try {
+          const opcoes = JSON.parse(opcoesJson);
+          setOpcoesIniciais(opcoes);
+        } catch (e) {
+          console.error('Erro ao parsear opções:', e);
+        }
+      }
+
+      // Limpar query params da URL (opcional, para ficar clean)
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+
+    fetchProduto();
+  }, [companyId]);
+
+  const handleClose = () => {
+    if (slug) {
+      router.push(`/ia/${slug}`);
+    }
+  };
 
   const handlePlayText = async (text: string) => {
     console.log('TTS:', text);
@@ -118,6 +170,9 @@ const handleClose = () => {
           onClose={handleClose}
           theme={theme}
           playText={handlePlayText}
+          produtoInicial={produtoInicial}
+          quantidadeInicial={quantidadeInicial}
+          opcoesIniciais={opcoesIniciais}
         />
       </div>
 

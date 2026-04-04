@@ -926,7 +926,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
           {/* SlugFooter - igual aos outros modos */}
           <div className="z-[60] relative">
-            <SlugFooter theme={theme} />
+            <SlugFooter
+  theme={theme}
+  slug={company.slug}
+  webapp_enabled={company.webapp_enabled}
+/>
           </div>
 
           <style jsx>{`
@@ -1085,7 +1089,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
           )}
 
           {/* G. SlugFooter - NOVO */}
-          <SlugFooter theme={theme} />
+          <SlugFooter
+  theme={theme}
+  slug={company.slug}
+  webapp_enabled={company.webapp_enabled}
+/>
 
         </div>
       )}

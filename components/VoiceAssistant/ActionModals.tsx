@@ -136,31 +136,6 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
   // ── Modais com props customizadas ─────────────────────────
   // Estes precisam de wrapper inline pois recebem props além do padrão
-  'SaleModeModal': dynamic(
-    () => import('@/components/VoiceAssistant/modals/SaleModeModal').then(mod => ({
-      default: ({ data, onClose, theme, playText }: any) => (
-        <mod.default
-          companyId={data.companyId}
-          theme={theme}
-          onClose={onClose}
-          playText={playText}
-          produtoDestaque={data.produtoDestaque}
-          isListening={data.isListening}
-          isProcessing={data.isProcessing}
-          isPlayingAudio={data.isPlayingAudio}
-          isTranscribing={data.isTranscribing}
-          onMicDown={data.onMicDown}
-          onMicUp={data.onMicUp}
-          onTextMessage={data.onTextMessage}
-          isMaximized={data.isMaximized}
-          profile={data.profile}
-          isFullscreen={false}
-        />
-      )
-    })),
-    { ssr: false }
-  ),
-
   'VerProdutoDisplay': dynamic(
     () => import('@/components/assistant/VerProdutoDisplay').then(mod => ({
       default: ({ data, onClose, theme, playText }: any) => (

@@ -1044,6 +1044,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
       onAssistantStart={() => setAssistantStarted(true)}
       hideDisabledFunctions={company.hide_disabled_functions_carousel}
       autoScroll={company.carousel_auto_scroll}
+      textMode={true}
       onTextMessage={(handler) => {
         textMessageHandlerRef.current = handler;
       }}

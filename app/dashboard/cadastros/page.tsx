@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
+import ModoToggle from '@/components/ModoToggle';
 import {
   UserPlus,
   Users,
@@ -955,6 +956,20 @@ function CadastrosPageContent() {
               {selectedAssistantName && <span className="font-medium text-gray-900 dark:text-white"> — {selectedAssistantName}</span>}
             </p>
           </div>
+
+          {/* Modo Fila */}
+          {companyId && (
+            <div className="mb-8">
+              <ModoToggle
+                companyId={companyId}
+                modoType="fila"
+                initialEnabled={false}
+                onToggle={(enabled) => {
+                  console.log('Modo Fila atualizado:', enabled);
+                }}
+              />
+            </div>
+          )}
 
           {/* Sem assistente */}
           {!companyId && (

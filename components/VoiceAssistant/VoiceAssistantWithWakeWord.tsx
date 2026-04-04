@@ -95,6 +95,7 @@ export function VoiceAssistantWithWakeWord({
   textMode = false,
 }: VoiceAssistantProps & {
   onTextMessage?: (handler: (text: string) => Promise<{ text: string; functionKey?: string } | null>) => void;
+  textMode?: boolean;
 }) {
 
   // ── States básicos ────────────────────────────────────────

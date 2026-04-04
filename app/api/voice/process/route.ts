@@ -48,7 +48,7 @@ function normalizeText(text: string): string {
 async function findMatchingFAQ(supabase: any, companyId: string, question: string) {
   console.log('=== FAQ MATCHING ===');
   console.log('❓', question);
-  
+
   const { data: faqs, error } = await supabase
     .from('faq_entries')
     .select('*')
@@ -62,25 +62,25 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
 
   const questionNormalized = normalizeText(question);
   const questionWords = questionNormalized.split(' ').filter((w: string) => w.length > 2);
-  
+
   let bestMatch: any = null;
   let bestScore = 0;
 
   for (const faq of faqs) {
     const faqQuestionNormalized = normalizeText(faq.question);
-    
+
     if (questionNormalized === faqQuestionNormalized) {
       bestScore = 1.0;
       bestMatch = faq;
       break;
     }
-    
+
     const score = similarity(questionNormalized, faqQuestionNormalized);
     if (score > bestScore && score > 0.85) {
       bestScore = score;
       bestMatch = faq;
     }
-    
+
     if (faq.variations && Array.isArray(faq.variations)) {
       for (const variation of faq.variations) {
         const variationNormalized = normalizeText(variation);
@@ -96,11 +96,11 @@ async function findMatchingFAQ(supabase: any, companyId: string, question: strin
         }
       }
     }
-    
+
     const faqWords = faqQuestionNormalized.split(' ').filter((w: string) => w.length > 2);
     const commonWords = questionWords.filter((w: string) => faqWords.includes(w));
     const keywordScore = commonWords.length / Math.max(questionWords.length, faqWords.length);
-    
+
     if (keywordScore > bestScore && keywordScore > 0.70) {
       bestScore = keywordScore;
       bestMatch = faq;
@@ -159,7 +159,7 @@ async function findMatchingHint(
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   console.log('\n=== 🎯 NOVA REQUISIÇÃO ===');
-  
+
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient();
-    
+
     const { data: company } = await supabase
       .from('companies')
       .select('id, name, system_prompt, orcamento_prompt, greeting_message, welcome_message')
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
         .eq('id', sessionId)
         .eq('company_id', companyId)
         .single();
-      
+
       if (session && new Date(session.expires_at) > new Date()) {
         currentSession = session;
         conversationHistory = session.messages || [];
@@ -247,7 +247,6 @@ export async function POST(request: NextRequest) {
         console.log(`🎯 Hint ativou função: ${matchedFunctionKey}`);
         const totalTime = Date.now() - startTime;
 
-        // Retornar áudio curto + header X-Function-Key para o frontend executar a função
         const hintAudio = await synthesizeSpeech({
           text: 'Um momento...',
           voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
@@ -271,15 +270,69 @@ export async function POST(request: NextRequest) {
     const matchingFAQ = useOrcamentoPrompt
       ? null
       : await findMatchingFAQ(supabase, companyId, userMessage);
-    
+
     let responseText = '';
     let usedFAQ = false;
 
     if (matchingFAQ) {
+      // ✅ NOVO: FAQ com função vinculada — retornar como execução de função
+      if (matchingFAQ.function_key) {
+        console.log(`⚡ FAQ com função vinculada: ${matchingFAQ.function_key}`);
+
+        // Incrementar usage_count (non-blocking)
+        supabase
+          .from('faq_entries')
+          .update({ usage_count: (matchingFAQ.usage_count || 0) + 1 })
+          .eq('id', matchingFAQ.id)
+          .then(() => console.log('📊 +1'));
+
+        await supabase.from('assistant_function_logs').insert({
+          company_id: companyId,
+          function_key: matchingFAQ.function_key,
+          credits_consumed: 1,
+          metadata: {
+            user_input: userMessage,
+            triggered_by: 'faq',
+            faq_id: matchingFAQ.id,
+          },
+        });
+
+        // Usar o answer da FAQ como fala introdutória antes de executar a função
+        const introText = matchingFAQ.answer || 'Um momento...';
+        const faqFunctionAudio = await synthesizeSpeech({
+          text: introText,
+          voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+          speakingRate: 1.2,
+          audioEncoding: 'MP3',
+        });
+
+        const totalTime = Date.now() - startTime;
+        console.log(`⏱️ Total: ${totalTime}ms\n`);
+
+        const responseHeaders: Record<string, string> = {
+          'Content-Type': 'audio/mpeg',
+          'X-Function-Key': matchingFAQ.function_key,
+          'X-Session-Id': currentSession.id,
+          'X-Used-FAQ': 'true',
+          'X-Processing-Time': String(totalTime),
+          'X-Transcription': encodeURIComponent(userMessage),
+          'X-Response-Text': encodeURIComponent(introText.slice(0, 300)),
+        };
+
+        if (matchingFAQ.function_params) {
+          responseHeaders['X-Function-Params'] = encodeURIComponent(
+            JSON.stringify(matchingFAQ.function_params)
+          );
+        }
+
+        return new Response(new Uint8Array(faqFunctionAudio), { headers: responseHeaders });
+      }
+
+      // Comportamento original — FAQ sem função vinculada
       responseText = matchingFAQ.answer;
       usedFAQ = true;
       console.log('⚡ Usando FAQ');
-      
+
       supabase
         .from('faq_entries')
         .update({ usage_count: (matchingFAQ.usage_count || 0) + 1 })
@@ -295,17 +348,17 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('🤖 Usando OpenAI GPT-4o-mini');
 
-const saleModeContext = saleMode
-  ? `\n\nCONTEXTO ATUAL: O cliente está visualizando o CARDÁPIO/LOJA VIRTUAL.
+      const saleModeContext = saleMode
+        ? `\n\nCONTEXTO ATUAL: O cliente está visualizando o CARDÁPIO/LOJA VIRTUAL.
 Suas prioridades agora:
 1. Responda perguntas sobre produtos, preços e disponibilidade de forma direta.
 2. Se o cliente perguntar algo não relacionado a produtos, responda brevemente e redirecione: "Posso te ajudar a escolher algo do cardápio?"
 3. Respostas curtas — o cliente está no processo de compra.
 4. Se mencionar um produto, confirme se está disponível e informe o preço.`
-  : '';
+        : '';
 
-const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
-  ? company.orcamento_prompt
+      const systemPrompt = useOrcamentoPrompt && company.orcamento_prompt
+        ? company.orcamento_prompt
         : `${company.system_prompt || `Você é um assistente virtual da empresa ${company.name}.`}
 
 Regras:
@@ -383,10 +436,10 @@ Pergunta: ${userMessage}`;
       speakingRate: 1.2,
       audioEncoding: 'MP3',
     });
-    
+
     const audioData = new Uint8Array(audioBuffer);
     let finalConversationId = conversationId || randomUUID();
-    
+
     if (!conversationId || conversationId === 'new') {
       await supabase.from('conversations').insert({ id: finalConversationId, company_id: companyId });
     }

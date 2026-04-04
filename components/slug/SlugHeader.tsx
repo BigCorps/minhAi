@@ -8,6 +8,7 @@ interface SlugHeaderProps {
     name: string;
     logo_url?: string | null;
     assistant_role?: string | null;
+    webapp_enabled?: boolean; //
   };
   theme: 'dark' | 'light';
   overlayMode?: boolean;

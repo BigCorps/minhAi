@@ -779,18 +779,7 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
         </div>
       )}
 
-      {/* Banner — permissões por tipo */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
-        <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
-            Quer definir quais funções cada tipo pode acessar?
-          </p>
-          <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
-            Acesse <a href="/dashboard/functions" className="underline font-semibold">Funções do Assistente</a> e use o seletor de perfil no topo da página para configurar as permissões de cada tipo.
-          </p>
-        </div>
-      </div>
+    
 
       {modalAberto && (
         <ProfileModal

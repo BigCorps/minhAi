@@ -1,12 +1,10 @@
 'use client';
 
-// ============================================================
 // components/cliente/dashboards/shared/BotaoLogout.tsx
-// Reutilizado em todos os dashboards.
-// ============================================================
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LogOut, Loader2 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 
 interface BotaoLogoutProps {
@@ -23,6 +21,7 @@ export default function BotaoLogout({ slug, theme }: BotaoLogoutProps) {
   async function handleLogout() {
     setSaindo(true);
     await logout();
+    // logout() já dispara eai:profileLogout — o SlugHeader atualiza o avatar
     router.replace(`/ia/${slug}`);
   }
 
@@ -40,15 +39,12 @@ export default function BotaoLogout({ slug, theme }: BotaoLogoutProps) {
     >
       {saindo ? (
         <>
-          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin" />
           Saindo...
         </>
       ) : (
         <>
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
+          <LogOut className="w-4 h-4" />
           Sair da Conta
         </>
       )}

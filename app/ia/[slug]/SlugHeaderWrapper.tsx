@@ -17,14 +17,14 @@ interface SlugHeaderWrapperProps {
     assistant_role?: string | null;
     webapp_theme_color?: string | null;
     webapp_enabled?: boolean;
+    modo_vendas_enabled?: boolean; // ← NOVO
+    modo_fila_enabled?: boolean;   // ← NOVO
   };
-  slug?: string;                          // NOVA: necessária para navegação
-  pageType?: 'ia' | 'vendas' | 'fila';   // NOVA: controla qual página estamos
+  slug?: string;
+  pageType?: 'ia' | 'vendas' | 'fila';
   overlayMode?: boolean;
   forceTheme?: 'dark' | 'light';
   onClose?: () => void;
-  // Controla visibilidade dos botões no overlayMode
-  // Desktop: via hover no topo | Mobile: via toque no topo
   showControls?: boolean;
 }
 
@@ -99,7 +99,6 @@ export default function SlugHeaderWrapper({
   };
 
   // LEGACY: mantido para retrocompatibilidade com código antigo
-  // Será ignorado pelo SlugHeader quando slug estiver presente
   const handleToggleModoVenda = () => {
     window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
       detail: { functionKey: 'modo_venda' },

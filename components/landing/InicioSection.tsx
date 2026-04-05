@@ -107,12 +107,12 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                   {OPCOES[currentIndex]}
                 </span>
               </span>
-              {' '}IA
+              {' '}IA que
             </span>
 
             {/* Linha 3 */}
             <span className="block whitespace-nowrap">
-              que trabalha 24/7{' '}
+              qexecuta + de 100 funções{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
                 por você
               </span>

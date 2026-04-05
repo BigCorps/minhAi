@@ -3,15 +3,17 @@
 // ============================================================
 // app/cliente/[slug]/cliente-page.tsx
 //
-// FIX: useProfile chama Edge Function auth-profile (~300ms).
-// O redirect só pode ocorrer DEPOIS de loading=false.
-// Sem isso, usuário logado é redirecionado para /ia/[slug].
+// - Usa SlugHeaderWrapper com pageType='cliente' (mesmo header
+//   do assistente, com troca de tema, navegação, avatar etc.)
+// - Escuta eai:profileLogin para atualizar sem refresh de página
+// - FIX: aguarda loading da Edge Function antes de redirecionar
 // ============================================================
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useProfile } from '@/hooks/useProfile';
+import SlugHeaderWrapper from '@/components/slug/SlugHeaderWrapper';
 
 const ClienteDashboard     = dynamic(() => import('@/components/cliente/dashboards/ClienteDashboard'));
 const ColaboradorDashboard = dynamic(() => import('@/components/cliente/dashboards/ColaboradorDashboard'));
@@ -38,11 +40,14 @@ interface ClientePageProps {
     slug: string;
     name: string;
     logo_url?: string | null;
+    assistant_role?: string | null;
+    webapp_enabled?: boolean;
+    modo_vendas_enabled?: boolean;
+    modo_fila_enabled?: boolean;
   };
-  theme: 'dark' | 'light';
 }
 
-export default function ClientePage({ company, theme }: ClientePageProps) {
+export default function ClientePage({ company }: ClientePageProps) {
   const router = useRouter();
   const { profile, loading } = useProfile(company.slug);
 
@@ -53,26 +58,48 @@ export default function ClientePage({ company, theme }: ClientePageProps) {
     }
   }, [loading, profile, router, company.slug]);
 
+  // ── Loading: aguarda Edge Function ───────────────────────
   if (loading) {
     return (
-      <div
-        className="flex flex-col items-center justify-center min-h-screen gap-4"
-        style={{ background: theme === 'dark' ? 'rgb(2, 6, 23)' : 'rgb(248, 250, 252)' }}
-      >
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
-        <p
-          className="text-sm"
-          style={{ color: theme === 'dark' ? 'rgb(148, 163, 184)' : 'rgb(100, 116, 139)' }}
-        >
-          Verificando sessão...
-        </p>
+      <div className="min-h-screen flex flex-col">
+        {/* Header mesmo durante o loading */}
+        <SlugHeaderWrapper
+          company={company}
+          slug={company.slug}
+          pageType="cliente"
+          overlayMode={false}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
+          <p className="text-sm text-slate-400">Verificando sessão...</p>
+        </div>
       </div>
     );
   }
 
+  // ── Sem perfil: aguarda redirect do useEffect ─────────────
   if (!profile) return null;
 
   const Dashboard = DASHBOARD_MAP[profile.tipo] ?? ColaboradorDashboard;
 
-  return <Dashboard profile={profile} company={company} theme={theme} />;
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* ── Header idêntico ao do assistente ─────────────── */}
+      <SlugHeaderWrapper
+        company={company}
+        slug={company.slug}
+        pageType="cliente"
+        overlayMode={false}
+      />
+
+      {/* ── Dashboard do tipo do perfil ───────────────────── */}
+      <main className="flex-1">
+        <Dashboard
+          profile={profile}
+          company={company}
+          theme="dark" // SlugHeaderWrapper controla o tema globalmente via next-themes
+        />
+      </main>
+    </div>
+  );
 }

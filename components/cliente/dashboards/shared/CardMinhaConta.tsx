@@ -1,10 +1,8 @@
 'use client';
 
-// ============================================================
 // components/cliente/dashboards/shared/CardMinhaConta.tsx
-// Exibe dados do perfil logado. Reutilizado em todos os dashboards.
-// ============================================================
 
+import { User } from 'lucide-react';
 import { SlugProfile } from '@/hooks/useProfile';
 
 const TIPO_LABEL: Record<string, string> = {
@@ -35,21 +33,20 @@ export default function CardMinhaConta({ profile, theme }: CardMinhaContaProps) 
   const tipoLabel  = TIPO_LABEL[profile.tipo]  ?? profile.tipo;
   const telefone   = profile.metadata?.telefone ?? null;
 
-  const cardBg     = isDark ? 'rgba(30,41,59,0.8)'      : 'rgba(255,255,255,0.9)';
-  const cardBorder = isDark ? 'rgba(148,163,184,0.1)'   : 'rgba(203,213,225,0.3)';
-  const labelColor = isDark ? 'rgb(100,116,139)'         : 'rgb(148,163,184)';
-  const valueColor = isDark ? 'rgb(226,232,240)'         : 'rgb(15,23,42)';
-  const titleColor = isDark ? 'rgb(241,245,249)'         : 'rgb(15,23,42)';
+  const cardBg     = isDark ? 'rgba(30,41,59,0.8)'    : 'rgba(255,255,255,0.9)';
+  const cardBorder = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(203,213,225,0.3)';
+  const labelColor = isDark ? 'rgb(100,116,139)'       : 'rgb(148,163,184)';
+  const valueColor = isDark ? 'rgb(226,232,240)'       : 'rgb(15,23,42)';
+  const titleColor = isDark ? 'rgb(241,245,249)'       : 'rgb(15,23,42)';
 
   return (
-    <div
-      className="rounded-2xl p-6 shadow-lg border"
-      style={{ background: cardBg, borderColor: cardBorder }}
-    >
+    <div className="rounded-2xl p-6 shadow-lg border"
+      style={{ background: cardBg, borderColor: cardBorder }}>
+
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center"
           style={{ background: 'rgba(168,85,247,0.1)' }}>
-          👤
+          <User className="w-6 h-6" style={{ color: isDark ? 'rgb(216,180,254)' : 'rgb(107,33,168)' }} />
         </div>
         <div>
           <h2 className="text-xl font-bold" style={{ color: titleColor }}>Minha Conta</h2>
@@ -61,15 +58,15 @@ export default function CardMinhaConta({ profile, theme }: CardMinhaContaProps) 
       </div>
 
       <div className="space-y-4">
-        <Row label="Nome" value={profile.nome} labelColor={labelColor} valueColor={valueColor} />
+        <Row label="Nome"         value={profile.nome}          labelColor={labelColor} valueColor={valueColor} />
         {profile.email && (
-          <Row label="E-mail" value={profile.email} labelColor={labelColor} valueColor={valueColor} small />
+          <Row label="E-mail"     value={profile.email}         labelColor={labelColor} valueColor={valueColor} small />
         )}
         {profile.identificador && profile.identificador !== profile.email && (
           <Row label="Identificador" value={profile.identificador} labelColor={labelColor} valueColor={valueColor} />
         )}
         {telefone && (
-          <Row label="Telefone" value={telefone} labelColor={labelColor} valueColor={valueColor} />
+          <Row label="Telefone"   value={telefone}              labelColor={labelColor} valueColor={valueColor} />
         )}
       </div>
     </div>

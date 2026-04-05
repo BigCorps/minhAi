@@ -189,7 +189,9 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
         assistant_role: company.assistant_role,
         hide_disabled_functions_carousel: company.hide_disabled_functions_carousel,
         carousel_auto_scroll: company.carousel_auto_scroll,
-        webapp_enabled: company.webapp_enabled ?? false, //
+        webapp_enabled: company.webapp_enabled ?? false,
+      modo_vendas_enabled: company.modo_vendas_enabled ?? false,
+      modo_fila_enabled: company.modo_fila_enabled ?? false,
       }}
     />
   );

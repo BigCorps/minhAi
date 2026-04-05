@@ -80,7 +80,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           >
             {/* Linha 1 */}
             <span className="block whitespace-nowrap">
-              Uma <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>IA</span> pra chamar de sua!
+              className={isDark ? 'text-blue-400' : 'text-blue-600'}>Uma IA pra chamar de sua!</span>
             </span>
 
             {/* Linha 2 - com rolagem vertical */}

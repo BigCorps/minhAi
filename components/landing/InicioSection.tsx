@@ -80,7 +80,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           >
             {/* Linha 1 */}
   <span className="block whitespace-nowrap">
-  <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-4xl font-extrabold`}>
+  <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-3xl font-bold`}>
     Uma IA pra chamar de sua!
   </span>
 </span>
@@ -114,9 +114,9 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 
             {/* Linha 3 */}
             <span className="block whitespace-nowrap">
-              executa + de 100 funções{' '}
+              faz + de 100 funções{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                por você
+                pra você
               </span>
               !
             </span>

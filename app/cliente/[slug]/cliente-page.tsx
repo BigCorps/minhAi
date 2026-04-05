@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import { useProfile } from '@/hooks/useProfile';
 import SlugHeader from '@/components/slug/SlugHeader';
 import SlugFooter from '@/components/slug/SlugFooter';
-import CategoryCarousel from '@/components/CategoryCarousel';
+import CategoryCarousel from '@/components/assistant/CategoryCarousel';
 
 // Importações dinâmicas dos dashboards
 import dynamic from 'next/dynamic';
@@ -16,12 +16,12 @@ const ClienteDashboard = dynamic(
   { ssr: false, loading: () => <DashboardSkeleton /> }
 );
 
-const ColaboradorDashboard = dynamic(
-  () => import('@/components/cliente/dashboards/ColaboradorDashboard'),
-  { ssr: false, loading: () => <DashboardSkeleton /> }
-);
+ const ColaboradorDashboard = dynamic(
+   () => import('@/components/cliente/dashboards/ColaboradorDashboard'),
+ { ssr: false, loading: () => <DashboardSkeleton /> }
+ );
 
-const TotemDashboard = dynamic(
+ const TotemDashboard = dynamic(
   () => import('@/components/cliente/dashboards/TotemDashboard'),
   { ssr: false, loading: () => <DashboardSkeleton /> }
 );

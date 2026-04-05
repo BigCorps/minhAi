@@ -153,6 +153,8 @@ export function VoiceAssistantWithWakeWord({
 
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────
   const faqs = useFAQs(companyId);
+  const faqsRef = useRef<typeof faqs>([]);
+  useEffect(() => { faqsRef.current = faqs; }, [faqs]);
 
   // ── Push-to-talk ───────────────────────────────────────────
   const voiceRecorder = useVoiceRecorder();
@@ -961,7 +963,7 @@ export function VoiceAssistantWithWakeWord({
     await stopGoogleSpeech();
 
     // ── FAQ FIRST ─────────────────────────────────────────────
-    const matchedFAQ = findMatchingFAQLocal(faqs, questionText);
+    const matchedFAQ = findMatchingFAQLocal(faqsRef.current, questionText);
     if (matchedFAQ) {
       console.log('📚 FAQ resolvida localmente:', matchedFAQ.question);
 
@@ -1279,8 +1281,8 @@ const handleTextMessage = async (message: string) => {
 
     try {
       // ── FAQ FIRST ─────────────────────────────────────────────
-      const matchedFAQ = findMatchingFAQLocal(faqs, message);
-      console.log('🔎 FAQ check:', faqsRef.current.length, 'faqs | query:', questionText, '| match:', matchedFAQ?.question ?? 'null');
+      const matchedFAQ = findMatchingFAQLocal(faqsRef.current, message);
+      console.log('🔎 FAQ check:', faqsRef.current.length, 'faqs | match:', matchedFAQ?.question ?? 'null');
       if (matchedFAQ) {
         console.log('📚 FAQ resolvida localmente (texto):', matchedFAQ.question);
 

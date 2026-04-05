@@ -83,7 +83,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
   <span
     className={`
       ${isDark ? 'text-blue-400' : 'text-blue-600'}
-      text-6xl md:text-3xl lg:text-8xl font-bold
+      text-5xl md:text-3xl lg:text-5xl font-bold
     `}
   >
     Uma IA pra chamar de sua!

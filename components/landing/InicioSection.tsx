@@ -79,8 +79,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             }`}
           >
             {/* Linha 1 */}
-            <span className="block whitespace-nowrap">
-  <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-2xl font-bold`}>
+  <span className="block whitespace-nowrap">
+  <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-4xl font-extrabold`}>
     Uma IA pra chamar de sua!
   </span>
 </span>
@@ -129,7 +129,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           >
             Personalize seu assistente e transforme a experiência dos seus clientes com um 
             funcionário de voz e texto que trabalha 24/7. Tenha seu prórpio WebApp personalizado e configure do seu jeito para responder perguntas, executar 
-            funções, gerar cobranças, agendar consultas, recomendar vídeos, produtos e muito mais.
+            funções, gerar cobranças, agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
           </p>
 
           {/* Botões CTA */}

@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { navigateContextual } from '@/lib/routing-utils';
 import { useProfile } from '@/hooks/useProfile';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
-// Importação dinâmica do LoginClienteDisplay
 const LoginClienteDisplay = dynamic(
   () => import('@/components/assistant/LoginClienteDisplay'),
   { ssr: false }
@@ -24,9 +23,9 @@ interface SlugHeaderProps {
     modo_fila_enabled?: boolean;
     id: string;
   };
-  slug?: string; // NOVA: necessária para navegação entre páginas
+  slug?: string;
   theme: 'dark' | 'light';
-  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente'; // NOVA: controla qual página estamos
+  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente';
   overlayMode?: boolean;
   isKioskMode?: boolean;
   isWakeLockActive?: boolean;
@@ -44,7 +43,7 @@ export default function SlugHeader({
   company,
   slug,
   theme,
-  pageType = 'ia', // Padrão: página do assistente
+  pageType = 'ia',
   overlayMode = false,
   isKioskMode = false,
   isWakeLockActive = false,
@@ -58,37 +57,50 @@ export default function SlugHeader({
   onClose,
 }: SlugHeaderProps) {
   const router = useRouter();
-  
-  // Hook de perfil do usuário
-  const { profile } = useProfile(slug ?? '');
+
+  // ── Profile: lê do hook + re-sincroniza ao ouvir eai:profileLogin/Logout ──
+  const { profile: hookProfile } = useProfile(slug ?? '');
+  const [profile, setProfile] = useState(hookProfile);
+
+  // Sincroniza quando o hook resolve (após Edge Function responder)
+  useEffect(() => {
+    setProfile(hookProfile);
+  }, [hookProfile]);
+
+  // ✅ FIX: escuta eventos de login/logout para atualizar o avatar sem refresh
+  useEffect(() => {
+    const handleLogin = (e: CustomEvent) => {
+      setProfile(e.detail ?? null);
+    };
+    const handleLogout = () => {
+      setProfile(null);
+    };
+
+    window.addEventListener('eai:profileLogin',  handleLogin  as EventListener);
+    window.addEventListener('eai:profileLogout', handleLogout as EventListener);
+
+    return () => {
+      window.removeEventListener('eai:profileLogin',  handleLogin  as EventListener);
+      window.removeEventListener('eai:profileLogout', handleLogout as EventListener);
+    };
+  }, []);
+
   const isLoggedIn = !!profile;
-  
-  // Estado do modal de login
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // ─────────────────────────────────────────────────────────
-  // Lógica de visibilidade: nunca mostrar o botão da página atual
-  // ─────────────────────────────────────────────────────────
-  const showAssistenteButton = (!isLoggedIn || pageType === 'ia') && pageType !== 'ia';
-  const showVendasButton = (company.modo_vendas_enabled === true) && pageType !== 'vendas';
-  const showFilaButton = (company.modo_fila_enabled === true) && pageType !== 'fila';
+  // ── Visibilidade dos botões de navegação ──────────────────
+  const showAssistenteButton = pageType !== 'ia';
+  const showVendasButton     = company.modo_vendas_enabled === true && pageType !== 'vendas';
+  const showFilaButton       = company.modo_fila_enabled   === true && pageType !== 'fila';
+  // Botão cliente: se logado mostra avatar (sempre), se não logado mostra ícone user
+  // Na própria página /cliente não mostra (pois o logout está no dashboard)
+  const showClienteButton    = pageType !== 'cliente';
 
-  // ─────────────────────────────────────────────────────────
-  // Handlers de navegação
-  // ─────────────────────────────────────────────────────────
-const handleNavigateToIA = () => {
-  navigateContextual(router, 'ia', slug);
-};
+  // ── Handlers ─────────────────────────────────────────────
+  const handleNavigateToIA     = () => navigateContextual(router, 'ia',      slug);
+  const handleNavigateToVendas = () => navigateContextual(router, 'vendas',  slug);
+  const handleNavigateToFila   = () => navigateContextual(router, 'fila',    slug);
 
-const handleNavigateToVendas = () => {
-  navigateContextual(router, 'vendas', slug);
-};
-
-const handleNavigateToFila = () => {
-  navigateContextual(router, 'fila', slug);
-};
-
-  // Handler do botão Clientes
   const handleClientesClick = () => {
     if (isLoggedIn) {
       navigateContextual(router, 'cliente', slug);
@@ -97,17 +109,11 @@ const handleNavigateToFila = () => {
     }
   };
 
-  // Função para obter iniciais do nome
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const getInitials = (name: string) =>
+    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-  const icon = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
+  // ── Estilos ───────────────────────────────────────────────
+  const icon       = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
   const iconMobile = 'w-4 h-4';
 
   const btn = (extra = '') => {
@@ -137,10 +143,10 @@ const handleNavigateToFila = () => {
           : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50 hover:border-emerald-300'
       }`;
 
-  // Badge de verificado (verde limão) — aparece quando webapp_enabled = true
+  // ── Badge verificado ──────────────────────────────────────
   const VerifiedBadge = ({ size = 'md' }: { size?: 'sm' | 'md' }) => {
     if (!company.webapp_enabled) return null;
-    const wh = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+    const wh     = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
     const iconWh = size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3';
     return (
       <span
@@ -148,35 +154,23 @@ const handleNavigateToFila = () => {
         className={`inline-flex items-center justify-center ${wh} rounded-full flex-shrink-0`}
         style={{ background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)' }}
       >
-        <svg
-          className={`${iconWh} text-white`}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          viewBox="0 0 24 24"
-        >
+        <svg className={`${iconWh} text-white`} fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </span>
     );
   };
 
-  // ─────────────────────────────────────────────────────────
-  // BOTÕES DE NAVEGAÇÃO (novos)
-  // ─────────────────────────────────────────────────────────
+  // ── Botões de navegação ───────────────────────────────────
   const NavigationButtons = ({ iconSize }: { iconSize?: string } = {}) => {
     const sz = iconSize ?? icon;
-    if (!slug) return null; // Não renderiza se não tiver slug
+    if (!slug) return null;
 
     return (
       <>
-        {/* Botão Assistente - só aparece quando NÃO estiver na página IA */}
+        {/* Assistente */}
         {showAssistenteButton && (
-          <button
-            onClick={handleNavigateToIA}
-            className={btn()}
-            title="Ir para Assistente"
-          >
+          <button onClick={handleNavigateToIA} className={btn()} title="Ir para Assistente">
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -184,13 +178,9 @@ const handleNavigateToFila = () => {
           </button>
         )}
 
-        {/* Botão Vendas - só aparece quando NÃO estiver na página Vendas */}
+        {/* Vendas */}
         {showVendasButton && (
-          <button
-            onClick={handleNavigateToVendas}
-            className={btn()}
-            title="Ir para Vendas"
-          >
+          <button onClick={handleNavigateToVendas} className={btn()} title="Ir para Vendas">
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -198,13 +188,9 @@ const handleNavigateToFila = () => {
           </button>
         )}
 
-        {/* Botão Fila - só aparece quando NÃO estiver na página Fila */}
+        {/* Fila */}
         {showFilaButton && (
-          <button
-            onClick={handleNavigateToFila}
-            className={btn()}
-            title="Ir para Fila de Atendimento"
-          >
+          <button onClick={handleNavigateToFila} className={btn()} title="Ir para Fila de Atendimento">
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -212,40 +198,40 @@ const handleNavigateToFila = () => {
           </button>
         )}
 
-        {/* Botão Clientes/Perfil */}
-        <button
-          onClick={handleClientesClick}
-          className={btn()}
-          title={isLoggedIn ? 'Meu Perfil' : 'Fazer Login'}
-        >
-          {isLoggedIn ? (
-            <div className={`${sz} rounded-full flex items-center justify-center text-[10px] font-bold ${
-              theme === 'dark' ? 'bg-white/10 text-white' : 'bg-black/10 text-black'
-            }`}>
-              {getInitials(profile.nome)}
-            </div>
-          ) : (
-            <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          )}
-        </button>
+        {/* Cliente / Avatar */}
+        {showClienteButton && (
+          <button
+            onClick={handleClientesClick}
+            className={btn()}
+            title={isLoggedIn ? `Meu Perfil (${profile!.nome})` : 'Fazer Login'}
+          >
+            {isLoggedIn ? (
+              // Avatar com iniciais — atualiza imediatamente via estado local
+              <div className={`${sz} rounded-full flex items-center justify-center text-[10px] font-bold ${
+                theme === 'dark' ? 'bg-blue-500/30 text-blue-200' : 'bg-blue-100 text-blue-700'
+              }`}
+                style={{ minWidth: sz.includes('5') ? '20px' : '16px', minHeight: sz.includes('5') ? '20px' : '16px' }}
+              >
+                {getInitials(profile!.nome)}
+              </div>
+            ) : (
+              <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            )}
+          </button>
+        )}
       </>
     );
   };
 
-  // Botões do overlay — visibilidade controlada por showControls
+  // ── Grupos de botões ──────────────────────────────────────
   const overlayButtons = (
     <div className={`flex items-center space-x-1 transition-all duration-300 ${
       showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
     }`}>
-      {/* BOTÕES DE NAVEGAÇÃO */}
       <NavigationButtons />
-      
-      {/* BOTÃO MODO VENDA (legacy - removido pois agora temos navegação) */}
-      {/* {onToggleModoVenda && (...)} */}
-      
       {onEnterKioskMode && !isKioskMode && (
         <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
           <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,11 +241,8 @@ const handleNavigateToFila = () => {
         </button>
       )}
       {isWakeLockSupported && onToggleWakeLock && (
-        <button
-          onClick={onToggleWakeLock}
-          className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-        >
+        <button onClick={onToggleWakeLock} className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
+          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
           {isWakeLockActive ? (
             <svg className={`${icon} text-green-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -298,13 +281,9 @@ const handleNavigateToFila = () => {
     </div>
   );
 
-  // Botões do modo normal (sempre visíveis)
   const normalButtons = (
     <div className="flex items-center space-x-1">
-      {/* BOTÕES DE NAVEGAÇÃO */}
       <NavigationButtons />
-      
-      {/* BOTÃO MODO VENDA (legacy - mantido para compatibilidade com código existente) */}
       {onToggleModoVenda && !slug && (
         <button onClick={onToggleModoVenda} className={btnVenda()} title="Modo Venda">
           <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,7 +292,6 @@ const handleNavigateToFila = () => {
           </svg>
         </button>
       )}
-      
       {onEnterKioskMode && !isKioskMode && (
         <button onClick={onEnterKioskMode} className={btn()} title="Ativar Modo Kiosk">
           <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,11 +301,8 @@ const handleNavigateToFila = () => {
         </button>
       )}
       {isWakeLockSupported && onToggleWakeLock && (
-        <button
-          onClick={onToggleWakeLock}
-          className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-        >
+        <button onClick={onToggleWakeLock} className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
+          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
           {isWakeLockActive ? (
             <svg className={`${icon} text-green-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -359,6 +334,7 @@ const handleNavigateToFila = () => {
     </div>
   );
 
+  // ── Render ────────────────────────────────────────────────
   return (
     <header
       data-role="slug-header"
@@ -372,40 +348,25 @@ const handleNavigateToFila = () => {
             }`
       }`}
     >
-      <div className={overlayMode
-        ? 'px-2 py-1'
-        : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
-      }>
+      <div className={overlayMode ? 'px-2 py-1' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}>
 
-        {/* ── Desktop Layout ─────────────────────────────────── */}
-        <div className={`hidden md:flex md:items-center md:justify-between relative ${
-          overlayMode ? '' : 'py-4'
-        }`}>
-
-          {/* ESQUERDA */}
+        {/* ── Desktop ───────────────────────────────────────── */}
+        <div className={`hidden md:flex md:items-center md:justify-between relative ${overlayMode ? '' : 'py-4'}`}>
           {!overlayMode ? (
             <div className="flex items-center space-x-3">
               {company.logo_url && (
-                <img
-                  src={company.logo_url}
-                  alt={`${company.name} logo`}
+                <img src={company.logo_url} alt={`${company.name} logo`}
                   className="rounded-lg object-contain flex-shrink-0"
-                  style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }}
-                />
+                  style={{ maxHeight: '40px', height: 'auto', width: 'auto', maxWidth: '120px' }} />
               )}
               <div className="flex flex-col">
-                {/* Nome + badge */}
                 <div className="flex items-center gap-2">
-                  <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <h1 className={`text-xl sm:text-2xl font-bold transition-colors ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                     {company.name}
                   </h1>
                   <VerifiedBadge size="md" />
                 </div>
-                <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${
-                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-                }`}>
+                <p className={`text-xs sm:text-sm tracking-wider uppercase transition-colors ${theme === 'dark' ? 'text-white/40' : 'text-gray-500'}`}>
                   {company.assistant_role || 'Uma IA pra chamar de sua!'}
                 </p>
               </div>
@@ -414,107 +375,63 @@ const handleNavigateToFila = () => {
             <div />
           )}
 
-          {/* DIREITA: botões + logo minhAi */}
           <div className="relative flex items-center space-x-2">
             {overlayMode ? overlayButtons : normalButtons}
-            {!overlayMode && (
-              <div className={`w-px h-10 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'}`} />
-            )}
-            <Link
-              href="https://minhai.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity"
-              title="Visite minhAi.app"
-            >
-              <Image
-                src="/logo-circle.png"
-                alt="minhAi logo"
-                width={overlayMode ? 36 : 40}
-                height={overlayMode ? 36 : 40}
-                className="rounded-lg"
-              />
+            {!overlayMode && <div className={`w-px h-10 ${theme === 'dark' ? 'bg-white/10' : 'bg-gray-300'}`} />}
+            <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
+              className="flex-shrink-0 hover:opacity-80 transition-opacity" title="Visite minhAi.app">
+              <Image src="/logo-circle.png" alt="minhAi logo"
+                width={overlayMode ? 36 : 40} height={overlayMode ? 36 : 40} className="rounded-lg" />
             </Link>
           </div>
         </div>
 
-        {/* ── Mobile Normal ──────────────────────────────────── */}
+        {/* ── Mobile Normal ─────────────────────────────────── */}
         {!overlayMode && (
           <div className="md:hidden py-4 space-y-4">
             <div className="relative flex items-center justify-center min-h-[48px] px-4">
               {company.logo_url && (
                 <div className="absolute left-4 flex-shrink-0">
-                  <img
-                    src={company.logo_url}
-                    alt={`${company.name} logo`}
+                  <img src={company.logo_url} alt={`${company.name} logo`}
                     className="rounded-lg object-contain"
-                    style={{ maxHeight: '36px', height: 'auto', width: 'auto', maxWidth: '80px' }}
-                  />
+                    style={{ maxHeight: '36px', height: 'auto', width: 'auto', maxWidth: '80px' }} />
                 </div>
               )}
               <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center text-center">
-                {/* Nome + badge */}
                 <div className="flex items-center gap-1.5">
-                  <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <h1 className={`text-lg font-bold whitespace-nowrap transition-colors ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                     {company.name}
                   </h1>
                   <VerifiedBadge size="sm" />
                 </div>
-                <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${
-                  theme === 'dark' ? 'text-white/40' : 'text-gray-500'
-                }`}>
+                <p className={`text-[10px] tracking-wider uppercase whitespace-nowrap transition-colors ${theme === 'dark' ? 'text-white/40' : 'text-gray-500'}`}>
                   {company.assistant_role || 'Uma IA para chamar de sua!'}
                 </p>
               </div>
-              <Link
-                href="https://minhai.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity"
-                title="Visite minhAi.app"
-              >
+              <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
+                className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity" title="Visite minhAi.app">
                 <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
               </Link>
             </div>
-
             <div className="flex items-center justify-center space-x-2">
-              {/* BOTÕES DE NAVEGAÇÃO */}
               <NavigationButtons iconSize={iconMobile} />
-              
               {onEnterKioskMode && (
-                <button
-                  onClick={onEnterKioskMode}
+                <button onClick={onEnterKioskMode}
                   className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
                     theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
                   } ${isKioskMode ? 'ring-2 ring-red-500 ring-opacity-50' : ''}`}
-                  title="Modo Kiosk"
-                >
-                  {isKioskMode ? (
-                    <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                    </svg>
-                  )}
+                  title="Modo Kiosk">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
                 </button>
               )}
-              {/* BOTÃO MODO VENDA (legacy - só aparece se não tiver slug) */}
               {onToggleModoVenda && !slug && (
-                <button
-                  onClick={onToggleModoVenda}
+                <button onClick={onToggleModoVenda}
                   className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                    theme === 'dark'
-                      ? 'bg-white/5 border-white/10 text-white hover:bg-emerald-500/20'
-                      : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50'
-                  }`}
-                  title="Modo Venda"
-                >
+                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white hover:bg-emerald-500/20' : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50'
+                  }`} title="Modo Venda">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -522,34 +439,22 @@ const handleNavigateToFila = () => {
                 </button>
               )}
               {isWakeLockSupported && onToggleWakeLock && (
-                <button
-                  onClick={onToggleWakeLock}
+                <button onClick={onToggleWakeLock}
                   className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
                     theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
                   } ${isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
-                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-                >
-                  {isWakeLockActive ? (
-                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
+                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
                 </button>
               )}
               {onToggleTheme && (
-                <button
-                  onClick={onToggleTheme}
+                <button onClick={onToggleTheme}
                   className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
                     theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                  }`}
-                  title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-                >
+                  }`} title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
                   {theme === 'dark' ? (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -567,20 +472,13 @@ const handleNavigateToFila = () => {
           </div>
         )}
 
-        {/* ── Mobile Overlay ─────────────────────────────────── */}
+        {/* ── Mobile Overlay ────────────────────────────────── */}
         {overlayMode && (
           <div className="md:hidden relative flex items-center justify-end min-h-[48px] py-2">
-
-            {/* Botões — absolute para não empurrar o logo */}
             <div className={`absolute right-9 flex items-center space-x-1 transition-all duration-300 ${
               showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}>
-              {/* BOTÕES DE NAVEGAÇÃO */}
               <NavigationButtons />
-              
-              {/* BOTÃO MODO VENDA (legacy - removido do overlay) */}
-              {/* {onToggleModoVenda && (...)} */}
-              
               {onEnterKioskMode && !isKioskMode && (
                 <button onClick={onEnterKioskMode} className={btn()} title="Modo Kiosk">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,11 +488,9 @@ const handleNavigateToFila = () => {
                 </button>
               )}
               {isWakeLockSupported && onToggleWakeLock && (
-                <button
-                  onClick={onToggleWakeLock}
+                <button onClick={onToggleWakeLock}
                   className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}
-                >
+                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -617,30 +513,18 @@ const handleNavigateToFila = () => {
                 </button>
               )}
             </div>
-
-            {/* Logo minhAi — no fluxo flex, sempre visível */}
-            <Link
-              href="https://minhai.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity z-10"
-              title="Visite minhAi.app"
-            >
+            <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
+              className="flex-shrink-0 hover:opacity-80 transition-opacity z-10" title="Visite minhAi.app">
               <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
             </Link>
           </div>
         )}
-
       </div>
 
       {/* Modal de Login */}
       {showLoginModal && (
         <LoginClienteDisplay
-          data={{
-            companyId: company.id,
-            slug: slug ?? '',
-            profile,
-          }}
+          data={{ companyId: company.id, slug: slug ?? '', profile }}
           onClose={() => setShowLoginModal(false)}
           theme={theme}
           playText={async () => {}}

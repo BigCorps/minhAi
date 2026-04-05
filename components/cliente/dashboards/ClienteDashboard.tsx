@@ -226,11 +226,6 @@ export default function ClienteDashboard({ profile, company, theme }: ClienteDas
 
       </div>
 
-      {/* Logout full no mobile (abaixo dos cards) */}
-      <div className="mt-8 sm:hidden">
-        <BotaoLogout slug={company.slug} theme={theme} profile={profile} />
-      </div>
-
     </div>
   );
 }

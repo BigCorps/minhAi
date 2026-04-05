@@ -1622,10 +1622,10 @@ export function VoiceAssistantWithWakeWord({
       <div className="grid md:grid-cols-2 gap-8">
 
         {/* Card esquerdo: Avatar */}
-        <div className={`rounded-3xl shadow-2xl p-4 md:p-8 border relative overflow-hidden transition-colors ${
+        <div className={`rounded-3xl shadow-2xl p-8 border relative overflow-hidden transition-colors ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
-          <div className="relative h-52 md:h-96">
+          <div className="relative h-96">
             <AvatarFace
               isListening={isListening}
               isSpeaking={isPlayingAudio}
@@ -1644,27 +1644,27 @@ export function VoiceAssistantWithWakeWord({
         </div>
 
         {/* Card direito: Status / Microfone */}
-        <div className={`rounded-3xl shadow-2xl p-4 md:p-8 border transition-colors h-auto md:h-[448px] flex flex-col overflow-hidden ${
+        <div className={`rounded-3xl shadow-2xl p-8 border transition-colors h-[448px] flex flex-col overflow-hidden ${
           theme === 'dark' ? 'bg-slate-900/50 border-white/10 backdrop-blur-xl' : 'bg-white border-gray-200'
         }`}>
           <div className="flex flex-col items-center flex-1 min-h-0">
 
-            <div className="relative flex items-center justify-center mt-1 md:mt-2">
+            <div className="relative flex items-center justify-center mt-2">
               <button
                 onMouseDown={handleMicButtonDown}
                 onMouseUp={handleMicButtonUp}
                 onTouchStart={handleMicButtonDown}
                 onTouchEnd={handleMicButtonUp}
                 disabled={(!permissionGranted && hasMicrophone) || !hasMicrophone || showStartButton || isTranscribing}
-                className={`w-16 h-16 md:w-[102px] md:h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
+                className={`w-[102px] h-[102px] rounded-full ${getMicButtonColor()} flex items-center justify-center transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300/50 disabled:opacity-50 select-none`}
                 aria-label="Segurar para falar"
               >
                 {isPlayingAudio ? (
-                  <Square className="w-8 h-8 md:w-[51px] md:h-[51px] text-white fill-current" />
+                  <Square className="w-[51px] h-[51px] text-white fill-current" />
                 ) : hasMicrophone && permissionGranted ? (
-                  <Mic className="w-8 h-8 md:w-[51px] md:h-[51px] text-white" />
+                  <Mic className="w-[51px] h-[51px] text-white" />
                 ) : (
-                  <MicOff className="w-8 h-8 md:w-[51px] md:h-[51px] text-white opacity-50" />
+                  <MicOff className="w-[51px] h-[51px] text-white opacity-50" />
                 )}
               </button>
             </div>
@@ -1676,7 +1676,7 @@ export function VoiceAssistantWithWakeWord({
             )}
 
             <div className="text-center w-full mt-4">
-              <p className={`text-base md:text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <p className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 {getStatusMessage()}
               </p>
               <p className={`text-sm ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>

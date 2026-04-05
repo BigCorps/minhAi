@@ -820,7 +820,7 @@ function AbaTotens({ companyId }: { companyId: string }) {
       <div className="bg-white/50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-4">
         <div className="flex items-center gap-3">
           <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">
-            Totens são dispositivos físicos fixos (tablets, quiosques). Cada totem tem um perfil próprio com localização.
+            Totens podem ser Tablets, PDVs, Quiosques, etc.
           </p>
           <button onClick={load} disabled={loading}
             className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition disabled:opacity-50">

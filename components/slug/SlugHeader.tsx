@@ -108,6 +108,7 @@ const handleNavigateToFila = () => {
   };
 
   const icon = overlayMode ? 'w-4 h-4' : 'w-5 h-5';
+  const iconMobile = 'w-4 h-4';
 
   const btn = (extra = '') => {
     const base = overlayMode
@@ -163,7 +164,8 @@ const handleNavigateToFila = () => {
   // ─────────────────────────────────────────────────────────
   // BOTÕES DE NAVEGAÇÃO (novos)
   // ─────────────────────────────────────────────────────────
-  const NavigationButtons = () => {
+  const NavigationButtons = ({ iconSize }: { iconSize?: string } = {}) => {
+    const sz = iconSize ?? icon;
     if (!slug) return null; // Não renderiza se não tiver slug
 
     return (
@@ -175,7 +177,7 @@ const handleNavigateToFila = () => {
             className={btn()}
             title="Ir para Assistente"
           >
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
@@ -189,7 +191,7 @@ const handleNavigateToFila = () => {
             className={btn()}
             title="Ir para Vendas"
           >
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
@@ -203,7 +205,7 @@ const handleNavigateToFila = () => {
             className={btn()}
             title="Ir para Fila de Atendimento"
           >
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
@@ -217,13 +219,13 @@ const handleNavigateToFila = () => {
           title={isLoggedIn ? 'Meu Perfil' : 'Fazer Login'}
         >
           {isLoggedIn ? (
-            <div className={`${icon} rounded-full flex items-center justify-center text-[10px] font-bold ${
+            <div className={`${sz} rounded-full flex items-center justify-center text-[10px] font-bold ${
               theme === 'dark' ? 'bg-white/10 text-white' : 'bg-black/10 text-black'
             }`}>
               {getInitials(profile.nome)}
             </div>
           ) : (
-            <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -479,7 +481,7 @@ const handleNavigateToFila = () => {
 
             <div className="flex items-center justify-center space-x-2">
               {/* BOTÕES DE NAVEGAÇÃO */}
-              <NavigationButtons />
+              <NavigationButtons iconSize={iconMobile} />
               
               {onEnterKioskMode && (
                 <button

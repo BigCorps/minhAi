@@ -85,10 +85,6 @@ export default function FrentistaDashboard({ profile, company, theme }: Props) {
 
       </div>
 
-      {/* Logout mobile */}
-      <div className="mt-8 sm:hidden">
-        <BotaoLogout slug={company.slug} theme={theme} />
-      </div>
     </div>
   );
 }

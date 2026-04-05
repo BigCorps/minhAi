@@ -79,8 +79,13 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             }`}
           >
             {/* Linha 1 */}
-  <span className="block whitespace-nowrap">
-  <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-3xl font-bold`}>
+<span className="block whitespace-nowrap">
+  <span
+    className={`
+      ${isDark ? 'text-blue-400' : 'text-blue-600'}
+      text-3xl md:text-3xl lg:text-5xl font-bold
+    `}
+  >
     Uma IA pra chamar de sua!
   </span>
 </span>

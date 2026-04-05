@@ -126,8 +126,6 @@ function ProfileModal({
     identificador: profile?.identificador ?? '',
     pin:           profile?.pin           ?? '',
     endereco:      profile?.endereco      ?? '',
-    latitude:      profile?.latitude?.toString()  ?? '',
-    longitude:     profile?.longitude?.toString() ?? '',
     is_active:     profile?.is_active     ?? true,
   });
   const [saving, setSaving]               = useState(false);
@@ -135,15 +133,13 @@ function ProfileModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isTotem = form.tipo === 'totem';
-  // Colaboradores usam PIN como credencial de acesso ao dashboard
-  const isColaborador = !isTotem;
 
   async function handleSalvar() {
     if (!form.nome.trim()) { setError('Nome é obrigatório'); return; }
 
-    // Validação: colaborador precisa de ao menos um identificador (email ou identificador)
-    if (isColaborador && !form.email.trim() && !form.identificador.trim()) {
-      setError('Informe pelo menos um E-mail ou Identificador para que o colaborador consiga fazer login.');
+    // Validação: qualquer perfil com login precisa de ao menos email ou identificador
+    if (!form.email.trim() && !form.identificador.trim()) {
+      setError('Informe pelo menos um E-mail ou Identificador para que o perfil consiga fazer login.');
       return;
     }
 
@@ -158,8 +154,6 @@ function ProfileModal({
         identificador: form.identificador.trim() || null,
         pin:           form.pin.trim()           || null,
         endereco:      form.endereco.trim()      || null,
-        latitude:      form.latitude  ? parseFloat(form.latitude)  : null,
-        longitude:     form.longitude ? parseFloat(form.longitude) : null,
         is_active:     form.is_active,
       };
 
@@ -215,19 +209,21 @@ function ProfileModal({
             </div>
           )}
 
-          {/* Tipo */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
-            <select
-              value={form.tipo}
-              onChange={e => setForm(p => ({ ...p, tipo: e.target.value }))}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {tiposDisponiveis.map(t => (
-                <option key={t} value={t}>{TIPOS_LABEL[t] ?? t}</option>
-              ))}
-            </select>
-          </div>
+          {/* Tipo — só exibe se houver mais de uma opção */}
+          {tiposDisponiveis.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+              <select
+                value={form.tipo}
+                onChange={e => setForm(p => ({ ...p, tipo: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {tiposDisponiveis.map(t => (
+                  <option key={t} value={t}>{TIPOS_LABEL[t] ?? t}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Nome */}
           <div>
@@ -243,32 +239,30 @@ function ProfileModal({
             />
           </div>
 
-          {/* Email — apenas para colaboradores */}
-          {!isTotem && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                E-mail
-                {/* Obrigatório se não tiver identificador */}
-                {!form.identificador.trim() && (
-                  <span className="text-red-500 ml-1">*</span>
-                )}
-              </label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="email@exemplo.com"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
+          {/* Email — aparece para todos */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              E-mail
+              {/* Obrigatório se não tiver identificador */}
+              {!form.identificador.trim() && (
+                <span className="text-red-500 ml-1">*</span>
+              )}
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              placeholder="email@exemplo.com"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-          {/* Identificador — aparece para TODOS (totem + colaboradores) */}
+          {/* Identificador — aparece para TODOS */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Identificador
-              {/* Obrigatório para colaborador se não tiver email */}
-              {isColaborador && !form.email.trim() && (
+              {/* Obrigatório se não tiver email */}
+              {!form.email.trim() && (
                 <span className="text-red-500 ml-1">*</span>
               )}
             </label>
@@ -279,60 +273,30 @@ function ProfileModal({
               placeholder={isTotem ? 'Ex: Bomba 3, Loja Centro' : 'Matrícula, usuário ou telefone'}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {isColaborador && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Usado no login junto com o PIN. Pode ser matrícula, usuário, telefone ou e-mail.
-              </p>
-            )}
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Usado no login junto com o PIN. Pode ser matrícula, usuário, telefone ou e-mail.
+            </p>
           </div>
 
-          {/* PIN — com label clara de que é a credencial de login */}
-          {isColaborador && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                PIN — Senha de acesso ao painel
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={form.pin}
-                onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g, '') }))}
-                placeholder="4 a 6 dígitos"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono tracking-widest"
-              />
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                O colaborador usará o identificador (ou e-mail) + este PIN para entrar em{' '}
-                <span className="font-mono text-gray-500 dark:text-gray-400">/cliente/[slug]</span>.
-              </p>
-            </div>
-          )}
-
-          {/* Localização (totem) */}
-          {isTotem && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Latitude</label>
-                <input
-                  type="text"
-                  value={form.latitude}
-                  onChange={e => setForm(p => ({ ...p, latitude: e.target.value }))}
-                  placeholder="-23.5505"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitude</label>
-                <input
-                  type="text"
-                  value={form.longitude}
-                  onChange={e => setForm(p => ({ ...p, longitude: e.target.value }))}
-                  placeholder="-46.6333"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                />
-              </div>
-            </div>
-          )}
+          {/* PIN — credencial de login para todos os perfis */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              PIN — Senha de acesso ao painel
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={form.pin}
+              onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g, '') }))}
+              placeholder="4 a 6 dígitos"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono tracking-widest"
+            />
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              O perfil usará o identificador (ou e-mail) + este PIN para entrar em{' '}
+              <span className="font-mono text-gray-500 dark:text-gray-400">/cliente/[slug]</span>.
+            </p>
+          </div>
 
           {/* Ativo */}
           <div className="flex items-center justify-between py-2">

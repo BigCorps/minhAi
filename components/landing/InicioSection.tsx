@@ -112,7 +112,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 
             {/* Linha 3 */}
             <span className="block whitespace-nowrap">
-              qexecuta + de 100 funções{' '}
+              executa + de 100 funções{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
                 por você
               </span>

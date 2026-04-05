@@ -122,7 +122,7 @@ export default function ClienteDashboard({ profile, company, theme }: ClienteDas
 
         {/* Logout inline ao lado do título */}
         <div className="flex-shrink-0 ml-4">
-          <BotaoLogout slug={company.slug} theme={theme} compact />
+          <BotaoLogout slug={company.slug} theme={theme} profile={profile} compact />
         </div>
       </div>
 
@@ -224,6 +224,11 @@ export default function ClienteDashboard({ profile, company, theme }: ClienteDas
           </button>
         </div>
 
+      </div>
+
+      {/* Logout full no mobile (abaixo dos cards) */}
+      <div className="mt-8 sm:hidden">
+        <BotaoLogout slug={company.slug} theme={theme} profile={profile} />
       </div>
 
     </div>

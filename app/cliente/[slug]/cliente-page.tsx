@@ -13,7 +13,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useProfile } from '@/hooks/useProfile';
-import SlugHeaderWrapper from '@/components/slug/SlugHeaderWrapper';
+import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';
 
 const ClienteDashboard     = dynamic(() => import('@/components/cliente/dashboards/ClienteDashboard'));
 const ColaboradorDashboard = dynamic(() => import('@/components/cliente/dashboards/ColaboradorDashboard'));

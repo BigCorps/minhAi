@@ -24,7 +24,9 @@ interface AssistenteClientProps {
     assistant_role?: string;
     hide_disabled_functions_carousel?: boolean;
     carousel_auto_scroll?: boolean;
-    webapp_enabled?: boolean; //
+    webapp_enabled?: boolean;
+    modo_vendas_enabled?: boolean;
+    modo_fila_enabled?: boolean;
   };
 }
 

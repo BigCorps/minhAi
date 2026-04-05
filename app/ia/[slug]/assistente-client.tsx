@@ -1072,11 +1072,13 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
         </div>
       )}
 
-      <SlugFooter
-        theme={theme}
-        slug={company.slug}
-        webapp_enabled={company.webapp_enabled}
-      />
+      <div style={{ position: 'relative', zIndex: 60 }}>
+  <SlugFooter
+    theme={theme}
+    slug={company.slug}
+    webapp_enabled={company.webapp_enabled}
+  />
+</div>
 
     </>
   );

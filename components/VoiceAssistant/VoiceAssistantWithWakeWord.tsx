@@ -1142,15 +1142,30 @@ export function VoiceAssistantWithWakeWord({
   }
 
   // ── handleTextMessage (modo voz input text) ───────────────
-  const handleTextMessage = async (message: string) => {
-    if (detectStopCommand(message)) { stopEverything(); return; }
-    if (message.trim()) setLastTranscript(message.trim());
+const handleTextMessage = async (message: string) => {
+  if (detectStopCommand(message)) { stopEverything(); return; }
+  if (message.trim()) setLastTranscript(message.trim());
 
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
+  if (currentAudioRef.current) {
+    currentAudioRef.current.pause();
+    currentAudioRef.current.currentTime = 0;
+    currentAudioRef.current = null;
+  }
+
+  // ── FAQ FIRST ─────────────────────────────────────────────
+  const matchedFAQ = findMatchingFAQLocal(faqsRef.current, message);
+  console.log('🔎 FAQ check (text):', faqsRef.current.length, 'faqs | match:', matchedFAQ?.question ?? 'null');
+  if (matchedFAQ) {
+    console.log('📚 FAQ resolvida (texto):', matchedFAQ.question);
+    if (matchedFAQ.function_key) {
+      if (matchedFAQ.answer) await playText(matchedFAQ.answer);
+      handleFunctionClickSilent(matchedFAQ.function_key);
+    } else {
+      await playText(matchedFAQ.answer);
     }
+    await registerFunctionUsage(companyId, 'faq', 1);
+    return;
+  }
 
     setIsProcessing(true);
 

@@ -912,32 +912,6 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
             </div>
           )}
 
-          {/* CategoryCarousel no modo FULL */}
-          {assistantStarted && (
-            <div data-role="carousel" className="fixed bottom-8 left-0 right-0 w-full z-[55]">
-              <CategoryCarousel
-                companyId={company.id}
-                onFunctionClick={(functionKey) => {
-                  window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
-                    detail: { functionKey }
-                  }));
-                }}
-                theme={theme}
-                hideDisabledFunctions={company.hide_disabled_functions_carousel}
-                autoScroll={company.carousel_auto_scroll}
-              />
-            </div>
-          )}
-
-          {/* SlugFooter - igual aos outros modos */}
-          <div className="z-[60] relative">
-            <SlugFooter
-  theme={theme}
-  slug={company.slug}
-  webapp_enabled={company.webapp_enabled}
-/>
-          </div>
-
           <style jsx>{`
             @keyframes slide-down {
               from {
@@ -1078,32 +1052,32 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   />
 )}
 
-          {/* G. CategoryCarousel fixo no rodapé em AMBOS os modos (padrao + texto) */}
-          {assistantStarted && (
-            <div className="fixed bottom-8 left-0 right-0 z-30">
-              <CategoryCarousel
-                companyId={company.id}
-                onFunctionClick={(functionKey) => {
-                  window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
-                    detail: { functionKey }
-                  }));
-                }}
-                theme={theme}
-                hideDisabledFunctions={company.hide_disabled_functions_carousel}
-                autoScroll={company.carousel_auto_scroll}
-              />
-            </div>
-          )}
-
-          {/* G. SlugFooter - NOVO */}
-          <SlugFooter
-  theme={theme}
-  slug={company.slug}
-  webapp_enabled={company.webapp_enabled}
-/>
-
         </div>
       )}
+
+      {/* ── SEMPRE MONTADOS — nunca reinicializam ao trocar de modo ── */}
+      {assistantStarted && (
+        <div className="fixed bottom-8 left-0 right-0 z-[55]">
+          <CategoryCarousel
+            companyId={company.id}
+            onFunctionClick={(functionKey) => {
+              window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
+                detail: { functionKey }
+              }));
+            }}
+            theme={theme}
+            hideDisabledFunctions={company.hide_disabled_functions_carousel}
+            autoScroll={company.carousel_auto_scroll}
+          />
+        </div>
+      )}
+
+      <SlugFooter
+        theme={theme}
+        slug={company.slug}
+        webapp_enabled={company.webapp_enabled}
+      />
+
     </>
   );
 }

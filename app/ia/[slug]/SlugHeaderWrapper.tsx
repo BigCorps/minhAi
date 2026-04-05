@@ -2,6 +2,7 @@
 
 // ============================================================
 // app/ia/[slug]/SlugHeaderWrapper.tsx
+// Adicionado pageType 'cliente' ao tipo aceito
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -17,11 +18,11 @@ interface SlugHeaderWrapperProps {
     assistant_role?: string | null;
     webapp_theme_color?: string | null;
     webapp_enabled?: boolean;
-    modo_vendas_enabled?: boolean; // ← NOVO
-    modo_fila_enabled?: boolean;   // ← NOVO
+    modo_vendas_enabled?: boolean;
+    modo_fila_enabled?: boolean;
   };
   slug?: string;
-  pageType?: 'ia' | 'vendas' | 'fila';
+  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente'; // ← 'cliente' adicionado
   overlayMode?: boolean;
   forceTheme?: 'dark' | 'light';
   onClose?: () => void;
@@ -98,7 +99,6 @@ export default function SlugHeaderWrapper({
     window.dispatchEvent(new CustomEvent('eai:requestKioskMode'));
   };
 
-  // LEGACY: mantido para retrocompatibilidade com código antigo
   const handleToggleModoVenda = () => {
     window.dispatchEvent(new CustomEvent('voiceAssistantFunctionClick', {
       detail: { functionKey: 'modo_venda' },

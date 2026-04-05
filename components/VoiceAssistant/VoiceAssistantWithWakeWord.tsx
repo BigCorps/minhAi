@@ -1265,6 +1265,7 @@ export function VoiceAssistantWithWakeWord({
     try {
       // ── FAQ FIRST ─────────────────────────────────────────────
       const matchedFAQ = findMatchingFAQLocal(faqs, message);
+      console.log('🔎 FAQ check:', faqsRef.current.length, 'faqs | query:', questionText, '| match:', matchedFAQ?.question ?? 'null');
       if (matchedFAQ) {
         console.log('📚 FAQ resolvida localmente (texto):', matchedFAQ.question);
 

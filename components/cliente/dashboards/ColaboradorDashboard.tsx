@@ -42,7 +42,7 @@ export default function ColaboradorDashboard({ profile, company, theme }: Props)
           </p>
         </div>
         <div className="flex-shrink-0 ml-4">
-          <BotaoLogout slug={company.slug} theme={theme} compact />
+          <BotaoLogout slug={company.slug} theme={theme} profile={profile} compact />
         </div>
       </div>
 

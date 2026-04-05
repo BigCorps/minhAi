@@ -120,39 +120,49 @@ function ProfileModal({
 }) {
   const supabase = createClient();
   const [form, setForm] = useState({
-    tipo: profile?.tipo ?? tiposDisponiveis[0] ?? 'colaborador',
-    nome: profile?.nome ?? '',
-    email: profile?.email ?? '',
+    tipo:          profile?.tipo          ?? tiposDisponiveis[0] ?? 'colaborador',
+    nome:          profile?.nome          ?? '',
+    email:         profile?.email         ?? '',
     identificador: profile?.identificador ?? '',
-    pin: profile?.pin ?? '',
-    endereco: profile?.endereco ?? '',
-    latitude: profile?.latitude?.toString() ?? '',
-    longitude: profile?.longitude?.toString() ?? '',
-    is_active: profile?.is_active ?? true,
+    pin:           profile?.pin           ?? '',
+    endereco:      profile?.endereco      ?? '',
+    latitude:      profile?.latitude?.toString()  ?? '',
+    longitude:     profile?.longitude?.toString() ?? '',
+    is_active:     profile?.is_active     ?? true,
   });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [saving, setSaving]               = useState(false);
+  const [error, setError]                 = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isTotem = form.tipo === 'totem';
+  // Colaboradores usam PIN como credencial de acesso ao dashboard
+  const isColaborador = !isTotem;
 
   async function handleSalvar() {
     if (!form.nome.trim()) { setError('Nome é obrigatório'); return; }
+
+    // Validação: colaborador precisa de ao menos um identificador (email ou identificador)
+    if (isColaborador && !form.email.trim() && !form.identificador.trim()) {
+      setError('Informe pelo menos um E-mail ou Identificador para que o colaborador consiga fazer login.');
+      return;
+    }
+
     setSaving(true);
     setError('');
     try {
       const payload = {
-        company_id: companyId,
-        tipo: form.tipo,
-        nome: form.nome.trim(),
-        email: form.email.trim() || null,
+        company_id:    companyId,
+        tipo:          form.tipo,
+        nome:          form.nome.trim(),
+        email:         form.email.trim()         || null,
         identificador: form.identificador.trim() || null,
-        pin: form.pin.trim() || null,
-        endereco: form.endereco.trim() || null,
-        latitude: form.latitude ? parseFloat(form.latitude) : null,
-        longitude: form.longitude ? parseFloat(form.longitude) : null,
-        is_active: form.is_active,
+        pin:           form.pin.trim()           || null,
+        endereco:      form.endereco.trim()      || null,
+        latitude:      form.latitude  ? parseFloat(form.latitude)  : null,
+        longitude:     form.longitude ? parseFloat(form.longitude) : null,
+        is_active:     form.is_active,
       };
+
       if (profile) {
         const { error: err } = await supabase.from('company_profiles').update(payload).eq('id', profile.id);
         if (err) throw err;
@@ -187,6 +197,7 @@ function ProfileModal({
         className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/10 sticky top-0 bg-white dark:bg-slate-900 z-10">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {profile ? 'Editar perfil' : 'Novo perfil'}
@@ -232,26 +243,16 @@ function ProfileModal({
             />
           </div>
 
-          {/* Identificador */}
-          {isTotem && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Identificador
-              </label>
-              <input
-                type="text"
-                value={form.identificador}
-                onChange={e => setForm(p => ({ ...p, identificador: e.target.value }))}
-                placeholder="Ex: Bomba 3, Loja Centro"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          {/* Email */}
+          {/* Email — apenas para colaboradores */}
           {!isTotem && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-mail</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                E-mail
+                {/* Obrigatório se não tiver identificador */}
+                {!form.identificador.trim() && (
+                  <span className="text-red-500 ml-1">*</span>
+                )}
+              </label>
               <input
                 type="email"
                 value={form.email}
@@ -262,20 +263,48 @@ function ProfileModal({
             </div>
           )}
 
-          {/* PIN */}
-          {!isTotem && (
+          {/* Identificador — aparece para TODOS (totem + colaboradores) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Identificador
+              {/* Obrigatório para colaborador se não tiver email */}
+              {isColaborador && !form.email.trim() && (
+                <span className="text-red-500 ml-1">*</span>
+              )}
+            </label>
+            <input
+              type="text"
+              value={form.identificador}
+              onChange={e => setForm(p => ({ ...p, identificador: e.target.value }))}
+              placeholder={isTotem ? 'Ex: Bomba 3, Loja Centro' : 'Matrícula, usuário ou telefone'}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {isColaborador && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Usado no login junto com o PIN. Pode ser matrícula, usuário, telefone ou e-mail.
+              </p>
+            )}
+          </div>
+
+          {/* PIN — com label clara de que é a credencial de login */}
+          {isColaborador && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                PIN (4-6 dígitos)
+                PIN — Senha de acesso ao painel
               </label>
               <input
                 type="text"
+                inputMode="numeric"
                 maxLength={6}
                 value={form.pin}
                 onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g, '') }))}
-                placeholder="Opcional — alternativa à senha"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                placeholder="4 a 6 dígitos"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono tracking-widest"
               />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                O colaborador usará o identificador (ou e-mail) + este PIN para entrar em{' '}
+                <span className="font-mono text-gray-500 dark:text-gray-400">/cliente/[slug]</span>.
+              </p>
             </div>
           )}
 
@@ -321,6 +350,7 @@ function ProfileModal({
           </div>
         </div>
 
+        {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-between sticky bottom-0 bg-white dark:bg-slate-900">
           {profile && (
             <div>

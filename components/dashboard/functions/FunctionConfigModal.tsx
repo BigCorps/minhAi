@@ -981,7 +981,7 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
           Como funciona
         </h4>
         <ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-          <li>• Colaborador aciona o assistente por voz: "Chamar gerente"</li>
+          <li>• Usuário solicita: "Chamar Gerente"</li>
           <li>• Descreve o motivo e confirma o envio</li>
           <li>• Gerente recebe notificação por email e/ou SMS</li>
         </ul>

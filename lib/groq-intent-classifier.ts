@@ -1,17 +1,14 @@
 // lib/groq-intent-classifier.ts
-
 import { createClient } from '@/lib/supabase-browser';
-import { getAllFunctions } from '@/lib/functions-registry';
 
 interface ClassifierDeps {
   companyId: string;
-  sessionId?: string | null;      // ← novo
+  sessionId?: string | null;
   playText: (text: string) => Promise<void>;
   groqContextRef: React.MutableRefObject<string>;
   commandProcessor: any;
 }
 
-// Frases que claramente são conversa geral — pular GROQ
 const GENERAL_CONVERSATION = [
   'tudo bem', 'tudo certo', 'obrigado', 'obrigada', 'valeu', 'tchau',
   'boa tarde', 'bom dia', 'boa noite',
@@ -28,39 +25,35 @@ export async function classifyIntentWithGroq(
   deps: ClassifierDeps
 ): Promise<boolean> {
   try {
-    // Conversa trivial → GPT direto
     if (isGeneralConversation(transcript)) {
       console.log('💬 GROQ pulado: conversa trivial');
       return false;
     }
 
     const functionsContext = deps.groqContextRef.current;
-
-    // Contexto ainda não carregado → GPT
     if (!functionsContext) {
       console.log('⚠️ GROQ: contexto ainda não carregado');
       return false;
     }
 
-    let sessionContext = null;
+    // ── Fase 2: buscar contexto de memória ──
     const effectiveSessionId = deps.sessionId ?? `groq-${deps.companyId}`;
+    let sessionContext = null;
     try {
       const supabase = createClient();
       const { data: sessionData } = await supabase
         .from('assistant_sessions')
         .select('context_summary, last_function_keys')
         .eq('id', effectiveSessionId)
-          .eq('company_id', deps.companyId)
-          .maybeSingle();
-
-        if (sessionData) {
-          sessionContext = {
-            summary: sessionData.context_summary ?? '',
-            lastFunctions: sessionData.last_function_keys ?? [],
-          };
-        }
-      } catch (_e) { /* silencioso — memória é enhancement, não bloqueante */ }
-    }
+        .eq('company_id', deps.companyId)
+        .maybeSingle();
+      if (sessionData) {
+        sessionContext = {
+          summary: sessionData.context_summary ?? '',
+          lastFunctions: sessionData.last_function_keys ?? [],
+        };
+      }
+    } catch (_e) { /* silencioso */ }
 
     const response = await fetch('/api/groq/classify', {
       method: 'POST',
@@ -71,7 +64,6 @@ export async function classifyIntentWithGroq(
     if (!response.ok) return false;
 
     const { response: groqResponse } = await response.json();
-
     if (!groqResponse) {
       console.log('💬 GROQ: conversa geral → GPT');
       return false;
@@ -81,10 +73,7 @@ export async function classifyIntentWithGroq(
     await deps.playText(groqResponse);
     deps.commandProcessor?.saveUnrecognizedHint(transcript);
 
-    // ── Fase 2: atualizar memória após resposta do GROQ ──
-    // Usa company_id como session_id quando não há sessionId
-    // (interações via GROQ não passam pelo backend que gera o sessionId)
-    const effectiveSessionId = deps.sessionId ?? `groq-${deps.companyId}`;
+    // ── Fase 2: salvar memória após resposta ──
     fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-session-memory`,
       {

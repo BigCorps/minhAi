@@ -63,7 +63,7 @@ export default function TotemDashboard({ profile, company, theme }: Props) {
           style={{ background: cardBg, borderColor: cardBorder }}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(16,185,129,0.1)', color: isDark ? 'rgb(110,231,183)' : 'rgb(5,150,105)' }}>
+              style={{ background: 'rgba(59,130,246,0.1)', color: isDark ? 'rgb(147,197,253)' : 'rgb(29,78,216)' }}>
               <ShoppingCart className="w-6 h-6" />
             </div>
             <h2 className="text-xl font-bold" style={{ color: titleColor }}>Modo Venda</h2>
@@ -75,9 +75,9 @@ export default function TotemDashboard({ profile, company, theme }: Props) {
             onClick={() => router.push(`/vendas/${company.slug}`)}
             className="w-full py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
             style={{
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
               color: '#ffffff',
-              boxShadow: '0 4px 14px rgba(16,185,129,0.35)',
+              boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
             }}
           >
             <ShoppingCart className="w-4 h-4" />
@@ -90,13 +90,13 @@ export default function TotemDashboard({ profile, company, theme }: Props) {
           description="Escaneie ou digite o código para validar um cupom do cliente."
           functionKey="validar_cupom"
           companyId={company.id}
-          iconBg="rgba(16,185,129,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<Tag className="w-6 h-6" />}
-          iconColor="rgb(110,231,183)"
-          iconColorLight="rgb(5,150,105)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Validar Cupom"
-          buttonGradient="linear-gradient(135deg, #10b981, #059669)"
-          buttonShadow="0 4px 14px rgba(16,185,129,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 

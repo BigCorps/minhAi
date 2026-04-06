@@ -105,7 +105,9 @@ export function VoiceAssistantWithWakeWord({
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [hasMicrophone, setHasMicrophone] = useState(true);
   const [showStartButton, setShowStartButton] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(
+    () => crypto.randomUUID() // gera UUID local na montagem do componente
+  );
   const [externalInput, setExternalInput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 

@@ -55,9 +55,9 @@ export default function ModalEditarPerfil({
   const [mounted, setMounted] = useState(false);
 
   const [form, setForm] = useState({
-    nome:     profile.nome ?? '',
-    telefone: profile.metadata?.telefone ?? '',
-    endereco: profile.endereco ?? '',
+    nome:     profile.nome     ?? '',
+    telefone: profile.metadata?.telefone ?? '',  // ← lê de metadata
+    endereco: profile.endereco ?? '',            // ← coluna direta
   });
 
   const [saving, setSaving]   = useState(false);
@@ -93,12 +93,12 @@ export default function ModalEditarPerfil({
         updates.nome = form.nome.trim();
       }
 
-      // Telefone e endereço ficam no metadata (telefone) e no campo raiz (endereco)
+      // Endereço fica no campo raiz
       if (campos.includes('endereco')) {
         updates.endereco = form.endereco.trim() || null;
       }
 
-      // metadata precisa de merge para não perder outros campos
+      // Telefone fica em metadata — merge para não perder outros campos
       if (campos.includes('telefone')) {
         const metadataAtual = profile.metadata ?? {};
         updates.metadata = {

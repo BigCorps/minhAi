@@ -58,7 +58,7 @@ export async function classifyIntentWithGroq(
             lastFunctions: sessionData.last_function_keys ?? [],
           };
         }
-      } catch { /* silencioso — memória é enhancement, não bloqueante */ }
+      } catch (_e) { /* silencioso — memória é enhancement, não bloqueante */ }
     }
 
     const response = await fetch('/api/groq/classify', {

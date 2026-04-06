@@ -63,13 +63,13 @@ export default function GerenteDashboard({ profile, company, theme }: Props) {
           description="Visualize o relatório completo de vendas com totais por período e método."
           functionKey="relatorio_vendas"
           companyId={company.id}
-          iconBg="rgba(99,102,241,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<BarChart2 className="w-6 h-6" />}
-          iconColor="rgb(165,180,252)"
-          iconColorLight="rgb(67,56,202)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Ver Relatório"
-          buttonGradient="linear-gradient(135deg, #6366f1, #4f46e5)"
-          buttonShadow="0 4px 14px rgba(99,102,241,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 
@@ -78,13 +78,13 @@ export default function GerenteDashboard({ profile, company, theme }: Props) {
           description="Consulte o cadastro completo de clientes e histórico de compras."
           functionKey="ver_clientes"
           companyId={company.id}
-          iconBg="rgba(168,85,247,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<Users className="w-6 h-6" />}
-          iconColor="rgb(216,180,254)"
-          iconColorLight="rgb(107,33,168)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Ver Clientes"
-          buttonGradient="linear-gradient(135deg, #a855f7, #7c3aed)"
-          buttonShadow="0 4px 14px rgba(168,85,247,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 
@@ -108,13 +108,13 @@ export default function GerenteDashboard({ profile, company, theme }: Props) {
           description="Realize o fechamento do caixa com totais e conferência de valores."
           functionKey="fechar_caixa"
           companyId={company.id}
-          iconBg="rgba(239,68,68,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<Lock className="w-6 h-6" />}
-          iconColor="rgb(252,165,165)"
-          iconColorLight="rgb(185,28,28)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Fechar Caixa"
-          buttonGradient="linear-gradient(135deg, #ef4444, #dc2626)"
-          buttonShadow="0 4px 14px rgba(239,68,68,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 
@@ -123,13 +123,13 @@ export default function GerenteDashboard({ profile, company, theme }: Props) {
           description="Registre a troca de turno entre operadores de caixa."
           functionKey="trocar_turno"
           companyId={company.id}
-          iconBg="rgba(245,158,11,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<RefreshCw className="w-6 h-6" />}
-          iconColor="rgb(252,211,77)"
-          iconColorLight="rgb(180,83,9)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Trocar Turno"
-          buttonGradient="linear-gradient(135deg, #f59e0b, #d97706)"
-          buttonShadow="0 4px 14px rgba(245,158,11,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 
@@ -138,13 +138,13 @@ export default function GerenteDashboard({ profile, company, theme }: Props) {
           description="Escaneie ou digite o código para validar um cupom do cliente."
           functionKey="validar_cupom"
           companyId={company.id}
-          iconBg="rgba(16,185,129,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<Tag className="w-6 h-6" />}
-          iconColor="rgb(110,231,183)"
-          iconColorLight="rgb(5,150,105)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Validar Cupom"
-          buttonGradient="linear-gradient(135deg, #10b981, #059669)"
-          buttonShadow="0 4px 14px rgba(16,185,129,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 

@@ -541,7 +541,7 @@ function AgendaPageContent() {
     <div className="flex items-center justify-between">
       <div>
         {selectedFolder
-          ? <p className="text-sm text-gray-600 dark:text-gray-400">📁 <strong>{selectedFolder.name}</strong> — {driveImages.length} imagem{driveImages.length !== 1 ? 's' : ''}</p>
+          ? <p className="text-sm text-gray-600 dark:text-gray-400">📁 <strong>{selectedFolder.name}</strong> — {driveImages.length} imagem{driveImages.length !== 1 ? 'ns' : ''}</p>
           : <p className="text-sm text-gray-400">Selecione uma pasta para ver as imagens</p>
         }
       </div>

@@ -128,7 +128,7 @@ export default function ClienteDashboard({ profile, company, theme }: ClienteDas
 
       {/* ── Card Minha Conta — full width no desktop ─────────── */}
       <div className="mb-6">
-        <CardMinhaConta profile={profile} theme={theme} horizontal />
+        <CardMinhaConta profile={profile} slug={company.slug} theme={theme} horizontal />
       </div>
 
       {/* ── Grid: Minhas Compras + Fazer Pedido ──────────────── */}

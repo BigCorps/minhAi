@@ -32,6 +32,7 @@ interface CompanyProfile {
   email: string | null;
   identificador: string | null;
   endereco: string | null;
+  telefone: string | null;
   pin: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -78,9 +79,9 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString('pt-BR');
 }
 
-/** Extrai telefone do metadata (onde é salvo pelo ModalEditarPerfil e ProfileModal) */
+/** Extrai telefone da coluna direta */
 function getTelefone(p: CompanyProfile): string {
-  return p.metadata?.telefone ?? '';
+  return p.telefone ?? '';
 }
 
 function TipoBadge({ tipo }: { tipo: string }) {
@@ -114,7 +115,7 @@ function ProfileModal({
     identificador: profile?.identificador       ?? '',
     pin:           profile?.pin                 ?? '',
     endereco:      profile?.endereco            ?? '',
-    telefone:      profile?.metadata?.telefone  ?? '',   // ← lê de metadata
+    telefone:      profile?.telefone            ?? '',
     is_active:     profile?.is_active           ?? true,
   });
   const [saving, setSaving]               = useState(false);
@@ -139,12 +140,8 @@ function ProfileModal({
         identificador: form.identificador.trim() || null,
         pin:           form.pin.trim()           || null,
         endereco:      form.endereco.trim()      || null,
+        telefone:      form.telefone.trim()      || null,
         is_active:     form.is_active,
-        // ← merge metadata para não apagar outros campos existentes
-        metadata: {
-          ...(profile?.metadata ?? {}),
-          telefone: form.telefone.trim() || null,
-        },
       };
       if (profile) {
         const { error: err } = await supabase.from('company_profiles').update(payload).eq('id', profile.id);
@@ -225,7 +222,6 @@ function ProfileModal({
             </p>
           </div>
 
-          {/* Telefone — salvo em metadata.telefone */}
           {!isTotem && (
             <div>
               <label className={labelCls}>Telefone</label>
@@ -448,7 +444,6 @@ function AbaClientes({ companyId }: { companyId: string }) {
   useEffect(() => {
     load();
 
-    // Realtime: atualiza a lista quando o cliente editar seus dados
     const channel = supabase
       .channel(`clientes-${companyId}`)
       .on('postgres_changes', {
@@ -627,7 +622,6 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
   useEffect(() => {
     load();
 
-    // Realtime: atualiza quando colaborador editar Nome ou Telefone
     const channel = supabase
       .channel(`colaboradores-${companyId}`)
       .on('postgres_changes', {
@@ -765,6 +759,16 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
         </div>
       )}
 
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+        <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Quer definir quais funções cada tipo pode acessar?</p>
+          <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+            Acesse <a href="/dashboard/functions" className="underline font-semibold">Funções do Assistente</a> e use o seletor de perfil no topo para configurar permissões por tipo.
+          </p>
+        </div>
+      </div>
+
       {modalAberto && (
         <ProfileModal companyId={companyId} profile={editando} tiposDisponiveis={TIPOS_COLABORADOR}
           onClose={() => { setModalAberto(false); setEditando(null); }} onSalvo={load} />
@@ -785,7 +789,6 @@ function AbaTotens({ companyId }: { companyId: string }) {
   useEffect(() => {
     load();
 
-    // Realtime: atualiza card do totem quando nome for editado
     const channel = supabase
       .channel(`totens-${companyId}`)
       .on('postgres_changes', {
@@ -877,6 +880,16 @@ function AbaTotens({ companyId }: { companyId: string }) {
           </div>
         </div>
       )}
+
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+        <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Quer definir quais funções cada tipo pode acessar?</p>
+          <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+            Acesse <a href="/dashboard/functions" className="underline font-semibold">Funções do Assistente</a> e use o seletor de perfil no topo para configurar permissões por tipo.
+          </p>
+        </div>
+      </div>
 
       {modalAberto && (
         <ProfileModal companyId={companyId} profile={editando} tiposDisponiveis={['totem']}

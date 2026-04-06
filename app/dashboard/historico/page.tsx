@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-browser';
-import { Search, RefreshCw, Zap, Trash2, ChevronDown, ChevronLeft, ChevronRight, User, MessageSquare } from 'lucide-react';
+import { Search, RefreshCw, Zap, Trash2, ChevronDown, ChevronLeft, ChevronRight, User, MessageSquare, Download } from 'lucide-react';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -358,6 +358,87 @@ export default function HistoricoPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  async function exportarPDF() {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const LOGO_URL = 'https://minhai.app/icons/icon-192x192.png';
+  const geradoEm = new Date().toLocaleString('pt-BR', { timeZone: BRT });
+  const empresaLabel = selectedCompany === 'all'
+    ? 'Todos os assistentes'
+    : companies.find(c => c.id === selectedCompany)?.name ?? '—';
+
+  // Cabeçalho
+  try {
+    const img = await fetch(LOGO_URL);
+    const blob = await img.blob();
+    const dataUrl = await new Promise<string>((res) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.readAsDataURL(blob);
+    });
+    doc.addImage(dataUrl, 'PNG', 10, 8, 12, 12);
+  } catch { /* sem logo não quebra */ }
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('minhAi — Histórico de Interações', 26, 14);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100);
+  doc.text(`Assistente: ${empresaLabel}`, 26, 20);
+  doc.text(`Gerado em: ${geradoEm}`, 26, 25);
+  doc.text(`Total de registros: ${totalCount}`, 26, 30);
+  doc.setTextColor(0);
+
+  // Tabela
+  const rows = logs.map(log => {
+    const func = functions[log.function_key];
+    return [
+      formatBRT(log.executed_at),
+      log.companyName,
+      func?.function_name ?? log.function_key,
+      log.credits_consumed > 0 ? String(log.credits_consumed) : '—',
+      (getUserMessage(log) ?? '').slice(0, 120),
+      (getAssistantMessage(log) ?? '').slice(0, 120),
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 36,
+    head: [['Data/Hora', 'Assistente', 'Função', 'Créditos', 'Mensagem do Usuário', 'Resposta']],
+    body: rows,
+    styles: { fontSize: 7.5, cellPadding: 2.5, overflow: 'linebreak' },
+    headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 30 },
+      1: { cellWidth: 32 },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 18, halign: 'center' },
+      4: { cellWidth: 72 },
+      5: { cellWidth: 72 },
+    },
+    alternateRowStyles: { fillColor: [245, 247, 255] },
+    didDrawPage: (data) => {
+      // Rodapé com número de página
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(
+        `Página ${data.pageNumber} de ${pageCount}`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 8,
+        { align: 'center' }
+      );
+    },
+  });
+
+  const nomeArquivo = `historico-minhai-${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(nomeArquivo);
+}
+
   // ─── Display helpers ───────────────────────────────────────────────────────
 
   function hasRealDialogue(log: LogEntry) {
@@ -496,6 +577,19 @@ export default function HistoricoPage() {
                 <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
             </div>
+
+{/* Exportar PDF */}
+<button
+  onClick={exportarPDF}
+  disabled={loading || logs.length === 0}
+  title="Exportar página atual como PDF"
+  className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-transparent transition-colors disabled:opacity-50 flex-shrink-0
+  bg-blue-50 text-blue-700 hover:bg-blue-100
+  dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+>
+  <Download className="w-4 h-4" />
+  <span className="hidden md:inline">Exportar PDF</span>
+</button>
 
             {/* Refresh */}
             <button

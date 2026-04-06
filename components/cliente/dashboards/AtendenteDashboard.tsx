@@ -12,12 +12,10 @@
 //   - Minha Conta + Logout
 // ============================================================
 
-import { useState, useEffect } from 'react';
 import { SlugProfile } from '@/hooks/useProfile';
 import CardMinhaConta from './shared/CardMinhaConta';
 import BotaoLogout from './shared/BotaoLogout';
 import CardAcao from './shared/CardAcao';
-import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 import { Zap, Users, Tag, PhoneCall } from 'lucide-react';
 
 interface Props {
@@ -30,18 +28,6 @@ export default function AtendenteDashboard({ profile, company, theme }: Props) {
   const isDark     = theme === 'dark';
   const titleColor = isDark ? 'rgb(241,245,249)' : 'rgb(15,23,42)';
   const muteColor  = isDark ? 'rgb(100,116,139)'  : 'rgb(148,163,184)';
-
-  const [activeModal, setActiveModal] = useState<{ type: string; data: any } | null>(null);
-
-  useEffect(() => {
-    const handleFunctionClick = (e: CustomEvent) => {
-      const { functionKey, ...rest } = e.detail;
-      setActiveModal({ type: functionKey, data: { companyId: company.id, ...rest } });
-    };
-
-    window.addEventListener('voiceAssistantFunctionClick', handleFunctionClick as EventListener);
-    return () => window.removeEventListener('voiceAssistantFunctionClick', handleFunctionClick as EventListener);
-  }, [company.id]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -130,13 +116,6 @@ export default function AtendenteDashboard({ profile, company, theme }: Props) {
         />
 
       </div>
-
-      <ActionModals
-        activeModal={activeModal}
-        onClose={() => setActiveModal(null)}
-        theme={theme}
-        playText={async () => {}}
-      />
 
     </div>
   );

@@ -27,6 +27,7 @@ import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import SlugHeader from '@/components/slug/SlugHeader';
+import { useTheme } from 'next-themes';
 
 export interface SaleModeModalProps {
   companyId: string;
@@ -85,7 +86,8 @@ function SaleModeInner({
   quantidadeInicial,
   profile,
 }: SaleModeModalProps) {
-  const isDark = theme === 'dark';
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = (resolvedTheme ?? theme) === 'dark';
   const { totalItens, addItem } = useCart();
 
   const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);

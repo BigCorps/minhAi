@@ -5,24 +5,36 @@
 //
 // Clientes     → logout direto (sem confirmação)
 // Colaboradores, Caixas, Gerentes, Totens, etc →
-//   abre modal pedindo o PIN/senha antes do logout.
+//   abre modal pedindo PIN/senha antes do logout.
 //
-// A verificação do PIN/senha é feita via query direta no
-// Supabase (mesmo padrão do LoginClienteDisplay) — sem passar
-// pela Edge Function auth-profile, para não sobrescrever a
-// sessão ativa nem disparar eai:profileLogin.
-//
-// Verifica: pin === digitado OU senha_hash === digitado
-// (igual ao que a Edge Function auth-profile faz internamente)
+// A verificação usa a action 'verify_pin' da Edge Function
+// auth-profile (service role) — que lê pin/senha_hash com
+// permissão total e retorna apenas { valid: true/false }.
+// Não cria nova sessão nem altera o token atual.
 // ============================================================
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { LogOut, Loader2, Lock, X, ShieldAlert } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
 import { useProfile, SlugProfile } from '@/hooks/useProfile';
 import { navigateContextual } from '@/lib/routing-utils';
+
+const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const ANON_KEY      = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// ── Chama a Edge Function auth-profile ───────────────────────
+async function callAuthProfile(body: Record<string, any>) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/auth-profile`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${ANON_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
 
 // ── Props ─────────────────────────────────────────────────────
 
@@ -33,7 +45,7 @@ interface BotaoLogoutProps {
   compact?: boolean;
 }
 
-// ── Modal de confirmação ──────────────────────────────────────
+// ── Modal de confirmação PIN ──────────────────────────────────
 
 interface ConfirmPinModalProps {
   theme: 'dark' | 'light';
@@ -43,7 +55,7 @@ interface ConfirmPinModalProps {
 }
 
 function ConfirmPinModal({ theme, profile, onConfirmed, onCancel }: ConfirmPinModalProps) {
-  const isDark   = theme === 'dark';
+  const isDark = theme === 'dark';
   const [pin, setPin]         = useState('');
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
@@ -65,37 +77,22 @@ function ConfirmPinModal({ theme, profile, onConfirmed, onCancel }: ConfirmPinMo
     setError('');
 
     try {
-      const supabase = createClient();
+      // Chama verify_pin na Edge Function (service role)
+      // Não cria sessão, não altera token, só retorna { valid }
+      const data = await callAuthProfile({
+        action:     'verify_pin',
+        profile_id: profile.id,
+        pin:        pin.trim(),
+      });
 
-      // Query direta — mesmo padrão do LoginClienteDisplay
-      // Busca o perfil pelo id e verifica pin OU senha_hash
-      const { data, error: dbError } = await supabase
-        .from('company_profiles')
-        .select('id, pin, senha_hash')
-        .eq('id', profile.id)
-        .eq('is_active', true)
-        .single();
-
-      if (dbError || !data) {
-        setError('Erro ao verificar. Tente novamente.');
-        setLoading(false);
-        return;
-      }
-
-      // Verifica pin ou senha_hash (texto simples — igual à Edge Function)
-      const pinOk   = data.pin        && data.pin        === pin.trim();
-      const senhaOk = data.senha_hash && data.senha_hash === pin.trim();
-
-      if (!pinOk && !senhaOk) {
-        setError('PIN ou senha incorretos.');
+      if (data.valid) {
+        onConfirmed();
+      } else {
+        setError(data.error ?? 'PIN ou senha incorretos.');
         setPin('');
         setLoading(false);
         setTimeout(() => inputRef.current?.focus(), 50);
-        return;
       }
-
-      // Credencial correta — confirma
-      onConfirmed();
     } catch {
       setError('Erro ao verificar. Tente novamente.');
       setLoading(false);
@@ -103,14 +100,14 @@ function ConfirmPinModal({ theme, profile, onConfirmed, onCancel }: ConfirmPinMo
   }
 
   // ── Cores ─────────────────────────────────────────────────
-  const overlay  = isDark ? 'rgba(0,0,0,0.75)'          : 'rgba(0,0,0,0.5)';
-  const bg       = isDark ? '#1e293b'                    : '#ffffff';
-  const border   = isDark ? 'rgba(255,255,255,0.08)'     : '#e2e8f0';
-  const divider  = isDark ? 'rgba(255,255,255,0.06)'     : '#f1f5f9';
-  const text     = isDark ? '#f1f5f9'                    : '#0f172a';
-  const muted    = isDark ? 'rgba(255,255,255,0.45)'     : '#64748b';
-  const inputBg  = isDark ? '#0f172a'                    : '#f8fafc';
-  const inputBdr = isDark ? 'rgba(255,255,255,0.1)'      : '#e2e8f0';
+  const overlay     = isDark ? 'rgba(0,0,0,0.75)'       : 'rgba(0,0,0,0.5)';
+  const bg          = isDark ? '#1e293b'                 : '#ffffff';
+  const border      = isDark ? 'rgba(255,255,255,0.08)'  : '#e2e8f0';
+  const divider     = isDark ? 'rgba(255,255,255,0.06)'  : '#f1f5f9';
+  const text        = isDark ? '#f1f5f9'                 : '#0f172a';
+  const muted       = isDark ? 'rgba(255,255,255,0.45)'  : '#64748b';
+  const inputBg     = isDark ? '#0f172a'                 : '#f8fafc';
+  const inputBdr    = isDark ? 'rgba(255,255,255,0.1)'   : '#e2e8f0';
   const btnDisabled = isDark ? 'rgba(239,68,68,0.3)'     : '#fca5a5';
 
   return createPortal(
@@ -160,8 +157,6 @@ function ConfirmPinModal({ theme, profile, onConfirmed, onCancel }: ConfirmPinMo
 
         {/* Body */}
         <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-          {/* Campo */}
           <div>
             <label style={{
               display: 'block', fontSize: '0.8rem', fontWeight: 500,
@@ -227,7 +222,6 @@ function ConfirmPinModal({ theme, profile, onConfirmed, onCancel }: ConfirmPinMo
               }
             </button>
           </div>
-
         </div>
       </div>
     </div>,
@@ -242,13 +236,12 @@ export default function BotaoLogout({ slug, theme, profile, compact = false }: B
   const router = useRouter();
   const { logout } = useProfile(slug);
 
-  const [saindo, setSaindo]             = useState(false);
-  const [showModal, setShowModal]       = useState(false);
-  const [mounted, setMounted]           = useState(false);
+  const [saindo, setSaindo]       = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [mounted, setMounted]     = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Clientes saem direto; todos os outros precisam confirmar com PIN
   const requiresPin = profile.tipo !== 'cliente';
 
   function handleClick() {
@@ -265,7 +258,6 @@ export default function BotaoLogout({ slug, theme, profile, compact = false }: B
     navigateContextual(router, 'ia', slug);
   }
 
-  // ── Estilos base ──────────────────────────────────────────
   const base = {
     background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)',
     color:      isDark ? 'rgb(252,165,165)'     : 'rgb(185,28,28)',
@@ -273,11 +265,11 @@ export default function BotaoLogout({ slug, theme, profile, compact = false }: B
     opacity:    saindo ? 0.6 : 1,
   } as const;
 
-  const iconLogout = saindo
+  const iconContent = saindo
     ? <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
     : <LogOut  className="w-4 h-4 flex-shrink-0" />;
 
-  // ── Versão compacta (header do dashboard) ─────────────────
+  // ── Compacto ──────────────────────────────────────────────
   if (compact) {
     return (
       <>
@@ -291,7 +283,7 @@ export default function BotaoLogout({ slug, theme, profile, compact = false }: B
           {requiresPin && !saindo && (
             <Lock className="w-3 h-3 flex-shrink-0 opacity-50" />
           )}
-          {iconLogout}
+          {iconContent}
           <span className="hidden sm:inline text-sm font-semibold">
             {saindo ? 'Saindo...' : 'Sair'}
           </span>
@@ -309,7 +301,7 @@ export default function BotaoLogout({ slug, theme, profile, compact = false }: B
     );
   }
 
-  // ── Versão completa (rodapé mobile) ───────────────────────
+  // ── Completo ──────────────────────────────────────────────
   return (
     <>
       <button

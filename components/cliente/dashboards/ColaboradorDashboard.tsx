@@ -74,13 +74,13 @@ export default function ColaboradorDashboard({ profile, company, theme }: Props)
           description="Escaneie ou digite o código para validar um cupom do cliente."
           functionKey="validar_cupom"
           companyId={company.id}
-          iconBg="rgba(16,185,129,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<Tag className="w-6 h-6" />}
-          iconColor="rgb(110,231,183)"
-          iconColorLight="rgb(5,150,105)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Validar Cupom"
-          buttonGradient="linear-gradient(135deg, #10b981, #059669)"
-          buttonShadow="0 4px 14px rgba(16,185,129,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 
@@ -89,18 +89,18 @@ export default function ColaboradorDashboard({ profile, company, theme }: Props)
           description="Solicite a presença do gerente para situações que precisam de autorização."
           functionKey="chamar_gerente"
           companyId={company.id}
-          iconBg="rgba(249,115,22,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<PhoneCall className="w-6 h-6" />}
-          iconColor="rgb(253,186,116)"
-          iconColorLight="rgb(194,65,12)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Chamar Gerente"
-          buttonGradient="linear-gradient(135deg, #f97316, #ea580c)"
-          buttonShadow="0 4px 14px rgba(249,115,22,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 
       </div>
-      
+
     </div>
   );
 }

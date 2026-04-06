@@ -17,6 +17,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useTheme } from 'next-themes'; // ← FIX: importado para uso interno
 import { createClient } from '@/lib/supabase-browser';
 import { CartProvider, useCart } from '@/hooks/useCart';
 import ProductGrid from './SaleModeModal/ProductGrid';
@@ -27,7 +28,6 @@ import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
 import { listarProdutos, listarCategorias } from '@/lib/produtos-venda';
 import type { ProdutoVenda } from '@/lib/produtos-venda';
 import SlugHeader from '@/components/slug/SlugHeader';
-import { useTheme } from 'next-themes';
 
 export interface SaleModeModalProps {
   companyId: string;
@@ -86,8 +86,16 @@ function SaleModeInner({
   quantidadeInicial,
   profile,
 }: SaleModeModalProps) {
+  // ← FIX: usar useTheme() para ler e alterar o tema em vez de depender só da prop
   const { resolvedTheme, setTheme } = useTheme();
-  const isDark = (resolvedTheme ?? theme) === 'dark';
+  const effectiveTheme = (resolvedTheme ?? theme) as 'dark' | 'light';
+  const isDark = effectiveTheme === 'dark';
+
+  // ← FIX: handler que efetivamente altera o tema global
+  const handleToggleTheme = useCallback(() => {
+    setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
+  }, [effectiveTheme, setTheme]);
+
   const { totalItens, addItem } = useCart();
 
   const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);
@@ -205,28 +213,29 @@ function SaleModeInner({
         }`}
       >
         {/* SLUGHEADER - pageType='vendas' faz o botão vendas virar botão assistente */}
-<SlugHeader
-  company={{
-    name: companyName,
-    logo_url: companyLogo,
-    assistant_role: assistantRole,
-    webapp_enabled: true,
-  }}
-  slug={slug}
-  pageType="vendas"
-  theme={theme}
-  overlayMode={false}
-  isKioskMode={false}
-  isWakeLockActive={false}
-  isWakeLockSupported={false}
-  isPortrait={isPortrait}
-  showControls={false}
-  onEnterKioskMode={() => {}}
-  onToggleWakeLock={() => {}}
-  onToggleModoVenda={() => {}}
-  onToggleTheme={() => {}}
-  onClose={undefined}
-/>
+        {/* ← FIX: theme e onToggleTheme agora conectados ao next-themes */}
+        <SlugHeader
+          company={{
+            name: companyName,
+            logo_url: companyLogo,
+            assistant_role: assistantRole,
+            webapp_enabled: true,
+          }}
+          slug={slug}
+          pageType="vendas"
+          theme={effectiveTheme}
+          overlayMode={false}
+          isKioskMode={false}
+          isWakeLockActive={false}
+          isWakeLockSupported={false}
+          isPortrait={isPortrait}
+          showControls={false}
+          onEnterKioskMode={() => {}}
+          onToggleWakeLock={() => {}}
+          onToggleModoVenda={() => {}}
+          onToggleTheme={handleToggleTheme}
+          onClose={undefined}
+        />
 
         {/* CONTEÚDO */}
         <div className="flex-1 flex overflow-hidden px-3 py-3 pb-32 min-h-0 w-full gap-3">
@@ -244,7 +253,7 @@ function SaleModeInner({
                 >
                   <CheckoutFlow
                     companyId={companyId}
-                    theme={theme}
+                    theme={effectiveTheme}
                     onClose={() => {
                       setShowCheckout(false);
                       onClose();
@@ -275,7 +284,7 @@ function SaleModeInner({
                     produtos={produtos}
                     categorias={categorias}
                     loading={loadingProdutos}
-                    theme={theme}
+                    theme={effectiveTheme}
                     produtoDestaque={produtoDestaque}
                     onProdutoDestaqueClear={() => setProdutoDestaque(null)}
                     hideBusca
@@ -325,7 +334,7 @@ function SaleModeInner({
                             isListening={isListening}
                             isSpeaking={isPlayingAudio}
                             isProcessing={isProcessing || isTranscribing}
-                            theme={theme}
+                            theme={effectiveTheme}
                             qrCodeData={null}
                             pixConfirmationData={null}
                             onCloseQRCode={() => {}}
@@ -356,7 +365,7 @@ function SaleModeInner({
                         <TextInputChat
                           onSendMessage={onTextMessage}
                           isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                          theme={theme}
+                          theme={effectiveTheme}
                           disabled={false}
                           compact
                         />
@@ -366,7 +375,7 @@ function SaleModeInner({
 
                   {/* CartPanel */}
                   <div className="flex-1 min-h-0 overflow-hidden">
-                    <CartPanel theme={theme} onCheckout={handleCheckout} />
+                    <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
                   </div>
                 </div>
               </>
@@ -402,7 +411,7 @@ function SaleModeInner({
             >
               <CheckoutFlow
                 companyId={companyId}
-                theme={theme}
+                theme={effectiveTheme}
                 onClose={() => {
                   setShowCheckout(false);
                   onClose();
@@ -433,7 +442,7 @@ function SaleModeInner({
                 produtos={produtos}
                 categorias={categorias}
                 loading={loadingProdutos}
-                theme={theme}
+                theme={effectiveTheme}
                 produtoDestaque={produtoDestaque}
                 onProdutoDestaqueClear={() => setProdutoDestaque(null)}
                 hideBusca
@@ -496,7 +505,7 @@ function SaleModeInner({
                         isListening={isListening}
                         isSpeaking={isPlayingAudio}
                         isProcessing={isProcessing || isTranscribing}
-                        theme={theme}
+                        theme={effectiveTheme}
                         qrCodeData={null}
                         pixConfirmationData={null}
                         onCloseQRCode={() => {}}
@@ -527,7 +536,7 @@ function SaleModeInner({
                     <TextInputChat
                       onSendMessage={onTextMessage}
                       isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                      theme={theme}
+                      theme={effectiveTheme}
                       disabled={false}
                       compact
                     />
@@ -537,7 +546,7 @@ function SaleModeInner({
 
               {/* CartPanel */}
               <div className="flex-1 min-h-0 overflow-hidden">
-                <CartPanel theme={theme} onCheckout={handleCheckout} />
+                <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
               </div>
             </div>
           </>

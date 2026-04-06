@@ -796,6 +796,7 @@ export async function detectVoiceCommand(
     const { classifyIntentWithGroq } = await import('@/lib/groq-intent-classifier');
     const groqHandled = await classifyIntentWithGroq(transcript, {
       companyId,
+      sessionId,
       functionSettings,
       playText,
       setIsProcessing,

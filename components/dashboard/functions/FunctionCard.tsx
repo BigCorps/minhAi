@@ -119,6 +119,7 @@ const CONFIGURABLE_FUNCTIONS = [
   'lembrete_remedios',
   'ver_noticias',
   'procurar_produto',
+  'chamar_gerente',
   'tef_debito',
   'tef_credito'
 ];

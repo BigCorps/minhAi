@@ -45,6 +45,55 @@ function normalizeText(text: string): string {
     .trim();
 }
 
+// ─── Sanitização de segurança ─────────────────────────────────────────────
+
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?(previous|prior|above)\s+instructions?/i,
+  /forget\s+(everything|all|your|what)/i,
+  /you\s+are\s+now\s+(a|an|the)/i,
+  /act\s+as\s+(if\s+you\s+are\s+)?(a|an|the)/i,
+  /new\s+(role|persona|instructions?|system\s+prompt)/i,
+  /\[system\]/i,
+  /\[assistant\]/i,
+  /\[inst\]/i,
+  /<\|im_start\|>/i,
+  /<\|system\|>/i,
+  /###\s*instruction/i,
+  /prompt\s*injection/i,
+  /jailbreak/i,
+  /dan\s+mode/i,
+  /developer\s+mode/i,
+];
+
+function sanitizeInput(text: string): { safe: string; blocked: boolean; reason?: string } {
+  if (!text || typeof text !== 'string') {
+    return { safe: '', blocked: false };
+  }
+
+  // Truncar entradas muito longas (limite: 1000 chars para mensagem de voz)
+  const truncated = text.slice(0, 1000);
+
+  // Verificar padrões de injeção
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(truncated)) {
+      console.warn(`🚨 Prompt injection detectado: "${truncated.slice(0, 80)}..."`);
+      return {
+        safe: '',
+        blocked: true,
+        reason: `Padrão bloqueado: ${pattern.source.slice(0, 40)}`,
+      };
+    }
+  }
+
+  // Remover caracteres de controle e null bytes
+  const cleaned = truncated
+    .replace(/\0/g, '')
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim();
+
+  return { safe: cleaned, blocked: false };
+}
+
 async function findMatchingFAQ(supabase: any, companyId: string, question: string) {
   console.log('=== FAQ MATCHING ===');
   console.log('❓', question);
@@ -220,22 +269,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const userMessage = directQuestion || '';
-    const saleMode = formData.get('saleMode') === 'true';
+const rawMessage = directQuestion || '';
+const saleMode = formData.get('saleMode') === 'true';
 
-    if (!userMessage) {
-      const errorAudio = await synthesizeSpeech({
-        text: 'Não consegui te ouvir. Pode repetir?',
-        voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
-        speakingRate: 1.2,
-        audioEncoding: 'MP3',
-      });
-      return new Response(new Uint8Array(errorAudio), {
-        headers: { 'Content-Type': 'audio/mpeg', 'X-Used-FAQ': 'false' },
-      });
-    }
+// ─── Sanitização ──────────────────────────────────────────────────────────
+const { safe: userMessage, blocked, reason } = sanitizeInput(rawMessage);
 
-    console.log(`👂 "${userMessage}"`);
+if (!rawMessage) {
+  const errorAudio = await synthesizeSpeech({
+    text: 'Não consegui te ouvir. Pode repetir?',
+    voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+    speakingRate: 1.2,
+    audioEncoding: 'MP3',
+  });
+  return new Response(new Uint8Array(errorAudio), {
+    headers: { 'Content-Type': 'audio/mpeg', 'X-Used-FAQ': 'false' },
+  });
+}
+
+if (blocked) {
+  console.warn(`🚨 Mensagem bloqueada para company ${companyId}: ${reason}`);
+
+  // Log silencioso para auditoria (sem cobrar créditos)
+  await supabase.from('assistant_function_logs').insert({
+    company_id: companyId,
+    function_key: 'security_block',
+    credits_consumed: 0,
+    metadata: {
+      reason,
+      input_preview: rawMessage.slice(0, 80),
+      blocked_at: new Date().toISOString(),
+    },
+  });
+
+  const blockedAudio = await synthesizeSpeech({
+    text: 'Não consigo processar essa solicitação.',
+    voiceName: BRAZILIAN_VOICES.NEURAL_MALE,
+    speakingRate: 1.2,
+    audioEncoding: 'MP3',
+  });
+  return new Response(new Uint8Array(blockedAudio), {
+    headers: {
+      'Content-Type': 'audio/mpeg',
+      'X-Security-Block': 'true',
+      'X-Used-FAQ': 'false',
+    },
+  });
+}
+
+console.log(`👂 "${userMessage}"`);
 
     const useOrcamentoPrompt = formData.get('useOrcamentoPrompt') === 'true';
     console.log('📋 useOrcamentoPrompt:', useOrcamentoPrompt);

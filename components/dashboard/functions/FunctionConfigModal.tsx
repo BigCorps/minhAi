@@ -2,7 +2,7 @@
 'use client';
  
 import { useState, useEffect } from 'react';
-import { CheckCircle, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle, Info, Mic, Sparkles, Loader2, X, Mail, Calendar, Bell, ExternalLink, Settings, AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { InfinitePayConfigForm } from './InfinitePayConfigModal';

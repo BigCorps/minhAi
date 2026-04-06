@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { useAssistant } from '@/contexts/AssistantContext';
+import DrivePickerButton from '@/components/ui/DrivePickerButton';
 import {
   Calendar as CalendarIcon,
   Mail,
@@ -112,10 +113,10 @@ function AgendaPageContent() {
   // Drive
   const [driveFolders, setDriveFolders] = useState<DriveFolder[]>([]);
   const [driveImages, setDriveImages] = useState<DriveImage[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<DriveFolder | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<{ id: string; name: string } | null>(null);
+  const [loadingImages, setLoadingImages] = useState(false);
   const [folderPath, setFolderPath] = useState<DriveFolder[]>([]);
   const [loadingDrive, setLoadingDrive] = useState(false);
-  const [loadingImages, setLoadingImages] = useState(false);
 
   // Smart Home
   const [smartDevices, setSmartDevices] = useState<SmartDevice[]>([]);
@@ -144,7 +145,6 @@ function AgendaPageContent() {
   // Reload data when tab changes
   useEffect(() => {
     if (!selectedCompanyId || !googleAccount) return;
-    if (activeTab === 'drive' && driveFolders.length === 0) loadDriveFolders(null);
     if (activeTab === 'smarthome' && smartDevices.length === 0) loadSmartDevices();
   }, [activeTab, googleAccount]);
 
@@ -310,17 +310,6 @@ function AgendaPageContent() {
   function handleViewChange(view: 'dayGridMonth' | 'timeGridWeek' | 'listWeek') {
     const api = calendarRef.current?.getApi();
     if (api) { api.changeView(view); setActiveView(view); setCurrentTitle(api.view.title); }
-  }
-
-  function enterFolder(folder: DriveFolder) {
-    setFolderPath(prev => [...prev, folder]);
-    loadDriveFolders(folder.id);
-  }
-
-  function goBackFolder() {
-    const newPath = folderPath.slice(0, -1);
-    setFolderPath(newPath);
-    loadDriveFolders(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
   }
 
   function formatDate(dateString: string) {
@@ -547,113 +536,49 @@ function AgendaPageContent() {
               )}
 
               {/* ── GOOGLE DRIVE ── */}
-              {activeTab === 'drive' && (
-                <>
-                  {/* Breadcrumb */}
-                  <div className="mb-4 flex items-center gap-1 text-sm flex-wrap">
-                    <button onClick={() => { setFolderPath([]); loadDriveFolders(null); setSelectedFolder(null); setDriveImages([]); }}
-                      className="text-blue-500 hover:underline flex-shrink-0">
-                      Meu Drive
-                    </button>
-                    {folderPath.map((f, i) => (
-                      <span key={f.id} className="flex items-center gap-1">
-                        <span className="text-gray-400">/</span>
-                        <button onClick={() => {
-                          const newPath = folderPath.slice(0, i + 1);
-                          setFolderPath(newPath);
-                          loadDriveFolders(f.id);
-                          setSelectedFolder(null);
-                          setDriveImages([]);
-                        }} className="text-blue-500 hover:underline">
-                          {f.name}
-                        </button>
-                      </span>
-                    ))}
-                    {selectedFolder && (
-                      <span className="flex items-center gap-1">
-                        <span className="text-gray-400">/</span>
-                        <span className="text-gray-600 dark:text-gray-400">{selectedFolder.name}</span>
-                      </span>
-                    )}
-                  </div>
+{activeTab === 'drive' && (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <div>
+        {selectedFolder
+          ? <p className="text-sm text-gray-600 dark:text-gray-400">📁 <strong>{selectedFolder.name}</strong> — {driveImages.length} imagem{driveImages.length !== 1 ? 's' : ''}</p>
+          : <p className="text-sm text-gray-400">Selecione uma pasta para ver as imagens</p>
+        }
+      </div>
+      <DrivePickerButton
+        companyId={selectedCompanyId!}
+        onFolderSelected={(id, name) => {
+          setSelectedFolder({ id, name });
+          loadDriveImages(id);
+        }}
+        label={selectedFolder ? 'Trocar pasta' : 'Selecionar pasta'}
+        className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition"
+      />
+    </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* Pastas */}
-                    <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Folder className="w-4 h-4 text-yellow-500" />
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">Pastas</span>
-                        </div>
-                        {folderPath.length > 0 && (
-                          <button onClick={goBackFolder} className="text-xs text-blue-500 hover:underline">← Voltar</button>
-                        )}
-                      </div>
-                      <div className="max-h-80 overflow-y-auto">
-                        {loadingDrive ? (
-                          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
-                        ) : driveFolders.length === 0 ? (
-                          <p className="text-center py-8 text-sm text-gray-400">Nenhuma pasta encontrada</p>
-                        ) : (
-                          driveFolders.map(folder => (
-                            <div key={folder.id} className={`flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition ${selectedFolder?.id === folder.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                              <button onClick={() => enterFolder(folder)} className="flex items-center gap-2 flex-1 text-left text-sm text-gray-800 dark:text-gray-200">
-                                📁 {folder.name}
-                              </button>
-                              <button
-                                onClick={() => { setSelectedFolder(folder); loadDriveImages(folder.id); }}
-                                className={`text-xs px-2 py-1 rounded transition flex-shrink-0 ${selectedFolder?.id === folder.id ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100'}`}
-                              >
-                                {selectedFolder?.id === folder.id ? '✓ Aberta' : 'Ver imagens'}
-                              </button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Imagens */}
-                    <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {selectedFolder ? `Imagens em "${selectedFolder.name}"` : 'Selecione uma pasta'}
-                        </span>
-                      </div>
-                      <div className="max-h-80 overflow-y-auto">
-                        {loadingImages ? (
-                          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
-                        ) : !selectedFolder ? (
-                          <div className="flex flex-col items-center justify-center py-8 gap-2">
-                            <Folder className="w-10 h-10 text-gray-300" />
-                            <p className="text-sm text-gray-400">Clique em "Ver imagens" em uma pasta</p>
-                          </div>
-                        ) : driveImages.length === 0 ? (
-                          <p className="text-center py-8 text-sm text-gray-400">Nenhuma imagem encontrada</p>
-                        ) : (
-                          <div className="grid grid-cols-3 gap-1 p-2">
-                            {driveImages.map(img => (
-                              <div key={img.id} className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-800">
-                                <img
-                                  src={img.thumb}
-                                  alt={img.name}
-                                  className="w-full h-full object-cover hover:scale-105 transition"
-                                  title={img.name}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {driveImages.length > 0 && (
-                        <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5">
-                          <p className="text-xs text-gray-400">{driveImages.length} imagem{driveImages.length !== 1 ? 's' : ''}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
+    {loadingImages ? (
+      <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+    ) : !selectedFolder ? (
+      <div className="bg-white/50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
+        <HardDrive className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+        <p className="text-gray-500">Clique em "Selecionar pasta" para começar</p>
+      </div>
+    ) : driveImages.length === 0 ? (
+      <p className="text-center py-12 text-sm text-gray-400">Nenhuma imagem encontrada nesta pasta</p>
+    ) : (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {driveImages.map(img => (
+          <div key={img.id} className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800 group relative">
+            <img src={img.thumb} alt={img.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" title={img.name} />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-end p-2 opacity-0 group-hover:opacity-100">
+              <p className="text-white text-xs truncate">{img.name.replace(/\.[^/.]+$/, '')}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
               {/* ── SMART HOME ── */}
               {activeTab === 'smarthome' && (

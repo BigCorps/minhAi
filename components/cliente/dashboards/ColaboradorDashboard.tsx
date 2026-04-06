@@ -48,7 +48,7 @@ export default function ColaboradorDashboard({ profile, company, theme }: Props)
 
       {/* Minha Conta full-width */}
       <div className="mb-6">
-        <CardMinhaConta profile={profile} theme={theme} horizontal />
+        <CardMinhaConta profile={profile} slug={company.slug} theme={theme} horizontal />
       </div>
 
       {/* Grid de ações */}
@@ -100,7 +100,7 @@ export default function ColaboradorDashboard({ profile, company, theme }: Props)
         />
 
       </div>
-
+      
     </div>
   );
 }

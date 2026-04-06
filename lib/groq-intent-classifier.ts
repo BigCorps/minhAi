@@ -1,4 +1,5 @@
 // lib/groq-intent-classifier.ts
+
 import { createClient } from '@/lib/supabase-browser';
 import { getAllFunctions } from '@/lib/functions-registry';
 

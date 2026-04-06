@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase-browser';
 interface ChamarGerenteDisplayProps {
   data: {
     companyId: string;
-    motivo?: string; // Extraído da voz/texto
+    motivo?: string;
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
@@ -33,7 +33,6 @@ export default function ChamarGerenteDisplay({
   const supabase = createClient();
   const isDark = theme === 'dark';
 
-  // Paletas de cores
   const DARK = {
     bg: 'bg-slate-900',
     cardBg: 'bg-slate-800',
@@ -62,16 +61,15 @@ export default function ChamarGerenteDisplay({
     };
   }, []);
 
-  // Buscar email do gerente
+  // Buscar email do gerente + REALTIME
   useEffect(() => {
     async function fetchGerenteEmail() {
       try {
-        // Busca perfis do tipo 'gerente' na empresa
         const { data: perfis } = await supabase
           .from('company_profiles')
-          .select('nome, email')
+          .select('nome, email, telefone')
           .eq('company_id', companyId)
-          .eq('profile_type', 'gerente')
+          .eq('tipo', 'gerente')
           .eq('is_active', true)
           .limit(1);
 
@@ -80,7 +78,6 @@ export default function ChamarGerenteDisplay({
           setGerenteEmail(gerente.email || '');
           setGerenteNome(gerente.nome || 'Gerente');
         } else {
-          // Fallback: busca email da empresa
           const { data: company } = await supabase
             .from('companies')
             .select('business_email, name')
@@ -99,10 +96,29 @@ export default function ChamarGerenteDisplay({
         showToast('Erro ao carregar dados do gerente', 'error');
       }
     }
+    
     fetchGerenteEmail();
+
+    // REALTIME: atualiza quando gerente mudar
+    const channel = supabase
+      .channel(`gerente-${companyId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'company_profiles',
+        filter: `company_id=eq.${companyId}`,
+      }, (payload) => {
+        const updated = payload.new as any;
+        if (updated.tipo === 'gerente' && updated.is_active) {
+          setGerenteEmail(updated.email || '');
+          setGerenteNome(updated.nome || 'Gerente');
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [companyId]);
 
-  // Toast
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000);
@@ -128,7 +144,6 @@ export default function ChamarGerenteDisplay({
     setIsSending(true);
 
     try {
-      // Envia email via Edge Function
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,7 +164,6 @@ export default function ChamarGerenteDisplay({
         await playText('Gerente notificado com sucesso!');
       }
 
-      // Fecha após 1.5s
       setTimeout(() => {
         onClose();
       }, 1500);
@@ -170,7 +184,6 @@ export default function ChamarGerenteDisplay({
 
   const content = (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      {/* Toast */}
       {toast && (
         <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[400] px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
           toast.type === 'error' 
@@ -182,10 +195,8 @@ export default function ChamarGerenteDisplay({
         </div>
       )}
 
-      {/* Modal */}
       <div className={`w-full max-w-md rounded-2xl shadow-2xl ${colors.bg} ${colors.border} border overflow-hidden`}>
         
-        {/* Header */}
         <div className={`px-6 py-4 border-b ${colors.border} flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-yellow-900/30' : 'bg-yellow-100'}`}>
@@ -211,10 +222,8 @@ export default function ChamarGerenteDisplay({
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6 space-y-4">
           
-          {/* Info do Gerente */}
           <div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
             <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
             <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
@@ -223,7 +232,6 @@ export default function ChamarGerenteDisplay({
             )}
           </div>
 
-          {/* Motivo */}
           <div>
             <label className={`block text-sm font-medium mb-2 ${colors.textPrimary}`}>
               Motivo da chamada:
@@ -241,7 +249,6 @@ export default function ChamarGerenteDisplay({
             </p>
           </div>
 
-          {/* Botões */}
           <div className="flex gap-3">
             <button
               onClick={onClose}

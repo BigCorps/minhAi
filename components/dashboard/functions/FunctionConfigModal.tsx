@@ -894,9 +894,9 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         // 1. Tenta buscar do company_profiles (gerente cadastrado)
         const { data: perfil } = await supabase
           .from('company_profiles')
-          .select('nome, email, telefone')
+          .select('nome, email, metadata') 
           .eq('company_id', companyId)
-          .eq('profile_type', 'gerente')
+          .eq('tipo', 'gerente')
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();

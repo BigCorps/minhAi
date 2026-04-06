@@ -4,6 +4,7 @@ import { getAllFunctions } from '@/lib/functions-registry';
 
 interface ClassifierDeps {
   companyId: string;
+  sessionId?: string | null;      // ← novo
   playText: (text: string) => Promise<void>;
   groqContextRef: React.MutableRefObject<string>;
   commandProcessor: any;
@@ -40,10 +41,30 @@ export async function classifyIntentWithGroq(
       return false;
     }
 
+    let sessionContext = null;
+    if (deps.sessionId) {
+      try {
+        const supabase = createClient();
+        const { data: sessionData } = await supabase
+          .from('assistant_sessions')
+          .select('context_summary, last_function_keys')
+          .eq('id', deps.sessionId)
+          .eq('company_id', deps.companyId)
+          .maybeSingle();
+
+        if (sessionData) {
+          sessionContext = {
+            summary: sessionData.context_summary ?? '',
+            lastFunctions: sessionData.last_function_keys ?? [],
+          };
+        }
+      } catch { /* silencioso — memória é enhancement, não bloqueante */ }
+    }
+
     const response = await fetch('/api/groq/classify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcript, functionsContext }),
+      body: JSON.stringify({ transcript, functionsContext, sessionContext }),
     });
 
     if (!response.ok) return false;

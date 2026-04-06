@@ -32,6 +32,65 @@ const DASHBOARD_MAP: Record<string, React.ComponentType<any>> = {
   totem:         TotemDashboard,
 };
 
+// Mapeia functionKey (snake_case) → nome do componente no MODAL_COMPONENTS
+const FUNCTION_KEY_TO_MODAL: Record<string, string> = {
+  registrar_venda:   'RegistrarVendaDisplay',
+  ver_clientes:      'VerClientesDisplay',
+  validar_cupom:     'ValidarCupomDisplay',
+  chamar_gerente:    'ChamarGerenteDisplay',
+  fechar_caixa:      'FecharCaixaDisplay',
+  trocar_turno:      'TrocarTurnoDisplay',
+  relatorio_vendas:  'RelatorioVendasDisplay',
+  minhas_compras:    'MinhasComprasDisplay',
+  meu_cupom:         'MeuCupomDisplay',
+  procurar_produto:  'ProcurarProdutoDisplay',
+  lista_compras:     'ListaComprasDisplay',
+  ver_produto:       'VerProdutoDisplay',
+  pix_generate:      'PIXConfirmationModal',
+  send_email:        'SendEmailModal',
+  create_event:      'CreateEventModal',
+  view_agenda:       'ViewAgendaModal',
+  ler_qrcode:        'LerQRCodeDisplay',
+  ler_codigo_barras: 'LerCodigoBarrasDisplay',
+  clima_tempo:       'ClimaTempoDisplay',
+  consultar_cep:     'ConsultarCEPDisplay',
+  consultar_cpf:     'ConsultarCpfModal',
+  consultar_cnpj:    'ConsultarCnpjModal',
+  consultar_placa:   'ConsultarPlacaModal',
+  cotacao_moedas:    'CotacaoMoedasDisplay',
+  cronometro:        'CronometroDisplay',
+  temporizador:      'TemporizadorDisplay',
+  relogio_mundial:   'RelogioMundialDisplay',
+  alarme:            'AlarmeDisplay',
+  lembrete_remedios: 'LembreteRemediosDisplay',
+  criar_nota:        'CriarNotaDisplay',
+  criar_lembrete:    'CriarLembreteDisplay',
+  enviar_arquivo:    'EnviarArquivoDisplay',
+  converter_arquivo: 'ConverterArquivoDisplay',
+  editar_imagem:     'EditarImagemDisplay',
+  remover_fundo:     'RemoverFundoDisplay',
+  ver_noticias:      'VerNoticiasDisplay',
+  rastreio_correios: 'RastreioCorreiosDisplay',
+  tracar_rota:       'TracarRotaDisplay',
+  tocar_video:       'TocarVideoDisplay',
+  tocar_musica:      'TocarMusicaDisplay',
+  cardapio:          'CardapioDisplay',
+  painel_ofertas:    'PainelOfertasDisplay',
+  qrcode:            'QRCodeDisplay',
+  wifi_qrcode:       'WifiQRCodeDisplay',
+  gerar_qrcode:      'GerarQRCodeDisplay',
+  nosso_qrcode:      'NossoQRCodeDisplay',
+  endereco:          'EnderecoDisplay',
+  nossa_marca:       'NossaMarcaDisplay',
+  meu_sistema:       'MeuSistemaDisplay',
+  video_instrucoes:  'VideoInstrucoesDisplay',
+  translate_text:    'TranslateTextModal',
+  transcribe_audio:  'TranscribeAudioModal',
+  login_cliente:     'LoginClienteDisplay',
+  registration:      'RegistrationDisplay',
+  fichas_producao:   'FichaProducaoDisplay',
+};
+
 interface ClientePageProps {
   company: {
     id: string;
@@ -52,7 +111,7 @@ export default function ClientePage({ company }: ClientePageProps) {
   // ── Estado para controle de modais ──
   const [activeModal, setActiveModal] = useState<{ type: string; data: any } | null>(null);
 
-  // ── Tema dinâmico via next-themes (igual ao assistente) ──
+  // ── Tema dinâmico via next-themes ──
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -68,9 +127,12 @@ export default function ClientePage({ company }: ClientePageProps) {
     const handleFunctionClick = (e: CustomEvent) => {
       const { functionKey, ...rest } = e.detail;
 
-      console.log('[ClientePage] Função chamada:', functionKey, rest);
+      // Traduz functionKey → nome do componente no MODAL_COMPONENTS
+      const modalType = FUNCTION_KEY_TO_MODAL[functionKey] ?? functionKey;
 
-      setActiveModal({ type: functionKey, data: { companyId: company.id, ...rest } });
+      console.log('[ClientePage] Função chamada:', functionKey, '→', modalType, rest);
+
+      setActiveModal({ type: modalType, data: { companyId: company.id, ...rest } });
     };
 
     window.addEventListener('voiceAssistantFunctionClick', handleFunctionClick as EventListener);
@@ -94,11 +156,11 @@ export default function ClientePage({ company }: ClientePageProps) {
   if (loading) {
     return (
       <div className={`min-h-screen flex flex-col ${bgPage}`}>
-        <SlugHeaderWrapper 
-          company={company} 
-          slug={company.slug} 
-          pageType="cliente" 
-          overlayMode={false} 
+        <SlugHeaderWrapper
+          company={company}
+          slug={company.slug}
+          pageType="cliente"
+          overlayMode={false}
         />
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
@@ -116,18 +178,18 @@ export default function ClientePage({ company }: ClientePageProps) {
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${bgPage}`}>
-      <SlugHeaderWrapper 
-        company={company} 
-        slug={company.slug} 
-        pageType="cliente" 
-        overlayMode={false} 
+      <SlugHeaderWrapper
+        company={company}
+        slug={company.slug}
+        pageType="cliente"
+        overlayMode={false}
       />
-      
+
       <main className="flex-1">
-        <Dashboard 
-          profile={profile} 
-          company={company} 
-          theme={theme} 
+        <Dashboard
+          profile={profile}
+          company={company}
+          theme={theme}
         />
       </main>
 

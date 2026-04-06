@@ -1089,12 +1089,34 @@ export function VoiceAssistantWithWakeWord({
       setIsPlayingAudio(true);
 
       audio.onplay = () => setIsPlayingAudio(true);
-      audio.onended = () => {
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-        processingQuestion.current = false;
-        setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 2000);
-      };
+audio.onended = () => {
+  setIsPlayingAudio(false);
+  currentAudioRef.current = null;
+  processingQuestion.current = false;
+
+  // ── Fase 2: atualizar memória em background ──
+  if (sessionId && lastTranscript && lastResponse) {
+    fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-session-memory`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          company_id: companyId,
+          user_message: lastTranscript,
+          assistant_message: lastResponse,
+          function_key: null, // funções específicas atualizam via próprio handler
+        }),
+      }
+    ).catch(() => {}); // fire-and-forget — nunca bloqueia o fluxo de voz
+  }
+
+  setTimeout(async () => { shouldProcessAudio.current = true; await startGoogleSpeech(); }, 2000);
+};
       audio.onerror = () => {
         setIsPlayingAudio(false);
         currentAudioRef.current = null;

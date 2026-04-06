@@ -78,7 +78,7 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString('pt-BR');
 }
 
-/** Extrai telefone do metadata ou do campo identificador (compatibilidade legada) */
+/** Extrai telefone do metadata (onde é salvo pelo ModalEditarPerfil e ProfileModal) */
 function getTelefone(p: CompanyProfile): string {
   return p.metadata?.telefone ?? '';
 }
@@ -108,13 +108,14 @@ function ProfileModal({
 }) {
   const supabase = createClient();
   const [form, setForm] = useState({
-    tipo:          profile?.tipo          ?? tiposDisponiveis[0] ?? 'colaborador',
-    nome:          profile?.nome          ?? '',
-    email:         profile?.email         ?? '',
-    identificador: profile?.identificador ?? '',
-    pin:           profile?.pin           ?? '',
-    endereco:      profile?.endereco      ?? '',
-    is_active:     profile?.is_active     ?? true,
+    tipo:          profile?.tipo                ?? tiposDisponiveis[0] ?? 'colaborador',
+    nome:          profile?.nome                ?? '',
+    email:         profile?.email               ?? '',
+    identificador: profile?.identificador       ?? '',
+    pin:           profile?.pin                 ?? '',
+    endereco:      profile?.endereco            ?? '',
+    telefone:      profile?.metadata?.telefone  ?? '',   // ← lê de metadata
+    is_active:     profile?.is_active           ?? true,
   });
   const [saving, setSaving]               = useState(false);
   const [error, setError]                 = useState('');
@@ -139,6 +140,11 @@ function ProfileModal({
         pin:           form.pin.trim()           || null,
         endereco:      form.endereco.trim()      || null,
         is_active:     form.is_active,
+        // ← merge metadata para não apagar outros campos existentes
+        metadata: {
+          ...(profile?.metadata ?? {}),
+          telefone: form.telefone.trim() || null,
+        },
       };
       if (profile) {
         const { error: err } = await supabase.from('company_profiles').update(payload).eq('id', profile.id);
@@ -218,6 +224,23 @@ function ProfileModal({
               Usado no login junto com o PIN.
             </p>
           </div>
+
+          {/* Telefone — salvo em metadata.telefone */}
+          {!isTotem && (
+            <div>
+              <label className={labelCls}>Telefone</label>
+              <input
+                type="tel"
+                value={form.telefone}
+                onChange={e => setForm(p => ({ ...p, telefone: e.target.value }))}
+                placeholder="(XX) XXXXX-XXXX"
+                className={inputCls}
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Usado para notificações e chamada de gerente via SMS.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className={labelCls}>PIN — Senha de acesso ao painel</label>
@@ -425,7 +448,7 @@ function AbaClientes({ companyId }: { companyId: string }) {
   useEffect(() => {
     load();
 
-    // ✅ Realtime: atualiza a lista quando o cliente editar seus dados
+    // Realtime: atualiza a lista quando o cliente editar seus dados
     const channel = supabase
       .channel(`clientes-${companyId}`)
       .on('postgres_changes', {
@@ -481,7 +504,6 @@ function AbaClientes({ companyId }: { companyId: string }) {
   });
 
   function exportCSV() {
-    // ✅ Exporta telefone de metadata e endereço
     const headers = ['Data', 'Nome', 'E-mail', 'Telefone', 'Endereço', 'Último acesso', 'Ativo'];
     const rows = filtered.map(p => [
       new Date(p.created_at).toLocaleString('pt-BR'),
@@ -543,11 +565,9 @@ function AbaClientes({ companyId }: { companyId: string }) {
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Nome</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">E-mail</th>
-                  {/* ✅ Telefone agora lê de metadata.telefone */}
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />Telefone</span>
                   </th>
-                  {/* ✅ Endereço — novo campo editável pelo cliente */}
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />Endereço</span>
                   </th>
@@ -607,7 +627,7 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
   useEffect(() => {
     load();
 
-    // ✅ Realtime: atualiza quando colaborador editar Nome ou Telefone
+    // Realtime: atualiza quando colaborador editar Nome ou Telefone
     const channel = supabase
       .channel(`colaboradores-${companyId}`)
       .on('postgres_changes', {
@@ -697,7 +717,6 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Tipo</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">E-mail</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Identificador</th>
-                  {/* ✅ Telefone de metadata */}
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />Telefone</span>
                   </th>
@@ -776,7 +795,7 @@ function AbaTotens({ companyId }: { companyId: string }) {
   useEffect(() => {
     load();
 
-    // ✅ Realtime: atualiza card do totem quando nome for editado
+    // Realtime: atualiza card do totem quando nome for editado
     const channel = supabase
       .channel(`totens-${companyId}`)
       .on('postgres_changes', {

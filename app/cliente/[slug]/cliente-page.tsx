@@ -11,7 +11,7 @@ import { useTheme } from 'next-themes';
 import dynamic from 'next/dynamic';
 import { useProfile } from '@/hooks/useProfile';
 import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';
-import ActionModals from '@/components/VoiceAssistant/ActionModals';
+import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 
 const ClienteDashboard     = dynamic(() => import('@/components/cliente/dashboards/ClienteDashboard'));
 const ColaboradorDashboard = dynamic(() => import('@/components/cliente/dashboards/ColaboradorDashboard'));
@@ -50,8 +50,7 @@ export default function ClientePage({ company }: ClientePageProps) {
   const { profile, loading } = useProfile(company.slug);
 
   // ── Estado para controle de modais ──
-  const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [modalData, setModalData] = useState<any>(undefined);
+  const [activeModal, setActiveModal] = useState<{ type: string; data: any } | null>(null);
 
   // ── Tema dinâmico via next-themes (igual ao assistente) ──
   const { resolvedTheme } = useTheme();
@@ -66,22 +65,19 @@ export default function ClientePage({ company }: ClientePageProps) {
 
   // ── Listener do evento voiceAssistantFunctionClick ──
   useEffect(() => {
-    const handleFunctionClick = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const { functionKey, companyId, ...extraData } = customEvent.detail;
-      
-      console.log('[ClientePage] Função chamada:', functionKey, extraData);
-      
-      setActiveModal(functionKey);
-      setModalData({ companyId, ...extraData });
+    const handleFunctionClick = (e: CustomEvent) => {
+      const { functionKey, ...rest } = e.detail;
+
+      console.log('[ClientePage] Função chamada:', functionKey, rest);
+
+      setActiveModal({ type: functionKey, data: { companyId: company.id, ...rest } });
     };
 
     window.addEventListener('voiceAssistantFunctionClick', handleFunctionClick as EventListener);
-    
     return () => {
       window.removeEventListener('voiceAssistantFunctionClick', handleFunctionClick as EventListener);
     };
-  }, []);
+  }, [company.id]);
 
   // ── Redirecionar se não estiver logado ──
   useEffect(() => {
@@ -138,14 +134,9 @@ export default function ClientePage({ company }: ClientePageProps) {
       {/* ── Sistema de Modais ── */}
       <ActionModals
         activeModal={activeModal}
-        onClose={() => {
-          setActiveModal(null);
-          setModalData(undefined);
-        }}
-        companyId={company.id}
+        onClose={() => setActiveModal(null)}
         theme={theme}
-        playText={async () => {}} // Sem áudio nos dashboards
-        modalData={modalData}
+        playText={async () => {}}
       />
     </div>
   );

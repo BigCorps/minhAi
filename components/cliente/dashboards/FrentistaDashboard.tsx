@@ -47,7 +47,7 @@ export default function FrentistaDashboard({ profile, company, theme }: Props) {
 
       {/* Minha Conta full-width */}
       <div className="mb-6">
-        <CardMinhaConta profile={profile} theme={theme} horizontal />
+        <CardMinhaConta profile={profile} slug={company.slug} theme={theme} horizontal />
       </div>
 
       {/* Grid de ações — 2 colunas */}
@@ -73,13 +73,13 @@ export default function FrentistaDashboard({ profile, company, theme }: Props) {
           description="Solicite a presença do gerente para autorizações ou ocorrências."
           functionKey="chamar_gerente"
           companyId={company.id}
-          iconBg="rgba(249,115,22,0.1)"
+          iconBg="rgba(59,130,246,0.1)"
           icon={<PhoneCall className="w-6 h-6" />}
-          iconColor="rgb(253,186,116)"
-          iconColorLight="rgb(194,65,12)"
+          iconColor="rgb(147,197,253)"
+          iconColorLight="rgb(29,78,216)"
           buttonLabel="Chamar Gerente"
-          buttonGradient="linear-gradient(135deg, #f97316, #ea580c)"
-          buttonShadow="0 4px 14px rgba(249,115,22,0.35)"
+          buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+          buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
 

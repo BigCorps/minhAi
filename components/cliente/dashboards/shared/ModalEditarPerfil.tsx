@@ -2,25 +2,6 @@
 
 // ============================================================
 // components/cliente/dashboards/shared/ModalEditarPerfil.tsx
-//
-// Modal para o usuário editar suas próprias informações.
-//
-// Campos editáveis por tipo:
-//   totem        → Nome
-//   colaborador,
-//   frentista,
-//   atendente,
-//   caixa,
-//   gerente,
-//   administrador → Nome + Telefone
-//   cliente       → Nome + Telefone + Endereço
-//
-// Bloqueados (só via dashboard do dono):
-//   Email, Identificador, PIN, Senha
-//
-// Salva diretamente em company_profiles via Edge Function
-// update_profile (action nova) que usa service role.
-// Atualiza o localStorage do perfil após salvar.
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -34,18 +15,14 @@ interface ModalEditarPerfilProps {
   slug: string;
   theme: 'dark' | 'light';
   onClose: () => void;
-  onSalvo: (updated: Partial<SlugProfile & { metadata: Record<string, any> }>) => void;
+  onSalvo: (updated: Partial<SlugProfile>) => void;
 }
 
-// Campos que cada tipo pode editar
 function getCampos(tipo: string): Array<'nome' | 'telefone' | 'endereco'> {
   if (tipo === 'totem')   return ['nome'];
   if (tipo === 'cliente') return ['nome', 'telefone', 'endereco'];
   return ['nome', 'telefone'];
 }
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export default function ModalEditarPerfil({
   profile, slug, theme, onClose, onSalvo,
@@ -56,8 +33,8 @@ export default function ModalEditarPerfil({
 
   const [form, setForm] = useState({
     nome:     profile.nome     ?? '',
-    telefone: profile.metadata?.telefone ?? '',  // ← lê de metadata
-    endereco: profile.endereco ?? '',            // ← coluna direta
+    telefone: profile.telefone ?? '',  // ← CORRIGIDO: campo direto
+    endereco: profile.endereco ?? '',
   });
 
   const [saving, setSaving]   = useState(false);
@@ -86,25 +63,19 @@ export default function ModalEditarPerfil({
     try {
       const supabase = createClient();
 
-      // Monta o payload — só os campos editáveis do tipo
+      // ← CORRIGIDO: usa colunas diretas
       const updates: Record<string, any> = {};
 
       if (campos.includes('nome')) {
         updates.nome = form.nome.trim();
       }
 
-      // Endereço fica no campo raiz
       if (campos.includes('endereco')) {
         updates.endereco = form.endereco.trim() || null;
       }
 
-      // Telefone fica em metadata — merge para não perder outros campos
       if (campos.includes('telefone')) {
-        const metadataAtual = profile.metadata ?? {};
-        updates.metadata = {
-          ...metadataAtual,
-          telefone: form.telefone.trim() || null,
-        };
+        updates.telefone = form.telefone.trim() || null;  // ← CORRIGIDO
       }
 
       const { error: dbError } = await supabase
@@ -114,7 +85,7 @@ export default function ModalEditarPerfil({
 
       if (dbError) throw dbError;
 
-      // Atualiza o localStorage da sessão para refletir imediatamente
+      // Atualiza localStorage
       const storageKey = `profile_session_${slug}`;
       const stored = localStorage.getItem(storageKey);
       if (stored) {
@@ -122,9 +93,7 @@ export default function ModalEditarPerfil({
           const parsed = JSON.parse(stored);
           const updatedProfile = {
             ...parsed,
-            nome:     updates.nome     ?? parsed.nome,
-            endereco: updates.endereco ?? parsed.endereco,
-            metadata: updates.metadata ?? parsed.metadata,
+            ...updates,
           };
           localStorage.setItem(storageKey, JSON.stringify(updatedProfile));
         } catch {}
@@ -132,14 +101,9 @@ export default function ModalEditarPerfil({
 
       setSuccess(true);
 
-      // Notifica o componente pai para atualizar o estado
-      onSalvo({
-        nome:     updates.nome,
-        endereco: updates.endereco,
-        metadata: updates.metadata,
-      });
+      // ← CORRIGIDO: passa objeto correto
+      onSalvo(updates);
 
-      // Fecha após breve feedback de sucesso
       setTimeout(() => onClose(), 1200);
 
     } catch (e: any) {
@@ -213,8 +177,6 @@ export default function ModalEditarPerfil({
               E-mail, identificador e senha só podem ser alterados pelo administrador.
             </p>
           </div>
-
-          {/* Campos editáveis */}
 
           {/* Nome */}
           {campos.includes('nome') && (

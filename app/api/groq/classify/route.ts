@@ -6,13 +6,16 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const { transcript, functionsContext } = await req.json();
+    const { transcript, functionsContext, sessionContext } = await req.json();
     if (!transcript || !functionsContext) {
       return NextResponse.json({ response: null });
     }
 
     // Detecta se há perfil logado no contexto para personalizar respostas
     const hasProfile = functionsContext?.includes('Cliente logado:');
+    const memoryBlock = sessionContext?.summary || sessionContext?.lastFunctions?.length > 0
+      ? `\n\nCONTEXTO DESTA SESSÃO:\n${sessionContext.summary ? `- ${sessionContext.summary}` : ''}${sessionContext.lastFunctions?.length > 0 ? `\n- Funções usadas: ${sessionContext.lastFunctions.join(', ')}` : ''}`
+      : '';
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
@@ -42,7 +45,7 @@ Exemplos:
 "tudo bem?" → "Tudo sim, como posso te ajudar hoje?'."
 "me conta sobre você" → null,
 "o que é um cometa?" → null
-"qual a capital da França?" → null`,
+"qual a capital da França?" → null${memoryBlock}`,
         },
         {
           role: 'user',

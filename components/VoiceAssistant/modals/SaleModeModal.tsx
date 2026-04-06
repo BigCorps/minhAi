@@ -294,7 +294,7 @@ function SaleModeInner({
                 {/* Avatar + Carrinho */}
                 <div
                   className={`flex min-w-0 overflow-hidden gap-2 ${
-                    isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[3]'
+                    isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[2]'
                   }`}
                 >
                   {/* Card do avatar */}
@@ -452,7 +452,7 @@ function SaleModeInner({
             {/* Avatar + Carrinho */}
             <div
               className={`flex min-w-0 overflow-hidden gap-2 ${
-                isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[3]'
+                isPortrait ? 'flex-row flex-shrink-0 h-[200px]' : 'flex-col flex-[2]'
               }`}
             >
               {/* Card do avatar */}

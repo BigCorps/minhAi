@@ -484,6 +484,22 @@ export default function LoginPage() {
                 Aviso de Privacidade
               </Link>
             </div>
+            {/* NOVO CÓDIGO ADICIONADO AQUI */}
+            <div className="mt-4 text-center">
+              <a 
+                href="https://minhai.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`text-sm font-medium transition-colors hover:underline ${
+                  theme === 'dark'
+                    ? 'text-white/80 hover:text-white'
+                    : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                minhAi - Uma IA pra chamar de sua!
+              </a>
+            </div>
+            {/* FIM DO NOVO CÓDIGO */}
           </div>
         </div>
       </div>

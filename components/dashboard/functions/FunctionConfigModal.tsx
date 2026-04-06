@@ -661,57 +661,21 @@ const PlaylistConfigForm = ({ companyId }: any) => {
 };
 
 const PortaRetratoConfigForm = ({ companyId }: any) => {
-  const [config, setConfig] = useState<any>({ folder_id: '', seconds_per_photo: 5, transition: 'fade', shuffle: false });
+  const [config, setConfig] = useState<any>({
+    folder_id: '', folder_name: '', seconds_per_photo: 5, transition: 'fade', shuffle: false,
+  });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [folders, setFolders] = useState<any[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(false);
-  const [folderPath, setFolderPath] = useState<{ id: string; name: string }[]>([]);
-  const [mode, setMode] = useState<'browse' | 'manual'>('browse');
   const supabase = createClient();
 
   useEffect(() => {
     async function init() {
-      const { data } = await supabase
-        .from('company_function_settings').select('config')
+      const { data } = await supabase.from('company_function_settings').select('config')
         .eq('company_id', companyId).eq('function_key', 'porta_retrato').maybeSingle();
       if (data?.config) setConfig(data.config);
-      fetchFolders(null);
     }
     init();
   }, [companyId]);
-
-  const fetchFolders = async (parentId: string | null) => {
-    setLoadingFolders(true);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-folders`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ company_id: companyId, parent_id: parentId }),
-        }
-      );
-      const json = await res.json();
-      setFolders(json.folders || []);
-    } catch { setFolders([]); }
-    finally { setLoadingFolders(false); }
-  };
-
-  const enterFolder = (folder: { id: string; name: string }) => {
-    setFolderPath(prev => [...prev, folder]);
-    fetchFolders(folder.id);
-  };
-
-  const goBack = () => {
-    const newPath = folderPath.slice(0, -1);
-    setFolderPath(newPath);
-    fetchFolders(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
-  };
-
-  const selectFolder = (folder: { id: string; name: string }) => {
-    setConfig((p: any) => ({ ...p, folder_id: folder.id }));
-  };
 
   const save = async () => {
     setSaving(true);
@@ -721,81 +685,46 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
     setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
   };
 
-  const selectedFolderName = folderPath.find(f => f.id === config.folder_id)?.name
-    || folders.find(f => f.id === config.folder_id)?.name
-    || config.folder_id;
-
   return (
     <div className="space-y-4">
       <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-200 dark:border-pink-800">
-        <p className="text-sm text-pink-800 dark:text-pink-200">🖼️ Coloque fotos em uma pasta do Google Drive e selecione-a abaixo.</p>
+        <p className="text-sm text-pink-800 dark:text-pink-200">
+          🖼️ Selecione uma pasta do Google Drive com as fotos para o slideshow.
+        </p>
       </div>
 
-      {/* Pasta selecionada */}
-      {config.folder_id && (
+      {config.folder_id ? (
         <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <span className="text-green-600 dark:text-green-400">📁</span>
-          <span className="text-sm font-medium text-green-800 dark:text-green-200 truncate flex-1">{selectedFolderName}</span>
-          <button onClick={() => setConfig((p: any) => ({ ...p, folder_id: '' }))} className="text-xs text-red-500 hover:text-red-700 flex-shrink-0">Remover</button>
+          <span className="text-green-600">📁</span>
+          <span className="text-sm font-medium text-green-800 dark:text-green-200 flex-1 truncate">
+            {config.folder_name || config.folder_id}
+          </span>
+          <button
+            onClick={() => setConfig((p: any) => ({ ...p, folder_id: '', folder_name: '' }))}
+            className="text-xs text-red-500 hover:text-red-700 flex-shrink-0"
+          >
+            Remover
+          </button>
+        </div>
+      ) : (
+        <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-white/10 text-center">
+          <p className="text-sm text-gray-400 mb-3">Nenhuma pasta selecionada</p>
+          <DrivePickerButton
+            companyId={companyId}
+            onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
+            label="Selecionar pasta do Drive"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm rounded-lg font-medium transition"
+          />
         </div>
       )}
 
-      {/* Abas */}
-      <div className="flex gap-2">
-        <button onClick={() => setMode('browse')} className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${mode === 'browse' ? 'bg-pink-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>
-          📁 Navegar Drive
-        </button>
-        <button onClick={() => setMode('manual')} className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${mode === 'manual' ? 'bg-pink-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>
-          ✏️ Inserir ID
-        </button>
-      </div>
-
-      {/* Navegar */}
-      {mode === 'browse' && (
-        <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
-          <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 text-xs overflow-x-auto">
-            <button onClick={() => { setFolderPath([]); fetchFolders(null); }} className="text-blue-500 hover:underline flex-shrink-0">Meu Drive</button>
-            {folderPath.map((f, i) => (
-              <span key={f.id} className="flex items-center gap-1 flex-shrink-0">
-                <span className="text-gray-400">/</span>
-                <button onClick={() => { const p = folderPath.slice(0, i + 1); setFolderPath(p); fetchFolders(f.id); }} className="text-blue-500 hover:underline">{f.name}</button>
-              </span>
-            ))}
-          </div>
-          <div className="max-h-48 overflow-y-auto">
-            {loadingFolders ? (
-              <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500" /></div>
-            ) : folders.length === 0 ? (
-              <p className="text-center py-6 text-sm text-gray-400">Nenhuma pasta encontrada</p>
-            ) : (
-              <>
-                {folderPath.length > 0 && (
-                  <button onClick={goBack} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 transition border-b border-gray-100 dark:border-white/5">← Voltar</button>
-                )}
-                {folders.map(folder => (
-                  <div key={folder.id} className={`flex items-center justify-between px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition ${config.folder_id === folder.id ? 'bg-pink-50 dark:bg-pink-900/20' : ''}`}>
-                    <button onClick={() => enterFolder(folder)} className="flex items-center gap-2 flex-1 text-left text-sm text-gray-800 dark:text-gray-200">📁 {folder.name}</button>
-                    <button onClick={() => selectFolder(folder)} className={`text-xs px-2 py-1 rounded flex-shrink-0 transition ${config.folder_id === folder.id ? 'bg-pink-500 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-pink-100'}`}>
-                      {config.folder_id === folder.id ? '✓ Selecionada' : 'Usar'}
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Manual */}
-      {mode === 'manual' && (
-        <div>
-          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">ID da Pasta</label>
-          <input type="text" placeholder="Cole o ID da pasta do Drive"
-            value={config.folder_id || ''}
-            onChange={e => setConfig((p: any) => ({ ...p, folder_id: e.target.value }))}
-            className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
-          <p className="text-xs text-gray-500 mt-1">Abra a pasta no Drive e copie o ID da URL (após /folders/).</p>
-        </div>
+      {config.folder_id && (
+        <DrivePickerButton
+          companyId={companyId}
+          onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
+          label="Trocar pasta"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-pink-600 border border-gray-200 dark:border-white/10 rounded-lg transition"
+        />
       )}
 
       <div>
@@ -804,14 +733,17 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
           onChange={e => setConfig((p: any) => ({ ...p, seconds_per_photo: Number(e.target.value) }))}
           className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
       </div>
+
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Transição</label>
-        <select value={config.transition || 'fade'} onChange={e => setConfig((p: any) => ({ ...p, transition: e.target.value }))}
+        <select value={config.transition || 'fade'}
+          onChange={e => setConfig((p: any) => ({ ...p, transition: e.target.value }))}
           className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white">
           <option value="fade">Fade</option>
           <option value="slide">Slide</option>
         </select>
       </div>
+
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={config.shuffle || false}
           onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))} />
@@ -827,263 +759,98 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
 };
 
 const PainelOfertasConfigForm = ({ companyId }: any) => {
-  const [config, setConfig] = useState<any>({ folder_id: '', seconds_per_image: 8, shuffle: false });
+  const [config, setConfig] = useState<any>({
+    folder_id: '', folder_name: '', seconds_per_image: 8, shuffle: false, qr_type: 'none',
+  });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [folders, setFolders] = useState<any[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(false);
-  const [folderPath, setFolderPath] = useState<{ id: string; name: string }[]>([]);
-  const [mode, setMode] = useState<'browse' | 'manual'>('browse');
   const supabase = createClient();
 
   useEffect(() => {
     async function init() {
-      const { data } = await supabase
-        .from('company_function_settings')
-        .select('config')
-        .eq('company_id', companyId)
-        .eq('function_key', 'painel_ofertas')
-        .maybeSingle();
+      const { data } = await supabase.from('company_function_settings').select('config')
+        .eq('company_id', companyId).eq('function_key', 'painel_ofertas').maybeSingle();
       if (data?.config) setConfig(data.config);
-      fetchFolders(null);
     }
     init();
   }, [companyId]);
 
-  const fetchFolders = async (parentId: string | null) => {
-    setLoadingFolders(true);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-folders`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ company_id: companyId, parent_id: parentId }),
-        }
-      );
-      const json = await res.json();
-      setFolders(json.folders || []);
-    } catch (e) {
-      setFolders([]);
-    } finally {
-      setLoadingFolders(false);
-    }
-  };
-
-  const enterFolder = (folder: { id: string; name: string }) => {
-    setFolderPath(prev => [...prev, folder]);
-    fetchFolders(folder.id);
-  };
-
-  const goBack = () => {
-    const newPath = folderPath.slice(0, -1);
-    setFolderPath(newPath);
-    fetchFolders(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
-  };
-
-  const selectFolder = (folder: { id: string; name: string }) => {
-    setConfig((p: any) => ({ ...p, folder_id: folder.id }));
-  };
-
   const save = async () => {
     setSaving(true);
-    await supabase
-      .from('company_function_settings')
+    await supabase.from('company_function_settings')
       .update({ config, updated_at: new Date().toISOString() })
-      .eq('company_id', companyId)
-      .eq('function_key', 'painel_ofertas');
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    setSaving(false);
+      .eq('company_id', companyId).eq('function_key', 'painel_ofertas');
+    setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
   };
-
-  const selectedFolderName = folderPath.find(f => f.id === config.folder_id)?.name
-    || folders.find(f => f.id === config.folder_id)?.name
-    || config.folder_id;
 
   return (
     <div className="space-y-4">
       <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
         <p className="text-sm text-orange-800 dark:text-orange-200">
-          Coloque imagens de ofertas em uma pasta do Google Drive e selecione-a abaixo.
+          Selecione uma pasta do Google Drive com as imagens de oferta.
         </p>
       </div>
 
       {/* Pasta selecionada */}
-      {config.folder_id && (
+      {config.folder_id ? (
         <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <span className="text-green-600 dark:text-green-400">📁</span>
-          <span className="text-sm font-medium text-green-800 dark:text-green-200 truncate flex-1">
-            {selectedFolderName || config.folder_id}
+          <span className="text-green-600">📁</span>
+          <span className="text-sm font-medium text-green-800 dark:text-green-200 flex-1 truncate">
+            {config.folder_name || config.folder_id}
           </span>
           <button
-            onClick={() => setConfig((p: any) => ({ ...p, folder_id: '' }))}
+            onClick={() => setConfig((p: any) => ({ ...p, folder_id: '', folder_name: '' }))}
             className="text-xs text-red-500 hover:text-red-700 flex-shrink-0"
           >
             Remover
           </button>
         </div>
-      )}
-
-      {/* Abas: Navegar / Manual */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setMode('browse')}
-          className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${
-            mode === 'browse'
-              ? 'bg-orange-600 text-white'
-              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
-          }`}
-        >
-          📁 Navegar Drive
-        </button>
-        <button
-          onClick={() => setMode('manual')}
-          className={`flex-1 py-2 text-sm rounded-lg font-medium transition ${
-            mode === 'manual'
-              ? 'bg-orange-600 text-white'
-              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
-          }`}
-        >
-          Inserir ID
-        </button>
-      </div>
-
-      {/* Modo: Navegar */}
-      {mode === 'browse' && (
-        <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 text-xs overflow-x-auto">
-            <button
-              onClick={() => { setFolderPath([]); fetchFolders(null); }}
-              className="text-blue-500 hover:underline flex-shrink-0"
-            >
-              Meu Drive
-            </button>
-            {folderPath.map((f, i) => (
-              <span key={f.id} className="flex items-center gap-1 flex-shrink-0">
-                <span className="text-gray-400">/</span>
-                <button
-                  onClick={() => {
-                    const newPath = folderPath.slice(0, i + 1);
-                    setFolderPath(newPath);
-                    fetchFolders(f.id);
-                  }}
-                  className="text-blue-500 hover:underline"
-                >
-                  {f.name}
-                </button>
-              </span>
-            ))}
-          </div>
-
-          {/* Lista de pastas */}
-          <div className="max-h-48 overflow-y-auto">
-            {loadingFolders ? (
-              <div className="flex justify-center py-6">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500" />
-              </div>
-            ) : folders.length === 0 ? (
-              <p className="text-center py-6 text-sm text-gray-400">Nenhuma pasta encontrada</p>
-            ) : (
-              <>
-                {folderPath.length > 0 && (
-                  <button
-                    onClick={goBack}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition border-b border-gray-100 dark:border-white/5"
-                  >
-                    ← Voltar
-                  </button>
-                )}
-                {folders.map(folder => (
-                  <div
-                    key={folder.id}
-                    className={`flex items-center justify-between px-3 py-2.5 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition ${
-                      config.folder_id === folder.id ? 'bg-orange-50 dark:bg-orange-900/20' : ''
-                    }`}
-                  >
-                    <button
-                      onClick={() => enterFolder(folder)}
-                      className="flex items-center gap-2 flex-1 text-left text-sm text-gray-800 dark:text-gray-200"
-                    >
-                      📁 {folder.name}
-                    </button>
-                    <button
-                      onClick={() => selectFolder(folder)}
-                      className={`text-xs px-2 py-1 rounded flex-shrink-0 transition ${
-                        config.folder_id === folder.id
-                          ? 'bg-orange-500 text-white'
-                          : 'bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-orange-100'
-                      }`}
-                    >
-                      {config.folder_id === folder.id ? '✓ Selecionada' : 'Usar'}
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modo: Manual */}
-      {mode === 'manual' && (
-        <div>
-          <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-            ID da Pasta <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs"
-            value={config.folder_id || ''}
-            onChange={e => setConfig((p: any) => ({ ...p, folder_id: e.target.value }))}
-            className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white"
+      ) : (
+        <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-white/10 text-center">
+          <p className="text-sm text-gray-400 mb-3">Nenhuma pasta selecionada</p>
+          <DrivePickerButton
+            companyId={companyId}
+            onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
+            label="Selecionar pasta do Drive"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded-lg font-medium transition"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Abra a pasta no Drive e copie o ID da URL (após /folders/).
-          </p>
         </div>
       )}
 
-      {/* Configurações */}
+      {config.folder_id && (
+        <DrivePickerButton
+          companyId={companyId}
+          onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
+          label="Trocar pasta"
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 border border-gray-200 dark:border-white/10 rounded-lg transition"
+        />
+      )}
+
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por imagem</label>
-        <input
-          type="number" min="3" max="60"
-          value={config.seconds_per_image || 8}
+        <input type="number" min="3" max="60" value={config.seconds_per_image || 8}
           onChange={e => setConfig((p: any) => ({ ...p, seconds_per_image: Number(e.target.value) }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white"
-        />
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
       </div>
+
       <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={config.shuffle || false}
-          onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))}
-        />
+        <input type="checkbox" checked={config.shuffle || false}
+          onChange={e => setConfig((p: any) => ({ ...p, shuffle: e.target.checked }))} />
         <span className="text-sm text-gray-900 dark:text-white">Embaralhar imagens</span>
       </label>
 
-      {/* ── Seção QR Code ── */}
+      {/* QR Code */}
       <div className="border-t border-gray-200 dark:border-white/10 pt-4">
-        <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
-          QR Code fixo no slideshow
-        </label>
-        <select
-          value={config.qr_type || 'none'}
+        <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">QR Code fixo no slideshow</label>
+        <select value={config.qr_type || 'none'}
           onChange={e => setConfig((p: any) => ({ ...p, qr_type: e.target.value }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white mb-3"
-        >
+          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white mb-3">
           <option value="none">Sem QR Code</option>
           <option value="website">🌐 Site da empresa</option>
           <option value="whatsapp">💬 WhatsApp</option>
           <option value="instagram">📸 Instagram</option>
           <option value="custom">🔗 Link personalizado</option>
         </select>
-
         {config.qr_type === 'custom' && (
           <div className="space-y-2">
             <input type="url" placeholder="https://..."
@@ -1096,28 +863,10 @@ const PainelOfertasConfigForm = ({ companyId }: any) => {
               className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
           </div>
         )}
-
-        {config.qr_type && config.qr_type !== 'none' && config.qr_type !== 'custom' && (
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-xs text-blue-800 dark:text-blue-200">
-              ✅ O QR Code será gerado automaticamente usando os dados já configurados em{' '}
-              <strong>
-                {config.qr_type === 'website' ? 'Site da empresa' :
-                 config.qr_type === 'whatsapp' ? 'WhatsApp' : 'Instagram'}
-              </strong>.
-              {config.qr_type === 'website' && ' Configure em Configurações > Contato > Site.'}
-              {config.qr_type === 'whatsapp' && ' Configure em Configurações > Contato > WhatsApp.'}
-              {config.qr_type === 'instagram' && ' Configure em Configurações > Contato > Instagram.'}
-            </p>
-          </div>
-        )}
       </div>
 
-      <button
-        onClick={save}
-        disabled={saving || !config.folder_id}
-        className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition"
-      >
+      <button onClick={save} disabled={saving || !config.folder_id}
+        className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition">
         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
       </button>
     </div>

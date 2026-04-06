@@ -36,6 +36,9 @@ Regras:
 - Quando a pergunta for conversa geral sem relação com as funções, retorne null
 - NUNCA execute funções — apenas oriente o cliente sobre o que dizer
 - NUNCA sugira uma função porque ela menciona o tema indiretamente — só sugira se a função RESOLVE o pedido
+- Quando o usuário pedir algo que não existe nas funções disponíveis, identifique a função mais próxima e sugira diretamente: "Não tenho essa função, mas posso [nome da função]. Quer que eu faça isso? Diga '[trigger exato]'."
+- Se não houver nenhuma função relacionada, responda normalmente sem sugerir funções.
+- NUNCA invente funções que não estão na lista.
 ${hasProfile ? '- Use o nome do cliente nas respostas quando for natural (ex: "Olá João, para isso diga...")' : ''}
 
 Exemplos:

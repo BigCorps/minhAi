@@ -42,13 +42,13 @@ export async function classifyIntentWithGroq(
     }
 
     let sessionContext = null;
-    if (deps.sessionId) {
-      try {
-        const supabase = createClient();
-        const { data: sessionData } = await supabase
-          .from('assistant_sessions')
-          .select('context_summary, last_function_keys')
-          .eq('id', deps.sessionId)
+    const effectiveSessionId = deps.sessionId ?? `groq-${deps.companyId}`;
+    try {
+      const supabase = createClient();
+      const { data: sessionData } = await supabase
+        .from('assistant_sessions')
+        .select('context_summary, last_function_keys')
+        .eq('id', effectiveSessionId)
           .eq('company_id', deps.companyId)
           .maybeSingle();
 
@@ -77,12 +77,30 @@ export async function classifyIntentWithGroq(
     }
 
     console.log(`🤖 GROQ responde: "${groqResponse}"`);
-
-    // Fala a resposta do GROQ para o cliente
     await deps.playText(groqResponse);
-
-    // Salva o hint para o sistema continuar aprendendo
     deps.commandProcessor?.saveUnrecognizedHint(transcript);
+
+    // ── Fase 2: atualizar memória após resposta do GROQ ──
+    // Usa company_id como session_id quando não há sessionId
+    // (interações via GROQ não passam pelo backend que gera o sessionId)
+    const effectiveSessionId = deps.sessionId ?? `groq-${deps.companyId}`;
+    fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-session-memory`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: effectiveSessionId,
+          company_id: deps.companyId,
+          user_message: transcript,
+          assistant_message: groqResponse,
+          function_key: null,
+        }),
+      }
+    ).catch(() => {});
 
     return true;
 

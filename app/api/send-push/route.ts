@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-const vapidEmail = 'mailto:contato@minhai.app'; 
+const vapidEmail = 'mailto:contato@bigcorps.com.br'; 
 
 if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
@@ -55,9 +55,12 @@ export async function POST(req: NextRequest) {
     const sendPromises = subscriptions.map(async (sub) => {
       try {
         await webpush.sendNotification(sub.subscription, payload);
+        console.log(`✅ Push enviado com sucesso para ${sub.id}`); // <-- Adicione isso
       } catch (err: any) {
+        // 👇 ADICIONE ESTE CONSOLE.ERROR PARA VER O REAL MOTIVO
+        console.error(`🚨 Erro ao enviar para ${sub.id}:`, err.statusCode, err.body || err); 
+        
         if (err.statusCode === 410 || err.statusCode === 404) {
-          // 🔴 Use o supabaseAdmin para deletar também
           await supabaseAdmin.from('push_subscriptions').delete().eq('id', sub.id);
         }
       }

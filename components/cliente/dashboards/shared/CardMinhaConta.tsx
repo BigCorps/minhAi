@@ -53,16 +53,36 @@ export default function CardMinhaConta({
   const tipoColor = TIPO_COLOR[profile.tipo] ?? TIPO_COLOR.colaborador;
   const tipoLabel = TIPO_LABEL[profile.tipo]  ?? profile.tipo;
 
-  // Estado local — atualiza imediatamente após salvar sem refresh
+  // ✅ CORRIGIDO: Lê das colunas diretas telefone e endereco
   const [localNome,     setLocalNome]     = useState(profile.nome);
-  const [localTelefone, setLocalTelefone] = useState(profile.metadata?.telefone ?? '');
+  const [localEmail,    setLocalEmail]    = useState(profile.email ?? '');
+  const [localTelefone, setLocalTelefone] = useState(profile.telefone ?? '');
   const [localEndereco, setLocalEndereco] = useState(profile.endereco ?? '');
   const [showModal,     setShowModal]     = useState(false);
 
-  function handleSalvo(updated: any) {
-    if (updated.nome     !== undefined) setLocalNome(updated.nome);
-    if (updated.endereco !== undefined) setLocalEndereco(updated.endereco ?? '');
-    if (updated.metadata?.telefone !== undefined) setLocalTelefone(updated.metadata.telefone ?? '');
+  // ✅ CORRIGIDO: Atualiza os campos corretos
+  function handleSalvo(updates: any) {
+    console.log('📥 CardMinhaConta.handleSalvo recebeu:', updates);
+    
+    if (updates.nome !== undefined) {
+      setLocalNome(updates.nome);
+    }
+    if (updates.email !== undefined) {
+      setLocalEmail(updates.email ?? '');
+    }
+    if (updates.telefone !== undefined) {
+      setLocalTelefone(updates.telefone ?? '');
+    }
+    if (updates.endereco !== undefined) {
+      setLocalEndereco(updates.endereco ?? '');
+    }
+
+    console.log('✅ Estado local atualizado:', {
+      nome: updates.nome ?? localNome,
+      email: updates.email ?? localEmail,
+      telefone: updates.telefone ?? localTelefone,
+      endereco: updates.endereco ?? localEndereco,
+    });
   }
 
   // ── Cores ─────────────────────────────────────────────────
@@ -89,6 +109,15 @@ export default function CardMinhaConta({
       <Pencil className="w-3.5 h-3.5" />
     </button>
   );
+
+  // ✅ CORRIGIDO: Profile com campos diretos
+  const profileForModal = {
+    ...profile,
+    nome: localNome,
+    email: localEmail,
+    telefone: localTelefone,
+    endereco: localEndereco,
+  };
 
   // ── Layout horizontal ─────────────────────────────────────
   if (horizontal) {
@@ -122,10 +151,10 @@ export default function CardMinhaConta({
 
             {/* Campos em linha */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-1 flex-1 min-w-0">
-              {profile.email && (
-                <Field label="E-mail" value={profile.email} labelColor={labelColor} valueColor={valueColor} />
+              {localEmail && (
+                <Field label="E-mail" value={localEmail} labelColor={labelColor} valueColor={valueColor} />
               )}
-              {profile.identificador && profile.identificador !== profile.email && (
+              {profile.identificador && profile.identificador !== localEmail && (
                 <Field label="ID" value={profile.identificador} labelColor={labelColor} valueColor={valueColor} />
               )}
               {localTelefone && (
@@ -143,11 +172,10 @@ export default function CardMinhaConta({
 
         {showModal && (
           <ModalEditarPerfil
-            profile={{ ...profile, nome: localNome, endereco: localEndereco, metadata: { ...profile.metadata, telefone: localTelefone } }}
-            slug={slug}
-            theme={theme}
+            profile={profileForModal}
             onClose={() => setShowModal(false)}
             onSalvo={handleSalvo}
+            theme={theme}
           />
         )}
       </>
@@ -180,10 +208,10 @@ export default function CardMinhaConta({
 
         <div className="space-y-4">
           <Field label="Nome" value={localNome} labelColor={labelColor} valueColor={valueColor} />
-          {profile.email && (
-            <Field label="E-mail" value={profile.email} labelColor={labelColor} valueColor={valueColor} small />
+          {localEmail && (
+            <Field label="E-mail" value={localEmail} labelColor={labelColor} valueColor={valueColor} small />
           )}
-          {profile.identificador && profile.identificador !== profile.email && (
+          {profile.identificador && profile.identificador !== localEmail && (
             <Field label="Identificador" value={profile.identificador} labelColor={labelColor} valueColor={valueColor} />
           )}
           {localTelefone && (
@@ -197,11 +225,10 @@ export default function CardMinhaConta({
 
       {showModal && (
         <ModalEditarPerfil
-          profile={{ ...profile, nome: localNome, endereco: localEndereco, metadata: { ...profile.metadata, telefone: localTelefone } }}
-          slug={slug}
-          theme={theme}
+          profile={profileForModal}
           onClose={() => setShowModal(false)}
           onSalvo={handleSalvo}
+          theme={theme}
         />
       )}
     </>

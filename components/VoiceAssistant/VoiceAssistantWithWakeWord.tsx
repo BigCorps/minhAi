@@ -680,6 +680,12 @@ export function VoiceAssistantWithWakeWord({
           setActiveModal({ type: 'MinhasComprasDisplay', data: { companyId } });
           pt('Carregando seu histórico de compras...').catch(() => {});
           break;
+        case 'enviar_sms': {
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'EnviarSmsDisplay', data: { companyId } });
+          pt('Abrindo formulário de SMS...').catch(() => {});
+          break;
+        }
         case 'chamar_gerente': {
           await stopGoogleSpeech();
           const motivo = event?.detail?.transcript

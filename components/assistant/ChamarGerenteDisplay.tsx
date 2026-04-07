@@ -63,6 +63,7 @@ export default function ChamarGerenteDisplay({
   }, []);
 
   // Buscar email e telefone do gerente + REALTIME
+// Buscar email e telefone do gerente + REALTIME
 useEffect(() => {
   async function fetchGerenteData() {
     try {
@@ -78,13 +79,27 @@ useEffect(() => {
 
       if (perfis) {
         console.log('✅ Gerente encontrado:', perfis);
+        setGerenteNome(perfis.nome || 'Gerente');
         setGerenteEmail(perfis.email || '');
         setGerenteTelefone(perfis.telefone || '');
-        setGerenteNome(perfis.nome || 'Gerente');
+        
+        // ✅ Se não tiver email, tenta buscar email_contato da empresa
+        if (!perfis.email) {
+          const { data: company } = await supabase
+            .from('companies')
+            .select('email_contato')
+            .eq('id', companyId)
+            .single();
+            
+          if (company?.email_contato) {
+            console.log('✅ Usando email_contato da empresa:', company.email_contato);
+            setGerenteEmail(company.email_contato);
+          }
+        }
       } else {
         console.log('⚠️ Gerente não encontrado, buscando email_contato...');
         
-        // ✅ CORREÇÃO: usar email_contato ao invés de business_email
+        // ✅ Fallback: usa email_contato da empresa
         const { data: company } = await supabase
           .from('companies')
           .select('email_contato, name')
@@ -108,27 +123,27 @@ useEffect(() => {
   
   fetchGerenteData();
 
-    // ✅ REALTIME: atualiza quando gerente mudar
-    const channel = supabase
-      .channel(`gerente-${companyId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'company_profiles',
-        filter: `company_id=eq.${companyId}`,
-      }, (payload) => {
-        const updated = payload.new as any;
-        if (updated.tipo === 'gerente' && updated.is_active) {
-          console.log('🔄 Gerente atualizado via realtime:', updated);
-          setGerenteEmail(updated.email || '');
-          setGerenteTelefone(updated.telefone || '');
-          setGerenteNome(updated.nome || 'Gerente');
-        }
-      })
-      .subscribe();
+  // ✅ REALTIME: atualiza quando gerente mudar
+  const channel = supabase
+    .channel(`gerente-${companyId}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'company_profiles',
+      filter: `company_id=eq.${companyId}`,
+    }, (payload) => {
+      const updated = payload.new as any;
+      if (updated.tipo === 'gerente' && updated.is_active) {
+        console.log('🔄 Gerente atualizado via realtime:', updated);
+        setGerenteNome(updated.nome || 'Gerente');
+        setGerenteEmail(updated.email || '');
+        setGerenteTelefone(updated.telefone || '');
+      }
+    })
+    .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [companyId]);
+  return () => { supabase.removeChannel(channel); };
+}, [companyId]);
 
   useEffect(() => {
     if (toast) {
@@ -235,13 +250,16 @@ useEffect(() => {
 
         <div className="p-6 space-y-4">
           
-          <div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
-            <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
-            <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
-            {gerenteEmail && (
-              <p className={`text-xs ${colors.textMuted} mt-0.5`}>{gerenteEmail}</p>
-            )}
-          </div>
+<div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
+  <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
+  <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
+  {gerenteEmail && (
+    <p className={`text-xs ${colors.textMuted} mt-0.5`}>{gerenteEmail}</p>
+  )}
+  {gerenteTelefone && (
+    <p className={`text-xs ${colors.textMuted} mt-0.5`}>{gerenteTelefone}</p>
+  )}
+</div>
 
           <div>
             <label className={`block text-sm font-medium mb-2 ${colors.textPrimary}`}>

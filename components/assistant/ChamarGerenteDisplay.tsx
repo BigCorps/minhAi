@@ -30,11 +30,14 @@ export default function ChamarGerenteDisplay({
   const [gerenteTelefone, setGerenteTelefone] = useState<string>('');
   const [gerenteNome, setGerenteNome] = useState<string>('Gerente');
   const [notificarEmail, setNotificarEmail] = useState(true);
-  const [notificarSMS, setNotificarSMS] = useState(false);
+  const [notificarSms, setNotificarSms] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const supabase = createClient();
   const isDark = theme === 'dark';
+
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   const DARK = {
     bg: 'bg-slate-900',
@@ -64,27 +67,27 @@ export default function ChamarGerenteDisplay({
     };
   }, []);
 
-  // Buscar configurações e dados do gerente
+  // ✅ Buscar configurações + dados do gerente
   useEffect(() => {
-    async function fetchGerenteData() {
+    async function fetchData() {
       try {
-        console.log('🔍 Buscando gerente para company:', companyId);
+        console.log('🔍 Buscando dados para company:', companyId);
         
-        // 1. Busca configurações dos canais de notificação
-        const { data: settings } = await supabase
+        // 1. Busca configurações salvas em company_function_settings
+        const { data: funcSettings } = await supabase
           .from('company_function_settings')
           .select('config')
           .eq('company_id', companyId)
           .eq('function_key', 'chamar_gerente')
           .maybeSingle();
 
-        if (settings?.config) {
-          console.log('⚙️ Configurações encontradas:', settings.config);
-          setNotificarEmail(settings.config.notificar_email ?? true);
-          setNotificarSMS(settings.config.notificar_sms ?? false);
-        }
+        const config = funcSettings?.config || {};
+        setNotificarEmail(config.notificar_email ?? true);
+        setNotificarSms(config.notificar_sms ?? false);
         
-        // 2. Busca gerente em company_profiles
+        console.log('⚙️ Configurações:', config);
+
+        // 2. Busca dados do gerente em company_profiles
         const { data: perfil, error: perfilError } = await supabase
           .from('company_profiles')
           .select('nome, email, telefone')
@@ -104,9 +107,8 @@ export default function ChamarGerenteDisplay({
           setGerenteEmail(perfil.email || '');
           setGerenteTelefone(perfil.telefone || '');
           
-          // ✅ Se gerente não tem email, busca email_contato da empresa como fallback
+          // Se gerente não tem email, busca email_contato da empresa
           if (!perfil.email) {
-            console.log('⚠️ Gerente sem email, buscando email_contato...');
             const { data: company } = await supabase
               .from('companies')
               .select('email_contato')
@@ -119,9 +121,9 @@ export default function ChamarGerenteDisplay({
             }
           }
         } else {
-          console.log('⚠️ Nenhum gerente cadastrado, buscando email_contato...');
+          console.log('⚠️ Gerente não encontrado, buscando email_contato...');
           
-          // 3. Fallback: usa email_contato da empresa
+          // Fallback: usa email_contato da empresa
           const { data: company } = await supabase
             .from('companies')
             .select('email_contato, name')
@@ -131,20 +133,21 @@ export default function ChamarGerenteDisplay({
           if (company?.email_contato) {
             console.log('✅ Usando email_contato da empresa:', company.email_contato);
             setGerenteEmail(company.email_contato);
-            setGerenteNome('Gestão'); // ← SÓ AQUI que usa "Gestão"
+            setGerenteNome(company.name || 'Gestão');
           } else {
             console.log('❌ Nenhum email configurado');
+            showToast('Email do gerente não configurado', 'error');
           }
         }
       } catch (error) {
-        console.error('❌ Erro ao buscar dados do gerente:', error);
+        console.error('❌ Erro ao buscar dados:', error);
         showToast('Erro ao carregar dados do gerente', 'error');
       }
     }
     
-    fetchGerenteData();
+    fetchData();
 
-    // ✅ REALTIME: atualiza quando gerente mudar
+    // REALTIME: atualiza quando gerente mudar
     const channel = supabase
       .channel(`gerente-${companyId}`)
       .on('postgres_changes', {
@@ -188,12 +191,12 @@ export default function ChamarGerenteDisplay({
       return;
     }
 
-    if (notificarSMS && !gerenteTelefone) {
+    if (notificarSms && !gerenteTelefone) {
       showToast('Telefone do gerente não configurado', 'error');
       return;
     }
 
-    if (!notificarEmail && !notificarSMS) {
+    if (!notificarEmail && !notificarSms) {
       showToast('Configure ao menos um canal de notificação', 'error');
       return;
     }
@@ -203,45 +206,53 @@ export default function ChamarGerenteDisplay({
     try {
       const promises = [];
 
-      // ✅ Envia email via Edge Function enviar-email-google
+      // ✅ Envia EMAIL se configurado
       if (notificarEmail && gerenteEmail) {
         console.log('📧 Enviando email para:', gerenteEmail);
-        promises.push(
-          supabase.functions.invoke('enviar-email-google', {
-            body: {
-              to: gerenteEmail,
-              subject: '🔔 Chamada de Gerente - minhAi',
-              body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
-            },
-          })
-        );
+        
+        const emailPromise = fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            to: gerenteEmail,
+            subject: '🔔 Chamada de Gerente - minhAi',
+            body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
+          }),
+        });
+        
+        promises.push(emailPromise);
       }
 
-      // ✅ Envia SMS via Edge Function send-sms-gerente
-      if (notificarSMS && gerenteTelefone) {
+      // ✅ Envia SMS se configurado
+      if (notificarSms && gerenteTelefone) {
         console.log('📱 Enviando SMS para:', gerenteTelefone);
-        promises.push(
-          supabase.functions.invoke('send-sms-gerente', {
-            body: {
-              company_id: companyId,
-              telefone: gerenteTelefone,
-              mensagem: `🔔 Chamada de Gerente - minhAi\n\nMotivo: ${motivo}`,
-            },
-          })
-        );
+        
+        const smsPromise = fetch(`${SUPABASE_URL}/functions/v1/send-sms-gerente`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            telefone: gerenteTelefone,
+            mensagem: `🔔 CHAMADA DE GERENTE\n\nMotivo: ${motivo}\n\n- minhAi`,
+          }),
+        });
+        
+        promises.push(smsPromise);
       }
 
-      const results = await Promise.all(promises);
-      
-      // Verifica se algum deu erro
-      const errors = results.filter(r => r.error);
-      if (errors.length > 0) {
-        console.error('❌ Erros ao enviar:', errors);
-        throw new Error('Falha ao enviar notificações');
-      }
+      await Promise.all(promises);
 
-      console.log('✅ Notificações enviadas com sucesso');
-      showToast('Gerente notificado com sucesso!', 'success');
+      const canais = [
+        notificarEmail && gerenteEmail ? 'email' : null,
+        notificarSms && gerenteTelefone ? 'SMS' : null,
+      ].filter(Boolean).join(' e ');
+
+      showToast(`Gerente notificado via ${canais}!`, 'success');
       
       if (playText) {
         await playText('Gerente notificado com sucesso!');
@@ -288,7 +299,10 @@ export default function ChamarGerenteDisplay({
             <div>
               <h2 className={`text-lg font-semibold ${colors.textPrimary}`}>Chamar Gerente</h2>
               <p className={`text-xs ${colors.textMuted}`}>
-                {notificarEmail && notificarSMS ? 'Email + SMS' : notificarEmail ? 'Email' : 'SMS'}
+                {[
+                  notificarEmail && 'Email',
+                  notificarSms && 'SMS',
+                ].filter(Boolean).join(' + ')}
               </p>
             </div>
           </div>
@@ -312,13 +326,13 @@ export default function ChamarGerenteDisplay({
           <div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
             <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
             <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
-            {gerenteEmail && notificarEmail && (
+            {notificarEmail && gerenteEmail && (
               <p className={`text-xs ${colors.textMuted} mt-0.5 flex items-center gap-1`}>
                 <span>📧</span>
                 <span>{gerenteEmail}</span>
               </p>
             )}
-            {gerenteTelefone && notificarSMS && (
+            {notificarSms && gerenteTelefone && (
               <p className={`text-xs ${colors.textMuted} mt-0.5 flex items-center gap-1`}>
                 <span>📱</span>
                 <span>{gerenteTelefone}</span>

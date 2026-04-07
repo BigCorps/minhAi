@@ -63,50 +63,50 @@ export default function ChamarGerenteDisplay({
   }, []);
 
   // Buscar email e telefone do gerente + REALTIME
-  useEffect(() => {
-    async function fetchGerenteData() {
-      try {
-        // ✅ Busca gerente em company_profiles
-        const { data: perfis } = await supabase
-          .from('company_profiles')
-          .select('nome, email, telefone')
-          .eq('company_id', companyId)
-          .eq('tipo', 'gerente')
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle();
+useEffect(() => {
+  async function fetchGerenteData() {
+    try {
+      // ✅ Busca gerente em company_profiles
+      const { data: perfis } = await supabase
+        .from('company_profiles')
+        .select('nome, email, telefone')
+        .eq('company_id', companyId)
+        .eq('tipo', 'gerente')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
 
-        if (perfis) {
-          console.log('✅ Gerente encontrado:', perfis);
-          setGerenteEmail(perfis.email || '');
-          setGerenteTelefone(perfis.telefone || '');
-          setGerenteNome(perfis.nome || 'Gerente');
-        } else {
-          console.log('⚠️ Gerente não encontrado, buscando business_email...');
+      if (perfis) {
+        console.log('✅ Gerente encontrado:', perfis);
+        setGerenteEmail(perfis.email || '');
+        setGerenteTelefone(perfis.telefone || '');
+        setGerenteNome(perfis.nome || 'Gerente');
+      } else {
+        console.log('⚠️ Gerente não encontrado, buscando email_contato...');
+        
+        // ✅ CORREÇÃO: usar email_contato ao invés de business_email
+        const { data: company } = await supabase
+          .from('companies')
+          .select('email_contato, name')
+          .eq('id', companyId)
+          .single();
           
-          // ✅ CORREÇÃO: Adicionar .single()
-          const { data: company } = await supabase
-            .from('companies')
-            .select('business_email, name')
-            .eq('id', companyId)
-            .single(); // ← ADICIONAR .single()
-            
-          if (company?.business_email) {
-            console.log('✅ Usando business_email:', company.business_email);
-            setGerenteEmail(company.business_email);
-            setGerenteNome('Gestão');
-          } else {
-            console.log('❌ Nenhum email configurado');
-            showToast('Email do gerente não configurado', 'error');
-          }
+        if (company?.email_contato) {
+          console.log('✅ Usando email_contato:', company.email_contato);
+          setGerenteEmail(company.email_contato);
+          setGerenteNome('Gestão');
+        } else {
+          console.log('❌ Nenhum email configurado');
+          showToast('Email do gerente não configurado', 'error');
         }
-      } catch (error) {
-        console.error('❌ Erro ao buscar email do gerente:', error);
-        showToast('Erro ao carregar dados do gerente', 'error');
       }
+    } catch (error) {
+      console.error('❌ Erro ao buscar email do gerente:', error);
+      showToast('Erro ao carregar dados do gerente', 'error');
     }
-    
-    fetchGerenteData();
+  }
+  
+  fetchGerenteData();
 
     // ✅ REALTIME: atualiza quando gerente mudar
     const channel = supabase

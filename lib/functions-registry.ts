@@ -3212,6 +3212,50 @@ restricoes_cpf: {
       return true;
     },
   },
+
+  enviar_sms: {
+  functionKey: 'enviar_sms',
+  functionName: 'Enviar SMS',
+  category: 'services',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'enviar sms',
+    'mandar sms',
+    'enviar mensagem',
+    'mandar mensagem',
+    'enviar torpedo',
+    'mandar torpedo',
+  ],
+
+  examplePhrases: [
+    'Enviar SMS',
+    'Mandar mensagem SMS',
+    'Enviar torpedo',
+  ],
+
+  requiresInput: false,
+  description: 'Envia mensagens SMS para qualquer número de telefone usando a API Brasil',
+  shortDescription: 'Enviar mensagens via SMS',
+  icon: '🟠',
+  color: '#D2691E',
+
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    await playText('Abrindo formulário de SMS...');
+    
+    setActiveModal?.({
+      type: 'EnviarSmsDisplay',
+      data: { companyId },
+    });
+
+    return true;
+  },
+},
  
   chamar_gerente: {
     functionKey: 'chamar_gerente',

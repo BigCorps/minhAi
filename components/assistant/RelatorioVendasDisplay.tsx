@@ -88,7 +88,7 @@ export default function RelatorioVendasDisplay({
         // Busca perfil ativo do usuário
         const { data: session } = await supabase
           .from('profile_sessions')
-          .select('profile_id, company_profiles(nome, profile_type)')
+          .select('profile_id, company_profiles(nome, tipo)')
           .eq('user_id', user.id)
           .eq('company_id', companyId)
           .eq('is_active', true)
@@ -96,7 +96,7 @@ export default function RelatorioVendasDisplay({
 
         if (!session?.profile_id) return;
 
-        const profileType = (session as any).company_profiles?.profile_type || 'colaborador';
+        const profileType = (session as any).company_profiles?.tipo || 'colaborador';
         const profileNome = (session as any).company_profiles?.nome || 'Colaborador';
 
         // Calcula data de início baseado no período

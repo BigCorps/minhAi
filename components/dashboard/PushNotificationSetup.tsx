@@ -41,9 +41,27 @@ const handleSubscribe = async () => {
         return;
       }
 
-      // 2. FORÇA o registro do Service Worker para garantir que ele existe
-      await navigator.serviceWorker.register('/sw.js');
-      const registration = await navigator.serviceWorker.ready;
+// 2. FORÇA o registro e a atualização do Service Worker
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await reg.update(); // Obriga o celular a baixar a versão nova ignorando o cache
+      
+      const readyRegistration = await navigator.serviceWorker.ready;
+
+      // 🛑 O SEGREDO ESTÁ AQUI: Trava de segurança para o bug do Android
+      // Se o Service Worker ainda não estiver 'ativo', esperamos ele mudar de estado
+      if (!readyRegistration.active) {
+        await new Promise((resolve) => {
+          const newWorker = readyRegistration.installing || readyRegistration.waiting;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'activated') resolve(true);
+            });
+          } else {
+            // Fallback de segurança de 1.5 segundos
+            setTimeout(resolve, 1500);
+          }
+        });
+      }
       
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       if (!vapidPublicKey) {
@@ -51,8 +69,8 @@ const handleSubscribe = async () => {
         throw new Error("VAPID Key não encontrada");
       }
 
-      // 3. Gera a inscrição no aparelho
-      const subscription = await registration.pushManager.subscribe({
+      // 3. Gera a inscrição (agora com a certeza de que o SW está ativo)
+      const subscription = await readyRegistration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlB64ToUint8Array(vapidPublicKey),
       });

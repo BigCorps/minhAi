@@ -181,73 +181,80 @@ export default function ChamarGerenteDisplay({
     setToast({ message, type });
   }
 
-  async function handleSend() {
-    if (!motivo.trim()) {
-      showToast('Por favor, descreva o motivo da chamada', 'error');
-      return;
+async function handleSend() {
+  if (!motivo.trim()) {
+    showToast('Por favor, descreva o motivo da chamada', 'error');
+    return;
+  }
+
+  if (notificarEmail && !gerenteEmail) {
+    showToast('Email do gerente não configurado', 'error');
+    return;
+  }
+
+  if (notificarSms && !gerenteTelefone) {
+    showToast('Telefone do gerente não configurado', 'error');
+    return;
+  }
+
+  if (!notificarEmail && !notificarSms) {
+    showToast('Configure ao menos um canal de notificação', 'error');
+    return;
+  }
+
+  setIsSending(true);
+
+  try {
+    const promises = [];
+
+    // ✅ Envia EMAIL se configurado
+    if (notificarEmail && gerenteEmail) {
+      console.log('📧 Enviando email para:', gerenteEmail);
+      
+      const emailPromise = fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          company_id: companyId, // ✅ CORRIGIDO: adicionar company_id
+          to: gerenteEmail,
+          subject: '🔔 Chamada de Gerente - minhAi',
+          body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
+        }),
+      });
+      
+      promises.push(emailPromise);
     }
 
-    if (notificarEmail && !gerenteEmail) {
-      showToast('Email do gerente não configurado', 'error');
-      return;
+    // ✅ Envia SMS se configurado
+    if (notificarSms && gerenteTelefone) {
+      console.log('📱 Enviando SMS para:', gerenteTelefone);
+      
+      const smsPromise = fetch(`${SUPABASE_URL}/functions/v1/send-sms-gerente`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          number: gerenteTelefone, // ✅ CORRIGIDO: "number" não "telefone"
+          gerente_nome: gerenteNome, // ✅ CORRIGIDO: adicionar gerente_nome
+          motivo: motivo, // ✅ CORRIGIDO: "motivo" não "mensagem"
+        }),
+      });
+      
+      promises.push(smsPromise);
     }
 
-    if (notificarSms && !gerenteTelefone) {
-      showToast('Telefone do gerente não configurado', 'error');
-      return;
-    }
+    const results = await Promise.allSettled(promises);
 
-    if (!notificarEmail && !notificarSms) {
-      showToast('Configure ao menos um canal de notificação', 'error');
-      return;
-    }
+    // Verifica se algum enviou com sucesso
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    const failedCount = results.filter(r => r.status === 'rejected').length;
 
-    setIsSending(true);
-
-    try {
-      const promises = [];
-
-      // ✅ Envia EMAIL se configurado
-      if (notificarEmail && gerenteEmail) {
-        console.log('📧 Enviando email para:', gerenteEmail);
-        
-        const emailPromise = fetch(`${SUPABASE_URL}/functions/v1/enviar-email-google`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            to: gerenteEmail,
-            subject: '🔔 Chamada de Gerente - minhAi',
-            body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
-          }),
-        });
-        
-        promises.push(emailPromise);
-      }
-
-      // ✅ Envia SMS se configurado
-      if (notificarSms && gerenteTelefone) {
-        console.log('📱 Enviando SMS para:', gerenteTelefone);
-        
-        const smsPromise = fetch(`${SUPABASE_URL}/functions/v1/send-sms-gerente`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            telefone: gerenteTelefone,
-            mensagem: `🔔 CHAMADA DE GERENTE\n\nMotivo: ${motivo}\n\n- minhAi`,
-          }),
-        });
-        
-        promises.push(smsPromise);
-      }
-
-      await Promise.all(promises);
-
+    if (successCount > 0) {
       const canais = [
         notificarEmail && gerenteEmail ? 'email' : null,
         notificarSms && gerenteTelefone ? 'SMS' : null,
@@ -262,18 +269,21 @@ export default function ChamarGerenteDisplay({
       setTimeout(() => {
         onClose();
       }, 1500);
-
-    } catch (error) {
-      console.error('❌ Erro ao enviar notificação:', error);
-      showToast('Erro ao enviar notificação', 'error');
-      
-      if (playText) {
-        await playText('Erro ao enviar notificação. Tente novamente.');
-      }
-    } finally {
-      setIsSending(false);
+    } else {
+      throw new Error('Falha ao enviar notificações');
     }
+
+  } catch (error) {
+    console.error('❌ Erro ao enviar notificação:', error);
+    showToast('Erro ao enviar notificação', 'error');
+    
+    if (playText) {
+      await playText('Erro ao enviar notificação. Tente novamente.');
+    }
+  } finally {
+    setIsSending(false);
   }
+}
 
   if (!mounted) return null;
 

@@ -39,6 +39,53 @@ const THEME_COLORS = [
   { label: 'Ciano',    value: '#06b6d4' },
 ];
 
+// ── Processa qualquer imagem para 512×512 com letterbox (sem esticar) ──────────
+async function prepareLogoFor512(file: File): Promise<{ blob: Blob; previewUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const SIZE = 512;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas não disponível')); return; }
+
+      // Fundo transparente (ideal para logos com fundo já removido)
+      ctx.clearRect(0, 0, SIZE, SIZE);
+
+      // Calcula dimensões mantendo proporção (letterbox)
+      const ratio = Math.min(SIZE / img.naturalWidth, SIZE / img.naturalHeight);
+      const drawW = img.naturalWidth * ratio;
+      const drawH = img.naturalHeight * ratio;
+      const offsetX = (SIZE - drawW) / 2;
+      const offsetY = (SIZE - drawH) / 2;
+
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+      URL.revokeObjectURL(objectUrl);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { reject(new Error('Falha ao gerar PNG')); return; }
+          const previewUrl = URL.createObjectURL(blob);
+          resolve({ blob, previewUrl });
+        },
+        'image/png'
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Imagem inválida'));
+    };
+    img.src = objectUrl;
+  });
+}
+
+// ── Componentes de UI ──────────────────────────────────────────────────────────
+
 function Dot({ active, done }: { active: boolean; done: boolean }) {
   return (
     <div style={{
@@ -83,22 +130,25 @@ function StepBar({ step }: { step: Step }) {
   );
 }
 
+// ── Página principal ───────────────────────────────────────────────────────────
+
 export default function WebAppPage() {
   const router = useRouter();
   const supabase = createClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [motivo, setMotivo]         = useState<Motivo>('loading');
-  const [companies, setCompanies]   = useState<Company[]>([]);
-  const [selectedId, setSelectedId] = useState<string>('');
-  const [step, setStep]             = useState<Step>(1);
-  const [logoFile, setLogoFile]     = useState<File | null>(null);
+  const [motivo, setMotivo]           = useState<Motivo>('loading');
+  const [companies, setCompanies]     = useState<Company[]>([]);
+  const [selectedId, setSelectedId]   = useState<string>('');
+  const [step, setStep]               = useState<Step>(1);
+  const [logoFile, setLogoFile]       = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [themeColor, setThemeColor] = useState('#f97316');
-  const [saving, setSaving]         = useState(false);
-  const [error, setError]           = useState('');
-  const [published, setPublished]   = useState(false);
-  const [finalSlug, setFinalSlug]   = useState('');
+  const [processingLogo, setProcessingLogo] = useState(false);
+  const [themeColor, setThemeColor]   = useState('#f97316');
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState('');
+  const [published, setPublished]     = useState(false);
+  const [finalSlug, setFinalSlug]     = useState('');
 
   useEffect(() => {
     async function init() {
@@ -170,15 +220,28 @@ export default function WebAppPage() {
 
   const selectedCompany = companies.find(c => c.id === selectedId);
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // ── Upload e processamento 512×512 ─────────────────────────────────────────
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { setError('Logo deve ter no máximo 2MB'); return; }
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
+    if (file.size > 5 * 1024 * 1024) { setError('Logo deve ter no máximo 5MB'); return; }
+
+    setProcessingLogo(true);
     setError('');
+
+    try {
+      const { blob, previewUrl } = await prepareLogoFor512(file);
+      // Substitui o File original pelo blob 512×512 já processado
+      setLogoFile(new File([blob], 'logo_512.png', { type: 'image/png' }));
+      setLogoPreview(previewUrl);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao processar imagem');
+    } finally {
+      setProcessingLogo(false);
+    }
   }
 
+  // ── Publicar ───────────────────────────────────────────────────────────────
   async function publish() {
     if (!selectedCompany) return;
     setSaving(true);
@@ -191,15 +254,12 @@ export default function WebAppPage() {
       let logo_url = selectedCompany.logo_url;
 
       if (logoFile) {
-        const ext = logoFile.type === 'image/png' ? 'png'
-          : logoFile.type === 'image/webp' ? 'webp'
-          : logoFile.type === 'image/svg+xml' ? 'svg'
-          : 'jpg';
-        const path = `logos/${selectedCompany.id}/logo.${ext}`;
+        // logoFile já é PNG 512×512 processado pela prepareLogoFor512
+        const path = `logos/${selectedCompany.id}/logo.png`;
 
         const { error: upErr } = await supabase.storage
           .from('company-assets')
-          .upload(path, logoFile, { upsert: true, contentType: logoFile.type, cacheControl: '3600' });
+          .upload(path, logoFile, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
 
         if (upErr) throw upErr;
 
@@ -240,7 +300,7 @@ export default function WebAppPage() {
     }
   }
 
-  // ── Tela de loading ──────────────────────────────────────────────────────────
+  // ── Tela de loading ────────────────────────────────────────────────────────
   if (motivo === 'loading') {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -250,7 +310,7 @@ export default function WebAppPage() {
     );
   }
 
-  // ── Tela de inelegível ───────────────────────────────────────────────────────
+  // ── Tela de inelegível ─────────────────────────────────────────────────────
   if (motivo === 'ineligible') {
     return (
       <div style={{ maxWidth: 480, margin: '60px auto', padding: '0 16px' }}>
@@ -272,7 +332,7 @@ export default function WebAppPage() {
     );
   }
 
-  // ── Tela de sucesso ──────────────────────────────────────────────────────────
+  // ── Tela de sucesso ────────────────────────────────────────────────────────
   if (published && step === 3) {
     return (
       <div style={{ maxWidth: 560, margin: '40px auto', padding: '0 16px' }}>
@@ -314,7 +374,7 @@ export default function WebAppPage() {
     );
   }
 
-  // ── Wizard ───────────────────────────────────────────────────────────────────
+  // ── Wizard ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 16px 60px' }}>
       <div style={{ marginBottom: 36 }}>
@@ -330,7 +390,7 @@ export default function WebAppPage() {
 
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
 
-        {/* PASSO 1 */}
+        {/* ── PASSO 1 ── */}
         {step === 1 && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Identidade visual</h2>
@@ -353,12 +413,73 @@ export default function WebAppPage() {
             )}
 
             <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Logo</label>
-            <div onClick={() => fileRef.current?.click()}
-              style={{ border: `2px dashed ${logoPreview ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)'}`, borderRadius: 16, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 28, background: logoPreview ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}>
+
+            {/* Drop zone com posição relativa para overlay de loading */}
+            <div
+              onClick={() => !processingLogo && fileRef.current?.click()}
+              style={{
+                position: 'relative',
+                border: `2px dashed ${logoPreview ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)'}`,
+                borderRadius: 16,
+                padding: '28px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 12,
+                cursor: processingLogo ? 'wait' : 'pointer',
+                marginBottom: 28,
+                background: logoPreview ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.02)',
+                transition: 'all 0.2s',
+              }}
+            >
+              {/* Overlay de processamento */}
+              {processingLogo && (
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  background: 'rgba(15,23,42,0.82)',
+                  borderRadius: 14,
+                  zIndex: 2,
+                }}>
+                  <div style={{ width: 28, height: 28, border: `3px solid ${BORDER}`, borderTopColor: ORANGE, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ color: MUTED, fontSize: 12, fontWeight: 500 }}>Ajustando para 512×512…</span>
+                </div>
+              )}
+
               {logoPreview ? (
                 <>
-                  <img src={logoPreview} alt="Logo" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `2px solid rgba(16,185,129,0.4)` }} />
-                  <span style={{ color: GREEN, fontSize: 13, fontWeight: 600 }}>Logo carregado — clique para trocar</span>
+                  {/* Preview quadrado 512×512 simulado */}
+                  <div style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 16,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: `2px solid rgba(16,185,129,0.4)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    position: 'relative',
+                  }}>
+                    <img
+                      src={logoPreview}
+                      alt="Logo"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                      }}
+                    />
+                  </div>
+                  <span style={{ color: GREEN, fontSize: 13, fontWeight: 600 }}>
+                    Logo ajustado para 512×512 — clique para trocar
+                  </span>
+                  <span style={{ color: MUTED, fontSize: 11 }}>PNG transparente · pronto para PWA/TWA</span>
                 </>
               ) : (
                 <>
@@ -366,11 +487,17 @@ export default function WebAppPage() {
                     <svg width="22" height="22" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   </div>
                   <span style={{ color: MUTED, fontSize: 14 }}>Clique para fazer upload do logo</span>
-                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>PNG, JPG, WebP ou SVG · Máx 2MB</span>
+                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>PNG, JPG, WebP ou SVG · Máx 5MB · será convertido para 512×512</span>
                 </>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" style={{ display: 'none' }} onChange={onFileChange} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+              style={{ display: 'none' }}
+              onChange={onFileChange}
+            />
 
             <label style={{ display: 'block', color: MUTED, fontSize: 13, fontWeight: 600, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cor principal</label>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -381,13 +508,17 @@ export default function WebAppPage() {
             </div>
 
             {error && <p style={{ color: '#f87171', fontSize: 13, marginTop: 12 }}>{error}</p>}
-            <button onClick={() => setStep(2)} style={{ marginTop: 28, width: '100%', padding: '14px', background: `linear-gradient(135deg, ${ORANGE}, #ea580c)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>
+            <button
+              onClick={() => setStep(2)}
+              disabled={processingLogo}
+              style={{ marginTop: 28, width: '100%', padding: '14px', background: processingLogo ? 'rgba(249,115,22,0.3)' : `linear-gradient(135deg, ${ORANGE}, #ea580c)`, border: 'none', borderRadius: 14, color: WHITE, fontWeight: 700, fontSize: 16, cursor: processingLogo ? 'not-allowed' : 'pointer' }}
+            >
               Continuar →
             </button>
           </div>
         )}
 
-        {/* PASSO 2 */}
+        {/* ── PASSO 2 ── */}
         {step === 2 && selectedCompany && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Seu endereço</h2>
@@ -408,10 +539,24 @@ export default function WebAppPage() {
               <div style={{ background: DARK, borderRadius: 12, padding: '16px', border: `1px solid ${BORDER}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   {logoPreview
-                    ? <img src={logoPreview} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-                    : <div style={{ width: 32, height: 32, borderRadius: '50%', background: themeColor + '33', border: `1px solid ${themeColor}66`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    ? (
+                      <div style={{
+                        width: 32, height: 32,
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: `1px solid rgba(255,255,255,0.1)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <img src={logoPreview} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      </div>
+                    )
+                    : (
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: themeColor + '33', border: `1px solid ${themeColor}66`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="14" height="14" fill="none" stroke={themeColor} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       </div>
+                    )
                   }
                   <div>
                     <p style={{ color: WHITE, fontWeight: 700, fontSize: 13 }}>{selectedCompany.name}</p>
@@ -437,7 +582,7 @@ export default function WebAppPage() {
           </div>
         )}
 
-        {/* PASSO 3 */}
+        {/* ── PASSO 3 ── */}
         {step === 3 && !published && selectedCompany && (
           <div style={{ padding: '36px 36px 32px' }}>
             <h2 style={{ color: WHITE, fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Tudo pronto!</h2>
@@ -447,7 +592,7 @@ export default function WebAppPage() {
               {[
                 { label: 'Assistente', value: selectedCompany.name, icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> },
                 { label: 'Endereço', value: `${selectedCompany.slug}.${WEBAPP_DOMAIN}`, icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg> },
-                { label: 'Logo', value: logoFile ? logoFile.name : logoPreview ? 'Logo atual mantido' : 'Sem logo (padrão)', icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
+                { label: 'Logo', value: logoFile ? 'Logo 512×512 (PNG)' : logoPreview ? 'Logo atual mantido' : 'Sem logo (padrão)', icon: <svg width="16" height="16" fill="none" stroke={MUTED} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
                 { label: 'Cor', value: THEME_COLORS.find(c => c.value === themeColor)?.label || themeColor, icon: <div style={{ width: 16, height: 16, borderRadius: '50%', background: themeColor }} /> },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: i < 3 ? `1px solid ${BORDER}` : 'none' }}>
@@ -476,6 +621,7 @@ export default function WebAppPage() {
             </div>
           </div>
         )}
+
       </div>
 
       <style>{`

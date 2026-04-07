@@ -63,87 +63,93 @@ export default function ChamarGerenteDisplay({
   }, []);
 
   // Buscar email e telefone do gerente + REALTIME
-// Buscar email e telefone do gerente + REALTIME
-useEffect(() => {
-  async function fetchGerenteData() {
-    try {
-      // ✅ Busca gerente em company_profiles
-      const { data: perfis } = await supabase
-        .from('company_profiles')
-        .select('nome, email, telefone')
-        .eq('company_id', companyId)
-        .eq('tipo', 'gerente')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-
-      if (perfis) {
-        console.log('✅ Gerente encontrado:', perfis);
-        setGerenteNome(perfis.nome || 'Gerente');
-        setGerenteEmail(perfis.email || '');
-        setGerenteTelefone(perfis.telefone || '');
+  useEffect(() => {
+    async function fetchGerenteData() {
+      try {
+        console.log('🔍 Buscando gerente para company:', companyId);
         
-        // ✅ Se não tiver email, tenta buscar email_contato da empresa
-        if (!perfis.email) {
+        // ✅ Busca gerente em company_profiles
+        const { data: perfis, error: perfilError } = await supabase
+          .from('company_profiles')
+          .select('nome, email, telefone')
+          .eq('company_id', companyId)
+          .eq('tipo', 'gerente')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
+        if (perfilError) {
+          console.error('❌ Erro ao buscar perfil:', perfilError);
+        }
+
+        if (perfis) {
+          console.log('✅ Gerente encontrado:', perfis);
+          setGerenteNome(perfis.nome || 'Gerente');
+          setGerenteEmail(perfis.email || '');
+          setGerenteTelefone(perfis.telefone || '');
+          
+          // ✅ Se não tiver email, tenta buscar email_contato da empresa
+          if (!perfis.email) {
+            console.log('⚠️ Gerente sem email, buscando email_contato...');
+            const { data: company } = await supabase
+              .from('companies')
+              .select('email_contato')
+              .eq('id', companyId)
+              .single();
+              
+            if (company?.email_contato) {
+              console.log('✅ Usando email_contato da empresa:', company.email_contato);
+              setGerenteEmail(company.email_contato);
+            }
+          }
+        } else {
+          console.log('⚠️ Gerente não encontrado, buscando email_contato...');
+          
+          // ✅ Fallback: usa email_contato da empresa
           const { data: company } = await supabase
             .from('companies')
-            .select('email_contato')
+            .select('email_contato, name')
             .eq('id', companyId)
             .single();
             
           if (company?.email_contato) {
-            console.log('✅ Usando email_contato da empresa:', company.email_contato);
+            console.log('✅ Usando email_contato:', company.email_contato);
             setGerenteEmail(company.email_contato);
+            setGerenteNome('Gestão');
+          } else {
+            console.log('❌ Nenhum email configurado');
+            showToast('Email do gerente não configurado', 'error');
           }
         }
-      } else {
-        console.log('⚠️ Gerente não encontrado, buscando email_contato...');
-        
-        // ✅ Fallback: usa email_contato da empresa
-        const { data: company } = await supabase
-          .from('companies')
-          .select('email_contato, name')
-          .eq('id', companyId)
-          .single();
-          
-        if (company?.email_contato) {
-          console.log('✅ Usando email_contato:', company.email_contato);
-          setGerenteEmail(company.email_contato);
-          setGerenteNome('Gestão');
-        } else {
-          console.log('❌ Nenhum email configurado');
-          showToast('Email do gerente não configurado', 'error');
-        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar dados do gerente:', error);
+        showToast('Erro ao carregar dados do gerente', 'error');
       }
-    } catch (error) {
-      console.error('❌ Erro ao buscar email do gerente:', error);
-      showToast('Erro ao carregar dados do gerente', 'error');
     }
-  }
-  
-  fetchGerenteData();
+    
+    fetchGerenteData();
 
-  // ✅ REALTIME: atualiza quando gerente mudar
-  const channel = supabase
-    .channel(`gerente-${companyId}`)
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'company_profiles',
-      filter: `company_id=eq.${companyId}`,
-    }, (payload) => {
-      const updated = payload.new as any;
-      if (updated.tipo === 'gerente' && updated.is_active) {
-        console.log('🔄 Gerente atualizado via realtime:', updated);
-        setGerenteNome(updated.nome || 'Gerente');
-        setGerenteEmail(updated.email || '');
-        setGerenteTelefone(updated.telefone || '');
-      }
-    })
-    .subscribe();
+    // ✅ REALTIME: atualiza quando gerente mudar
+    const channel = supabase
+      .channel(`gerente-${companyId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'company_profiles',
+        filter: `company_id=eq.${companyId}`,
+      }, (payload) => {
+        const updated = payload.new as any;
+        if (updated.tipo === 'gerente' && updated.is_active) {
+          console.log('🔄 Gerente atualizado via realtime:', updated);
+          setGerenteNome(updated.nome || 'Gerente');
+          setGerenteEmail(updated.email || '');
+          setGerenteTelefone(updated.telefone || '');
+        }
+      })
+      .subscribe();
 
-  return () => { supabase.removeChannel(channel); };
-}, [companyId]);
+    return () => { supabase.removeChannel(channel); };
+  }, [companyId]);
 
   useEffect(() => {
     if (toast) {
@@ -230,7 +236,7 @@ useEffect(() => {
             </div>
             <div>
               <h2 className={`text-lg font-semibold ${colors.textPrimary}`}>Chamar Gerente</h2>
-              <p className={`text-xs ${colors.textMuted}`}>Notificação via email</p>
+              <p className={`text-xs ${colors.textMuted}`}>Notificação via email{gerenteTelefone ? ' e SMS' : ''}</p>
             </div>
           </div>
           <button
@@ -250,16 +256,22 @@ useEffect(() => {
 
         <div className="p-6 space-y-4">
           
-<div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
-  <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
-  <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
-  {gerenteEmail && (
-    <p className={`text-xs ${colors.textMuted} mt-0.5`}>{gerenteEmail}</p>
-  )}
-  {gerenteTelefone && (
-    <p className={`text-xs ${colors.textMuted} mt-0.5`}>{gerenteTelefone}</p>
-  )}
-</div>
+          <div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
+            <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
+            <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
+            {gerenteEmail && (
+              <p className={`text-xs ${colors.textMuted} mt-0.5 flex items-center gap-1`}>
+                <span>📧</span>
+                <span>{gerenteEmail}</span>
+              </p>
+            )}
+            {gerenteTelefone && (
+              <p className={`text-xs ${colors.textMuted} mt-0.5 flex items-center gap-1`}>
+                <span>📱</span>
+                <span>{gerenteTelefone}</span>
+              </p>
+            )}
+          </div>
 
           <div>
             <label className={`block text-sm font-medium mb-2 ${colors.textPrimary}`}>

@@ -221,7 +221,7 @@ async function handleSend() {
           company_id: companyId, // ✅ CORRIGIDO: adicionar company_id
           to: gerenteEmail,
           subject: '🔔 Chamada de Gerente - minhAi',
-          body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
+          body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um usuário.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
         }),
       });
       

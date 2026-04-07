@@ -88,7 +88,7 @@ export default function VerClientesDisplay({
             created_at
           `)
           .eq('company_id', companyId)
-          .eq('profile_type', 'cliente')
+          .eq('tipo', 'cliente')
           .eq('is_active', true)
           .order('nome', { ascending: true });
 

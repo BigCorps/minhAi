@@ -29,6 +29,8 @@ export default function ChamarGerenteDisplay({
   const [gerenteEmail, setGerenteEmail] = useState<string>('');
   const [gerenteTelefone, setGerenteTelefone] = useState<string>('');
   const [gerenteNome, setGerenteNome] = useState<string>('Gerente');
+  const [notificarEmail, setNotificarEmail] = useState(true);
+  const [notificarSMS, setNotificarSMS] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const supabase = createClient();
@@ -62,14 +64,28 @@ export default function ChamarGerenteDisplay({
     };
   }, []);
 
-  // Buscar email e telefone do gerente + REALTIME
+  // Buscar configurações e dados do gerente
   useEffect(() => {
     async function fetchGerenteData() {
       try {
         console.log('🔍 Buscando gerente para company:', companyId);
         
-        // ✅ Busca gerente em company_profiles
-        const { data: perfis, error: perfilError } = await supabase
+        // 1. Busca configurações dos canais de notificação
+        const { data: settings } = await supabase
+          .from('company_function_settings')
+          .select('config')
+          .eq('company_id', companyId)
+          .eq('function_key', 'chamar_gerente')
+          .maybeSingle();
+
+        if (settings?.config) {
+          console.log('⚙️ Configurações encontradas:', settings.config);
+          setNotificarEmail(settings.config.notificar_email ?? true);
+          setNotificarSMS(settings.config.notificar_sms ?? false);
+        }
+        
+        // 2. Busca gerente em company_profiles
+        const { data: perfil, error: perfilError } = await supabase
           .from('company_profiles')
           .select('nome, email, telefone')
           .eq('company_id', companyId)
@@ -82,14 +98,14 @@ export default function ChamarGerenteDisplay({
           console.error('❌ Erro ao buscar perfil:', perfilError);
         }
 
-        if (perfis) {
-          console.log('✅ Gerente encontrado:', perfis);
-          setGerenteNome(perfis.nome || 'Gerente');
-          setGerenteEmail(perfis.email || '');
-          setGerenteTelefone(perfis.telefone || '');
+        if (perfil) {
+          console.log('✅ Gerente encontrado:', perfil);
+          setGerenteNome(perfil.nome || 'Gerente');
+          setGerenteEmail(perfil.email || '');
+          setGerenteTelefone(perfil.telefone || '');
           
-          // ✅ Se não tiver email, tenta buscar email_contato da empresa
-          if (!perfis.email) {
+          // ✅ Se gerente não tem email, busca email_contato da empresa como fallback
+          if (!perfil.email) {
             console.log('⚠️ Gerente sem email, buscando email_contato...');
             const { data: company } = await supabase
               .from('companies')
@@ -103,9 +119,9 @@ export default function ChamarGerenteDisplay({
             }
           }
         } else {
-          console.log('⚠️ Gerente não encontrado, buscando email_contato...');
+          console.log('⚠️ Nenhum gerente cadastrado, buscando email_contato...');
           
-          // ✅ Fallback: usa email_contato da empresa
+          // 3. Fallback: usa email_contato da empresa
           const { data: company } = await supabase
             .from('companies')
             .select('email_contato, name')
@@ -113,12 +129,11 @@ export default function ChamarGerenteDisplay({
             .single();
             
           if (company?.email_contato) {
-            console.log('✅ Usando email_contato:', company.email_contato);
+            console.log('✅ Usando email_contato da empresa:', company.email_contato);
             setGerenteEmail(company.email_contato);
-            setGerenteNome('Gestão');
+            setGerenteNome('Gestão'); // ← SÓ AQUI que usa "Gestão"
           } else {
             console.log('❌ Nenhum email configurado');
-            showToast('Email do gerente não configurado', 'error');
           }
         }
       } catch (error) {
@@ -168,28 +183,64 @@ export default function ChamarGerenteDisplay({
       return;
     }
 
-    if (!gerenteEmail) {
+    if (notificarEmail && !gerenteEmail) {
       showToast('Email do gerente não configurado', 'error');
+      return;
+    }
+
+    if (notificarSMS && !gerenteTelefone) {
+      showToast('Telefone do gerente não configurado', 'error');
+      return;
+    }
+
+    if (!notificarEmail && !notificarSMS) {
+      showToast('Configure ao menos um canal de notificação', 'error');
       return;
     }
 
     setIsSending(true);
 
     try {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: gerenteEmail,
-          subject: '🔔 Chamada de Gerente - minhAi',
-          body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
-        }),
-      });
+      const promises = [];
 
-      if (!response.ok) {
-        throw new Error('Falha ao enviar email');
+      // ✅ Envia email via Edge Function enviar-email-google
+      if (notificarEmail && gerenteEmail) {
+        console.log('📧 Enviando email para:', gerenteEmail);
+        promises.push(
+          supabase.functions.invoke('enviar-email-google', {
+            body: {
+              to: gerenteEmail,
+              subject: '🔔 Chamada de Gerente - minhAi',
+              body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
+            },
+          })
+        );
       }
 
+      // ✅ Envia SMS via Edge Function send-sms-gerente
+      if (notificarSMS && gerenteTelefone) {
+        console.log('📱 Enviando SMS para:', gerenteTelefone);
+        promises.push(
+          supabase.functions.invoke('send-sms-gerente', {
+            body: {
+              company_id: companyId,
+              telefone: gerenteTelefone,
+              mensagem: `🔔 Chamada de Gerente - minhAi\n\nMotivo: ${motivo}`,
+            },
+          })
+        );
+      }
+
+      const results = await Promise.all(promises);
+      
+      // Verifica se algum deu erro
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        console.error('❌ Erros ao enviar:', errors);
+        throw new Error('Falha ao enviar notificações');
+      }
+
+      console.log('✅ Notificações enviadas com sucesso');
       showToast('Gerente notificado com sucesso!', 'success');
       
       if (playText) {
@@ -201,7 +252,7 @@ export default function ChamarGerenteDisplay({
       }, 1500);
 
     } catch (error) {
-      console.error('Erro ao enviar notificação:', error);
+      console.error('❌ Erro ao enviar notificação:', error);
       showToast('Erro ao enviar notificação', 'error');
       
       if (playText) {
@@ -236,7 +287,9 @@ export default function ChamarGerenteDisplay({
             </div>
             <div>
               <h2 className={`text-lg font-semibold ${colors.textPrimary}`}>Chamar Gerente</h2>
-              <p className={`text-xs ${colors.textMuted}`}>Notificação via email{gerenteTelefone ? ' e SMS' : ''}</p>
+              <p className={`text-xs ${colors.textMuted}`}>
+                {notificarEmail && notificarSMS ? 'Email + SMS' : notificarEmail ? 'Email' : 'SMS'}
+              </p>
             </div>
           </div>
           <button
@@ -259,13 +312,13 @@ export default function ChamarGerenteDisplay({
           <div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
             <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
             <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
-            {gerenteEmail && (
+            {gerenteEmail && notificarEmail && (
               <p className={`text-xs ${colors.textMuted} mt-0.5 flex items-center gap-1`}>
                 <span>📧</span>
                 <span>{gerenteEmail}</span>
               </p>
             )}
-            {gerenteTelefone && (
+            {gerenteTelefone && notificarSMS && (
               <p className={`text-xs ${colors.textMuted} mt-0.5 flex items-center gap-1`}>
                 <span>📱</span>
                 <span>{gerenteTelefone}</span>
@@ -304,7 +357,7 @@ export default function ChamarGerenteDisplay({
             </button>
             <button
               onClick={handleSend}
-              disabled={isSending || !motivo.trim() || !gerenteEmail}
+              disabled={isSending || !motivo.trim()}
               className="flex-1 px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
             >
               {isSending ? (

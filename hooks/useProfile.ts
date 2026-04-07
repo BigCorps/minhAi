@@ -21,6 +21,7 @@ export interface SlugProfile {
   nome: string;
   email?: string | null;
   identificador?: string | null;
+  telefone?: string | null; // ✅ ADICIONADO
   endereco?: string | null;
   metadata?: Record<string, any>;
 }
@@ -71,6 +72,7 @@ export function useProfile(slug: string): UseProfileReturn {
         const data = await callAuthProfile({ action: 'validate', token: savedToken });
 
         if (data.profile) {
+          console.log('🔍 Profile recebido da Edge Function:', data.profile); // ✅ DEBUG
           setProfile(data.profile);
           setToken(savedToken);
         } else {
@@ -103,6 +105,8 @@ export function useProfile(slug: string): UseProfileReturn {
 
       if (data.error) return { success: false, error: data.error };
 
+      console.log('🔍 Login - Profile recebido:', data.profile); // ✅ DEBUG
+
       localStorage.setItem(storageKey, data.token);
       setToken(data.token);
       setProfile(data.profile);
@@ -128,6 +132,8 @@ export function useProfile(slug: string): UseProfileReturn {
       });
 
       if (data.error) return { success: false, error: data.error };
+
+      console.log('🔍 Register - Profile recebido:', data.profile); // ✅ DEBUG
 
       localStorage.setItem(storageKey, data.token);
       setToken(data.token);

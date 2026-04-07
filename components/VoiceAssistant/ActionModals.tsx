@@ -118,7 +118,8 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'RegistrationDisplay': dynamic(() => import('@/components/assistant/RegistrationDisplay'), { ssr: false }),
   'LoginClienteDisplay': dynamic(() => import('@/components/assistant/LoginClienteDisplay'), { ssr: false }),
   'MeuCupomDisplay': dynamic(() => import('@/components/assistant/MeuCupomDisplay'), { ssr: false }),
-
+  'EnviarSmsDisplay': dynamic(() => import('@/components/assistant/EnviarSmsDisplay'), { ssr: false }),
+  
   // ── Tradução e transcrição ────────────────────────────────
   'TranslateTextModal': dynamic(() => import('@/components/assistant/TranslateTextModal'), { ssr: false }),
   'TranscribeAudioModal': dynamic(() => import('@/components/assistant/TranscribeAudioModal'), { ssr: false }),

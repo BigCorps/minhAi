@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, Send, Loader2, AlertCircle, Check, UserPlus, ExternalLink } from 'lucide-react';
+import { Bell, Send, Loader2, AlertCircle, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
-import { useRouter } from 'next/navigation';
 
 interface ChamarGerenteDisplayProps {
   data: {
@@ -28,13 +27,11 @@ export default function ChamarGerenteDisplay({
   const [isSending, setIsSending] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [gerenteEmail, setGerenteEmail] = useState<string>('');
-  const [gerenteTelefone, setGerenteTelefone] = useState<string>(''); // ✅ ADICIONADO
+  const [gerenteTelefone, setGerenteTelefone] = useState<string>('');
   const [gerenteNome, setGerenteNome] = useState<string>('Gerente');
-  const [gerenteConfigurado, setGerenteConfigurado] = useState(false); // ✅ ADICIONADO
   const [mounted, setMounted] = useState(false);
 
   const supabase = createClient();
-  const router = useRouter();
   const isDark = theme === 'dark';
 
   const DARK = {
@@ -65,10 +62,11 @@ export default function ChamarGerenteDisplay({
     };
   }, []);
 
-  // ✅ Buscar dados do gerente + REALTIME
+  // Buscar email e telefone do gerente + REALTIME
   useEffect(() => {
     async function fetchGerenteData() {
       try {
+        // ✅ Busca gerente em company_profiles
         const { data: perfis } = await supabase
           .from('company_profiles')
           .select('nome, email, telefone')
@@ -79,29 +77,32 @@ export default function ChamarGerenteDisplay({
           .maybeSingle();
 
         if (perfis) {
-          setGerenteNome(perfis.nome || 'Gerente');
+          console.log('✅ Gerente encontrado:', perfis);
           setGerenteEmail(perfis.email || '');
           setGerenteTelefone(perfis.telefone || '');
-          setGerenteConfigurado(!!(perfis.email || perfis.telefone));
+          setGerenteNome(perfis.nome || 'Gerente');
         } else {
-          // Fallback para business_email da empresa
+          console.log('⚠️ Gerente não encontrado, buscando business_email...');
+          
+          // ✅ CORREÇÃO: Adicionar .single()
           const { data: company } = await supabase
             .from('companies')
             .select('business_email, name')
             .eq('id', companyId)
-            .single();
+            .single(); // ← ADICIONAR .single()
             
           if (company?.business_email) {
+            console.log('✅ Usando business_email:', company.business_email);
             setGerenteEmail(company.business_email);
             setGerenteNome('Gestão');
-            setGerenteConfigurado(true);
           } else {
-            setGerenteConfigurado(false);
+            console.log('❌ Nenhum email configurado');
+            showToast('Email do gerente não configurado', 'error');
           }
         }
       } catch (error) {
-        console.error('Erro ao buscar dados do gerente:', error);
-        setGerenteConfigurado(false);
+        console.error('❌ Erro ao buscar email do gerente:', error);
+        showToast('Erro ao carregar dados do gerente', 'error');
       }
     }
     
@@ -118,10 +119,10 @@ export default function ChamarGerenteDisplay({
       }, (payload) => {
         const updated = payload.new as any;
         if (updated.tipo === 'gerente' && updated.is_active) {
-          setGerenteNome(updated.nome || 'Gerente');
+          console.log('🔄 Gerente atualizado via realtime:', updated);
           setGerenteEmail(updated.email || '');
           setGerenteTelefone(updated.telefone || '');
-          setGerenteConfigurado(!!(updated.email || updated.telefone));
+          setGerenteNome(updated.nome || 'Gerente');
         }
       })
       .subscribe();
@@ -146,33 +147,27 @@ export default function ChamarGerenteDisplay({
       return;
     }
 
-    if (!gerenteEmail && !gerenteTelefone) {
-      showToast('Configure o email ou telefone do gerente primeiro', 'error');
+    if (!gerenteEmail) {
+      showToast('Email do gerente não configurado', 'error');
       return;
     }
 
     setIsSending(true);
 
     try {
-      // Envia email se tiver
-      if (gerenteEmail) {
-        const response = await fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: gerenteEmail,
-            subject: '🔔 Chamada de Gerente - minhAi',
-            body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
-          }),
-        });
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: gerenteEmail,
+          subject: '🔔 Chamada de Gerente - minhAi',
+          body: `Olá ${gerenteNome},\n\nVocê foi chamado(a) por um colaborador.\n\n**Motivo:**\n${motivo}\n\n---\nEnviado via minhAi`,
+        }),
+      });
 
-        if (!response.ok) {
-          throw new Error('Falha ao enviar email');
-        }
+      if (!response.ok) {
+        throw new Error('Falha ao enviar email');
       }
-
-      // TODO: Enviar SMS se tiver telefone configurado
-      // if (gerenteTelefone) { ... }
 
       showToast('Gerente notificado com sucesso!', 'success');
       
@@ -194,11 +189,6 @@ export default function ChamarGerenteDisplay({
     } finally {
       setIsSending(false);
     }
-  }
-
-  function handleGoToCadastros() {
-    onClose();
-    router.push(`/dashboard/${companyId}/cadastros`);
   }
 
   if (!mounted) return null;
@@ -225,7 +215,7 @@ export default function ChamarGerenteDisplay({
             </div>
             <div>
               <h2 className={`text-lg font-semibold ${colors.textPrimary}`}>Chamar Gerente</h2>
-              <p className={`text-xs ${colors.textMuted}`}>Notificação via email{gerenteTelefone ? ' e SMS' : ''}</p>
+              <p className={`text-xs ${colors.textMuted}`}>Notificação via email</p>
             </div>
           </div>
           <button
@@ -245,106 +235,61 @@ export default function ChamarGerenteDisplay({
 
         <div className="p-6 space-y-4">
           
-          {/* ✅ Aviso se gerente não configurado */}
-          {!gerenteConfigurado ? (
-            <div className={`p-4 rounded-lg border ${
-              isDark ? 'bg-amber-900/20 border-amber-500/20' : 'bg-amber-50 border-amber-200'
-            }`}>
-              <div className="flex items-start gap-3">
-                <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                  isDark ? 'text-amber-400' : 'text-amber-600'
-                }`} />
-                <div className="flex-1">
-                  <p className={`text-sm font-semibold mb-1 ${
-                    isDark ? 'text-amber-200' : 'text-amber-900'
-                  }`}>
-                    Gerente não configurado
-                  </p>
-                  <p className={`text-xs mb-3 ${
-                    isDark ? 'text-amber-300' : 'text-amber-700'
-                  }`}>
-                    Para usar esta função, cadastre um perfil do tipo "Gerente" com email e/ou telefone.
-                  </p>
-                  <button
-                    onClick={handleGoToCadastros}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                      isDark 
-                        ? 'bg-amber-500 hover:bg-amber-600 text-white' 
-                        : 'bg-amber-600 hover:bg-amber-700 text-white'
-                    }`}
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Ir para Cadastros
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Dados do gerente */}
-              <div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
-                <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
-                <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
-                {gerenteEmail && (
-                  <p className={`text-xs ${colors.textMuted} mt-0.5`}>📧 {gerenteEmail}</p>
-                )}
-                {gerenteTelefone && (
-                  <p className={`text-xs ${colors.textMuted} mt-0.5`}>📱 {gerenteTelefone}</p>
-                )}
-              </div>
+          <div className={`p-3 rounded-lg ${colors.cardBg} ${colors.border} border`}>
+            <p className={`text-xs ${colors.textMuted} mb-1`}>Destinatário:</p>
+            <p className={`text-sm font-medium ${colors.textPrimary}`}>{gerenteNome}</p>
+            {gerenteEmail && (
+              <p className={`text-xs ${colors.textMuted} mt-0.5`}>{gerenteEmail}</p>
+            )}
+          </div>
 
-              {/* Motivo */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${colors.textPrimary}`}>
-                  Motivo da chamada:
-                </label>
-                <textarea
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Descreva o motivo (ex: Aprovação necessária, problema no caixa, cliente solicitando gerente...)"
-                  rows={5}
-                  disabled={isSending}
-                  className={`w-full px-4 py-3 rounded-lg border ${colors.border} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none disabled:opacity-50`}
-                />
-                <p className={`text-xs ${colors.textMuted} mt-1`}>
-                  💡 Seja específico para que o gerente saiba a urgência
-                </p>
-              </div>
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${colors.textPrimary}`}>
+              Motivo da chamada:
+            </label>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Descreva o motivo (ex: Aprovação necessária, problema no caixa, cliente solicitando gerente...)"
+              rows={5}
+              disabled={isSending}
+              className={`w-full px-4 py-3 rounded-lg border ${colors.border} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none disabled:opacity-50`}
+            />
+            <p className={`text-xs ${colors.textMuted} mt-1`}>
+              💡 Seja específico para que o gerente saiba a urgência
+            </p>
+          </div>
 
-              {/* Botões */}
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  disabled={isSending}
-                  className={`flex-1 px-4 py-3 rounded-lg font-medium transition disabled:opacity-50 ${
-                    isDark 
-                      ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                  }`}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSend}
-                  disabled={isSending || !motivo.trim()}
-                  className="flex-1 px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                >
-                  {isSending ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Notificar Gerente
-                    </>
-                  )}
-                </button>
-              </div>
-            </>
-          )}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              disabled={isSending}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition disabled:opacity-50 ${
+                isDark 
+                  ? 'bg-slate-700 hover:bg-slate-600 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+              }`}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={isSending || !motivo.trim() || !gerenteEmail}
+              className="flex-1 px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="w-5 h-5" />
+                  Notificar Gerente
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { CreditsCard } from '@/components/CreditsCard';
 import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 import SetupBanner from '@/components/dashboard/SetupBanner';
+import { PushNotificationSetup } from '@/components/dashboard/PushNotificationSetup';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -71,6 +72,9 @@ export default async function DashboardPage() {
 
       {/* ✅ Banner — entre créditos e gráfico */}
       <SetupBanner />
+
+      {/* ✅ NOVO: BANNER DE NOTIFICAÇÕES (Some sozinho se já estiver ativo) */}
+      {user && <PushNotificationSetup userId={user.id} />}
 
       {/* Credits Progress Chart */}
       {user && <CreditsProgressChartWrapper userId={user.id} />}

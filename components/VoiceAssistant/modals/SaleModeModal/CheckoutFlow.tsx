@@ -25,7 +25,7 @@ interface CheckoutFlowProps {
    *  Ex: ['pix_generate', 'tef_debito', 'link_pagamento']
    *  Se undefined, exibe todos (comportamento legado). */
   metodosAtivos?: string[];
-  profile?: { nome: string; email?: string | null; identificador?: string | null; endereco?: string | null } | null; // ← adicionado
+  profile?: { nome: string; email?: string | null; identificador?: string | null; telefone?: string | null; endereco?: string | null } | null; // ← adicionado
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -57,12 +57,11 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
   const [clienteTel, setClienteTel] = useState('');
 
   // Pré-preencher com dados do perfil logado
-  useEffect(() => {
-    if (!profile) return;
-    if (profile.nome) setClienteNome(profile.nome);
-    // identificador pode ser telefone
-    if (profile.identificador) setClienteTel(profile.identificador);
-  }, [profile]);
+useEffect(() => {
+  if (!profile) return;
+  if (profile.nome) setClienteNome(profile.nome);
+  if (profile.telefone) setClienteTel(profile.telefone);
+}, [profile]);
   const [metodo, setMetodo] = useState<MetodoPagamento>('pix');
 
   const [pedidoId, setPedidoId] = useState<string | null>(null);

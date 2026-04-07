@@ -77,10 +77,11 @@ export default function DrivePickerButton({
       // Criar o Google Picker
       const picker = new window.google.picker.PickerBuilder()
         .addView(
-          new window.google.picker.DocsView(window.google.picker.ViewId.FOLDERS)
-            .setSelectFolderEnabled(true)
-            .setIncludeFolders(true)
-            .setMimeTypes('application/vnd.google-apps.folder')
+          // 1. Mude de ViewId.FOLDERS para ViewId.DOCS
+          new window.google.picker.DocsView(window.google.picker.ViewId.DOCS)
+            .setIncludeFolders(true) // Permite ver pastas
+            .setSelectFolderEnabled(true) // Permite selecionar a pasta atual
+            // 2. Remova a linha do .setMimeTypes()
         )
         .setOAuthToken(accessToken)
         .setCallback((data: any) => {

@@ -1,6 +1,6 @@
-// app/api/send-push/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+// 🔴 Mude de createClient para createAdminClient
+import { createAdminClient } from '@/lib/supabase-admin'; 
 import webpush from 'web-push';
 
 export const runtime = 'nodejs';
@@ -16,12 +16,11 @@ if (vapidPublicKey && vapidPrivateKey) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Segurança Básica: Impedir que pessoas de fora usem sua API
     const authHeader = req.headers.get('x-api-key');
-    const secretKey = process.env.PUSH_SECRET_KEY || 'sua_chave_secreta_aqui_123';
-    
-    // Obs: As chamadas do frontend não terão header, então você pode flexibilizar 
-    // ou exigir que até o frontend passe a chave (mais seguro).
+    // Obs: Se for fazer push direto do dashboard (client), ajuste essa validação
+    if (authHeader !== process.env.PUSH_SECRET_KEY) {
+       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
     
     const body = await req.json();
     const { title, message, url, companyId, userId, broadcast } = body;
@@ -30,12 +29,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faltam parâmetros obrigatórios.' }, { status: 400 });
     }
 
-    const supabase = createClient();
-    let query = supabase.from('push_subscriptions').select('id, subscription');
+    // 🔴 Use o supabaseAdmin aqui também
+    const supabaseAdmin = createAdminClient();
+    let query = supabaseAdmin.from('push_subscriptions').select('id, subscription');
 
-    // 2. Filtros Dinâmicos (Para uma empresa, para um usuário, ou para TODOS)
     if (broadcast) {
-      // Pega todos (Não filtra nada)
+      // Pega todos
     } else if (companyId) {
       query = query.eq('company_id', companyId);
     } else if (userId) {
@@ -47,6 +46,7 @@ export async function POST(req: NextRequest) {
     const { data: subscriptions, error } = await query;
 
     if (error || !subscriptions || subscriptions.length === 0) {
+      console.log("Nenhuma inscrição válida encontrada para envio.");
       return NextResponse.json({ success: true, sent: 0, message: 'Nenhuma inscrição encontrada.' });
     }
 
@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
         await webpush.sendNotification(sub.subscription, payload);
       } catch (err: any) {
         if (err.statusCode === 410 || err.statusCode === 404) {
-          await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+          // 🔴 Use o supabaseAdmin para deletar também
+          await supabaseAdmin.from('push_subscriptions').delete().eq('id', sub.id);
         }
       }
     });
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, sent: subscriptions.length });
 
   } catch (error: any) {
+    console.error("Erro interno do web-push:", error);
     return NextResponse.json({ error: 'Ocorreu um erro.' }, { status: 500 });
   }
 }

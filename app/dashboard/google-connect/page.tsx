@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useTheme } from 'next-themes';
 import { useSearchParams } from 'next/navigation';
@@ -27,7 +27,7 @@ interface Company {
 function GoogleConnectPageContent() {
   const searchParams = useSearchParams();
   const companyIdFromUrl = searchParams.get('companyId');
-
+  const popupRef = useRef<Window | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [googleAccount, setGoogleAccount] = useState<GoogleAccount | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,6 +48,14 @@ function GoogleConnectPageContent() {
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
+      // Força o fechamento imediato do popup pelo frontend
+      if (['google-auth-success', 'google-auth-error', 'google-auth-cancelled'].includes(event.data.type)) {
+        if (popupRef.current && !popupRef.current.closed) {
+          popupRef.current.close();
+          popupRef.current = null; // Limpa a referência
+        }
+      }
+
       if (event.data.type === 'google-auth-success') {
         console.log('✅ Autorização bem-sucedida:', event.data);
         if (companyIdFromUrl) {
@@ -147,6 +155,8 @@ function GoogleConnectPageContent() {
         'Google Authorization',
         `width=${width},height=${height},left=${left},top=${top}`
       );
+
+      popupRef.current = popup;
 
       const interval = setInterval(async () => {
         if (popup?.closed) {

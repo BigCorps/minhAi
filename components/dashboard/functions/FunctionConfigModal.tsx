@@ -892,14 +892,14 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
       setLoading(true);
       try {
         // 1. Busca gerente de company_profiles
-        const { data: perfil } = await supabase
-          .from('company_profiles')
-          .select('nome, email, telefone')
-          .eq('company_id', companyId)
-          .eq('tipo', 'gerente')
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle();
+const { data: perfil } = await supabase
+  .from('company_profiles')
+  .select('nome, email, telefone')
+  .eq('company_id', companyId)
+  .eq('tipo', 'gerente')
+  .eq('is_active', true)
+  .limit(1)
+  .maybeSingle();
 
         // 2. Busca settings salvas
         const { data: funcSettings } = await supabase
@@ -937,14 +937,14 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         filter: `company_id=eq.${companyId}`,
       }, (payload) => {
         const updated = payload.new as any;
-        if (updated.tipo === 'gerente' && updated.is_active) {
-          setConfig((prev: any) => ({
-            ...prev,
-            gerente_nome: prev.gerente_nome || updated.nome || '',
-            gerente_email: prev.gerente_email || updated.email || '',
-            gerente_telefone: prev.gerente_telefone || updated.telefone || '',
-          }));
-        }
+if (updated.tipo === 'gerente' && updated.is_active) {
+  setConfig((prev: any) => ({
+    ...prev,
+    gerente_nome: updated.nome || prev.gerente_nome || '',
+    gerente_email: updated.email || prev.gerente_email || '',
+    gerente_telefone: updated.telefone || prev.gerente_telefone || '',
+  }));
+}
       })
       .subscribe();
 

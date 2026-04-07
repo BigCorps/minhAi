@@ -32,7 +32,7 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
 const handleSubscribe = async () => {
     setLoading(true);
     try {
-      // 1. Pede a permissão
+      // 1. Pede a permissão primeiro
       const currentPermission = await Notification.requestPermission();
       setPermission(currentPermission);
 
@@ -41,27 +41,30 @@ const handleSubscribe = async () => {
         return;
       }
 
-// 2. FORÇA o registro e a atualização do Service Worker
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      await reg.update(); // Obriga o celular a baixar a versão nova ignorando o cache
-      
-      const readyRegistration = await navigator.serviceWorker.ready;
+      // 2. OPÇÃO NUCLEAR: Desregista TODOS os Service Workers encravados
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (let reg of registrations) {
+        await reg.unregister();
+      }
 
-      // 🛑 O SEGREDO ESTÁ AQUI: Trava de segurança para o bug do Android
-      // Se o Service Worker ainda não estiver 'ativo', esperamos ele mudar de estado
-      if (!readyRegistration.active) {
+      // 3. Regista um novo do zero e limpo
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      
+      // 4. Aguarda explicitamente que o estado passe a 'activated'
+      let serviceWorker = registration.installing || registration.waiting || registration.active;
+
+      if (serviceWorker && serviceWorker.state !== 'activated') {
         await new Promise((resolve) => {
-          const newWorker = readyRegistration.installing || readyRegistration.waiting;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'activated') resolve(true);
-            });
-          } else {
-            // Fallback de segurança de 1.5 segundos
-            setTimeout(resolve, 1500);
-          }
+          serviceWorker?.addEventListener('statechange', (e: any) => {
+            if (e.target.state === 'activated') {
+              resolve(true);
+            }
+          });
         });
       }
+
+      // 5. Garante a prontidão do Service Worker
+      const readyRegistration = await navigator.serviceWorker.ready;
       
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       if (!vapidPublicKey) {
@@ -69,13 +72,13 @@ const handleSubscribe = async () => {
         throw new Error("VAPID Key não encontrada");
       }
 
-      // 3. Gera a inscrição (agora com a certeza de que o SW está ativo)
+      // 6. Finalmente, gera a subscrição
       const subscription = await readyRegistration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlB64ToUint8Array(vapidPublicKey),
       });
 
-      // 4. Salva no Supabase
+      // 7. Guarda no Supabase
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -87,8 +90,7 @@ const handleSubscribe = async () => {
       });
 
       if (error) {
-        // Se o Supabase bloquear, ele vai avisar aqui!
-        alert(`Erro ao salvar no banco: ${error.message}`);
+        alert(`Erro ao guardar no banco: ${error.message}`);
         throw error;
       }
 

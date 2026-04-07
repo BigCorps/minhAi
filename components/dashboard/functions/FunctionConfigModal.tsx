@@ -876,32 +876,33 @@ const PainelOfertasConfigForm = ({ companyId }: any) => {
 
 const ChamarGerenteConfigForm = ({ companyId }: any) => {
   const [config, setConfig] = useState<any>({
-    gerente_nome: '',
-    gerente_email: '',
-    gerente_telefone: '',
     notificar_email: true,
     notificar_sms: false,
   });
+  const [gerenteData, setGerenteData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchConfig() {
       setLoading(true);
       try {
-        // 1. Busca gerente de company_profiles
-const { data: perfil } = await supabase
-  .from('company_profiles')
-  .select('nome, email, telefone')
-  .eq('company_id', companyId)
-  .eq('tipo', 'gerente')
-  .eq('is_active', true)
-  .limit(1)
-  .maybeSingle();
+        // 1. Busca gerente cadastrado em company_profiles
+        const { data: perfil } = await supabase
+          .from('company_profiles')
+          .select('nome, email, telefone')
+          .eq('company_id', companyId)
+          .eq('tipo', 'gerente')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
 
-        // 2. Busca settings salvas
+        setGerenteData(perfil);
+
+        // 2. Busca apenas os toggles de notificação
         const { data: funcSettings } = await supabase
           .from('company_function_settings')
           .select('config')
@@ -909,14 +910,10 @@ const { data: perfil } = await supabase
           .eq('function_key', 'chamar_gerente')
           .maybeSingle();
 
-        // 3. Settings têm prioridade; perfil preenche o que faltar
         const saved = funcSettings?.config || {};
         setConfig({
-          gerente_nome:      saved.gerente_nome      || perfil?.nome     || '',
-          gerente_email:     saved.gerente_email     || perfil?.email    || '',
-          gerente_telefone:  saved.gerente_telefone  || perfil?.telefone || '',
-          notificar_email:   saved.notificar_email   ?? true,
-          notificar_sms:     saved.notificar_sms     ?? false,
+          notificar_email: saved.notificar_email ?? true,
+          notificar_sms: saved.notificar_sms ?? false,
         });
       } catch (err) {
         console.error('Erro ao buscar config chamar_gerente:', err);
@@ -927,24 +924,27 @@ const { data: perfil } = await supabase
     
     fetchConfig();
 
-    // REALTIME: sincroniza quando gerente mudar no dashboard
+    // REALTIME: atualiza quando gerente mudar no cadastro
     const channel = supabase
       .channel(`chamar-gerente-config-${companyId}`)
       .on('postgres_changes', {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
         table: 'company_profiles',
         filter: `company_id=eq.${companyId}`,
       }, (payload) => {
         const updated = payload.new as any;
-if (updated.tipo === 'gerente' && updated.is_active) {
-  setConfig((prev: any) => ({
-    ...prev,
-    gerente_nome: updated.nome || prev.gerente_nome || '',
-    gerente_email: updated.email || prev.gerente_email || '',
-    gerente_telefone: updated.telefone || prev.gerente_telefone || '',
-  }));
-}
+        if (updated?.tipo === 'gerente' && updated?.is_active) {
+          setGerenteData({
+            nome: updated.nome,
+            email: updated.email,
+            telefone: updated.telefone,
+          });
+        }
+        // Se deletou o gerente
+        if (payload.eventType === 'DELETE' && payload.old?.tipo === 'gerente') {
+          setGerenteData(null);
+        }
       })
       .subscribe();
 
@@ -952,16 +952,16 @@ if (updated.tipo === 'gerente' && updated.is_active) {
   }, [companyId]);
 
   async function handleSave() {
-    if (!config.gerente_email && !config.gerente_telefone) {
-      alert('Informe ao menos um email ou telefone do gerente.');
+    if (config.notificar_email && !gerenteData?.email) {
+      alert('O gerente precisa ter email cadastrado para receber notificações por email.');
       return;
     }
-    if (config.notificar_sms && !config.gerente_telefone) {
-      alert('Para enviar SMS, informe o telefone do gerente.');
+    if (config.notificar_sms && !gerenteData?.telefone) {
+      alert('O gerente precisa ter telefone cadastrado para receber notificações por SMS.');
       return;
     }
-    if (config.notificar_email && !config.gerente_email) {
-      alert('Para enviar email, informe o email do gerente.');
+    if (!config.notificar_email && !config.notificar_sms) {
+      alert('Selecione ao menos um canal de notificação.');
       return;
     }
 
@@ -988,6 +988,10 @@ if (updated.tipo === 'gerente' && updated.is_active) {
     setSaving(false);
   }
 
+  function handleGoToCadastros() {
+    router.push(`/dashboard/${companyId}/cadastros`);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -1004,67 +1008,85 @@ if (updated.tipo === 'gerente' && updated.is_active) {
           Como funciona
         </h4>
         <ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-          <li>• Usuário solicita: "Chamar Gerente"</li>
+          <li>• Colaborador solicita: "Chamar Gerente"</li>
           <li>• Descreve o motivo e confirma o envio</li>
           <li>• Gerente recebe notificação por email e/ou SMS</li>
         </ul>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Nome do Gerente
-        </label>
-        <input
-          type="text"
-          placeholder="Ex: João Silva"
-          value={config.gerente_nome}
-          onChange={e => setConfig((p: any) => ({ ...p, gerente_nome: e.target.value }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-yellow-500"
-        />
-      </div>
+      {/* Status do Gerente Cadastrado */}
+      {gerenteData ? (
+        <div className="p-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">
+                ✓ Gerente cadastrado
+              </p>
+              <p className="text-sm text-green-800 dark:text-green-200 font-medium">
+                {gerenteData.nome}
+              </p>
+              {gerenteData.email && (
+                <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                  📧 {gerenteData.email}
+                </p>
+              )}
+              {gerenteData.telefone && (
+                <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                  📱 {gerenteData.telefone}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleGoToCadastros}
+              className="ml-3 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100 transition-colors"
+            >
+              Editar →
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                Gerente não cadastrado
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-200 mb-3">
+                Para usar esta função, cadastre um perfil do tipo "Gerente" com email e/ou telefone.
+              </p>
+              <button
+                onClick={handleGoToCadastros}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Ir para Cadastros
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Email do Gerente
-        </label>
-        <input
-          type="email"
-          placeholder="gerente@empresa.com"
-          value={config.gerente_email}
-          onChange={e => setConfig((p: any) => ({ ...p, gerente_email: e.target.value }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-yellow-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
-          Telefone do Gerente (para SMS)
-        </label>
-        <input
-          type="tel"
-          placeholder="(31) 99999-9999"
-          value={config.gerente_telefone}
-          onChange={e => setConfig((p: any) => ({ ...p, gerente_telefone: e.target.value }))}
-          className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-yellow-500"
-        />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Com DDD. Apenas números ou formato (XX) XXXXX-XXXX
-        </p>
-      </div>
-
+      {/* Canais de Notificação */}
       <div className="border border-gray-200 dark:border-white/10 rounded-lg p-4 space-y-3">
         <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
           Canais de Notificação
         </p>
 
         <label className="flex items-center justify-between cursor-pointer">
-          <div>
+          <div className="flex-1">
             <p className="text-sm text-gray-900 dark:text-white">📧 Notificar por Email</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Envia email detalhado com motivo da chamada
             </p>
+            {config.notificar_email && !gerenteData?.email && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                ⚠️ Gerente sem email cadastrado
+              </p>
+            )}
           </div>
-          <div className="relative">
+          <div className="relative ml-3">
             <input
               type="checkbox"
               checked={config.notificar_email}
@@ -1076,13 +1098,18 @@ if (updated.tipo === 'gerente' && updated.is_active) {
         </label>
 
         <label className="flex items-center justify-between cursor-pointer">
-          <div>
+          <div className="flex-1">
             <p className="text-sm text-gray-900 dark:text-white">💬 Notificar por SMS</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Envia SMS imediato via API Brasil
             </p>
+            {config.notificar_sms && !gerenteData?.telefone && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                ⚠️ Gerente sem telefone cadastrado
+              </p>
+            )}
           </div>
-          <div className="relative">
+          <div className="relative ml-3">
             <input
               type="checkbox"
               checked={config.notificar_sms}
@@ -1094,14 +1121,15 @@ if (updated.tipo === 'gerente' && updated.is_active) {
         </label>
       </div>
 
-      {(config.notificar_email || config.notificar_sms) && (
+      {/* Resumo das notificações ativas */}
+      {gerenteData && (config.notificar_email || config.notificar_sms) && (
         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
           <p className="text-xs text-green-800 dark:text-green-200">
             ✅ Ao chamar o gerente, será(ão) enviado(s):{' '}
             <strong>
               {[
-                config.notificar_email && config.gerente_email ? `Email para ${config.gerente_email}` : null,
-                config.notificar_sms && config.gerente_telefone ? `SMS para ${config.gerente_telefone}` : null,
+                config.notificar_email && gerenteData.email ? `Email para ${gerenteData.email}` : null,
+                config.notificar_sms && gerenteData.telefone ? `SMS para ${gerenteData.telefone}` : null,
               ]
                 .filter(Boolean)
                 .join(' + ')}
@@ -1110,24 +1138,9 @@ if (updated.tipo === 'gerente' && updated.is_active) {
         </div>
       )}
 
-      {config.notificar_sms && !config.gerente_telefone && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-          <p className="text-xs text-red-800 dark:text-red-200">
-            ⚠️ SMS ativado mas telefone não preenchido.
-          </p>
-        </div>
-      )}
-      {config.notificar_email && !config.gerente_email && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-          <p className="text-xs text-red-800 dark:text-red-200">
-            ⚠️ Email ativado mas email não preenchido.
-          </p>
-        </div>
-      )}
-
       <button
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || !gerenteData}
         className="w-full py-2.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
       >
         {saving ? (

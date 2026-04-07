@@ -29,10 +29,10 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
     }
   }, []);
 
-  const handleSubscribe = async () => {
+const handleSubscribe = async () => {
     setLoading(true);
     try {
-      // 1. Pede a permissão pro usuário
+      // 1. Pede a permissão
       const currentPermission = await Notification.requestPermission();
       setPermission(currentPermission);
 
@@ -41,20 +41,23 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
         return;
       }
 
-      // 2. Registra no Service Worker
+      // 2. FORÇA o registro do Service Worker para garantir que ele existe
+      await navigator.serviceWorker.register('/sw.js');
       const registration = await navigator.serviceWorker.ready;
       
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) throw new Error("VAPID Key não encontrada no .env");
+      if (!vapidPublicKey) {
+        alert("Erro Técnico: Chave VAPID não configurada no front-end.");
+        throw new Error("VAPID Key não encontrada");
+      }
 
-      // 3. Gera a inscrição (Subscription) do aparelho
+      // 3. Gera a inscrição no aparelho
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlB64ToUint8Array(vapidPublicKey),
       });
 
-      // 4. Salva no Supabase vinculando ao User ID
-      // Crie o cliente usando seu padrão (ex: createBrowserClient)
+      // 4. Salva no Supabase
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -65,10 +68,17 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
         subscription: subscription.toJSON(),
       });
 
-      if (error) throw error;
+      if (error) {
+        // Se o Supabase bloquear, ele vai avisar aqui!
+        alert(`Erro ao salvar no banco: ${error.message}`);
+        throw error;
+      }
 
-    } catch (error) {
+      alert("✅ Inscrição concluída com sucesso! Verifique a tabela.");
+
+    } catch (error: any) {
       console.error('Erro ao assinar notificações:', error);
+      alert(`🚨 Falha ao assinar: ${error.message || "Erro desconhecido"}`);
     } finally {
       setLoading(false);
     }

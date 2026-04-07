@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Loader2, User, Mail, Phone, MapPin } from 'lucide-react';
+import { X, Save, Loader2, User, Mail, Phone, MapPin, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface ModalEditarPerfilProps {
@@ -79,45 +79,53 @@ export default function ModalEditarPerfil({
     setError('');
 
     try {
-      // Atualiza diretamente nas colunas telefone e endereco
+      const updatePayload = {
+        nome: form.nome.trim(),
+        email: form.email.trim() || null,
+        telefone: form.telefone.trim() || null,
+        endereco: form.endereco.trim() || null,
+      };
+
+      console.log('📝 Salvando perfil:', updatePayload);
+
       const { error: updateError } = await supabase
         .from('company_profiles')
-        .update({
-          nome: form.nome.trim(),
-          email: form.email.trim() || null,
-          telefone: form.telefone.trim() || null,
-          endereco: form.endereco.trim() || null,
-        })
+        .update(updatePayload)
         .eq('id', profile.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Erro ao atualizar:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Perfil atualizado com sucesso!');
 
       // Atualiza localStorage
       const storageKey = `profile_${profile.company_id}_${profile.tipo}`;
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        const updated = {
-          ...parsed,
-          nome: form.nome.trim(),
-          email: form.email.trim() || null,
-          telefone: form.telefone.trim() || null,
-          endereco: form.endereco.trim() || null,
-        };
-        localStorage.setItem(storageKey, JSON.stringify(updated));
+        try {
+          const parsed = JSON.parse(stored);
+          const updated = {
+            ...parsed,
+            ...updatePayload,
+          };
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+          console.log('✅ localStorage atualizado');
+        } catch (e) {
+          console.error('Erro ao atualizar localStorage:', e);
+        }
       }
 
-      // Passa as atualizações pro callback
-      onSalvo({
-        nome: form.nome.trim(),
-        email: form.email.trim() || null,
-        telefone: form.telefone.trim() || null,
-        endereco: form.endereco.trim() || null,
-      });
+      // IMPORTANTE: Passa exatamente os campos atualizados
+      onSalvo(updatePayload);
+
+      // Pequeno delay para garantir que o realtime propagou
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       onClose();
     } catch (err: any) {
-      console.error('Erro ao salvar perfil:', err);
+      console.error('❌ Erro ao salvar perfil:', err);
       setError(err.message || 'Erro ao salvar. Tente novamente.');
     } finally {
       setIsSaving(false);
@@ -130,6 +138,7 @@ export default function ModalEditarPerfil({
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className={`w-full max-w-md rounded-2xl shadow-2xl ${colors.bg} ${colors.border} border overflow-hidden`}>
         
+        {/* Header */}
         <div className={`px-6 py-4 border-b ${colors.border} flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
@@ -153,14 +162,17 @@ export default function ModalEditarPerfil({
           </button>
         </div>
 
+        {/* Body */}
         <div className="p-6 space-y-4">
           
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-500">{error}</p>
             </div>
           )}
 
+          {/* Nome */}
           <div>
             <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${colors.textPrimary}`}>
               <User className="w-4 h-4" />
@@ -172,10 +184,11 @@ export default function ModalEditarPerfil({
               onChange={(e) => setForm(prev => ({ ...prev, nome: e.target.value }))}
               placeholder="Seu nome completo"
               disabled={isSaving}
-              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50`}
+              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all`}
             />
           </div>
 
+          {/* Email */}
           <div>
             <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${colors.textPrimary}`}>
               <Mail className="w-4 h-4" />
@@ -187,10 +200,11 @@ export default function ModalEditarPerfil({
               onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
               placeholder="seu@email.com"
               disabled={isSaving}
-              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50`}
+              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all`}
             />
           </div>
 
+          {/* Telefone */}
           <div>
             <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${colors.textPrimary}`}>
               <Phone className="w-4 h-4" />
@@ -202,10 +216,14 @@ export default function ModalEditarPerfil({
               onChange={(e) => setForm(prev => ({ ...prev, telefone: e.target.value }))}
               placeholder="(31) 99999-9999"
               disabled={isSaving}
-              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50`}
+              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all`}
             />
+            <p className={`text-xs mt-1 ${colors.textMuted}`}>
+              Usado para notificações e chamada de gerente via SMS
+            </p>
           </div>
 
+          {/* Endereço */}
           <div>
             <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${colors.textPrimary}`}>
               <MapPin className="w-4 h-4" />
@@ -217,10 +235,11 @@ export default function ModalEditarPerfil({
               placeholder="Rua, Número, Bairro, Cidade - UF"
               rows={3}
               disabled={isSaving}
-              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50`}
+              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50 transition-all`}
             />
           </div>
 
+          {/* Botões */}
           <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}
@@ -246,7 +265,7 @@ export default function ModalEditarPerfil({
               ) : (
                 <>
                   <Save className="w-5 h-5" />
-                  Salvar Alterações
+                  Salvar
                 </>
               )}
             </button>

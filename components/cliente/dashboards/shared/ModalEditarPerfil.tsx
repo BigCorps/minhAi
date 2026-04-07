@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Save, Loader2, User, Mail, Phone, MapPin, AlertCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
 
 interface ModalEditarPerfilProps {
   profile: {
@@ -36,7 +35,6 @@ export default function ModalEditarPerfil({
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
 
-  const supabase = createClient();
   const isDark = theme === 'dark';
 
   const DARK = {
@@ -86,19 +84,27 @@ export default function ModalEditarPerfil({
         endereco: form.endereco.trim() || null,
       };
 
-      console.log('📝 Salvando perfil:', updatePayload);
+      console.log('📝 Salvando via API - Profile ID:', profile.id);
+      console.log('📝 Payload:', updatePayload);
 
-      const { error: updateError } = await supabase
-        .from('company_profiles')
-        .update(updatePayload)
-        .eq('id', profile.id);
+      // ✅ USA API ROUTE COM SERVICE ROLE
+      const response = await fetch('/api/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile_id: profile.id,
+          updates: updatePayload,
+        }),
+      });
 
-      if (updateError) {
-        console.error('❌ Erro ao atualizar:', updateError);
-        throw updateError;
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        console.error('❌ Erro da API:', result.error);
+        throw new Error(result.error || 'Erro ao salvar');
       }
 
-      console.log('✅ Perfil atualizado com sucesso!');
+      console.log('✅ API retornou:', result.profile);
 
       // Atualiza localStorage
       const storageKey = `profile_${profile.company_id}_${profile.tipo}`;
@@ -106,22 +112,22 @@ export default function ModalEditarPerfil({
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          const updated = {
+          const updatedStorage = {
             ...parsed,
             ...updatePayload,
           };
-          localStorage.setItem(storageKey, JSON.stringify(updated));
+          localStorage.setItem(storageKey, JSON.stringify(updatedStorage));
           console.log('✅ localStorage atualizado');
         } catch (e) {
           console.error('Erro ao atualizar localStorage:', e);
         }
       }
 
-      // IMPORTANTE: Passa exatamente os campos atualizados
+      // Callback
       onSalvo(updatePayload);
 
-      // Pequeno delay para garantir que o realtime propagou
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Delay para garantir propagação
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       onClose();
     } catch (err: any) {

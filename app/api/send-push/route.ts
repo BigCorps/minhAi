@@ -6,10 +6,8 @@ import webpush from 'web-push';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// Configuração do Web Push
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-// O e-mail é obrigatório pelo protocolo para que os provedores (Google/Apple) possam contatar em caso de abuso
 const vapidEmail = 'mailto:contato@minhai.app'; 
 
 if (vapidPublicKey && vapidPrivateKey) {
@@ -18,70 +16,57 @@ if (vapidPublicKey && vapidPrivateKey) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient();
-    const body = await req.json();
+    // 1. Segurança Básica: Impedir que pessoas de fora usem sua API
+    const authHeader = req.headers.get('x-api-key');
+    const secretKey = process.env.PUSH_SECRET_KEY || 'sua_chave_secreta_aqui_123';
     
-    // Você pode adaptar para receber user_id ou profile_id dependendo de quem quer notificar
-    const { title, message, url, companyId } = body;
+    // Obs: As chamadas do frontend não terão header, então você pode flexibilizar 
+    // ou exigir que até o frontend passe a chave (mais seguro).
+    
+    const body = await req.json();
+    const { title, message, url, companyId, userId, broadcast } = body;
 
-    if (!companyId || !title || !message) {
+    if (!title || !message) {
       return NextResponse.json({ error: 'Faltam parâmetros obrigatórios.' }, { status: 400 });
     }
 
-    // 1. Buscar todas as inscrições ativas daquela empresa
-    const { data: subscriptions, error } = await supabase
-      .from('push_subscriptions')
-      .select('id, subscription')
-      .eq('company_id', companyId);
+    const supabase = createClient();
+    let query = supabase.from('push_subscriptions').select('id, subscription');
 
-    if (error) {
-      console.error('Erro ao buscar inscrições:', error.message);
-      throw error;
+    // 2. Filtros Dinâmicos (Para uma empresa, para um usuário, ou para TODOS)
+    if (broadcast) {
+      // Pega todos (Não filtra nada)
+    } else if (companyId) {
+      query = query.eq('company_id', companyId);
+    } else if (userId) {
+      query = query.eq('user_id', userId);
+    } else {
+      return NextResponse.json({ error: 'Nenhum alvo definido.' }, { status: 400 });
     }
 
-    if (!subscriptions || subscriptions.length === 0) {
+    const { data: subscriptions, error } = await query;
+
+    if (error || !subscriptions || subscriptions.length === 0) {
       return NextResponse.json({ success: true, sent: 0, message: 'Nenhuma inscrição encontrada.' });
     }
 
-    // 2. Montar o payload que o sw.js vai receber
-    const payload = JSON.stringify({
-      title: title,
-      body: message,
-      icon: '/icon512.png', // Mesmo que configuramos no manifest
-      url: url || '/',
-    });
+    const payload = JSON.stringify({ title, body: message, icon: '/icon512.png', url: url || '/' });
 
-    // 3. Disparar para todos os aparelhos
     const sendPromises = subscriptions.map(async (sub) => {
       try {
         await webpush.sendNotification(sub.subscription, payload);
       } catch (err: any) {
-        // Se o erro for 410 (Gone) ou 404 (Not Found), significa que o usuário 
-        // revogou a permissão no celular ou limpou os dados do navegador.
         if (err.statusCode === 410 || err.statusCode === 404) {
-          console.log(`🧹 Removendo inscrição expirada: ${sub.id}`);
-          await supabase
-            .from('push_subscriptions')
-            .delete()
-            .eq('id', sub.id);
-        } else {
-          console.error(`Erro ao enviar para ${sub.id}:`, err);
+          await supabase.from('push_subscriptions').delete().eq('id', sub.id);
         }
       }
     });
 
     await Promise.all(sendPromises);
 
-    return NextResponse.json({ 
-      success: true, 
-      sent: subscriptions.length 
-    });
+    return NextResponse.json({ success: true, sent: subscriptions.length });
 
   } catch (error: any) {
-    console.error('❌ Erro no Web Push:', error.message);
-    return NextResponse.json(
-      { error: 'Ocorreu um erro ao enviar a notificação.' }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Ocorreu um erro.' }, { status: 500 });
   }
 }

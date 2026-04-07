@@ -36,6 +36,7 @@ export default function ModalEditarPerfil({
   const [mounted, setMounted] = useState(false);
 
   const isDark = theme === 'dark';
+  const isCliente = profile.tipo === 'cliente'; // ✅ Verifica se é cliente
 
   const DARK = {
     bg: 'bg-slate-900',
@@ -81,10 +82,11 @@ export default function ModalEditarPerfil({
         nome: form.nome.trim(),
         email: form.email.trim() || null,
         telefone: form.telefone.trim() || null,
-        endereco: form.endereco.trim() || null,
+        endereco: isCliente ? (form.endereco.trim() || null) : null, // ✅ Só salva endereço se for cliente
       };
 
       console.log('📝 Salvando via API - Profile ID:', profile.id);
+      console.log('📝 Tipo:', profile.tipo);
       console.log('📝 Payload:', updatePayload);
 
       // ✅ USA API ROUTE COM SERVICE ROLE
@@ -225,25 +227,30 @@ export default function ModalEditarPerfil({
               className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all`}
             />
             <p className={`text-xs mt-1 ${colors.textMuted}`}>
-              Usado para notificações e chamada de gerente via SMS
+              {isCliente 
+                ? 'Usado para contato e notificações'
+                : 'Usado para notificações e chamada de gerente via SMS'
+              }
             </p>
           </div>
 
-          {/* Endereço */}
-          <div>
-            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${colors.textPrimary}`}>
-              <MapPin className="w-4 h-4" />
-              Endereço
-            </label>
-            <textarea
-              value={form.endereco}
-              onChange={(e) => setForm(prev => ({ ...prev, endereco: e.target.value }))}
-              placeholder="Rua, Número, Bairro, Cidade - UF"
-              rows={3}
-              disabled={isSaving}
-              className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50 transition-all`}
-            />
-          </div>
+          {/* Endereço - ✅ SÓ APARECE PARA CLIENTES */}
+          {isCliente && (
+            <div>
+              <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${colors.textPrimary}`}>
+                <MapPin className="w-4 h-4" />
+                Endereço
+              </label>
+              <textarea
+                value={form.endereco}
+                onChange={(e) => setForm(prev => ({ ...prev, endereco: e.target.value }))}
+                placeholder="Rua, Número, Bairro, Cidade - UF"
+                rows={3}
+                disabled={isSaving}
+                className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50 transition-all`}
+              />
+            </div>
+          )}
 
           {/* Botões */}
           <div className="flex gap-3 pt-2">

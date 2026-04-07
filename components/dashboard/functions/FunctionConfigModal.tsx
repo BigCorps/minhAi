@@ -891,17 +891,17 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
     async function fetchConfig() {
       setLoading(true);
       try {
-        // 1. Tenta buscar do company_profiles (gerente cadastrado)
+        // 1. Busca gerente de company_profiles
         const { data: perfil } = await supabase
           .from('company_profiles')
-          .select('nome, email, metadata') 
+          .select('nome, email, telefone')
           .eq('company_id', companyId)
           .eq('tipo', 'gerente')
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
 
-        // 2. Tenta buscar da company_function_settings
+        // 2. Busca settings salvas
         const { data: funcSettings } = await supabase
           .from('company_function_settings')
           .select('config')
@@ -909,12 +909,12 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
           .eq('function_key', 'chamar_gerente')
           .maybeSingle();
 
-        // 3. Mescla: settings salvas têm prioridade; perfil preenche o que faltar
+        // 3. Settings têm prioridade; perfil preenche o que faltar
         const saved = funcSettings?.config || {};
         setConfig({
-          gerente_nome:      saved.gerente_nome      || perfil?.nome      || '',
-          gerente_email:     saved.gerente_email     || perfil?.email     || '',
-          gerente_telefone:  saved.gerente_telefone  || perfil?.telefone  || '',
+          gerente_nome:      saved.gerente_nome      || perfil?.nome     || '',
+          gerente_email:     saved.gerente_email     || perfil?.email    || '',
+          gerente_telefone:  saved.gerente_telefone  || perfil?.telefone || '',
           notificar_email:   saved.notificar_email   ?? true,
           notificar_sms:     saved.notificar_sms     ?? false,
         });
@@ -924,7 +924,31 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         setLoading(false);
       }
     }
+    
     fetchConfig();
+
+    // REALTIME: sincroniza quando gerente mudar no dashboard
+    const channel = supabase
+      .channel(`chamar-gerente-config-${companyId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'company_profiles',
+        filter: `company_id=eq.${companyId}`,
+      }, (payload) => {
+        const updated = payload.new as any;
+        if (updated.tipo === 'gerente' && updated.is_active) {
+          setConfig((prev: any) => ({
+            ...prev,
+            gerente_nome: prev.gerente_nome || updated.nome || '',
+            gerente_email: prev.gerente_email || updated.email || '',
+            gerente_telefone: prev.gerente_telefone || updated.telefone || '',
+          }));
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [companyId]);
 
   async function handleSave() {
@@ -974,7 +998,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
 
   return (
     <div className="space-y-4">
-      {/* Info */}
       <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
         <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2 flex items-center gap-2">
           <Bell className="w-4 h-4" />
@@ -987,7 +1010,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         </ul>
       </div>
 
-      {/* Nome */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Nome do Gerente
@@ -1001,7 +1023,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         />
       </div>
 
-      {/* Email */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Email do Gerente
@@ -1015,7 +1036,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         />
       </div>
 
-      {/* Telefone */}
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
           Telefone do Gerente (para SMS)
@@ -1032,7 +1052,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         </p>
       </div>
 
-      {/* Canais de notificação */}
       <div className="border border-gray-200 dark:border-white/10 rounded-lg p-4 space-y-3">
         <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
           Canais de Notificação
@@ -1075,7 +1094,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         </label>
       </div>
 
-      {/* Preview dos canais ativos */}
       {(config.notificar_email || config.notificar_sms) && (
         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
           <p className="text-xs text-green-800 dark:text-green-200">
@@ -1092,7 +1110,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         </div>
       )}
 
-      {/* Aviso se SMS ativo sem telefone ou email ativo sem email */}
       {config.notificar_sms && !config.gerente_telefone && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
           <p className="text-xs text-red-800 dark:text-red-200">
@@ -1108,7 +1125,6 @@ const ChamarGerenteConfigForm = ({ companyId }: any) => {
         </div>
       )}
 
-      {/* Botão salvar */}
       <button
         onClick={handleSave}
         disabled={saving}

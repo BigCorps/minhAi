@@ -261,15 +261,6 @@ export default function EnviarSmsDisplay({
             </p>
           </div>
 
-          {/* Aviso de créditos */}
-          <div className={`p-3 rounded-lg border ${
-            isDark ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200'
-          }`}>
-            <p className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-              ⚡ Esta função consome <strong>2 créditos</strong> por envio
-            </p>
-          </div>
-
           {/* Botões */}
           <div className="flex gap-3 pt-2">
             <button

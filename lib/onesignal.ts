@@ -27,10 +27,9 @@ export async function sendOneSignalPush({
     target_channel: "push"
   };
 
-  if (broadcast) {
-    // "All" é o único segmento garantido por padrão no OneSignal
-    payload.included_segments = ["All"];
-  } else if (userId) {
+ if (broadcast) {
+  payload.included_segments = ["Total Subscriptions"];
+} else if (userId) {
     payload.include_aliases = { external_id: [userId] };
     payload.target_channel = "push";
   } else {

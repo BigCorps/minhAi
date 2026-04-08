@@ -5,7 +5,7 @@ import OneSignal from 'react-onesignal';
 import { Bell, Loader2 } from 'lucide-react';
 
 export function PushNotificationSetup({ userId }: { userId: string }) {
-  const [isOptedIn, setIsOptedIn] = useState(true); // Começa assumindo true para não piscar na tela
+  const [isOptedIn, setIsOptedIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
   };
 
   // Some sozinho se já estiver inscrito
-  if (isOptedIn) return null;
+  if (isOptedIn === null || isOptedIn === true) return null;
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">

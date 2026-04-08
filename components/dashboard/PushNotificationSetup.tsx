@@ -43,10 +43,17 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
   const handleSubscribe = async () => {
     setLoading(true);
     try {
-      // Abre o prompt nativo (ou o slidedown bonito do OneSignal)
-      await OneSignal.Slidedown.promptPush();
+      // Força diretamente o prompt nativo do navegador (ignora o Slidedown)
+      const accepted = await OneSignal.Notifications.requestPermission();
+      
+      if (accepted) {
+        setIsOptedIn(true);
+        console.log("✅ Permissão concedida com sucesso!");
+      } else {
+        alert("A permissão foi negada ou o navegador bloqueou o aviso. Verifique o cadeado na barra de endereços.");
+      }
     } catch (error) {
-      console.error('Erro ao assinar notificações:', error);
+      console.error('Erro ao pedir permissão:', error);
     } finally {
       setLoading(false);
     }

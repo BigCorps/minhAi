@@ -17,6 +17,8 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
           appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
           safari_web_id: "web.onesignal.auto...", // Preencha se quiser suporte ao Safari depois
           notifyButton: { enable: false }, // Esconde o sino flutuante nativo deles
+          serviceWorkerParam: { scope: "/" },
+          serviceWorkerPath: "sw.js"
         });
 
         // O pulo do gato: vincula o aparelho logado ao ID do seu usuário no Supabase!

@@ -23,10 +23,7 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
           serviceWorkerPath: "sw.js"
         });
 
-        // Aguarda o SW estar completamente ativo antes de continuar
-        if ('serviceWorker' in navigator) {
-          await navigator.serviceWorker.ready;
-        }
+        // ❌ Removido: navigator.serviceWorker.ready — causava conflito com o SW dinâmico
 
         if (userId) {
           await OneSignal.login(userId);
@@ -63,7 +60,6 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
       console.log("🔔 Resultado:", accepted);
 
       if (accepted) {
-        // Aguarda o token ser gerado
         await new Promise(resolve => setTimeout(resolve, 1500));
         const optedIn = OneSignal.User.PushSubscription.optedIn ?? false;
         console.log("🔔 optedIn após aceite:", optedIn);
@@ -78,7 +74,6 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
     }
   };
 
-  // null = carregando (não pisca), true = já inscrito (some)
   if (isOptedIn === null || isOptedIn === true) return null;
 
   return (

@@ -28,10 +28,13 @@ export async function sendOneSignalPush({
   };
 
   if (broadcast) {
-    // 🔴 Correção do erro 500: Nome atualizado do segmento no OneSignal
-    payload.included_segments = ["Subscribed Users"];
+    // "All" é o único segmento garantido por padrão no OneSignal
+    payload.included_segments = ["All"];
   } else if (userId) {
     payload.include_aliases = { external_id: [userId] };
+    payload.target_channel = "push";
+  } else {
+    throw new Error("É necessário fornecer userId ou broadcast=true");
   }
 
   const response = await fetch("https://onesignal.com/api/v1/notifications", {

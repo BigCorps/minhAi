@@ -46,12 +46,18 @@ export async function sendOneSignalPush({
     body: JSON.stringify(payload)
   });
 
-  const result = await response.json();
+const result = await response.json();
 
-  if (!response.ok || result.errors) {
-    console.error("🚨 Erro detalhado do OneSignal:", result);
-    throw new Error(JSON.stringify(result.errors));
-  }
+// Log completo da resposta do OneSignal
+console.log("📬 Resposta completa do OneSignal:", JSON.stringify(result));
+console.log("📊 Status HTTP:", response.status);
+console.log("👥 Recipients:", result.recipients);
+console.log("🆔 Notification ID:", result.id);
 
-  return result;
+if (!response.ok || result.errors) {
+  console.error("🚨 Erro detalhado do OneSignal:", result);
+  throw new Error(JSON.stringify(result.errors));
+}
+
+return result;
 }

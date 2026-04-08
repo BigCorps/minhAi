@@ -1,6 +1,7 @@
 // app/manifest.webmanifest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 export async function GET(request: NextRequest) {
   const hostname = request.headers.get('host') || '';

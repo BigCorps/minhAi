@@ -1,113 +1,59 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr'; // Ajuste o import do seu cliente Supabase de navegador, se necessário
+import OneSignal from 'react-onesignal';
 import { Bell, Loader2 } from 'lucide-react';
 
-// Função auxiliar obrigatória para converter a chave VAPID
-function urlB64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
 export function PushNotificationSetup({ userId }: { userId: string }) {
-  const [isSupported, setIsSupported] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [isOptedIn, setIsOptedIn] = useState(true); // Começa assumindo true para não piscar na tela
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Verifica se o navegador suporta Service Workers e Push
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true);
-      setPermission(Notification.permission);
-    }
-  }, []);
+    async function initOneSignal() {
+      if (!process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID) return;
 
-const handleSubscribe = async () => {
+      try {
+        await OneSignal.init({
+          appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
+          safari_web_id: "web.onesignal.auto...", // Preencha se quiser suporte ao Safari depois
+          notifyButton: { enable: false }, // Esconde o sino flutuante nativo deles
+        });
+
+        // O pulo do gato: vincula o aparelho logado ao ID do seu usuário no Supabase!
+        if (userId) {
+          await OneSignal.login(userId);
+        }
+
+        const optedIn = OneSignal.User.PushSubscription.optedIn;
+        setIsOptedIn(optedIn);
+
+        // Escuta se o usuário aceitar pelo prompt do navegador
+        OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+          setIsOptedIn(event.current.optedIn);
+        });
+
+      } catch (error) {
+        console.error("Erro ao inicializar OneSignal:", error);
+      }
+    }
+
+    initOneSignal();
+  }, [userId]);
+
+  const handleSubscribe = async () => {
     setLoading(true);
     try {
-      // 1. Pede a permissão primeiro
-      const currentPermission = await Notification.requestPermission();
-      setPermission(currentPermission);
-
-      if (currentPermission !== 'granted') {
-        setLoading(false);
-        return;
-      }
-
-      // 2. OPÇÃO NUCLEAR: Desregista TODOS os Service Workers encravados
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (let reg of registrations) {
-        await reg.unregister();
-      }
-
-      // 3. Regista um novo do zero e limpo
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      
-      // 4. Aguarda explicitamente que o estado passe a 'activated'
-      let serviceWorker = registration.installing || registration.waiting || registration.active;
-
-      if (serviceWorker && serviceWorker.state !== 'activated') {
-        await new Promise((resolve) => {
-          serviceWorker?.addEventListener('statechange', (e: any) => {
-            if (e.target.state === 'activated') {
-              resolve(true);
-            }
-          });
-        });
-      }
-
-      // 5. Garante a prontidão do Service Worker
-      const readyRegistration = await navigator.serviceWorker.ready;
-      
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        alert("Erro Técnico: Chave VAPID não configurada no front-end.");
-        throw new Error("VAPID Key não encontrada");
-      }
-
-      // 6. Finalmente, gera a subscrição
-      const subscription = await readyRegistration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlB64ToUint8Array(vapidPublicKey),
-      });
-
-      // 7. Guarda no Supabase
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-
-      const { error } = await supabase.from('push_subscriptions').insert({
-        user_id: userId,
-        subscription: subscription.toJSON(),
-      });
-
-      if (error) {
-        alert(`Erro ao guardar no banco: ${error.message}`);
-        throw error;
-      }
-
-      alert("✅ Inscrição concluída com sucesso! Verifique a tabela.");
-
-    } catch (error: any) {
+      // Abre o prompt nativo (ou o slidedown bonito do OneSignal)
+      await OneSignal.Slidedown.promptPush();
+    } catch (error) {
       console.error('Erro ao assinar notificações:', error);
-      alert(`🚨 Falha ao assinar: ${error.message || "Erro desconhecido"}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Se não suportar, ou se o usuário já aceitou/negou, o banner some silenciosamente
-  if (!isSupported || permission === 'granted' || permission === 'denied') {
-    return null;
-  }
+  // Some sozinho se já estiver inscrito
+  if (isOptedIn) return null;
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -118,14 +64,14 @@ const handleSubscribe = async () => {
         <div>
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Ative as Notificações</h3>
           <p className="text-sm text-gray-600 dark:text-white/70">
-            Receba alertas em tempo real sobre seus assistentes, novos leads e avisos de saldo.
+            Receba alertas em tempo real sobre seus assistentes e saldo.
           </p>
         </div>
       </div>
       <button
         onClick={handleSubscribe}
         disabled={loading}
-        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition whitespace-nowrap disabled:opacity-70"
+        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
       >
         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bell className="w-5 h-5" />}
         Quero Receber

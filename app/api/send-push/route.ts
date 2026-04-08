@@ -1,77 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
-// 🔴 Mude de createClient para createAdminClient
-import { createAdminClient } from '@/lib/supabase-admin'; 
-import webpush from 'web-push';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-const vapidEmail = 'mailto:contato@bigcorps.com.br'; 
-
-if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
-}
-
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('x-api-key');
-    // Obs: Se for fazer push direto do dashboard (client), ajuste essa validação
     if (authHeader !== process.env.PUSH_SECRET_KEY) {
        return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
     
     const body = await req.json();
-    const { title, message, url, companyId, userId, broadcast } = body;
+    const { title, message, url, userId, broadcast } = body;
 
     if (!title || !message) {
       return NextResponse.json({ error: 'Faltam parâmetros obrigatórios.' }, { status: 400 });
     }
 
-    // 🔴 Use o supabaseAdmin aqui também
-    const supabaseAdmin = createAdminClient();
-    let query = supabaseAdmin.from('push_subscriptions').select('id, subscription');
+    const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+    const restApiKey = process.env.ONESIGNAL_REST_API_KEY;
 
+    if (!appId || !restApiKey) {
+      throw new Error("Credenciais do OneSignal ausentes");
+    }
+
+    // Payload padrão do OneSignal
+    const onesignalPayload: any = {
+      app_id: appId,
+      headings: { en: title, pt: title },
+      contents: { en: message, pt: message },
+      url: url || 'https://www.minhai.app/dashboard',
+    };
+
+    // A mágica do direcionamento
     if (broadcast) {
-      // Pega todos
-    } else if (companyId) {
-      query = query.eq('company_id', companyId);
+      // Envia para todos os inscritos (Targeting "All")
+      onesignalPayload.included_segments = ["Subscribed Users"];
     } else if (userId) {
-      query = query.eq('user_id', userId);
+      // Envia especificamente para o usuário logado (Aquele OneSignal.login(userId) do Frontend)
+      onesignalPayload.include_aliases = { external_id: [userId] };
+      onesignalPayload.target_channel = "push";
     } else {
       return NextResponse.json({ error: 'Nenhum alvo definido.' }, { status: 400 });
     }
 
-    const { data: subscriptions, error } = await query;
-
-    if (error || !subscriptions || subscriptions.length === 0) {
-      console.log("Nenhuma inscrição válida encontrada para envio.");
-      return NextResponse.json({ success: true, sent: 0, message: 'Nenhuma inscrição encontrada.' });
-    }
-
-    const payload = JSON.stringify({ title, body: message, icon: '/icon512.png', url: url || '/' });
-
-    const sendPromises = subscriptions.map(async (sub) => {
-      try {
-        await webpush.sendNotification(sub.subscription, payload);
-        console.log(`✅ Push enviado com sucesso para ${sub.id}`); // <-- Adicione isso
-      } catch (err: any) {
-        // 👇 ADICIONE ESTE CONSOLE.ERROR PARA VER O REAL MOTIVO
-        console.error(`🚨 Erro ao enviar para ${sub.id}:`, err.statusCode, err.body || err); 
-        
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          await supabaseAdmin.from('push_subscriptions').delete().eq('id', sub.id);
-        }
-      }
+    // Dispara para a API do OneSignal
+    const response = await fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${restApiKey}`
+      },
+      body: JSON.stringify(onesignalPayload)
     });
 
-    await Promise.all(sendPromises);
+    const result = await response.json();
 
-    return NextResponse.json({ success: true, sent: subscriptions.length });
+    if (!response.ok || result.errors) {
+      console.error("Erro do OneSignal:", result);
+      return NextResponse.json({ error: 'Erro ao enviar para o OneSignal' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, id: result.id });
 
   } catch (error: any) {
-    console.error("Erro interno do web-push:", error);
-    return NextResponse.json({ error: 'Ocorreu um erro.' }, { status: 500 });
+    console.error("Erro na API de envio:", error);
+    return NextResponse.json({ error: 'Ocorreu um erro interno.' }, { status: 500 });
   }
 }

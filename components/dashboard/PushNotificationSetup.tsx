@@ -16,12 +16,12 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
       if (!process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID) return;
 
       try {
-        await OneSignal.init({
-          appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
-          notifyButton: { enable: false },
-          serviceWorkerParam: { scope: "/" },
-          serviceWorkerPath: "sw.js"
-        });
+await OneSignal.init({
+  appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
+  notifyButton: { enable: false },
+  serviceWorkerParam: { scope: "/" },
+  serviceWorkerPath: "OneSignalSDKWorker.js" // 👈 aponta direto pro arquivo correto
+});
 
         // ❌ Removido: navigator.serviceWorker.ready — causava conflito com o SW dinâmico
 

@@ -20,7 +20,12 @@ await OneSignal.init({
   appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
   notifyButton: { enable: false },
   serviceWorkerParam: { scope: "/" },
-  serviceWorkerPath: "OneSignalSDKWorker.js" // 👈 aponta direto pro arquivo correto
+  serviceWorkerPath: "OneSignalSDKWorker.js",
+  promptOptions: {
+    slidedown: {
+      prompts: [] // 👈 desativa o slidedown completamente
+    }
+  }
 });
 
         // ❌ Removido: navigator.serviceWorker.ready — causava conflito com o SW dinâmico

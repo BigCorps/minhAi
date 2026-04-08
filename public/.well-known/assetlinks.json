@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.minhai.www.twa",
+    "sha256_cert_fingerprints": ["70:B8:A4:A0:21:48:2B:30:A2:23:20:88:BB:39:0F:12:EB:8B:3B:6E:72:24:28:A7:7C:4B:67:8F:FB:37:D8:D7"]
+  }
+}]

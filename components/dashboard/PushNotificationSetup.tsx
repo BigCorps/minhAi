@@ -23,7 +23,17 @@ await OneSignal.init({
   serviceWorkerPath: "OneSignalSDKWorker.js",
   promptOptions: {
     slidedown: {
-      prompts: [] // 👈 desativa o slidedown completamente
+      prompts: [
+        {
+          type: "push",
+          autoPrompt: true,
+          text: {
+            actionMessage: "Deseja receber notificações sobre seus assistentes e saldo?",
+            acceptButton: "Permitir",
+            cancelButton: "Agora não"
+          }
+        }
+      ]
     }
   }
 });

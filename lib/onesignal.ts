@@ -36,6 +36,8 @@ export async function sendOneSignalPush({
     throw new Error("É necessário fornecer userId ou broadcast=true");
   }
 
+console.log("📤 Payload enviado ao OneSignal:", JSON.stringify(payload, null, 2));
+
   const response = await fetch("https://onesignal.com/api/v1/notifications", {
     method: "POST",
     headers: {

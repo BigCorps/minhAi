@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-// 🔴 Mude de createClient para createAdminClient
-import { createAdminClient } from '@/lib/supabase-admin'; 
+import { createAdminClient } from '@/lib/supabase-admin';
+import { sendOneSignalPush } from '@/lib/onesignal'; // Importa a função nativa
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -15,33 +15,24 @@ export async function POST(req: NextRequest) {
   const { record, old_record } = payload;
 
   if (record.enviar === true && old_record.enviar === false) {
-    
-const host = req.headers.get('host') || 'www.minhai.app';
-const protocol = host.includes('localhost') ? 'http' : 'https';
-
-await fetch(`${protocol}://${host}/api/send-push`, {
-  method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.PUSH_SECRET_KEY!
-      },
-      body: JSON.stringify({
+    try {
+      // 🔴 Correção do erro 404: Chamada direta à função
+      await sendOneSignalPush({
         title: record.titulo,
         message: record.mensagem,
         url: record.url,
         broadcast: true
-      })
-    });
+      });
 
-    // 🔴 Use o supabaseAdmin e adicionei um log para garantir
-    const supabaseAdmin = createAdminClient();
-    const { error } = await supabaseAdmin
-      .from('push_broadcasts')
-      .update({ enviado_em: new Date().toISOString() })
-      .eq('id', record.id);
-      
-    if (error) {
-       console.error('Erro ao salvar enviado_em:', error);
+      const supabaseAdmin = createAdminClient();
+      await supabaseAdmin
+        .from('push_broadcasts')
+        .update({ enviado_em: new Date().toISOString() })
+        .eq('id', record.id);
+
+    } catch (error: any) {
+      console.error("Erro no envio do broadcast:", error);
+      return NextResponse.json({ error: 'Falha ao enviar broadcast' }, { status: 500 });
     }
   }
 

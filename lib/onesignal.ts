@@ -20,12 +20,12 @@ export async function sendOneSignalPush({
   }
 
   const payload: any = {
-    app_id: appId,
-    headings: { en: title, pt: title },
-    contents: { en: message, pt: message },
-    url: url || 'https://www.minhai.app/dashboard',
-    target_channel: "push"
-  };
+  app_id: appId,
+  headings: { en: title, pt: title },
+  contents: { en: message, pt: message },
+  url: url?.startsWith('http') ? url : `https://www.minhai.app${url || '/dashboard'}`,
+  target_channel: "push"
+};
 
  if (broadcast) {
   payload.included_segments = ["Total Subscriptions"];

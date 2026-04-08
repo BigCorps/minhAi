@@ -16,8 +16,11 @@ export async function POST(req: NextRequest) {
 
   if (record.enviar === true && old_record.enviar === false) {
     
-    await fetch('https://www.minhai.app/api/send-push', {
-      method: 'POST',
+const host = req.headers.get('host') || 'www.minhai.app';
+const protocol = host.includes('localhost') ? 'http' : 'https';
+
+await fetch(`${protocol}://${host}/api/send-push`, {
+  method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.PUSH_SECRET_KEY!

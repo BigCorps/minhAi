@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { sendOneSignalPush } from '@/lib/onesignal'; // Importa a função nativa
+import { sendOneSignalPush } from '@/lib/onesignal';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
   const payload = await req.json();
   const { record, old_record } = payload;
 
-  if (record.enviar === true && old_record.enviar === false) {
+  // Optional chaining: old_record pode ser undefined em inserções novas
+  if (record.enviar === true && old_record?.enviar === false) {
     try {
-      // 🔴 Correção do erro 404: Chamada direta à função
       await sendOneSignalPush({
         title: record.titulo,
         message: record.mensagem,
@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
         .from('push_broadcasts')
         .update({ enviado_em: new Date().toISOString() })
         .eq('id', record.id);
-
     } catch (error: any) {
       console.error("Erro no envio do broadcast:", error);
       return NextResponse.json({ error: 'Falha ao enviar broadcast' }, { status: 500 });

@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const slug = hostname.replace('.minhai.com.br', '');
 
   const swContent = `
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 const CACHE_NAME = 'minhai-${slug}-v1';
 const CACHE_URLS = ['/'];
 

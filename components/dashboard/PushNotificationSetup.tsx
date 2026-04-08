@@ -1,41 +1,46 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import OneSignal from 'react-onesignal';
 import { Bell, Loader2 } from 'lucide-react';
 
 export function PushNotificationSetup({ userId }: { userId: string }) {
   const [isOptedIn, setIsOptedIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     async function initOneSignal() {
       if (!process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID) return;
 
       try {
         await OneSignal.init({
           appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
-          safari_web_id: "web.onesignal.auto...", // Preencha se quiser suporte ao Safari depois
-          notifyButton: { enable: false }, // Esconde o sino flutuante nativo deles
+          notifyButton: { enable: false },
           serviceWorkerParam: { scope: "/" },
           serviceWorkerPath: "sw.js"
         });
 
-        // O pulo do gato: vincula o aparelho logado ao ID do seu usuário no Supabase!
+        // Aguarda o SW estar completamente ativo antes de continuar
+        if ('serviceWorker' in navigator) {
+          await navigator.serviceWorker.ready;
+        }
+
         if (userId) {
           await OneSignal.login(userId);
         }
 
-        const optedIn = OneSignal.User.PushSubscription.optedIn;
+        const optedIn = OneSignal.User.PushSubscription.optedIn ?? false;
         setIsOptedIn(optedIn);
 
-        // Escuta se o usuário aceitar pelo prompt do navegador
         OneSignal.User.PushSubscription.addEventListener('change', (event) => {
           setIsOptedIn(event.current.optedIn);
         });
-
       } catch (error) {
         console.error("Erro ao inicializar OneSignal:", error);
+        setIsOptedIn(false);
       }
     }
 
@@ -43,16 +48,28 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
   }, [userId]);
 
   const handleSubscribe = async () => {
+    const permission = Notification.permission;
+    console.log("🔔 Estado atual da permissão:", permission);
+
+    if (permission === 'denied') {
+      alert("Notificações bloqueadas. Acesse as configurações do site e permita notificações.");
+      return;
+    }
+
     setLoading(true);
     try {
-      // Força diretamente o prompt nativo do navegador (ignora o Slidedown)
+      console.log("🔔 Solicitando permissão...");
       const accepted = await OneSignal.Notifications.requestPermission();
-      
+      console.log("🔔 Resultado:", accepted);
+
       if (accepted) {
-        setIsOptedIn(true);
-        console.log("✅ Permissão concedida com sucesso!");
+        // Aguarda o token ser gerado
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const optedIn = OneSignal.User.PushSubscription.optedIn ?? false;
+        console.log("🔔 optedIn após aceite:", optedIn);
+        setIsOptedIn(optedIn);
       } else {
-        alert("A permissão foi negada ou o navegador bloqueou o aviso. Verifique o cadeado na barra de endereços.");
+        alert("Permissão negada. Verifique as configurações do navegador.");
       }
     } catch (error) {
       console.error('Erro ao pedir permissão:', error);
@@ -61,7 +78,7 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
     }
   };
 
-  // Some sozinho se já estiver inscrito
+  // null = carregando (não pisca), true = já inscrito (some)
   if (isOptedIn === null || isOptedIn === true) return null;
 
   return (

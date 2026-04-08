@@ -29,7 +29,7 @@ export async function sendOneSignalPush({
 
   if (broadcast) {
     // 🔴 Correção do erro 500: Nome atualizado do segmento no OneSignal
-    payload.included_segments = ["Total Subscriptions"];
+    payload.included_segments = ["Subscribed Users"];
   } else if (userId) {
     payload.include_aliases = { external_id: [userId] };
   }

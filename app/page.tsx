@@ -41,7 +41,7 @@ const RECURSO_CARDS = [
       </svg>
     ),
     title: 'Custo Baixo',
-    highlight: 'R$ 0,05',
+    highlight: 'R$ 0,09',
     highlightLabel: 'por interação (a partir)',
     description: 'Planos com custo baixo por interação. Uma economia de até 90% comparado a atendimento humano tradicional.',
     color: 'green' as const,
@@ -65,9 +65,9 @@ const RECURSO_CARDS = [
       </svg>
     ),
     title: 'Rápido e Fácil',
-    highlight: '< 1 min',
+    highlight: '< 5 min',
     highlightLabel: 'para configurar',
-    description: 'Configure em segundos. Sem necessidade de código ou conhecimento técnico para começar.',
+    description: 'Configure em minutos. Sem necessidade de código ou conhecimento técnico para começar.',
     color: 'green' as const,
   },
   {
@@ -101,7 +101,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações',
     title: 'Conexões e Serviços Profissionais',
     description:
-      'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Drive, Aparelhos Smart, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
+      'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações e APIs do minhAi',
     color: 'green' as const,
@@ -304,6 +304,16 @@ export default function LandingPage() {
     if (mq.matches) setTheme('light');
   }, []);
 
+  // Fallback dvh para browsers antigos
+  useEffect(() => {
+    function setVh() {
+      document.documentElement.style.setProperty('--dvh', `${window.innerHeight * 0.01}px`);
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    return () => window.removeEventListener('resize', setVh);
+  }, []);
+
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -385,7 +395,7 @@ export default function LandingPage() {
   const activeRecursoIndex = RECURSO_IMAGE_SLIDES.findIndex((r) => r.id === activeSectionId);
 
   return (
-    <div className={`relative h-screen w-screen overflow-hidden transition-colors duration-500 ${
+    <div className={`relative h-dvh-safe w-screen overflow-hidden transition-colors duration-500 ${
       isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
     }`}>
 
@@ -402,9 +412,12 @@ export default function LandingPage() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <style jsx>{`main::-webkit-scrollbar { display: none; }`}</style>
+        <style jsx global>{`
+          .h-dvh-safe { height: 100vh; height: 100dvh; }
+        `}</style>
 
         {/* INÍCIO */}
-        <section id="inicio" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+        <section id="inicio" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always">
           <InicioSection theme={theme} />
         </section>
 
@@ -413,7 +426,7 @@ export default function LandingPage() {
           <section
             key={slide.id}
             id={slide.id}
-            className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+            className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
           >
             <RecursoImageSlide
               theme={theme}
@@ -433,7 +446,7 @@ export default function LandingPage() {
         {/* RECURSOS - Página 4: Extras (WebApp, Indicação, Link PIX) */}
         <section
           id="recurso-extras"
-          className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+          className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
         >
           <VantagensSlide
             theme={theme}
@@ -445,7 +458,7 @@ export default function LandingPage() {
         {/* RECURSOS - Página 5: 4 cards */}
         <section
           id="recurso-cards"
-          className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+          className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
         >
           <RecursoCardsSlide
             theme={theme}
@@ -460,7 +473,7 @@ export default function LandingPage() {
           <section
             key={page.id}
             id={page.id}
-            className="w-screen h-screen flex-shrink-0 snap-start snap-always"
+            className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
           >
             <FuncaoCardsSlide
               theme={theme}
@@ -472,12 +485,12 @@ export default function LandingPage() {
         ))}
 
         {/* PREÇOS */}
-        <section id="precos" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+        <section id="precos" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always">
           <PrecosSection theme={theme} />
         </section>
 
         {/* CONTATO */}
-        <section id="contato" className="w-screen h-screen flex-shrink-0 snap-start snap-always">
+        <section id="contato" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always">
           <ContatoSection theme={theme} />
         </section>
       </main>

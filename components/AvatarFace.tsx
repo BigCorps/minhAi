@@ -30,11 +30,11 @@ interface AvatarFaceProps {
   onCancelPix?: () => Promise<void>;
 }
 
-// ✅ Novas expressões adicionadas: wink, excited, thinking, embarrassed, love, skeptical, starry, nervous, cool
+// ✅ Novas expressões adicionadas: wink, excited, confused, embarrassed, love, skeptical, starry, nervous, cool
 type EyeExpression =
   | 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry'
   | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy'
-  | 'wink' | 'excited' | 'thinking' | 'embarrassed'
+  | 'wink' | 'excited' | 'confused' | 'embarrassed'
   | 'love' | 'skeptical' | 'starry' | 'nervous' | 'cool';
 
 export function AvatarFace({
@@ -156,17 +156,21 @@ export function AvatarFace({
     const shouldAnimate = !isSpeaking && !isProcessing;
     if (!shouldAnimate) { setEyeExpr('idle'); return; }
 
-    // ✅ Lista completa sem confused
+    // ✅ Lista completa sem thinking, com confused de volta
     const expressions: EyeExpression[] = [
       'idle', 'sleeping', 'surprised', 'attentive', 'flirt', 'sad', 'angry',
       'lookLeft', 'lookRight', 'lookDown', 'happy',
-      'wink', 'excited', 'thinking', 'embarrassed',
+      'wink', 'excited', 'confused', 'embarrassed',
       'love', 'skeptical', 'starry', 'nervous', 'cool'
     ];
 
     const changeExpression = () => {
       const nonIdleExpressions = expressions.filter(e => e !== 'idle');
       const randomExpr = nonIdleExpressions[Math.floor(Math.random() * nonIdleExpressions.length)];
+      // Garante que o piscar para antes de entrar em expressões que controlam os olhos
+      if (randomExpr === 'wink' || randomExpr === 'flirt' || randomExpr === 'love' || randomExpr === 'cool' || randomExpr === 'starry') {
+        setIsBlinking(false);
+      }
       setEyeExpr(randomExpr);
       exprTimeoutRef.current = setTimeout(() => { setEyeExpr('idle'); }, 4000 + Math.random() * 2000);
     };
@@ -344,15 +348,30 @@ export function AvatarFace({
       </>
     );
 
-    // ── Wink: olho esquerdo normal, direito fechado ──
+    // ── Wink: olho esquerdo totalmente estático, direito fechado em arco ──
     if (eyeExpr === 'wink') return (
       <>
-        {renderEye(76, 85)}
-        {renderEyeLine('M 110 88 Q 124 94 138 88')}
+        {/* Olho esquerdo estático — sem piscar, sem movimento */}
+        <ellipse cx="76" cy="85" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
+        <ellipse cx="73" cy="79" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
+        <circle cx="74" cy="81" r="3.2" fill="white" opacity="0.7" />
+        {/* Olho direito fechado em arco — o wink */}
+        <path d="M 110 87 Q 124 96 138 87" stroke={colors.primary} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.88" />
       </>
     );
 
-    // ── Flirt: olho esquerdo normal, direito piscado ──
+    // ── Confused: sobrancelha levantada esquerda + "?" ──
+    if (eyeExpr === 'confused') return (
+      <>
+        {renderEye(76, 85)}
+        {renderEye(124, 85)}
+        {/* sobrancelha levantada no olho esquerdo */}
+        <path d="M 62 66 Q 76 58 90 64" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.65" />
+        {/* "?" canto superior direito */}
+        <path d="M 151 54 Q 160 46 151 40 Q 142 34 148 27" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.65" />
+        <circle cx="151" cy="61" r="3" fill={colors.primary} opacity="0.65" />
+      </>
+    );
     if (eyeExpr === 'flirt') return (
       <>
         {renderEye(76, 85)}
@@ -371,21 +390,6 @@ export function AvatarFace({
         {/* faíscas canto direito */}
         <path d="M 152 58 L 148 65 L 152 72" stroke={colors.secondary} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.7" />
         <path d="M 144 65 L 156 65" stroke={colors.secondary} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.7" />
-      </>
-    );
-
-    // ── Thinking: olho direito olhando para cima ──
-    if (eyeExpr === 'thinking') return (
-      <>
-        {renderEye(76, 85)}
-        {/* olho direito deslocado para cima */}
-        <ellipse cx="124" cy="80" rx="14.4" ry="17.6" fill="url(#eyeGradient)" opacity="0.85" />
-        <ellipse cx="129" cy="74" rx="6.4" ry="8" fill="url(#glowGradient)" opacity="0.6" />
-        <circle cx="130" cy="75" r="3.2" fill="white" opacity="0.7" />
-        {/* três pontinhos "..." */}
-        <circle cx="140" cy="50" r="2.8" fill={colors.primary} opacity="0.35" />
-        <circle cx="152" cy="45" r="2.8" fill={colors.primary} opacity="0.55" />
-        <circle cx="164" cy="40" r="2.8" fill={colors.primary} opacity="0.75" />
       </>
     );
 
@@ -522,8 +526,11 @@ export function AvatarFace({
 
       // Sorriso médio
       case 'cool':
-      case 'wink':
         return 'M 70 136 Q 100 152 130 136';
+
+      // Wink: boca assimétrica puxada para o lado direito (lado do olho fechado)
+      case 'wink':
+        return 'M 72 138 Q 106 154 130 134';
 
       // Sorriso suave
       case 'attentive':
@@ -542,8 +549,8 @@ export function AvatarFace({
       // Boca reta / assimétrica
       case 'skeptical':
         return 'M 68 140 Q 96 136 128 143';
-      case 'thinking':
-        return 'M 68 138 Q 95 146 128 140';
+      case 'confused':
+        return 'M 72 142 Q 100 140 130 142';
       case 'angry':
         return 'M 70 148 Q 100 138 130 148';
 

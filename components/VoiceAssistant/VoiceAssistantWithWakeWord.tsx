@@ -167,7 +167,7 @@ export function VoiceAssistantWithWakeWord({
 
   // ── Lógica de Inatividade (5 minutos) ────────────────────
   const { resetTimer: resetInactivityTimer } = useInactivityDetector({
-    timeoutSeconds: 120,
+    timeoutSeconds: 30,
     onInactivity: async () => {
       if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
       const feature = await getRandomActiveFunctionHighlight();
@@ -517,7 +517,7 @@ export function VoiceAssistantWithWakeWord({
 
     if (wakeWordResult.confidence < 0.75) return;
 
-    resetInactivityTimer(); // Wake word detectada = atividade real
+    resetInactivityTimer(); // Wake word detectada (parcial ou final) = atividade real
     setIsWakeWordDetected(true);
     setTimeout(() => setIsWakeWordDetected(false), 1500);
 

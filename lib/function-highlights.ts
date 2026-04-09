@@ -9,20 +9,18 @@ export async function getRandomActiveFunctionHighlight(): Promise<AssistantFunct
   const supabase = createClient();
 
   const { data, error } = await supabase
-    .from("assistant_functions")
-    .select("function_name, short_description")
-    .eq("is_active", true)
-    .order("random", { ascending: true })
-    .limit(1);
+    .from('assistant_functions')
+    .select('function_name, short_description')
+    .eq('is_active', true)
+    .not('short_description', 'is', null);
 
   if (error) {
-    console.error("Erro ao buscar função aleatória:", error);
+    console.error('Erro ao buscar função aleatória:', error);
     return null;
   }
 
-  if (data && data.length > 0) {
-    return data[0];
-  }
+  if (!data || data.length === 0) return null;
 
-  return null;
+  const randomIndex = Math.floor(Math.random() * data.length);
+  return data[randomIndex];
 }

@@ -5,7 +5,7 @@
 // Caminho: components/assistant/VoiceAssistant/VoiceAssistantWithWakeWord.tsx
 // ============================================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, MicOff, Square } from 'lucide-react';
 import { AvatarFace } from '@/components/AvatarFace';
 import TextInputChat from '@/components/VoiceAssistant/TextInputChat';
@@ -25,6 +25,9 @@ import { getContextualRoute } from '@/lib/routing-utils';
 // ── Ponto 1: Novos imports ─────────────────────────────────
 import { useFAQs } from './hooks/useFAQs';
 import { findMatchingFAQLocal } from './utils/faqUtils';
+import { useInactivityDetector } from '@/hooks/useInactivityDetector';
+import { getRandomActiveFunctionHighlight } from '@/lib/function-highlights';
+import { FeatureHighlightModal } from './FeatureHighlightModal';
 
 // ── Tipos ──────────────────────────────────────────────────
 import {
@@ -111,6 +114,10 @@ export function VoiceAssistantWithWakeWord({
   const [externalInput, setExternalInput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
 
+  // -- States de Destaque de Função (Inatividade) --
+  const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
+  const [highlightedFeature, setHighlightedFeature] = useState<{ function_name: string; short_description: string } | null>(null);
+
   // ── States de PIX ────────────────────────────────────────
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
   const [pixConfirmationData, setPixConfirmationData] = useState<PixConfirmationData | null>(null);
@@ -157,6 +164,29 @@ export function VoiceAssistantWithWakeWord({
   const faqs = useFAQs(companyId);
   const faqsRef = useRef<typeof faqs>([]);
   useEffect(() => { faqsRef.current = faqs; }, [faqs]);
+
+  // ── Lógica de Inatividade (5 minutos) ────────────────────
+  const { resetTimer: resetInactivityTimer } = useInactivityDetector({
+    timeoutSeconds: 300,
+    onInactivity: async () => {
+      if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
+      const feature = await getRandomActiveFunctionHighlight();
+      if (feature) {
+        setHighlightedFeature(feature);
+        setShowFeatureHighlight(true);
+        setTimeout(() => {
+          handleCloseFeatureHighlight();
+        }, 10000);
+      }
+    },
+    onActivity: () => {},
+  });
+
+  const handleCloseFeatureHighlight = useCallback(() => {
+    setShowFeatureHighlight(false);
+    setHighlightedFeature(null);
+    resetInactivityTimer();
+  }, [resetInactivityTimer]);
 
   // ── Push-to-talk ───────────────────────────────────────────
   const voiceRecorder = useVoiceRecorder();
@@ -519,6 +549,7 @@ export function VoiceAssistantWithWakeWord({
 
   // ── Start ─────────────────────────────────────────────────
   async function handleStart() {
+    resetInactivityTimer();
     setSessionId(null);
     unlockAudio(audioUnlocked);
     try {
@@ -534,6 +565,7 @@ export function VoiceAssistantWithWakeWord({
 
   // ── Function click ────────────────────────────────────────
   async function handleFunctionClick(functionKey: string, event?: any) {
+    resetInactivityTimer();
     const pt = effectivePlayText;
 
     const isEnabled = await checkIfFunctionIsEnabled(companyId, functionKey);
@@ -1175,6 +1207,7 @@ audio.onended = () => {
 
   // ── handleTextMessage (modo voz input text) ───────────────
 const handleTextMessage = async (message: string) => {
+  resetInactivityTimer();
   if (detectStopCommand(message)) { stopEverything(); return; }
   if (message.trim()) setLastTranscript(message.trim());
 
@@ -1667,6 +1700,16 @@ const handleTextMessage = async (message: string) => {
   // ── RENDER: NORMAL ────────────────────────────────────────
   return (
     <div className="w-full max-w-6xl mx-auto">
+      {/* Modal de Destaque de Função */}
+      {highlightedFeature && (
+        <FeatureHighlightModal
+          isOpen={showFeatureHighlight}
+          onClose={handleCloseFeatureHighlight}
+          featureName={highlightedFeature.function_name}
+          featureDescription={highlightedFeature.short_description}
+          theme={theme}
+        />
+      )}
       <div className="grid md:grid-cols-2 gap-8">
 
         {/* Card esquerdo: Avatar */}

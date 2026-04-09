@@ -30,11 +30,11 @@ interface AvatarFaceProps {
   onCancelPix?: () => Promise<void>;
 }
 
-// ✅ Novas expressões adicionadas: wink, excited, confused, thinking, embarrassed, love, skeptical, starry, nervous, cool
+// ✅ Novas expressões adicionadas: wink, excited, thinking, embarrassed, love, skeptical, starry, nervous, cool
 type EyeExpression =
   | 'idle' | 'sleeping' | 'surprised' | 'attentive' | 'flirt' | 'sad' | 'angry'
   | 'lookLeft' | 'lookRight' | 'lookDown' | 'happy'
-  | 'wink' | 'excited' | 'confused' | 'thinking' | 'embarrassed'
+  | 'wink' | 'excited' | 'thinking' | 'embarrassed'
   | 'love' | 'skeptical' | 'starry' | 'nervous' | 'cool';
 
 export function AvatarFace({
@@ -156,11 +156,11 @@ export function AvatarFace({
     const shouldAnimate = !isSpeaking && !isProcessing;
     if (!shouldAnimate) { setEyeExpr('idle'); return; }
 
-    // ✅ Lista completa com as novas expressões incluídas
+    // ✅ Lista completa sem confused
     const expressions: EyeExpression[] = [
       'idle', 'sleeping', 'surprised', 'attentive', 'flirt', 'sad', 'angry',
       'lookLeft', 'lookRight', 'lookDown', 'happy',
-      'wink', 'excited', 'confused', 'thinking', 'embarrassed',
+      'wink', 'excited', 'thinking', 'embarrassed',
       'love', 'skeptical', 'starry', 'nervous', 'cool'
     ];
 
@@ -168,7 +168,7 @@ export function AvatarFace({
       const nonIdleExpressions = expressions.filter(e => e !== 'idle');
       const randomExpr = nonIdleExpressions[Math.floor(Math.random() * nonIdleExpressions.length)];
       setEyeExpr(randomExpr);
-      exprTimeoutRef.current = setTimeout(() => { setEyeExpr('idle'); }, 2000 + Math.random() * 1000);
+      exprTimeoutRef.current = setTimeout(() => { setEyeExpr('idle'); }, 4000 + Math.random() * 2000);
     };
 
     const interval = setInterval(() => { changeExpression(); }, 10000 + Math.random() * 5000);
@@ -374,19 +374,6 @@ export function AvatarFace({
       </>
     );
 
-    // ── Confused: sobrancelha levantada esquerda + "?" ──
-    if (eyeExpr === 'confused') return (
-      <>
-        {renderEye(76, 85)}
-        {renderEye(124, 85)}
-        {/* sobrancelha levantada no olho esquerdo */}
-        <path d="M 62 66 Q 76 58 90 64" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.65" />
-        {/* "?" canto superior direito */}
-        <path d="M 151 54 Q 160 46 151 40 Q 142 34 148 27" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.65" />
-        <circle cx="151" cy="61" r="3" fill={colors.primary} opacity="0.65" />
-      </>
-    );
-
     // ── Thinking: olho direito olhando para cima ──
     if (eyeExpr === 'thinking') return (
       <>
@@ -470,32 +457,45 @@ export function AvatarFace({
       </>
     );
 
-    // ── Sad: olhos normais (tristeza fica na boca) ──
+    // ── Sad: sobrancelhas caídas para dentro (triângulos que tampam a parte superior dos olhos) ──
     if (eyeExpr === 'sad') return (
       <>
         {renderEye(76, 85)}
         {renderEye(124, 85)}
-        {/* sombra de sobrancelha triste */}
-        {!isDark && (
-          <>
-            <path d="M 50 60 L 100 85 L 100 60 Z" fill="#f8fafc" />
-            <path d="M 100 60 L 150 60 L 100 85 Z" fill="#f8fafc" />
-          </>
-        )}
+        {/* sobrancelha esquerda caída: tampa canto superior-externo do olho esquerdo */}
+        <path
+          d="M 52 62 L 94 72 L 62 72 Z"
+          fill={isDark ? 'rgba(15,23,42,0.82)' : 'rgba(248,250,252,0.88)'}
+        />
+        {/* sobrancelha direita caída: tampa canto superior-externo do olho direito */}
+        <path
+          d="M 148 62 L 106 72 L 138 72 Z"
+          fill={isDark ? 'rgba(15,23,42,0.82)' : 'rgba(248,250,252,0.88)'}
+        />
+        {/* linha de sobrancelha triste visível por cima */}
+        <path d="M 55 64 Q 70 72 88 70" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.55" />
+        <path d="M 145 64 Q 130 72 112 70" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.55" />
       </>
     );
 
-    // ── Angry ──
+    // ── Angry: sobrancelhas descendo para dentro (espelhadas das tristes) ──
     if (eyeExpr === 'angry') return (
       <>
         {renderEye(76, 85)}
         {renderEye(124, 85)}
-        {!isDark && (
-          <>
-            <path d="M 50 60 L 100 60 L 50 85 Z" fill="#f8fafc" />
-            <path d="M 100 60 L 150 85 L 150 60 Z" fill="#f8fafc" />
-          </>
-        )}
+        {/* sobrancelha esquerda raivosa: tampa canto superior-interno do olho esquerdo */}
+        <path
+          d="M 58 62 L 96 72 L 96 62 Z"
+          fill={isDark ? 'rgba(15,23,42,0.82)' : 'rgba(248,250,252,0.88)'}
+        />
+        {/* sobrancelha direita raivosa: tampa canto superior-interno do olho direito */}
+        <path
+          d="M 142 62 L 104 72 L 104 62 Z"
+          fill={isDark ? 'rgba(15,23,42,0.82)' : 'rgba(248,250,252,0.88)'}
+        />
+        {/* linha de sobrancelha raivosa */}
+        <path d="M 60 64 Q 75 70 92 66" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.55" />
+        <path d="M 140 64 Q 125 70 108 66" stroke={colors.primary} strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.55" />
       </>
     );
 
@@ -540,8 +540,6 @@ export function AvatarFace({
         return 'M 76 140 Q 100 148 124 140';
 
       // Boca reta / assimétrica
-      case 'confused':
-        return 'M 72 142 Q 100 140 130 142';
       case 'skeptical':
         return 'M 68 140 Q 96 136 128 143';
       case 'thinking':

@@ -116,7 +116,7 @@ export function VoiceAssistantWithWakeWord({
 
   // -- States de Destaque de Função (Inatividade) --
   const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
-  const [highlightedFeature, setHighlightedFeature] = useState<{ function_name: string; short_description: string } | null>(null);
+  const [highlightedFeature, setHighlightedFeature] = useState<{ function_name: string; short_description: string; function_category: string } | null>(null);
 
   // ── States de PIX ────────────────────────────────────────
   const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null);
@@ -167,7 +167,7 @@ export function VoiceAssistantWithWakeWord({
 
   // ── Lógica de Inatividade (5 minutos) ────────────────────
   const { resetTimer: resetInactivityTimer } = useInactivityDetector({
-    timeoutSeconds: 10,
+    timeoutSeconds: 120,
     onInactivity: async () => {
       if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
       const feature = await getRandomActiveFunctionHighlight();
@@ -1709,6 +1709,7 @@ const handleTextMessage = async (message: string) => {
           onClose={handleCloseFeatureHighlight}
           featureName={highlightedFeature.function_name}
           featureDescription={highlightedFeature.short_description}
+          featureCategory={highlightedFeature.function_category}
           theme={theme}
         />
       )}

@@ -166,20 +166,25 @@ export function VoiceAssistantWithWakeWord({
   useEffect(() => { faqsRef.current = faqs; }, [faqs]);
 
   // ── Lógica de Inatividade (5 minutos) ────────────────────
-  const { resetTimer: resetInactivityTimer } = useInactivityDetector({
-    timeoutSeconds: 30,
-    onInactivity: async () => {
+  // onInactivity fica num ref para não recriar a cada render e não
+  // disparar o useEffect do hook (que reiniciaria o timer).
+  const onInactivityRef = useRef(async () => {});
+  useEffect(() => {
+    onInactivityRef.current = async () => {
       if (activeModal || isSpeaking || isPlayingAudio || isProcessing || showFeatureHighlight) return;
       const feature = await getRandomActiveFunctionHighlight();
       if (feature) {
         setHighlightedFeature(feature);
         setShowFeatureHighlight(true);
-        setTimeout(() => {
-          handleCloseFeatureHighlight();
-        }, 10000);
+        setTimeout(() => handleCloseFeatureHighlight(), 10000);
       }
-    },
-    onActivity: () => {},
+    };
+  }); // sem deps → sempre atualizado, mas sem recriar o resetTimer
+
+  const { resetTimer: resetInactivityTimer } = useInactivityDetector({
+    timeoutSeconds: 30,
+    onInactivity: useCallback(() => onInactivityRef.current(), []),
+    onActivity: useCallback(() => {}, []),
   });
 
   const handleCloseFeatureHighlight = useCallback(() => {

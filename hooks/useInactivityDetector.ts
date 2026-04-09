@@ -29,26 +29,16 @@ export function useInactivityDetector({
     }
   }, [timeoutSeconds, onInactivity, onActivity]);
 
+  // Inicia o timer na montagem — sem listeners globais.
+  // O reset acontece apenas via chamadas explícitas a resetTimer()
+  // nas interações relevantes: carrossel, wake word, microfone e text input.
   useEffect(() => {
-    resetTimer(); // Inicia o timer na montagem
-
-    const events = ['mousemove', 'keydown', 'touchstart', 'scroll'];
-
-    const handleActivity = () => {
-      resetTimer();
-    };
-
-    events.forEach((event) => {
-      window.addEventListener(event, handleActivity);
-    });
+    resetTimer();
 
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      events.forEach((event) => {
-        window.removeEventListener(event, handleActivity);
-      });
     };
   }, [resetTimer]);
 

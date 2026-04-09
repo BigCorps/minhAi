@@ -446,42 +446,89 @@ export default function SaldoPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100 dark:border-white/5">
-                          <th className="pb-4 font-bold">Data</th>
-                          <th className="pb-4 font-bold">Tipo</th>
-                          <th className="pb-4 font-bold">Valor</th>
-                          <th className="pb-4 font-bold">Status</th>
-                          <th className="pb-4 font-bold">Detalhes</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                        {filteredTransactions.map((tx) => (
-                          <tr key={tx.id} className="text-sm">
-                            <td className="py-4 text-gray-600 dark:text-gray-400">
-                              {new Date(tx.requested_at).toLocaleString('pt-BR')}
-                            </td>
-                            <td className="py-4">
-                              <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400">
-                                {tx.notes?.includes('Saque') ? 'Saque' : 'PIX Recebido'}
-                              </span>
-                            </td>
-                            <td className="py-4 font-bold text-gray-900 dark:text-white">
-                              {formatCurrency(tx.amount_cents)}
-                            </td>
-                            <td className="py-4">
-                              {getStatusBadge(tx.status)}
-                            </td>
-                            <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs">
-                              {tx.notes || formatPixKey(tx.destination_withdrawal_pix_key)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+<div className="overflow-x-auto">
+  <table className="w-full text-left border-collapse">
+    <thead>
+      <tr className="text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100 dark:border-white/5">
+        <th className="pb-4 font-bold">Data</th>
+        <th className="pb-4 font-bold">Tipo</th>
+        <th className="pb-4 font-bold">Valor</th>
+        <th className="pb-4 font-bold">Status</th>
+        <th className="pb-4 font-bold">Detalhes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {(() => {
+        const rows: React.ReactNode[] = [];
+        let lastDay = '';
+        let dayTotal = 0;
+        let dayGroup: PixTransaction[] = [];
+
+        const flushDay = (day: string, group: PixTransaction[], total: number) => {
+          // Day separator header
+          rows.push(
+            <tr key={`sep-${day}`}>
+              <td colSpan={5} className="pt-5 pb-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    {new Date(day + 'T12:00:00').toLocaleDateString('pt-BR', {
+                      weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+                    })}
+                  </span>
+                  <div className="flex-1 border-t border-gray-200 dark:border-white/10" />
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    Total do dia:{' '}
+                    <span className="text-green-600 dark:text-green-400">
+                      {formatCurrency(total)}
+                    </span>
+                  </span>
+                </div>
+              </td>
+            </tr>
+          );
+          // Rows for the day
+          group.forEach((tx) => {
+            rows.push(
+              <tr key={tx.id} className="text-sm border-t border-gray-100 dark:border-white/5">
+                <td className="py-4 text-gray-600 dark:text-gray-400">
+                  {new Date(tx.requested_at).toLocaleString('pt-BR')}
+                </td>
+                <td className="py-4">
+                  <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400">
+                    {tx.notes?.includes('Saque') ? 'Saque' : 'PIX Recebido'}
+                  </span>
+                </td>
+                <td className="py-4 font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(tx.amount_cents)}
+                </td>
+                <td className="py-4">{getStatusBadge(tx.status)}</td>
+                <td className="py-4 text-gray-500 dark:text-gray-500 font-mono text-xs">
+                  {tx.notes || formatPixKey(tx.destination_withdrawal_pix_key)}
+                </td>
+              </tr>
+            );
+          });
+        };
+
+        filteredTransactions.forEach((tx) => {
+          const day = tx.requested_at.slice(0, 10); // 'YYYY-MM-DD'
+          if (day !== lastDay) {
+            if (lastDay) flushDay(lastDay, dayGroup, dayTotal);
+            lastDay = day;
+            dayTotal = 0;
+            dayGroup = [];
+          }
+          dayTotal += tx.amount_cents;
+          dayGroup.push(tx);
+        });
+
+        if (lastDay) flushDay(lastDay, dayGroup, dayTotal);
+
+        return rows;
+      })()}
+    </tbody>
+  </table>
+</div>
                 )}
               </div>
             ) : (

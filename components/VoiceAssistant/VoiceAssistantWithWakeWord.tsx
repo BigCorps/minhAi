@@ -182,7 +182,7 @@ export function VoiceAssistantWithWakeWord({
   }); // sem deps → sempre atualizado, mas sem recriar o resetTimer
 
   const { resetTimer: resetInactivityTimer } = useInactivityDetector({
-    timeoutSeconds: 30,
+    timeoutSeconds: 120,
     onInactivity: useCallback(() => onInactivityRef.current(), []),
     onActivity: useCallback(() => {}, []),
   });

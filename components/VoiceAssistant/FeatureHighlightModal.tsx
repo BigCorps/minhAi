@@ -10,6 +10,23 @@ interface FeatureHighlightModalProps {
   theme?: 'dark' | 'light';
 }
 
+const CATEGORY_NAMES: { [key: string]: string } = {
+  'knowledge':     'Consultas',
+  'configuration': 'Localização',
+  'contact':       'Contato',
+  'payment':       'Financeiro',
+  'schedule':      'Agendamento',
+  'information':   'Informação',
+  'ai_assistant':  'Conhecimento',
+  'video':         'Multimídia',
+  'biometry':      'Identificação',
+  'products':      'Comercial',
+  'images':        'Arquivos',
+  'codes':         'Câmera',
+  'utylities':     'Utilitários',
+  'services':      'Serviços',
+};
+
 export function FeatureHighlightModal({
   isOpen,
   onClose,
@@ -18,6 +35,10 @@ export function FeatureHighlightModal({
   featureCategory,
   theme = 'dark',
 }: FeatureHighlightModalProps) {
+  const categoryLabel = featureCategory
+    ? (CATEGORY_NAMES[featureCategory] ?? featureCategory)
+    : null;
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -32,16 +53,16 @@ export function FeatureHighlightModal({
     >
       <div className="flex flex-col items-center text-center p-2">
         <div className={`p-3 rounded-full mb-4 ${
-          theme === 'dark' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-yellow-100 text-yellow-600'
+          theme === 'dark' ? 'bg-lime-500/20 text-lime-400' : 'bg-lime-100 text-lime-600'
         }`}>
           <Lightbulb className="w-8 h-8" />
         </div>
 
-        {featureCategory && (
+        {categoryLabel && (
           <span className={`text-xs font-semibold uppercase tracking-widest mb-1 ${
-            theme === 'dark' ? 'text-yellow-400/70' : 'text-yellow-600/70'
+            theme === 'dark' ? 'text-lime-400/70' : 'text-lime-600/70'
           }`}>
-            {featureCategory}
+            {categoryLabel}
           </span>
         )}
 
@@ -60,7 +81,7 @@ export function FeatureHighlightModal({
         <p className={`text-xs mt-4 ${
           theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
         }`}>
-          (Este aviso sumirá em breve ou você pode fechá-lo acima)
+          (Este aviso sumirá em breve ou você pode fechá-lo)
         </p>
       </div>
     </BaseModal>

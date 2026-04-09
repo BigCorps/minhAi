@@ -404,6 +404,7 @@ export function VoiceAssistantWithWakeWord({
     if (e && isPlayingAudio) { e.preventDefault(); e.stopPropagation(); }
     if (isPlayingAudio) { stopEverything(); return; }
     if (!permissionGranted || isProcessing || isTranscribing) return;
+    resetInactivityTimer(); // Microfone pressionado = atividade real
     shouldProcessAudio.current = false;
     await stopGoogleSpeech();
     setIsListening(true);
@@ -516,6 +517,7 @@ export function VoiceAssistantWithWakeWord({
 
     if (wakeWordResult.confidence < 0.75) return;
 
+    resetInactivityTimer(); // Wake word detectada = atividade real
     setIsWakeWordDetected(true);
     setTimeout(() => setIsWakeWordDetected(false), 1500);
 

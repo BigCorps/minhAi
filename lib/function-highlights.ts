@@ -3,6 +3,7 @@ import { createClient } from './supabase-browser';
 interface AssistantFunctionHighlight {
   function_name: string;
   short_description: string;
+  function_category: string;
 }
 
 export async function getRandomActiveFunctionHighlight(): Promise<AssistantFunctionHighlight | null> {
@@ -10,7 +11,7 @@ export async function getRandomActiveFunctionHighlight(): Promise<AssistantFunct
 
   const { data, error } = await supabase
     .from('assistant_functions')
-    .select('function_name, short_description')
+    .select('function_name, short_description, function_category')
     .eq('is_active', true)
     .not('short_description', 'is', null);
 

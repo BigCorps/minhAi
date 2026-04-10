@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
-import { Settings, Wallet } from 'lucide-react';
+import { Settings, Wallet, ShoppingCart, UserPlus, Calendar, Share2 } from 'lucide-react';
 import { CreditsCard } from '@/components/CreditsCard';
 import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
@@ -70,10 +70,10 @@ export default async function DashboardPage() {
       {/* Credit Card */}
       {user && <CreditsCard userId={user.id} />}
 
-      {/* ✅ Banner — entre créditos e gráfico */}
+      {/* Banner — entre créditos e gráfico */}
       <SetupBanner />
 
-      {/* ✅ NOVO: BANNER DE NOTIFICAÇÕES (Some sozinho se já estiver ativo) */}
+      {/* Banner de notificações */}
       {user && <PushNotificationSetup userId={user.id} />}
 
       {/* Credits Progress Chart */}
@@ -156,9 +156,52 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      {/* New Feature Cards */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Link href="/dashboard/vendas">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-emerald-500 dark:hover:border-emerald-500/50 transition cursor-pointer">
+            <div className="flex flex-col items-center text-center gap-2 mb-2">
+              <ShoppingCart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Vendas e Produtos</h3>
+            </div>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Gerencie sua loja virtual e pedidos</p>
+          </div>
+        </Link>
+
+        <Link href="/dashboard/cadastros">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-orange-500 dark:hover:border-orange-500/50 transition cursor-pointer">
+            <div className="flex flex-col items-center text-center gap-2 mb-2">
+              <UserPlus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Controle de Usuários</h3>
+            </div>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Gerencie perfis e permissões de acesso</p>
+          </div>
+        </Link>
+
+        <Link href="/dashboard/agenda">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-blue-500 dark:hover:border-blue-500/50 transition cursor-pointer">
+            <div className="flex flex-col items-center text-center gap-2 mb-2">
+              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Serviços Google</h3>
+            </div>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com Google Agenda e serviços</p>
+          </div>
+        </Link>
+
+        <Link href="/dashboard/atendimentos">
+          <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:border-pink-500 dark:hover:border-pink-500/50 transition cursor-pointer">
+            <div className="flex flex-col items-center text-center gap-2 mb-2">
+              <Share2 className="w-5 h-5 text-pink-600 dark:text-pink-400" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Serviços Meta</h3>
+            </div>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com WhatsApp e Instagram</p>
+          </div>
+        </Link>
+      </div>
+
       {/* CTA para quem não tem assistente */}
       {totalCompanies === 0 && (
-        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6">
+        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6 flex flex-col items-center text-center md:items-start md:text-left">
           <h3 className="font-semibold text-blue-900 dark:text-white mb-1">Comece Agora</h3>
           <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
           <Link

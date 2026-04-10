@@ -21,6 +21,7 @@ interface ProductGridProps {
   onProdutoDestaqueClear?: () => void;
   hideBusca?: boolean;
   termoBusca?: string;
+  onOpenBarcodeScanner?: () => void; // ← novo: abre o BarcodePdvModal
 }
 
 export default function ProductGrid({
@@ -32,6 +33,7 @@ export default function ProductGrid({
   onProdutoDestaqueClear,
   hideBusca = false,
   termoBusca = '',
+  onOpenBarcodeScanner,
 }: ProductGridProps) {
   const { addItem, itens } = useCart();
   const [categoria, setCategoria] = useState<string>('');
@@ -97,23 +99,46 @@ export default function ProductGrid({
   return (
     <div className="flex flex-col h-full gap-2">
 
-      {/* Pills de categoria */}
-      {categorias.length > 0 && (
-        <div className="flex-shrink-0 flex gap-1.5 flex-wrap">
-          <button
-            onClick={() => setCategoria('')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              categoria === ''
-                ? isDark
-                  ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                  : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                : isDark
-                  ? 'bg-white/5 text-white/50 border border-white/10 hover:border-white/20'
-                  : 'bg-gray-100 text-gray-500 border border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            Todos
-          </button>
+      {/* Pills de categoria + botão scanner */}
+      {(categorias.length > 0 || onOpenBarcodeScanner) && (
+        <div className="flex-shrink-0 flex gap-1.5 flex-wrap items-center">
+
+          {/* ── Botão Scanner PDV ── */}
+          {onOpenBarcodeScanner && (
+            <button
+              onClick={onOpenBarcodeScanner}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors border flex-shrink-0 ${
+                isDark
+                  ? 'bg-blue-500/15 text-blue-400 border-blue-500/30 hover:bg-blue-500/25 hover:border-blue-500/50'
+                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+              }`}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 5v14M7 5v14M11 5v14M15 5v4M15 15v4M19 5v4M19 15v4M15 11h4"/>
+              </svg>
+              Cód. Barras
+            </button>
+          )}
+
+          {/* ── Pill "Todos" ── */}
+          {categorias.length > 0 && (
+            <button
+              onClick={() => setCategoria('')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                categoria === ''
+                  ? isDark
+                    ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                  : isDark
+                    ? 'bg-white/5 text-white/50 border border-white/10 hover:border-white/20'
+                    : 'bg-gray-100 text-gray-500 border border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              Todos
+            </button>
+          )}
+
+          {/* ── Pills de categoria ── */}
           {categorias.map((c) => (
             <button
               key={c}

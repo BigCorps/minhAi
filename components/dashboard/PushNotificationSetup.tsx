@@ -11,34 +11,40 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
 
     async function initOneSignal() {
       if (!process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID) return;
-
       try {
         await OneSignal.init({
           appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
           notifyButton: { enable: false },
           serviceWorkerParam: { scope: "/" },
           serviceWorkerPath: "OneSignalSDKWorker.js",
-          // Deixa o OneSignal controlar o prompt nativamente
           promptOptions: {
             slidedown: {
               prompts: [
                 {
                   type: "push",
                   autoPrompt: true,
+                  text: {
+                    actionMessage: "Ative as notificações para receber novidades em tempo real.",
+                    acceptButton: "Ativar",
+                    cancelButton: "Agora não",
+                  },
                   delay: {
                     pageViews: 1,
-                    timeDelay: 3 // aparece 3 segundos após carregar
-                  }
-                }
-              ]
-            }
-          }
+                    timeDelay: 3,
+                  },
+                },
+              ],
+            },
+          },
+          welcomeNotification: {
+            title: "minhAi",
+            message: "Notificações ativadas com sucesso!",
+          },
         });
 
         if (userId) {
           await OneSignal.login(userId);
         }
-
       } catch (error) {
         console.error("Erro ao inicializar OneSignal:", error);
       }
@@ -47,6 +53,5 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
     initOneSignal();
   }, [userId]);
 
-  // Não renderiza nada — o OneSignal cuida do prompt
   return null;
 }

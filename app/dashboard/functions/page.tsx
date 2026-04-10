@@ -589,6 +589,19 @@ function getFunctionCredits(functionKey: string): number {
   </div>
 </div>
 
+          {/* ── Sem assistente selecionado ── */}
+          {!companyId && (
+            <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
+              <Lightbulb className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Selecione um Assistente
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                Escolha um assistente no topo da página para ver as funções disponíveis
+              </p>
+            </div>
+          )}
+
           {/* ── Com assistente selecionado ── */}
           {loading && (
             <div className="flex items-center justify-center py-12">

@@ -165,9 +165,112 @@ export default function DashboardContent({
         </Link>
       </div>
 
+      {/* New Feature Cards */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Vendas e Produtos */}
+        <Link href="/dashboard/vendas">
+          <div className={`rounded-xl p-6 border transition cursor-pointer ${
+            theme === 'dark'
+              ? 'bg-slate-800/50 border-white/10 hover:border-emerald-500/50'
+              : 'bg-white border-gray-200 hover:border-emerald-500'
+          }`}>
+            <div className="flex items-center space-x-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-100'
+              }`}>
+                <svg className={`w-5 h-5 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Vendas e Produtos
+              </h3>
+            </div>
+            <p className={`text-sm ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}`}>
+              Gerencie sua loja virtual e pedidos
+            </p>
+          </div>
+        </Link>
+
+        {/* Controle de Usuários */}
+        <Link href="/dashboard/cadastros">
+          <div className={`rounded-xl p-6 border transition cursor-pointer ${
+            theme === 'dark'
+              ? 'bg-slate-800/50 border-white/10 hover:border-orange-500/50'
+              : 'bg-white border-gray-200 hover:border-orange-500'
+          }`}>
+            <div className="flex items-center space-x-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                theme === 'dark' ? 'bg-orange-500/20' : 'bg-orange-100'
+              }`}>
+                <svg className={`w-5 h-5 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Controle de Usuários
+              </h3>
+            </div>
+            <p className={`text-sm ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}`}>
+              Gerencie perfis e permissões de acesso
+            </p>
+          </div>
+        </Link>
+
+        {/* Serviços Google */}
+        <Link href="/dashboard/agenda">
+          <div className={`rounded-xl p-6 border transition cursor-pointer ${
+            theme === 'dark'
+              ? 'bg-slate-800/50 border-white/10 hover:border-blue-500/50'
+              : 'bg-white border-gray-200 hover:border-blue-500'
+          }`}>
+            <div className="flex items-center space-x-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
+              }`}>
+                <svg className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Serviços Google
+              </h3>
+            </div>
+            <p className={`text-sm ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}`}>
+              Integração com Google Agenda e serviços
+            </p>
+          </div>
+        </Link>
+
+        {/* Serviços Meta */}
+        <Link href="/dashboard/atendimentos">
+          <div className={`rounded-xl p-6 border transition cursor-pointer ${
+            theme === 'dark'
+              ? 'bg-slate-800/50 border-white/10 hover:border-pink-500/50'
+              : 'bg-white border-gray-200 hover:border-pink-500'
+          }`}>
+            <div className="flex items-center space-x-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                theme === 'dark' ? 'bg-pink-500/20' : 'bg-pink-100'
+              }`}>
+                <svg className={`w-5 h-5 ${theme === 'dark' ? 'text-pink-400' : 'text-pink-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </div>
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Serviços Meta
+              </h3>
+            </div>
+            <p className={`text-sm ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'}`}>
+              Integração com WhatsApp e Instagram
+            </p>
+          </div>
+        </Link>
+      </div>
+
       {/* CTA */}
       {totalCompanies === 0 && (
-        <div className={`rounded-xl p-6 border ${
+        <div className={`rounded-xl p-6 border flex flex-col items-center text-center md:items-start md:text-left ${
           theme === 'dark'
             ? 'bg-blue-500/10 border-blue-500/20'
             : 'bg-blue-50 border-blue-200'

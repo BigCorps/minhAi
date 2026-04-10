@@ -124,11 +124,11 @@ export default async function DashboardPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">FAQs</h3>
-                <p className="text-sm text-gray-500 dark:text-white/40">Perguntas e Respostas</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Respostas Rápidas</h3>
+                <p className="text-sm text-gray-500 dark:text-white/40">{totalFAQs} respostas</p>
               </div>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Configure respostas automáticas</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Configure respostas automáticas do seu assistente</p>
           </div>
         </Link>
       </div>

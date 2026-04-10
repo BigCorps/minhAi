@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
-import { AssistantProvider } from '@/contexts/AssistantContext'; // ← ADD
+import { AssistantProvider } from '@/contexts/AssistantContext';
 import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
 import 'react-image-crop/dist/ReactCrop.css';
+
 export const metadata: Metadata = {
   title: 'minhAi - Uma IA pra chamar de sua!',
   description: 'Funcionários de IA',
@@ -19,11 +20,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body>
+      <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <AssistantProvider> {/* ← ADD */}
+          <AssistantProvider>
             {children}
-          </AssistantProvider> {/* ← ADD */}
+          </AssistantProvider>
         </ThemeProvider>
         <RegisterSW />
       </body>

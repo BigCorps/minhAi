@@ -201,7 +201,7 @@ export default async function DashboardPage() {
 
       {/* CTA para quem não tem assistente */}
       {totalCompanies === 0 && (
-        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6 flex flex-col items-center text-center md:items-start md:text-left">
+        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6 flex flex-col items-center text-center">
           <h3 className="font-semibold text-blue-900 dark:text-white mb-1">Comece Agora</h3>
           <p className="text-sm text-blue-800 dark:text-white/70 mb-3">Crie seu primeiro assistente</p>
           <Link

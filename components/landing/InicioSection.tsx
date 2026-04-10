@@ -9,23 +9,10 @@ interface InicioSectionProps {
 }
 
 const OPCOES = [
-  'Assistente',
-  'Aplicativo',
-  'Funcionário',
-  'Atendente',
-  'Gerente',
-  'Totem',
-  'Auxiliar',
-  'Secretário',
-  'Operador',
-  'Vendedor',
-  'Recepcionista',
-  'Agente',
-  'Analista',
-  'Estoquista',
-  'Consultor',
-  'Coordenador',
-  'Divulgador',
+  'Assistente', 'Aplicativo', 'Funcionário', 'Atendente', 'Gerente',
+  'Totem', 'Auxiliar', 'Secretário', 'Operador', 'Vendedor',
+  'Recepcionista', 'Agente', 'Analista', 'Estoquista', 'Consultor',
+  'Coordenador', 'Divulgador',
 ];
 
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
@@ -41,74 +28,76 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         setIsAnimating(false);
       }, 300);
     }, 2000);
-
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div
-      className={`relative flex items-center justify-center h-full w-full overflow-hidden transition-colors duration-500 ${
+      className={`relative flex items-center justify-center min-h-full w-full transition-colors duration-500 ${
         isDark
           ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
           : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
       }`}
     >
-      {/* Fundo decorativo sutil */}
+      {/* Fundo decorativo */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className={`absolute -top-1/4 -right-1/4 w-[60%] h-[60%] rounded-full blur-[120px] ${
-            isDark ? 'bg-blue-500/10' : 'bg-blue-200/30'
-          }`}
-        />
-        <div
-          className={`absolute -bottom-1/4 -left-1/4 w-[50%] h-[50%] rounded-full blur-[100px] ${
-            isDark ? 'bg-green-500/8' : 'bg-green-200/20'
-          }`}
-        />
+        <div className={`absolute -top-1/4 -right-1/4 w-[60%] h-[60%] rounded-full blur-[120px] ${
+          isDark ? 'bg-blue-500/10' : 'bg-blue-200/30'
+        }`} />
+        <div className={`absolute -bottom-1/4 -left-1/4 w-[50%] h-[50%] rounded-full blur-[100px] ${
+          isDark ? 'bg-green-500/8' : 'bg-green-200/20'
+        }`} />
       </div>
 
-      {/* Conteúdo principal */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-16 pt-20 md:pt-0">
-        
+      {/* Conteúdo principal
+          - overflow-y-auto: permite scroll vertical se o conteúdo ultrapassar a tela
+          - py-[max(5rem,10vh)]: padding top/bottom adaptativo (mínimo 5rem, idealmente 10vh)
+            garante que o header não cubra o conteúdo nem que role muito em telas grandes
+      */}
+      <div
+        className="relative z-10 flex flex-col md:flex-row items-center justify-between
+                   w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-6 md:gap-16
+                   overflow-y-auto"
+        style={{ paddingTop: 'max(5rem, 10vh)', paddingBottom: 'max(1.5rem, 3vh)' }}
+      >
+
         {/* LADO ESQUERDO - Texto + CTAs */}
         <div className="flex-1 text-center order-2 md:order-1 max-w-xl">
           <h1
             style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-2xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.1] mb-6 transition-colors ${
+            className={`font-bold leading-[1.1] mb-4 transition-colors ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}
           >
             {/* Linha 1 */}
-<span className="block whitespace-nowrap">
-  <span
-    className={`
-      ${isDark ? 'text-blue-400' : 'text-blue-600'}
-      text-3xl md:text-5xl lg:text-5xl font-bold
-    `}
-  >
-    Uma IA pra chamar de sua!
-  </span>
-</span>
+            <span className="block whitespace-nowrap">
+              <span className={`
+                ${isDark ? 'text-blue-400' : 'text-blue-600'}
+                font-bold
+                text-[clamp(1.35rem,5vw,2.75rem)]
+              `}>
+                Uma IA pra chamar de sua!
+              </span>
+            </span>
 
             {/* Linha 2 - com rolagem vertical */}
-            <span className="block whitespace-nowrap">
+            <span
+              className="block whitespace-nowrap"
+              style={{ fontSize: 'clamp(1.1rem, 4vw, 2rem)' }}
+            >
               Sou o{' '}
-              <span 
+              <span
                 className="inline-block relative overflow-hidden text-center"
                 style={{ height: '1.2em', verticalAlign: '-0.30em' }}
               >
-                {/* Palavras invisíveis para definir a largura máxima */}
                 {OPCOES.map((palavra) => (
                   <span key={palavra} className="invisible block h-0 px-1" aria-hidden="true">
                     {palavra}
                   </span>
                 ))}
-                {/* Palavra visível animada */}
                 <span
                   className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-in-out ${
-                    isAnimating
-                      ? '-translate-y-full opacity-0'
-                      : 'translate-y-0 opacity-100'
+                    isAnimating ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'
                   } ${isDark ? 'text-green-400' : 'text-green-600'}`}
                 >
                   {OPCOES[currentIndex]}
@@ -118,36 +107,41 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
 
             {/* Linha 3 */}
-            <span className="block whitespace-nowrap">
+            <span
+              className="block whitespace-nowrap"
+              style={{ fontSize: 'clamp(1.1rem, 4vw, 2rem)' }}
+            >
               faz + de 100 funções{' '}
-              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                pra você
-              </span>
-              !
+              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>pra você</span>!
             </span>
           </h1>
 
+          {/* Parágrafo — oculta as últimas linhas em telas muito pequenas */}
           <p
-            className={`text-sm sm:text-base md:text-lg max-w-lg mb-8 leading-relaxed transition-colors ${
-              isDark ? 'text-white/55' : 'text-gray-600'
-            } mx-auto`}
+            className={`text-sm sm:text-base md:text-lg max-w-lg mb-6 leading-relaxed transition-colors
+              line-clamp-4 sm:line-clamp-none
+              ${isDark ? 'text-white/55' : 'text-gray-600'} mx-auto`}
           >
-            Personalize seu assistente e transforme a experiência dos seus clientes com um 
-            funcionário de voz e texto que trabalha 24/7. Tenha seu prórpio WebApp personalizado e configure do seu jeito para responder perguntas, executar 
-            funções, gerar cobranças, agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
+            Personalize seu assistente e transforme a experiência dos seus clientes com um
+            funcionário de voz e texto que trabalha 24/7. Tenha seu próprio WebApp personalizado e
+            configure do seu jeito para responder perguntas, executar funções, gerar cobranças,
+            agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
           </p>
 
           {/* Botões CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link
               href="/login"
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
+              className="w-full sm:w-auto px-8 py-3.5 bg-[#A4C61E] text-white rounded-full
+                         hover:brightness-110 transition-all duration-300 font-bold
+                         text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
               Comece Gratuitamente
             </Link>
             <Link
               href="/ia/suporte"
-              className={`w-full sm:w-auto px-8 py-3.5 border-2 rounded-full transition-all duration-300 font-bold text-sm sm:text-base text-center hover:scale-105 ${
+              className={`w-full sm:w-auto px-8 py-3.5 border-2 rounded-full transition-all
+                          duration-300 font-bold text-sm sm:text-base text-center hover:scale-105 ${
                 isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'
@@ -158,58 +152,48 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </div>
 
           {/* Mini destaques */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-8">
-            {[
-              { text: 'Rápido e Fácil de Começar' },
-              { text: 'Pague por Interação' },
-              { text: '100% Customizável' },
-            ].map((item) => (
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-6">
+            {['Rápido e Fácil de Começar', 'Pague por Interação', '100% Customizável'].map((text) => (
               <span
-                key={item.text}
+                key={text}
                 className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
                   isDark ? 'text-white/35' : 'text-gray-400'
                 }`}
               >
-                {item.text}
+                {text}
               </span>
             ))}
           </div>
 
           {/* Traço separador */}
-          <div className="flex justify-center my-5">
+          <div className="flex justify-center my-4">
             <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
           </div>
 
           {/* Slogan */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            {[
-              { text: 'minhAi - Uma IA pra chamar de sua!' },
-            ].map((item) => (
-              <span
-                key={item.text}
-                className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
-                  isDark ? 'text-white/35' : 'text-gray-400'
-                }`}
-              >
-                {item.text}
-              </span>
-            ))}
-          </div>
+          <span className={`text-xs font-medium ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
+            minhAi - Uma IA pra chamar de sua!
+          </span>
         </div>
 
-        {/* LADO DIREITO - Avatar (Orbe) */}
+        {/* LADO DIREITO - Avatar
+            clamp(160px, 42vw, 26rem): encolhe em telas pequenas automaticamente
+            Também limitado por max-h para não ultrapassar a viewport em altura
+        */}
         <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
-          <div className={`
-            relative transition-all duration-500
-            w-[21rem] h-[21rem] 
-            sm:w-[23rem] sm:h-[23rem] 
-            md:w-80 md:h-80 
-            lg:w-[22rem] lg:h-[22rem] 
-            xl:w-[26rem] xl:h-[26rem]
-          `}>
+          <div
+            className="relative transition-all duration-500"
+            style={{
+              width:  'clamp(160px, 42vw, 26rem)',
+              height: 'clamp(160px, 42vw, 26rem)',
+              maxHeight: '38vh',
+              maxWidth:  '38vh',
+            }}
+          >
             <LandingAvatarFace theme={theme} />
           </div>
         </div>
+
       </div>
     </div>
   );

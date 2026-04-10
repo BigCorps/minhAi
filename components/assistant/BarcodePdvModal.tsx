@@ -380,15 +380,6 @@ export default function BarcodePdvModal({ companyId, theme, playText, onProductF
             </div>
           )}
 
-          {/* ── Dica ── */}
-          <div style={{
-            padding: '9px 11px', borderRadius: 9,
-            background: p.tipBg, border: `1px solid ${p.border}`,
-            fontSize: 11, color: p.textMuted, lineHeight: 1.55,
-          }}>
-            💡 <strong style={{ color: p.text }}>Leitor USB/Bluetooth:</strong> aponte para o código — o campo já está focado e o produto é adicionado automaticamente.
-          </div>
-
         </div>
       </div>
     </>,

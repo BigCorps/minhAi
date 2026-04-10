@@ -22,55 +22,45 @@ body {
   min-height: 100vh;
 }
 
+/* ─── Fonte adaptativa para telas pequenas / acessibilidade ─── */
+@media screen and (max-height: 680px) {
+  html { font-size: 14px; }
+}
+@media screen and (max-height: 580px) {
+  html { font-size: 12px; }
+}
+@media screen and (max-width: 360px) {
+  html { font-size: 13px; }
+}
+
+/* ─── h-dvh-safe: usa dvh com fallback para vh ─── */
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-dvh-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
-
-  /* Cores primárias - Backgrounds */
-  .bg-primary-blue {
-    background-color: rgb(var(--primary-blue));
-  }
-
-  .bg-primary-green {
-    background-color: rgb(var(--primary-green));
-  }
-
-  .bg-primary-green-dark {
-    background-color: rgb(var(--primary-green-dark));
-  }
-
-  /* Cores primárias - Text */
-  .text-primary-blue {
-    color: rgb(var(--primary-blue));
-  }
-
-  .text-primary-green {
-    color: rgb(var(--primary-green));
-  }
-
-  .text-primary-green-dark {
-    color: rgb(var(--primary-green-dark));
-  }
-
-  /* Cores primárias - Borders */
-  .border-primary-blue {
-    border-color: rgb(var(--primary-blue));
-  }
-
-  .border-primary-green {
-    border-color: rgb(var(--primary-green));
-  }
-
-  /* Gradientes */
+  .bg-primary-blue    { background-color: rgb(var(--primary-blue)); }
+  .bg-primary-green   { background-color: rgb(var(--primary-green)); }
+  .bg-primary-green-dark { background-color: rgb(var(--primary-green-dark)); }
+  .text-primary-blue  { color: rgb(var(--primary-blue)); }
+  .text-primary-green { color: rgb(var(--primary-green)); }
+  .text-primary-green-dark { color: rgb(var(--primary-green-dark)); }
+  .border-primary-blue  { border-color: rgb(var(--primary-blue)); }
+  .border-primary-green { border-color: rgb(var(--primary-green)); }
   .bg-gradient-primary {
     background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(220, 240, 250));
   }
-
   .bg-gradient-green {
     background: linear-gradient(to bottom right, rgb(var(--primary-green)), rgb(200, 220, 50));
   }
-
   .bg-gradient-blue {
     background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(200, 230, 245));
   }

@@ -1,13 +1,14 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import OneSignal from 'react-onesignal';
 
-export function PushNotificationSetup({ userId }: { userId: string }) {
-  const initialized = useRef(false);
+// Fora do componente — não reseta com StrictMode
+let oneSignalInitialized = false;
 
+export function PushNotificationSetup({ userId }: { userId: string }) {
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    if (oneSignalInitialized) return;
+    oneSignalInitialized = true;
 
     async function initOneSignal() {
       if (!process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID) return;

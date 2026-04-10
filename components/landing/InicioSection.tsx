@@ -49,15 +49,10 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         }`} />
       </div>
 
-      {/* Conteúdo principal
-          - overflow-y-auto: permite scroll vertical se o conteúdo ultrapassar a tela
-          - py-[max(5rem,10vh)]: padding top/bottom adaptativo (mínimo 5rem, idealmente 10vh)
-            garante que o header não cubra o conteúdo nem que role muito em telas grandes
-      */}
+      {/* Conteúdo principal — sem overflow-y-auto aqui */}
       <div
         className="relative z-10 flex flex-col md:flex-row items-center justify-between
-                   w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-6 md:gap-16
-                   overflow-y-auto"
+                   w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-6 md:gap-16"
         style={{ paddingTop: 'max(5rem, 10vh)', paddingBottom: 'max(1.5rem, 3vh)' }}
       >
 
@@ -69,22 +64,15 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               isDark ? 'text-white' : 'text-gray-900'
             }`}
           >
-            {/* Linha 1 */}
             <span className="block whitespace-nowrap">
-              <span className={`
-                ${isDark ? 'text-blue-400' : 'text-blue-600'}
-                font-bold
-                text-[clamp(1.35rem,5vw,2.75rem)]
-              `}>
+              <span className={`font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
+                style={{ fontSize: 'clamp(1.35rem, 5vw, 2.75rem)' }}>
                 Uma IA pra chamar de sua!
               </span>
             </span>
 
-            {/* Linha 2 - com rolagem vertical */}
-            <span
-              className="block whitespace-nowrap"
-              style={{ fontSize: 'clamp(1.1rem, 4vw, 2rem)' }}
-            >
+            <span className="block whitespace-nowrap"
+              style={{ fontSize: 'clamp(1.1rem, 4vw, 2rem)' }}>
               Sou o{' '}
               <span
                 className="inline-block relative overflow-hidden text-center"
@@ -106,21 +94,16 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               {' '}IA que
             </span>
 
-            {/* Linha 3 */}
-            <span
-              className="block whitespace-nowrap"
-              style={{ fontSize: 'clamp(1.1rem, 4vw, 2rem)' }}
-            >
+            <span className="block whitespace-nowrap"
+              style={{ fontSize: 'clamp(1.1rem, 4vw, 2rem)' }}>
               faz + de 100 funções{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>pra você</span>!
             </span>
           </h1>
 
-          {/* Parágrafo — oculta as últimas linhas em telas muito pequenas */}
-          <p
-            className={`text-sm sm:text-base md:text-lg max-w-lg mb-6 leading-relaxed transition-colors
-              line-clamp-4 sm:line-clamp-none
-              ${isDark ? 'text-white/55' : 'text-gray-600'} mx-auto`}
+          <p className={`text-sm sm:text-base md:text-lg max-w-lg mb-6 leading-relaxed transition-colors
+            line-clamp-4 sm:line-clamp-none
+            ${isDark ? 'text-white/55' : 'text-gray-600'} mx-auto`}
           >
             Personalize seu assistente e transforme a experiência dos seus clientes com um
             funcionário de voz e texto que trabalha 24/7. Tenha seu próprio WebApp personalizado e
@@ -128,7 +111,6 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
           </p>
 
-          {/* Botões CTA */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link
               href="/login"
@@ -151,41 +133,32 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </Link>
           </div>
 
-          {/* Mini destaques */}
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-6">
             {['Rápido e Fácil de Começar', 'Pague por Interação', '100% Customizável'].map((text) => (
-              <span
-                key={text}
-                className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
-                  isDark ? 'text-white/35' : 'text-gray-400'
-                }`}
-              >
+              <span key={text} className={`flex items-center gap-1.5 text-xs font-medium ${
+                isDark ? 'text-white/35' : 'text-gray-400'
+              }`}>
                 {text}
               </span>
             ))}
           </div>
 
-          {/* Traço separador */}
           <div className="flex justify-center my-4">
             <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
           </div>
 
-          {/* Slogan */}
           <span className={`text-xs font-medium ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
             minhAi - Uma IA pra chamar de sua!
           </span>
         </div>
 
-        {/* LADO DIREITO - Avatar
-            clamp(160px, 42vw, 26rem): encolhe em telas pequenas automaticamente
-            Também limitado por max-h para não ultrapassar a viewport em altura
-        */}
+        {/* LADO DIREITO - Avatar */}
         <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
           <div
             className="relative transition-all duration-500"
             style={{
-              width:  'clamp(160px, 42vw, 26rem)',
-              height: 'clamp(160px, 42vw, 26rem)',
+              width:     'clamp(160px, 42vw, 26rem)',
+              height:    'clamp(160px, 42vw, 26rem)',
               maxHeight: '38vh',
               maxWidth:  '38vh',
             }}

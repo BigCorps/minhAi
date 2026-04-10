@@ -18,7 +18,6 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
           notifyButton: { enable: false },
           serviceWorkerParam: { scope: "/" },
           serviceWorkerPath: "OneSignalSDKWorker.js",
-          // Deixa o OneSignal controlar o prompt nativamente
           promptOptions: {
             slidedown: {
               prompts: [
@@ -26,8 +25,8 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
                   type: "push",
                   autoPrompt: true,
                   delay: {
-                    pageViews: 1,
-                    timeDelay: 3 // aparece 3 segundos após carregar
+                    pageViews: 0,
+                    timeDelay: 3
                   }
                 }
               ]
@@ -39,6 +38,9 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
           await OneSignal.login(userId);
         }
 
+        // Força o slidedown aparecer (remova após testes)
+        await OneSignal.Slidedown.promptPush();
+
       } catch (error) {
         console.error("Erro ao inicializar OneSignal:", error);
       }
@@ -47,6 +49,5 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
     initOneSignal();
   }, [userId]);
 
-  // Não renderiza nada — o OneSignal cuida do prompt
   return null;
 }

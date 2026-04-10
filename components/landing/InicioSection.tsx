@@ -68,7 +68,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-16 pt-20 md:pt-0">
+      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-16 pt-16 md:pt-0">
         
         {/* LADO ESQUERDO - Texto + CTAs */}
         <div className="flex-1 text-center order-2 md:order-1 max-w-xl">
@@ -201,11 +201,11 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
         <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
           <div className={`
             relative transition-all duration-500
-            w-[21rem] h-[21rem] 
-            sm:w-[23rem] sm:h-[23rem] 
-            md:w-80 md:h-80 
-            lg:w-[22rem] lg:h-[22rem] 
-            xl:w-[26rem] xl:h-[26rem]
+w-[65vw] h-[65vw]
+sm:w-[55vw] sm:h-[55vw]
+md:w-80 md:h-80 
+lg:w-[22rem] lg:h-[22rem] 
+xl:w-[26rem] xl:h-[26rem]
           `}>
             <LandingAvatarFace theme={theme} />
           </div>

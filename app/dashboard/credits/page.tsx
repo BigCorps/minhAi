@@ -203,7 +203,7 @@ export default function CreditsPage() {
         }`}>
           <Star className="w-5 h-5 flex-shrink-0" />
           <p className="text-sm font-medium">
-            Você está no <strong>período de teste gratuito</strong> — {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'} (até {planExpiresFormatted}). Assine um plano abaixo para continuar com acesso após o trial.
+            Você está no <strong>período de teste gratuito</strong> — {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'} (até {planExpiresFormatted}). Assine um plano mensal para continuar com acesso total aos Serviços Google, Serviços Meta e Assistente de Produção.
           </p>
         </div>
       )}

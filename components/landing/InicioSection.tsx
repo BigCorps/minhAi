@@ -70,7 +70,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
       {/* Conteúdo principal */}
       <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-3 sm:gap-6 md:gap-16 pt-14 md:pt-0">
 
-        {/* AVATAR — mobile: topo, menor; desktop: lado direito, maior */}
+        {/* AVATAR */}
         <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
           <div className="
             relative transition-all duration-500
@@ -84,7 +84,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </div>
         </div>
 
-        {/* LADO ESQUERDO - Texto + CTAs */}
+        {/* TEXTO + CTAs */}
         <div className="flex-1 text-center order-2 md:order-1 max-w-xl">
           <h1
             className={`font-bold leading-[1.15] mb-3 sm:mb-6 transition-colors
@@ -92,11 +92,9 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               ${isDark ? 'text-white' : 'text-gray-900'}
             `}
           >
-            {/* Linha 1 */}
             <span className="block whitespace-nowrap">
               <span
-                className={`font-bold
-                  text-2xl sm:text-4xl md:text-5xl lg:text-5xl
+                className={`font-bold text-2xl sm:text-4xl md:text-5xl lg:text-5xl
                   ${isDark ? 'text-blue-400' : 'text-blue-600'}
                 `}
               >
@@ -104,25 +102,20 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               </span>
             </span>
 
-            {/* Linha 2 - com rolagem vertical */}
             <span className="block whitespace-nowrap">
               Sou o{' '}
               <span
                 className="inline-block relative overflow-hidden text-center"
                 style={{ height: '1.2em', verticalAlign: '-0.30em' }}
               >
-                {/* Palavras invisíveis para definir a largura máxima */}
                 {OPCOES.map((palavra) => (
                   <span key={palavra} className="invisible block h-0 px-1" aria-hidden="true">
                     {palavra}
                   </span>
                 ))}
-                {/* Palavra visível animada */}
                 <span
                   className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-in-out ${
-                    isAnimating
-                      ? '-translate-y-full opacity-0'
-                      : 'translate-y-0 opacity-100'
+                    isAnimating ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'
                   } ${isDark ? 'text-green-400' : 'text-green-600'}`}
                 >
                   {OPCOES[currentIndex]}
@@ -131,7 +124,6 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               {' '}IA que
             </span>
 
-            {/* Linha 3 */}
             <span className="block whitespace-nowrap">
               faz + de 100 funções{' '}
               <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
@@ -141,9 +133,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </h1>
 
-          {/* Descrição — oculta em telas muito pequenas para economizar espaço */}
           <p
-            className={`hidden xs:block text-sm sm:text-base md:text-lg max-w-lg mb-4 sm:mb-8 leading-relaxed transition-colors mx-auto
+            className={`text-sm sm:text-base md:text-lg max-w-lg mb-4 sm:mb-8 leading-relaxed transition-colors mx-auto
               ${isDark ? 'text-white/55' : 'text-gray-600'}
             `}
           >
@@ -153,26 +144,17 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
           </p>
 
-          {/* Descrição curta — só em telas muito pequenas */}
-          <p
-            className={`block xs:hidden text-xs max-w-lg mb-4 leading-relaxed transition-colors mx-auto
-              ${isDark ? 'text-white/55' : 'text-gray-600'}
-            `}
-          >
-            Funcionário de IA que trabalha 24/7 com + de 100 funções personalizáveis.
-          </p>
-
-          {/* Botões CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+          {/* Botões CTA — sempre na mesma linha */}
+          <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
             <Link
               href="/login"
-              className="w-full sm:w-auto px-8 py-3 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
+              className="flex-1 sm:flex-none px-4 sm:px-8 py-2.5 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
               Comece Gratuitamente
             </Link>
             <Link
               href="/ia/suporte"
-              className={`w-full sm:w-auto px-8 py-3 sm:py-3.5 border-2 rounded-full transition-all duration-300 font-bold text-sm sm:text-base text-center hover:scale-105 ${
+              className={`flex-1 sm:flex-none px-4 sm:px-8 py-2.5 sm:py-3.5 border-2 rounded-full transition-all duration-300 font-bold text-xs sm:text-base text-center hover:scale-105 ${
                 isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'
@@ -196,17 +178,13 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             ))}
           </div>
 
-          {/* Traço + Slogan — oculto em mobile pequeno */}
-          <div className="hidden sm:block">
-            <div className="flex justify-center my-4 sm:my-5">
-              <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
-            </div>
-            <span
-              className={`text-xs font-medium ${isDark ? 'text-white/35' : 'text-gray-400'}`}
-            >
-              minhAi - Uma IA pra chamar de sua!
-            </span>
+          {/* Traço + Slogan */}
+          <div className="flex justify-center my-4 sm:my-5">
+            <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
           </div>
+          <span className={`text-xs font-medium ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
+            minhAi - Uma IA pra chamar de sua!
+          </span>
         </div>
       </div>
     </div>

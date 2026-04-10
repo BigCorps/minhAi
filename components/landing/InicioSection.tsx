@@ -68,32 +68,46 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-8 md:gap-16 pt-16 md:pt-0">
-        
+      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-3 sm:gap-6 md:gap-16 pt-14 md:pt-0">
+
+        {/* AVATAR — mobile: topo, menor; desktop: lado direito, maior */}
+        <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
+          <div className="
+            relative transition-all duration-500
+            w-[42vw] h-[42vw]
+            sm:w-[38vw] sm:h-[38vw]
+            md:w-80 md:h-80
+            lg:w-[22rem] lg:h-[22rem]
+            xl:w-[26rem] xl:h-[26rem]
+          ">
+            <LandingAvatarFace theme={theme} />
+          </div>
+        </div>
+
         {/* LADO ESQUERDO - Texto + CTAs */}
         <div className="flex-1 text-center order-2 md:order-1 max-w-xl">
           <h1
-            style={{ fontFamily: "'Nunito', sans-serif" }}
-            className={`text-2xl sm:text-4xl md:text-4xl lg:text-[2.75rem] font-bold leading-[1.1] mb-6 transition-colors ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}
+            className={`font-bold leading-[1.15] mb-3 sm:mb-6 transition-colors
+              text-xl sm:text-4xl md:text-4xl lg:text-[2.75rem]
+              ${isDark ? 'text-white' : 'text-gray-900'}
+            `}
           >
             {/* Linha 1 */}
-<span className="block whitespace-nowrap">
-  <span
-    className={`
-      ${isDark ? 'text-blue-400' : 'text-blue-600'}
-      text-3xl md:text-5xl lg:text-5xl font-bold
-    `}
-  >
-    Uma IA pra chamar de sua!
-  </span>
-</span>
+            <span className="block whitespace-nowrap">
+              <span
+                className={`font-bold
+                  text-2xl sm:text-4xl md:text-5xl lg:text-5xl
+                  ${isDark ? 'text-blue-400' : 'text-blue-600'}
+                `}
+              >
+                Uma IA pra chamar de sua!
+              </span>
+            </span>
 
             {/* Linha 2 - com rolagem vertical */}
             <span className="block whitespace-nowrap">
               Sou o{' '}
-              <span 
+              <span
                 className="inline-block relative overflow-hidden text-center"
                 style={{ height: '1.2em', verticalAlign: '-0.30em' }}
               >
@@ -127,27 +141,38 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
           </h1>
 
+          {/* Descrição — oculta em telas muito pequenas para economizar espaço */}
           <p
-            className={`text-sm sm:text-base md:text-lg max-w-lg mb-8 leading-relaxed transition-colors ${
-              isDark ? 'text-white/55' : 'text-gray-600'
-            } mx-auto`}
+            className={`hidden xs:block text-sm sm:text-base md:text-lg max-w-lg mb-4 sm:mb-8 leading-relaxed transition-colors mx-auto
+              ${isDark ? 'text-white/55' : 'text-gray-600'}
+            `}
           >
-            Personalize seu assistente e transforme a experiência dos seus clientes com um 
-            funcionário de voz e texto que trabalha 24/7. Tenha seu prórpio WebApp personalizado e configure do seu jeito para responder perguntas, executar 
-            funções, gerar cobranças, agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
+            Personalize seu assistente e transforme a experiência dos seus clientes com um
+            funcionário de voz e texto que trabalha 24/7. Tenha seu próprio WebApp personalizado
+            e configure do seu jeito para responder perguntas, executar funções, gerar cobranças,
+            agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
+          </p>
+
+          {/* Descrição curta — só em telas muito pequenas */}
+          <p
+            className={`block xs:hidden text-xs max-w-lg mb-4 leading-relaxed transition-colors mx-auto
+              ${isDark ? 'text-white/55' : 'text-gray-600'}
+            `}
+          >
+            Funcionário de IA que trabalha 24/7 com + de 100 funções personalizáveis.
           </p>
 
           {/* Botões CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Link
               href="/login"
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
+              className="w-full sm:w-auto px-8 py-3 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-sm sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
               Comece Gratuitamente
             </Link>
             <Link
               href="/ia/suporte"
-              className={`w-full sm:w-auto px-8 py-3.5 border-2 rounded-full transition-all duration-300 font-bold text-sm sm:text-base text-center hover:scale-105 ${
+              className={`w-full sm:w-auto px-8 py-3 sm:py-3.5 border-2 rounded-full transition-all duration-300 font-bold text-sm sm:text-base text-center hover:scale-105 ${
                 isDark
                   ? 'border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400'
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'
@@ -158,56 +183,29 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </div>
 
           {/* Mini destaques */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-8">
-            {[
-              { text: 'Rápido e Fácil de Começar' },
-              { text: 'Pague por Interação' },
-              { text: '100% Customizável' },
-            ].map((item) => (
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-4 sm:mt-8">
+            {['Rápido e Fácil de Começar', 'Pague por Interação', '100% Customizável'].map((text) => (
               <span
-                key={item.text}
+                key={text}
                 className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
                   isDark ? 'text-white/35' : 'text-gray-400'
                 }`}
               >
-                {item.text}
+                {text}
               </span>
             ))}
           </div>
 
-          {/* Traço separador */}
-          <div className="flex justify-center my-5">
-            <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
-          </div>
-
-          {/* Slogan */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            {[
-              { text: 'minhAi - Uma IA pra chamar de sua!' },
-            ].map((item) => (
-              <span
-                key={item.text}
-                className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
-                  isDark ? 'text-white/35' : 'text-gray-400'
-                }`}
-              >
-                {item.text}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* LADO DIREITO - Avatar (Orbe) */}
-        <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
-          <div className={`
-            relative transition-all duration-500
-w-[65vw] h-[65vw]
-sm:w-[55vw] sm:h-[55vw]
-md:w-80 md:h-80 
-lg:w-[22rem] lg:h-[22rem] 
-xl:w-[26rem] xl:h-[26rem]
-          `}>
-            <LandingAvatarFace theme={theme} />
+          {/* Traço + Slogan — oculto em mobile pequeno */}
+          <div className="hidden sm:block">
+            <div className="flex justify-center my-4 sm:my-5">
+              <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
+            </div>
+            <span
+              className={`text-xs font-medium ${isDark ? 'text-white/35' : 'text-gray-400'}`}
+            >
+              minhAi - Uma IA pra chamar de sua!
+            </span>
           </div>
         </div>
       </div>

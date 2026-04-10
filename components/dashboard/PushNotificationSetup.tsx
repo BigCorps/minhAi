@@ -1,11 +1,18 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import OneSignal from 'react-onesignal';
+import { Bell, Loader2 } from 'lucide-react';
 
 export function PushNotificationSetup({ userId }: { userId: string }) {
+  const [isOptedIn, setIsOptedIn] = useState<boolean | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(false);
   const initialized = useRef(false);
 
   useEffect(() => {
+    // Detecta mobile
+    setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
     if (initialized.current) return;
     initialized.current = true;
 
@@ -38,16 +45,64 @@ export function PushNotificationSetup({ userId }: { userId: string }) {
           await OneSignal.login(userId);
         }
 
-        // Força o slidedown aparecer (remova após testes)
-        await OneSignal.Slidedown.promptPush();
+        const optedIn = OneSignal.User.PushSubscription.optedIn ?? false;
+        setIsOptedIn(optedIn);
+
+        OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+          setIsOptedIn(event.current.optedIn);
+        });
 
       } catch (error) {
         console.error("Erro ao inicializar OneSignal:", error);
+        setIsOptedIn(false);
       }
     }
 
     initOneSignal();
   }, [userId]);
 
-  return null;
+  const handleSubscribe = async () => {
+    setLoading(true);
+    try {
+      // Usa o Slidedown do OneSignal que registra o token corretamente
+      await OneSignal.Slidedown.promptPush();
+
+      // Aguarda o token ser gerado
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const optedIn = OneSignal.User.PushSubscription.optedIn ?? false;
+      setIsOptedIn(optedIn);
+    } catch (error) {
+      console.error('Erro ao pedir permissão:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // No desktop o OneSignal cuida sozinho — não mostra banner
+  // No mobile só mostra se não estiver inscrito
+  if (!isMobile || isOptedIn === null || isOptedIn === true) return null;
+
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="flex items-center gap-4 text-center md:text-left">
+        <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+          <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Ative as Notificações</h3>
+          <p className="text-sm text-gray-600 dark:text-white/70">
+            Receba alertas em tempo real sobre seus assistentes e saldo.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={handleSubscribe}
+        disabled={loading}
+        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+      >
+        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bell className="w-5 h-5" />}
+        Quero Receber
+      </button>
+    </div>
+  );
 }

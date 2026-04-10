@@ -184,7 +184,7 @@ export default async function DashboardPage() {
               <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Serviços Google</h3>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com Google Agenda e serviços</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com Agenda, Gmail, Drive e Smarts</p>
           </div>
         </Link>
 
@@ -194,7 +194,7 @@ export default async function DashboardPage() {
               <Share2 className="w-5 h-5 text-pink-600 dark:text-pink-400" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Serviços Meta</h3>
             </div>
-            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com WhatsApp e Instagram</p>
+            <p className="text-sm text-center text-gray-600 dark:text-white/60">Integração com WhatsApp, Instagram e Facebook</p>
           </div>
         </Link>
       </div>

@@ -48,11 +48,10 @@ function GoogleConnectPageContent() {
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      // Força o fechamento imediato do popup pelo frontend
       if (['google-auth-success', 'google-auth-error', 'google-auth-cancelled'].includes(event.data.type)) {
         if (popupRef.current && !popupRef.current.closed) {
           popupRef.current.close();
-          popupRef.current = null; // Limpa a referência
+          popupRef.current = null;
         }
       }
 
@@ -327,7 +326,7 @@ function GoogleConnectPageContent() {
                       Conta Google Não Conectada
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                      Conecte sua conta Google para enviar e receber emails, gerenciar seu calendário, ler arquivos no Drive e músicas e vídeos do YouTube com comandos simples.
+                      Conecte sua conta Google para enviar emails, gerenciar seu calendário, ler arquivos no Drive e músicas e vídeos do YouTube com comandos simples.
                     </p>
 
                     <button
@@ -361,7 +360,8 @@ function GoogleConnectPageContent() {
                       <div className="grid md:grid-cols-2 gap-3 text-left max-w-lg mx-auto">
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
-                          <span>Enviar e receber emails (Gmail)</span>
+                          {/* ✅ Removido "receber" — só temos gmail.send */}
+                          <span>Enviar emails (Gmail)</span>
                         </div>
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" />
@@ -457,12 +457,7 @@ function GoogleConnectPageContent() {
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Enviar emails</span>
                         </div>
                       )}
-                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/gmail.readonly') && (
-                        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">Receber emails</span>
-                        </div>
-                      )}
+                      {/* ✅ Bloco gmail.readonly removido */}
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/calendar') && (
                         <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                           <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />

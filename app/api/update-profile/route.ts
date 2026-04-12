@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 // Campos que o próprio usuário pode atualizar.
 // Campos críticos como tipo, company_id, is_active, senha_hash
 // ficam fora da whitelist intencionalmente.
-const ALLOWED_FIELDS = ['nome', 'email', 'identificador', 'endereco', 'metadata'];
+const ALLOWED_FIELDS = ['nome', 'email', 'telefone', 'identificador', 'endereco', 'metadata'];
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

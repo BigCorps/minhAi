@@ -70,9 +70,7 @@ export async function POST(request: NextRequest) {
     // O profile_id vem do token validado, não do body da requisição
     const { data, error } = await supabaseAdmin
       .from('company_profiles')
-      .update({
-        ...safeUpdates,
-        updated_at: new Date().toISOString(),
+        .update(safeUpdates)
       })
       .eq('id', session.profile_id)
       .select('id, nome, email, identificador, endereco, metadata')

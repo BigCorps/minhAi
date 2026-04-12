@@ -15,7 +15,6 @@
 
 # Misc
 .DS_Store
-*.pem
 
 # Debug
 npm-debug.log*
@@ -34,18 +33,30 @@ yarn-error.log*
 next-env.d.ts
 
 # ========================================
-# Google Cloud Credentials (CRÍTICO!)
+# Credenciais e segredos (CRÍTICO!)
 # ========================================
 credentials/
-service-account-key.json
-*-service-account.json
-google-credentials.json
-
-# ========================================
-# Arquivos sensíveis adicionais
-# ========================================
-.env.production
-.env.development
 *.key
 *.pem
 *.p12
+*.pfx
+service-account-key.json
+*-service-account*.json
+google-credentials.json
+
+# ========================================
+# Variáveis de ambiente (todos os ambientes)
+# ========================================
+.env.production
+.env.development
+.env.staging
+.env.test
+
+# ========================================
+# Arquivos de configuração sensíveis
+# ========================================
+*.secret
+*.secrets
+secrets/
+.secrets/
+config/secrets.*

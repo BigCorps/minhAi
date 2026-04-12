@@ -5,46 +5,38 @@ import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
 
-const supabase = createClient(
+// ✅ Anon key — respeita RLS, não expõe dados sensíveis
+const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
+
+function getDefaultLogoBuffer(): Buffer {
+  const logoPath = path.join(process.cwd(), 'public', 'icon192.png')
+  return fs.readFileSync(logoPath)
+}
 
 async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
   try {
     let logoUrl: string | null = null
 
     if (companyId) {
-      // Busca empresa + user_id
-      const { data: company } = await supabase
-        .from('companies')
+      // ✅ View pública — só expõe webapp_logo_url e user_id
+      const { data: company } = await supabaseAnon
+        .from('companies_qr_info')
         .select('webapp_logo_url, user_id')
         .eq('id', companyId)
         .single()
 
       if (company?.user_id) {
-        // Busca plano pelo user_id
-        const { data: credits } = await supabase
-          .from('user_credits')
-          .select('has_active_plan, active_plan_name, plan_expires_at')
+        // ✅ View pública de créditos — só expõe o necessário
+        const { data: credits } = await supabaseAnon
+          .from('user_credits_qr_info')
+          .select('is_paid_plan')
           .eq('user_id', company.user_id)
           .single()
 
-        const isPaidPlan =
-          credits?.has_active_plan === true &&
-          credits?.active_plan_name !== 'Trial' &&
-          credits?.plan_expires_at != null &&
-          new Date(credits.plan_expires_at) > new Date()
-
-        console.log('QR DEBUG:', {
-          companyId,
-          user_id: company.user_id,
-          active_plan_name: credits?.active_plan_name,
-          isPaidPlan,
-          webapp_logo_url: company.webapp_logo_url,
-        })
-
-        if (isPaidPlan && company.webapp_logo_url) {
+        if (credits?.is_paid_plan && company.webapp_logo_url) {
           logoUrl = company.webapp_logo_url
         }
       }
@@ -65,21 +57,59 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
   }
 }
 
+// ✅ Rate limiting simples por IP via cache em memória
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 30 // requests
+const RATE_WINDOW = 60 * 1000 // 1 minuto
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW })
+    return true
+  }
+
+  if (entry.count >= RATE_LIMIT) return false
+
+  entry.count++
+  return true
+}
+
 export async function GET(req: NextRequest) {
+  // ✅ Rate limiting por IP
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (!checkRateLimit(ip)) {
+    return new NextResponse('Too Many Requests', {
+      status: 429,
+      headers: { 'Retry-After': '60' },
+    })
+  }
+
   const { searchParams } = new URL(req.url)
 
   const data      = searchParams.get('data')
   const color     = searchParams.get('color')  || '#000000'
   const bgColor   = searchParams.get('bg')     || '#ffffff'
-  const size      = parseInt(searchParams.get('size') || '300')
+  const size      = Math.min(parseInt(searchParams.get('size') || '300'), 500) // ✅ Limita tamanho máximo
   const companyId = searchParams.get('company_id') || null
 
   if (!data) {
     return NextResponse.json({ error: 'Parâmetro data é obrigatório' }, { status: 400 })
   }
 
+  // ✅ Limita tamanho do conteúdo do QR
+  if (data.length > 2000) {
+    return NextResponse.json({ error: 'Conteúdo muito longo' }, { status: 400 })
+  }
+
+  // ✅ Valida companyId como UUID para evitar injeção
+  if (companyId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId)) {
+    return NextResponse.json({ error: 'company_id inválido' }, { status: 400 })
+  }
+
   try {
-    // Gera QR como SVG
     const qrSvg = await QRCode.toString(data, {
       type: 'svg',
       margin: 2,
@@ -91,7 +121,6 @@ export async function GET(req: NextRequest) {
       width: size,
     })
 
-    // Arredonda os pontos via rx/ry no SVG
     const qrSvgRounded = qrSvg.replace(
       /<rect([^/]*)\/>/g,
       (match, attrs) => {
@@ -102,7 +131,6 @@ export async function GET(req: NextRequest) {
       }
     )
 
-    // Converte SVG para PNG
     const qrBuffer = await sharp(Buffer.from(qrSvgRounded))
       .resize(size, size)
       .png()
@@ -116,7 +144,6 @@ export async function GET(req: NextRequest) {
       const logoSize = Math.floor(size * 0.25)
       const padding = 6
 
-      // Fundo branco com padding
       const whiteBg = await sharp({
         create: {
           width: logoSize + padding * 2,
@@ -128,19 +155,16 @@ export async function GET(req: NextRequest) {
       .png()
       .toBuffer()
 
-      // Logo redimensionado
       const logoResized = await sharp(logoBuffer)
         .resize(logoSize, logoSize, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
         .png()
         .toBuffer()
 
-      // Logo sobre fundo branco
       const logoWithBg = await sharp(whiteBg)
         .composite([{ input: logoResized, top: padding, left: padding }])
         .png()
         .toBuffer()
 
-      // Máscara circular
       const totalSize = logoSize + padding * 2
       const circleMask = Buffer.from(
         `<svg width="${totalSize}" height="${totalSize}">
@@ -153,7 +177,6 @@ export async function GET(req: NextRequest) {
         .png()
         .toBuffer()
 
-      // Centraliza logo sobre o QR
       const offset = Math.floor((size - totalSize) / 2)
 
       finalBuffer = await sharp(qrBuffer)
@@ -168,7 +191,8 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': 'no-store', // ✅ Sem cache público
+        'X-Content-Type-Options': 'nosniff',
       },
     })
   } catch (err) {

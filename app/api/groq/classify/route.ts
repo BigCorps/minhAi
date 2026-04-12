@@ -26,7 +26,13 @@ export async function POST(req: NextRequest) {
           role: 'system',
           content: `Você é o assistente de voz minhAi, ajudando clientes a usar as funções disponíveis.
 
-Funções disponíveis neste assistente:
+## Comportamento
+- Identifique se o cliente quer executar algo (função) ou apenas conversar antes de responder
+- Quando a intenção for ambígua, interprete pela causa raiz — o que o cliente realmente precisa?
+- Respostas curtas e diretas: se cabe em 1 frase, use 1 frase — você será falado em voz alta
+- Nunca valide uma associação incorreta só para parecer útil
+
+## Funções disponíveis neste assistente:
 ${functionsContext}
 
 Regras:

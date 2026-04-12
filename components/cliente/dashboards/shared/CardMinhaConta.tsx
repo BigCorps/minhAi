@@ -2,18 +2,6 @@
 
 // ============================================================
 // components/cliente/dashboards/shared/CardMinhaConta.tsx
-//
-// Exibe dados do perfil logado.
-// Botão de lápis (Pencil) abre ModalEditarPerfil.
-// Após salvar, atualiza o estado local sem refresh de página.
-//
-// Campos editáveis por tipo (gerenciados no ModalEditarPerfil):
-//   totem        → Nome
-//   colaboradores → Nome + Telefone
-//   cliente       → Nome + Telefone + Endereço
-//
-// Campos somente leitura (sempre):
-//   E-mail, Identificador (só via dashboard do dono)
 // ============================================================
 
 import { useState } from 'react';
@@ -42,7 +30,6 @@ interface CardMinhaContaProps {
   profile: SlugProfile;
   slug: string;
   theme: 'dark' | 'light';
-  /** Modo horizontal: full-width no topo do dashboard (desktop) */
   horizontal?: boolean;
 }
 
@@ -53,48 +40,42 @@ export default function CardMinhaConta({
   const tipoColor = TIPO_COLOR[profile.tipo] ?? TIPO_COLOR.colaborador;
   const tipoLabel = TIPO_LABEL[profile.tipo]  ?? profile.tipo;
 
-  // ✅ CORRIGIDO: Lê das colunas diretas telefone e endereco
   const [localNome,     setLocalNome]     = useState(profile.nome);
   const [localEmail,    setLocalEmail]    = useState(profile.email ?? '');
   const [localTelefone, setLocalTelefone] = useState(profile.telefone ?? '');
   const [localEndereco, setLocalEndereco] = useState(profile.endereco ?? '');
   const [showModal,     setShowModal]     = useState(false);
 
-  // ✅ CORRIGIDO: Atualiza os campos corretos
-  function handleSalvo(updates: any) {
-    console.log('📥 CardMinhaConta.handleSalvo recebeu:', updates);
-    
-    if (updates.nome !== undefined) {
-      setLocalNome(updates.nome);
-    }
-    if (updates.email !== undefined) {
-      setLocalEmail(updates.email ?? '');
-    }
-    if (updates.telefone !== undefined) {
-      setLocalTelefone(updates.telefone ?? '');
-    }
-    if (updates.endereco !== undefined) {
-      setLocalEndereco(updates.endereco ?? '');
-    }
+  // Lê o token de sessão do localStorage — mesma chave usada pelo useProfile
+  // Não precisa passar como prop: o slug já está disponível aqui
+  const getToken = (): string => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(`profile_session_${slug}`) ?? '';
+  };
 
-    console.log('✅ Estado local atualizado:', {
-      nome: updates.nome ?? localNome,
-      email: updates.email ?? localEmail,
-      telefone: updates.telefone ?? localTelefone,
-      endereco: updates.endereco ?? localEndereco,
-    });
+  function handleSalvo(updates: any) {
+    if (updates.nome      !== undefined) setLocalNome(updates.nome);
+    if (updates.email     !== undefined) setLocalEmail(updates.email ?? '');
+    if (updates.telefone  !== undefined) setLocalTelefone(updates.telefone ?? '');
+    if (updates.endereco  !== undefined) setLocalEndereco(updates.endereco ?? '');
   }
 
-  // ── Cores ─────────────────────────────────────────────────
   const cardBg     = isDark ? 'rgba(30,41,59,0.8)'    : 'rgba(255,255,255,0.9)';
   const cardBorder = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(203,213,225,0.5)';
   const labelColor = isDark ? 'rgb(100,116,139)'       : 'rgb(148,163,184)';
   const valueColor = isDark ? 'rgb(226,232,240)'       : 'rgb(15,23,42)';
   const titleColor = isDark ? 'rgb(241,245,249)'       : 'rgb(15,23,42)';
-  const pencilColor= isDark ? 'rgba(148,163,184,0.5)' : 'rgba(100,116,139,0.5)';
   const pencilHover= isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)';
+  const pencilColor= isDark ? 'rgba(148,163,184,0.5)' : 'rgba(100,116,139,0.5)';
 
-  // ── Botão lápis ───────────────────────────────────────────
+  const profileForModal = {
+    ...profile,
+    nome: localNome,
+    email: localEmail,
+    telefone: localTelefone,
+    endereco: localEndereco,
+  };
+
   const EditButton = () => (
     <button
       onClick={() => setShowModal(true)}
@@ -110,14 +91,16 @@ export default function CardMinhaConta({
     </button>
   );
 
-  // ✅ CORRIGIDO: Profile com campos diretos
-  const profileForModal = {
-    ...profile,
-    nome: localNome,
-    email: localEmail,
-    telefone: localTelefone,
-    endereco: localEndereco,
-  };
+  // ── Modal compartilhado ────────────────────────────────────
+  const modal = showModal && (
+    <ModalEditarPerfil
+      profile={profileForModal}
+      token={getToken()}
+      onClose={() => setShowModal(false)}
+      onSalvo={handleSalvo}
+      theme={theme}
+    />
+  );
 
   // ── Layout horizontal ─────────────────────────────────────
   if (horizontal) {
@@ -128,28 +111,22 @@ export default function CardMinhaConta({
           style={{ background: cardBg, borderColor: cardBorder }}
         >
           <div className="flex items-center gap-4 flex-wrap">
-            {/* Ícone */}
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgba(168,85,247,0.1)' }}>
               <User className="w-5 h-5" style={{ color: isDark ? 'rgb(216,180,254)' : 'rgb(107,33,168)' }} />
             </div>
 
-            {/* Nome + badge */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="font-bold text-lg" style={{ color: titleColor }}>
-                {localNome}
-              </span>
+              <span className="font-bold text-lg" style={{ color: titleColor }}>{localNome}</span>
               <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
                 style={{ background: tipoColor.bg, color: tipoColor.text }}>
                 {tipoLabel}
               </span>
             </div>
 
-            {/* Divisor */}
             <div className="hidden sm:block w-px h-8 self-center"
               style={{ background: isDark ? 'rgba(148,163,184,0.15)' : 'rgba(203,213,225,0.6)' }} />
 
-            {/* Campos em linha */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-1 flex-1 min-w-0">
               {localEmail && (
                 <Field label="E-mail" value={localEmail} labelColor={labelColor} valueColor={valueColor} />
@@ -165,19 +142,10 @@ export default function CardMinhaConta({
               )}
             </div>
 
-            {/* Lápis */}
             <EditButton />
           </div>
         </div>
-
-        {showModal && (
-          <ModalEditarPerfil
-            profile={profileForModal}
-            onClose={() => setShowModal(false)}
-            onSalvo={handleSalvo}
-            theme={theme}
-          />
-        )}
+        {modal}
       </>
     );
   }
@@ -188,7 +156,6 @@ export default function CardMinhaConta({
       <div className="rounded-2xl p-6 shadow-lg border"
         style={{ background: cardBg, borderColor: cardBorder }}>
 
-        {/* Header: ícone + título + lápis */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -222,20 +189,10 @@ export default function CardMinhaConta({
           )}
         </div>
       </div>
-
-      {showModal && (
-        <ModalEditarPerfil
-          profile={profileForModal}
-          onClose={() => setShowModal(false)}
-          onSalvo={handleSalvo}
-          theme={theme}
-        />
-      )}
+      {modal}
     </>
   );
 }
-
-// ── Sub-componente: campo somente leitura ─────────────────────
 
 function Field({ label, value, labelColor, valueColor, small }: {
   label: string; value: string;

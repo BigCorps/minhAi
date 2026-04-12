@@ -14,6 +14,7 @@ interface ModalEditarPerfilProps {
     telefone: string | null;
     endereco: string | null;
   };
+  token: string; // ← token de sessão do useProfile / localStorage
   onClose: () => void;
   onSalvo: (updates: any) => void;
   theme?: 'dark' | 'light';
@@ -21,6 +22,7 @@ interface ModalEditarPerfilProps {
 
 export default function ModalEditarPerfil({
   profile,
+  token,
   onClose,
   onSalvo,
   theme = 'dark',
@@ -36,11 +38,10 @@ export default function ModalEditarPerfil({
   const [mounted, setMounted] = useState(false);
 
   const isDark = theme === 'dark';
-  const isCliente = profile.tipo === 'cliente'; // ✅ Verifica se é cliente
+  const isCliente = profile.tipo === 'cliente';
 
   const DARK = {
     bg: 'bg-slate-900',
-    cardBg: 'bg-slate-800',
     border: 'border-white/10',
     textPrimary: 'text-white',
     textMuted: 'text-white/60',
@@ -50,7 +51,6 @@ export default function ModalEditarPerfil({
 
   const LIGHT = {
     bg: 'bg-white',
-    cardBg: 'bg-gray-50',
     border: 'border-gray-200',
     textPrimary: 'text-gray-900',
     textMuted: 'text-gray-600',
@@ -74,6 +74,11 @@ export default function ModalEditarPerfil({
       return;
     }
 
+    if (!token) {
+      setError('Sessão inválida. Faça login novamente.');
+      return;
+    }
+
     setIsSaving(true);
     setError('');
 
@@ -82,19 +87,15 @@ export default function ModalEditarPerfil({
         nome: form.nome.trim(),
         email: form.email.trim() || null,
         telefone: form.telefone.trim() || null,
-        endereco: isCliente ? (form.endereco.trim() || null) : null, // ✅ Só salva endereço se for cliente
+        endereco: isCliente ? (form.endereco.trim() || null) : null,
       };
 
-      console.log('📝 Salvando via API - Profile ID:', profile.id);
-      console.log('📝 Tipo:', profile.tipo);
-      console.log('📝 Payload:', updatePayload);
-
-      // ✅ USA API ROUTE COM SERVICE ROLE
+      // Envia token em vez de profile_id — o servidor identifica o perfil pelo token
       const response = await fetch('/api/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profile_id: profile.id,
+          token,
           updates: updatePayload,
         }),
       });
@@ -102,11 +103,8 @@ export default function ModalEditarPerfil({
       const result = await response.json();
 
       if (!response.ok || result.error) {
-        console.error('❌ Erro da API:', result.error);
         throw new Error(result.error || 'Erro ao salvar');
       }
-
-      console.log('✅ API retornou:', result.profile);
 
       // Atualiza localStorage
       const storageKey = `profile_${profile.company_id}_${profile.tipo}`;
@@ -114,23 +112,14 @@ export default function ModalEditarPerfil({
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          const updatedStorage = {
-            ...parsed,
-            ...updatePayload,
-          };
-          localStorage.setItem(storageKey, JSON.stringify(updatedStorage));
-          console.log('✅ localStorage atualizado');
+          localStorage.setItem(storageKey, JSON.stringify({ ...parsed, ...updatePayload }));
         } catch (e) {
           console.error('Erro ao atualizar localStorage:', e);
         }
       }
 
-      // Callback
       onSalvo(updatePayload);
-
-      // Delay para garantir propagação
       await new Promise(resolve => setTimeout(resolve, 500));
-
       onClose();
     } catch (err: any) {
       console.error('❌ Erro ao salvar perfil:', err);
@@ -145,7 +134,7 @@ export default function ModalEditarPerfil({
   const content = (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className={`w-full max-w-md rounded-2xl shadow-2xl ${colors.bg} ${colors.border} border overflow-hidden`}>
-        
+
         {/* Header */}
         <div className={`px-6 py-4 border-b ${colors.border} flex items-center justify-between`}>
           <div className="flex items-center gap-3">
@@ -161,8 +150,8 @@ export default function ModalEditarPerfil({
             onClick={onClose}
             disabled={isSaving}
             className={`p-2 rounded-lg transition-colors ${
-              isDark 
-                ? 'text-white/50 hover:text-white hover:bg-white/10' 
+              isDark
+                ? 'text-white/50 hover:text-white hover:bg-white/10'
                 : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
             } disabled:opacity-50`}
           >
@@ -172,7 +161,7 @@ export default function ModalEditarPerfil({
 
         {/* Body */}
         <div className="p-6 space-y-4">
-          
+
           {error && (
             <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -227,14 +216,14 @@ export default function ModalEditarPerfil({
               className={`w-full px-4 py-3 rounded-lg border ${colors.inputBorder} ${colors.inputBg} ${colors.textPrimary} focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all`}
             />
             <p className={`text-xs mt-1 ${colors.textMuted}`}>
-              {isCliente 
+              {isCliente
                 ? 'Usado para contato e notificações'
                 : 'Usado para notificações e chamada de gerente via SMS'
               }
             </p>
           </div>
 
-          {/* Endereço - ✅ SÓ APARECE PARA CLIENTES */}
+          {/* Endereço — só para clientes */}
           {isCliente && (
             <div>
               <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${colors.textPrimary}`}>
@@ -258,8 +247,8 @@ export default function ModalEditarPerfil({
               onClick={onClose}
               disabled={isSaving}
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition disabled:opacity-50 ${
-                isDark 
-                  ? 'bg-slate-700 hover:bg-slate-600 text-white' 
+                isDark
+                  ? 'bg-slate-700 hover:bg-slate-600 text-white'
                   : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
               }`}
             >

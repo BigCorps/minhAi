@@ -21,7 +21,6 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
     let logoUrl: string | null = null
 
     if (companyId) {
-      // ✅ View pública — só expõe webapp_logo_url e user_id
       const { data: company } = await supabaseAnon
         .from('companies_qr_info')
         .select('webapp_logo_url, user_id')
@@ -29,14 +28,12 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
         .single()
 
       if (company?.user_id) {
-        // ✅ View pública de créditos — só expõe o necessário
-        const { data: credits } = await supabaseAnon
-          .from('user_credits_qr_info')
-          .select('is_paid_plan')
-          .eq('user_id', company.user_id)
-          .single()
+        const { data: isPaidResult } = await supabaseAnon
+          .rpc('get_is_paid_plan', { p_user_id: company.user_id })
 
-        if (credits?.is_paid_plan && company.webapp_logo_url) {
+        const isPaid = isPaidResult === true
+
+        if (isPaid && company.webapp_logo_url) {
           logoUrl = company.webapp_logo_url
         }
       }
@@ -59,8 +56,8 @@ async function getLogoBuffer(companyId: string | null): Promise<Buffer | null> {
 
 // ✅ Rate limiting simples por IP via cache em memória
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT = 30 // requests
-const RATE_WINDOW = 60 * 1000 // 1 minuto
+const RATE_LIMIT = 30
+const RATE_WINDOW = 60 * 1000
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
@@ -78,7 +75,6 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export async function GET(req: NextRequest) {
-  // ✅ Rate limiting por IP
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
   if (!checkRateLimit(ip)) {
     return new NextResponse('Too Many Requests', {
@@ -92,19 +88,17 @@ export async function GET(req: NextRequest) {
   const data      = searchParams.get('data')
   const color     = searchParams.get('color')  || '#000000'
   const bgColor   = searchParams.get('bg')     || '#ffffff'
-  const size      = Math.min(parseInt(searchParams.get('size') || '300'), 500) // ✅ Limita tamanho máximo
+  const size      = Math.min(parseInt(searchParams.get('size') || '300'), 500)
   const companyId = searchParams.get('company_id') || null
 
   if (!data) {
     return NextResponse.json({ error: 'Parâmetro data é obrigatório' }, { status: 400 })
   }
 
-  // ✅ Limita tamanho do conteúdo do QR
   if (data.length > 2000) {
     return NextResponse.json({ error: 'Conteúdo muito longo' }, { status: 400 })
   }
 
-  // ✅ Valida companyId como UUID para evitar injeção
   if (companyId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId)) {
     return NextResponse.json({ error: 'company_id inválido' }, { status: 400 })
   }
@@ -191,7 +185,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'no-store', // ✅ Sem cache público
+        'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
       },
     })

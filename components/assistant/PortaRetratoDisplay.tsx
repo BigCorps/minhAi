@@ -58,7 +58,6 @@ export default function PortaRetratoDisplay({
     }, 300);
   }, [images.length]);
 
-  // Buscar imagens do Drive e config
   useEffect(() => {
     async function init() {
       const { data: settings } = await supabase
@@ -71,8 +70,10 @@ export default function PortaRetratoDisplay({
       const cfg = settings?.config || {};
       setIntervalSeconds(cfg.seconds_per_photo || 5);
 
-      if (!cfg.folder_id) {
-        setError('Nenhuma pasta do Drive configurada. Configure no painel.');
+      const fileIds = cfg.file_ids?.map((f: any) => f.id || f) || [];
+
+      if (fileIds.length === 0) {
+        setError('Nenhuma foto configurada. Configure no painel.');
         setLoading(false);
         return;
       }
@@ -86,12 +87,12 @@ export default function PortaRetratoDisplay({
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
             },
-            body: JSON.stringify({ company_id: companyId, folder_id: cfg.folder_id }),
+            body: JSON.stringify({ company_id: companyId, file_ids: fileIds }),
           }
         );
         const json = await res.json();
         if (!res.ok || json.error) throw new Error(json.error || 'Erro ao carregar fotos');
-        if (!json.images || json.images.length === 0) throw new Error('Nenhuma foto encontrada na pasta.');
+        if (!json.images || json.images.length === 0) throw new Error('Nenhuma foto encontrada.');
 
         let imageList = json.images;
         if (cfg.shuffle) {
@@ -111,14 +112,12 @@ export default function PortaRetratoDisplay({
     init();
   }, []);
 
-  // Auto-advance
   useEffect(() => {
     if (!isPlaying || images.length === 0) return;
     timerRef.current = setInterval(goNext, intervalSeconds * 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isPlaying, images.length, goNext, intervalSeconds]);
 
-  // Auto-hide controls
   useEffect(() => {
     if (images.length === 0) return;
     hideControlsRef.current = setTimeout(() => setControlsVisible(false), 3000);
@@ -162,7 +161,6 @@ export default function PortaRetratoDisplay({
       onClick={showControls}
       onMouseMove={showControls}
     >
-      {/* Loading */}
       {loading && (
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-pink-500 animate-spin" />
@@ -170,18 +168,14 @@ export default function PortaRetratoDisplay({
         </div>
       )}
 
-      {/* Erro */}
       {!loading && error && (
         <div className="flex flex-col items-center gap-4 px-8 text-center">
           <p className="text-5xl">🖼️</p>
           <p className="text-white text-lg">{error}</p>
-          <button onClick={handleClose} className="px-6 py-2 bg-pink-600 text-white rounded-full text-sm">
-            Fechar
-          </button>
+          <button onClick={handleClose} className="px-6 py-2 bg-pink-600 text-white rounded-full text-sm">Fechar</button>
         </div>
       )}
 
-      {/* Foto */}
       {!loading && currentImage && (
         <img
           key={currentImage.id}
@@ -193,7 +187,6 @@ export default function PortaRetratoDisplay({
         />
       )}
 
-      {/* Controles */}
       {!loading && images.length > 0 && (
         <div className={`absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent transition-all duration-300 ${
           controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
@@ -203,10 +196,7 @@ export default function PortaRetratoDisplay({
               <SkipBack className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsPlaying(p => !p)}
-                className="p-4 rounded-full bg-pink-600 hover:bg-pink-700 text-white transition shadow-xl"
-              >
+              <button onClick={() => setIsPlaying(p => !p)} className="p-4 rounded-full bg-pink-600 hover:bg-pink-700 text-white transition shadow-xl">
                 {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
               </button>
               <span className="text-white/60 text-sm">{currentIndex + 1} / {images.length}</span>
@@ -215,27 +205,16 @@ export default function PortaRetratoDisplay({
               <SkipForward className="w-5 h-5" />
             </button>
           </div>
-
           <div className="mt-4 h-0.5 bg-white/20 rounded-full max-w-2xl mx-auto overflow-hidden">
-            <div
-              className="h-full bg-pink-500 rounded-full"
-              style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }}
-            />
+            <div className="h-full bg-pink-500 rounded-full" style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }} />
           </div>
         </div>
       )}
 
-      {/* Botão fechar */}
-      <button
-        onClick={handleClose}
-        className={`absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition ${
-          controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
+      <button onClick={handleClose} className={`absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <X className="w-5 h-5" />
       </button>
 
-      {/* Dica de voz */}
       {controlsVisible && (
         <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/40 backdrop-blur-sm rounded-full text-white/50 text-xs">
           🎤 "pausar" · "próximo" · "fechar"

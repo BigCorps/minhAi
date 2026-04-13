@@ -662,9 +662,7 @@ const PlaylistConfigForm = ({ companyId }: any) => {
 };
 
 const PortaRetratoConfigForm = ({ companyId }: any) => {
-  const [config, setConfig] = useState<any>({
-    folder_id: '', folder_name: '', seconds_per_photo: 5, transition: 'fade', shuffle: false,
-  });
+  const [config, setConfig] = useState<any>({ file_ids: [], seconds_per_photo: 5, transition: 'fade', shuffle: false });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const supabase = createClient();
@@ -686,47 +684,47 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
     setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
   };
 
+  const removeFile = (id: string) => {
+    setConfig((p: any) => ({ ...p, file_ids: p.file_ids.filter((f: any) => (f.id || f) !== id) }));
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-200 dark:border-pink-800">
         <p className="text-sm text-pink-800 dark:text-pink-200">
-          🖼️ Selecione uma pasta do Google Drive com as fotos para o slideshow.
+          Selecione as fotos do Google Drive para o slideshow. Para adicionar novas, selecione novamente.
         </p>
       </div>
 
-      {config.folder_id ? (
-        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <span className="text-green-600">📁</span>
-          <span className="text-sm font-medium text-green-800 dark:text-green-200 flex-1 truncate">
-            {config.folder_name || config.folder_id}
-          </span>
-          <button
-            onClick={() => setConfig((p: any) => ({ ...p, folder_id: '', folder_name: '' }))}
-            className="text-xs text-red-500 hover:text-red-700 flex-shrink-0"
-          >
-            Remover
-          </button>
-        </div>
-      ) : (
-        <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-white/10 text-center">
-          <p className="text-sm text-gray-400 mb-3">Nenhuma pasta selecionada</p>
-          <DrivePickerButton
-            companyId={companyId}
-            onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
-            label="Selecionar pasta do Drive"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm rounded-lg font-medium transition"
-          />
+      {config.file_ids?.length > 0 && (
+        <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              {config.file_ids.length} foto{config.file_ids.length !== 1 ? 's' : ''} selecionada{config.file_ids.length !== 1 ? 's' : ''}
+            </span>
+            <button onClick={() => setConfig((p: any) => ({ ...p, file_ids: [] }))} className="text-xs text-red-500 hover:text-red-700">Limpar todas</button>
+          </div>
+          <div className="max-h-40 overflow-y-auto">
+            {config.file_ids.map((f: any) => {
+              const id = f.id || f;
+              const name = f.name || id;
+              return (
+                <div key={id} className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-white/5 text-sm">
+                  <span className="text-gray-700 dark:text-gray-300 truncate flex-1">{name}</span>
+                  <button onClick={() => removeFile(id)} className="text-red-400 hover:text-red-600 ml-2 flex-shrink-0 text-xs">✕</button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {config.folder_id && (
-        <DrivePickerButton
-          companyId={companyId}
-          onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
-          label="Trocar pasta"
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-pink-600 border border-gray-200 dark:border-white/10 rounded-lg transition"
-        />
-      )}
+      <DrivePickerButton
+        companyId={companyId}
+        onFilesSelected={(files) => setConfig((p: any) => ({ ...p, file_ids: files }))}
+        label={config.file_ids?.length > 0 ? 'Trocar fotos' : 'Selecionar fotos do Drive'}
+        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white text-sm rounded-lg font-medium transition"
+      />
 
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por foto</label>
@@ -737,8 +735,7 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
 
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Transição</label>
-        <select value={config.transition || 'fade'}
-          onChange={e => setConfig((p: any) => ({ ...p, transition: e.target.value }))}
+        <select value={config.transition || 'fade'} onChange={e => setConfig((p: any) => ({ ...p, transition: e.target.value }))}
           className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white">
           <option value="fade">Fade</option>
           <option value="slide">Slide</option>
@@ -751,7 +748,7 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
         <span className="text-sm text-gray-900 dark:text-white">Embaralhar fotos</span>
       </label>
 
-      <button onClick={save} disabled={saving || !config.folder_id}
+      <button onClick={save} disabled={saving || !config.file_ids?.length}
         className="w-full py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white font-semibold text-sm transition">
         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
       </button>
@@ -760,9 +757,7 @@ const PortaRetratoConfigForm = ({ companyId }: any) => {
 };
 
 const PainelOfertasConfigForm = ({ companyId }: any) => {
-  const [config, setConfig] = useState<any>({
-    folder_id: '', folder_name: '', seconds_per_image: 8, shuffle: false, qr_type: 'none',
-  });
+  const [config, setConfig] = useState<any>({ file_ids: [], seconds_per_image: 8, shuffle: false, qr_type: 'none' });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const supabase = createClient();
@@ -784,48 +779,48 @@ const PainelOfertasConfigForm = ({ companyId }: any) => {
     setSaved(true); setTimeout(() => setSaved(false), 2000); setSaving(false);
   };
 
+  const removeFile = (id: string) => {
+    setConfig((p: any) => ({ ...p, file_ids: p.file_ids.filter((f: any) => (f.id || f) !== id) }));
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
         <p className="text-sm text-orange-800 dark:text-orange-200">
-          Selecione uma pasta do Google Drive com as imagens de oferta.
+          Selecione as imagens de oferta diretamente do Google Drive. Para atualizar, selecione novamente.
         </p>
       </div>
 
-      {/* Pasta selecionada */}
-      {config.folder_id ? (
-        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <span className="text-green-600">📁</span>
-          <span className="text-sm font-medium text-green-800 dark:text-green-200 flex-1 truncate">
-            {config.folder_name || config.folder_id}
-          </span>
-          <button
-            onClick={() => setConfig((p: any) => ({ ...p, folder_id: '', folder_name: '' }))}
-            className="text-xs text-red-500 hover:text-red-700 flex-shrink-0"
-          >
-            Remover
-          </button>
-        </div>
-      ) : (
-        <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-white/10 text-center">
-          <p className="text-sm text-gray-400 mb-3">Nenhuma pasta selecionada</p>
-          <DrivePickerButton
-            companyId={companyId}
-            onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
-            label="Selecionar pasta do Drive"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded-lg font-medium transition"
-          />
+      {/* Imagens selecionadas */}
+      {config.file_ids?.length > 0 && (
+        <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              {config.file_ids.length} imagem{config.file_ids.length !== 1 ? 's' : ''} selecionada{config.file_ids.length !== 1 ? 's' : ''}
+            </span>
+            <button onClick={() => setConfig((p: any) => ({ ...p, file_ids: [] }))} className="text-xs text-red-500 hover:text-red-700">Limpar todas</button>
+          </div>
+          <div className="max-h-40 overflow-y-auto">
+            {config.file_ids.map((f: any) => {
+              const id = f.id || f;
+              const name = f.name || id;
+              return (
+                <div key={id} className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-white/5 text-sm">
+                  <span className="text-gray-700 dark:text-gray-300 truncate flex-1">{name}</span>
+                  <button onClick={() => removeFile(id)} className="text-red-400 hover:text-red-600 ml-2 flex-shrink-0 text-xs">✕</button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {config.folder_id && (
-        <DrivePickerButton
-          companyId={companyId}
-          onFolderSelected={(id, name) => setConfig((p: any) => ({ ...p, folder_id: id, folder_name: name }))}
-          label="Trocar pasta"
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 border border-gray-200 dark:border-white/10 rounded-lg transition"
-        />
-      )}
+      <DrivePickerButton
+        companyId={companyId}
+        onFilesSelected={(files) => setConfig((p: any) => ({ ...p, file_ids: files }))}
+        label={config.file_ids?.length > 0 ? 'Trocar imagens' : 'Selecionar imagens do Drive'}
+        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded-lg font-medium transition"
+      />
 
       <div>
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Segundos por imagem</label>
@@ -843,30 +838,27 @@ const PainelOfertasConfigForm = ({ companyId }: any) => {
       {/* QR Code */}
       <div className="border-t border-gray-200 dark:border-white/10 pt-4">
         <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">QR Code fixo no slideshow</label>
-        <select value={config.qr_type || 'none'}
-          onChange={e => setConfig((p: any) => ({ ...p, qr_type: e.target.value }))}
+        <select value={config.qr_type || 'none'} onChange={e => setConfig((p: any) => ({ ...p, qr_type: e.target.value }))}
           className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white mb-3">
           <option value="none">Sem QR Code</option>
-          <option value="website">🌐 Site da empresa</option>
-          <option value="whatsapp">💬 WhatsApp</option>
-          <option value="instagram">📸 Instagram</option>
-          <option value="custom">🔗 Link personalizado</option>
+          <option value="website">Site da empresa</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="instagram">Instagram</option>
+          <option value="custom">Link personalizado</option>
         </select>
         {config.qr_type === 'custom' && (
           <div className="space-y-2">
-            <input type="url" placeholder="https://..."
-              value={config.qr_custom_link || ''}
+            <input type="url" placeholder="https://..." value={config.qr_custom_link || ''}
               onChange={e => setConfig((p: any) => ({ ...p, qr_custom_link: e.target.value }))}
               className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
-            <input type="text" placeholder="Texto abaixo do QR (ex: Saiba mais)"
-              value={config.qr_custom_label || ''}
+            <input type="text" placeholder="Texto abaixo do QR (ex: Saiba mais)" value={config.qr_custom_label || ''}
               onChange={e => setConfig((p: any) => ({ ...p, qr_custom_label: e.target.value }))}
               className="w-full p-2 border rounded-md dark:bg-slate-800 dark:border-white/10 dark:text-white" />
           </div>
         )}
       </div>
 
-      <button onClick={save} disabled={saving || !config.folder_id}
+      <button onClick={save} disabled={saving || !config.file_ids?.length}
         className="w-full py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold text-sm transition">
         {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar'}
       </button>

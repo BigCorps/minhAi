@@ -222,7 +222,11 @@ function GraficoRecharts({ grafico, C }: { grafico: Grafico; C: typeof DARK }) {
   );
 
   const chartProps = { data: dados, margin: { top: 5, right: 10, left: -10, bottom: 5 } };
-  const axisStyle = { fontSize: 10, fill: C.textMuted };
+  // Usa fill explícito com valor de atributo SVG (não CSS color) para que
+  // html2canvas consiga ler corretamente ao exportar PDF
+  const axisFill = '#6b7280'; // cinza neutro — legível tanto em dark quanto no PDF branco
+  const gridColor = '#d1d5db'; // cinza claro — visível em fundo branco no PDF
+  const axisStyle = { fontSize: 10, fill: axisFill };
   const tooltipStyle = { backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 11 };
 
   if (tipo === 'pie') {
@@ -240,7 +244,7 @@ function GraficoRecharts({ grafico, C }: { grafico: Grafico; C: typeof DARK }) {
   if (tipo === 'line') return (
     <ResponsiveContainer width="100%" height={160}>
       <LineChart {...chartProps}>
-        <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
         <XAxis dataKey={config.xKey} tick={axisStyle} />
         <YAxis tick={axisStyle} />
         <Tooltip contentStyle={tooltipStyle} />
@@ -252,7 +256,7 @@ function GraficoRecharts({ grafico, C }: { grafico: Grafico; C: typeof DARK }) {
     <ResponsiveContainer width="100%" height={160}>
       <AreaChart {...chartProps}>
         <defs><linearGradient id={`g${grafico.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={config.cor} stopOpacity={0.3} /><stop offset="95%" stopColor={config.cor} stopOpacity={0} /></linearGradient></defs>
-        <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
         <XAxis dataKey={config.xKey} tick={axisStyle} /><YAxis tick={axisStyle} />
         <Tooltip contentStyle={tooltipStyle} />
         <Area type="monotone" dataKey={config.yKey} stroke={config.cor} fill={`url(#g${grafico.id})`} strokeWidth={2} />
@@ -263,7 +267,7 @@ function GraficoRecharts({ grafico, C }: { grafico: Grafico; C: typeof DARK }) {
   return (
     <ResponsiveContainer width="100%" height={160}>
       <BarChart {...chartProps}>
-        <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
         <XAxis dataKey={config.xKey} tick={axisStyle} /><YAxis tick={axisStyle} />
         <Tooltip contentStyle={tooltipStyle} />
         {config.multiSeries ? config.multiSeries.map(s => <Bar key={s.key} dataKey={s.key} fill={s.cor} radius={[3,3,0,0]} name={s.label} />) : <Bar dataKey={config.yKey} fill={config.cor} radius={[3,3,0,0]} />}
@@ -604,6 +608,11 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   // ── Export PDF com gráficos via html2canvas ───────────────
   const exportarPDF = async () => {
     if (!ficha.completo || isExportingPDF) return;
+    // Garante que os dados ainda estão em memória antes de gerar
+    if (!dadosBrutos.length) {
+      alert('Os dados da planilha não estão mais em memória. Feche o modal e abra novamente enviando o arquivo.');
+      return;
+    }
     setIsExportingPDF(true);
     try {
       const { jsPDF } = await import('jspdf');
@@ -700,7 +709,6 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         doc.text('Gráficos', margin, y);
         y += 6;
 
-        // Seleciona cada div de gráfico pelo data-grafico-id
         const graficoEls = graficosContainerRef.current.querySelectorAll<HTMLDivElement>('[data-grafico-id]');
 
         for (const el of Array.from(graficoEls)) {
@@ -716,14 +724,65 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           }
 
           try {
+            // ── Sobrescreve estilos para fundo branco antes de capturar ──
+            // Necessário porque html2canvas captura o DOM renderizado,
+            // incluindo cores do tema dark. Guardamos os valores originais
+            // e restauramos logo após a captura.
+            const originalBg = el.style.background;
+            const originalColor = el.style.color;
+            const originalBorder = el.style.border;
+
+            // Força paleta light no container do gráfico
+            el.style.background = '#ffffff';
+            el.style.color = '#0f172a';
+            el.style.border = '1px solid #e2e8f0';
+
+            // Força também nos textos filhos (títulos, labels)
+            const allText = el.querySelectorAll<HTMLElement>('p, span, text, tspan');
+            const originalTextColors: string[] = [];
+            allText.forEach(t => {
+              originalTextColors.push(t.style.color);
+              // Só sobrescreve se for cor clara (white/slate) — mantém cores de destaque
+              const computed = window.getComputedStyle(t).color;
+              // rgb(241,245,249), rgb(248,250,252), rgb(148,163,184) = cores do tema dark
+              if (computed === 'rgb(241, 245, 249)' || computed === 'rgb(248, 250, 252)' || computed === 'rgb(148, 163, 184)' || computed === 'rgb(100, 116, 139)') {
+                t.style.color = '#0f172a';
+              }
+            });
+
+            // SVG text elements (eixos Recharts)
+            const svgTexts = el.querySelectorAll<SVGTextElement>('text, tspan');
+            const originalSvgFills: string[] = [];
+            svgTexts.forEach(t => {
+              originalSvgFills.push(t.getAttribute('fill') ?? '');
+              const fill = t.getAttribute('fill');
+              // Substitui cores de texto claro por cor escura
+              if (!fill || fill === '#94a3b8' || fill === '#64748b' || fill === 'white' || fill === '#f1f5f9') {
+                t.setAttribute('fill', '#374151');
+              }
+            });
+
             const canvas = await html2canvas(el, {
               scale: 2,
-              backgroundColor: isDark ? '#1e293b' : '#ffffff',
+              backgroundColor: '#ffffff', // sempre branco, independente do tema
               logging: false,
               useCORS: true,
+              // ignoreElements filtra elementos que causam cross-origin problems
+              ignoreElements: (element) => element.tagName === 'IFRAME',
             });
+
+            // ── Restaura estilos originais ────────────────────
+            el.style.background = originalBg;
+            el.style.color = originalColor;
+            el.style.border = originalBorder;
+            allText.forEach((t, i) => { t.style.color = originalTextColors[i] ?? ''; });
+            svgTexts.forEach((t, i) => {
+              const orig = originalSvgFills[i];
+              if (orig) t.setAttribute('fill', orig);
+              else t.removeAttribute('fill');
+            });
+
             const imgData = canvas.toDataURL('image/png');
-            // Calcula altura proporcional: largura fixa = contentW mm
             const pxW = canvas.width;
             const pxH = canvas.height;
             const imgH = (pxH / pxW) * contentW;

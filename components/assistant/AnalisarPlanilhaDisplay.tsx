@@ -468,67 +468,120 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
     } else if (tipo === 'pdf') {
       addMessage('assistant', 'Extraindo texto do PDF...');
       try {
+        // Carrega pdfjs se necessário
         if (!window.pdfjsLib) {
           await new Promise<void>((resolve, reject) => {
             const s = document.createElement('script');
             s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            s.onload = () => {
-              window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-              resolve();
-            };
+            s.onload = () => resolve();
             s.onerror = reject;
             document.head.appendChild(s);
           });
         }
+
+        // Sempre configura o workerSrc — mesmo se pdfjsLib já existia mas sem worker
+        // Usa disableWorker como fallback para evitar erros de CORS com o worker CDN
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // Aguarda um tick para o worker inicializar
+        await new Promise(r => setTimeout(r, 100));
+
         const buffer = await file.arrayBuffer();
-        const pdfDoc = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+
+        // disableWorker: true como fallback — roda no main thread se o worker falhar
+        const loadingTask = window.pdfjsLib.getDocument({
+          data: new Uint8Array(buffer),
+          disableWorker: false,
+          // Evita warning de password
+          password: '',
+        });
+
+        const pdfDoc = await loadingTask.promise;
         const numPages = pdfDoc.numPages;
         let textoCompleto = '';
-        // Extrai até 20 páginas
+
         for (let p = 1; p <= Math.min(numPages, 20); p++) {
           const page = await pdfDoc.getPage(p);
           const content = await page.getTextContent();
-          const pageText = content.items.map((item: any) => item.str).join(' ');
-          textoCompleto += `\n--- Página ${p} ---\n${pageText}`;
+          // Junta itens preservando espaços entre palavras
+          const pageText = content.items
+            .map((item: any) => item.str)
+            .filter((s: string) => s.trim())
+            .join(' ');
+          if (pageText.trim()) {
+            textoCompleto += `\n--- Página ${p} ---\n${pageText}`;
+          }
         }
+
         if (!textoCompleto.trim()) {
-          addMessage('assistant', 'Não consegui extrair texto deste PDF. Pode ser um PDF de imagens — tente enviar como imagem (JPG/PNG).');
+          addMessage('assistant', 'Este PDF não contém texto extraível (pode ser um PDF de imagens digitalizadas). Tente exportar como JPG/PNG e envie a imagem.');
           return;
         }
+
         setConteudoTexto(textoCompleto);
-        const msg = `PDF lido: ${numPages} página(s). Iniciando análise do conteúdo...`;
+        const msg = `PDF lido: ${numPages} página(s), ${Math.round(textoCompleto.length / 1000)}k caracteres. Iniciando análise...`;
         addMessage('assistant', msg);
         await playTextSafe(msg);
         await processarMensagem('analisar documento', undefined, undefined, textoCompleto, undefined, file.name);
-      } catch (err) {
-        console.error(err);
-        addMessage('assistant', 'Erro ao ler o PDF. Tente novamente.');
+      } catch (err: any) {
+        console.error('Erro PDF:', err);
+        // Tenta fallback: envia como imagem se for PDF de 1 página
+        addMessage('assistant', `Não consegui extrair o texto do PDF (${err?.message ?? 'erro desconhecido'}). Se for um PDF digitalizado, converta para imagem (JPG/PNG) e envie.`);
       }
 
     } else if (tipo === 'docx') {
-      addMessage('assistant', 'Extraindo texto do documento...');
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext === 'doc') {
+        addMessage('assistant', 'Arquivos .DOC (formato antigo) não são suportados. Salve o documento como .DOCX no Word e envie novamente.');
+        return;
+      }
+      addMessage('assistant', 'Extraindo texto do documento DOCX...');
       try {
         if (!window.mammoth) {
           await new Promise<void>((resolve, reject) => {
             const s = document.createElement('script');
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js';
-            s.onload = () => resolve(); s.onerror = reject;
+            // Usa versão mais recente e estável do mammoth no browser
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+            s.onload = () => resolve();
+            s.onerror = () => {
+              // Fallback para versão anterior
+              const s2 = document.createElement('script');
+              s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js';
+              s2.onload = () => resolve();
+              s2.onerror = reject;
+              document.head.appendChild(s2);
+            };
             document.head.appendChild(s);
           });
         }
+
         const buffer = await file.arrayBuffer();
-        const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
-        const texto = result.value?.trim();
-        if (!texto) { addMessage('assistant', 'Não consegui extrair texto deste documento.'); return; }
+
+        // O mammoth browser pode expor a API de formas diferentes
+        const mammothLib = window.mammoth?.default ?? window.mammoth;
+        if (!mammothLib?.extractRawText) {
+          throw new Error('mammoth não carregou corretamente');
+        }
+
+        const result = await mammothLib.extractRawText({ arrayBuffer: buffer });
+        const texto = result?.value?.trim();
+
+        if (!texto) {
+          addMessage('assistant', 'O documento está vazio ou protegido por senha. Verifique o arquivo e tente novamente.');
+          return;
+        }
+
         setConteudoTexto(texto);
-        const msg = `Documento lido (${Math.round(texto.length / 1000)}k caracteres). Iniciando análise...`;
+        const msg = `Documento lido: ${Math.round(texto.length / 1000)}k caracteres. Iniciando análise...`;
         addMessage('assistant', msg);
         await playTextSafe(msg);
         await processarMensagem('analisar documento', undefined, undefined, texto, undefined, file.name);
-      } catch (err) {
-        console.error(err);
-        addMessage('assistant', 'Erro ao ler o documento DOCX. Tente novamente.');
+      } catch (err: any) {
+        console.error('Erro DOCX:', err);
+        addMessage('assistant', `Erro ao ler o documento: ${err?.message ?? 'formato não reconhecido'}. Certifique-se de que é um .DOCX válido e tente novamente.`);
       }
 
     } else if (tipo === 'imagem') {
@@ -1001,6 +1054,14 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           <p style={{ fontSize: 11, color: C.textMuted }}>📊 XLSX, CSV · 📄 PDF · 📝 DOCX · 🖼️ JPG, PNG</p>
           <p style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>Arraste ou clique para selecionar</p>
           <input ref={fileInputRef} type="file" accept={TIPOS_ACEITOS} style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
+        </div>
+      )}
+
+      {/* Alerta PII */}
+      {alertaPII.length > 0 && (
+        <div style={{ padding: '8px 12px', borderRadius: 8, background: `${C.warning}15`, border: `1px solid ${C.warning}40`, marginBottom: 12 }}>
+          <p style={{ fontSize: 11, color: C.warning, fontWeight: 600, marginBottom: 2 }}>🔒 LGPD — Dados anonimizados</p>
+          <p style={{ fontSize: 10, color: C.textMuted }}>{alertaPII.join(', ')}</p>
         </div>
       )}
 

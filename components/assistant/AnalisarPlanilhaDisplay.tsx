@@ -4,15 +4,12 @@
 // AnalisarPlanilhaDisplay.tsx
 // Arquivo: components/assistant/AnalisarPlanilhaDisplay.tsx
 // ============================================================
-// Baseado em FichaConversacionalDisplay.tsx:
-// - Mesma estrutura de chat conversacional
-// - Preview ao vivo na coluna direita (KPIs + gráficos Recharts)
-// - Upload de XLSX/CSV com SheetJS (carregado dinamicamente)
-// - Anonimização PII client-side antes de qualquer envio
-// - Botões de PDF e compartilhamento aparecem apenas quando completo: true
-// - Padrão: createPortal + fixed inset-0 + inline styles DARK/LIGHT
-// - SEM lucide-react nos ícones de modal (SVGs inline)
-// - playText() via prop — nunca window.speechSynthesis
+// Analisador universal de arquivos:
+// - Planilhas: XLSX, XLS, CSV, TSV → JSON (SheetJS)
+// - Documentos: DOCX, DOC → texto (mammoth)
+// - PDFs → texto por página (pdfjs)
+// - Imagens: JPG, PNG, WEBP → GPT-4o Vision (base64)
+// Padrão: createPortal + fixed inset-0 + inline styles DARK/LIGHT
 // ============================================================
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -26,6 +23,14 @@ import {
   AreaChart, Area, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
+
+declare global {
+  interface Window {
+    XLSX?: any;
+    pdfjsLib?: any;
+    mammoth?: any;
+  }
+}
 
 // ── Tipos ────────────────────────────────────────────────────
 
@@ -124,7 +129,23 @@ const LIGHT = {
 
 const PIE_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-const MENSAGEM_INICIAL = 'Olá! Vou transformar sua planilha em um dashboard com insights. Envie um arquivo CSV ou XLSX para começar, ou me descreva o que você quer analisar.';
+// ── Tipo de arquivo ───────────────────────────────────────────
+type TipoArquivo = 'planilha' | 'pdf' | 'docx' | 'imagem' | null;
+
+const TIPOS_ACEITOS = '.csv,.xlsx,.xls,.tsv,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp';
+
+const EXTENSOES_POR_TIPO: Record<string, TipoArquivo> = {
+  csv: 'planilha', xlsx: 'planilha', xls: 'planilha', tsv: 'planilha',
+  pdf: 'pdf',
+  doc: 'docx', docx: 'docx',
+  jpg: 'imagem', jpeg: 'imagem', png: 'imagem', webp: 'imagem',
+};
+
+const ICONE_POR_TIPO: Record<NonNullable<TipoArquivo>, string> = {
+  planilha: '📊', pdf: '📄', docx: '📝', imagem: '🖼️',
+};
+
+const MENSAGEM_INICIAL = 'Olá! Posso analisar planilhas, documentos, PDFs e imagens. Envie qualquer arquivo para começar, ou me descreva o que você quer analisar.';
 
 // ── Ícones SVG inline (sem lucide-react) ──────────────────────
 const IconX = () => (
@@ -334,8 +355,11 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [slugCopiado, setSlugCopiado] = useState(false);
   const [nomeArquivo, setNomeArquivo] = useState('');
+  const [tipoArquivo, setTipoArquivo] = useState<TipoArquivo>(null);
   const [dadosBrutos, setDadosBrutos] = useState<Record<string, unknown>[]>([]);
   const [schema, setSchema] = useState<ReturnType<typeof construirSchema>>([]);
+  const [conteudoTexto, setConteudoTexto] = useState(''); // para PDF/DOCX
+  const [imagemBase64, setImagemBase64] = useState('');   // para imagens
   const [alertaPII, setAlertaPII] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dashboardSalvoId, setDashboardSalvoId] = useState<string | null>(null);
@@ -393,67 +417,138 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   // Auto-scroll
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // ── Upload e parse XLSX ───────────────────────────────────
+  // ── Processador universal de arquivos ────────────────────
   const processarArquivo = async (file: File) => {
     if (!file) return;
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    if (!['csv', 'xlsx', 'xls', 'tsv'].includes(ext ?? '')) {
-      addMessage('assistant', 'Formato não suportado. Envie um arquivo CSV, XLSX ou TSV.');
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const tipo = EXTENSOES_POR_TIPO[ext] ?? null;
+
+    if (!tipo) {
+      addMessage('assistant', `Formato .${ext} não suportado. Envie: planilhas (XLSX, CSV), documentos (DOCX, PDF) ou imagens (JPG, PNG, WEBP).`);
       return;
     }
 
     setNomeArquivo(file.name);
-    addMessage('user', `📎 ${file.name}`);
-    addMessage('assistant', 'Lendo o arquivo e anonimizando dados sensíveis...');
+    setTipoArquivo(tipo);
+    addMessage('user', `${ICONE_POR_TIPO[tipo]} ${file.name}`);
 
-    try {
-      // Carrega SheetJS dinamicamente (igual ao EnviarArquivoDisplay)
-      if (!window.XLSX) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-          script.onload = () => resolve();
-          script.onerror = reject;
-          document.head.appendChild(script);
+    if (tipo === 'planilha') {
+      addMessage('assistant', 'Lendo a planilha e anonimizando dados sensíveis...');
+      try {
+        if (!window.XLSX) {
+          await new Promise<void>((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            s.onload = () => resolve(); s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        const buffer = await file.arrayBuffer();
+        const workbook = window.XLSX.read(buffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const jsonData = window.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' }) as Record<string, unknown>[];
+        if (!jsonData.length) { addMessage('assistant', 'O arquivo está vazio ou não foi possível ler os dados.'); return; }
+
+        const { dadosLimpos, camposAnonimizados, totalOcorrencias } = anonimizarPII(jsonData);
+        const schemaDetectado = construirSchema(dadosLimpos);
+        setDadosBrutos(dadosLimpos);
+        setSchema(schemaDetectado);
+        if (camposAnonimizados.length > 0) setAlertaPII(camposAnonimizados);
+
+        const avisoAnon = camposAnonimizados.length > 0 ? ` (${totalOcorrencias} dado(s) sensível(is) anonimizados por LGPD)` : '';
+        const msg = `Planilha lida: ${jsonData.length} linhas, ${schemaDetectado.length} colunas${avisoAnon}. Iniciando análise...`;
+        addMessage('assistant', msg);
+        await playTextSafe(msg);
+        await processarMensagem('analisar planilha', dadosLimpos, schemaDetectado, undefined, undefined, file.name);
+      } catch (err) {
+        console.error(err);
+        addMessage('assistant', 'Não consegui ler a planilha. Verifique se o arquivo está íntegro.');
+      }
+
+    } else if (tipo === 'pdf') {
+      addMessage('assistant', 'Extraindo texto do PDF...');
+      try {
+        if (!window.pdfjsLib) {
+          await new Promise<void>((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload = () => {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+              resolve();
+            };
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        const buffer = await file.arrayBuffer();
+        const pdfDoc = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+        const numPages = pdfDoc.numPages;
+        let textoCompleto = '';
+        // Extrai até 20 páginas
+        for (let p = 1; p <= Math.min(numPages, 20); p++) {
+          const page = await pdfDoc.getPage(p);
+          const content = await page.getTextContent();
+          const pageText = content.items.map((item: any) => item.str).join(' ');
+          textoCompleto += `\n--- Página ${p} ---\n${pageText}`;
+        }
+        if (!textoCompleto.trim()) {
+          addMessage('assistant', 'Não consegui extrair texto deste PDF. Pode ser um PDF de imagens — tente enviar como imagem (JPG/PNG).');
+          return;
+        }
+        setConteudoTexto(textoCompleto);
+        const msg = `PDF lido: ${numPages} página(s). Iniciando análise do conteúdo...`;
+        addMessage('assistant', msg);
+        await playTextSafe(msg);
+        await processarMensagem('analisar documento', undefined, undefined, textoCompleto, undefined, file.name);
+      } catch (err) {
+        console.error(err);
+        addMessage('assistant', 'Erro ao ler o PDF. Tente novamente.');
+      }
+
+    } else if (tipo === 'docx') {
+      addMessage('assistant', 'Extraindo texto do documento...');
+      try {
+        if (!window.mammoth) {
+          await new Promise<void>((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js';
+            s.onload = () => resolve(); s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        const buffer = await file.arrayBuffer();
+        const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+        const texto = result.value?.trim();
+        if (!texto) { addMessage('assistant', 'Não consegui extrair texto deste documento.'); return; }
+        setConteudoTexto(texto);
+        const msg = `Documento lido (${Math.round(texto.length / 1000)}k caracteres). Iniciando análise...`;
+        addMessage('assistant', msg);
+        await playTextSafe(msg);
+        await processarMensagem('analisar documento', undefined, undefined, texto, undefined, file.name);
+      } catch (err) {
+        console.error(err);
+        addMessage('assistant', 'Erro ao ler o documento DOCX. Tente novamente.');
+      }
+
+    } else if (tipo === 'imagem') {
+      addMessage('assistant', 'Processando imagem com visão computacional...');
+      try {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
+        setImagemBase64(base64);
+        const msg = 'Imagem carregada. Iniciando análise com IA visual...';
+        addMessage('assistant', msg);
+        await playTextSafe(msg);
+        await processarMensagem('analisar imagem', undefined, undefined, undefined, base64, file.name);
+      } catch (err) {
+        console.error(err);
+        addMessage('assistant', 'Erro ao carregar a imagem. Tente novamente.');
       }
-
-      const buffer = await file.arrayBuffer();
-      const workbook = window.XLSX.read(buffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = window.XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, unknown>[];
-
-      if (!jsonData.length) {
-        addMessage('assistant', 'O arquivo está vazio ou não foi possível ler os dados.');
-        return;
-      }
-
-      // Anonimização PII client-side
-      const { dadosLimpos, camposAnonimizados, totalOcorrencias } = anonimizarPII(jsonData);
-      const schemaDetectado = construirSchema(dadosLimpos);
-
-      setDadosBrutos(dadosLimpos);
-      setSchema(schemaDetectado);
-
-      if (camposAnonimizados.length > 0) {
-        setAlertaPII(camposAnonimizados);
-      }
-
-      const avisoAnon = camposAnonimizados.length > 0
-        ? ` (${totalOcorrencias} dado(s) sensível(is) anonimizados por LGPD)`
-        : '';
-
-      const msg = `Arquivo lido com sucesso! ${jsonData.length} linhas, ${schemaDetectado.length} colunas${avisoAnon}. Iniciando análise inteligente...`;
-      addMessage('assistant', msg);
-      await playTextSafe(msg);
-
-      // Dispara análise automática
-      await processarMensagem('analisar planilha', dadosLimpos, schemaDetectado, file.name);
-
-    } catch (err) {
-      console.error('Erro ao processar arquivo:', err);
-      addMessage('assistant', 'Não consegui ler o arquivo. Verifique se está íntegro e tente novamente.');
     }
   };
 
@@ -462,16 +557,21 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
     setMessages(prev => [...prev, { id: Date.now().toString() + Math.random(), role, content, timestamp: new Date() }]);
   };
 
-  // ── Processar mensagem (conversa + análise) ───────────────
+  // ── Processar mensagem (conversa + análise universal) ─────
   const processarMensagem = async (
     textoUsuario: string,
     dadosOverride?: Record<string, unknown>[],
     schemaOverride?: ReturnType<typeof construirSchema>,
+    conteudoOverride?: string,
+    imagemOverride?: string,
     nomeOverride?: string,
   ) => {
     const dadosEnvio = dadosOverride ?? dadosBrutos;
     const schemaEnvio = schemaOverride ?? schema;
+    const conteudoEnvio = conteudoOverride ?? conteudoTexto;
+    const imagemEnvio = imagemOverride ?? imagemBase64;
     const nomeEnvio = nomeOverride ?? nomeArquivo;
+    const tipoEnvio = tipoArquivo;
 
     // Detectar intenção de salvar por voz
     const comandoSalvar = /\b(salvar|salva|salve|finalizar|pronto|concluir|confirmar)\b/i;
@@ -481,19 +581,44 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
       return;
     }
 
+    const MSGS_INTERNAS = ['analisar planilha', 'analisar documento', 'analisar imagem'];
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: textoUsuario, timestamp: new Date() };
-    if (textoUsuario !== 'analisar planilha') { // mensagem interna não aparece no chat
+    if (!MSGS_INTERNAS.includes(textoUsuario)) {
       setMessages(prev => [...prev, userMsg]);
     }
 
-    if (!dadosEnvio.length) {
-      addMessage('assistant', 'Primeiro envie uma planilha para eu analisar. Clique na área de upload acima.');
+    // Guard: sem arquivo carregado
+    const temArquivo = dadosEnvio.length > 0 || conteudoEnvio.length > 0 || imagemEnvio.length > 0;
+    if (!temArquivo) {
+      addMessage('assistant', 'Primeiro envie um arquivo para analisar. Aceito planilhas (XLSX, CSV), documentos (DOCX, PDF) e imagens (JPG, PNG).');
       return;
     }
 
     setIsProcessing(true);
 
     try {
+      const body: Record<string, unknown> = {
+        messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+        fichaAtual: ficha,
+        nomeArquivo: nomeEnvio,
+        tipoArquivo: tipoEnvio,
+        companyId,
+      };
+
+      // Monta payload específico por tipo
+      if (tipoEnvio === 'planilha') {
+        body.dados = dadosEnvio.slice(0, 500);
+        body.schema = schemaEnvio;
+      } else if (tipoEnvio === 'pdf' || tipoEnvio === 'docx') {
+        // Limita texto a ~8k chars para não estourar tokens
+        body.conteudo = conteudoEnvio.slice(0, 8000);
+      } else if (tipoEnvio === 'imagem') {
+        body.imagem = imagemEnvio;
+        // Para imagem, dados vazios são aceitos pela edge
+        body.dados = [];
+        body.schema = [];
+      }
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/analisar-planilha`,
         {
@@ -502,14 +627,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({
-            messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
-            dados: dadosEnvio.slice(0, 500),
-            schema: schemaEnvio,
-            fichaAtual: ficha,
-            nomeArquivo: nomeEnvio,
-            companyId,
-          }),
+          body: JSON.stringify(body),
         }
       );
 
@@ -527,16 +645,16 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
       setMessages(prev => [...prev, assistantMsg]);
       playTextSafe(resultado.resposta);
 
-      if (resultado.ficha?.completo && resultado.ficha.nome && !dashboardSalvoId) {
+      if (resultado.ficha?.completo && !dashboardSalvoId) {
         setTimeout(() => {
           const msg: Message = {
             id: (Date.now() + 2).toString(),
             role: 'assistant',
-            content: 'O dashboard está pronto! Você pode exportar o PDF ou salvar e compartilhar o link.',
+            content: 'A análise está pronta! Clique em "Exportar PDF" para baixar o relatório.',
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, msg]);
-          playTextSafe('O dashboard está pronto! Clique em Exportar PDF ou Salvar e compartilhar.');
+          playTextSafe('A análise está pronta! Clique em Exportar PDF para baixar o relatório.');
         }, 800);
       }
 
@@ -638,8 +756,8 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   const exportarPDF = async () => {
     if (!ficha.completo || isExportingPDF) return;
     // Garante que os dados ainda estão em memória antes de gerar
-    if (!dadosBrutos.length) {
-      alert('Os dados da planilha não estão mais em memória. Feche o modal e abra novamente enviando o arquivo.');
+    if (!dadosBrutos.length && !conteudoTexto && !imagemBase64) {
+      alert('Os dados do arquivo não estão mais em memória. Feche o modal e abra novamente enviando o arquivo.');
       return;
     }
     setIsExportingPDF(true);
@@ -859,7 +977,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   const PreviewContent = () => (
     <>
       {/* Upload zone — aparece quando sem dados */}
-      {!dadosBrutos.length && (
+      {!dadosBrutos.length && !conteudoTexto && !imagemBase64 && (
         <div
           onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
@@ -878,10 +996,11 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         >
           <div style={{ color: isDragging ? C.accent : C.textMuted, marginBottom: 8 }}><IconUpload /></div>
           <p style={{ fontSize: 13, fontWeight: 600, color: isDragging ? C.accent : C.text, marginBottom: 4 }}>
-            {isDragging ? 'Solte aqui!' : 'Enviar planilha'}
+            {isDragging ? 'Solte aqui!' : 'Enviar arquivo'}
           </p>
-          <p style={{ fontSize: 11, color: C.textMuted }}>CSV, XLSX ou TSV • Arraste ou clique</p>
-          <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.tsv" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
+          <p style={{ fontSize: 11, color: C.textMuted }}>📊 XLSX, CSV · 📄 PDF · 📝 DOCX · 🖼️ JPG, PNG</p>
+          <p style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>Arraste ou clique para selecionar</p>
+          <input ref={fileInputRef} type="file" accept={TIPOS_ACEITOS} style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
         </div>
       )}
 
@@ -940,7 +1059,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
       )}
 
       {/* Placeholder vazio */}
-      {!ficha.kpis.length && !ficha.graficos.length && dadosBrutos.length > 0 && (
+      {!ficha.kpis.length && !ficha.graficos.length && (dadosBrutos.length > 0 || conteudoTexto || imagemBase64) && (
         <div style={{ padding: '40px 20px', textAlign: 'center', color: C.textMuted, fontSize: 13 }}>
           <div style={{ marginBottom: 12, opacity: 0.3 }}><IconChart /></div>
           <p>O dashboard aparece aqui conforme a análise progride</p>
@@ -980,7 +1099,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
       >
         + Arquivo
       </button>
-      <input ref={fileInputHeaderRef} type="file" accept=".csv,.xlsx,.xls,.tsv" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
+      <input ref={fileInputHeaderRef} type="file" accept={TIPOS_ACEITOS} style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
       <button onClick={toggleMute} title={audioMutado ? 'Ativar áudio' : 'Desativar áudio'} style={{ padding: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: audioMutado ? C.textMuted : C.accent, opacity: audioMutado ? 0.5 : 1 }}>
         {audioMutado ? <IconVolumeMute /> : <IconVolume />}
       </button>
@@ -1034,7 +1153,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           value={inputText}
           onChange={e => setInputText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagem(); } }}
-          placeholder={dadosBrutos.length ? 'Peça para refinar a análise...' : 'Envie um arquivo ou descreva os dados...'}
+          placeholder={dadosBrutos.length || conteudoTexto || imagemBase64 ? 'Peça para refinar a análise...' : 'Envie um arquivo ou descreva o que quer analisar...'}
           disabled={isProcessing || voiceRecorder.isRecording || isTranscribing}
           style={{ flex: 1, padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: 20, color: C.text, fontSize: 13, outline: 'none' }}
         />

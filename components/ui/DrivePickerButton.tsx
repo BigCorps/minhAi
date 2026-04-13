@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, FolderOpen } from 'lucide-react';
+import { Loader2, Images } from 'lucide-react';
+
+interface DriveFile {
+  id: string;
+  name: string;
+}
 
 interface DrivePickerButtonProps {
   companyId: string;
-  onFolderSelected: (folderId: string, folderName: string) => void;
+  onFilesSelected: (files: DriveFile[]) => void;
   label?: string;
   className?: string;
 }
@@ -20,14 +25,13 @@ declare global {
 
 export default function DrivePickerButton({
   companyId,
-  onFolderSelected,
-  label = 'Selecionar pasta do Drive',
+  onFilesSelected,
+  label = 'Selecionar imagens do Drive',
   className,
 }: DrivePickerButtonProps) {
   const [loading, setLoading] = useState(false);
   const [pickerReady, setPickerReady] = useState(false);
 
-  // Carrega os scripts do Google Picker
   useEffect(() => {
     const loadScript = (src: string): Promise<void> =>
       new Promise((resolve, reject) => {
@@ -74,22 +78,31 @@ export default function DrivePickerButton({
 
       const accessToken = json.access_token;
 
-      // Criar o Google Picker
+      // Criar o Google Picker com seleção múltipla de imagens
       const picker = new window.google.picker.PickerBuilder()
         .addView(
-          // 1. Mude de ViewId.FOLDERS para ViewId.DOCS
-          new window.google.picker.DocsView(window.google.picker.ViewId.DOCS)
-            .setIncludeFolders(true) // Permite ver pastas
-            .setSelectFolderEnabled(true) // Permite selecionar a pasta atual
-            // 2. Remova a linha do .setMimeTypes()
+          new window.google.picker.DocsView()
+            .setMimeTypes('image/jpeg,image/png,image/gif,image/webp,image/bmp')
+            .setMode(window.google.picker.DocsViewMode.GRID)
         )
+        .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
+        .enableFeature(window.google.picker.Feature.SUPPORT_DRIVES)
         .setOAuthToken(accessToken)
+        .setTitle('Selecione as imagens (máximo 50)')
         .setCallback((data: any) => {
           if (data.action === window.google.picker.Action.PICKED) {
-            const folder = data.docs[0];
-            onFolderSelected(folder.id, folder.name);
+            const files: DriveFile[] = data.docs.map((f: any) => ({
+              id: f.id,
+              name: f.name,
+            }));
+            onFilesSelected(files);
           }
-          setLoading(false);
+          if (
+            data.action === window.google.picker.Action.PICKED ||
+            data.action === window.google.picker.Action.CANCEL
+          ) {
+            setLoading(false);
+          }
         })
         .build();
 
@@ -99,7 +112,7 @@ export default function DrivePickerButton({
       alert('Erro ao abrir seletor do Drive: ' + err.message);
       setLoading(false);
     }
-  }, [pickerReady, companyId, onFolderSelected]);
+  }, [pickerReady, companyId, onFilesSelected]);
 
   return (
     <button
@@ -109,7 +122,7 @@ export default function DrivePickerButton({
     >
       {loading
         ? <Loader2 className="w-4 h-4 animate-spin" />
-        : <FolderOpen className="w-4 h-4" />
+        : <Images className="w-4 h-4" />
       }
       {loading ? 'Abrindo...' : pickerReady ? label : 'Carregando...'}
     </button>

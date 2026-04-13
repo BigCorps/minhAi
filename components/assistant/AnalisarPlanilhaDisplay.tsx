@@ -1051,17 +1051,9 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           <p style={{ fontSize: 13, fontWeight: 600, color: isDragging ? C.accent : C.text, marginBottom: 4 }}>
             {isDragging ? 'Solte aqui!' : 'Enviar arquivo'}
           </p>
-          <p style={{ fontSize: 11, color: C.textMuted }}>📊 XLSX, CSV · 📄 PDF · 📝 DOCX · 🖼️ JPG, PNG</p>
+          <p style={{ fontSize: 11, color: C.textMuted }}>XLSX, CSV · PDF · DOCX · JPG, PNG</p>
           <p style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>Arraste ou clique para selecionar</p>
           <input ref={fileInputRef} type="file" accept={TIPOS_ACEITOS} style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
-        </div>
-      )}
-
-      {/* Alerta PII */}
-      {alertaPII.length > 0 && (
-        <div style={{ padding: '8px 12px', borderRadius: 8, background: `${C.warning}15`, border: `1px solid ${C.warning}40`, marginBottom: 12 }}>
-          <p style={{ fontSize: 11, color: C.warning, fontWeight: 600, marginBottom: 2 }}>🔒 LGPD — Dados anonimizados</p>
-          <p style={{ fontSize: 10, color: C.textMuted }}>{alertaPII.join(', ')}</p>
         </div>
       )}
 

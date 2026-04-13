@@ -320,7 +320,6 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputHeaderRef = useRef<HTMLInputElement>(null);
-  const graficosContainerRef = useRef<HTMLDivElement>(null);
   const audioMutadoRef = useRef(false);
   const audioQueueRef = useRef<string[]>([]);
   const isPlayingRef = useRef(false);
@@ -700,8 +699,11 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         doc.setTextColor(0, 0, 0);
       }
 
-      // ── Gráficos via html2canvas ──────────────────────────
-      if (ficha.graficos.length && graficosContainerRef.current) {
+      // ── Gráficos via html2canvas + container off-screen ──────
+      // O ResponsiveContainer do Recharts precisa de dimensões reais no DOM
+      // para renderizar os SVGs. Solução: criar um div fixo fora da viewport,
+      // renderizar cada gráfico lá com ReactDOM, aguardar o layout, capturar.
+      if (ficha.graficos.length) {
         if (y > 200) { doc.addPage(); y = 20; }
         doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
@@ -709,91 +711,60 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         doc.text('Gráficos', margin, y);
         y += 6;
 
-        const graficoEls = graficosContainerRef.current.querySelectorAll<HTMLDivElement>('[data-grafico-id]');
+        const ReactDOM = await import('react-dom/client');
+        const React = await import('react');
 
-        for (const el of Array.from(graficoEls)) {
+        // Container off-screen com largura fixa para o Recharts medir
+        const offscreen = document.createElement('div');
+        offscreen.style.cssText = 'position:fixed;top:-9999px;left:0;width:800px;background:#ffffff;z-index:-1;pointer-events:none;';
+        document.body.appendChild(offscreen);
+
+        for (const g of ficha.graficos) {
           if (y > 220) { doc.addPage(); y = 20; }
 
-          const titulo = el.getAttribute('data-grafico-titulo') ?? '';
-          if (titulo) {
+          if (g.titulo) {
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
-            doc.text(titulo, margin, y);
+            doc.text(g.titulo, margin, y);
             y += 5;
           }
 
           try {
-            // ── Sobrescreve estilos para fundo branco antes de capturar ──
-            // Necessário porque html2canvas captura o DOM renderizado,
-            // incluindo cores do tema dark. Guardamos os valores originais
-            // e restauramos logo após a captura.
-            const originalBg = el.style.background;
-            const originalColor = el.style.color;
-            const originalBorder = el.style.border;
+            const chartDiv = document.createElement('div');
+            chartDiv.style.cssText = 'width:800px;height:300px;background:#ffffff;padding:12px;box-sizing:border-box;border-radius:8px;border:1px solid #e2e8f0;';
+            offscreen.appendChild(chartDiv);
 
-            // Força paleta light no container do gráfico
-            el.style.background = '#ffffff';
-            el.style.color = '#0f172a';
-            el.style.border = '1px solid #e2e8f0';
+            // Renderiza GraficoRecharts com paleta LIGHT (sempre branco no PDF)
+            const root = ReactDOM.createRoot(chartDiv);
+            root.render(React.createElement(GraficoRecharts, { grafico: g, C: LIGHT }));
 
-            // Força também nos textos filhos (títulos, labels)
-            const allText = el.querySelectorAll<HTMLElement>('p, span, text, tspan');
-            const originalTextColors: string[] = [];
-            allText.forEach(t => {
-              originalTextColors.push(t.style.color);
-              // Só sobrescreve se for cor clara (white/slate) — mantém cores de destaque
-              const computed = window.getComputedStyle(t).color;
-              // rgb(241,245,249), rgb(248,250,252), rgb(148,163,184) = cores do tema dark
-              if (computed === 'rgb(241, 245, 249)' || computed === 'rgb(248, 250, 252)' || computed === 'rgb(148, 163, 184)' || computed === 'rgb(100, 116, 139)') {
-                t.style.color = '#0f172a';
-              }
-            });
+            // Aguarda Recharts medir o container e renderizar o SVG completo
+            await new Promise(r => setTimeout(r, 700));
 
-            // SVG text elements (eixos Recharts)
-            const svgTexts = el.querySelectorAll<SVGTextElement>('text, tspan');
-            const originalSvgFills: string[] = [];
-            svgTexts.forEach(t => {
-              originalSvgFills.push(t.getAttribute('fill') ?? '');
-              const fill = t.getAttribute('fill');
-              // Substitui cores de texto claro por cor escura
-              if (!fill || fill === '#94a3b8' || fill === '#64748b' || fill === 'white' || fill === '#f1f5f9') {
-                t.setAttribute('fill', '#374151');
-              }
-            });
-
-            const canvas = await html2canvas(el, {
+            const canvas = await html2canvas(chartDiv, {
               scale: 2,
-              backgroundColor: '#ffffff', // sempre branco, independente do tema
+              backgroundColor: '#ffffff',
               logging: false,
               useCORS: true,
-              // ignoreElements filtra elementos que causam cross-origin problems
-              ignoreElements: (element) => element.tagName === 'IFRAME',
+              ignoreElements: (el) => el.tagName === 'IFRAME',
             });
 
-            // ── Restaura estilos originais ────────────────────
-            el.style.background = originalBg;
-            el.style.color = originalColor;
-            el.style.border = originalBorder;
-            allText.forEach((t, i) => { t.style.color = originalTextColors[i] ?? ''; });
-            svgTexts.forEach((t, i) => {
-              const orig = originalSvgFills[i];
-              if (orig) t.setAttribute('fill', orig);
-              else t.removeAttribute('fill');
-            });
+            root.unmount();
+            offscreen.removeChild(chartDiv);
 
             const imgData = canvas.toDataURL('image/png');
-            const pxW = canvas.width;
-            const pxH = canvas.height;
-            const imgH = (pxH / pxW) * contentW;
+            const imgH = (canvas.height / canvas.width) * contentW;
 
             if (y + imgH > 275) { doc.addPage(); y = 20; }
             doc.addImage(imgData, 'PNG', margin, y, contentW, imgH);
             y += imgH + 8;
           } catch (err) {
-            console.warn('Erro ao capturar gráfico:', err);
+            console.warn('Erro ao capturar gráfico:', g.titulo, err);
           }
         }
+
+        document.body.removeChild(offscreen);
       }
 
       // ── Insights ──────────────────────────────────────────
@@ -915,12 +886,10 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
       {ficha.graficos.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <p style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gráficos</p>
-          <div ref={graficosContainerRef}>
+          <div>
             {ficha.graficos.map(g => (
               <div
                 key={g.id}
-                data-grafico-id={g.id}
-                data-grafico-titulo={g.titulo}
                 style={{ marginBottom: 16, background: C.bgSecondary, borderRadius: 10, padding: '12px', border: `1px solid ${C.border}` }}
               >
                 <p style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 2 }}>{g.titulo}</p>

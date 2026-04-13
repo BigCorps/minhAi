@@ -315,6 +315,8 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputHeaderRef = useRef<HTMLInputElement>(null);
+  const graficosContainerRef = useRef<HTMLDivElement>(null);
   const audioMutadoRef = useRef(false);
   const audioQueueRef = useRef<string[]>([]);
   const isPlayingRef = useRef(false);
@@ -599,21 +601,21 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
     setTimeout(() => setSlugCopiado(false), 2000);
   };
 
-  // ── Export PDF ────────────────────────────────────────────
+  // ── Export PDF com gráficos via html2canvas ───────────────
   const exportarPDF = async () => {
     if (!ficha.completo || isExportingPDF) return;
     setIsExportingPDF(true);
     try {
-      // Carrega jsPDF dinamicamente
       const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+      const html2canvas = (await import('html2canvas')).default;
 
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
       const W = 210;
       let y = 20;
       const margin = 15;
       const contentW = W - margin * 2;
 
-      // Header
+      // ── Header ───────────────────────────────────────────
       doc.setFillColor(30, 64, 175);
       doc.rect(0, 0, W, 40, 'F');
       doc.setTextColor(255, 255, 255);
@@ -627,7 +629,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
       doc.setTextColor(0, 0, 0);
       y = 50;
 
-      // Domínio
+      // ── Domínio ──────────────────────────────────────────
       if (ficha.dominio) {
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
@@ -635,7 +637,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         y += 8;
       }
 
-      // Resumo executivo
+      // ── Resumo executivo ──────────────────────────────────
       if (ficha.resumo_executivo) {
         doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
@@ -650,41 +652,92 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         y += resumoLines.length * 5 + 8;
       }
 
-      // KPIs
+      // ── KPIs ─────────────────────────────────────────────
       if (ficha.kpis.length) {
+        if (y > 240) { doc.addPage(); y = 20; }
         doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(0, 0, 0);
         doc.text('Indicadores Chave (KPIs)', margin, y);
         y += 6;
 
+        const kpiCols = 3;
+        const kpiW = contentW / kpiCols;
         ficha.kpis.forEach((kpi, i) => {
-          const col = i % 3;
-          const kpiW = contentW / 3;
+          const col = i % kpiCols;
+          const row = Math.floor(i / kpiCols);
           const x = margin + col * kpiW;
-          if (col === 0 && i > 0) y += 20;
-
+          const yKpi = y + row * 22;
           doc.setFillColor(241, 245, 249);
-          doc.roundedRect(x, y, kpiW - 2, 18, 2, 2, 'F');
+          doc.roundedRect(x, yKpi, kpiW - 2, 19, 2, 2, 'F');
           doc.setFontSize(8);
           doc.setTextColor(100, 100, 100);
-          doc.text(kpi.label, x + 3, y + 6);
-          doc.setFontSize(11);
+          doc.setFont('helvetica', 'normal');
+          doc.text(kpi.label, x + 3, yKpi + 6);
+          doc.setFontSize(12);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(0, 0, 0);
-          doc.text(kpi.valor, x + 3, y + 13);
+          doc.text(kpi.valor, x + 3, yKpi + 14);
           if (kpi.variacao) {
             doc.setFontSize(8);
             doc.setFont('helvetica', 'normal');
-            doc.setTextColor(kpi.variacao.startsWith('+') ? 22 : 220, kpi.variacao.startsWith('+') ? 163 : 38, kpi.variacao.startsWith('+') ? 74 : 38);
-            doc.text(kpi.variacao, x + kpiW - 18, y + 13);
+            const isPos = kpi.variacao.startsWith('+');
+            doc.setTextColor(isPos ? 22 : 220, isPos ? 163 : 38, isPos ? 74 : 38);
+            doc.text(kpi.variacao, x + kpiW - 20, yKpi + 14);
           }
-          doc.setTextColor(0, 0, 0);
         });
-        y += 28;
+        const kpiRows = Math.ceil(ficha.kpis.length / kpiCols);
+        y += kpiRows * 22 + 6;
+        doc.setTextColor(0, 0, 0);
       }
 
-      // Insights
+      // ── Gráficos via html2canvas ──────────────────────────
+      if (ficha.graficos.length && graficosContainerRef.current) {
+        if (y > 200) { doc.addPage(); y = 20; }
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Gráficos', margin, y);
+        y += 6;
+
+        // Seleciona cada div de gráfico pelo data-grafico-id
+        const graficoEls = graficosContainerRef.current.querySelectorAll<HTMLDivElement>('[data-grafico-id]');
+
+        for (const el of Array.from(graficoEls)) {
+          if (y > 220) { doc.addPage(); y = 20; }
+
+          const titulo = el.getAttribute('data-grafico-titulo') ?? '';
+          if (titulo) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text(titulo, margin, y);
+            y += 5;
+          }
+
+          try {
+            const canvas = await html2canvas(el, {
+              scale: 2,
+              backgroundColor: isDark ? '#1e293b' : '#ffffff',
+              logging: false,
+              useCORS: true,
+            });
+            const imgData = canvas.toDataURL('image/png');
+            // Calcula altura proporcional: largura fixa = contentW mm
+            const pxW = canvas.width;
+            const pxH = canvas.height;
+            const imgH = (pxH / pxW) * contentW;
+
+            if (y + imgH > 275) { doc.addPage(); y = 20; }
+            doc.addImage(imgData, 'PNG', margin, y, contentW, imgH);
+            y += imgH + 8;
+          } catch (err) {
+            console.warn('Erro ao capturar gráfico:', err);
+          }
+        }
+      }
+
+      // ── Insights ──────────────────────────────────────────
       if (ficha.insights.length) {
         if (y > 230) { doc.addPage(); y = 20; }
         doc.setFontSize(13);
@@ -694,7 +747,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         y += 6;
 
         ficha.insights.forEach(ins => {
-          if (y > 270) { doc.addPage(); y = 20; }
+          if (y > 268) { doc.addPage(); y = 20; }
           const prioridadeCor: Record<string, [number, number, number]> = {
             high: [220, 38, 38], medium: [217, 119, 6], low: [100, 116, 139],
           };
@@ -711,18 +764,18 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           doc.setTextColor(60, 60, 60);
           const descLines = doc.splitTextToSize(ins.descricao, contentW - 6);
           doc.text(descLines, margin + 6, y);
-          y += descLines.length * 4 + 5;
+          y += descLines.length * 4 + 6;
         });
       }
 
-      // Footer
+      // ── Footer em todas as páginas ────────────────────────
       const totalPages = (doc as any).internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
-        doc.text('Gerado por minhAi · minhai.app', margin, 290);
-        doc.text(`Pág. ${i}/${totalPages}`, W - margin - 15, 290);
+        doc.text('Gerado por minhAi · minhai.app', margin, 291);
+        doc.text(`Pág. ${i}/${totalPages}`, W - margin - 15, 291);
       }
 
       doc.save(`dashboard-${(nomeArquivo || 'analise').replace(/\.[^/.]+$/, '')}.pdf`);
@@ -799,17 +852,24 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         </div>
       )}
 
-      {/* Gráficos */}
+      {/* Gráficos — container com ref para html2canvas */}
       {ficha.graficos.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <p style={{ fontSize: 11, color: C.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gráficos</p>
-          {ficha.graficos.map(g => (
-            <div key={g.id} style={{ marginBottom: 16, background: C.bgSecondary, borderRadius: 10, padding: '12px', border: `1px solid ${C.border}` }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 2 }}>{g.titulo}</p>
-              {g.descricao && <p style={{ fontSize: 10, color: C.textMuted, marginBottom: 8 }}>{g.descricao}</p>}
-              <GraficoRecharts grafico={g} C={C} />
-            </div>
-          ))}
+          <div ref={graficosContainerRef}>
+            {ficha.graficos.map(g => (
+              <div
+                key={g.id}
+                data-grafico-id={g.id}
+                data-grafico-titulo={g.titulo}
+                style={{ marginBottom: 16, background: C.bgSecondary, borderRadius: 10, padding: '12px', border: `1px solid ${C.border}` }}
+              >
+                <p style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 2 }}>{g.titulo}</p>
+                {g.descricao && <p style={{ fontSize: 10, color: C.textMuted, marginBottom: 8 }}>{g.descricao}</p>}
+                <GraficoRecharts grafico={g} C={C} />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -837,15 +897,15 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         </div>
       )}
 
-      {/* Botões de ação — apenas quando completo */}
+      {/* Botão PDF — aparece assim que completo, sem precisar digitar nada */}
       {ficha.completo && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-          {/* Exportar PDF */}
+        <div style={{ marginTop: 12 }}>
           <button
             onClick={exportarPDF}
             disabled={isExportingPDF}
             style={{
-              width: '100%', padding: '11px', borderRadius: 8, border: 'none', cursor: isExportingPDF ? 'not-allowed' : 'pointer',
+              width: '100%', padding: '12px', borderRadius: 8, border: 'none',
+              cursor: isExportingPDF ? 'not-allowed' : 'pointer',
               background: C.accent, color: 'white', fontSize: 13, fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               opacity: isExportingPDF ? 0.6 : 1,
@@ -853,65 +913,54 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           >
             {isExportingPDF ? <><IconLoader /> Gerando PDF...</> : <><IconPDF /> Exportar PDF</>}
           </button>
-
-          {/* Salvar e compartilhar */}
-          {!dashboardSalvoId ? (
-            <button
-              onClick={salvarDashboard}
-              disabled={isSaving}
-              style={{
-                width: '100%', padding: '11px', borderRadius: 8, border: `1px solid ${C.success}`,
-                cursor: isSaving ? 'not-allowed' : 'pointer', background: `${C.success}15`,
-                color: C.success, fontSize: 13, fontWeight: 600,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                opacity: isSaving ? 0.6 : 1,
-              }}
-            >
-              {isSaving ? <><IconLoader /> Salvando...</> : <><IconShare /> Salvar e compartilhar</>}
-            </button>
-          ) : (
-            <button
-              onClick={copiarLink}
-              style={{
-                width: '100%', padding: '11px', borderRadius: 8, border: `1px solid ${C.success}`,
-                cursor: 'pointer', background: slugCopiado ? C.success : `${C.success}15`,
-                color: slugCopiado ? 'white' : C.success, fontSize: 13, fontWeight: 600,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s',
-              }}
-            >
-              <IconShare /> {slugCopiado ? 'Link copiado!' : 'Copiar link'}
-            </button>
-          )}
         </div>
       )}
     </>
   );
 
-  // ── Botões header ─────────────────────────────────────────
-  const HeaderButtons = () => (
+  // ── Shared inline JSX blocks ─────────────────────────────
+  // IMPORTANTE: estes blocos são JSX inline, não componentes,
+  // para evitar remount a cada keystroke (bug de perda de foco).
+  const headerButtonsJSX = (
     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-      {/* Upload rápido */}
       <button
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => fileInputHeaderRef.current?.click()}
         title="Enviar arquivo"
         style={{ padding: '6px 10px', borderRadius: 6, background: `${C.accent}20`, border: `1px solid ${C.accent}40`, cursor: 'pointer', color: C.accent, fontSize: 11, fontWeight: 600 }}
       >
         + Arquivo
       </button>
-      <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.tsv" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
-      {/* Mute */}
+      <input ref={fileInputHeaderRef} type="file" accept=".csv,.xlsx,.xls,.tsv" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
       <button onClick={toggleMute} title={audioMutado ? 'Ativar áudio' : 'Desativar áudio'} style={{ padding: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: audioMutado ? C.textMuted : C.accent, opacity: audioMutado ? 0.5 : 1 }}>
         {audioMutado ? <IconVolumeMute /> : <IconVolume />}
       </button>
-      {/* Fechar */}
       <button onClick={onClose} style={{ padding: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted }}>
         <IconX />
       </button>
     </div>
   );
 
-  // ── Input area ────────────────────────────────────────────
-  const InputArea = () => (
+  const chatMessagesJSX = (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
+      {messages.map(msg => (
+        <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+          <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: 12, background: msg.role === 'user' ? C.userBubble : C.assistantBubble, color: msg.role === 'user' ? 'white' : C.text, fontSize: 13, lineHeight: 1.5 }}>
+            {msg.content}
+          </div>
+        </div>
+      ))}
+      {isProcessing && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <div style={{ padding: '10px 14px', borderRadius: 12, background: C.assistantBubble, color: C.text, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            <IconLoader /> Analisando...
+          </div>
+        </div>
+      )}
+      <div ref={messagesEndRef} />
+    </div>
+  );
+
+  const inputAreaJSX = (
     <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {!inputText.trim() && (
@@ -950,27 +999,6 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
     </div>
   );
 
-  // ── Chat messages ─────────────────────────────────────────
-  const ChatMessages = () => (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
-      {messages.map(msg => (
-        <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-          <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: 12, background: msg.role === 'user' ? C.userBubble : C.assistantBubble, color: msg.role === 'user' ? 'white' : C.text, fontSize: 13, lineHeight: 1.5 }}>
-            {msg.content}
-          </div>
-        </div>
-      ))}
-      {isProcessing && (
-        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <div style={{ padding: '10px 14px', borderRadius: 12, background: C.assistantBubble, color: C.text, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-            <IconLoader /> Analisando...
-          </div>
-        </div>
-      )}
-      <div ref={messagesEndRef} />
-    </div>
-  );
-
   // ── RENDER MOBILE ─────────────────────────────────────────
   if (isMobile) {
     return createPortal(
@@ -982,12 +1010,12 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
             <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Analisar Planilha</h2>
             {ficha.dominio && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: `${C.accent}20`, color: C.accent, fontWeight: 600 }}>{ficha.dominio}</span>}
           </div>
-          <HeaderButtons />
+          {headerButtonsJSX}
         </div>
 
         {/* Chat */}
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          <ChatMessages />
+          {chatMessagesJSX}
         </div>
 
         {/* Preview colapsável */}
@@ -998,7 +1026,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           </div>
         )}
 
-        <InputArea />
+        {inputAreaJSX}
       </div>,
       document.body
     );
@@ -1022,7 +1050,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
               <p style={{ fontSize: 12, color: C.textMuted }}>Converse para refinar a análise e exportar o relatório</p>
             </div>
           </div>
-          <HeaderButtons />
+          {headerButtonsJSX}
         </div>
 
         {/* Conteúdo 2 colunas */}
@@ -1030,8 +1058,8 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
 
           {/* COLUNA ESQUERDA — CHAT */}
           <div style={{ background: C.bgChat, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <ChatMessages />
-            <InputArea />
+            {chatMessagesJSX}
+            {inputAreaJSX}
           </div>
 
           {/* COLUNA DIREITA — DASHBOARD PREVIEW */}

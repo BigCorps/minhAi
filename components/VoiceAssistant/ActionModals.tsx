@@ -78,6 +78,10 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'DuplicarImagemDisplay': dynamic(() => import('@/components/assistant/DuplicarImagemDisplay'), { ssr: false }),
   'EditarImagemDisplay': dynamic(() => import('@/components/assistant/EditarImagemDisplay'), { ssr: false }),
   'RemoverFundoDisplay': dynamic(() => import('@/components/assistant/RemoverFundoDisplay'), { ssr: false }),
+  'AnalisarPlanilhaDisplay': dynamic(
+  () => import('@/components/assistant/AnalisarPlanilhaDisplay'),
+  { ssr: false }
+),
 
   // ── Consultas ─────────────────────────────────────────────
   'ConsultarCpfModal': dynamic(() => import('@/components/assistant/ConsultarCpfModal'), { ssr: false }),

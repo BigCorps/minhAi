@@ -227,8 +227,8 @@ export default function PainelOfertasDisplay({
       )}
 
       {/* QR Code fixo — canto inferior esquerdo */}
-      {qrContent && !loading && (
-        <div className="absolute bottom-6 left-6 flex flex-col items-center gap-1.5 z-20">
+{qrContent && !loading && (
+  <div className="absolute top-6 right-6 flex flex-col items-center gap-1.5 z-20">
           <div className="rounded-xl overflow-hidden shadow-2xl border-2 border-white/20">
             <img src={buildQrUrl(qrContent)} alt="QR Code" width={96} height={96} className="block" />
           </div>

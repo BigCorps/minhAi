@@ -114,6 +114,9 @@ export default function PainelOfertasDisplay({
       // Buscar imagens por file_ids
       const fileIds = cfg.file_ids?.map((f: any) => f.id || f) || [];
 
+      console.log('cfg.file_ids raw:', JSON.stringify(cfg.file_ids));
+      console.log('fileIds processados:', fileIds);
+
       if (fileIds.length === 0) {
         setError('Nenhuma imagem configurada. Configure no painel.');
         setLoading(false);

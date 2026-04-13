@@ -405,12 +405,49 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
     isPlayingRef.current = false;
   }, [playTextComMute]);
 
-  // ── Mensagem inicial ──────────────────────────────────────
+  // ── Mensagem inicial + preload de libs ───────────────────
   useEffect(() => {
     if (hasSpokenInitialRef.current) return;
     hasSpokenInitialRef.current = true;
     setMessages([{ id: Date.now().toString(), role: 'assistant', content: MENSAGEM_INICIAL, timestamp: new Date() }]);
     playTextSafe(MENSAGEM_INICIAL);
+
+    // Preload das libs em background para evitar delay no primeiro upload
+    // Não bloqueia — fire-and-forget
+    const preload = async () => {
+      try {
+        // SheetJS
+        if (!window.XLSX) {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          document.head.appendChild(s);
+        }
+        // pdfjs
+        if (!window.pdfjsLib) {
+          await new Promise<void>((resolve) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload = () => {
+              if (window.pdfjsLib) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+              }
+              resolve();
+            };
+            s.onerror = () => resolve(); // falha silenciosa no preload
+            document.head.appendChild(s);
+          });
+        }
+        // mammoth
+        if (!window.mammoth) {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+          document.head.appendChild(s);
+        }
+      } catch { /* preload silencioso */ }
+    };
+    preload();
+
     return () => { isActiveRef.current = false; };
   }, []);
 
@@ -459,7 +496,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         const msg = `Planilha lida: ${jsonData.length} linhas, ${schemaDetectado.length} colunas${avisoAnon}. Iniciando análise...`;
         addMessage('assistant', msg);
         await playTextSafe(msg);
-        await processarMensagem('analisar planilha', dadosLimpos, schemaDetectado, undefined, undefined, file.name);
+        await processarMensagem('analisar planilha', dadosLimpos, schemaDetectado, undefined, undefined, file.name, 'planilha');
       } catch (err) {
         console.error(err);
         addMessage('assistant', 'Não consegui ler a planilha. Verifique se o arquivo está íntegro.');
@@ -479,15 +516,12 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           });
         }
 
-        // Sempre configura o workerSrc — mesmo se pdfjsLib já existia mas sem worker
-        // Usa disableWorker como fallback para evitar erros de CORS com o worker CDN
+        // Sempre configura workerSrc — independente de quando a lib carregou
         if (window.pdfjsLib) {
           window.pdfjsLib.GlobalWorkerOptions.workerSrc =
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
-
-        // Aguarda um tick para o worker inicializar
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 150)); // dá tempo ao worker inicializar
 
         const buffer = await file.arrayBuffer();
 
@@ -525,7 +559,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         const msg = `PDF lido: ${numPages} página(s), ${Math.round(textoCompleto.length / 1000)}k caracteres. Iniciando análise...`;
         addMessage('assistant', msg);
         await playTextSafe(msg);
-        await processarMensagem('analisar documento', undefined, undefined, textoCompleto, undefined, file.name);
+        await processarMensagem('analisar documento', undefined, undefined, textoCompleto, undefined, file.name, 'pdf');
       } catch (err: any) {
         console.error('Erro PDF:', err);
         // Tenta fallback: envia como imagem se for PDF de 1 página
@@ -578,7 +612,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         const msg = `Documento lido: ${Math.round(texto.length / 1000)}k caracteres. Iniciando análise...`;
         addMessage('assistant', msg);
         await playTextSafe(msg);
-        await processarMensagem('analisar documento', undefined, undefined, texto, undefined, file.name);
+        await processarMensagem('analisar documento', undefined, undefined, texto, undefined, file.name, 'docx');
       } catch (err: any) {
         console.error('Erro DOCX:', err);
         addMessage('assistant', `Erro ao ler o documento: ${err?.message ?? 'formato não reconhecido'}. Certifique-se de que é um .DOCX válido e tente novamente.`);
@@ -597,7 +631,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
         const msg = 'Imagem carregada. Iniciando análise com IA visual...';
         addMessage('assistant', msg);
         await playTextSafe(msg);
-        await processarMensagem('analisar imagem', undefined, undefined, undefined, base64, file.name);
+        await processarMensagem('analisar imagem', undefined, undefined, undefined, base64, file.name, 'imagem');
       } catch (err) {
         console.error(err);
         addMessage('assistant', 'Erro ao carregar a imagem. Tente novamente.');
@@ -618,13 +652,14 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
     conteudoOverride?: string,
     imagemOverride?: string,
     nomeOverride?: string,
+    tipoOverride?: TipoArquivo,     // ← evita stale state logo após setTipoArquivo
   ) => {
     const dadosEnvio = dadosOverride ?? dadosBrutos;
     const schemaEnvio = schemaOverride ?? schema;
     const conteudoEnvio = conteudoOverride ?? conteudoTexto;
     const imagemEnvio = imagemOverride ?? imagemBase64;
     const nomeEnvio = nomeOverride ?? nomeArquivo;
-    const tipoEnvio = tipoArquivo;
+    const tipoEnvio = tipoOverride ?? tipoArquivo; // usa override primeiro
 
     // Detectar intenção de salvar por voz
     const comandoSalvar = /\b(salvar|salva|salve|finalizar|pronto|concluir|confirmar)\b/i;
@@ -1047,13 +1082,21 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
             marginBottom: 16,
           }}
         >
-          <div style={{ color: isDragging ? C.accent : C.textMuted, marginBottom: 8 }}><IconUpload /></div>
+          <div style={{ display: 'flex', justifyContent: 'center', color: isDragging ? C.accent : C.textMuted, marginBottom: 8 }}><IconUpload /></div>
           <p style={{ fontSize: 13, fontWeight: 600, color: isDragging ? C.accent : C.text, marginBottom: 4 }}>
             {isDragging ? 'Solte aqui!' : 'Enviar arquivo'}
           </p>
-          <p style={{ fontSize: 11, color: C.textMuted }}>XLSX, CSV · PDF · DOCX · JPG, PNG</p>
+          <p style={{ fontSize: 11, color: C.textMuted }}>📊 XLSX, CSV · 📄 PDF · 📝 DOCX · 🖼️ JPG, PNG</p>
           <p style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>Arraste ou clique para selecionar</p>
           <input ref={fileInputRef} type="file" accept={TIPOS_ACEITOS} style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
+        </div>
+      )}
+
+      {/* Alerta PII */}
+      {alertaPII.length > 0 && (
+        <div style={{ padding: '8px 12px', borderRadius: 8, background: `${C.warning}15`, border: `1px solid ${C.warning}40`, marginBottom: 12 }}>
+          <p style={{ fontSize: 11, color: C.warning, fontWeight: 600, marginBottom: 2 }}>🔒 LGPD — Dados anonimizados</p>
+          <p style={{ fontSize: 10, color: C.textMuted }}>{alertaPII.join(', ')}</p>
         </div>
       )}
 

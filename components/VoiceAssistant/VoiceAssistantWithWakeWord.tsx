@@ -943,6 +943,10 @@ export function VoiceAssistantWithWakeWord({
           pt('Abrindo modo vendas!').catch(() => {});
           break;
         }
+        case 'analisar_planilha':
+          await stopGoogleSpeech();
+          setActiveModal({ type: 'AnalisarPlanilhaDisplay', data: { companyId } });
+          break;
         case 'ver_produtos':
           break;
         default: {
@@ -1551,6 +1555,7 @@ const handleTextMessage = async (message: string) => {
       remover_fundo:      { type: 'RemoverFundoDisplay',              data: { companyId } },
       duplicar_imagem:    { type: 'DuplicarImagemDisplay',            data: { companyId } },
       lista_compras:      { type: 'ListaComprasDisplay',              data: { companyId } },
+      analisar_planilha:  { type: 'AnalisarPlanilhaDisplay',          data: { companyId } },
     };
 
     const modal = modalOnlyFunctions[functionKey];

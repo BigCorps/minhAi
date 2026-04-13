@@ -24,7 +24,7 @@ import { anonimizarPII, construirSchema } from '@/lib/utils/anonimizarPII';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   AreaChart, Area, ScatterChart, Scatter,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 
 // ── Tipos ────────────────────────────────────────────────────
@@ -222,23 +222,53 @@ function GraficoRecharts({ grafico, C }: { grafico: Grafico; C: typeof DARK }) {
   );
 
   const chartProps = { data: dados, margin: { top: 5, right: 10, left: -10, bottom: 5 } };
-  // Usa fill explícito com valor de atributo SVG (não CSS color) para que
-  // html2canvas consiga ler corretamente ao exportar PDF
-  const axisFill = '#6b7280'; // cinza neutro — legível tanto em dark quanto no PDF branco
-  const gridColor = '#d1d5db'; // cinza claro — visível em fundo branco no PDF
+  const axisFill = '#6b7280';
+  const gridColor = '#d1d5db';
   const axisStyle = { fontSize: 10, fill: axisFill };
   const tooltipStyle = { backgroundColor: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 11 };
 
   if (tipo === 'pie') {
+    // Pie usa altura maior e label DENTRO da fatia (cx/cy com margem)
+    // para evitar que o html2canvas corte as labels externas.
+    // Também adiciona Legend abaixo para garantir legibilidade no PDF.
+    const RADIAN = Math.PI / 180;
+    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+      // Só mostra label se fatia >= 5% para não sobrepor
+      if (percent < 0.05) return null;
+      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+      return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      );
+    };
+
     return (
-      <ResponsiveContainer width="100%" height={160}>
-        <PieChart>
-          <Pie data={dados} dataKey={config.yKey} nameKey={config.xKey} cx="50%" cy="50%" outerRadius={60} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-            {dados.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-          </Pie>
-          <Tooltip contentStyle={tooltipStyle} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div style={{ width: '100%' }}>
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+            <Pie
+              data={dados}
+              dataKey={config.yKey}
+              nameKey={config.xKey}
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              labelLine={false}
+              label={renderCustomLabel}
+            >
+              {dados.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+            </Pie>
+            <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [value, name]} />
+            <Legend
+              formatter={(value) => <span style={{ fontSize: 11, color: axisFill }}>{value}</span>}
+              wrapperStyle={{ paddingTop: 8 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     );
   }
   if (tipo === 'line') return (
@@ -732,7 +762,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
 
           try {
             const chartDiv = document.createElement('div');
-            chartDiv.style.cssText = 'width:800px;height:300px;background:#ffffff;padding:12px;box-sizing:border-box;border-radius:8px;border:1px solid #e2e8f0;';
+            chartDiv.style.cssText = 'width:800px;height:340px;background:#ffffff;padding:12px;box-sizing:border-box;border-radius:8px;border:1px solid #e2e8f0;';
             offscreen.appendChild(chartDiv);
 
             // Renderiza GraficoRecharts com paleta LIGHT (sempre branco no PDF)
@@ -852,14 +882,6 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
           </p>
           <p style={{ fontSize: 11, color: C.textMuted }}>CSV, XLSX ou TSV • Arraste ou clique</p>
           <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.tsv" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processarArquivo(e.target.files[0]); }} />
-        </div>
-      )}
-
-      {/* Alerta PII */}
-      {alertaPII.length > 0 && (
-        <div style={{ padding: '8px 12px', borderRadius: 8, background: `${C.warning}15`, border: `1px solid ${C.warning}40`, marginBottom: 12 }}>
-          <p style={{ fontSize: 11, color: C.warning, fontWeight: 600, marginBottom: 2 }}>🔒 LGPD — Dados anonimizados</p>
-          <p style={{ fontSize: 10, color: C.textMuted }}>{alertaPII.join(', ')}</p>
         </div>
       )}
 

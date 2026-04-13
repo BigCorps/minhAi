@@ -457,6 +457,63 @@ voiceTriggers: [
     },
   },
 
+analisar_planilha: {
+  functionKey: 'analisar_planilha',
+  functionName: 'Analisar Planilha',
+  category: 'images',                    // mesma categoria de enviar_arquivo / gerar_qrcode
+  responseType: 'voice+modal',
+ 
+  voiceTriggers: [
+    'analisar planilha',
+    'analisar arquivo',
+    'dashboard de planilha',
+    'gerar dashboard',
+    'analisar dados',
+    'análise de dados',
+    'analise de dados',
+    'transformar planilha',
+    'insights da planilha',
+    'relatório de planilha',
+    'relatorio de planilha',
+    'gráficos da planilha',
+    'graficos da planilha',
+    'analisar excel',
+    'analisar csv',
+    'analisar xlsx',
+  ],
+ 
+  examplePhrases: [
+    'Analisar planilha de vendas',
+    'Gerar dashboard do meu Excel',
+    'Análise de dados com gráficos',
+    'Transformar planilha em dashboard',
+    'Analisar meu CSV',
+  ],
+ 
+  edgeFunction: 'analisar-planilha',
+  uiComponent: 'AnalisarPlanilhaDisplay',
+  requiresInput: false,
+ 
+  description: 'Transforma planilhas CSV ou XLSX em dashboards interativos com KPIs, gráficos e insights gerados por IA. Converse para refinar a análise e exporte o relatório em PDF.',
+  shortDescription: 'Planilha → Dashboard com IA em segundos.',
+  icon: '📊',
+  color: '#1e40af',
+ 
+  saveToHistory: true,
+  creditsPerUse: 3,                      // cobrado apenas ao salvar (quando completo: true)
+  requiresPayment: false,
+  isPremium: false,
+ 
+  handler: async ({ companyId, setActiveModal }) => {
+    // SEM playText aqui — o modal fala no useEffect de mount (padrão do projeto)
+    setActiveModal?.({
+      type: 'AnalisarPlanilhaDisplay',
+      data: { companyId },
+    });
+    return true;
+  },
+},
+  
 converter_arquivo: {
   functionKey: 'converter_arquivo',
   functionName: 'Converter Arquivos',

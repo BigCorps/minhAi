@@ -1308,7 +1308,7 @@ export default function AnalisarPlanilhaDisplay({ data, onClose, theme = 'dark',
             <IconChart />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Analisar Planilha</h2>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Relatório de Arquivos</h2>
                 {ficha.dominio && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: `${C.accent}20`, color: C.accent, fontWeight: 600 }}>{ficha.dominio.charAt(0).toUpperCase() + ficha.dominio.slice(1)}</span>}
                 {nomeArquivo && <span style={{ fontSize: 11, color: C.textMuted }}>· {nomeArquivo}</span>}
               </div>

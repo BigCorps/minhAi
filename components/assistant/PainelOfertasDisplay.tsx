@@ -20,8 +20,8 @@ interface PainelOfertasDisplayProps {
   playText: (text: string) => Promise<void>;
 }
 
-function buildQrUrl(content: string, companyId: string): string {
-  return `/api/qrcode?size=96&data=${encodeURIComponent(content)}&color=%23000080&company_id=${companyId}`;
+function buildQrUrl(content: string): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(content)}&margin=6&bgcolor=ffffff`;
 }
 
 function buildWhatsAppUrl(number: string): string {
@@ -46,8 +46,6 @@ export default function PainelOfertasDisplay({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [fadeIn, setFadeIn] = useState(true);
   const [intervalSeconds, setIntervalSeconds] = useState(8);
-
-  // QR Code
   const [qrContent, setQrContent] = useState<string | null>(null);
   const [qrLabel, setQrLabel] = useState<string>('');
 
@@ -72,10 +70,8 @@ export default function PainelOfertasDisplay({
     }, 400);
   }, [images.length]);
 
-  // Buscar imagens, config e dados da empresa para QR Code
   useEffect(() => {
     async function init() {
-      // Buscar config da função
       const { data: settings } = await supabase
         .from('company_function_settings')
         .select('config')
@@ -86,16 +82,15 @@ export default function PainelOfertasDisplay({
       const cfg = settings?.config || {};
       setIntervalSeconds(cfg.seconds_per_image || 8);
 
-      // Montar QR Code baseado na config
+      // Montar QR Code
       if (cfg.qr_type && cfg.qr_type !== 'none') {
-        // Buscar dados da empresa para montar o link
         const { data: company } = await supabase
           .from('companies')
           .select('website, whatsapp_number, instagram_username')
           .eq('id', companyId)
           .single();
 
-        let content = cfg.qr_custom_link || '';
+        let content = '';
         let label = '';
 
         if (cfg.qr_type === 'website' && company?.website) {
@@ -113,15 +108,14 @@ export default function PainelOfertasDisplay({
           label = cfg.qr_custom_label || 'Saiba mais';
         }
 
-        if (content) {
-          setQrContent(content);
-          setQrLabel(label);
-        }
+        if (content) { setQrContent(content); setQrLabel(label); }
       }
 
-      // Buscar imagens do Drive
-      if (!cfg.folder_id) {
-        setError('Nenhuma pasta do Drive configurada. Configure no painel.');
+      // Buscar imagens por file_ids
+      const fileIds = cfg.file_ids?.map((f: any) => f.id || f) || [];
+
+      if (fileIds.length === 0) {
+        setError('Nenhuma imagem configurada. Configure no painel.');
         setLoading(false);
         return;
       }
@@ -135,12 +129,12 @@ export default function PainelOfertasDisplay({
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
             },
-            body: JSON.stringify({ company_id: companyId, folder_id: cfg.folder_id }),
+            body: JSON.stringify({ company_id: companyId, file_ids: fileIds }),
           }
         );
         const json = await res.json();
         if (!res.ok || json.error) throw new Error(json.error || 'Erro ao carregar imagens');
-        if (!json.images || json.images.length === 0) throw new Error('Nenhuma imagem encontrada na pasta.');
+        if (!json.images || json.images.length === 0) throw new Error('Nenhuma imagem encontrada.');
 
         let imageList = json.images;
         if (cfg.shuffle) {
@@ -160,14 +154,12 @@ export default function PainelOfertasDisplay({
     init();
   }, []);
 
-  // Auto-advance
   useEffect(() => {
     if (!isPlaying || images.length === 0) return;
     timerRef.current = setInterval(goNext, intervalSeconds * 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isPlaying, images.length, goNext, intervalSeconds]);
 
-  // Auto-hide controls
   useEffect(() => {
     if (images.length === 0) return;
     hideControlsRef.current = setTimeout(() => setControlsVisible(false), 3000);
@@ -211,7 +203,6 @@ export default function PainelOfertasDisplay({
       onClick={showControls}
       onMouseMove={showControls}
     >
-      {/* Loading */}
       {loading && (
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
@@ -219,18 +210,14 @@ export default function PainelOfertasDisplay({
         </div>
       )}
 
-      {/* Erro */}
       {!loading && error && (
         <div className="flex flex-col items-center gap-4 px-8 text-center">
           <p className="text-5xl">📢</p>
           <p className="text-white text-lg">{error}</p>
-          <button onClick={handleClose} className="px-6 py-2 bg-orange-600 text-white rounded-full text-sm">
-            Fechar
-          </button>
+          <button onClick={handleClose} className="px-6 py-2 bg-orange-600 text-white rounded-full text-sm">Fechar</button>
         </div>
       )}
 
-      {/* Imagem */}
       {!loading && currentImage && (
         <img
           key={currentImage.id}
@@ -242,17 +229,11 @@ export default function PainelOfertasDisplay({
         />
       )}
 
-      {/* ── QR Code fixo — canto inferior esquerdo ─────────── */}
+      {/* QR Code fixo — canto inferior esquerdo */}
       {qrContent && !loading && (
         <div className="absolute bottom-6 left-6 flex flex-col items-center gap-1.5 z-20">
           <div className="rounded-xl overflow-hidden shadow-2xl border-2 border-white/20">
-            <img
-              src={buildQrUrl(qrContent, companyId)}
-              alt="QR Code"
-              width={96}
-              height={96}
-              className="block"
-            />
+            <img src={buildQrUrl(qrContent)} alt="QR Code" width={96} height={96} className="block" />
           </div>
           {qrLabel && (
             <span className="text-white/80 text-xs font-medium px-2 py-0.5 bg-black/50 backdrop-blur-sm rounded-full text-center">
@@ -262,27 +243,21 @@ export default function PainelOfertasDisplay({
         </div>
       )}
 
-      {/* Nome da oferta */}
       {!loading && currentImage && controlsVisible && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-black/50 backdrop-blur-sm rounded-full text-white/70 text-sm truncate max-w-xs">
           {currentImage.name.replace(/\.[^/.]+$/, '')}
         </div>
       )}
 
-      {/* Controles */}
       {!loading && images.length > 0 && (
         <div className={`absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/70 to-transparent transition-all duration-300 ${
           controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}>
-          {/* Centralizar controles evitando o QR Code */}
           <div className="flex items-center justify-center gap-4 ml-28">
             <button onClick={goPrev} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
               <SkipBack className="w-5 h-5" />
             </button>
-            <button
-              onClick={() => setIsPlaying(p => !p)}
-              className="p-4 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition shadow-xl"
-            >
+            <button onClick={() => setIsPlaying(p => !p)} className="p-4 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition shadow-xl">
               {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
             </button>
             <span className="text-white/60 text-sm">{currentIndex + 1} / {images.length}</span>
@@ -290,27 +265,16 @@ export default function PainelOfertasDisplay({
               <SkipForward className="w-5 h-5" />
             </button>
           </div>
-
           <div className="mt-4 h-0.5 bg-white/20 rounded-full mx-auto overflow-hidden" style={{ marginLeft: '120px' }}>
-            <div
-              className="h-full bg-orange-500 rounded-full"
-              style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }}
-            />
+            <div className="h-full bg-orange-500 rounded-full" style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }} />
           </div>
         </div>
       )}
 
-      {/* Botão fechar */}
-      <button
-        onClick={handleClose}
-        className={`absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition ${
-          controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
+      <button onClick={handleClose} className={`absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition ${controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <X className="w-5 h-5" />
       </button>
 
-      {/* Dica de voz */}
       {controlsVisible && (
         <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/40 backdrop-blur-sm rounded-full text-white/50 text-xs">
           🎤 "pausar" · "próximo" · "fechar"

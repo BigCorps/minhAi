@@ -247,23 +247,30 @@ export default function PainelOfertasDisplay({
       )}
 
       {!loading && images.length > 0 && (
-        <div className={`absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/70 to-transparent transition-all duration-300 ${
-          controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg transition-all duration-300 ${
+          controlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}>
-          <div className="flex items-center justify-center gap-4 ml-28">
-            <button onClick={goPrev} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
-              <SkipBack className="w-5 h-5" />
-            </button>
-            <button onClick={() => setIsPlaying(p => !p)} className="p-4 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition shadow-xl">
-              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
-            </button>
-            <span className="text-white/60 text-sm">{currentIndex + 1} / {images.length}</span>
-            <button onClick={goNext} className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
-              <SkipForward className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="mt-4 h-0.5 bg-white/20 rounded-full mx-auto overflow-hidden" style={{ marginLeft: '120px' }}>
-            <div className="h-full bg-orange-500 rounded-full" style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }} />
+          <div className="bg-black/50 backdrop-blur-md p-6 rounded-3xl shadow-2xl mx-4">
+            <div className="flex items-center justify-between">
+              <button onClick={goPrev} className="p-3 rounded-full bg-white/10 hover:bg-white/30 text-white transition">
+                <SkipBack className="w-6 h-6" />
+              </button>
+              
+              <div className="flex items-center gap-6">
+                <button onClick={() => setIsPlaying(p => !p)} className="p-5 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition shadow-xl">
+                  {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
+                </button>
+                <span className="text-white/80 font-medium text-sm">{currentIndex + 1} / {images.length}</span>
+              </div>
+
+              <button onClick={goNext} className="p-3 rounded-full bg-white/10 hover:bg-white/30 text-white transition">
+                <SkipForward className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="mt-6 h-1 bg-white/20 rounded-full w-full overflow-hidden">
+              <div className="h-full bg-orange-500 rounded-full" style={{ width: `${((currentIndex + 1) / images.length) * 100}%`, transition: 'width 0.5s ease' }} />
+            </div>
           </div>
         </div>
       )}

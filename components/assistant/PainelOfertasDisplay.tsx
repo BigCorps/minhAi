@@ -111,50 +111,44 @@ export default function PainelOfertasDisplay({
         if (content) { setQrContent(content); setQrLabel(label); }
       }
 
-      // Buscar imagens por file_ids
-      const fileIds = cfg.file_ids?.map((f: any) => f.id || f) || [];
+      // ✅ Fix: montar imagens direto do config, sem chamar a edge function
+      // Os IDs e nomes já foram salvos pelo Picker — thumbnails do Drive
+      // funcionam publicamente para arquivos compartilhados "com o link"
+      const rawFileIds: any[] = cfg.file_ids || [];
 
-      console.log('cfg.file_ids raw:', JSON.stringify(cfg.file_ids));
-      console.log('fileIds processados:', fileIds);
-
-      if (fileIds.length === 0) {
+      if (rawFileIds.length === 0) {
         setError('Nenhuma imagem configurada. Configure no painel.');
         setLoading(false);
         return;
       }
 
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/google-drive-images`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({ company_id: companyId, file_ids: fileIds }),
-          }
-        );
-        const json = await res.json();
-        if (!res.ok || json.error) throw new Error(json.error || 'Erro ao carregar imagens');
-        if (!json.images || json.images.length === 0) throw new Error('Nenhuma imagem encontrada.');
+      const imageList: DriveImage[] = rawFileIds.map((f: any) => {
+        const id = f.id || f;
+        const name = f.name || id;
+        return {
+          id,
+          name,
+          url: `https://drive.google.com/thumbnail?id=${id}&sz=w1920-h1080`,
+          thumb: `https://drive.google.com/thumbnail?id=${id}&sz=w400-h300`,
+        };
+      });
 
-        let imageList = json.images;
-        if (cfg.shuffle) {
-          for (let i = imageList.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [imageList[i], imageList[j]] = [imageList[j], imageList[i]];
-          }
+      if (cfg.shuffle) {
+        for (let i = imageList.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [imageList[i], imageList[j]] = [imageList[j], imageList[i]];
         }
-        setImages(imageList);
-      } catch (err: any) {
-        setError(err.message);
-        playText('Não consegui carregar as ofertas.').catch(() => {});
-      } finally {
-        setLoading(false);
       }
+
+      setImages(imageList);
+      setLoading(false);
     }
-    init();
+
+    init().catch((err) => {
+      setError(err.message);
+      playText('Não consegui carregar as ofertas.').catch(() => {});
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {

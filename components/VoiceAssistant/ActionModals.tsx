@@ -82,6 +82,11 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   () => import('@/components/assistant/AnalisarPlanilhaDisplay'),
   { ssr: false }
 ),
+  'JuntarPdfsDisplay': dynamic(
+    () => import('@/components/assistant/JuntarPdfsDisplay'),
+    { ssr: false }
+  ),
+};
 
   // ── Consultas ─────────────────────────────────────────────
   'ConsultarCpfModal': dynamic(() => import('@/components/assistant/ConsultarCpfModal'), { ssr: false }),
@@ -138,6 +143,7 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'RelatorioVendasDisplay': dynamic(() => import('@/components/assistant/RelatorioVendasDisplay'), { ssr: false }),
   'MinhasComprasDisplay': dynamic(() => import('@/components/assistant/MinhasComprasDisplay'), { ssr: false }),
   'ChamarGerenteDisplay': dynamic(() => import('@/components/assistant/ChamarGerenteDisplay'), { ssr: false }),
+  
 
   // ── Modais com props customizadas ─────────────────────────
   // Estes precisam de wrapper inline pois recebem props além do padrão

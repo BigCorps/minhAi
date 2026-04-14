@@ -80,7 +80,7 @@ export default async function DashboardPage() {
             Navegue pelo menu à direita ou seu perfil à esquerda.
           </p>
         </div>
-      </div> {/* Adicionada a tag de fechamento da div externa */}
+
         <div className="flex flex-col gap-2 flex-shrink-0 min-w-[260px]">
           <WebAppButton
             userId={user.id}

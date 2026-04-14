@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
-import ModoToggle from '@/components/ModoToggle';
+import ModoToggle from '@/components/dashboard/ModoToggle';
 import {
   UserPlus, Users, Loader2, Search, Download, RefreshCw,
   Fingerprint, Camera, ChevronDown, ChevronUp, Shield,

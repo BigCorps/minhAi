@@ -457,6 +457,53 @@ voiceTriggers: [
     },
   },
 
+link_na_bio: {
+  functionKey: 'link_na_bio',
+  functionName: 'Link na Bio',
+  category: 'contact',
+  responseType: 'navigation',
+ 
+  voiceTriggers: [
+    'link na bio',
+    'página de links',
+    'pagina de links',
+    'links da empresa',
+    'links de contato',
+    'nossos links',
+  ],
+ 
+  examplePhrases: [
+    'Ver link na bio',
+    'Abrir página de links',
+    'Mostrar redes sociais',
+    'Links da empresa',
+  ],
+ 
+  requiresInput: false,
+  description: 'Abre a página pública de links da empresa com redes sociais, links customizados e botão para o assistente.',
+  shortDescription: 'Página de links da empresa',
+  icon: '🔗',
+  color: '#8B5CF6',
+ 
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+ 
+  handler: async ({ playText, slug }) => {
+    try {
+      const linkUrl = getContextualRoute('link', slug);
+      await playText('Abrindo página de links!');
+      window.location.href = linkUrl;
+      return true;
+    } catch (error) {
+      console.error('Erro ao navegar para link na bio:', error);
+      await playText('Erro ao abrir a página de links.');
+      return false;
+    }
+  },
+},
+  
 analisar_planilha: {
   functionKey: 'analisar_planilha',
   functionName: 'Analisar Planilha',

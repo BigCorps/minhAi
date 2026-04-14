@@ -1,7 +1,6 @@
 // app/link/[slug]/page.tsx
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { checkWebappEligibility } from '@/lib/webapp-eligibility';
 import LinkClient from './LinkClient';
 
 interface Props {
@@ -13,7 +12,6 @@ export default async function LinkPage({ params }: Props) {
 
   const supabase = createAdminClient();
 
-  // Buscar empresa pelo slug
   const { data: company, error } = await supabase
     .from('companies')
     .select(`
@@ -31,10 +29,6 @@ export default async function LinkPage({ params }: Props) {
     redirect('/');
   }
 
-  // Verificar elegibilidade webapp (padrão das outras rotas slug)
-  const eligibility = await checkWebappEligibility(company.id);
-
-  // Buscar links customizados ativos
   const { data: links } = await supabase
     .from('company_links')
     .select('id, titulo, url, display_order, is_broken')
@@ -47,7 +41,6 @@ export default async function LinkPage({ params }: Props) {
       company={company}
       links={links ?? []}
       slug={slug}
-      eligibility={eligibility}
     />
   );
 }

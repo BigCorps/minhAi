@@ -40,7 +40,7 @@ const CONFIG = {
     label: 'Link na Bio',
     description: 'Habilita a página pública de links da empresa',
     column: 'modo_links_enabled',
-    color: 'violet',
+    color: 'blue',
     icon: (
       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -53,8 +53,7 @@ const CONFIG = {
 export default function ModoToggle({ companyId, modoType, initialEnabled, onToggle }: ModoToggleProps) {
   const supabase = createClient();
   const cfg = CONFIG[modoType];
-  const isBlue   = cfg.color === 'blue';
-  const isViolet = cfg.color === 'violet';
+  const isBlue = cfg.color !== 'emerald';
 
   const [enabled, setEnabled] = useState(initialEnabled);
   const [loading, setLoading] = useState(true); // true enquanto busca valor real
@@ -97,9 +96,7 @@ export default function ModoToggle({ companyId, modoType, initialEnabled, onTogg
       {/* Esquerda: ícone + label + descrição (descrição só desktop) */}
       <div className="flex items-center gap-2 min-w-0">
         <span className={`flex-shrink-0 ${
-          isBlue   ? 'text-blue-500 dark:text-blue-400'
-          : isViolet ? 'text-violet-500 dark:text-violet-400'
-          : 'text-emerald-500 dark:text-emerald-400'
+          isBlue ? 'text-blue-500 dark:text-blue-400' : 'text-emerald-500 dark:text-emerald-400'
         }`}>
           {cfg.icon}
         </span>
@@ -116,8 +113,6 @@ export default function ModoToggle({ companyId, modoType, initialEnabled, onTogg
             enabled
               ? isBlue
                 ? 'text-blue-600 dark:text-blue-400'
-                : isViolet
-                ? 'text-violet-600 dark:text-violet-400'
                 : 'text-emerald-600 dark:text-emerald-400'
               : 'text-gray-400 dark:text-gray-500'
         }`}>
@@ -130,7 +125,7 @@ export default function ModoToggle({ companyId, modoType, initialEnabled, onTogg
           onClick={handleToggle}
           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
             enabled
-              ? isBlue ? 'bg-blue-500' : isViolet ? 'bg-violet-500' : 'bg-emerald-500'
+              ? isBlue ? 'bg-blue-500' : 'bg-emerald-500'
               : 'bg-gray-300 dark:bg-slate-600'
           }`}
         >

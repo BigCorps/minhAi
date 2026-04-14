@@ -513,6 +513,41 @@ analisar_planilha: {
     return true;
   },
 },
+
+juntar_pdfs: {
+  functionKey: 'juntar_pdfs',
+  functionName: 'Juntar PDFs',
+  category: 'tools' as any,
+  responseType: 'voice+modal',
+  
+  voiceTriggers: [
+    'juntar pdf', 'juntar pdfs', 'mesclar pdf', 'unir pdf',
+    'combinar pdf', 'mesclar documentos', 'unir documentos',
+    'juntar arquivos', 'merge pdf'
+  ],
+  
+  examplePhrases: [
+    'Juntar PDFs',
+    'Mesclar documentos',
+    'Unir vários PDFs'
+  ],
+  
+  edgeFunction: undefined,
+  uiComponent: 'JuntarPdfsDisplay',
+  requiresInput: false,
+  description: 'Mescla múltiplos arquivos PDF em um único documento. Permite reordenar as páginas antes de juntar.',
+  icon: '🌐',
+  color: '#000080',
+  saveToHistory: true,
+  creditsPerUse: 2,
+  requiresPayment: false,
+  isPremium: false,
+  
+  handler: async ({ companyId, setActiveModal }) => {
+    setActiveModal?.({ type: 'JuntarPdfsDisplay', data: { companyId } });
+    return true;
+  },
+},
   
 converter_arquivo: {
   functionKey: 'converter_arquivo',

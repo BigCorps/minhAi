@@ -32,7 +32,7 @@ const DARK = {
   surface: '#1e293b',
   surfaceHover: '#273548',
   border: 'rgba(255,255,255,0.08)',
-  borderFocus: '#8b5cf6',
+  borderFocus: '#3b82f6',
   text: '#f1f5f9',
   textMuted: 'rgba(255,255,255,0.45)',
   textPlaceholder: 'rgba(255,255,255,0.25)',
@@ -44,8 +44,8 @@ const DARK = {
   successBg: 'rgba(52,211,153,0.12)',
   warning: '#fbbf24',
   warningBg: 'rgba(251,191,36,0.12)',
-  violet: '#a78bfa',
-  violetBg: 'rgba(139,92,246,0.15)',
+  violet: '#60a5fa',
+  violetBg: 'rgba(59,130,246,0.15)',
   overlay: 'rgba(0,0,0,0.75)',
 };
 
@@ -54,7 +54,7 @@ const LIGHT = {
   surface: '#f8fafc',
   surfaceHover: '#f1f5f9',
   border: '#e2e8f0',
-  borderFocus: '#8b5cf6',
+  borderFocus: '#3b82f6',
   text: '#0f172a',
   textMuted: '#64748b',
   textPlaceholder: '#94a3b8',
@@ -66,8 +66,8 @@ const LIGHT = {
   successBg: '#f0fdf4',
   warning: '#d97706',
   warningBg: '#fffbeb',
-  violet: '#7c3aed',
-  violetBg: '#ede9fe',
+  violet: '#2563eb',
+  violetBg: '#eff6ff',
   overlay: 'rgba(0,0,0,0.5)',
 };
 

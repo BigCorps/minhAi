@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import QRCodeSVG from 'qrcode.react';
 
 const DARK = {
   bg: '#1e293b',
@@ -42,6 +41,7 @@ interface FilaSenha {
   numero: number;
   gerada_em: string;
   status: string;
+  chamada_em?: string;
 }
 
 interface FilaConfig {
@@ -68,6 +68,7 @@ export default function GerarSenhaDisplay({
   const [ultimaChamada, setUltimaChamada] = useState<FilaSenha | null>(null);
   const [tempoEstimado, setTempoEstimado] = useState(0);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
 
   const supabase = createClient();
 
@@ -75,6 +76,15 @@ export default function GerarSenhaDisplay({
   useEffect(() => {
     gerarNovaSenha();
   }, []);
+
+  // Gerar URL do QR Code via API interna sempre que a senha mudar
+  useEffect(() => {
+    if (senha && slug) {
+      const acompanhamentoUrl = `https://${slug}.minhai.app/fila-acompanhamento/${senha.id}`;
+      const url = `/api/qrcode?size=200&data=${encodeURIComponent(acompanhamentoUrl)}&color=%23000080&company_id=${companyId}`;
+      setQrCodeUrl(url);
+    }
+  }, [senha, slug, companyId]);
 
   // Realtime para atualizar posição
   useEffect(() => {
@@ -121,7 +131,7 @@ export default function GerarSenhaDisplay({
 
       // Verificar se fila está ativa
       if (!config.fila_ativa) {
-        showToast(config.mensagem_fila_pausada || 'Fila pausada', 'warning');
+        showToast(config.mensagem_fila_pausada || 'Fila pausada', 'error');
         setLoading(false);
         return;
       }
@@ -158,7 +168,7 @@ export default function GerarSenhaDisplay({
         .eq('id', config.id);
 
       setSenha(novaSenha);
-      
+
       // TTS
       if (playText) {
         const prefixo = senhaCompleta[0];
@@ -169,7 +179,7 @@ export default function GerarSenhaDisplay({
 
       // Calcular posição e tempo
       await atualizarPosicao();
-      
+
       setLoading(false);
       showToast('Senha gerada com sucesso!', 'success');
 
@@ -234,7 +244,7 @@ export default function GerarSenhaDisplay({
         .eq('id', senha.id);
 
       showToast('Senha cancelada', 'info');
-      
+
       if (playText) {
         await playText('Senha cancelada com sucesso');
       }
@@ -270,8 +280,6 @@ export default function GerarSenhaDisplay({
       document.body
     );
   }
-
-  const qrUrl = slug ? `https://${slug}.minhai.app/fila-acompanhamento/${senha?.id}` : '';
 
   const content = (
     <div
@@ -396,17 +404,17 @@ export default function GerarSenhaDisplay({
                       {ultimaChamada.senha_completa}
                     </div>
                     <div style={{ color: colors.textSecondary, fontSize: '12px', marginTop: '4px' }}>
-                      {new Date(ultimaChamada.chamada_em || ultimaChamada.gerada_em).toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(ultimaChamada.chamada_em || ultimaChamada.gerada_em).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
                       })}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* QR Code */}
-              {qrUrl && (
+              {/* QR Code via API interna */}
+              {qrCodeUrl && (
                 <div style={{
                   background: colors.bgSecondary,
                   borderRadius: '12px',
@@ -423,7 +431,11 @@ export default function GerarSenhaDisplay({
                     borderRadius: '8px',
                     display: 'inline-block',
                   }}>
-                    <QRCodeSVG value={qrUrl} size={200} />
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code acompanhamento"
+                      style={{ width: '200px', height: '200px', objectFit: 'contain', display: 'block' }}
+                    />
                   </div>
                 </div>
               )}

@@ -17,11 +17,17 @@ import { SlugProfile } from '@/hooks/useProfile';
 import CardMinhaConta from './shared/CardMinhaConta';
 import BotaoLogout from './shared/BotaoLogout';
 import CardAcao from './shared/CardAcao';
-import { Zap, Lock, RefreshCw, Tag, PhoneCall } from 'lucide-react';
+import { Zap, Lock, RefreshCw, Tag, PhoneCall, Users } from 'lucide-react';
 
 interface Props {
   profile: SlugProfile;
-  company: { id: string; slug: string; name: string; logo_url?: string | null };
+  company: { 
+    id: string; 
+    slug: string; 
+    name: string; 
+    logo_url?: string | null;
+    modo_fila_enabled?: boolean; // ← ADICIONAR ESTA LINHA
+  };
   theme: 'dark' | 'light';
 }
 
@@ -100,6 +106,23 @@ export default function CaixaDashboard({ profile, company, theme }: Props) {
           buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
           theme={theme}
         />
+
+        {company.modo_fila_enabled && (
+          <CardAcao
+            title="Fila de Atendimento"
+            description="Gerencie a fila: chamar próxima senha, finalizar atendimento e visualizar estatísticas."
+            functionKey="fila_atendimento"
+            companyId={company.id}
+            iconBg="rgba(128,128,0,0.1)"
+            icon={<Users className="w-6 h-6" />}
+            iconColor="rgb(192,192,96)"
+            iconColorLight="rgb(128,128,0)"
+            buttonLabel="Abrir Fila"
+            buttonGradient="linear-gradient(135deg, #808000, #a0a000)"
+            buttonShadow="0 4px 14px rgba(128,128,0,0.35)"
+            theme={theme}
+          />
+        )}
 
         <CardAcao
           title="Validar Cupom"

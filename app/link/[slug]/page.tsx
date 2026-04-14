@@ -1,56 +1,53 @@
 // app/link/[slug]/page.tsx
-// Server Component — resolve slug e redireciona para a rota real.
-// Usa supabase-browser pois não há supabase-server no projeto.
+import { redirect } from 'next/navigation';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { checkWebappEligibility } from '@/lib/webapp-eligibility';
+import LinkClient from './LinkClient';
 
-'use client';
+interface Props {
+  params: Promise<{ slug: string }>;
+}
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase-browser';
+export default async function LinkPage({ params }: Props) {
+  const { slug } = await params;
 
-export default function ShortLinkPage({ params }: { params: { slug: string } }) {
-  const router = useRouter();
+  const supabase = createAdminClient();
 
-  useEffect(() => {
-    const supabase = createClient();
+  // Buscar empresa pelo slug
+  const { data: company, error } = await supabase
+    .from('companies')
+    .select(`
+      id, name, slug, logo_url, webapp_logo_url, webapp_enabled,
+      webapp_theme_color, assistant_role, brand_description,
+      modo_links_enabled,
+      whatsapp_number, instagram_username, website, facebook,
+      email_contato, telefone_fixo, tiktok, twitter, linkedin,
+      youtube_channel_url
+    `)
+    .eq('slug', slug)
+    .single();
 
-    async function resolve() {
-      const { data: link } = await supabase
-        .from('short_links')
-        .select('type, target_token, expires_at')
-        .eq('slug', params.slug)
-        .maybeSingle();
+  if (error || !company) {
+    redirect('/');
+  }
 
-      if (!link) {
-        router.replace('/link/expirado');
-        return;
-      }
+  // Verificar elegibilidade webapp (padrão das outras rotas slug)
+  const eligibility = await checkWebappEligibility(company.id);
 
-      if (link.expires_at && new Date(link.expires_at) < new Date()) {
-        router.replace('/link/expirado');
-        return;
-      }
+  // Buscar links customizados ativos
+  const { data: links } = await supabase
+    .from('company_links')
+    .select('id, titulo, url, display_order, is_broken')
+    .eq('company_id', company.id)
+    .eq('is_active', true)
+    .order('display_order', { ascending: true });
 
-      if (link.type === 'upload') {
-        router.replace(`/arquivos?token=${link.target_token}`);
-        return;
-      }
-
-      if (link.type === 'download') {
-        router.replace(`/download/${link.target_token}`);
-        return;
-      }
-
-      router.replace('/link/expirado');
-    }
-
-    resolve();
-  }, [params.slug]); // eslint-disable-line
-
-  // Tela de loading enquanto resolve
   return (
-    <div className="min-h-[100dvh] bg-slate-900 flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-    </div>
+    <LinkClient
+      company={company}
+      links={links ?? []}
+      slug={slug}
+      eligibility={eligibility}
+    />
   );
 }

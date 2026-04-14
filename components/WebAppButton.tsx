@@ -80,6 +80,8 @@ export function WebAppButton({ userId }: WebAppButtonProps) {
         style={{
           display: 'inline-flex',
           alignItems: 'center',
+          justifyContent: 'center', // <-- Adicione esta linha
+          textAlign: 'center',      // <-- Adicione esta linha
           gap: 8,
           padding: '8px 16px',
           background: 'linear-gradient(135deg, #10b981, #059669)',
@@ -115,6 +117,8 @@ export function WebAppButton({ userId }: WebAppButtonProps) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center', // <-- Adicione esta linha
+        textAlign: 'center',      // <-- Adicione esta linha
         gap: 8,
         padding: '8px 16px',
         background: 'linear-gradient(135deg, #f97316, #ea580c)',

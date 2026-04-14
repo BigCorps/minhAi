@@ -1,0 +1,491 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { createClient } from '@/lib/supabase-browser';
+import QRCodeSVG from 'qrcode.react';
+
+const DARK = {
+  bg: '#1e293b',
+  bgSecondary: '#334155',
+  text: '#f8fafc',
+  textSecondary: '#cbd5e1',
+  border: '#475569',
+  accent: '#808000',
+  success: '#10b981',
+  danger: '#ef4444',
+  warning: '#f59e0b',
+};
+
+const LIGHT = {
+  bg: '#ffffff',
+  bgSecondary: '#f1f5f9',
+  text: '#0f172a',
+  textSecondary: '#475569',
+  border: '#cbd5e1',
+  accent: '#808000',
+  success: '#10b981',
+  danger: '#ef4444',
+  warning: '#f59e0b',
+};
+
+interface GerarSenhaDisplayProps {
+  data: { companyId: string; slug?: string };
+  onClose: () => void;
+  theme?: 'dark' | 'light';
+  playText?: (text: string) => Promise<void>;
+}
+
+interface FilaSenha {
+  id: string;
+  senha_completa: string;
+  numero: number;
+  gerada_em: string;
+  status: string;
+}
+
+interface FilaConfig {
+  id: string;
+  fila_ativa: boolean;
+  mensagem_fila_pausada: string;
+  tempo_medio_atendimento: number;
+  prefixo_senha: string;
+  ultimo_numero_gerado: number;
+}
+
+export default function GerarSenhaDisplay({
+  data,
+  onClose,
+  theme = 'dark',
+  playText,
+}: GerarSenhaDisplayProps) {
+  const colors = theme === 'dark' ? DARK : LIGHT;
+  const { companyId, slug } = data;
+
+  const [loading, setLoading] = useState(true);
+  const [senha, setSenha] = useState<FilaSenha | null>(null);
+  const [posicao, setPosicao] = useState(0);
+  const [ultimaChamada, setUltimaChamada] = useState<FilaSenha | null>(null);
+  const [tempoEstimado, setTempoEstimado] = useState(0);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const supabase = createClient();
+
+  // Gerar senha automaticamente ao abrir
+  useEffect(() => {
+    gerarNovaSenha();
+  }, []);
+
+  // Realtime para atualizar posição
+  useEffect(() => {
+    if (!senha) return;
+
+    const channel = supabase
+      .channel(`senha-${senha.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'fila_senhas',
+        filter: `company_id=eq.${companyId}`,
+      }, async () => {
+        await atualizarPosicao();
+      })
+      .subscribe();
+
+    // Atualizar posição a cada 10s
+    const interval = setInterval(atualizarPosicao, 10000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [senha, companyId]);
+
+  async function gerarNovaSenha() {
+    try {
+      setLoading(true);
+
+      // Buscar config da fila
+      const { data: config, error: configError } = await supabase
+        .from('fila_configs')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('fila_ativa', true)
+        .single();
+
+      if (configError || !config) {
+        showToast('Fila não disponível no momento', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Verificar se fila está ativa
+      if (!config.fila_ativa) {
+        showToast(config.mensagem_fila_pausada || 'Fila pausada', 'warning');
+        setLoading(false);
+        return;
+      }
+
+      // Incrementar número
+      const proximoNumero = config.ultimo_numero_gerado + 1;
+      const senhaCompleta = `${config.prefixo_senha}${proximoNumero.toString().padStart(3, '0')}`;
+
+      // Criar senha
+      const { data: novaSenha, error: senhaError } = await supabase
+        .from('fila_senhas')
+        .insert({
+          company_id: companyId,
+          fila_config_id: config.id,
+          senha_completa: senhaCompleta,
+          numero: proximoNumero,
+          prefixo: config.prefixo_senha,
+          status: 'aguardando',
+        })
+        .select()
+        .single();
+
+      if (senhaError || !novaSenha) {
+        console.error('Erro ao criar senha:', senhaError);
+        showToast('Erro ao gerar senha', 'error');
+        setLoading(false);
+        return;
+      }
+
+      // Atualizar último número
+      await supabase
+        .from('fila_configs')
+        .update({ ultimo_numero_gerado: proximoNumero })
+        .eq('id', config.id);
+
+      setSenha(novaSenha);
+      
+      // TTS
+      if (playText) {
+        const prefixo = senhaCompleta[0];
+        const numeros = senhaCompleta.slice(1).split('');
+        const texto = `Sua senha é ${prefixo}. ${numeros.join('. ')}. Aguarde ser chamado.`;
+        await playText(texto);
+      }
+
+      // Calcular posição e tempo
+      await atualizarPosicao();
+      
+      setLoading(false);
+      showToast('Senha gerada com sucesso!', 'success');
+
+    } catch (error) {
+      console.error('Erro ao gerar senha:', error);
+      showToast('Erro ao gerar senha', 'error');
+      setLoading(false);
+    }
+  }
+
+  async function atualizarPosicao() {
+    if (!senha) return;
+
+    try {
+      // Calcular posição
+      const { count } = await supabase
+        .from('fila_senhas')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'aguardando')
+        .lt('gerada_em', senha.gerada_em);
+
+      setPosicao(count || 0);
+
+      // Buscar última chamada
+      const { data: ultimaSenha } = await supabase
+        .from('fila_senhas')
+        .select('*')
+        .eq('company_id', companyId)
+        .in('status', ['chamando', 'atendimento'])
+        .order('chamada_em', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (ultimaSenha) {
+        setUltimaChamada(ultimaSenha);
+      }
+
+      // Buscar config para tempo médio
+      const { data: config } = await supabase
+        .from('fila_configs')
+        .select('tempo_medio_atendimento')
+        .eq('company_id', companyId)
+        .single();
+
+      if (config) {
+        setTempoEstimado((count || 0) * config.tempo_medio_atendimento);
+      }
+
+    } catch (error) {
+      console.error('Erro ao atualizar posição:', error);
+    }
+  }
+
+  async function cancelarSenha() {
+    if (!senha) return;
+
+    try {
+      await supabase
+        .from('fila_senhas')
+        .update({ status: 'cancelado' })
+        .eq('id', senha.id);
+
+      showToast('Senha cancelada', 'info');
+      
+      if (playText) {
+        await playText('Senha cancelada com sucesso');
+      }
+
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+
+    } catch (error) {
+      console.error('Erro ao cancelar:', error);
+      showToast('Erro ao cancelar senha', 'error');
+    }
+  }
+
+  function showToast(message: string, type: 'success' | 'error' | 'info') {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  if (loading) {
+    return createPortal(
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 300,
+      }}>
+        <div style={{ color: '#fff', fontSize: '18px' }}>Gerando senha...</div>
+      </div>,
+      document.body
+    );
+  }
+
+  const qrUrl = slug ? `https://${slug}.minhai.app/fila-acompanhamento/${senha?.id}` : '';
+
+  const content = (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 300,
+        padding: '20px',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: colors.bg,
+          borderRadius: '16px',
+          width: '100%',
+          maxWidth: '500px',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '20px',
+          borderBottom: `1px solid ${colors.border}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
+            Sua Senha da Fila
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: colors.textSecondary,
+              fontSize: '24px',
+              cursor: 'pointer',
+              padding: '0',
+              width: '32px',
+              height: '32px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          {senha && (
+            <>
+              {/* Número da senha */}
+              <div style={{
+                background: colors.bgSecondary,
+                borderRadius: '12px',
+                padding: '40px 20px',
+                marginBottom: '20px',
+                textAlign: 'center',
+                border: `2px solid ${colors.accent}`,
+              }}>
+                <div style={{ fontSize: '72px', fontWeight: 'bold', color: colors.accent }}>
+                  {senha.senha_completa}
+                </div>
+              </div>
+
+              {/* Informações */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{
+                  background: colors.bgSecondary,
+                  borderRadius: '8px',
+                  padding: '16px',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <div style={{ color: colors.textSecondary, fontSize: '14px' }}>
+                    📍 Posição na fila
+                  </div>
+                  <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
+                    {posicao === 0 ? 'Você é o próximo!' : `${posicao}ª na fila`}
+                  </div>
+                </div>
+
+                <div style={{
+                  background: colors.bgSecondary,
+                  borderRadius: '8px',
+                  padding: '16px',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <div style={{ color: colors.textSecondary, fontSize: '14px' }}>
+                    ⏱️ Tempo estimado
+                  </div>
+                  <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
+                    {tempoEstimado} minutos
+                  </div>
+                </div>
+
+                {ultimaChamada && (
+                  <div style={{
+                    background: colors.bgSecondary,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '12px',
+                  }}>
+                    <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px' }}>
+                      🔔 Última Chamada
+                    </div>
+                    <div style={{ color: colors.text, fontSize: '24px', fontWeight: 'bold' }}>
+                      {ultimaChamada.senha_completa}
+                    </div>
+                    <div style={{ color: colors.textSecondary, fontSize: '12px', marginTop: '4px' }}>
+                      {new Date(ultimaChamada.chamada_em || ultimaChamada.gerada_em).toLocaleTimeString('pt-BR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* QR Code */}
+              {qrUrl && (
+                <div style={{
+                  background: colors.bgSecondary,
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginBottom: '20px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ color: colors.textSecondary, fontSize: '14px', marginBottom: '12px' }}>
+                    Escaneie para acompanhar em tempo real
+                  </div>
+                  <div style={{
+                    background: '#fff',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    display: 'inline-block',
+                  }}>
+                    <QRCodeSVG value={qrUrl} size={200} />
+                  </div>
+                </div>
+              )}
+
+              {/* Botões */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <button
+                  onClick={atualizarPosicao}
+                  style={{
+                    background: 'transparent',
+                    border: `2px solid ${colors.accent}`,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: colors.accent,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔄 Atualizar Posição
+                </button>
+
+                <button
+                  onClick={cancelarSenha}
+                  style={{
+                    background: 'transparent',
+                    border: `2px solid ${colors.danger}`,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: colors.danger,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ❌ Cancelar Senha
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Toast */}
+        {toast && (
+          <div style={{
+            position: 'absolute',
+            top: '80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: toast.type === 'success' ? colors.success : toast.type === 'error' ? colors.danger : colors.warning,
+            color: '#fff',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 400,
+          }}>
+            {toast.message}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return createPortal(content, document.body);
+}

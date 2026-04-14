@@ -20,9 +20,10 @@ interface SlugHeaderWrapperProps {
     webapp_enabled?: boolean;
     modo_vendas_enabled?: boolean;
     modo_fila_enabled?: boolean;
+    modo_links_enabled?: boolean;  
   };
   slug?: string;
-  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente'; // ← 'cliente' adicionado
+  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente' | 'link';
   overlayMode?: boolean;
   forceTheme?: 'dark' | 'light';
   onClose?: () => void;

@@ -113,13 +113,13 @@ export default function CaixaDashboard({ profile, company, theme }: Props) {
             description="Gerencie a fila: chamar próxima senha, finalizar atendimento e visualizar estatísticas."
             functionKey="fila_atendimento"
             companyId={company.id}
-            iconBg="rgba(128,128,0,0.1)"
+            iconBg="rgba(59,130,246,0.1)"
             icon={<Users className="w-6 h-6" />}
-            iconColor="rgb(192,192,96)"
-            iconColorLight="rgb(128,128,0)"
-            buttonLabel="Abrir Fila"
-            buttonGradient="linear-gradient(135deg, #808000, #a0a000)"
-            buttonShadow="0 4px 14px rgba(128,128,0,0.35)"
+            iconColor="rgb(147,197,253)"
+            iconColorLight="rgb(29,78,216)"
+            buttonLabel="Gerenciar Fila"
+            buttonGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+            buttonShadow="0 4px 14px rgba(59,130,246,0.35)"
             theme={theme}
           />
         )}

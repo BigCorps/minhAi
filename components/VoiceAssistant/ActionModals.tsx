@@ -143,7 +143,11 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'MinhasComprasDisplay': dynamic(() => import('@/components/assistant/MinhasComprasDisplay'), { ssr: false }),
   'ChamarGerenteDisplay': dynamic(() => import('@/components/assistant/ChamarGerenteDisplay'), { ssr: false }),
   
-
+  // ── Fila de Atendimento ───────────────────────────────────
+  'FilaAtendimentoDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/FilaAtendimentoDisplay'), { ssr: false }),
+  'GerarSenhaDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/FilaAtendimentoDisplay/GerarSenhaDisplay'), { ssr: false }),
+  'PainelFilaDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/FilaAtendimentoDisplay/PainelFilaDisplay'), { ssr: false }),
+  
   // ── Modais com props customizadas ─────────────────────────
   // Estes precisam de wrapper inline pois recebem props além do padrão
   'VerProdutoDisplay': dynamic(

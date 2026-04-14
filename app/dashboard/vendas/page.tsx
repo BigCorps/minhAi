@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
 import ModoToggle from '@/components/dashboard/ModoToggle';
+
 import {
   ShoppingCart,
   Package,
@@ -29,6 +30,7 @@ import {
   BarChart2,
   X,
 } from 'lucide-react';
+
 import type { ProdutoVenda, Pedido, ProdutoVendaInput } from '@/lib/produtos-venda';
 import { formatarPreco } from '@/lib/produtos-venda';
 import OpcionaisModal from '@/components/dashboard/vendas/OpcionaisModal';

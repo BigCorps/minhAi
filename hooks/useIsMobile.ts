@@ -1,39 +1,26 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 
 /**
- * Detecta se o usuário está em um dispositivo móvel.
- * Combina userAgent (tipo de hardware) + matchMedia (tamanho de tela).
- * userAgent é checado uma vez; matchMedia responde a redimensionamento.
+ * Detecta se o usuário está em uma tela mobile.
+ * Baseado APENAS no tamanho da janela (matchMedia).
+ * UserAgent foi removido pois misturar hardware + viewport
+ * causa layout incorreto (ex: desktop com janela estreita,
+ * ou dispositivo mobile em tela grande).
  */
-export function useIsMobile(): boolean {
+export function useIsMobile(breakpoint = 768): boolean {
   const [isMobile, setIsMobile] = useState<boolean>(() => {
-    // Avaliação inicial no cliente (evita hydration mismatch no Next.js)
-    if (typeof navigator === 'undefined') return false;
-    return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
-      navigator.userAgent
-    );
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < breakpoint;
   });
 
   useEffect(() => {
-    // userAgent não muda — checar uma vez é suficiente
-    const isMobileUA = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
-      navigator.userAgent
-    );
-
-    // matchMedia captura tablets/janelas redimensionadas
-    const mediaQuery = window.matchMedia('(max-width: 768px)');
-
-    const update = () => {
-      setIsMobile(isMobileUA || mediaQuery.matches);
-    };
-
-    update(); // checar imediatamente
-    mediaQuery.addEventListener('change', update);
-
-    return () => mediaQuery.removeEventListener('change', update);
-  }, []);
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, [breakpoint]);
 
   return isMobile;
 }

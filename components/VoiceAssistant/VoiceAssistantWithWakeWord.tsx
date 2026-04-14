@@ -948,13 +948,11 @@ case 'juntar_pdfs':
           await stopGoogleSpeech();
           const vendaUrl = getContextualRoute('vendas', slug);
           window.location.href = vendaUrl;
-          pt('Abrindo modo vendas!').catch(() => {});
           break;
         }
         case 'link_na_bio': {
           await stopGoogleSpeech();
           const linkUrl = getContextualRoute('link', slug);
-          pt('Abrindo página de links!').catch(() => {});
           window.location.href = linkUrl;
           break;
         }

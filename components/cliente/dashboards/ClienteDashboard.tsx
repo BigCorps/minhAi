@@ -103,8 +103,18 @@ export default function ClienteDashboard({ profile, company, theme }: ClienteDas
   }
 
   function handleFazerPedido() {
+  const isSubdomain =
+    typeof window !== 'undefined' &&
+    (window.location.hostname.endsWith('.minhai.com.br') ||
+     window.location.hostname.endsWith('.minhai.app')) &&
+    !window.location.hostname.startsWith('www.');
+
+  if (isSubdomain) {
+    router.push('/vendas');
+  } else {
     router.push(`/vendas/${company.slug}`);
   }
+}
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -1,4 +1,4 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v9
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v10
 //
 // VERSÃO HÍBRIDA: Suporta dois modos de renderização
 //
@@ -12,6 +12,10 @@
 //   - Com SlugHeader completo (pageType='vendas')
 //   - Com footer (contador)
 //   - Usado na página /vendas/[slug]
+//
+// Cards da sidebar (landscape) e da barra inferior (portrait) são
+// colapsáveis da mesma forma: clique no cabeçalho expande/recolhe.
+// Estado compartilhado: expandedCard ('avatar' | 'cart' | null)
 
 'use client';
 
@@ -115,9 +119,9 @@ function SaleModeInner({
     addItem(produto as any);
   }, [addItem]);
 
-  // ── Cards colapsáveis em portrait (mobile) ───────────────────────────────
+  // ── Cards colapsáveis — compartilhado entre portrait e landscape ─────────
   // null = ambos expandidos; 'avatar' | 'cart' = apenas um expandido
-  const [portraitExpanded, setPortraitExpanded] = useState<'avatar' | 'cart' | null>(null);
+  const [expandedCard, setExpandedCard] = useState<'avatar' | 'cart' | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -249,9 +253,87 @@ function SaleModeInner({
     </p>
   );
 
-  // ── Conteúdo compartilhado: grid + carrinho ──────────────────────────────
-  const gridAndCart = isPortrait ? (
-    // ── PORTRAIT (mobile): produtos em cima, avatar+carrinho em baixo como botões colapsáveis ──
+  // ── Mini avatar (cabeçalho dos cards colapsáveis) ────────────────────────
+  const miniAvatar = (
+    <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 relative">
+      {isListening && (
+        <div className="absolute inset-0 rounded-full border border-red-500 animate-ping opacity-40 pointer-events-none" />
+      )}
+      <div style={{ transform: 'scale(0.146)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
+        <AvatarFace
+          isListening={isListening}
+          isSpeaking={isPlayingAudio}
+          isProcessing={isProcessing || isTranscribing}
+          theme={effectiveTheme}
+          qrCodeData={null}
+          pixConfirmationData={null}
+          onCloseQRCode={() => {}}
+          onCopyQRCode={() => {}}
+          onConfirmPix={() => {}}
+          onCancelPix={() => {}}
+        />
+      </div>
+    </div>
+  );
+
+  // ── Conteúdo expandido do card avatar (reutilizado portrait + landscape) ─
+  const avatarExpandedContent = (
+    <div className="flex flex-col items-center gap-2 px-3 pb-3">
+      <div className="flex items-center justify-center w-full">
+        <div
+          className="relative cursor-pointer select-none"
+          style={{ width: 80, height: 80 }}
+          onMouseDown={onMicDown}
+          onMouseUp={onMicUp}
+          onTouchStart={(e) => { e.preventDefault(); onMicDown?.(); }}
+          onTouchEnd={(e) => { e.preventDefault(); onMicUp?.(); }}
+        >
+          {isListening && (
+            <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
+          )}
+          <div className="w-full h-full overflow-hidden rounded-full">
+            <div style={{ transform: 'scale(0.417)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
+              <AvatarFace
+                isListening={isListening}
+                isSpeaking={isPlayingAudio}
+                isProcessing={isProcessing || isTranscribing}
+                theme={effectiveTheme}
+                qrCodeData={null}
+                pixConfirmationData={null}
+                onCloseQRCode={() => {}}
+                onCopyQRCode={() => {}}
+                onConfirmPix={() => {}}
+                onCancelPix={() => {}}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      {avatarLabel}
+      {onTextMessage && (
+        <div className="w-full">
+          <TextInputChat
+            onSendMessage={onTextMessage}
+            isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+            theme={effectiveTheme}
+            disabled={false}
+            compact
+          />
+        </div>
+      )}
+      {!isFullscreen && (
+        <button
+          onClick={onClose}
+          className={`text-[10px] ${isDark ? 'text-white/25 hover:text-white/50' : 'text-gray-300 hover:text-gray-500'}`}
+        >
+          Fechar modo vendas
+        </button>
+      )}
+    </div>
+  );
+
+  // ── gridAndCart — portrait ───────────────────────────────────────────────
+  const gridAndCartPortrait = (
     <>
       {/* Produtos — ocupa o espaço restante */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -270,152 +352,76 @@ function SaleModeInner({
       {/* Barra inferior: avatar + carrinho como cards-botão */}
       <div className="flex-shrink-0 flex gap-2 pt-1">
 
-        {/* ── Card Avatar ── */}
+        {/* ── Card Avatar (portrait) ── */}
         <div className={`flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 ${
           isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
-        } ${portraitExpanded === 'avatar' ? 'flex-1' : portraitExpanded === 'cart' ? 'w-14 flex-shrink-0' : 'w-[140px] flex-shrink-0'}`}>
+        } ${expandedCard === 'avatar' ? 'flex-1' : expandedCard === 'cart' ? 'w-14 flex-shrink-0' : 'w-[140px] flex-shrink-0'}`}>
 
-          {/* Cabeçalho clicável do card avatar */}
           <button
             className={`flex items-center gap-2 px-3 py-2 w-full transition-colors ${
               isDark ? 'hover:bg-white/5 active:bg-white/8' : 'hover:bg-gray-100 active:bg-gray-150'
             }`}
-            onClick={() => setPortraitExpanded(p => p === 'avatar' ? null : 'avatar')}
+            onClick={() => setExpandedCard(p => p === 'avatar' ? null : 'avatar')}
           >
-            {/* Mini avatar sempre visível no header */}
-            <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 relative">
-              {isListening && <div className="absolute inset-0 rounded-full border border-red-500 animate-ping opacity-40 pointer-events-none" />}
-              <div style={{ transform: 'scale(0.146)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
-                <AvatarFace
-                  isListening={isListening}
-                  isSpeaking={isPlayingAudio}
-                  isProcessing={isProcessing || isTranscribing}
-                  theme={effectiveTheme}
-                  qrCodeData={null}
-                  pixConfirmationData={null}
-                  onCloseQRCode={() => {}}
-                  onCopyQRCode={() => {}}
-                  onConfirmPix={() => {}}
-                  onCancelPix={() => {}}
-                />
-              </div>
-            </div>
-            {portraitExpanded !== 'cart' && (
+            {miniAvatar}
+            {expandedCard !== 'cart' && (
               <span className={`text-[10px] font-medium truncate flex-1 text-left ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
                 {isListening ? 'Ouvindo...' : isProcessing || isPlayingAudio ? 'Processando...' : 'Assistente'}
               </span>
             )}
             <svg
-              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${portraitExpanded === 'avatar' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
+              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${expandedCard === 'avatar' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
             </svg>
           </button>
 
-          {/* Conteúdo expandido do avatar */}
-          {portraitExpanded === 'avatar' && (
-            <div className="flex flex-col items-center gap-2 px-3 pb-3">
-              {/* Avatar centralizado com justify-center */}
-              <div className="flex items-center justify-center w-full">
-                <div
-                  className="relative cursor-pointer select-none"
-                  style={{ width: 80, height: 80 }}
-                  onMouseDown={onMicDown}
-                  onMouseUp={onMicUp}
-                  onTouchStart={(e) => { e.preventDefault(); onMicDown?.(); }}
-                  onTouchEnd={(e) => { e.preventDefault(); onMicUp?.(); }}
-                >
-                  {isListening && (
-                    <div className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-30 pointer-events-none" />
-                  )}
-                  <div className="w-full h-full overflow-hidden rounded-full">
-                    <div style={{ transform: 'scale(0.417)', transformOrigin: 'top left', width: 192, height: 192, pointerEvents: 'none' }}>
-                      <AvatarFace
-                        isListening={isListening}
-                        isSpeaking={isPlayingAudio}
-                        isProcessing={isProcessing || isTranscribing}
-                        theme={effectiveTheme}
-                        qrCodeData={null}
-                        pixConfirmationData={null}
-                        onCloseQRCode={() => {}}
-                        onCopyQRCode={() => {}}
-                        onConfirmPix={() => {}}
-                        onCancelPix={() => {}}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {avatarLabel}
-              {onTextMessage && (
-                <div className="w-full">
-                  <TextInputChat
-                    onSendMessage={onTextMessage}
-                    isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                    theme={effectiveTheme}
-                    disabled={false}
-                    compact
-                  />
-                </div>
-              )}
-              {!isFullscreen && (
-                <button
-                  onClick={onClose}
-                  className={`text-[10px] ${isDark ? 'text-white/25 hover:text-white/50' : 'text-gray-300 hover:text-gray-500'}`}
-                >
-                  Fechar modo vendas
-                </button>
-              )}
-            </div>
-          )}
+          {expandedCard === 'avatar' && avatarExpandedContent}
         </div>
 
-        {/* ── Card Carrinho ── */}
+        {/* ── Card Carrinho (portrait) ── */}
         <div className={`flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 ${
           isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
-        } ${portraitExpanded === 'cart' ? 'flex-1' : portraitExpanded === 'avatar' ? 'w-14 flex-shrink-0' : 'flex-1'}`}>
+        } ${expandedCard === 'cart' ? 'flex-1' : expandedCard === 'avatar' ? 'w-14 flex-shrink-0' : 'flex-1'}`}>
 
-          {/* Cabeçalho clicável do carrinho */}
           <button
             className={`flex items-center gap-2 px-3 py-2 w-full transition-colors ${
               isDark ? 'hover:bg-white/5 active:bg-white/8' : 'hover:bg-gray-100 active:bg-gray-150'
             }`}
-            onClick={() => setPortraitExpanded(p => p === 'cart' ? null : 'cart')}
+            onClick={() => setExpandedCard(p => p === 'cart' ? null : 'cart')}
           >
             <svg className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-white/50' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            {portraitExpanded !== 'avatar' && (
+            {expandedCard !== 'avatar' && (
               <span className={`text-[10px] font-medium flex-1 text-left truncate ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
                 Carrinho
               </span>
             )}
-            {totalItens > 0 && portraitExpanded !== 'avatar' && (
+            {totalItens > 0 && expandedCard !== 'avatar' && (
               <span className="flex-shrink-0 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                 {totalItens}
               </span>
             )}
             <svg
-              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${portraitExpanded === 'cart' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
+              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${expandedCard === 'cart' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
             </svg>
           </button>
 
-          {/* Conteúdo expandido do carrinho */}
-          {portraitExpanded === 'cart' && (
+          {expandedCard === 'cart' && (
             <div className="flex-1 min-h-0 overflow-hidden px-1 pb-2">
               <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
             </div>
           )}
 
-          {/* Resumo compacto quando não expandido */}
-          {portraitExpanded !== 'cart' && totalItens > 0 && (
+          {expandedCard !== 'cart' && totalItens > 0 && (
             <div
               className="px-3 pb-2 cursor-pointer"
-              onClick={() => setPortraitExpanded('cart')}
+              onClick={() => setExpandedCard('cart')}
             >
               <button
                 onClick={(e) => { e.stopPropagation(); handleCheckout(); }}
@@ -428,8 +434,10 @@ function SaleModeInner({
         </div>
       </div>
     </>
-  ) : (
-    // ── LANDSCAPE / DESKTOP: layout original ──
+  );
+
+  // ── gridAndCart — landscape ──────────────────────────────────────────────
+  const gridAndCartLandscape = (
     <>
       {/* Produtos */}
       <div className="flex flex-col min-w-0 overflow-hidden flex-[7]">
@@ -445,47 +453,136 @@ function SaleModeInner({
         />
       </div>
 
-      {/* Avatar + Carrinho */}
+      {/* Sidebar: Avatar + Carrinho como cards colapsáveis verticais */}
       <div className="flex flex-col min-w-0 overflow-hidden gap-2 flex-[1.5]">
-        {/* Card do avatar */}
-        <div className={`rounded-2xl border flex flex-col items-center justify-center gap-1 pt-2 pb-2 px-2 relative flex-shrink-0 ${
+
+        {/* ── Card Avatar (landscape) ── */}
+        <div className={`flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 ${
           isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
+        } ${
+          expandedCard === 'avatar'
+            ? 'flex-1'
+            : expandedCard === 'cart'
+            ? 'flex-shrink-0'
+            : 'flex-shrink-0'
         }`}>
-          {!isFullscreen && (
-            <button
-              onClick={onClose}
-              className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 ${
-                isDark ? 'text-white/30 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
-              }`}
+
+          {/* Cabeçalho clicável */}
+          <button
+            className={`flex items-center gap-2 px-3 py-2 w-full transition-colors ${
+              isDark ? 'hover:bg-white/5 active:bg-white/8' : 'hover:bg-gray-100 active:bg-gray-150'
+            }`}
+            onClick={() => setExpandedCard(p => p === 'avatar' ? null : 'avatar')}
+          >
+            {miniAvatar}
+            <span className={`text-[10px] font-medium truncate flex-1 text-left ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+              {isListening ? 'Ouvindo...' : isProcessing || isPlayingAudio ? 'Processando...' : 'Assistente'}
+            </span>
+            {/* Botão fechar no cabeçalho quando não expandido e não fullscreen */}
+            {!isFullscreen && expandedCard !== 'avatar' && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onClose(); }}
+                className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                  isDark ? 'text-white/30 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+            <svg
+              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${expandedCard === 'avatar' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-          {/* items-center + justify-center no pai garante centralização */}
-          {avatarNode}
-          {avatarLabel}
-          {onTextMessage && (
-            <div className="w-full mt-0.5">
-              <TextInputChat
-                onSendMessage={onTextMessage}
-                isProcessing={isProcessing || isPlayingAudio || isTranscribing}
-                theme={effectiveTheme}
-                disabled={false}
-                compact
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+
+          {/* Conteúdo expandido */}
+          {expandedCard === 'avatar' && avatarExpandedContent}
+
+          {/* Estado padrão (nenhum expandido): mostra avatar centralizado */}
+          {expandedCard === null && (
+            <div className="flex flex-col items-center gap-1 pt-1 pb-2 px-2">
+              {avatarNode}
+              {avatarLabel}
+              {onTextMessage && (
+                <div className="w-full mt-0.5">
+                  <TextInputChat
+                    onSendMessage={onTextMessage}
+                    isProcessing={isProcessing || isPlayingAudio || isTranscribing}
+                    theme={effectiveTheme}
+                    disabled={false}
+                    compact
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* CartPanel */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
+        {/* ── Card Carrinho (landscape) ── */}
+        <div className={`flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 ${
+          isDark ? 'bg-white/3 border-white/8' : 'bg-gray-50 border-gray-200'
+        } ${
+          expandedCard === 'cart'
+            ? 'flex-1'
+            : expandedCard === 'avatar'
+            ? 'flex-shrink-0'
+            : 'flex-1 min-h-0'
+        }`}>
+
+          {/* Cabeçalho clicável */}
+          <button
+            className={`flex items-center gap-2 px-3 py-2 w-full transition-colors flex-shrink-0 ${
+              isDark ? 'hover:bg-white/5 active:bg-white/8' : 'hover:bg-gray-100 active:bg-gray-150'
+            }`}
+            onClick={() => setExpandedCard(p => p === 'cart' ? null : 'cart')}
+          >
+            <svg className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-white/50' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span className={`text-[10px] font-medium flex-1 text-left truncate ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+              Carrinho
+            </span>
+            {totalItens > 0 && (
+              <span className="flex-shrink-0 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                {totalItens}
+              </span>
+            )}
+            <svg
+              className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${expandedCard === 'cart' ? 'rotate-180' : ''} ${isDark ? 'text-white/30' : 'text-gray-400'}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+
+          {/* Conteúdo: sempre visível em null ou cart, oculto em avatar */}
+          {expandedCard !== 'avatar' && (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <CartPanel theme={effectiveTheme} onCheckout={handleCheckout} />
+            </div>
+          )}
+
+          {/* Resumo compacto quando avatar está expandido */}
+          {expandedCard === 'avatar' && totalItens > 0 && (
+            <div className="px-3 pb-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCheckout(); }}
+                className="w-full py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-semibold transition-colors"
+              >
+                Finalizar pedido
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
   );
+
+  const gridAndCart = isPortrait ? gridAndCartPortrait : gridAndCartLandscape;
 
   // ── Checkout compartilhado ───────────────────────────────────────────────
   const checkoutContent = (

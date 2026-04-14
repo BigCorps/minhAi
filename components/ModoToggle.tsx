@@ -107,7 +107,6 @@ export default function ModoToggle({ companyId, modoType, initialEnabled, onTogg
           {cfg.label}
         </span>
         <span className="hidden sm:inline text-xs text-gray-400 dark:text-gray-500 truncate">
-          — {cfg.description}
         </span>
       </div>
 

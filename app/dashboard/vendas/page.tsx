@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import { useRouter } from 'next/navigation';
-import ModoToggle from '@/components/ModoToggle';
+import ModoToggle from '@/components/dashboard/ModoToggle';
 import {
   ShoppingCart,
   Package,

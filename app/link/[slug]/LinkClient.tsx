@@ -3,6 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
+import { detectSubdomainContext, getContextualRoute } from '@/lib/routing-utils';
 import SlugHeader from '@/components/slug/SlugHeader';
 import SlugFooter from '@/components/slug/SlugFooter';
 
@@ -166,7 +168,8 @@ const CONTACT_MAP = [
 // ── Componente principal ─────────────────────────────────────────────────────
 
 export default function LinkClient({ company, links, slug }: Props) {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -175,6 +178,11 @@ export default function LinkClient({ company, links, slug }: Props) {
 
   const theme = mounted ? ((resolvedTheme as 'dark' | 'light') ?? 'dark') : 'dark';
   const isDark = theme === 'dark';
+
+  // URL do assistente respeitando subdomínio (routing-utils)
+  const assistenteUrl = mounted ? getContextualRoute('ia', slug) : `/ia/${slug}`;
+
+  const handleToggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   // Filtrar links de contato com campos preenchidos
   const contactLinks = CONTACT_MAP.filter((c) => {
@@ -251,7 +259,7 @@ export default function LinkClient({ company, links, slug }: Props) {
         onEnterKioskMode={() => {}}
         onToggleWakeLock={() => {}}
         onToggleModoVenda={() => {}}
-        onToggleTheme={() => {}}
+        onToggleTheme={handleToggleTheme}
         onClose={undefined}
       />
 
@@ -310,11 +318,11 @@ export default function LinkClient({ company, links, slug }: Props) {
 
         {/* ── Links de Contato ── */}
         {contactLinks.length > 0 && (
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Contato
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
               {contactLinks.map((c) => {
                 const val = String(company[c.field] ?? '');
                 return (
@@ -357,8 +365,8 @@ export default function LinkClient({ company, links, slug }: Props) {
 
         {/* ── Links Customizados ── */}
         {links.length > 0 && (
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', alignSelf: 'center' }}>
               Links
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -421,7 +429,7 @@ export default function LinkClient({ company, links, slug }: Props) {
         {/* ── Botão Falar com o Assistente ── */}
         <section>
           <a
-            href={`/ia/${slug}`}
+            href={assistenteUrl}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               padding: '16px 24px',
@@ -442,12 +450,6 @@ export default function LinkClient({ company, links, slug }: Props) {
               (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${accentColor}40`;
             }}
           >
-            {/* Logo minhAi */}
-            <img
-              src="https://minhai.app/icons/icon-192x192.png"
-              alt="minhAi"
-              style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
-            />
             Falar com o Assistente
           </a>
         </section>

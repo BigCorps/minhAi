@@ -70,10 +70,17 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Olá, {displayName}!
           </h1>
+          
+          {/* A tag <p> abaixo agora está fechada corretamente */}
           <p className="text-lg text-gray-600 dark:text-white/60">
-            Bem-vindo ao seu painel de controle
+            Bem-vindo ao seu painel de controle.
+          </p> 
+          
+          <p className="text-lg text-gray-600 dark:text-white/60">
+            Navegue pelo menu à direita ou seu perfil à esquerda.
           </p>
         </div>
+      </div> {/* Adicionada a tag de fechamento da div externa */}
         <div className="flex flex-col gap-2 flex-shrink-0 min-w-[260px]">
           <WebAppButton
             userId={user.id}

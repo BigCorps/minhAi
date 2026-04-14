@@ -27,6 +27,7 @@ interface AssistenteClientProps {
     webapp_enabled?: boolean;
     modo_vendas_enabled?: boolean;
     modo_fila_enabled?: boolean;
+    modo_links_enabled?: boolean;
   };
 }
 

@@ -21,11 +21,12 @@ interface SlugHeaderProps {
     webapp_enabled?: boolean;
     modo_vendas_enabled?: boolean;
     modo_fila_enabled?: boolean;
+    modo_links_enabled?: boolean;  
     id: string;
   };
   slug?: string;
   theme: 'dark' | 'light';
-  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente';
+  pageType?: 'ia' | 'vendas' | 'fila' | 'cliente' | 'link'; 
   overlayMode?: boolean;
   isKioskMode?: boolean;
   isWakeLockActive?: boolean;
@@ -95,11 +96,13 @@ export default function SlugHeader({
   // Botão cliente: se logado mostra avatar (sempre), se não logado mostra ícone user
   // Na própria página /cliente não mostra (pois o logout está no dashboard)
   const showClienteButton    = pageType !== 'cliente';
+  const showLinksButton      = company.modo_links_enabled === true && pageType !== 'link'; 
 
   // ── Handlers ─────────────────────────────────────────────
   const handleNavigateToIA     = () => navigateContextual(router, 'ia',      slug);
   const handleNavigateToVendas = () => navigateContextual(router, 'vendas',  slug);
   const handleNavigateToFila   = () => navigateContextual(router, 'fila',    slug);
+  const handleNavigateToLinks  = () => navigateContextual(router, 'link',    slug);
 
   const handleClientesClick = () => {
     if (isLoggedIn) {
@@ -194,6 +197,16 @@ export default function SlugHeader({
             <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Links */}
+        {showLinksButton && (
+          <button onClick={handleNavigateToLinks} className={btn()} title="Página de Links">
+            <svg className={sz} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
           </button>
         )}

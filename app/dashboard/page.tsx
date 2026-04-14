@@ -7,6 +7,7 @@ import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 import SetupBanner from '@/components/dashboard/SetupBanner';
 import { PushNotificationSetup } from '@/components/dashboard/PushNotificationSetup';
+import ModoToggle from '@/components/dashboard/ModoToggle';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -44,6 +45,19 @@ export default async function DashboardPage() {
     }
   } catch (e) { console.error(e); }
 
+    const firstCompany = userCompanies?.[0] ?? null;
+ 
+  // Buscar modo_links_enabled da primeira empresa (para o toggle)
+  let firstCompanyData: { id: string; modo_links_enabled: boolean; slug: string } | null = null;
+  if (firstCompany) {
+    const { data: cd } = await supabase
+      .from('companies')
+      .select('id, slug, modo_links_enabled')
+      .eq('id', firstCompany.id)
+      .single();
+    firstCompanyData = cd ?? null;
+  }
+
   const displayName = user?.user_metadata?.name || user?.email || 'Usuário';
 
   return (
@@ -59,11 +73,34 @@ export default async function DashboardPage() {
             Bem-vindo ao seu painel de controle
           </p>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex flex-col gap-2 flex-shrink-0 min-w-[260px]">
           <WebAppButton
             userId={user.id}
             className="bg-[#ADFF2F] hover:bg-[#96e028] text-black border-none"
           />
+          {firstCompanyData && (
+            <div className="flex items-center gap-2">
+              <ModoToggle
+                companyId={firstCompanyData.id}
+                modoType="link"
+                initialEnabled={firstCompanyData.modo_links_enabled ?? false}
+              />
+              {firstCompanyData.modo_links_enabled && (
+                <a
+                  href={`/link/${firstCompanyData.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-gray-500 dark:text-white/50 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                  title="Ver página de links"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

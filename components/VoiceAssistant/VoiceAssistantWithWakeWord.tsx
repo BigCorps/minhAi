@@ -624,6 +624,41 @@ export function VoiceAssistantWithWakeWord({
           setActiveModal({ type: 'TocarVideoDisplay', data: { companyId, query: '' } });
           pt('Qual vídeo você quer assistir? Me diga o assunto.').catch(() => {});
           break;
+
+case 'fila_atendimento':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'FilaAtendimentoDisplay',
+    data: { companyId },
+  });
+  playText('Abrindo painel de atendimento...').catch(() => {});
+  break;
+
+case 'gerar_senha':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'GerarSenhaDisplay',
+    data: { companyId, slug },
+  });
+  playText('Gerando sua senha...').catch(() => {});
+  break;
+
+// Funções internas (chamadas via voz ou dentro dos modais)
+case 'chamar_proxima_senha':
+case 'finalizar_atendimento':
+case 'pausar_fila':
+case 'retomar_fila':
+case 'cancelar_senha':
+case 'minha_posicao_fila':
+  // Executar handler diretamente (não abre modal)
+  await functionRegistry[functionKey]?.handler({
+    companyId,
+    playText,
+    transcript: lastTranscript || '',
+    slug,
+  });
+  break;
+          
 case 'juntar_pdfs':
   setActiveModal({ type: 'JuntarPdfsDisplay', data: { companyId } });
   await saveInteractionToHistory(

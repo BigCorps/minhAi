@@ -624,6 +624,14 @@ export function VoiceAssistantWithWakeWord({
           setActiveModal({ type: 'TocarVideoDisplay', data: { companyId, query: '' } });
           pt('Qual vídeo você quer assistir? Me diga o assunto.').catch(() => {});
           break;
+case 'juntar_pdfs':
+  setActiveModal({ type: 'JuntarPdfsDisplay', data: { companyId } });
+  await saveInteractionToHistory(
+    companyId,
+    'Juntar PDFs',
+    'Modal de juntar PDFs aberto'
+  );
+  break;
         case 'minha_conta':
           await stopGoogleSpeech();
           setActiveModal({ type: 'LoginClienteDisplay', data: { profile, companyId, slug: slug ?? '' } });

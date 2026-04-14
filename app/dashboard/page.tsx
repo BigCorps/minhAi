@@ -7,7 +7,7 @@ import { WebAppButton } from '@/components/WebAppButton';
 import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWrapper';
 import SetupBanner from '@/components/dashboard/SetupBanner';
 import { PushNotificationSetup } from '@/components/dashboard/PushNotificationSetup';
-import ModoToggle from '@/components/ModoToggle';
+import ModoToggle from '@/components/dashboard/ModoToggle';
 import LinkNaBioModalWrapper from '@/components/dashboard/LinkNaBioModalWrapper';
 
 export default async function DashboardPage() {

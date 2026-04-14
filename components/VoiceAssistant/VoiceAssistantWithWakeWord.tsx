@@ -951,6 +951,13 @@ case 'juntar_pdfs':
           pt('Abrindo modo vendas!').catch(() => {});
           break;
         }
+        case 'link_na_bio': {
+          await stopGoogleSpeech();
+          const linkUrl = getContextualRoute('link', slug);
+          pt('Abrindo página de links!').catch(() => {});
+          window.location.href = linkUrl;
+          break;
+        }
         case 'analisar_planilha':
           await stopGoogleSpeech();
           setActiveModal({ type: 'AnalisarPlanilhaDisplay', data: { companyId } });

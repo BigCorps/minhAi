@@ -62,7 +62,7 @@ export function detectSubdomainContext(): {
  * getContextualRoute('cliente', 'loja') → '/cliente/loja'
  */
 export function getContextualRoute(
-  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente',
+  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente' | 'link',
   slug?: string
 ): string {
   const { isSubdomain, currentSlug } = detectSubdomainContext();
@@ -100,7 +100,7 @@ export function getContextualRoute(
  */
 export function navigateContextual(
   router: any,
-  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente',
+  route: 'ia' | 'vendas' | 'fila' | 'atendimento' | 'kiosk' | 'cliente' | 'link',
   slug?: string
 ): void {
   const url = getContextualRoute(route, slug);

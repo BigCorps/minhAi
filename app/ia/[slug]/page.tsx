@@ -192,7 +192,7 @@ export default async function AssistentePublicoPage({ params }: PageProps) {
         webapp_enabled: company.webapp_enabled ?? false,
         modo_vendas_enabled: company.modo_vendas_enabled ?? false,
         modo_fila_enabled: company.modo_fila_enabled ?? false,
-        modo_links_enabled: company.modo_links_enabled ?? false,  // ← NOVO
+        modo_links_enabled: company.modo_links_enabled ?? false,
       }}
     />
   );

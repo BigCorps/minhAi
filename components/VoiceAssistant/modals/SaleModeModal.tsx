@@ -1,4 +1,4 @@
-// components/VoiceAssistant/modals/SaleModeModal.tsx — v10
+// components/VoiceAssistant/modals/SaleModeModal.tsx — v11
 //
 // VERSÃO HÍBRIDA: Suporta dois modos de renderização
 //
@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom';
 import { useTheme } from 'next-themes';
 import { createClient } from '@/lib/supabase-browser';
 import { CartProvider, useCart } from '@/hooks/useCart';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import ProductGrid from './SaleModeModal/ProductGrid';
 import CartPanel from './SaleModeModal/CartPanel';
 import CheckoutFlow from './SaleModeModal/CheckoutFlow';
@@ -97,6 +98,9 @@ function SaleModeInner({
 
   const { totalItens, addItem } = useCart();
 
+  // ── Detecção de mobile baseada APENAS em tamanho de janela ───────────────
+  const isMobile = useIsMobile(); // substitui o state local anterior
+
   const [produtos, setProdutos] = useState<ProdutoVenda[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [loadingProdutos, setLoadingProdutos] = useState(true);
@@ -105,7 +109,6 @@ function SaleModeInner({
   );
   const [showCheckout, setShowCheckout] = useState(false);
   const [isPortrait, setIsPortrait] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [metodosAtivos, setMetodosAtivos] = useState<string[]>([]);
 
@@ -128,10 +131,11 @@ function SaleModeInner({
     };
   }, []);
 
+  // isPortrait mantido para outros usos (ex: ajustes de UI opcionais),
+  // mas NÃO é mais usado na decisão de layout principal
   useEffect(() => {
     const update = () => {
       setIsPortrait(getIsPortrait());
-      setIsMobile(window.innerWidth < 768);
     };
     update();
     window.addEventListener('resize', update);
@@ -144,10 +148,10 @@ function SaleModeInner({
     };
   }, []);
 
-  // Reseta o card expandido ao trocar entre portrait/landscape
+  // Reseta o card expandido ao trocar entre mobile/desktop
   useEffect(() => {
     setPortraitExpanded(null);
-  }, [isPortrait, isMobile]);
+  }, [isMobile]);
 
   useEffect(() => {
     let m = true;
@@ -259,10 +263,13 @@ function SaleModeInner({
   );
 
   // ── Conteúdo compartilhado: grid + carrinho ──────────────────────────────
-  // Layout mobile: portrait + tela pequena → cards colapsáveis na barra inferior
-  // Layout desktop: coluna lateral fixa com avatar + carrinho empilhados
-  const gridAndCart = (isPortrait && isMobile) ? (
-    // ── PORTRAIT MOBILE: produtos em cima, avatar+carrinho em baixo como botões colapsáveis ──
+  //
+  // CORREÇÃO: a condição usa apenas `isMobile` (tamanho de janela).
+  // Antes usava `isPortrait && isMobile`, o que quebrava em desktop
+  // quando a janela era mais alta que larga.
+  //
+  const gridAndCart = isMobile ? (
+    // ── MOBILE: produtos em cima, avatar+carrinho em baixo como botões colapsáveis ──
     <>
       {/* Produtos — ocupa o espaço restante */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -439,7 +446,7 @@ function SaleModeInner({
       </div>
     </>
   ) : (
-    // ── DESKTOP / LANDSCAPE: layout original com coluna lateral fixa ──
+    // ── DESKTOP: layout com coluna lateral fixa (avatar + carrinho à direita) ──
     <>
       {/* Produtos */}
       <div className="flex flex-col min-w-0 overflow-hidden flex-[7]">

@@ -457,6 +457,465 @@ voiceTriggers: [
     },
   },
 
+// ========================================
+// FUNÇÕES DE FILA (8 funções)
+// ========================================
+
+// 1. FILA DE ATENDIMENTO (pública - aparece no carrossel)
+fila_atendimento: {
+  functionKey: 'fila_atendimento',
+  functionName: 'Fila de Atendimento',
+  category: 'biometry',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'fila de atendimento',
+    'painel de fila',
+    'gerenciar fila',
+    'controle de fila',
+    'abrir fila',
+    'painel atendimento',
+    'controlar fila',
+    'administrar fila',
+  ],
+  examplePhrases: [
+    'Abrir fila de atendimento',
+    'Gerenciar fila',
+    'Painel de atendimento',
+    'Controle da fila',
+  ],
+  description: 'Painel completo de gerenciamento de fila: chamar próxima, finalizar, pausar, retomar, estatísticas e configurações.',
+  shortDescription: 'Painel de controle da fila',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, setActiveModal, playText }) => {
+    await playText('Abrindo painel de atendimento...');
+    setActiveModal?.({
+      type: 'FilaAtendimentoDisplay',
+      data: { companyId },
+    });
+    return true;
+  },
+},
+
+// 2. GERAR SENHA (pública - aparece no carrossel)
+gerar_senha: {
+  functionKey: 'gerar_senha',
+  functionName: 'Gerar Senha',
+  category: 'biometry',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'gerar senha',
+    'pegar senha',
+    'quero senha',
+    'retirar senha',
+    'senha da fila',
+    'entrar na fila',
+    'tirar senha',
+    'pegar ficha',
+  ],
+  examplePhrases: [
+    'Pegar senha',
+    'Gerar senha da fila',
+    'Quero entrar na fila',
+    'Retirar senha',
+  ],
+  description: 'Gera uma nova senha da fila e exibe QR Code para acompanhamento em tempo real.',
+  shortDescription: 'Gerar senha e acompanhar fila',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, setActiveModal, playText, slug }) => {
+    await playText('Gerando sua senha...');
+    setActiveModal?.({
+      type: 'GerarSenhaDisplay',
+      data: { companyId, slug },
+    });
+    return true;
+  },
+},
+
+// 3. CHAMAR PRÓXIMA SENHA (interna - não aparece no carrossel)
+chamar_proxima_senha: {
+  functionKey: 'chamar_proxima_senha',
+  functionName: 'Chamar Próxima Senha',
+  category: 'biometry',
+  responseType: 'voice',
+  voiceTriggers: [
+    'chamar próxima',
+    'chamar proxima',
+    'próxima senha',
+    'proxima senha',
+    'chamar senha',
+  ],
+  examplePhrases: [
+    'Chamar próxima senha',
+    'Próxima',
+    'Chamar',
+  ],
+  description: 'Chama a próxima senha da fila com TTS.',
+  shortDescription: 'Chamar próxima senha',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, playText }) => {
+    const supabase = createClient();
+
+    try {
+      // Buscar próxima senha aguardando
+      const { data: proximaSenha, error } = await supabase
+        .from('fila_senhas')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('status', 'aguardando')
+        .order('gerada_em', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error || !proximaSenha) {
+        await playText('Não há senhas aguardando no momento.');
+        return true;
+      }
+
+      // Atualizar status para "chamando"
+      await supabase
+        .from('fila_senhas')
+        .update({
+          status: 'chamando',
+          chamada_em: new Date().toISOString(),
+        })
+        .eq('id', proximaSenha.id);
+
+      // TTS especial
+      const prefixo = proximaSenha.senha_completa[0];
+      const numeros = proximaSenha.senha_completa.slice(1).split('');
+      const texto = `Senha ${prefixo}. ${numeros.join('. ')}.`;
+      await playText(texto);
+
+      // Após 3s, mudar para "atendimento"
+      setTimeout(async () => {
+        await supabase
+          .from('fila_senhas')
+          .update({
+            status: 'atendimento',
+            atendimento_iniciado_em: new Date().toISOString(),
+          })
+          .eq('id', proximaSenha.id);
+      }, 3000);
+
+      return true;
+    } catch (err) {
+      console.error('Erro ao chamar senha:', err);
+      await playText('Erro ao chamar senha.');
+      return false;
+    }
+  },
+},
+
+// 4. FINALIZAR ATENDIMENTO (interna)
+finalizar_atendimento: {
+  functionKey: 'finalizar_atendimento',
+  functionName: 'Finalizar Atendimento',
+  category: 'biometry',
+  responseType: 'voice',
+  voiceTriggers: [
+    'finalizar atendimento',
+    'concluir atendimento',
+    'encerrar atendimento',
+  ],
+  examplePhrases: [
+    'Finalizar atendimento',
+    'Concluir',
+    'Finalizar',
+  ],
+  description: 'Finaliza o atendimento da senha atual.',
+  shortDescription: 'Finalizar atendimento atual',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, playText }) => {
+    const supabase = createClient();
+
+    try {
+      // Buscar senha em atendimento
+      const { data: senhaAtual, error } = await supabase
+        .from('fila_senhas')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('status', 'atendimento')
+        .single();
+
+      if (error || !senhaAtual) {
+        await playText('Nenhum atendimento em andamento.');
+        return true;
+      }
+
+      // Finalizar
+      await supabase
+        .from('fila_senhas')
+        .update({
+          status: 'finalizado',
+          finalizada_em: new Date().toISOString(),
+        })
+        .eq('id', senhaAtual.id);
+
+      await playText('Atendimento finalizado com sucesso.');
+      return true;
+    } catch (err) {
+      console.error('Erro ao finalizar:', err);
+      await playText('Erro ao finalizar atendimento.');
+      return false;
+    }
+  },
+},
+
+// 5. PAUSAR FILA (interna)
+pausar_fila: {
+  functionKey: 'pausar_fila',
+  functionName: 'Pausar Fila',
+  category: 'biometry',
+  responseType: 'voice',
+  voiceTriggers: [
+    'pausar fila',
+    'parar fila',
+    'suspender fila',
+    'interromper fila',
+  ],
+  examplePhrases: [
+    'Pausar fila',
+    'Parar fila',
+    'Pausar',
+  ],
+  description: 'Pausa temporariamente a fila.',
+  shortDescription: 'Pausar fila temporariamente',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, playText }) => {
+    const supabase = createClient();
+
+    try {
+      await supabase
+        .from('fila_configs')
+        .update({ fila_ativa: false })
+        .eq('company_id', companyId);
+
+      await playText('Fila pausada. Novas senhas não serão geradas.');
+      return true;
+    } catch (err) {
+      console.error('Erro ao pausar:', err);
+      await playText('Erro ao pausar fila.');
+      return false;
+    }
+  },
+},
+
+// 6. RETOMAR FILA (interna)
+retomar_fila: {
+  functionKey: 'retomar_fila',
+  functionName: 'Retomar Fila',
+  category: 'biometry',
+  responseType: 'voice',
+  voiceTriggers: [
+    'retomar fila',
+    'continuar fila',
+    'reativar fila',
+    'ativar fila',
+  ],
+  examplePhrases: [
+    'Retomar fila',
+    'Continuar fila',
+    'Retomar',
+  ],
+  description: 'Retoma a fila pausada.',
+  shortDescription: 'Retomar fila pausada',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, playText }) => {
+    const supabase = createClient();
+
+    try {
+      await supabase
+        .from('fila_configs')
+        .update({ fila_ativa: true })
+        .eq('company_id', companyId);
+
+      await playText('Fila retomada. Clientes podem gerar senhas novamente.');
+      return true;
+    } catch (err) {
+      console.error('Erro ao retomar:', err);
+      await playText('Erro ao retomar fila.');
+      return false;
+    }
+  },
+},
+
+// 7. CANCELAR SENHA (interna)
+cancelar_senha: {
+  functionKey: 'cancelar_senha',
+  functionName: 'Cancelar Senha',
+  category: 'biometry',
+  responseType: 'voice',
+  voiceTriggers: [
+    'cancelar senha',
+    'desistir da fila',
+    'sair da fila',
+    'remover senha',
+  ],
+  examplePhrases: [
+    'Cancelar senha',
+    'Desistir',
+    'Cancelar',
+  ],
+  description: 'Cancela uma senha específica.',
+  shortDescription: 'Cancelar senha da fila',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, playText, transcript }) => {
+    // Extrair número da senha do transcript
+    const match = transcript.match(/[A-Z]\d{3}/i);
+    if (!match) {
+      await playText('Por favor, informe o número da senha que deseja cancelar.');
+      return false;
+    }
+
+    const senhaCompleta = match[0].toUpperCase();
+    const supabase = createClient();
+
+    try {
+      const { error } = await supabase
+        .from('fila_senhas')
+        .update({ status: 'cancelado' })
+        .eq('company_id', companyId)
+        .eq('senha_completa', senhaCompleta)
+        .eq('status', 'aguardando');
+
+      if (error) {
+        await playText('Erro ao cancelar senha.');
+        return false;
+      }
+
+      await playText(`Senha ${senhaCompleta} cancelada com sucesso.`);
+      return true;
+    } catch (err) {
+      console.error('Erro ao cancelar:', err);
+      await playText('Erro ao cancelar senha.');
+      return false;
+    }
+  },
+},
+
+// 8. MINHA POSIÇÃO NA FILA (interna)
+minha_posicao_fila: {
+  functionKey: 'minha_posicao_fila',
+  functionName: 'Minha Posição na Fila',
+  category: 'biometry',
+  responseType: 'voice',
+  voiceTriggers: [
+    'minha posição',
+    'minha posicao',
+    'quantos na frente',
+    'posição da senha',
+    'posicao da senha',
+  ],
+  examplePhrases: [
+    'Minha posição',
+    'Quantos na frente',
+    'Onde estou na fila',
+  ],
+  description: 'Informa a posição na fila e tempo estimado.',
+  shortDescription: 'Consultar posição na fila',
+  icon: '🟤',
+  color: '#808000',
+  saveToHistory: true,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, playText, transcript }) => {
+    // Extrair número da senha
+    const match = transcript.match(/[A-Z]\d{3}/i);
+    if (!match) {
+      await playText('Por favor, informe o número da sua senha.');
+      return false;
+    }
+
+    const senhaCompleta = match[0].toUpperCase();
+    const supabase = createClient();
+
+    try {
+      // Buscar senha
+      const { data: senha, error } = await supabase
+        .from('fila_senhas')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('senha_completa', senhaCompleta)
+        .eq('status', 'aguardando')
+        .single();
+
+      if (error || !senha) {
+        await playText('Senha não encontrada ou já foi chamada.');
+        return false;
+      }
+
+      // Calcular posição
+      const { count } = await supabase
+        .from('fila_senhas')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'aguardando')
+        .lt('gerada_em', senha.gerada_em);
+
+      const posicao = count || 0;
+
+      // Buscar tempo médio
+      const { data: config } = await supabase
+        .from('fila_configs')
+        .select('tempo_medio_atendimento')
+        .eq('company_id', companyId)
+        .single();
+
+      const tempoEstimado = config ? posicao * config.tempo_medio_atendimento : 0;
+
+      if (posicao === 0) {
+        await playText(`Sua senha ${senhaCompleta} é a próxima da fila!`);
+      } else {
+        await playText(
+          `Sua senha ${senhaCompleta} tem ${posicao} ${posicao === 1 ? 'pessoa' : 'pessoas'} na frente. Tempo estimado: ${tempoEstimado} minutos.`
+        );
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Erro ao consultar posição:', err);
+      await playText('Erro ao consultar posição.');
+      return false;
+    }
+  },
+},
+
 link_na_bio: {
   functionKey: 'link_na_bio',
   functionName: 'Link na Bio',

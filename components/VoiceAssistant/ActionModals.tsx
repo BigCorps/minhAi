@@ -82,11 +82,10 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   () => import('@/components/assistant/AnalisarPlanilhaDisplay'),
   { ssr: false }
 ),
-  'JuntarPdfsDisplay': dynamic(
+ 'JuntarPdfsDisplay': dynamic(
     () => import('@/components/assistant/JuntarPdfsDisplay'),
     { ssr: false }
   ),
-};
 
   // ── Consultas ─────────────────────────────────────────────
   'ConsultarCpfModal': dynamic(() => import('@/components/assistant/ConsultarCpfModal'), { ssr: false }),

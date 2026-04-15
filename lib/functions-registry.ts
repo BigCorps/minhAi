@@ -526,12 +526,16 @@ gerar_senha: {
   description: 'Gera uma nova senha da fila e exibe QR Code para acompanhamento em tempo real.',
   shortDescription: 'Gerar senha e acompanhar fila',
   icon: '🟤',
-  color: '#000080', // Azul navy
+  color: '#000080',
   saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: false,
-  handler: async ({ companyId, setActiveModal, playText, supabase }) => {
+  handler: async ({ companyId, setActiveModal, playText }) => {
+    // Criar client Supabase dentro do handler
+    const { createClient } = await import('@/lib/supabase-browser');
+    const supabase = createClient();
+
     // Buscar slug da empresa
     const { data: company } = await supabase
       .from('companies')
@@ -547,8 +551,8 @@ gerar_senha: {
       data: { companyId, slug },
     });
 
-    // TTS depois (não bloqueia - executa em paralelo)
-    playText('Gerando sua senha...').catch(() => {});
+    // TTS depois SEM AWAIT (não bloqueia)
+    playText('Gerando sua senha...');
 
     return true;
   },

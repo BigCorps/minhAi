@@ -3,6 +3,13 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
+import { 
+  MapPin, 
+  Clock, 
+  Bell, 
+  RefreshCw, 
+  XCircle 
+} from 'lucide-react';
 
 const DARK = {
   bg: '#1e293b',
@@ -81,7 +88,7 @@ export default function GerarSenhaDisplay({
   useEffect(() => {
     if (senha && slug) {
       const acompanhamentoUrl = `https://${slug}.minhai.app/fila-acompanhamento/${senha.id}`;
-      const url = `/api/qrcode?size=200&data=${encodeURIComponent(acompanhamentoUrl)}&color=%23000080&company_id=${companyId}`;
+      const url = `/api/qrcode?size=200&data=${encodeURIComponent(acompanhamentoUrl)}&color=%23808000&company_id=${companyId}`;
       setQrCodeUrl(url);
     }
   }, [senha, slug, companyId]);
@@ -115,15 +122,19 @@ export default function GerarSenhaDisplay({
     try {
       setLoading(true);
 
-      // Buscar config da fila
+      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
       const { data: config, error: configError } = await supabase
         .from('fila_configs')
         .select('*')
         .eq('company_id', companyId)
         .eq('fila_ativa', true)
-        .single();
+        .maybeSingle();
 
-      if (configError || !config) {
+      if (configError) {
+        console.error('Erro ao buscar config:', configError);
+      }
+
+      if (!config) {
         showToast('Fila não disponível no momento', 'error');
         setLoading(false);
         return;
@@ -204,26 +215,34 @@ export default function GerarSenhaDisplay({
 
       setPosicao(count || 0);
 
-      // Buscar última chamada
-      const { data: ultimaSenha } = await supabase
+      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
+      const { data: ultimaSenha, error: ultimaError } = await supabase
         .from('fila_senhas')
         .select('*')
         .eq('company_id', companyId)
         .in('status', ['chamando', 'atendimento'])
         .order('chamada_em', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      if (ultimaError) {
+        console.error('Erro ao buscar última senha:', ultimaError);
+      }
 
       if (ultimaSenha) {
         setUltimaChamada(ultimaSenha);
       }
 
-      // Buscar config para tempo médio
-      const { data: config } = await supabase
+      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
+      const { data: config, error: configError } = await supabase
         .from('fila_configs')
         .select('tempo_medio_atendimento')
         .eq('company_id', companyId)
-        .single();
+        .maybeSingle();
+
+      if (configError) {
+        console.error('Erro ao buscar config:', configError);
+      }
 
       if (config) {
         setTempoEstimado((count || 0) * config.tempo_medio_atendimento);
@@ -365,8 +384,9 @@ export default function GerarSenhaDisplay({
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}>
-                  <div style={{ color: colors.textSecondary, fontSize: '14px' }}>
-                    📍 Posição na fila
+                  <div style={{ color: colors.textSecondary, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MapPin className="w-4 h-4" />
+                    Posição na fila
                   </div>
                   <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
                     {posicao === 0 ? 'Você é o próximo!' : `${posicao}ª na fila`}
@@ -382,8 +402,9 @@ export default function GerarSenhaDisplay({
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}>
-                  <div style={{ color: colors.textSecondary, fontSize: '14px' }}>
-                    ⏱️ Tempo estimado
+                  <div style={{ color: colors.textSecondary, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock className="w-4 h-4" />
+                    Tempo estimado
                   </div>
                   <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
                     {tempoEstimado} minutos
@@ -397,8 +418,9 @@ export default function GerarSenhaDisplay({
                     padding: '16px',
                     marginBottom: '12px',
                   }}>
-                    <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px' }}>
-                      🔔 Última Chamada
+                    <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Bell className="w-4 h-4" />
+                      Última Chamada
                     </div>
                     <div style={{ color: colors.text, fontSize: '24px', fontWeight: 'bold' }}>
                       {ultimaChamada.senha_completa}
@@ -453,9 +475,14 @@ export default function GerarSenhaDisplay({
                     fontWeight: '600',
                     color: colors.accent,
                     cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
                   }}
                 >
-                  🔄 Atualizar Posição
+                  <RefreshCw className="w-4 h-4" />
+                  Atualizar Posição
                 </button>
 
                 <button
@@ -469,9 +496,14 @@ export default function GerarSenhaDisplay({
                     fontWeight: '600',
                     color: colors.danger,
                     cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
                   }}
                 >
-                  ❌ Cancelar Senha
+                  <XCircle className="w-4 h-4" />
+                  Cancelar Senha
                 </button>
               </div>
             </>

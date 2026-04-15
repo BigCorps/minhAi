@@ -120,6 +120,8 @@ const CONFIGURABLE_FUNCTIONS = [
   'ver_noticias',
   'procurar_produto',
   'chamar_gerente',
+  'pre_atendimento',
+  'responder_pesquisa',
   'tef_debito',
   'tef_credito'
 ];

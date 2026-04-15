@@ -458,6 +458,157 @@ voiceTriggers: [
   },
 
 // ========================================
+// MODO FILA
+// ========================================
+modo_fila: {
+  functionKey: 'modo_fila',
+  functionName: 'Modo Fila',
+  category: 'biometry',
+  responseType: 'action',
+  voiceTriggers: [
+    'abrir fila',
+    'modo fila',
+    'painel fila',
+    'ver fila',
+    'abrir painel',
+  ],
+  examplePhrases: [
+    'Abrir modo fila',
+    'Ver painel da fila',
+    'Mostrar painel',
+  ],
+  description: 'Abre a tela de acompanhamento da fila em tela cheia, ideal para TVs e monitores.',
+  shortDescription: 'Abrir painel da fila',
+  icon: '🟤',
+  color: '#000080',
+  saveToHistory: false,
+  creditsPerUse: 0,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ slug }) => {
+    window.location.href = `/fila/${slug}`;
+    return true;
+  },
+},
+
+// ========================================
+// PESQUISAS E AVALIAÇÕES
+// ========================================
+responder_pesquisa: {
+  functionKey: 'responder_pesquisa',
+  functionName: 'Pesquisas e Avaliações',
+  category: 'biometry',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'responder pesquisa',
+    'fazer avaliação',
+    'avaliar atendimento',
+    'dar nota',
+    'pesquisa satisfação',
+  ],
+  examplePhrases: [
+    'Responder pesquisa',
+    'Avaliar atendimento',
+    'Dar minha opinião',
+  ],
+  description: 'Realize pesquisas de satisfação e colete avaliações dos clientes. Configure perguntas customizadas, avaliações por estrelas e análise de resultados em tempo real.',
+  shortDescription: 'Avaliar atendimento',
+  icon: '⭐',
+  color: '#f59e0b',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, setActiveModal, playText }) => {
+    // Criar client Supabase dentro do handler
+    const { createClient } = await import('@/lib/supabase-browser');
+    const supabase = createClient();
+
+    // Buscar pesquisa ativa
+    const { data: pesquisa } = await supabase
+      .from('pesquisas')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('ativa', true)
+      .maybeSingle();
+
+    if (!pesquisa) {
+      playText('Não há pesquisas ativas no momento.');
+      return false;
+    }
+
+    // Modal PRIMEIRO
+    setActiveModal?.({
+      type: 'ResponderPesquisaDisplay',
+      data: { companyId, pesquisaId: pesquisa.id },
+    });
+
+    // TTS depois
+    playText('Por favor, responda nossa pesquisa de satisfação.');
+
+    return true;
+  },
+},
+
+// ========================================
+// PRÉ-ATENDIMENTO
+// ========================================
+pre_atendimento: {
+  functionKey: 'pre_atendimento',
+  functionName: 'Pré-Atendimento',
+  category: 'biometry',
+  responseType: 'voice+modal',
+  voiceTriggers: [
+    'pré atendimento',
+    'preencher formulário',
+    'cadastro inicial',
+    'ficha atendimento',
+  ],
+  examplePhrases: [
+    'Preencher pré-atendimento',
+    'Fazer cadastro inicial',
+    'Preencher ficha',
+  ],
+  description: 'Formulário customizável de pré-atendimento. Colete informações específicas dos clientes antes do atendimento, ideal para clínicas, consultórios e serviços especializados.',
+  shortDescription: 'Preencher pré-atendimento',
+  icon: '📋',
+  color: '#3b82f6',
+  saveToHistory: true,
+  creditsPerUse: 1,
+  requiresPayment: false,
+  isPremium: false,
+  handler: async ({ companyId, setActiveModal, playText }) => {
+    // Criar client Supabase dentro do handler
+    const { createClient } = await import('@/lib/supabase-browser');
+    const supabase = createClient();
+
+    // Buscar formulário ativo
+    const { data: form } = await supabase
+      .from('pre_atendimento_forms')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('ativo', true)
+      .maybeSingle();
+
+    if (!form) {
+      playText('Não há formulários de pré-atendimento configurados.');
+      return false;
+    }
+
+    // Modal PRIMEIRO
+    setActiveModal?.({
+      type: 'PreAtendimentoDisplay',
+      data: { companyId, formId: form.id },
+    });
+
+    // TTS depois
+    playText('Por favor, preencha o formulário de pré-atendimento.');
+
+    return true;
+  },
+},
+
+// ========================================
 // FUNÇÕES DE FILA (8 funções)
 // ========================================
 

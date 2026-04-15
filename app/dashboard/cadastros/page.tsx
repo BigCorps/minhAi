@@ -958,7 +958,7 @@ function CadastrosPageContent() {
 
           {companyId && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-100 dark:border-white/5 overflow-hidden">
-              <div className="grid grid-cols-6 sm:flex border-b border-gray-200 dark:border-white/10">
+              <div className="grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-white/10">
                 {abas.map(({ key, label, icon: Icon }) => (
                   <button key={key} onClick={() => setAba(key)}
                     className={`sm:flex-1 px-3 py-3 text-sm font-medium transition flex items-center justify-center gap-2 border-b sm:border-b-0 ${

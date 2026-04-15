@@ -116,7 +116,7 @@ export default function FilaAtendimentoDisplay({
   useEffect(() => {
     carregarDados();
     
-    // Realtime
+    // Realtime com logging
     const channel = supabase
       .channel('fila-atendimento')
       .on('postgres_changes', {
@@ -124,10 +124,23 @@ export default function FilaAtendimentoDisplay({
         schema: 'public',
         table: 'fila_senhas',
         filter: `company_id=eq.${companyId}`,
-      }, () => {
+      }, (payload) => {
+        console.log('📡 Realtime evento recebido:', payload);
+        // Forçar recarregamento imediato
         carregarDados();
       })
-      .subscribe();
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'fila_configs',
+        filter: `company_id=eq.${companyId}`,
+      }, (payload) => {
+        console.log('📡 Config atualizada:', payload);
+        carregarDados();
+      })
+      .subscribe((status) => {
+        console.log('📡 Realtime status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

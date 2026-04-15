@@ -21,6 +21,7 @@ import { resolvePendingPaymentChoice } from '@/lib/paymentGatewayEntries';
 import { useGroqContext } from '@/hooks/useGroqContext';
 import { useProfile } from '@/hooks/useProfile';
 import { getContextualRoute } from '@/lib/routing-utils';
+import { createClient } from '@/lib/supabase-browser';
 
 // ── Ponto 1: Novos imports ─────────────────────────────────
 import { useFAQs } from './hooks/useFAQs';

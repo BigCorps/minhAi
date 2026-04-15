@@ -232,20 +232,23 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
       .select('*')
       .eq('company_id', settings.company_id)
       .order('created_at', { ascending: false });
-
     setPesquisas(data || []);
     setLoading(false);
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          Configure pesquisas de satisfação e avaliações. Adicione perguntas personalizadas, avaliações por estrelas e muito mais.
+          Configure pesquisas de satisfação e avaliações. As pesquisas são gerenciadas na aba "Pesquisas" da seção Cadastros.
         </p>
       </div>
 
@@ -255,16 +258,35 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
             Nenhuma pesquisa criada ainda
           </p>
           <a
-            href={`/dashboard/${settings.company_id}/pesquisas`}
+            href={`/dashboard/${settings.company_id}/cadastros?tab=pesquisas`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
           >
             <Plus className="w-4 h-4" />
-            Criar Primeira Pesquisa
+            Ir para Pesquisas
           </a>
         </div>
       ) : (
         <div className="space-y-3">
-          {pesquisas.map((pesquisa) => (
+          <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {pesquisas.length} pesquisa{pesquisas.length !== 1 ? 's' : ''} criada{pesquisas.length !== 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {pesquisas.filter(p => p.ativa).length} ativa{pesquisas.filter(p => p.ativa).length !== 1 ? 's' : ''} • {pesquisas.filter(p => !p.ativa).length} inativa{pesquisas.filter(p => !p.ativa).length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <a
+                href={`/dashboard/${settings.company_id}/cadastros?tab=pesquisas`}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
+                Gerenciar →
+              </a>
+            </div>
+          </div>
+
+          {pesquisas.slice(0, 3).map((pesquisa) => (
             <div
               key={pesquisa.id}
               className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10"
@@ -279,7 +301,7 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
                       {pesquisa.descricao}
                     </p>
                   )}
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-2">
                     <span className={`text-xs px-2 py-1 rounded ${
                       pesquisa.ativa
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
@@ -289,22 +311,22 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
                     </span>
                   </div>
                 </div>
-                <a
-                  href={`/dashboard/${settings.company_id}/pesquisas/${pesquisa.id}`}
-                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
-                >
-                  Editar
-                </a>
               </div>
             </div>
           ))}
 
+          {pesquisas.length > 3 && (
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+              + {pesquisas.length - 3} pesquisa{pesquisas.length - 3 !== 1 ? 's' : ''} adicional{pesquisas.length - 3 !== 1 ? 'is' : ''}
+            </p>
+          )}
+
           <a
-            href={`/dashboard/${settings.company_id}/pesquisas`}
+            href={`/dashboard/${settings.company_id}/cadastros?tab=pesquisas`}
             className="block text-center py-3 bg-gray-100 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
           >
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              + Criar Nova Pesquisa
+              Ver Todas as Pesquisas →
             </span>
           </a>
         </div>
@@ -312,6 +334,7 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
     </div>
   );
 };
+
 // ========================================
 // CONFIGURAÇÃO: PRÉ-ATENDIMENTO
 // ========================================
@@ -330,20 +353,23 @@ const PreAtendimentoConfigForm = ({ settings, onChange }: any) => {
       .select('*')
       .eq('company_id', settings.company_id)
       .order('created_at', { ascending: false });
-
     setForms(data || []);
     setLoading(false);
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          Configure formulários de pré-atendimento. Adicione campos personalizados para coletar informações específicas antes do atendimento.
+          Configure formulários de pré-atendimento. Os formulários são gerenciados na aba "Pré-Atendimento" da seção Cadastros.
         </p>
       </div>
 
@@ -353,16 +379,35 @@ const PreAtendimentoConfigForm = ({ settings, onChange }: any) => {
             Nenhum formulário criado ainda
           </p>
           <a
-            href={`/dashboard/${settings.company_id}/pre-atendimento`}
+            href={`/dashboard/${settings.company_id}/cadastros?tab=pre-atendimento`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
-            Criar Primeiro Formulário
+            Ir para Pré-Atendimento
           </a>
         </div>
       ) : (
         <div className="space-y-3">
-          {forms.map((form) => (
+          <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {forms.length} formulário{forms.length !== 1 ? 's' : ''} criado{forms.length !== 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {forms.filter(f => f.ativo).length} ativo{forms.filter(f => f.ativo).length !== 1 ? 's' : ''} • {forms.filter(f => !f.ativo).length} inativo{forms.filter(f => !f.ativo).length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <a
+                href={`/dashboard/${settings.company_id}/cadastros?tab=pre-atendimento`}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              >
+                Gerenciar →
+              </a>
+            </div>
+          </div>
+
+          {forms.slice(0, 3).map((form) => (
             <div
               key={form.id}
               className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10"
@@ -385,27 +430,27 @@ const PreAtendimentoConfigForm = ({ settings, onChange }: any) => {
                     }`}>
                       {form.ativo ? 'Ativo' : 'Inativo'}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {form.campos?.length || 0} campos
                     </span>
                   </div>
                 </div>
-                <a
-                  href={`/dashboard/${settings.company_id}/pre-atendimento/${form.id}`}
-                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
-                >
-                  Editar
-                </a>
               </div>
             </div>
           ))}
 
+          {forms.length > 3 && (
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+              + {forms.length - 3} formulário{forms.length - 3 !== 1 ? 's' : ''} adicional{forms.length - 3 !== 1 ? 'is' : ''}
+            </p>
+          )}
+
           <a
-            href={`/dashboard/${settings.company_id}/pre-atendimento`}
+            href={`/dashboard/${settings.company_id}/cadastros?tab=pre-atendimento`}
             className="block text-center py-3 bg-gray-100 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
           >
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              + Criar Novo Formulário
+              Ver Todos os Formulários →
             </span>
           </a>
         </div>

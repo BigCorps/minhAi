@@ -1,5 +1,5 @@
 /**
- * Sistema de Registro de Funções NOVAS - eAi
+ * Sistema de Registro de Funções NOVAS - minhAi
  * 
  * ⚠️ IMPORTANTE: Este registry é apenas para NOVAS funções.
  * Funções existentes (WhatsApp, Instagram, PIX, FAQ, ChatGPT) continuam
@@ -492,118 +492,134 @@ modo_fila: {
 },
 
 // ========================================
-// PESQUISAS E AVALIAÇÕES
+// HANDLERS CORRIGIDOS - functions-registry.ts
 // ========================================
+
+// RESPONDER PESQUISA
 responder_pesquisa: {
-  functionKey: 'responder_pesquisa',
-  functionName: 'Pesquisas e Avaliações',
-  category: 'biometry',
-  responseType: 'voice+modal',
   voiceTriggers: [
     'responder pesquisa',
-    'fazer avaliação',
+    'fazer pesquisa',
+    'pesquisa de satisfação',
     'avaliar atendimento',
     'dar nota',
-    'pesquisa satisfação',
+    'avaliação',
   ],
-  examplePhrases: [
-    'Responder pesquisa',
-    'Avaliar atendimento',
-    'Dar minha opinião',
-  ],
-  description: 'Realize pesquisas de satisfação e colete avaliações dos clientes. Configure perguntas customizadas, avaliações por estrelas e análise de resultados em tempo real.',
-  shortDescription: 'Avaliar atendimento',
-  icon: '⭐',
-  color: '#f59e0b',
-  saveToHistory: true,
-  creditsPerUse: 1,
-  requiresPayment: false,
-  isPremium: false,
   handler: async ({ companyId, setActiveModal, playText }) => {
-    // Criar client Supabase dentro do handler
-    const { createClient } = await import('@/lib/supabase-browser');
-    const supabase = createClient();
+    try {
+      // Importar supabase
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
 
-    // Buscar pesquisa ativa
-    const { data: pesquisa } = await supabase
-      .from('pesquisas')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('ativa', true)
-      .maybeSingle();
+      console.log('[responder_pesquisa] Buscando pesquisa ativa para company:', companyId);
 
-    if (!pesquisa) {
-      playText('Não há pesquisas ativas no momento.');
+      // Buscar pesquisa ativa
+      const { data: pesquisa, error } = await supabase
+        .from('pesquisas')
+        .select('id, titulo')
+        .eq('company_id', companyId)
+        .eq('ativa', true)
+        .maybeSingle();
+
+      console.log('[responder_pesquisa] Resultado:', { pesquisa, error });
+
+      if (error) {
+        console.error('[responder_pesquisa] Erro ao buscar pesquisa:', error);
+        playText('Erro ao carregar pesquisa. Tente novamente.');
+        return false;
+      }
+
+      if (!pesquisa) {
+        console.warn('[responder_pesquisa] Nenhuma pesquisa ativa encontrada');
+        playText('Não há pesquisas disponíveis no momento.');
+        return false;
+      }
+
+      console.log('[responder_pesquisa] Abrindo modal para pesquisa:', pesquisa.id);
+
+      // Abrir modal ANTES do TTS
+      setActiveModal({
+        type: 'ResponderPesquisaDisplay',
+        data: { 
+          companyId, 
+          pesquisaId: pesquisa.id 
+        },
+      });
+
+      // TTS depois (sem await para não bloquear)
+      playText(`Por favor, responda nossa pesquisa: ${pesquisa.titulo}`);
+
+      return true;
+
+    } catch (error) {
+      console.error('[responder_pesquisa] Erro geral:', error);
+      playText('Erro ao abrir pesquisa.');
       return false;
     }
-
-    // Modal PRIMEIRO
-    setActiveModal?.({
-      type: 'ResponderPesquisaDisplay',
-      data: { companyId, pesquisaId: pesquisa.id },
-    });
-
-    // TTS depois
-    playText('Por favor, responda nossa pesquisa de satisfação.');
-
-    return true;
   },
 },
 
-// ========================================
 // PRÉ-ATENDIMENTO
-// ========================================
 pre_atendimento: {
-  functionKey: 'pre_atendimento',
-  functionName: 'Pré-Atendimento',
-  category: 'biometry',
-  responseType: 'voice+modal',
   voiceTriggers: [
     'pré atendimento',
+    'pré-atendimento',
     'preencher formulário',
-    'ficha atendimento',
+    'formulário',
+    'cadastro inicial',
+    'triagem',
   ],
-  examplePhrases: [
-    'Preencher pré-atendimento',
-    'Fazer cadastro inicial',
-    'Preencher ficha',
-  ],
-  description: 'Formulário customizável de pré-atendimento. Colete informações específicas dos clientes antes do atendimento, ideal para clínicas, consultórios e serviços especializados.',
-  shortDescription: 'Preencher pré-atendimento',
-  icon: '📋',
-  color: '#3b82f6',
-  saveToHistory: true,
-  creditsPerUse: 1,
-  requiresPayment: false,
-  isPremium: false,
   handler: async ({ companyId, setActiveModal, playText }) => {
-    // Criar client Supabase dentro do handler
-    const { createClient } = await import('@/lib/supabase-browser');
-    const supabase = createClient();
+    try {
+      // Importar supabase
+      const { createClient } = await import('@/lib/supabase-browser');
+      const supabase = createClient();
 
-    // Buscar formulário ativo
-    const { data: form } = await supabase
-      .from('pre_atendimento_forms')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('ativo', true)
-      .maybeSingle();
+      console.log('[pre_atendimento] Buscando formulário ativo para company:', companyId);
 
-    if (!form) {
-      playText('Não há formulários de pré-atendimento configurados.');
+      // Buscar formulário ativo
+      const { data: form, error } = await supabase
+        .from('pre_atendimento_forms')
+        .select('id, nome')
+        .eq('company_id', companyId)
+        .eq('ativo', true)
+        .maybeSingle();
+
+      console.log('[pre_atendimento] Resultado:', { form, error });
+
+      if (error) {
+        console.error('[pre_atendimento] Erro ao buscar formulário:', error);
+        playText('Erro ao carregar formulário. Tente novamente.');
+        return false;
+      }
+
+      if (!form) {
+        console.warn('[pre_atendimento] Nenhum formulário ativo encontrado');
+        playText('Não há formulários de pré-atendimento configurados.');
+        return false;
+      }
+
+      console.log('[pre_atendimento] Abrindo modal para formulário:', form.id);
+
+      // Abrir modal ANTES do TTS
+      setActiveModal({
+        type: 'PreAtendimentoDisplay',
+        data: { 
+          companyId, 
+          formId: form.id 
+        },
+      });
+
+      // TTS depois (sem await para não bloquear)
+      playText(`Por favor, preencha o formulário: ${form.nome}`);
+
+      return true;
+
+    } catch (error) {
+      console.error('[pre_atendimento] Erro geral:', error);
+      playText('Erro ao abrir formulário.');
       return false;
     }
-
-    // Modal PRIMEIRO
-    setActiveModal?.({
-      type: 'PreAtendimentoDisplay',
-      data: { companyId, formId: form.id },
-    });
-
-    // TTS depois
-    playText('Por favor, preencha o formulário de pré-atendimento.');
-
-    return true;
   },
 },
 

@@ -491,76 +491,25 @@ modo_fila: {
   },
 },
 
-// ========================================
-// ADICIONAR NO FUNCTIONS_REGISTRY
-// ========================================
-
 responder_pesquisa: {
   functionKey: 'responder_pesquisa',
   functionName: 'Responder Pesquisa',
   category: 'information',
   responseType: 'voice+modal',
-
-  voiceTriggers: [
-    'responder pesquisa',
-    'fazer pesquisa',
-    'pesquisa de satisfação',
-    'avaliar atendimento',
-    'dar nota',
-    'avaliação',
-    'avaliar',
-  ],
-
-  examplePhrases: [
-    'Quero responder a pesquisa',
-    'Fazer pesquisa de satisfação',
-    'Avaliar o atendimento',
-    'Dar nota',
-  ],
-
+  voiceTriggers: ['responder pesquisa', 'fazer pesquisa', 'pesquisa de satisfação', 'avaliar atendimento', 'dar nota', 'avaliação', 'avaliar'],
+  examplePhrases: ['Quero responder a pesquisa', 'Fazer pesquisa de satisfação', 'Avaliar o atendimento'],
   requiresInput: false,
   description: 'Abre pesquisa de satisfação para o cliente responder.',
   shortDescription: 'Responder pesquisa de satisfação',
   icon: '⭐',
   color: '#f59e0b',
-
   saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: false,
-
-  handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      const supabase = createClient();
-
-      const { data: pesquisa } = await supabase
-        .from('pesquisas')
-        .select('id, titulo')
-        .eq('company_id', companyId)
-        .eq('ativa', true)
-        .maybeSingle();
-
-      if (!pesquisa) {
-        await playText('Não há pesquisas disponíveis no momento.');
-        return false;
-      }
-
-      setActiveModal?.({
-        type: 'ResponderPesquisaDisplay',
-        data: { 
-          companyId, 
-          pesquisaId: pesquisa.id 
-        },
-      });
-
-      await playText(`Por favor, responda nossa pesquisa: ${pesquisa.titulo}`);
-      return true;
-
-    } catch (err) {
-      console.error('Erro responder_pesquisa:', err);
-      await playText('Erro ao abrir pesquisa. Tente novamente.');
-      return false;
-    }
+  handler: async ({ playText }) => {
+    await playText('Abrindo pesquisa...');
+    return true;
   },
 },
 
@@ -569,65 +518,20 @@ pre_atendimento: {
   functionName: 'Pré-Atendimento',
   category: 'information',
   responseType: 'voice+modal',
-
-  voiceTriggers: [
-    'pré atendimento',
-    'pré-atendimento',
-    'preencher formulário',
-    'formulário',
-    'cadastro inicial',
-    'triagem',
-  ],
-
-  examplePhrases: [
-    'Preencher formulário de pré-atendimento',
-    'Fazer cadastro inicial',
-    'Triagem',
-  ],
-
+  voiceTriggers: ['pré atendimento', 'pré-atendimento', 'preencher formulário', 'formulário', 'cadastro inicial', 'triagem'],
+  examplePhrases: ['Preencher formulário de pré-atendimento', 'Fazer cadastro inicial', 'Triagem'],
   requiresInput: false,
   description: 'Abre formulário de pré-atendimento para coleta de informações.',
   shortDescription: 'Preencher formulário de pré-atendimento',
   icon: '📋',
   color: '#3b82f6',
-
   saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: false,
-
-  handler: async ({ playText, setActiveModal, companyId }) => {
-    try {
-      const supabase = createClient();
-
-      const { data: form } = await supabase
-        .from('pre_atendimento_forms')
-        .select('id, nome')
-        .eq('company_id', companyId)
-        .eq('ativo', true)
-        .maybeSingle();
-
-      if (!form) {
-        await playText('Não há formulários de pré-atendimento configurados.');
-        return false;
-      }
-
-      setActiveModal?.({
-        type: 'PreAtendimentoDisplay',
-        data: { 
-          companyId, 
-          formId: form.id 
-        },
-      });
-
-      await playText(`Por favor, preencha o formulário: ${form.nome}`);
-      return true;
-
-    } catch (err) {
-      console.error('Erro pre_atendimento:', err);
-      await playText('Erro ao abrir formulário. Tente novamente.');
-      return false;
-    }
+  handler: async ({ playText }) => {
+    await playText('Abrindo formulário...');
+    return true;
   },
 },
 

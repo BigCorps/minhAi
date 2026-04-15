@@ -925,7 +925,7 @@ function CadastrosPageContent() {
     { key: 'clientes',         label: 'Clientes',         icon: Users },
     { key: 'colaboradores',    label: 'Colaboradores',    icon: Briefcase },
     { key: 'totens',           label: 'Totens',           icon: Monitor },
-    { key: 'pesquisas',        label: 'Pesquisas',        icon: Search },
+    { key: 'pesquisas',        label: 'Pesquisas/Avaliações',        icon: Search },
     { key: 'pre-atendimento',  label: 'Pré-Atendimento',  icon: Shield },
   ];
 

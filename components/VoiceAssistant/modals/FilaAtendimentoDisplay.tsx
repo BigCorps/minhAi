@@ -527,13 +527,13 @@ export default function FilaAtendimentoDisplay({
         <button
           onClick={() => window.open(`/fila/${companyId}`, '_blank')}
           style={{
-            background: 'transparent',
-            border: `2px solid ${colors.accent}`,
+            background: colors.accent,
+            color: '#fff',
+            border: 'none',
             borderRadius: '8px',
             padding: '16px',
             fontSize: '16px',
             fontWeight: '600',
-            color: colors.accent,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',

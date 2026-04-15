@@ -14,7 +14,7 @@ interface FilaPageProps {
 
 export default function FilaPage({ params }: FilaPageProps) {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -69,6 +69,10 @@ export default function FilaPage({ params }: FilaPageProps) {
     window.speechSynthesis.speak(utterance);
   };
 
+  const handleToggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
+
   // Tema resolvido
   const theme = mounted ? (resolvedTheme as 'dark' | 'light' || 'dark') : 'dark';
 
@@ -99,12 +103,9 @@ export default function FilaPage({ params }: FilaPageProps) {
   }
 
   return (
-    <div className="relative min-h-screen">
-      {/* Painel Fila - z-[50] */}
-      <div className={`fixed inset-0 z-[50] ${
-        theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'
-      }`}>
-        {/* SlugHeader */}
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* SlugHeader */}
+      <div className="flex-shrink-0">
         <SlugHeader
           company={{
             id: companyId,
@@ -123,15 +124,13 @@ export default function FilaPage({ params }: FilaPageProps) {
           isWakeLockActive={false}
           isWakeLockSupported={false}
           isPortrait={false}
-          showControls={false}
-          onEnterKioskMode={() => {}}
-          onToggleWakeLock={() => {}}
-          onToggleModoVenda={() => {}}
-          onToggleTheme={() => {}}
-          onClose={undefined}
+          showControls={true}
+          onToggleTheme={handleToggleTheme}
         />
+      </div>
 
-        {/* Painel */}
+      {/* Painel - ocupa espaço restante */}
+      <div className="flex-1 overflow-hidden">
         <PainelFilaDisplay
           companyId={companyId}
           theme={theme}
@@ -139,8 +138,8 @@ export default function FilaPage({ params }: FilaPageProps) {
         />
       </div>
 
-      {/* SlugFooter - z-[310] */}
-      <div className="fixed bottom-0 left-0 right-0 z-[310]">
+      {/* SlugFooter */}
+      <div className="flex-shrink-0">
         <SlugFooter
           theme={theme}
           slug={slug}

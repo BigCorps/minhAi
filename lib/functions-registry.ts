@@ -535,47 +535,32 @@ responder_pesquisa: {
   requiresPayment: false,
   isPremium: false,
 
-  handler: async ({ playText }) => {
-    await playText('Abrindo pesquisa...');
-    return true;
-  },
-},
+  handler: async ({ playText, setActiveModal, companyId }) => {
+    try {
+      const supabase = createClient();
+      const { data: pesquisa } = await supabase
+        .from('pesquisas')
+        .select('id, titulo')
+        .eq('company_id', companyId)
+        .eq('ativa', true)
+        .maybeSingle();
 
-pre_atendimento: {
-  functionKey: 'pre_atendimento',
-  functionName: 'Pré-Atendimento',
-  category: 'information',
-  responseType: 'voice+modal',
+      if (!pesquisa) {
+        await playText('Não há pesquisas disponíveis no momento.');
+        return false;
+      }
 
-  voiceTriggers: [
-    'pré atendimento',
-    'pré-atendimento',
-    'preencher formulário',
-    'formulário',
-    'cadastro inicial',
-    'triagem',
-  ],
-
-  examplePhrases: [
-    'Preencher formulário de pré-atendimento',
-    'Fazer cadastro inicial',
-    'Triagem',
-  ],
-
-  requiresInput: false,
-  description: 'Abre formulário de pré-atendimento para coleta de informações.',
-  shortDescription: 'Preencher formulário de pré-atendimento',
-  icon: '📋',
-  color: '#3b82f6',
-
-  saveToHistory: true,
-  creditsPerUse: 1,
-  requiresPayment: false,
-  isPremium: false,
-
-  handler: async ({ playText }) => {
-    await playText('Abrindo formulário...');
-    return true;
+      setActiveModal?.({
+        type: 'ResponderPesquisaDisplay',
+        data: { companyId, pesquisaId: pesquisa.id },
+      });
+      playText(`Por favor, responda nossa pesquisa: ${pesquisa.titulo}`).catch(() => {});
+      return true;
+    } catch (err) {
+      console.error('Erro responder_pesquisa:', err);
+      await playText('Erro ao abrir pesquisa.');
+      return false;
+    }
   },
 },
 // ========================================

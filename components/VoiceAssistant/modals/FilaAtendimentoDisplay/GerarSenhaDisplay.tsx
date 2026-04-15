@@ -555,7 +555,7 @@ export default function GerarSenhaDisplay({
                           fontWeight: '600',
                         }}
                       >
-                        📱 Abrir Acompanhamento
+                        Abrir Acompanhamento
                       </a>
                     )}
                   </div>

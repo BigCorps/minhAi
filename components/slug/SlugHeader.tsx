@@ -334,7 +334,7 @@ export default function SlugHeader({
           {theme === 'dark' ? (
             <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 118 0z" />
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           ) : (
             <svg className={icon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -485,18 +485,10 @@ export default function SlugHeader({
           </div>
         )}
 
-        {/* ── Mobile Overlay (modo full) ────────────────────── */}
+        {/* ── Mobile Overlay ────────────────────────────────── */}
         {overlayMode && (
-          <div className="md:hidden flex flex-col items-end py-2 gap-1">
-
-            {/* Linha 1: Logo minhAi */}
-            <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
-              className="flex-shrink-0 hover:opacity-80 transition-opacity z-10" title="Visite minhAi.app">
-              <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
-            </Link>
-
-            {/* Linha 2: Botões de navegação e controles */}
-            <div className={`flex items-center space-x-1 transition-all duration-300 ${
+          <div className="md:hidden relative flex items-center justify-end min-h-[48px] py-2">
+            <div className={`absolute right-9 flex items-center space-x-1 transition-all duration-300 ${
               showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}>
               <NavigationButtons />
@@ -534,6 +526,10 @@ export default function SlugHeader({
                 </button>
               )}
             </div>
+            <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
+              className="flex-shrink-0 hover:opacity-80 transition-opacity z-10" title="Visite minhAi.app">
+              <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
+            </Link>
           </div>
         )}
       </div>

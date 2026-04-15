@@ -4,6 +4,10 @@ import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import ModoToggle from '@/components/dashboard/ModoToggle';
+import PesquisasTab from '@/components/dashboard/PesquisasTab';
+import PreAtendimentoTab from '@/components/dashboard/PreAtendimentoTab';
+import EditarPesquisaModal from '@/components/dashboard/EditarPesquisaModal';
+import EditarPreAtendimentoModal from '@/components/dashboard/EditarPreAtendimentoModal';
 import {
   UserPlus, Users, Loader2, Search, Download, RefreshCw,
   Fingerprint, Camera, ChevronDown, ChevronUp, Shield,
@@ -13,7 +17,7 @@ import {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type Aba = 'cadastros' | 'clientes' | 'colaboradores' | 'totens';
+type Aba = 'cadastros' | 'clientes' | 'colaboradores' | 'totens' | 'pesquisas' | 'pre-atendimento';
 
 interface Registration {
   id: string;
@@ -904,12 +908,16 @@ function AbaTotens({ companyId }: { companyId: string }) {
 function CadastrosPageContent() {
   const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
   const [aba, setAba] = useState<Aba>('cadastros');
+  const [modalPesquisaId, setModalPesquisaId] = useState<string | null | undefined>(undefined);
+  const [modalFormId, setModalFormId] = useState<string | null | undefined>(undefined);
 
   const abas: { key: Aba; label: string; icon: any }[] = [
-    { key: 'cadastros',    label: 'Cadastros',    icon: UserPlus },
-    { key: 'clientes',     label: 'Clientes',     icon: Users },
-    { key: 'colaboradores',label: 'Colaboradores',icon: Briefcase },
-    { key: 'totens',       label: 'Totens',       icon: Monitor },
+    { key: 'cadastros',        label: 'Cadastros',        icon: UserPlus },
+    { key: 'clientes',         label: 'Clientes',         icon: Users },
+    { key: 'colaboradores',    label: 'Colaboradores',    icon: Briefcase },
+    { key: 'totens',           label: 'Totens',           icon: Monitor },
+    { key: 'pesquisas',        label: 'Pesquisas',        icon: Search },
+    { key: 'pre-atendimento',  label: 'Pré-Atendimento',  icon: Shield },
   ];
 
   return (
@@ -941,7 +949,7 @@ function CadastrosPageContent() {
 
           {companyId && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow border border-gray-100 dark:border-white/5 overflow-hidden">
-              <div className="grid grid-cols-4 sm:flex border-b border-gray-200 dark:border-white/10">
+              <div className="grid grid-cols-6 sm:flex border-b border-gray-200 dark:border-white/10">
                 {abas.map(({ key, label, icon: Icon }) => (
                   <button key={key} onClick={() => setAba(key)}
                     className={`sm:flex-1 px-3 py-3 text-sm font-medium transition flex items-center justify-center gap-2 border-b sm:border-b-0 ${
@@ -956,12 +964,31 @@ function CadastrosPageContent() {
                 ))}
               </div>
               <div className="p-6">
-                {aba === 'cadastros'     && <AbaCadastros companyId={companyId} assistantName={selectedAssistantName ?? ''} />}
-                {aba === 'clientes'      && <AbaClientes companyId={companyId} />}
-                {aba === 'colaboradores' && <AbaColaboradores companyId={companyId} />}
-                {aba === 'totens'        && <AbaTotens companyId={companyId} />}
+                {aba === 'cadastros'        && <AbaCadastros companyId={companyId} assistantName={selectedAssistantName ?? ''} />}
+                {aba === 'clientes'         && <AbaClientes companyId={companyId} />}
+                {aba === 'colaboradores'    && <AbaColaboradores companyId={companyId} />}
+                {aba === 'totens'           && <AbaTotens companyId={companyId} />}
+                {aba === 'pesquisas'        && <PesquisasTab companyId={companyId} onOpenModal={setModalPesquisaId} />}
+                {aba === 'pre-atendimento'  && <PreAtendimentoTab companyId={companyId} onOpenModal={setModalFormId} />}
               </div>
             </div>
+          )}
+
+          {modalPesquisaId !== undefined && (
+            <EditarPesquisaModal
+              pesquisaId={modalPesquisaId}
+              companyId={companyId!}
+              onClose={() => setModalPesquisaId(undefined)}
+              onSave={() => { setModalPesquisaId(undefined); }}
+            />
+          )}
+          {modalFormId !== undefined && (
+            <EditarPreAtendimentoModal
+              formId={modalFormId}
+              companyId={companyId!}
+              onClose={() => setModalFormId(undefined)}
+              onSave={() => { setModalFormId(undefined); }}
+            />
           )}
         </div>
       </div>

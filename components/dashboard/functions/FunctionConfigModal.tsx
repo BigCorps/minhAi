@@ -214,6 +214,207 @@ const VerNoticiasForm = () => (
   </div>
 );
 
+// ========================================
+// CONFIGURAÇÃO: PESQUISAS E AVALIAÇÕES
+// ========================================
+const PesquisasConfigForm = ({ settings, onChange }: any) => {
+  const [pesquisas, setPesquisas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    loadPesquisas();
+  }, []);
+
+  async function loadPesquisas() {
+    const { data } = await supabase
+      .from('pesquisas')
+      .select('*')
+      .eq('company_id', settings.company_id)
+      .order('created_at', { ascending: false });
+
+    setPesquisas(data || []);
+    setLoading(false);
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          Configure pesquisas de satisfação e avaliações. Adicione perguntas personalizadas, avaliações por estrelas e muito mais.
+        </p>
+      </div>
+
+      {pesquisas.length === 0 ? (
+        <div className="text-center py-8 bg-gray-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            Nenhuma pesquisa criada ainda
+          </p>
+          
+            href={`/dashboard/${settings.company_id}/pesquisas`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+          >
+            <Plus className="w-4 h-4" />
+            Criar Primeira Pesquisa
+          </a>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {pesquisas.map((pesquisa) => (
+            <div
+              key={pesquisa.id}
+              className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">
+                    {pesquisa.titulo}
+                  </h4>
+                  {pesquisa.descricao && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      {pesquisa.descricao}
+                    </p>
+                  )}
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      pesquisa.ativa
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {pesquisa.ativa ? 'Ativa' : 'Inativa'}
+                    </span>
+                  </div>
+                </div>
+                
+                  href={`/dashboard/${settings.company_id}/pesquisas/${pesquisa.id}`}
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                >
+                  Editar
+                </a>
+              </div>
+            </div>
+          ))}
+
+          
+            href={`/dashboard/${settings.company_id}/pesquisas`}
+            className="block text-center py-3 bg-gray-100 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              + Criar Nova Pesquisa
+            </span>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ========================================
+// CONFIGURAÇÃO: PRÉ-ATENDIMENTO
+// ========================================
+const PreAtendimentoConfigForm = ({ settings, onChange }: any) => {
+  const [forms, setForms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    loadForms();
+  }, []);
+
+  async function loadForms() {
+    const { data } = await supabase
+      .from('pre_atendimento_forms')
+      .select('*')
+      .eq('company_id', settings.company_id)
+      .order('created_at', { ascending: false });
+
+    setForms(data || []);
+    setLoading(false);
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          Configure formulários de pré-atendimento. Adicione campos personalizados para coletar informações específicas antes do atendimento.
+        </p>
+      </div>
+
+      {forms.length === 0 ? (
+        <div className="text-center py-8 bg-gray-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            Nenhum formulário criado ainda
+          </p>
+          
+            href={`/dashboard/${settings.company_id}/pre-atendimento`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Criar Primeiro Formulário
+          </a>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {forms.map((form) => (
+            <div
+              key={form.id}
+              className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-white/10"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">
+                    {form.nome}
+                  </h4>
+                  {form.descricao && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      {form.descricao}
+                    </p>
+                  )}
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      form.ativo
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {form.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {form.campos?.length || 0} campos
+                    </span>
+                  </div>
+                </div>
+                
+                  href={`/dashboard/${settings.company_id}/pre-atendimento/${form.id}`}
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                >
+                  Editar
+                </a>
+              </div>
+            </div>
+          ))}
+
+          
+            href={`/dashboard/${settings.company_id}/pre-atendimento`}
+            className="block text-center py-3 bg-gray-100 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              + Criar Novo Formulário
+            </span>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ProcurarProdutoForm = () => (
   <div className="space-y-4">
     {/* Info box */}
@@ -4044,6 +4245,8 @@ const FORM_COMPONENTS: { [key: string]: React.FC<any> } = {
   'ver_noticias': VerNoticiasForm,
   'procurar_produto': ProcurarProdutoForm,
   'chamar_gerente': ChamarGerenteConfigForm,
+  'pre_atendimento': PreAtendimentoConfigForm,
+  'responder_pesquisa': PesquisasConfigForm,
 };
 
 // ===== INTERFACE =====

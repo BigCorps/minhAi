@@ -4343,6 +4343,9 @@ consultar_leilao: {
     responseType: 'voice+modal',
 
     voiceTriggers: [
+      'que horas são',
+      'qual o horário atual',
+      'qual a hora',
       'relógio mundial',
       'relogio mundial',
       'horas no mundo',

@@ -496,17 +496,35 @@ responder_pesquisa: {
   functionName: 'Responder Pesquisa',
   category: 'information',
   responseType: 'voice+modal',
-  voiceTriggers: ['responder pesquisa', 'fazer pesquisa', 'pesquisa de satisfação', 'avaliar atendimento', 'dar nota', 'avaliação', 'avaliar'],
-  examplePhrases: ['Quero responder a pesquisa', 'Fazer pesquisa de satisfação', 'Avaliar o atendimento'],
+
+  voiceTriggers: [
+    'responder pesquisa',
+    'fazer pesquisa',
+    'pesquisa de satisfação',
+    'avaliar atendimento',
+    'dar nota',
+    'avaliação',
+    'avaliar',
+  ],
+
+  examplePhrases: [
+    'Quero responder a pesquisa',
+    'Fazer pesquisa de satisfação',
+    'Avaliar o atendimento',
+    'Dar nota',
+  ],
+
   requiresInput: false,
   description: 'Abre pesquisa de satisfação para o cliente responder.',
   shortDescription: 'Responder pesquisa de satisfação',
   icon: '⭐',
   color: '#f59e0b',
+
   saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: false,
+
   handler: async ({ playText }) => {
     await playText('Abrindo pesquisa...');
     return true;
@@ -518,23 +536,38 @@ pre_atendimento: {
   functionName: 'Pré-Atendimento',
   category: 'information',
   responseType: 'voice+modal',
-  voiceTriggers: ['pré atendimento', 'pré-atendimento', 'preencher formulário', 'formulário', 'cadastro inicial', 'triagem'],
-  examplePhrases: ['Preencher formulário de pré-atendimento', 'Fazer cadastro inicial', 'Triagem'],
+
+  voiceTriggers: [
+    'pré atendimento',
+    'pré-atendimento',
+    'preencher formulário',
+    'formulário',
+    'cadastro inicial',
+    'triagem',
+  ],
+
+  examplePhrases: [
+    'Preencher formulário de pré-atendimento',
+    'Fazer cadastro inicial',
+    'Triagem',
+  ],
+
   requiresInput: false,
   description: 'Abre formulário de pré-atendimento para coleta de informações.',
   shortDescription: 'Preencher formulário de pré-atendimento',
   icon: '📋',
   color: '#3b82f6',
+
   saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: false,
+
   handler: async ({ playText }) => {
     await playText('Abrindo formulário...');
     return true;
   },
 },
-
 // ========================================
 // FUNÇÕES DE FILA (8 funções)
 // ========================================

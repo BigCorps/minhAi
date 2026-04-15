@@ -658,6 +658,27 @@ case 'minha_posicao_fila':
     slug,
   });
   break;
+
+case 'modo_fila':
+  await stopGoogleSpeech();
+  window.location.href = `/fila/${slug}`;
+  break;
+
+case 'responder_pesquisa':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'ResponderPesquisaDisplay',
+    data: { companyId, pesquisaId: functionData?.pesquisaId },
+  });
+  break;
+
+case 'pre_atendimento':
+  await stopGoogleSpeech();
+  setActiveModal({
+    type: 'PreAtendimentoDisplay',
+    data: { companyId, formId: functionData?.formId },
+  });
+  break;
           
 case 'juntar_pdfs':
   setActiveModal({ type: 'JuntarPdfsDisplay', data: { companyId } });

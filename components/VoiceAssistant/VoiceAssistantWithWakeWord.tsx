@@ -661,7 +661,8 @@ case 'minha_posicao_fila':
 
 case 'modo_fila':
   await stopGoogleSpeech();
-  window.location.href = `/fila/${slug}`;
+  const filaUrl = getContextualRoute('fila', slug);
+  window.location.href = filaUrl;
   break;
 
 case 'responder_pesquisa':

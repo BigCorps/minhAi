@@ -3,6 +3,20 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
+import { 
+  Bell, 
+  BarChart3, 
+  Settings, 
+  Tv, 
+  Play, 
+  CheckCircle2, 
+  Pause, 
+  XCircle,
+  Users,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+} from 'lucide-react';
 
 // Paletas de cores
 const DARK = {
@@ -57,6 +71,7 @@ interface FilaSenha {
   chamada_em?: string;
   atendimento_iniciado_em?: string;
   tempo_espera_minutos?: number;
+  tempo_atendimento_minutos?: number;
 }
 
 export default function FilaAtendimentoDisplay({
@@ -89,14 +104,6 @@ export default function FilaAtendimentoDisplay({
 
   const supabase = createClient();
 
-// ⚠️ TESTE: Forçar headers corretos
-supabase.rest.headers = {
-  ...supabase.rest.headers,
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
-  'Prefer': 'return=representation',
-};
-
   // Carregar configuração e senhas
   useEffect(() => {
     carregarDados();
@@ -121,26 +128,34 @@ supabase.rest.headers = {
 
   async function carregarDados() {
     try {
-      // Carregar config
-      const { data: configData } = await supabase
+      // ✅ CORREÇÃO 1: Usar .maybeSingle() em vez de .single()
+      const { data: configData, error: configError } = await supabase
         .from('fila_configs')
         .select('*')
         .eq('company_id', companyId)
-        .single();
+        .maybeSingle();
+
+      if (configError) {
+        console.error('Erro ao carregar config:', configError);
+      }
 
       if (configData) {
         setConfig(configData);
       }
 
-      // Carregar senha em atendimento
-      const { data: senhaAtualData } = await supabase
+      // ✅ CORREÇÃO 2: Usar .maybeSingle() em vez de .single()
+      const { data: senhaAtualData, error: senhaError } = await supabase
         .from('fila_senhas')
         .select('*')
         .eq('company_id', companyId)
         .in('status', ['chamando', 'atendimento'])
         .order('gerada_em', { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      if (senhaError) {
+        console.error('Erro ao carregar senha atual:', senhaError);
+      }
 
       setSenhaAtual(senhaAtualData || null);
 
@@ -293,22 +308,55 @@ supabase.rest.headers = {
         .update({ status: 'cancelado' })
         .eq('id', senhaId);
 
-      showToast('Senha cancelada', 'success');
+      showToast('Senha cancelada', 'info');
     } catch (error) {
       console.error('Erro ao cancelar:', error);
       showToast('Erro ao cancelar senha', 'error');
     }
   }
 
-  // TTS especial para senhas
+  async function salvarConfiguracao(novaConfig: Partial<FilaConfig>) {
+    if (!config) return;
+
+    try {
+      // ✅ CORREÇÃO 3: Usar .maybeSingle() em vez de .single()
+      const { data: configData, error: fetchError } = await supabase
+        .from('fila_configs')
+        .select('*')
+        .eq('company_id', companyId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Erro ao buscar config:', fetchError);
+        showToast('Erro ao carregar configuração', 'error');
+        return;
+      }
+
+      if (configData) {
+        await supabase
+          .from('fila_configs')
+          .update(novaConfig)
+          .eq('id', config.id);
+
+        showToast('Configuração salva!', 'success');
+        await carregarDados();
+      } else {
+        showToast('Configuração não encontrada', 'error');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      showToast('Erro ao salvar configuração', 'error');
+    }
+  }
+
   async function speakSenha(senhaCompleta: string) {
     const prefixo = senhaCompleta[0];
     const numeros = senhaCompleta.slice(1).split('');
     const texto = `Senha ${prefixo}. ${numeros.join('. ')}.`;
-    
+
     if (playText) {
       await playText(texto);
-    } else {
+    } else if (typeof window !== 'undefined' && window.speechSynthesis) {
       const utterance = new SpeechSynthesisUtterance(texto);
       utterance.lang = 'pt-BR';
       utterance.rate = 0.8;
@@ -321,10 +369,10 @@ supabase.rest.headers = {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // Render de cada aba
+  // Renderizações das abas
   const renderAtendimento = () => (
     <div style={{ padding: '20px' }}>
-      {/* Última chamada */}
+      {/* Última Chamada */}
       {senhaAtual && (
         <div style={{
           background: colors.bgSecondary,
@@ -333,38 +381,38 @@ supabase.rest.headers = {
           marginBottom: '20px',
           border: `2px solid ${colors.accent}`,
         }}>
-          <div style={{ color: colors.textSecondary, fontSize: '14px', marginBottom: '8px' }}>
-            Última Chamada
+          <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Bell className="w-4 h-4" />
+            ÚLTIMA CHAMADA
           </div>
-          <div style={{ fontSize: '48px', fontWeight: 'bold', color: colors.accent }}>
+          <div style={{ fontSize: '48px', fontWeight: 'bold', color: colors.accent, marginBottom: '8px' }}>
             {senhaAtual.senha_completa}
           </div>
-          <div style={{ color: colors.textSecondary, fontSize: '14px', marginTop: '8px' }}>
-            Status: {senhaAtual.status === 'chamando' ? 'Sendo Chamada' : 'Em Atendimento'}
+          <div style={{ color: colors.textSecondary, fontSize: '14px' }}>
+            {senhaAtual.status === 'chamando' ? 'Sendo Chamada' : 'Em Atendimento'}
           </div>
         </div>
       )}
 
-      {/* Aguardando */}
-      <div style={{ color: colors.text, fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
-        Aguardando ({senhasAguardando.length} {senhasAguardando.length === 1 ? 'senha' : 'senhas'})
-      </div>
-
-      <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
-        {senhasAguardando.length === 0 ? (
-          <div style={{ color: colors.textSecondary, textAlign: 'center', padding: '40px' }}>
-            Nenhuma senha aguardando
-          </div>
-        ) : (
-          senhasAguardando.map((senha) => {
-            const minutosEspera = Math.floor((Date.now() - new Date(senha.gerada_em).getTime()) / 60000);
-            return (
+      {/* Lista de Aguardando */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ color: colors.text, fontSize: '16px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Users className="w-5 h-5" />
+          Aguardando ({senhasAguardando.length})
+        </div>
+        <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+          {senhasAguardando.length === 0 ? (
+            <div style={{ color: colors.textSecondary, fontSize: '14px', textAlign: 'center', padding: '20px' }}>
+              Nenhuma senha aguardando
+            </div>
+          ) : (
+            senhasAguardando.map((senha, index) => (
               <div
                 key={senha.id}
                 style={{
                   background: colors.bgSecondary,
                   borderRadius: '8px',
-                  padding: '12px 16px',
+                  padding: '12px',
                   marginBottom: '8px',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -372,11 +420,11 @@ supabase.rest.headers = {
                 }}
               >
                 <div>
-                  <div style={{ color: colors.text, fontSize: '16px', fontWeight: '600' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: colors.text }}>
                     {senha.senha_completa}
                   </div>
-                  <div style={{ color: colors.textSecondary, fontSize: '12px' }}>
-                    há {minutosEspera} min
+                  <div style={{ fontSize: '12px', color: colors.textSecondary }}>
+                    Posição: {index + 1}
                   </div>
                 </div>
                 <button
@@ -387,52 +435,68 @@ supabase.rest.headers = {
                     borderRadius: '6px',
                     padding: '6px 12px',
                     color: colors.danger,
-                    cursor: 'pointer',
                     fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
+                  <XCircle className="w-3 h-3" />
                   Cancelar
                 </button>
               </div>
-            );
-          })
-        )}
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Botões principais */}
+      {/* Botões de Ação */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
         <button
           onClick={chamarProxima}
           disabled={senhasAguardando.length === 0}
           style={{
-            background: senhasAguardando.length > 0 ? colors.accent : colors.bgSecondary,
-            color: senhasAguardando.length > 0 ? '#fff' : colors.textSecondary,
+            background: senhasAguardando.length === 0 ? colors.border : colors.accent,
+            color: '#fff',
             border: 'none',
             borderRadius: '8px',
             padding: '16px',
             fontSize: '16px',
             fontWeight: '600',
-            cursor: senhasAguardando.length > 0 ? 'pointer' : 'not-allowed',
+            cursor: senhasAguardando.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: senhasAguardando.length === 0 ? 0.5 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
-          📢 Chamar Próxima
+          <Play className="w-5 h-5" />
+          Chamar Próxima
         </button>
 
         <button
           onClick={finalizarAtendimento}
           disabled={!senhaAtual}
           style={{
-            background: senhaAtual ? colors.success : colors.bgSecondary,
-            color: senhaAtual ? '#fff' : colors.textSecondary,
+            background: !senhaAtual ? colors.border : colors.success,
+            color: '#fff',
             border: 'none',
             borderRadius: '8px',
             padding: '16px',
             fontSize: '16px',
             fontWeight: '600',
-            cursor: senhaAtual ? 'pointer' : 'not-allowed',
+            cursor: !senhaAtual ? 'not-allowed' : 'pointer',
+            opacity: !senhaAtual ? 0.5 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
-          ✅ Finalizar Atendimento
+          <CheckCircle2 className="w-5 h-5" />
+          Finalizar
         </button>
       </div>
 
@@ -448,13 +512,27 @@ supabase.rest.headers = {
             fontWeight: '600',
             color: config?.fila_ativa ? colors.warning : colors.success,
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
-          {config?.fila_ativa ? '⏸️ Pausar Fila' : '▶️ Retomar Fila'}
+          {config?.fila_ativa ? (
+            <>
+              <Pause className="w-5 h-5" />
+              Pausar Fila
+            </>
+          ) : (
+            <>
+              <Play className="w-5 h-5" />
+              Retomar Fila
+            </>
+          )}
         </button>
 
         <button
-          onClick={() => setActiveTab('painel')}
+          onClick={() => window.open(`/fila/${companyId}`, '_blank')}
           style={{
             background: 'transparent',
             border: `2px solid ${colors.accent}`,
@@ -464,9 +542,14 @@ supabase.rest.headers = {
             fontWeight: '600',
             color: colors.accent,
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
-          📺 Abrir Painel TV
+          <Tv className="w-5 h-5" />
+          Abrir Painel
         </button>
       </div>
     </div>
@@ -474,47 +557,90 @@ supabase.rest.headers = {
 
   const renderStats = () => (
     <div style={{ padding: '20px' }}>
-      <div style={{ color: colors.text, fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-        📊 Estatísticas de Hoje
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+        <div style={{
+          background: colors.bgSecondary,
+          borderRadius: '8px',
+          padding: '16px',
+        }}>
+          <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Users className="w-4 h-4" />
+            Total Hoje
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.text }}>
+            {stats.totalHoje}
+          </div>
+        </div>
+
+        <div style={{
+          background: colors.bgSecondary,
+          borderRadius: '8px',
+          padding: '16px',
+        }}>
+          <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <CheckCircle2 className="w-4 h-4" />
+            Finalizadas
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.success }}>
+            {stats.finalizadas}
+          </div>
+        </div>
+
+        <div style={{
+          background: colors.bgSecondary,
+          borderRadius: '8px',
+          padding: '16px',
+        }}>
+          <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock className="w-4 h-4" />
+            Aguardando
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.warning }}>
+            {stats.aguardando}
+          </div>
+        </div>
+
+        <div style={{
+          background: colors.bgSecondary,
+          borderRadius: '8px',
+          padding: '16px',
+        }}>
+          <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <XCircle className="w-4 h-4" />
+            Canceladas
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: 'bold', color: colors.danger }}>
+            {stats.canceladas}
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-        <div style={{ background: colors.bgSecondary, borderRadius: '8px', padding: '16px' }}>
-          <div style={{ color: colors.textSecondary, fontSize: '12px' }}>Total de Senhas</div>
-          <div style={{ color: colors.text, fontSize: '32px', fontWeight: 'bold' }}>{stats.totalHoje}</div>
-        </div>
-
-        <div style={{ background: colors.bgSecondary, borderRadius: '8px', padding: '16px' }}>
-          <div style={{ color: colors.textSecondary, fontSize: '12px' }}>Finalizadas</div>
-          <div style={{ color: colors.success, fontSize: '32px', fontWeight: 'bold' }}>{stats.finalizadas}</div>
-        </div>
-
-        <div style={{ background: colors.bgSecondary, borderRadius: '8px', padding: '16px' }}>
-          <div style={{ color: colors.textSecondary, fontSize: '12px' }}>Aguardando</div>
-          <div style={{ color: colors.warning, fontSize: '32px', fontWeight: 'bold' }}>{stats.aguardando}</div>
-        </div>
-
-        <div style={{ background: colors.bgSecondary, borderRadius: '8px', padding: '16px' }}>
-          <div style={{ color: colors.textSecondary, fontSize: '12px' }}>Canceladas</div>
-          <div style={{ color: colors.danger, fontSize: '32px', fontWeight: 'bold' }}>{stats.canceladas}</div>
-        </div>
-      </div>
-
-      <div style={{ background: colors.bgSecondary, borderRadius: '8px', padding: '16px', marginBottom: '12px' }}>
-        <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '8px' }}>
+      <div style={{
+        background: colors.bgSecondary,
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '12px',
+      }}>
+        <div style={{ color: colors.text, fontSize: '14px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <TrendingUp className="w-4 h-4" />
           Tempo Médio de Espera
         </div>
-        <div style={{ color: colors.text, fontSize: '24px', fontWeight: 'bold' }}>
-          {stats.tempoMedioEspera} minutos
+        <div style={{ fontSize: '36px', fontWeight: 'bold', color: colors.accent }}>
+          {stats.tempoMedioEspera} min
         </div>
       </div>
 
-      <div style={{ background: colors.bgSecondary, borderRadius: '8px', padding: '16px' }}>
-        <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '8px' }}>
+      <div style={{
+        background: colors.bgSecondary,
+        borderRadius: '12px',
+        padding: '16px',
+      }}>
+        <div style={{ color: colors.text, fontSize: '14px', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Clock className="w-4 h-4" />
           Tempo Médio de Atendimento
         </div>
-        <div style={{ color: colors.text, fontSize: '24px', fontWeight: 'bold' }}>
-          {stats.tempoMedioAtendimento} minutos
+        <div style={{ fontSize: '36px', fontWeight: 'bold', color: colors.accent }}>
+          {stats.tempoMedioAtendimento} min
         </div>
       </div>
     </div>
@@ -522,15 +648,12 @@ supabase.rest.headers = {
 
   const renderConfig = () => (
     <div style={{ padding: '20px' }}>
-      <div style={{ color: colors.text, fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-        ⚙️ Configurações da Fila
-      </div>
-
       {config && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-              Prefixo
+            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'block', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Settings className="w-4 h-4" />
+              Prefixo da Senha
             </label>
             <input
               type="text"
@@ -614,15 +737,29 @@ supabase.rest.headers = {
             padding: '16px',
             marginTop: '8px',
           }}>
-            <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '8px' }}>
+            <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <AlertCircle className="w-4 h-4" />
               Status da Fila
             </div>
             <div style={{
               color: config.fila_ativa ? colors.success : colors.danger,
               fontSize: '16px',
               fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}>
-              {config.fila_ativa ? '✅ Ativa' : '❌ Pausada'}
+              {config.fila_ativa ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Ativa
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-5 h-5" />
+                  Pausada
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -632,8 +769,9 @@ supabase.rest.headers = {
 
   const renderPainel = () => (
     <div style={{ padding: '20px', textAlign: 'center' }}>
-      <div style={{ color: colors.text, fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-        📺 Painel de Chamadas
+      <div style={{ color: colors.text, fontSize: '18px', fontWeight: '600', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <Tv className="w-6 h-6" />
+        Painel de Chamadas
       </div>
 
       <div style={{
@@ -684,7 +822,7 @@ supabase.rest.headers = {
       </div>
 
       <button
-        onClick={() => window.open(`/fila-painel/${companyId}`, '_blank')}
+        onClick={() => window.open(`/fila/${companyId}`, '_blank')}
         style={{
           background: colors.accent,
           color: '#fff',
@@ -694,8 +832,12 @@ supabase.rest.headers = {
           fontSize: '16px',
           fontWeight: '600',
           cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
         }}
       >
+        <Tv className="w-5 h-5" />
         Abrir em Tela Cheia
       </button>
     </div>
@@ -781,10 +923,10 @@ supabase.rest.headers = {
         }}>
           {(['atendimento', 'stats', 'config', 'painel'] as const).map((tab) => {
             const icons = {
-              atendimento: '🔔',
-              stats: '📊',
-              config: '⚙️',
-              painel: '📺',
+              atendimento: Bell,
+              stats: BarChart3,
+              config: Settings,
+              painel: Tv,
             };
             const labels = {
               atendimento: 'Atendimento',
@@ -792,6 +934,8 @@ supabase.rest.headers = {
               config: 'Configurações',
               painel: 'Painel',
             };
+
+            const Icon = icons[tab];
 
             return (
               <button
@@ -807,9 +951,14 @@ supabase.rest.headers = {
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: activeTab === tab ? '600' : '400',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
                 }}
               >
-                {icons[tab]} {labels[tab]}
+                <Icon className="w-4 h-4" />
+                {labels[tab]}
               </button>
             );
           })}

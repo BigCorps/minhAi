@@ -561,7 +561,6 @@ pre_atendimento: {
   voiceTriggers: [
     'pré atendimento',
     'preencher formulário',
-    'cadastro inicial',
     'ficha atendimento',
   ],
   examplePhrases: [

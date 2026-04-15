@@ -147,6 +147,8 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'FilaAtendimentoDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/FilaAtendimentoDisplay'), { ssr: false }),
   'GerarSenhaDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/FilaAtendimentoDisplay/GerarSenhaDisplay'), { ssr: false }),
   'PainelFilaDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/FilaAtendimentoDisplay/PainelFilaDisplay'), { ssr: false }),
+  'ResponderPesquisaDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/ResponderPesquisaDisplay'), { ssr: false }),
+  'PreAtendimentoDisplay': dynamic(() => import('@/components/VoiceAssistant/modals/PreAtendimentoDisplay'), { ssr: false }),
   
   // ── Modais com props customizadas ─────────────────────────
   // Estes precisam de wrapper inline pois recebem props além do padrão

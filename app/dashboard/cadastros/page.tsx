@@ -914,6 +914,10 @@ function CadastrosPageContent() {
   const [modalPesquisaId, setModalPesquisaId] = useState<string | null | undefined>(undefined);
   const [modalFormId, setModalFormId] = useState<string | null | undefined>(undefined);
 
+  // ── Chaves de refresh para forçar remount das tabs ao salvar ──
+  const [pesquisasRefreshKey, setPesquisasRefreshKey] = useState(0);
+  const [preAtendimentoRefreshKey, setPreAtendimentoRefreshKey] = useState(0);
+
   useEffect(() => {
     if (tabParam && ['cadastros', 'clientes', 'colaboradores', 'totens', 'pesquisas', 'pre-atendimento'].includes(tabParam)) {
       setAba(tabParam as Aba);
@@ -925,7 +929,7 @@ function CadastrosPageContent() {
     { key: 'clientes',         label: 'Clientes',         icon: Users },
     { key: 'colaboradores',    label: 'Colaboradores',    icon: Briefcase },
     { key: 'totens',           label: 'Totens',           icon: Monitor },
-    { key: 'pesquisas',        label: 'Pesquisas/Avaliações',        icon: Search },
+    { key: 'pesquisas',        label: 'Pesquisas/Avaliações', icon: Search },
     { key: 'pre-atendimento',  label: 'Pré-Atendimento',  icon: Shield },
   ];
 
@@ -977,8 +981,8 @@ function CadastrosPageContent() {
                 {aba === 'clientes'         && <AbaClientes companyId={companyId} />}
                 {aba === 'colaboradores'    && <AbaColaboradores companyId={companyId} />}
                 {aba === 'totens'           && <AbaTotens companyId={companyId} />}
-                {aba === 'pesquisas'        && <PesquisasTab companyId={companyId} onOpenModal={setModalPesquisaId} />}
-                {aba === 'pre-atendimento'  && <PreAtendimentoTab companyId={companyId} onOpenModal={setModalFormId} />}
+                {aba === 'pesquisas'        && <PesquisasTab key={pesquisasRefreshKey} companyId={companyId} onOpenModal={setModalPesquisaId} />}
+                {aba === 'pre-atendimento'  && <PreAtendimentoTab key={preAtendimentoRefreshKey} companyId={companyId} onOpenModal={setModalFormId} />}
               </div>
             </div>
           )}
@@ -988,7 +992,10 @@ function CadastrosPageContent() {
               pesquisaId={modalPesquisaId}
               companyId={companyId!}
               onClose={() => setModalPesquisaId(undefined)}
-              onSave={() => { setModalPesquisaId(undefined); }}
+              onSave={() => {
+                setModalPesquisaId(undefined);
+                setPesquisasRefreshKey(k => k + 1); // ← força reload da tab
+              }}
             />
           )}
           {modalFormId !== undefined && (
@@ -996,7 +1003,10 @@ function CadastrosPageContent() {
               formId={modalFormId}
               companyId={companyId!}
               onClose={() => setModalFormId(undefined)}
-              onSave={() => { setModalFormId(undefined); }}
+              onSave={() => {
+                setModalFormId(undefined);
+                setPreAtendimentoRefreshKey(k => k + 1); // ← força reload da tab
+              }}
             />
           )}
         </div>

@@ -635,7 +635,7 @@ case 'fila_atendimento':
   break;
 
 case 'gerar_senha':
-  stopGoogleSpeech();
+  await stopGoogleSpeech();
   setActiveModal({
     type: 'GerarSenhaDisplay',
     data: { companyId, slug },

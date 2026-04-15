@@ -666,18 +666,60 @@ case 'modo_fila':
 
 case 'responder_pesquisa':
   await stopGoogleSpeech();
-  setActiveModal({
-    type: 'ResponderPesquisaDisplay',
-    data: { companyId, pesquisaId: functionData?.pesquisaId },
-  });
+  try {
+    const supabase = createClient();
+    const { data: pesquisa } = await supabase
+      .from('pesquisas')
+      .select('id, titulo')
+      .eq('company_id', companyId)
+      .eq('ativa', true)
+      .maybeSingle();
+
+    if (!pesquisa) {
+      await pt('Não há pesquisas disponíveis no momento.');
+      setIsProcessing(false);
+      break;
+    }
+
+    setActiveModal({
+      type: 'ResponderPesquisaDisplay',
+      data: { companyId, pesquisaId: pesquisa.id },
+    });
+    pt(`Por favor, responda nossa pesquisa: ${pesquisa.titulo}`).catch(() => {});
+  } catch (err) {
+    console.error('Erro responder_pesquisa:', err);
+    await pt('Erro ao abrir pesquisa.');
+    setIsProcessing(false);
+  }
   break;
 
 case 'pre_atendimento':
   await stopGoogleSpeech();
-  setActiveModal({
-    type: 'PreAtendimentoDisplay',
-    data: { companyId, formId: functionData?.formId },
-  });
+  try {
+    const supabase = createClient();
+    const { data: form } = await supabase
+      .from('pre_atendimento_forms')
+      .select('id, nome')
+      .eq('company_id', companyId)
+      .eq('ativo', true)
+      .maybeSingle();
+
+    if (!form) {
+      await pt('Não há formulários de pré-atendimento configurados.');
+      setIsProcessing(false);
+      break;
+    }
+
+    setActiveModal({
+      type: 'PreAtendimentoDisplay',
+      data: { companyId, formId: form.id },
+    });
+    pt(`Por favor, preencha o formulário: ${form.nome}`).catch(() => {});
+  } catch (err) {
+    console.error('Erro pre_atendimento:', err);
+    await pt('Erro ao abrir formulário.');
+    setIsProcessing(false);
+  }
   break;
           
 case 'juntar_pdfs':

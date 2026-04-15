@@ -76,13 +76,36 @@ export default function GerarSenhaDisplay({
   const [tempoEstimado, setTempoEstimado] = useState(0);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
 
   const supabase = createClient();
+
+  // Detectar mobile/desktop
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Gerar senha automaticamente ao abrir
   useEffect(() => {
     gerarNovaSenha();
   }, []);
+
+  // Timer de 15 segundos para fechar automaticamente
+  useEffect(() => {
+    if (!senha) return;
+
+    const timer = setTimeout(() => {
+      onClose();
+    }, 15000); // 15 segundos
+
+    return () => clearTimeout(timer);
+  }, [senha, onClose]);
 
   // Gerar URL do QR Code via API interna sempre que a senha mudar
   useEffect(() => {
@@ -122,7 +145,6 @@ export default function GerarSenhaDisplay({
     try {
       setLoading(true);
 
-      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
       const { data: config, error: configError } = await supabase
         .from('fila_configs')
         .select('*')
@@ -215,7 +237,6 @@ export default function GerarSenhaDisplay({
 
       setPosicao(count || 0);
 
-      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
       const { data: ultimaSenha, error: ultimaError } = await supabase
         .from('fila_senhas')
         .select('*')
@@ -233,7 +254,6 @@ export default function GerarSenhaDisplay({
         setUltimaChamada(ultimaSenha);
       }
 
-      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
       const { data: config, error: configError } = await supabase
         .from('fila_configs')
         .select('tempo_medio_atendimento')
@@ -263,10 +283,6 @@ export default function GerarSenhaDisplay({
         .eq('id', senha.id);
 
       showToast('Senha cancelada', 'info');
-
-      if (playText) {
-        await playText('Senha cancelada com sucesso');
-      }
 
       setTimeout(() => {
         onClose();
@@ -319,7 +335,7 @@ export default function GerarSenhaDisplay({
           background: colors.bg,
           borderRadius: '16px',
           width: '100%',
-          maxWidth: '500px',
+          maxWidth: isMobile ? '500px' : '900px',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
@@ -358,155 +374,222 @@ export default function GerarSenhaDisplay({
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
           {senha && (
-            <>
-              {/* Número da senha */}
-              <div style={{
-                background: colors.bgSecondary,
-                borderRadius: '12px',
-                padding: '40px 20px',
-                marginBottom: '20px',
-                textAlign: 'center',
-                border: `2px solid ${colors.accent}`,
-              }}>
-                <div style={{ fontSize: '72px', fontWeight: 'bold', color: colors.accent }}>
-                  {senha.senha_completa}
-                </div>
-              </div>
-
-              {/* Informações */}
-              <div style={{ marginBottom: '20px' }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '20px',
+            }}>
+              {/* Lado Esquerdo: Senha + Informações */}
+              <div style={{ flex: isMobile ? 'none' : '1' }}>
+                {/* Número da senha */}
                 <div style={{
                   background: colors.bgSecondary,
-                  borderRadius: '8px',
-                  padding: '16px',
-                  marginBottom: '12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  borderRadius: '12px',
+                  padding: '40px 20px',
+                  marginBottom: '20px',
+                  textAlign: 'center',
+                  border: `2px solid ${colors.accent}`,
                 }}>
-                  <div style={{ color: colors.textSecondary, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin className="w-4 h-4" />
-                    Posição na fila
-                  </div>
-                  <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
-                    {posicao === 0 ? 'Você é o próximo!' : `${posicao}ª na fila`}
+                  <div style={{ fontSize: '72px', fontWeight: 'bold', color: colors.accent }}>
+                    {senha.senha_completa}
                   </div>
                 </div>
 
-                <div style={{
-                  background: colors.bgSecondary,
-                  borderRadius: '8px',
-                  padding: '16px',
-                  marginBottom: '12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                  <div style={{ color: colors.textSecondary, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Clock className="w-4 h-4" />
-                    Tempo estimado
-                  </div>
-                  <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
-                    {tempoEstimado} minutos
-                  </div>
-                </div>
-
-                {ultimaChamada && (
+                {/* Informações */}
+                <div style={{ marginBottom: '20px' }}>
                   <div style={{
                     background: colors.bgSecondary,
                     borderRadius: '8px',
                     padding: '16px',
                     marginBottom: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}>
-                    <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Bell className="w-4 h-4" />
-                      Última Chamada
+                    <div style={{ color: colors.textSecondary, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MapPin className="w-4 h-4" />
+                      Posição na fila
                     </div>
-                    <div style={{ color: colors.text, fontSize: '24px', fontWeight: 'bold' }}>
-                      {ultimaChamada.senha_completa}
+                    <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
+                      {posicao === 0 ? 'Você é o próximo!' : `${posicao}ª na fila`}
                     </div>
-                    <div style={{ color: colors.textSecondary, fontSize: '12px', marginTop: '4px' }}>
-                      {new Date(ultimaChamada.chamada_em || ultimaChamada.gerada_em).toLocaleTimeString('pt-BR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                  </div>
+
+                  <div style={{
+                    background: colors.bgSecondary,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <div style={{ color: colors.textSecondary, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Clock className="w-4 h-4" />
+                      Tempo estimado
                     </div>
+                    <div style={{ color: colors.text, fontSize: '20px', fontWeight: '600' }}>
+                      {tempoEstimado} minutos
+                    </div>
+                  </div>
+
+                  {ultimaChamada && (
+                    <div style={{
+                      background: colors.bgSecondary,
+                      borderRadius: '8px',
+                      padding: '16px',
+                      marginBottom: '12px',
+                    }}>
+                      <div style={{ color: colors.textSecondary, fontSize: '12px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Bell className="w-4 h-4" />
+                        Última Chamada
+                      </div>
+                      <div style={{ color: colors.text, fontSize: '24px', fontWeight: 'bold' }}>
+                        {ultimaChamada.senha_completa}
+                      </div>
+                      <div style={{ color: colors.textSecondary, fontSize: '12px', marginTop: '4px' }}>
+                        {new Date(ultimaChamada.chamada_em || ultimaChamada.gerada_em).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botões (só aparecem no mobile) */}
+                {isMobile && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <button
+                      onClick={atualizarPosicao}
+                      style={{
+                        background: 'transparent',
+                        border: `2px solid ${colors.accent}`,
+                        borderRadius: '8px',
+                        padding: '16px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: colors.accent,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Atualizar
+                    </button>
+
+                    <button
+                      onClick={cancelarSenha}
+                      style={{
+                        background: 'transparent',
+                        border: `2px solid ${colors.danger}`,
+                        borderRadius: '8px',
+                        padding: '16px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: colors.danger,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Cancelar
+                    </button>
                   </div>
                 )}
               </div>
 
-              {/* QR Code via API interna */}
+              {/* Lado Direito: QR Code */}
               {qrCodeUrl && (
                 <div style={{
-                  background: colors.bgSecondary,
-                  borderRadius: '12px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  textAlign: 'center',
+                  flex: isMobile ? 'none' : '0 0 300px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}>
-                  <div style={{ color: colors.textSecondary, fontSize: '14px', marginBottom: '12px' }}>
-                    Escaneie para acompanhar em tempo real
-                  </div>
                   <div style={{
-                    background: '#fff',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    display: 'inline-block',
+                    background: colors.bgSecondary,
+                    borderRadius: '12px',
+                    padding: '20px',
+                    textAlign: 'center',
+                    marginBottom: isMobile ? '0' : '20px',
                   }}>
-                    <img
-                      src={qrCodeUrl}
-                      alt="QR Code acompanhamento"
-                      style={{ width: '200px', height: '200px', objectFit: 'contain', display: 'block' }}
-                    />
+                    <div style={{ color: colors.textSecondary, fontSize: '14px', marginBottom: '12px' }}>
+                      Escaneie para acompanhar
+                    </div>
+                    <div style={{
+                      background: '#fff',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      display: 'inline-block',
+                    }}>
+                      <img
+                        src={qrCodeUrl}
+                        alt="QR Code acompanhamento"
+                        style={{ width: '200px', height: '200px', objectFit: 'contain', display: 'block' }}
+                      />
+                    </div>
                   </div>
+
+                  {/* Botões (só aparecem no desktop) */}
+                  {!isMobile && (
+                    <div style={{ width: '100%' }}>
+                      <button
+                        onClick={atualizarPosicao}
+                        style={{
+                          width: '100%',
+                          background: 'transparent',
+                          border: `2px solid ${colors.accent}`,
+                          borderRadius: '8px',
+                          padding: '16px',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: colors.accent,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Atualizar Posição
+                      </button>
+
+                      <button
+                        onClick={cancelarSenha}
+                        style={{
+                          width: '100%',
+                          background: 'transparent',
+                          border: `2px solid ${colors.danger}`,
+                          borderRadius: '8px',
+                          padding: '16px',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: colors.danger,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Cancelar Senha
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Botões */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <button
-                  onClick={atualizarPosicao}
-                  style={{
-                    background: 'transparent',
-                    border: `2px solid ${colors.accent}`,
-                    borderRadius: '8px',
-                    padding: '16px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: colors.accent,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Atualizar Posição
-                </button>
-
-                <button
-                  onClick={cancelarSenha}
-                  style={{
-                    background: 'transparent',
-                    border: `2px solid ${colors.danger}`,
-                    borderRadius: '8px',
-                    padding: '16px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: colors.danger,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <XCircle className="w-4 h-4" />
-                  Cancelar Senha
-                </button>
-              </div>
-            </>
+            </div>
           )}
         </div>
 

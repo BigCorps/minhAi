@@ -258,7 +258,7 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
             Nenhuma pesquisa criada ainda
           </p>
           <a
-            href={`/dashboard/${settings.company_id}/cadastros?tab=pesquisas`}
+            href={`/dashboard/cadastros?tab=pesquisas`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
           >
             <Plus className="w-4 h-4" />
@@ -278,7 +278,7 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
                 </p>
               </div>
               <a
-                href={`/dashboard/${settings.company_id}/cadastros?tab=pesquisas`}
+                href={`/dashboard/cadastros?tab=pesquisas`}
                 className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
                 Gerenciar →
@@ -322,7 +322,7 @@ const PesquisasConfigForm = ({ settings, onChange }: any) => {
           )}
 
           <a
-            href={`/dashboard/${settings.company_id}/cadastros?tab=pesquisas`}
+            href={`/dashboard/cadastros?tab=pesquisas`}
             className="block text-center py-3 bg-gray-100 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
           >
             <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -379,7 +379,7 @@ const PreAtendimentoConfigForm = ({ settings, onChange }: any) => {
             Nenhum formulário criado ainda
           </p>
           <a
-            href={`/dashboard/${settings.company_id}/cadastros?tab=pre-atendimento`}
+            href={`/dashboard/cadastros?tab=pre-atendimento`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
@@ -399,7 +399,7 @@ const PreAtendimentoConfigForm = ({ settings, onChange }: any) => {
                 </p>
               </div>
               <a
-                href={`/dashboard/${settings.company_id}/cadastros?tab=pre-atendimento`}
+                href={`/dashboard/cadastros?tab=pre-atendimento`}
                 className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
                 Gerenciar →
@@ -446,7 +446,7 @@ const PreAtendimentoConfigForm = ({ settings, onChange }: any) => {
           )}
 
           <a
-            href={`/dashboard/${settings.company_id}/cadastros?tab=pre-atendimento`}
+            href={`/dashboard/cadastros?tab=pre-atendimento`}
             className="block text-center py-3 bg-gray-100 dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
           >
             <span className="text-sm text-gray-600 dark:text-gray-400">

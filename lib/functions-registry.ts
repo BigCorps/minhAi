@@ -526,17 +526,30 @@ gerar_senha: {
   description: 'Gera uma nova senha da fila e exibe QR Code para acompanhamento em tempo real.',
   shortDescription: 'Gerar senha e acompanhar fila',
   icon: '🟤',
-  color: '#808000',
+  color: '#000080', // Azul navy
   saveToHistory: true,
   creditsPerUse: 1,
   requiresPayment: false,
   isPremium: false,
-  handler: async ({ companyId, setActiveModal, playText, slug }) => {
-    playText('Gerando sua senha...');
+  handler: async ({ companyId, setActiveModal, playText, supabase }) => {
+    // Buscar slug da empresa
+    const { data: company } = await supabase
+      .from('companies')
+      .select('slug')
+      .eq('id', companyId)
+      .single();
+
+    const slug = company?.slug;
+
+    // Modal PRIMEIRO (antes do TTS)
     setActiveModal?.({
       type: 'GerarSenhaDisplay',
       data: { companyId, slug },
     });
+
+    // TTS depois (não bloqueia - executa em paralelo)
+    playText('Gerando sua senha...').catch(() => {});
+
     return true;
   },
 },

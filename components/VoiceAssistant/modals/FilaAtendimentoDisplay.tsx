@@ -245,6 +245,19 @@ export default function FilaAtendimentoDisplay({
     }
 
     try {
+      // ✅ CORREÇÃO: Finalizar senha em atendimento antes de chamar próxima
+      if (senhaAtual && (senhaAtual.status === 'chamando' || senhaAtual.status === 'atendimento')) {
+        console.log('🔄 Finalizando senha anterior automaticamente:', senhaAtual.senha_completa);
+        
+        await supabase
+          .from('fila_senhas')
+          .update({
+            status: 'finalizado',
+            finalizada_em: new Date().toISOString(),
+          })
+          .eq('id', senhaAtual.id);
+      }
+
       const proximaSenha = senhasAguardando[0];
 
       // Atualizar status para "chamando"

@@ -263,7 +263,7 @@ export default function FilaAcompanhamentoPage({ params }: FilaAcompanhamentoPag
             color: colors.text,
             fontWeight: '600',
           }}>
-            🏢 minhAi Fila
+            minhAi.app
           </div>
         </div>
 

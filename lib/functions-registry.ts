@@ -464,30 +464,40 @@ modo_fila: {
   functionKey: 'modo_fila',
   functionName: 'Modo Fila',
   category: 'biometry',
-  responseType: 'action',
+  responseType: 'navigation',
+
   voiceTriggers: [
-    'abrir fila',
     'modo fila',
+    'abrir fila',
+    'ir para fila',
     'painel fila',
-    'ver fila',
-    'abrir painel',
   ],
+
   examplePhrases: [
     'Abrir modo fila',
-    'Ver painel da fila',
-    'Mostrar painel',
+    'Ir para a fila',
   ],
-  description: 'Abre a tela de acompanhamento da fila em tela cheia, ideal para TVs e monitores.',
-  shortDescription: 'Abrir painel da fila',
+
+  requiresInput: false,
+  description: 'Abre a página de gerenciamento de fila de atendimento.',
+  shortDescription: 'Abrir página da fila',
   icon: '🟤',
   color: '#000080',
+
   saveToHistory: false,
   creditsPerUse: 0,
   requiresPayment: false,
   isPremium: false,
+
   handler: async ({ slug }) => {
-    window.location.href = `/fila/${slug}`;
-    return true;
+    try {
+      // Usa getContextualRoute para detectar slug vs subdomínio
+      const filaUrl = getContextualRoute('fila', slug);
+      window.location.href = filaUrl;
+      return true;
+    } catch {
+      return false;
+    }
   },
 },
 

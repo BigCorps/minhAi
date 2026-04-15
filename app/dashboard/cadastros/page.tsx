@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import { useAssistant } from '@/contexts/AssistantContext';
 import ModoToggle from '@/components/dashboard/ModoToggle';
@@ -907,9 +908,17 @@ function AbaTotens({ companyId }: { companyId: string }) {
 
 function CadastrosPageContent() {
   const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('tab');
   const [aba, setAba] = useState<Aba>('cadastros');
   const [modalPesquisaId, setModalPesquisaId] = useState<string | null | undefined>(undefined);
   const [modalFormId, setModalFormId] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (tabParam && ['cadastros', 'clientes', 'colaboradores', 'totens', 'pesquisas', 'pre-atendimento'].includes(tabParam)) {
+      setAba(tabParam as Aba);
+    }
+  }, [tabParam]);
 
   const abas: { key: Aba; label: string; icon: any }[] = [
     { key: 'cadastros',        label: 'Cadastros',        icon: UserPlus },

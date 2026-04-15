@@ -486,46 +486,56 @@ export default function SlugHeader({
         )}
 
         {/* ── Mobile Overlay ────────────────────────────────── */}
-        {overlayMode && (
-          <div className="md:hidden relative flex items-center justify-end min-h-[48px] py-2">
-            <div className={`absolute right-9 flex items-center space-x-1 transition-all duration-300 ${
-              showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-            }`}>
-              <NavigationButtons />
-              {onEnterKioskMode && !isKioskMode && (
-                <button onClick={onEnterKioskMode} className={btn()} title="Modo Kiosk">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
-                </button>
-              )}
-              {isWakeLockSupported && onToggleWakeLock && (
-                <button onClick={onToggleWakeLock}
-                  className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
-                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </button>
-              )}
-              {onToggleTheme && (
-                <button onClick={onToggleTheme} className={btn()} title="Tema">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </button>
-              )}
-              {onClose && (
-                <button onClick={onClose} className={btn()} title="Fechar">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
+{overlayMode && (
+  <div className="md:hidden flex flex-col items-end py-2 gap-1">
+    
+    {/* Linha 1: Logo minhAi (direita) */}
+    <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
+      className="flex-shrink-0 hover:opacity-80 transition-opacity z-10" title="Visite minhAi.app">
+      <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
+    </Link>
+
+    {/* Linha 2: Botões de navegação e controles */}
+    <div className={`flex items-center space-x-1 transition-all duration-300 ${
+      showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+    }`}>
+      <NavigationButtons />
+      {onEnterKioskMode && !isKioskMode && (
+        <button onClick={onEnterKioskMode} className={btn()} title="Modo Kiosk">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
+      )}
+      {isWakeLockSupported && onToggleWakeLock && (
+        <button onClick={onToggleWakeLock}
+          className={btn(isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : '')}
+          title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </button>
+      )}
+      {onToggleTheme && (
+        <button onClick={onToggleTheme} className={btn()} title="Tema">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
+      )}
+      {onClose && (
+        <button onClick={onClose} className={btn()} title="Fechar">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+    </div>
+  </div>
+)}
             <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
               className="flex-shrink-0 hover:opacity-80 transition-opacity z-10" title="Visite minhAi.app">
               <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />

@@ -8,8 +8,8 @@ const DARK = {
   bgSecondary: '#1e293b',
   text: '#f8fafc',
   textSecondary: '#cbd5e1',
-  accent: '#000080',
-  senhaColor: '#ffffff',
+  accent: '#000080', // Azul navy (bordas)
+  senhaColor: '#ffffff', // Branco para senha no dark
 };
 
 const LIGHT = {
@@ -17,8 +17,8 @@ const LIGHT = {
   bgSecondary: '#ffffff',
   text: '#0f172a',
   textSecondary: '#475569',
-  accent: '#000080',
-  senhaColor: '#000080',
+  accent: '#000080', // Azul navy (bordas)
+  senhaColor: '#000080', // Azul para senha no light
 };
 
 interface PainelFilaDisplayProps {
@@ -44,7 +44,6 @@ export default function PainelFilaDisplay({
   const [senhaAtual, setSenhaAtual] = useState<FilaSenha | null>(null);
   const [proximasSenhas, setProximasSenhas] = useState<FilaSenha[]>([]);
   const [isLandscape, setIsLandscape] = useState(true);
-  const [animar, setAnimar] = useState(false);
 
   const supabase = createClient();
 
@@ -59,51 +58,45 @@ export default function PainelFilaDisplay({
     return () => window.removeEventListener('resize', checkOrientation);
   }, []);
 
-  // Realtime + dados
+  // Carregar dados
   useEffect(() => {
     carregarDados();
 
+    // Realtime
     const channel = supabase
       .channel('painel-fila')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'fila_senhas',
-          filter: `company_id=eq.${companyId}`,
-        },
-        async (payload) => {
-          if (
-            payload.eventType === 'UPDATE' &&
-            payload.new.status === 'chamando'
-          ) {
-            const novaSenha = payload.new as FilaSenha;
-
-            setSenhaAtual(novaSenha);
-
-            // 🔥 animação
-            setAnimar(true);
-            setTimeout(() => setAnimar(false), 2000);
-
-            // 🔊 TTS
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'fila_senhas',
+        filter: `company_id=eq.${companyId}`,
+      }, async (payload) => {
+        // Se mudou para "chamando", atualizar senha atual e falar
+        if (payload.eventType === 'UPDATE' && payload.new.status === 'chamando') {
+          const novaSenha = payload.new as FilaSenha;
+          setSenhaAtual(novaSenha);
+          
+          // TTS
+          if (playText) {
             const prefixo = novaSenha.senha_completa[0];
             const numeros = novaSenha.senha_completa.slice(1).split('');
             const texto = `Senha ${prefixo}. ${numeros.join('. ')}.`;
-
-            if (playText) {
-              await playText(texto);
-            } else {
-              const utterance = new SpeechSynthesisUtterance(texto);
-              utterance.lang = 'pt-BR';
-              utterance.rate = 0.8;
-              window.speechSynthesis.speak(utterance);
-            }
+            await playText(texto);
+          } else {
+            // Web Speech API fallback
+            const prefixo = novaSenha.senha_completa[0];
+            const numeros = novaSenha.senha_completa.slice(1).split('');
+            const texto = `Senha ${prefixo}. ${numeros.join('. ')}.`;
+            const utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 0.8;
+            window.speechSynthesis.speak(utterance);
           }
-
-          await carregarDados();
         }
-      )
+
+        // Recarregar lista
+        await carregarDados();
+      })
       .subscribe();
 
     return () => {
@@ -113,7 +106,8 @@ export default function PainelFilaDisplay({
 
   async function carregarDados() {
     try {
-      const { data: atual } = await supabase
+      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
+      const { data: atual, error: atualError } = await supabase
         .from('fila_senhas')
         .select('*')
         .eq('company_id', companyId)
@@ -122,138 +116,131 @@ export default function PainelFilaDisplay({
         .limit(1)
         .maybeSingle();
 
+      if (atualError) {
+        console.error('Erro ao carregar senha atual:', atualError);
+      }
+
       setSenhaAtual(atual || null);
 
+      // Próximas senhas
       const { data: proximas } = await supabase
         .from('fila_senhas')
         .select('*')
         .eq('company_id', companyId)
         .eq('status', 'aguardando')
         .order('gerada_em', { ascending: true })
-        .limit(6);
+        .limit(5);
 
       setProximasSenhas(proximas || []);
+
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
   }
 
-  // 🔥 estilos reutilizáveis
-  const cardStyle = {
-    background: colors.bgSecondary,
-    borderRadius: '24px',
-    border: `3px solid ${colors.accent}`,
-    boxShadow:
-      theme === 'dark'
-        ? '0 10px 40px rgba(0,0,0,0.5)'
-        : '0 10px 30px rgba(0,0,0,0.1)',
-  };
-
-  const senhaStyle = {
-    fontSize: 'clamp(60px, 14vw, 180px)',
-    fontWeight: 'bold',
-    color: colors.senhaColor,
-    lineHeight: 1,
-    transition: 'all 0.3s ease',
-    transform: animar ? 'scale(1.1)' : 'scale(1)',
-  };
-
-  // =========================
-  // LANDSCAPE (TV / Desktop)
-  // =========================
+  // Layout Landscape (deitado)
   if (isLandscape) {
     return (
       <div
         style={{
           width: '100%',
           height: '100%',
-          display: 'flex',
-          gap: 'clamp(10px, 2vw, 20px)',
-          padding: '10px',
           background: colors.bg,
-          overflow: 'hidden',
+          display: 'flex',
+          padding: '20px',
+          gap: '20px',
         }}
       >
-        {/* SENHA ATUAL */}
+        {/* Senha Atual - 60% da largura */}
         <div
           style={{
-            ...cardStyle,
-            flex: 3,
+            flex: '0 0 60%',
+            background: colors.bgSecondary,
+            borderRadius: '24px',
+            padding: '60px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-evenly',
             alignItems: 'center',
-            padding: '20px',
+            justifyContent: 'center',
+            border: `4px solid ${colors.accent}`,
+            boxShadow: theme === 'dark' 
+              ? '0 20px 60px rgba(0,0,0,0.5)' 
+              : '0 20px 60px rgba(0,0,0,0.1)',
           }}
         >
-          <div
-            style={{
-              fontSize: 'clamp(16px,2vw,28px)',
-              color: colors.textSecondary,
-              letterSpacing: '4px',
-              textTransform: 'uppercase',
-            }}
-          >
+          <div style={{
+            color: colors.textSecondary,
+            fontSize: '28px',
+            marginBottom: '20px',
+            textTransform: 'uppercase',
+            letterSpacing: '4px',
+            fontWeight: '600',
+          }}>
             SENHA ATUAL
           </div>
-
-          <div style={senhaStyle}>
+          
+          <div style={{
+            fontSize: '160px',
+            fontWeight: 'bold',
+            color: colors.senhaColor,
+            marginBottom: '20px',
+            lineHeight: 1,
+          }}>
             {senhaAtual ? senhaAtual.senha_completa : '---'}
           </div>
 
           {senhaAtual && (
-            <div
-              style={{
-                fontSize: 'clamp(14px,1.5vw,22px)',
-                color: colors.textSecondary,
-                textTransform: 'uppercase',
-              }}
-            >
-              {senhaAtual.status === 'chamando'
-                ? 'Sendo chamada'
-                : 'Em atendimento'}
+            <div style={{
+              color: colors.textSecondary,
+              fontSize: '24px',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+            }}>
+              {senhaAtual.status === 'chamando' ? 'Sendo Chamada' : 'Em Atendimento'}
             </div>
           )}
         </div>
 
-        {/* PRÓXIMAS SENHAS */}
+        {/* Próximas Senhas - 40% da largura */}
         <div
           style={{
-            ...cardStyle,
-            flex: 2,
+            flex: '0 0 calc(40% - 20px)',
+            background: colors.bgSecondary,
+            borderRadius: '24px',
+            padding: '40px',
             display: 'flex',
             flexDirection: 'column',
-            padding: '20px',
-            overflow: 'hidden',
+            boxShadow: theme === 'dark' 
+              ? '0 20px 60px rgba(0,0,0,0.5)' 
+              : '0 20px 60px rgba(0,0,0,0.1)',
           }}
         >
-          <div
-            style={{
-              textAlign: 'center',
-              fontSize: 'clamp(14px,1.5vw,20px)',
-              marginBottom: '10px',
-              color: colors.textSecondary,
-              textTransform: 'uppercase',
-            }}
-          >
+          <div style={{
+            color: colors.textSecondary,
+            fontSize: '20px',
+            marginBottom: '30px',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            textAlign: 'center',
+            fontWeight: '600',
+          }}>
             PRÓXIMAS SENHAS
           </div>
 
-          <div
-            style={{
-              flex: 1,
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: '10px',
-            }}
-          >
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '20px',
+          }}>
             {proximasSenhas.length === 0 ? (
-              <div
-                style={{
-                  textAlign: 'center',
-                  color: colors.textSecondary,
-                }}
-              >
+              <div style={{
+                color: colors.textSecondary,
+                fontSize: '18px',
+                padding: '40px',
+              }}>
                 Nenhuma senha aguardando
               </div>
             ) : (
@@ -261,11 +248,18 @@ export default function PainelFilaDisplay({
                 <div
                   key={senha.id}
                   style={{
-                    fontSize: 'clamp(24px,3vw,48px)',
-                    textAlign: 'center',
-                    padding: '10px',
+                    fontSize: '48px',
+                    fontWeight: 'bold',
+                    color: colors.text,
+                    padding: '16px 32px',
+                    background: colors.bg,
                     borderRadius: '12px',
                     border: `2px solid ${colors.accent}`,
+                    boxShadow: theme === 'dark'
+                      ? '0 4px 12px rgba(0,0,0,0.3)'
+                      : '0 4px 12px rgba(0,0,0,0.08)',
+                    width: '100%',
+                    textAlign: 'center',
                   }}
                 >
                   {senha.senha_completa}
@@ -278,72 +272,133 @@ export default function PainelFilaDisplay({
     );
   }
 
-  // =========================
-  // PORTRAIT (Mobile)
-  // =========================
+  // Layout Portrait (em pé) - vertical
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
+        background: colors.bg,
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
-        padding: '10px',
-        background: colors.bg,
-        overflow: 'hidden',
+        padding: '20px',
       }}
     >
-      {/* SENHA ATUAL */}
+      {/* Senha Atual - 60% da altura */}
       <div
         style={{
-          ...cardStyle,
-          flex: 1,
+          flex: '0 0 60%',
+          background: colors.bgSecondary,
+          borderRadius: '24px',
+          padding: '60px',
+          marginBottom: '20px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-evenly',
           alignItems: 'center',
+          justifyContent: 'center',
+          border: `4px solid ${colors.accent}`,
+          boxShadow: theme === 'dark' 
+            ? '0 20px 60px rgba(0,0,0,0.5)' 
+            : '0 20px 60px rgba(0,0,0,0.1)',
         }}
       >
-        <div style={{ color: colors.textSecondary }}>
+        <div style={{
+          color: colors.textSecondary,
+          fontSize: '28px',
+          marginBottom: '20px',
+          textTransform: 'uppercase',
+          letterSpacing: '4px',
+          fontWeight: '600',
+        }}>
           SENHA ATUAL
         </div>
-
-        <div
-          style={{
-            ...senhaStyle,
-            fontSize: 'clamp(50px, 20vw, 120px)',
-          }}
-        >
+        
+        <div style={{
+          fontSize: '140px',
+          fontWeight: 'bold',
+          color: colors.senhaColor,
+          marginBottom: '20px',
+          lineHeight: 1,
+        }}>
           {senhaAtual ? senhaAtual.senha_completa : '---'}
         </div>
+
+        {senhaAtual && (
+          <div style={{
+            color: colors.textSecondary,
+            fontSize: '24px',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+          }}>
+            {senhaAtual.status === 'chamando' ? 'Sendo Chamada' : 'Em Atendimento'}
+          </div>
+        )}
       </div>
 
-      {/* PRÓXIMAS */}
+      {/* Próximas Senhas - 40% da altura */}
       <div
         style={{
-          ...cardStyle,
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '10px',
-          padding: '10px',
+          flex: '0 0 calc(40% - 20px)',
+          background: colors.bgSecondary,
+          borderRadius: '24px',
+          padding: '30px',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: theme === 'dark' 
+            ? '0 20px 60px rgba(0,0,0,0.5)' 
+            : '0 20px 60px rgba(0,0,0,0.1)',
         }}
       >
-        {proximasSenhas.map((senha) => (
-          <div
-            key={senha.id}
-            style={{
-              fontSize: 'clamp(20px,5vw,36px)',
-              textAlign: 'center',
-              padding: '10px',
-              border: `2px solid ${colors.accent}`,
-              borderRadius: '12px',
-            }}
-          >
-            {senha.senha_completa}
-          </div>
-        ))}
+        <div style={{
+          color: colors.textSecondary,
+          fontSize: '20px',
+          marginBottom: '20px',
+          textTransform: 'uppercase',
+          letterSpacing: '2px',
+          textAlign: 'center',
+          fontWeight: '600',
+        }}>
+          PRÓXIMAS SENHAS
+        </div>
+
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '15px',
+          flexWrap: 'wrap',
+        }}>
+          {proximasSenhas.length === 0 ? (
+            <div style={{
+              color: colors.textSecondary,
+              fontSize: '16px',
+              padding: '20px',
+            }}>
+              Nenhuma senha aguardando
+            </div>
+          ) : (
+            proximasSenhas.map((senha) => (
+              <div
+                key={senha.id}
+                style={{
+                  fontSize: '40px',
+                  fontWeight: 'bold',
+                  color: colors.text,
+                  padding: '12px 24px',
+                  background: colors.bg,
+                  borderRadius: '12px',
+                  border: `2px solid ${colors.accent}`,
+                  boxShadow: theme === 'dark'
+                    ? '0 4px 12px rgba(0,0,0,0.3)'
+                    : '0 4px 12px rgba(0,0,0,0.08)',
+                }}
+              >
+                {senha.senha_completa}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

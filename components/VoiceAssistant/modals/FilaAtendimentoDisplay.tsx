@@ -16,6 +16,10 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
+  Save,
+  Hash,
+  FileText,
+  Calendar,
 } from 'lucide-react';
 
 // Paletas de cores
@@ -92,6 +96,10 @@ export default function FilaAtendimentoDisplay({
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  // Estados de edição
+  const [editMode, setEditMode] = useState(false);
+  const [editedConfig, setEditedConfig] = useState<Partial<FilaConfig>>({});
+
   // Stats
   const [stats, setStats] = useState({
     totalHoje: 0,
@@ -128,7 +136,7 @@ export default function FilaAtendimentoDisplay({
 
   async function carregarDados() {
     try {
-      // ✅ CORREÇÃO 1: Usar .maybeSingle() em vez de .single()
+      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
       const { data: configData, error: configError } = await supabase
         .from('fila_configs')
         .select('*')
@@ -141,9 +149,10 @@ export default function FilaAtendimentoDisplay({
 
       if (configData) {
         setConfig(configData);
+        setEditedConfig(configData);
       }
 
-      // ✅ CORREÇÃO 2: Usar .maybeSingle() em vez de .single()
+      // ✅ CORREÇÃO: Usar .maybeSingle() em vez de .single()
       const { data: senhaAtualData, error: senhaError } = await supabase
         .from('fila_senhas')
         .select('*')
@@ -315,34 +324,18 @@ export default function FilaAtendimentoDisplay({
     }
   }
 
-  async function salvarConfiguracao(novaConfig: Partial<FilaConfig>) {
+  async function salvarConfiguracao() {
     if (!config) return;
 
     try {
-      // ✅ CORREÇÃO 3: Usar .maybeSingle() em vez de .single()
-      const { data: configData, error: fetchError } = await supabase
+      await supabase
         .from('fila_configs')
-        .select('*')
-        .eq('company_id', companyId)
-        .maybeSingle();
+        .update(editedConfig)
+        .eq('id', config.id);
 
-      if (fetchError) {
-        console.error('Erro ao buscar config:', fetchError);
-        showToast('Erro ao carregar configuração', 'error');
-        return;
-      }
-
-      if (configData) {
-        await supabase
-          .from('fila_configs')
-          .update(novaConfig)
-          .eq('id', config.id);
-
-        showToast('Configuração salva!', 'success');
-        await carregarDados();
-      } else {
-        showToast('Configuração não encontrada', 'error');
-      }
+      showToast('Configuração salva!', 'success');
+      setEditMode(false);
+      await carregarDados();
     } catch (error) {
       console.error('Erro ao salvar:', error);
       showToast('Erro ao salvar configuração', 'error');
@@ -651,18 +644,20 @@ export default function FilaAtendimentoDisplay({
       {config && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'block', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Settings className="w-4 h-4" />
+            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <Hash className="w-4 h-4" />
               Prefixo da Senha
             </label>
             <input
               type="text"
-              value={config.prefixo_senha}
-              readOnly
+              value={editMode ? editedConfig.prefixo_senha : config.prefixo_senha}
+              onChange={(e) => setEditedConfig({ ...editedConfig, prefixo_senha: e.target.value })}
+              disabled={!editMode}
+              maxLength={1}
               style={{
                 width: '100%',
                 padding: '12px',
-                background: colors.bgSecondary,
+                background: editMode ? colors.bg : colors.bgSecondary,
                 border: `1px solid ${colors.border}`,
                 borderRadius: '6px',
                 color: colors.text,
@@ -672,17 +667,19 @@ export default function FilaAtendimentoDisplay({
           </div>
 
           <div>
-            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <FileText className="w-4 h-4" />
               Nome do Tipo de Atendimento
             </label>
             <input
               type="text"
-              value={config.nome_tipo_atendimento}
-              readOnly
+              value={editMode ? editedConfig.nome_tipo_atendimento : config.nome_tipo_atendimento}
+              onChange={(e) => setEditedConfig({ ...editedConfig, nome_tipo_atendimento: e.target.value })}
+              disabled={!editMode}
               style={{
                 width: '100%',
                 padding: '12px',
-                background: colors.bgSecondary,
+                background: editMode ? colors.bg : colors.bgSecondary,
                 border: `1px solid ${colors.border}`,
                 borderRadius: '6px',
                 color: colors.text,
@@ -692,17 +689,19 @@ export default function FilaAtendimentoDisplay({
           </div>
 
           <div>
-            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <Clock className="w-4 h-4" />
               Tempo Médio (minutos)
             </label>
             <input
               type="number"
-              value={config.tempo_medio_atendimento}
-              readOnly
+              value={editMode ? editedConfig.tempo_medio_atendimento : config.tempo_medio_atendimento}
+              onChange={(e) => setEditedConfig({ ...editedConfig, tempo_medio_atendimento: parseInt(e.target.value) })}
+              disabled={!editMode}
               style={{
                 width: '100%',
                 padding: '12px',
-                background: colors.bgSecondary,
+                background: editMode ? colors.bg : colors.bgSecondary,
                 border: `1px solid ${colors.border}`,
                 borderRadius: '6px',
                 color: colors.text,
@@ -712,17 +711,19 @@ export default function FilaAtendimentoDisplay({
           </div>
 
           <div>
-            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+            <label style={{ color: colors.textSecondary, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <Calendar className="w-4 h-4" />
               Máximo de Senhas por Dia
             </label>
             <input
               type="number"
-              value={config.max_senhas_dia}
-              readOnly
+              value={editMode ? editedConfig.max_senhas_dia : config.max_senhas_dia}
+              onChange={(e) => setEditedConfig({ ...editedConfig, max_senhas_dia: parseInt(e.target.value) })}
+              disabled={!editMode}
               style={{
                 width: '100%',
                 padding: '12px',
-                background: colors.bgSecondary,
+                background: editMode ? colors.bg : colors.bgSecondary,
                 border: `1px solid ${colors.border}`,
                 borderRadius: '6px',
                 color: colors.text,
@@ -761,6 +762,78 @@ export default function FilaAtendimentoDisplay({
                 </>
               )}
             </div>
+          </div>
+
+          {/* Botões de Edição */}
+          <div style={{ display: 'grid', gridTemplateColumns: editMode ? '1fr 1fr' : '1fr', gap: '12px', marginTop: '12px' }}>
+            {editMode ? (
+              <>
+                <button
+                  onClick={salvarConfiguracao}
+                  style={{
+                    background: colors.success,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Save className="w-5 h-5" />
+                  Salvar
+                </button>
+                <button
+                  onClick={() => {
+                    setEditMode(false);
+                    setEditedConfig(config);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: `2px solid ${colors.danger}`,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: colors.danger,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                  Cancelar
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setEditMode(true)}
+                style={{
+                  background: 'transparent',
+                  border: `2px solid ${colors.accent}`,
+                  borderRadius: '8px',
+                  padding: '16px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: colors.accent,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Settings className="w-5 h-5" />
+                Editar Configurações
+              </button>
+            )}
           </div>
         </div>
       )}

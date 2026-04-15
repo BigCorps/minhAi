@@ -102,11 +102,12 @@ export default function FilaPage({ params }: FilaPageProps) {
     return null;
   }
 
-  return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      {/* SlugHeader */}
-      <div className="flex-shrink-0">
-        <SlugHeader
+return (
+  <div className="h-screen flex flex-col overflow-hidden">
+    
+    {/* HEADER */}
+    <div className="flex-shrink-0">
+      <SlugHeader
           company={{
             id: companyId,
             name: companyData?.name,
@@ -129,18 +130,18 @@ export default function FilaPage({ params }: FilaPageProps) {
         />
       </div>
 
-      {/* Painel - ocupa espaço restante */}
-      <div className="flex-1 overflow-hidden">
-        <PainelFilaDisplay
-          companyId={companyId}
-          theme={theme}
-          playText={handlePlayText}
-        />
-      </div>
+    {/* PAINEL */}
+    <div className="flex-1 overflow-hidden">
+      <PainelFilaDisplay
+        companyId={companyId}
+        theme={theme}
+        playText={handlePlayText}
+      />
+    </div>
 
-      {/* SlugFooter */}
-      <div className="flex-shrink-0">
-        <SlugFooter
+    {/* FOOTER */}
+    <div className="flex-shrink-0">
+      <SlugFooter
           theme={theme}
           slug={slug}
           webapp_enabled={companyData?.webapp_enabled}

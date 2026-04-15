@@ -17,7 +17,7 @@ const DARK = {
   text: '#f8fafc',
   textSecondary: '#cbd5e1',
   border: '#475569',
-  accent: '#808000',
+  accent: '#000080',
   success: '#10b981',
   danger: '#ef4444',
   warning: '#f59e0b',
@@ -29,7 +29,7 @@ const LIGHT = {
   text: '#0f172a',
   textSecondary: '#475569',
   border: '#cbd5e1',
-  accent: '#808000',
+  accent: '#000080',
   success: '#10b981',
   danger: '#ef4444',
   warning: '#f59e0b',
@@ -88,7 +88,7 @@ export default function GerarSenhaDisplay({
   useEffect(() => {
     if (senha && slug) {
       const acompanhamentoUrl = `https://${slug}.minhai.app/fila-acompanhamento/${senha.id}`;
-      const url = `/api/qrcode?size=200&data=${encodeURIComponent(acompanhamentoUrl)}&color=%23808000&company_id=${companyId}`;
+      const url = `/api/qrcode?size=200&data=${encodeURIComponent(acompanhamentoUrl)}&color=%23000080&company_id=${companyId}`;
       setQrCodeUrl(url);
     }
   }, [senha, slug, companyId]);

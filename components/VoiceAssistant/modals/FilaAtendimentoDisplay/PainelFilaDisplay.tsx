@@ -8,7 +8,8 @@ const DARK = {
   bgSecondary: '#1e293b',
   text: '#f8fafc',
   textSecondary: '#cbd5e1',
-  accent: '#000080', // Azul navy
+  accent: '#000080', // Azul navy (bordas)
+  senhaColor: '#ffffff', // Branco para senha no dark
 };
 
 const LIGHT = {
@@ -16,7 +17,8 @@ const LIGHT = {
   bgSecondary: '#ffffff',
   text: '#0f172a',
   textSecondary: '#475569',
-  accent: '#000080', // Azul navy
+  accent: '#000080', // Azul navy (bordas)
+  senhaColor: '#000080', // Azul para senha no light
 };
 
 interface PainelFilaDisplayProps {
@@ -145,8 +147,8 @@ export default function PainelFilaDisplay({
           height: '100%',
           background: colors.bg,
           display: 'flex',
-          padding: '30px',
-          gap: '30px',
+          padding: '20px',
+          gap: '20px',
         }}
       >
         {/* Senha Atual - 60% da largura */}
@@ -180,7 +182,7 @@ export default function PainelFilaDisplay({
           <div style={{
             fontSize: '160px',
             fontWeight: 'bold',
-            color: colors.accent,
+            color: colors.senhaColor,
             marginBottom: '20px',
             lineHeight: 1,
           }}>
@@ -202,7 +204,7 @@ export default function PainelFilaDisplay({
         {/* Próximas Senhas - 40% da largura */}
         <div
           style={{
-            flex: '0 0 calc(40% - 30px)',
+            flex: '0 0 calc(40% - 20px)',
             background: colors.bgSecondary,
             borderRadius: '24px',
             padding: '40px',
@@ -279,7 +281,7 @@ export default function PainelFilaDisplay({
         background: colors.bg,
         display: 'flex',
         flexDirection: 'column',
-        padding: '30px',
+        padding: '20px',
       }}
     >
       {/* Senha Atual - 60% da altura */}
@@ -289,7 +291,7 @@ export default function PainelFilaDisplay({
           background: colors.bgSecondary,
           borderRadius: '24px',
           padding: '60px',
-          marginBottom: '30px',
+          marginBottom: '20px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -314,7 +316,7 @@ export default function PainelFilaDisplay({
         <div style={{
           fontSize: '140px',
           fontWeight: 'bold',
-          color: colors.accent,
+          color: colors.senhaColor,
           marginBottom: '20px',
           lineHeight: 1,
         }}>
@@ -336,7 +338,7 @@ export default function PainelFilaDisplay({
       {/* Próximas Senhas - 40% da altura */}
       <div
         style={{
-          flex: '0 0 calc(40% - 30px)',
+          flex: '0 0 calc(40% - 20px)',
           background: colors.bgSecondary,
           borderRadius: '24px',
           padding: '30px',

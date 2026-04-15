@@ -89,6 +89,14 @@ export default function FilaAtendimentoDisplay({
 
   const supabase = createClient();
 
+// ⚠️ TESTE: Forçar headers corretos
+supabase.rest.headers = {
+  ...supabase.rest.headers,
+  'Accept': 'application/json',
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation',
+};
+
   // Carregar configuração e senhas
   useEffect(() => {
     carregarDados();

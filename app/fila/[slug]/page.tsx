@@ -131,7 +131,7 @@ return (
       </div>
 
     {/* PAINEL */}
-    <div className="flex-1 overflow-hidden">
+    <div className="flex-1 overflow-hidden pb-8">
       <PainelFilaDisplay
         companyId={companyId}
         theme={theme}

@@ -89,9 +89,9 @@ const FUNCTION_KEY_TO_MODAL: Record<string, string> = {
   login_cliente:     'LoginClienteDisplay',
   registration:      'RegistrationDisplay',
   fichas_producao:   'FichaProducaoDisplay',
-  fila_atendimento:     'FilaAtendimentoDisplay',
-  gerar_senha:          'GerarSenhaDisplay',
-  painel_fila:          'PainelFilaDisplay',
+  fila_atendimento:  'FilaAtendimentoDisplay',
+  gerar_senha:       'GerarSenhaDisplay',
+  painel_fila:       'PainelFilaDisplay',
 };
 
 interface ClientePageProps {

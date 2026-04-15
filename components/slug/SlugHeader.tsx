@@ -401,9 +401,7 @@ export default function SlugHeader({
 
         {/* ── Mobile Normal ─────────────────────────────────── */}
         {!overlayMode && (
-          <div className="md:hidden py-3 space-y-3">
-
-            {/* Linha 1: logo empresa | nome centralizado | controles + logo minhAi */}
+          <div className="md:hidden py-4 space-y-4">
             <div className="relative flex items-center justify-center min-h-[48px] px-4">
               {company.logo_url && (
                 <div className="absolute left-4 flex-shrink-0">
@@ -423,74 +421,67 @@ export default function SlugHeader({
                   {company.assistant_role || 'Uma IA para chamar de sua!'}
                 </p>
               </div>
-              <div className="absolute right-4 flex items-center space-x-2">
-                {onEnterKioskMode && (
-                  <button onClick={onEnterKioskMode}
-                    className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                      theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                    } ${isKioskMode ? 'ring-2 ring-red-500 ring-opacity-50' : ''}`}
-                    title="Modo Kiosk">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                    </svg>
-                  </button>
-                )}
-                {onToggleModoVenda && !slug && (
-                  <button onClick={onToggleModoVenda}
-                    className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                      theme === 'dark' ? 'bg-white/5 border-white/10 text-white hover:bg-emerald-500/20' : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50'
-                    }`} title="Modo Venda">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </button>
-                )}
-                {isWakeLockSupported && onToggleWakeLock && (
-                  <button onClick={onToggleWakeLock}
-                    className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                      theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                    } ${isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
-                    title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </button>
-                )}
-                {onToggleTheme && (
-                  <button onClick={onToggleTheme}
-                    className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
-                      theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
-                    }`} title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
-                    {theme === 'dark' ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                    )}
-                  </button>
-                )}
-                <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
-                  className="flex-shrink-0 hover:opacity-80 transition-opacity" title="Visite minhAi.app">
-                  <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
-                </Link>
-              </div>
+              <Link href="https://minhai.app" target="_blank" rel="noopener noreferrer"
+                className="absolute right-4 flex-shrink-0 hover:opacity-80 transition-opacity" title="Visite minhAi.app">
+                <Image src="/logo-circle.png" alt="minhAi logo" width={32} height={32} className="rounded-lg" />
+              </Link>
             </div>
-
-            {/* Linha 2: botões de modos centralizados (só renderiza se houver slug) */}
-            {slug && (
-              <div className="flex items-center justify-center space-x-2">
-                <NavigationButtons iconSize={iconMobile} />
-              </div>
-            )}
-
+            <div className="flex items-center justify-center space-x-2">
+              <NavigationButtons iconSize={iconMobile} />
+              {onEnterKioskMode && (
+                <button onClick={onEnterKioskMode}
+                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
+                  } ${isKioskMode ? 'ring-2 ring-red-500 ring-opacity-50' : ''}`}
+                  title="Modo Kiosk">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                </button>
+              )}
+              {onToggleModoVenda && !slug && (
+                <button onClick={onToggleModoVenda}
+                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white hover:bg-emerald-500/20' : 'bg-black/5 border-black/10 text-black hover:bg-emerald-50'
+                  }`} title="Modo Venda">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </button>
+              )}
+              {isWakeLockSupported && onToggleWakeLock && (
+                <button onClick={onToggleWakeLock}
+                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
+                  } ${isWakeLockActive ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}
+                  title={isWakeLockActive ? 'Tela ligada ativa' : 'Manter tela sempre ligada'}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </button>
+              )}
+              {onToggleTheme && (
+                <button onClick={onToggleTheme}
+                  className={`p-2 rounded-lg backdrop-blur-xl border transition-all active:scale-95 ${
+                    theme === 'dark' ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
+                  }`} title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}>
+                  {theme === 'dark' ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         )}
 

@@ -532,7 +532,7 @@ gerar_senha: {
   requiresPayment: false,
   isPremium: false,
   handler: async ({ companyId, setActiveModal, playText, slug }) => {
-    await playText('Gerando sua senha...');
+    playText('Gerando sua senha...');
     setActiveModal?.({
       type: 'GerarSenhaDisplay',
       data: { companyId, slug },

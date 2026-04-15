@@ -519,7 +519,7 @@ export default function GerarSenhaDisplay({
                     borderRadius: '12px',
                     padding: '20px',
                     textAlign: 'center',
-                    marginBottom: isMobile ? '0' : '20px',
+                    marginBottom: '12px',
                   }}>
                     <div style={{ color: colors.textSecondary, fontSize: '14px', marginBottom: '12px' }}>
                       Escaneie para acompanhar
@@ -529,6 +529,7 @@ export default function GerarSenhaDisplay({
                       padding: '16px',
                       borderRadius: '8px',
                       display: 'inline-block',
+                      marginBottom: '12px',
                     }}>
                       <img
                         src={qrCodeUrl}
@@ -536,6 +537,27 @@ export default function GerarSenhaDisplay({
                         style={{ width: '200px', height: '200px', objectFit: 'contain', display: 'block' }}
                       />
                     </div>
+                    
+                    {/* Botão de link clicável */}
+                    {slug && senha && (
+                      <a
+                        href={`https://minhai.app/fila-acompanhamento/${senha.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block',
+                          background: colors.accent,
+                          color: '#fff',
+                          padding: '12px 24px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                        }}
+                      >
+                        📱 Abrir Acompanhamento
+                      </a>
+                    )}
                   </div>
 
                   {/* Botões (só aparecem no desktop) */}

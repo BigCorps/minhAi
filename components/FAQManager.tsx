@@ -47,6 +47,13 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
   const [availableFunctions, setAvailableFunctions] = useState<AvailableFunction[]>([]);
   const [functionSuggestions, setFunctionSuggestions] = useState<AvailableFunction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [smartDevices, setSmartDevices] = useState<{ id: string; displayName: string }[]>([]);
+  const [loadingSmartDevices, setLoadingSmartDevices] = useState(false);
+  const [smartConfig, setSmartConfig] = useState<{
+    device_id: string;
+    device_name: string;
+    command: 'turnOn' | 'turnOff';
+  }>({ device_id: '', device_name: '', command: 'turnOn' });
 
   const supabase = createClient();
 
@@ -65,6 +72,17 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
     }
     loadFunctions();
   }, []);
+
+  useEffect(() => {
+    if (formData.function_key !== 'aparelhos_smart') return;
+    if (smartDevices.length > 0) return;
+    setLoadingSmartDevices(true);
+    supabase.functions
+      .invoke('smart-home-devices', { body: { action: 'list', companyId } })
+      .then(({ data }) => setSmartDevices(data?.devices ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingSmartDevices(false));
+  }, [formData.function_key]);
 
   async function loadFAQs() {
     try {
@@ -94,7 +112,18 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
         .filter(v => v.length > 0);
 
       let parsedParams: Record<string, unknown> | null = null;
-      if (formData.function_params_raw.trim()) {
+      if (formData.function_key === 'aparelhos_smart') {
+        if (!smartConfig.device_id) {
+          alert('Selecione um dispositivo smart.');
+          return;
+        }
+        parsedParams = {
+          action: 'smart_home_command',
+          device_id: smartConfig.device_id,
+          device_name: smartConfig.device_name,
+          command: smartConfig.command,
+        };
+      } else if (formData.function_params_raw.trim()) {
         try {
           parsedParams = JSON.parse(formData.function_params_raw);
         } catch {
@@ -181,6 +210,14 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
         ? JSON.stringify(faq.function_params, null, 2)
         : '',
     });
+    if (faq.function_key === 'aparelhos_smart' && faq.function_params) {
+      const p = faq.function_params as any;
+      setSmartConfig({
+        device_id: p.device_id ?? '',
+        device_name: p.device_name ?? '',
+        command: p.command ?? 'turnOn',
+      });
+    }
     setShowAddModal(true);
   }
 
@@ -188,6 +225,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
     setShowAddModal(false);
     setEditingFaq(null);
     setShowSuggestions(false);
+    setSmartConfig({ device_id: '', device_name: '', command: 'turnOn' });
     setFormData({
       question: '',
       answer: '',
@@ -221,6 +259,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
 
   function clearFunction() {
     setFormData(prev => ({ ...prev, function_key: '', function_params_raw: '' }));
+    setSmartConfig({ device_id: '', device_name: '', command: 'turnOn' });
     setShowSuggestions(false);
   }
 
@@ -311,7 +350,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                           ? 'bg-purple-500/20 text-purple-300'
                           : 'bg-purple-100 text-purple-800'
                       }`}>
-                        ⚡ {faq.function_key}
+                        {faq.function_key}
                       </span>
                     )}
                     <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
@@ -547,6 +586,84 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                   </button>
                 )}
               </div>
+
+              {/* Configurador Smart Home — só aparece quando aparelhos_smart é selecionado */}
+              {formData.function_key === 'aparelhos_smart' && (
+                <div className={`rounded-xl border p-4 space-y-3 ${
+                  isDark ? 'bg-slate-800/60 border-green-500/30' : 'bg-green-50 border-green-200'
+                }`}>
+                  <p className={`text-sm font-semibold flex items-center gap-2 ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                    Configurar Comando Smart Home
+                  </p>
+
+                  {/* Seletor de dispositivo */}
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                      Dispositivo
+                    </label>
+                    {loadingSmartDevices ? (
+                      <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Carregando dispositivos...</p>
+                    ) : smartDevices.length === 0 ? (
+                      <p className={`text-xs ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                        Nenhum dispositivo encontrado. Conecte sua conta Google Smart Home.
+                      </p>
+                    ) : (
+                      <select
+                        value={smartConfig.device_id}
+                        onChange={(e) => {
+                          const dev = smartDevices.find(d => d.id === e.target.value);
+                          setSmartConfig(prev => ({
+                            ...prev,
+                            device_id: e.target.value,
+                            device_name: dev?.displayName ?? '',
+                          }));
+                        }}
+                        className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                          isDark
+                            ? 'bg-slate-700 border-white/10 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        <option value="">Selecione o dispositivo...</option>
+                        {smartDevices.map(dev => (
+                          <option key={dev.id} value={dev.id}>{dev.displayName}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Seletor de ação */}
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                      Ação
+                    </label>
+                    <select
+                      value={smartConfig.command}
+                      onChange={(e) => setSmartConfig(prev => ({
+                        ...prev,
+                        command: e.target.value as 'turnOn' | 'turnOff',
+                      }))}
+                      className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                        isDark
+                          ? 'bg-slate-700 border-white/10 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                    >
+                      <option value="turnOn">Ligar</option>
+                      <option value="turnOff">Desligar</option>
+                    </select>
+                  </div>
+
+                  {/* Preview do JSON gerado */}
+                  {smartConfig.device_id && (
+                    <p className={`text-[10px] font-mono rounded px-2 py-1 ${
+                      isDark ? 'bg-slate-900/60 text-white/40' : 'bg-white text-gray-400'
+                    }`}>
+                      {`{ action: "smart_home_command", device_id: "${smartConfig.device_id}", command: "${smartConfig.command}" }`}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* FAQ ativa */}
               <div className="flex items-center gap-2">

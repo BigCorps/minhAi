@@ -1134,7 +1134,7 @@ case 'juntar_pdfs':
       if (matchedFAQ.function_key) {
         // FAQ com função vinculada — falar introdução e disparar função
         if (matchedFAQ.answer) await playText(matchedFAQ.answer);
-        handleFunctionClickSilent(matchedFAQ.function_key);
+        handleFunctionClickSilent(matchedFAQ.function_key, matchedFAQ.function_params ?? undefined);
       } else {
         // FAQ simples — apenas responder
         await playText(matchedFAQ.answer);
@@ -1348,7 +1348,7 @@ const handleTextMessage = async (message: string) => {
     console.log('📚 FAQ resolvida (texto):', matchedFAQ.question);
     if (matchedFAQ.function_key) {
       if (matchedFAQ.answer) await playText(matchedFAQ.answer);
-      handleFunctionClickSilent(matchedFAQ.function_key);
+      handleFunctionClickSilent(matchedFAQ.function_key, matchedFAQ.function_params ?? undefined);
     } else {
       await playText(matchedFAQ.answer);
     }
@@ -1475,7 +1475,7 @@ const handleTextMessage = async (message: string) => {
 
         if (matchedFAQ.function_key) {
           if (matchedFAQ.answer) capturedText = matchedFAQ.answer;
-          handleFunctionClickSilent(matchedFAQ.function_key);
+          handleFunctionClickSilent(matchedFAQ.function_key, matchedFAQ.function_params ?? undefined);
         } else {
           capturedText = matchedFAQ.answer;
         }
@@ -1618,7 +1618,7 @@ const handleTextMessage = async (message: string) => {
   };
 
   // ── handleFunctionClickSilent ─────────────────────────────
-  const handleFunctionClickSilent = (functionKey: string) => {
+  const handleFunctionClickSilent = (functionKey: string, functionParams?: any) => {
     const modalOnlyFunctions: Record<string, ActiveModal> = {
       tocar_video:        { type: 'TocarVideoDisplay',                data: { companyId, query: '' } },
       meu_sistema:        { type: 'MeuSistemaDisplay',                data: { companyId } },
@@ -1639,7 +1639,6 @@ const handleTextMessage = async (message: string) => {
       playlist:           { type: 'PlaylistDisplay',                  data: { companyId } },
       porta_retrato:      { type: 'PortaRetratoDisplay',              data: { companyId } },
       painel_ofertas:     { type: 'PainelOfertasDisplay',             data: { companyId } },
-      aparelhos_smart:    { type: 'AparelhosSmartDisplay',            data: { companyId, transcript: '' } },
       confirmar_presenca: { type: 'ConfirmPresenceModal',             data: { companyId } },
       reagendar_compromisso: { type: 'RescheduleModal',               data: { companyId } },
       cancelar_agendamento:  { type: 'CancelAppointmentModal',        data: { companyId } },
@@ -1681,6 +1680,7 @@ const handleTextMessage = async (message: string) => {
           transcript: '',
           companyId,
           functionSettings,
+          functionParams,
           playText: () => Promise.resolve(),
           setIsProcessing,
           sessionId,

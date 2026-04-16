@@ -72,6 +72,7 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   const [showKioskBadge, setShowKioskBadge] = useState(false);
   const badgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const anyModalOpenRef = useRef(false);
+  const [isModalOpenState, setIsModalOpenState] = useState(false);
   
   const { isSupported, isActive, error, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [showToast, setShowToast] = useState(false);
@@ -131,12 +132,11 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
   }, []);
 
   useEffect(() => {
-    const onOpen  = () => { anyModalOpenRef.current = true; };
-    const onClose = () => {
-      setTimeout(() => {
-        anyModalOpenRef.current = false;
-      }, 300);
-    };
+const onOpen  = () => { anyModalOpenRef.current = true; setIsModalOpenState(true); };
+const onClose = () => {
+  setTimeout(() => { anyModalOpenRef.current = false; }, 300);
+  setIsModalOpenState(false);
+};
     window.addEventListener('eai:modalOpen',  onOpen);
     window.addEventListener('eai:modalClose', onClose);
     return () => {
@@ -1058,7 +1058,9 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
       {/* ── SEMPRE MONTADOS — nunca reinicializam ao trocar de modo ── */}
       {assistantStarted && (
-        <div className="fixed bottom-8 left-0 right-0 z-[55]">
+        <div className={`fixed bottom-8 left-0 right-0 z-[55] transition-all duration-500 ease-in-out ${
+          isModalOpenState ? 'opacity-0 pointer-events-none translate-y-10' : 'opacity-100 translate-y-0'
+        }`}>
           <CategoryCarousel
             companyId={company.id}
             onFunctionClick={(functionKey) => {

@@ -256,6 +256,25 @@ export function ActionModals({
     setMounted(true);
   }, []);
 
+  // ✅ CORREÇÃO: Disparar eventos globais para ocultar/mostrar o carrossel
+  // Isso garante que QUALQUER modal aberto via ActionModals oculte o carrossel automaticamente.
+  useEffect(() => {
+    if (activeModal) {
+      // Dispara evento de abertura
+      window.dispatchEvent(new CustomEvent('eai:modalOpen'));
+    } else {
+      // Dispara evento de fechamento (com pequeno delay para suavizar transições se necessário)
+      window.dispatchEvent(new CustomEvent('eai:modalClose'));
+    }
+
+    // Cleanup: garante que o carrossel volte se o componente for desmontado inesperadamente
+    return () => {
+      if (activeModal) {
+        window.dispatchEvent(new CustomEvent('eai:modalClose'));
+      }
+    };
+  }, [activeModal]);
+
   if (!activeModal || !mounted) return null;
 
   const Component = MODAL_COMPONENTS[activeModal.type];

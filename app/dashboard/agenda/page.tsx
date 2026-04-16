@@ -28,6 +28,8 @@ import {
   Wifi,
   WifiOff,
   Home,
+  Mic,
+  X,
 } from 'lucide-react';
 
 import FullCalendar from '@fullcalendar/react';
@@ -122,6 +124,9 @@ function AgendaPageContent() {
   const [smartDevices, setSmartDevices] = useState<SmartDevice[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
   const [deviceAction, setDeviceAction] = useState<string | null>(null);
+  const [quickFaqDevice, setQuickFaqDevice] = useState<SmartDevice | null>(null);
+  const [quickFaqAlias, setQuickFaqAlias] = useState('');
+  const [savingFaqs, setSavingFaqs] = useState(false);
 
   // General
   const [loading, setLoading] = useState(false);
@@ -288,6 +293,57 @@ function AgendaPageContent() {
       setTimeout(loadSmartDevices, 1500);
     } catch { }
     finally { setDeviceAction(null); }
+  }
+
+  async function createQuickFAQs() {
+    if (!quickFaqDevice || !quickFaqAlias.trim()) return;
+    setSavingFaqs(true);
+    try {
+      const alias = quickFaqAlias.trim();
+      const faqs = [
+        {
+          company_id: selectedCompanyId,
+          question: `Ligar ${alias}`,
+          answer: `Ligando ${alias} para você.`,
+          variations: [`liga ${alias}`, `acende ${alias}`, `turn on ${alias}`],
+          is_active: true,
+          function_key: 'aparelhos_smart',
+          function_params: {
+            action: 'smart_home_command',
+            device_id: quickFaqDevice.id,
+            device_name: alias,
+            command: 'turnOn',
+          },
+        },
+        {
+          company_id: selectedCompanyId,
+          question: `Desligar ${alias}`,
+          answer: `Desligando ${alias}.`,
+          variations: [`desliga ${alias}`, `apaga ${alias}`, `turn off ${alias}`],
+          is_active: true,
+          function_key: 'aparelhos_smart',
+          function_params: {
+            action: 'smart_home_command',
+            device_id: quickFaqDevice.id,
+            device_name: alias,
+            command: 'turnOff',
+          },
+        },
+      ];
+
+      const supabase = createClient();
+      const { error } = await supabase.from('faq_entries').insert(faqs);
+      if (error) throw error;
+
+      setQuickFaqDevice(null);
+      setQuickFaqAlias('');
+      alert(`✅ Comandos criados: "Ligar ${alias}" e "Desligar ${alias}"`);
+    } catch (err) {
+      console.error('Erro ao criar FAQs:', err);
+      alert('Erro ao criar comandos. Tente novamente.');
+    } finally {
+      setSavingFaqs(false);
+    }
   }
 
   function handleGoToConnect() {
@@ -600,7 +656,7 @@ function AgendaPageContent() {
                     <>
                       <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
                         <p className="text-sm text-green-800 dark:text-green-200">
-                          🏠 {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
+                          {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
                         </p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -614,9 +670,20 @@ function AgendaPageContent() {
                                   <p className="text-xs text-gray-500 dark:text-gray-400">{device.type.split('.').pop()}</p>
                                 </div>
                               </div>
-                              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${device.online ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                                {device.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                                {device.online ? 'Online' : 'Offline'}
+                              <div className="flex items-center gap-2">
+                                {/* Badge online/offline */}
+                                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${device.online ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                  {device.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                                  {device.online ? 'Online' : 'Offline'}
+                                </div>
+                                {/* Botão Criar Comando */}
+                                <button
+                                  onClick={() => { setQuickFaqDevice(device); setQuickFaqAlias(device.displayName); }}
+                                  title="Criar comando de voz"
+                                  className="p-1 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 transition"
+                                >
+                                  <Mic className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
                             {device.online && (
@@ -651,6 +718,58 @@ function AgendaPageContent() {
           )}
         </div>
       </div>
+
+      {/* Modal: Criar Comando de Voz */}
+      {quickFaqDevice && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                Criar Comando de Voz
+              </h3>
+              <button onClick={() => setQuickFaqDevice(null)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Dispositivo: <span className="font-semibold text-gray-700 dark:text-white">{quickFaqDevice.displayName}</span>
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-1">
+                Apelido do dispositivo
+              </label>
+              <input
+                type="text"
+                value={quickFaqAlias}
+                onChange={(e) => setQuickFaqAlias(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Ex: Luz da Sala, TV do Quarto..."
+              />
+              <p className="text-[10px] text-gray-400 mt-1">
+                Serão criados: "Ligar {quickFaqAlias || '...'}" e "Desligar {quickFaqAlias || '...'}"
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={createQuickFAQs}
+                disabled={savingFaqs || !quickFaqAlias.trim()}
+                className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+              >
+                {savingFaqs ? 'Criando...' : 'Criar Comandos'}
+              </button>
+              <button
+                onClick={() => setQuickFaqDevice(null)}
+                className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-white rounded-xl text-sm font-semibold transition"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

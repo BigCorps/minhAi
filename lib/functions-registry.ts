@@ -66,6 +66,7 @@ export interface FunctionDefinition {
     transcript: string;
     companyId: string;
     functionSettings: any;
+    functionParams?: any;
     playText: (text: string) => Promise<void>;
     setIsProcessing: (processing: boolean) => void;
     setActiveModal?: (modal: any) => void;
@@ -3175,13 +3176,49 @@ aparelhos_smart: {
   shortDescription: 'Controla dispositivos Smart Home por voz.',
   icon: '🏠', color: '#4CAF50',
   saveToHistory: true, creditsPerUse: 1, requiresPayment: false, isPremium: false,
-  handler: async ({ transcript, playText, setActiveModal, companyId }) => {
-    try {
-      setActiveModal?.({ type: 'AparelhosSmartDisplay', data: { companyId, transcript } });
-      playText('Abrindo controle de dispositivos...').catch(() => {});
+handler: async ({ transcript, playText, setActiveModal, companyId, functionParams }) => {
+  try {
+    // ── Headless: FAQ com comando direto (ex: "Ligar luz da sala") ──
+    if (functionParams?.action === 'smart_home_command') {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token ?? ''}`,
+          },
+          body: JSON.stringify({
+            action: 'command',
+            companyId,
+            deviceId: functionParams.device_id,
+            command: functionParams.command,
+            params: functionParams.params ?? {},
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        await playText('Não consegui executar o comando. Tente novamente.');
+        return false;
+      }
+
+      // Fala a resposta da FAQ (se veio pelo clique do modal) ou silencia
+      if (functionParams.answer) {
+        await playText(functionParams.answer);
+      }
       return true;
-    } catch { return false; }
-  },
+    }
+
+    // ── Comportamento padrão: abre o modal ──
+    setActiveModal?.({ type: 'AparelhosSmartDisplay', data: { companyId, transcript } });
+    playText('Abrindo controle de dispositivos...').catch(() => {});
+    return true;
+  } catch { return false; }
+},
 },
   
 cadastro: {

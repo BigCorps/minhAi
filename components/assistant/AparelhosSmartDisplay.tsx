@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { createClient } from '@/lib/supabase-browser';
 import { X, Loader2, Wifi, WifiOff, Thermometer, Wind, Lightbulb, Tv, Speaker } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useModalVoiceClose } from '@/components/VoiceAssistant/hooks/useModalVoiceClose';
@@ -12,6 +13,14 @@ interface SmartDevice {
   displayName: string;
   online: boolean;
   traits: Record<string, any>;
+}
+
+interface DeviceFAQ {
+  id: string;
+  question: string;
+  answer: string;
+  variations: string[];
+  function_params: Record<string, any>;
 }
 
 interface AparelhosSmartDisplayProps {
@@ -56,6 +65,7 @@ export default function AparelhosSmartDisplay({
   const [timeLeft, setTimeLeft] = useState(AUTO_CLOSE);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [faqs, setFaqs] = useState<DeviceFAQ[]>([]);
 
   const hasClosedRef = useRef(false);
   const isDark = theme === 'dark';
@@ -92,6 +102,17 @@ export default function AparelhosSmartDisplay({
   };
 
   useEffect(() => { fetchDevices(); }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('faq_entries')
+      .select('id, question, answer, variations, function_params')
+      .eq('company_id', companyId)
+      .eq('function_key', 'aparelhos_smart')
+      .eq('is_active', true)
+      .then(({ data }) => setFaqs((data as DeviceFAQ[]) ?? []));
+  }, [companyId]);
 
   // Auto-close
   useEffect(() => {
@@ -149,21 +170,45 @@ export default function AparelhosSmartDisplay({
     onClose();
   };
 
+  // ── Executa ação de uma FAQ (via clique ou voz interna) ──
+  const executeFaqAction = async (faq: DeviceFAQ) => {
+    const p = faq.function_params;
+    if (!p?.device_id || !p?.command) return;
+    setToast(`Executando: ${faq.question}`);
+    await sendCommand(
+      p.device_id,
+      p.command === 'turnOn'
+        ? 'sdm.devices.commands.ThermostatMode.SetMode'
+        : 'sdm.devices.commands.ThermostatMode.SetMode',
+      { mode: p.command === 'turnOn' ? 'HEAT' : 'OFF' }
+    );
+    if (faq.answer) await playText(faq.answer);
+  };
+
   useModalVoiceClose(handleClose);
 
   useModalVoiceCommand({
     active: true,
     onTranscript: (transcript) => {
-      const t = transcript.toLowerCase().trim()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[.,!?;:]+/g, '');
+      const normalize = (s: string) =>
+        s.toLowerCase().trim()
+         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+         .replace(/[.,!?;:]+/g, '');
+      const t = normalize(transcript);
 
       if (['fechar', 'cancelar', 'sair'].some(c => t.includes(c))) { handleClose(); return; }
       if (['atualizar', 'recarregar', 'refresh'].some(c => t.includes(c))) { fetchDevices(); return; }
 
-      // Ligar/desligar por nome
+      // ── 1. Checar FAQs vinculadas primeiro ──
+      const matchedFaq = faqs.find(faq => {
+        const terms = [faq.question, ...(faq.variations ?? [])].map(normalize);
+        return terms.some(term => t.includes(term) || term.includes(t));
+      });
+      if (matchedFaq) { executeFaqAction(matchedFaq); return; }
+
+      // ── 2. Fallback: Ligar/desligar pelo displayName ──
       devices.forEach(device => {
-        const name = device.displayName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const name = normalize(device.displayName);
         if (t.includes(name)) {
           if (['ligar', 'ativar', 'acender', 'on'].some(c => t.includes(c))) {
             sendCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'HEAT' });
@@ -199,7 +244,6 @@ export default function AparelhosSmartDisplay({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-xl">
-                🏠
               </div>
               <div>
                 <h2 className={`text-xl font-bold ${textPrimary}`}>Aparelhos Smart</h2>
@@ -293,6 +337,33 @@ export default function AparelhosSmartDisplay({
                       <p className={`text-xs ${textMuted} text-center w-full`}>Dispositivo offline</p>
                     )}
                   </div>
+
+                  {/* ── Comandos de Voz (FAQs vinculadas) ── */}
+                  {(() => {
+                    const deviceFaqs = faqs.filter(
+                      f => (f.function_params as any)?.device_id === device.id
+                    );
+                    if (deviceFaqs.length === 0) return null;
+                    return (
+                      <div className="mt-2 pt-2 border-t border-white/10">
+                        <p className={`text-[9px] uppercase font-bold tracking-wide mb-1.5 ${textMuted}`}>
+                          Comandos de Voz
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {deviceFaqs.map(faq => (
+                            <button
+                              key={faq.id}
+                              onClick={() => executeFaqAction(faq)}
+                              disabled={actionLoading === device.id}
+                              className="px-2 py-1 rounded-lg text-[10px] font-medium bg-green-500/10 hover:bg-green-500/25 text-green-400 transition disabled:opacity-40"
+                            >
+                              {faq.question}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -306,7 +377,7 @@ export default function AparelhosSmartDisplay({
                 isDarkMode ? 'text-white/30 hover:text-white/60 hover:bg-white/5' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
               }`}
             >
-              🔄 Atualizar dispositivos
+              Atualizar dispositivos
             </button>
           )}
 
@@ -314,8 +385,7 @@ export default function AparelhosSmartDisplay({
           <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${
             isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'
           }`}>
-            <span>🎤</span>
-            <span>Diga <strong>"ligar [dispositivo]"</strong>, <strong>"desligar [dispositivo]"</strong> ou <strong>"fechar"</strong></span>
+            <span>Diga o nome de um <strong>Comando de Voz</strong>, <strong>"ligar [dispositivo]"</strong> ou <strong>"fechar"</strong></span>
           </div>
         </div>
 

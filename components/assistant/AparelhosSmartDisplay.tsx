@@ -138,17 +138,23 @@ export default function AparelhosSmartDisplay({
     }
   }, [toast]);
 
-  const sendCommand = async (deviceId: string, command: string, params: any = {}) => {
+const sendCommand = async (deviceId: string, command: string, params: any = {}) => {
     setActionLoading(deviceId);
     try {
+      // 1. Pegue a sessão do usuário logado antes de fazer o fetch
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            // 2. Envie o access_token real do usuário, e não a Anon Key
+            'Authorization': `Bearer ${session?.access_token ?? ''}`, 
           },
+          // Aqui os nomes já estão certinhos (snake_case)
           body: JSON.stringify({ company_id: companyId, action: 'command', device_id: deviceId, command, params }),
         }
       );
@@ -162,7 +168,7 @@ export default function AparelhosSmartDisplay({
       setActionLoading(null);
     }
   };
-
+  
   const handleClose = () => {
     if (hasClosedRef.current) return;
     hasClosedRef.current = true;

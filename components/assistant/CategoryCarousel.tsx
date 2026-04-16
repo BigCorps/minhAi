@@ -66,18 +66,6 @@ export default function CategoryCarousel({
   const [hoveredFunction, setHoveredFunction] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [clickedChipRect, setClickedChipRect] = useState<DOMRect | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-useEffect(() => {
-  const onOpen = () => setIsModalOpen(true);
-  const onClose = () => setIsModalOpen(false);
-  window.addEventListener('eai:modalOpen', onOpen);
-  window.addEventListener('eai:modalClose', onClose);
-  return () => {
-    window.removeEventListener('eai:modalOpen', onOpen);
-    window.removeEventListener('eai:modalClose', onClose);
-  };
-}, []);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -246,11 +234,8 @@ useEffect(() => {
     };
   };
 
-return (
-  <div className={`relative w-full transition-all duration-500 ease-in-out ${
-    isModalOpen ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'
-  }`}>
-    
+  return (
+    <div className="relative w-full">
       {/* Painel flutuante de funções */}
       {activeCategory && (
         <div

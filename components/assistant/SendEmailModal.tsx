@@ -5,7 +5,7 @@ import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModal
 import { GoogleSpeechWebSocket } from '@/lib/google-speech-websocket';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { createPortal } from 'react-dom';
-import { Check, X, Mail, Loader2, AlertCircle, Mic } from 'lucide-react';
+import { Check, X, Mail, Loader2, AlertCircle, Mic, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 
 interface SendEmailModalProps {
@@ -28,6 +28,7 @@ export default function SendEmailModal({
   const [isRecording, setIsRecording] = useState(false);
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
   const [companyEmail, setCompanyEmail] = useState<string>('');
   const [recipientEmail, setRecipientEmail] = useState<string>('');
@@ -447,6 +448,28 @@ export default function SendEmailModal({
     }
   };
 
+  const handleEnhanceText = async () => {
+    if (!emailBody.trim()) return;
+    setIsEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('aprimorar-texto-email', {
+        body: { text: emailBody.trim() },
+      });
+      if (error) throw error;
+      if (data?.enhanced_text) {
+        setEmailBody(data.enhanced_text);
+        finalTranscriptRef.current = data.enhanced_text;
+        showToast('✨ Texto aprimorado com sucesso!', 'success');
+      } else {
+        showToast('Não foi possível aprimorar o texto.', 'warning');
+      }
+    } catch (err: any) {
+      showToast('Erro ao aprimorar texto. Tente novamente.', 'error');
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   const bg = isDark ? 'bg-slate-900' : 'bg-white';
   const border = isDark ? 'border-slate-700' : 'border-gray-200';
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -514,7 +537,7 @@ export default function SendEmailModal({
                     onClick={() => {
                       setEmailBody('');
                       finalTranscriptRef.current = '';
-                      setStep('confirming');
+                      setIsManualMode(true);
                     }}
                     className={`mt-4 px-6 py-2 rounded-lg ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-200 hover:bg-gray-300'} ${textPrimary} font-medium transition`}
                   >
@@ -664,6 +687,19 @@ export default function SendEmailModal({
                   className={`w-full px-4 py-3 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-gray-100'} ${textPrimary} border ${border} focus:ring-2 focus:ring-blue-500 resize-none`}
                 />
               </div>
+
+              {/* Botão Aprimorar Texto */}
+              <button
+                onClick={handleEnhanceText}
+                disabled={isEnhancing || !emailBody.trim() || isSending}
+                className="w-full px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 text-sm"
+              >
+                {isEnhancing ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Aprimorando...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" />Aprimorar Texto</>
+                )}
+              </button>
 
               <div className={`p-3 rounded-lg ${isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'} border`}>
                 <p className={`text-sm ${isDark ? 'text-green-200' : 'text-green-800'}`}>

@@ -3193,8 +3193,8 @@ handler: async ({ transcript, playText, setActiveModal, companyId, functionParam
           },
           body: JSON.stringify({
             action: 'command',
-            companyId,
-            deviceId: functionParams.device_id,
+            company_id: companyId,             // <-- Corrigido para snake_case
+            device_id: functionParams.device_id, // <-- Corrigido para snake_case
             command: functionParams.command,
             params: functionParams.params ?? {},
           }),

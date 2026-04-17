@@ -22,6 +22,7 @@ import { useGroqContext } from '@/hooks/useGroqContext';
 import { useProfile } from '@/hooks/useProfile';
 import { getContextualRoute } from '@/lib/routing-utils';
 import { createClient } from '@/lib/supabase-browser';
+import { useOnlinePresence } from '@/hooks/useOnlinePresence';
 
 // ── Ponto 1: Novos imports ─────────────────────────────────
 import { useFAQs } from './hooks/useFAQs';
@@ -159,6 +160,8 @@ export function VoiceAssistantWithWakeWord({
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
   const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
+  const profileRef = useRef(profile);
+  useEffect(() => { profileRef.current = profile; }, [profile]);
   const groqContextRef = useGroqContext(companyId, profile);
 
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────
@@ -278,12 +281,24 @@ export function VoiceAssistantWithWakeWord({
     };
     window.addEventListener('keydown', handleKeyPress);
 
+// ── Listener para chamada de vídeo recebida do dashboard ──
+    const handleIncomingCall = (event: any) => {
+      const { callId, roomUrl, receiverToken, callerName } = event.detail;
+      if (!profileRef.current) return;
+      setActiveModal({
+        type: 'VideoCallIncomingDisplay',
+        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+      });
+    };
+    window.addEventListener('eai:incomingVideoCall', handleIncomingCall);
+
     return () => {
       isActiveRef.current = false;
       cleanup();
       window.removeEventListener('verProdutoPix', handleVerProdutoPix);
       window.removeEventListener('voiceAssistantFunctionClick', handleExternalFunctionClick);
       window.removeEventListener('keydown', handleKeyPress);
+      window.removeEventListener('eai:incomingVideoCall', handleIncomingCall);
     };
   }, []);
 
@@ -625,6 +640,20 @@ export function VoiceAssistantWithWakeWord({
           setActiveModal({ type: 'TocarVideoDisplay', data: { companyId, query: '' } });
           pt('Qual vídeo você quer assistir? Me diga o assunto.').catch(() => {});
           break;
+
+case 'solicitar_video_chamada':
+  await stopGoogleSpeech();
+  if (!profile || !['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem'].includes(profile.tipo)) {
+    await pt('Esta função está disponível apenas para colaboradores logados.');
+    setIsProcessing(false);
+    break;
+  }
+  setActiveModal({
+    type: 'VideoCallRequestDisplay',
+    data: { companyId, profileId: profile.id, profileName: profile.nome },
+  });
+  pt('Solicitando vídeo chamada com o proprietário...').catch(() => {});
+  break;
 
 case 'fila_atendimento':
   stopGoogleSpeech();

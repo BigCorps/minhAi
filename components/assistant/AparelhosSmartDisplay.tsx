@@ -13,6 +13,7 @@ interface SmartDevice {
   displayName: string;
   online: boolean;
   traits: Record<string, any>;
+  provider?: 'google' | 'tuya'; // ✅ ETAPA 5
 }
 
 interface DeviceFAQ {
@@ -70,28 +71,47 @@ export default function AparelhosSmartDisplay({
   const hasClosedRef = useRef(false);
   const isDark = theme === 'dark';
 
+  // ✅ ETAPA 5 — fetch paralelo Google + Tuya
   const fetchDevices = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`,
-        {
+      const [googleRes, tuyaRes] = await Promise.allSettled([
+        fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({ company_id: companyId, action: 'list' }),
-        }
-      );
-      const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error || 'Erro ao buscar dispositivos');
-      setDevices(json.devices || []);
-      if (json.devices?.length === 0) {
-        playText('Nenhum dispositivo encontrado na conta Google.').catch(() => {});
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tuya-smart-home`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ action: 'list', company_id: companyId }),
+        }).then(r => r.json()),
+      ]);
+
+      const googleDevices: SmartDevice[] =
+        googleRes.status === 'fulfilled'
+          ? (googleRes.value.devices ?? []).map((d: any) => ({ ...d, provider: 'google' as const }))
+          : [];
+
+      const tuyaDevices: SmartDevice[] =
+        tuyaRes.status === 'fulfilled'
+          ? (tuyaRes.value.devices ?? [])
+          : [];
+
+      const allDevices = [...googleDevices, ...tuyaDevices];
+      setDevices(allDevices);
+
+      if (allDevices.length === 0) {
+        playText('Nenhum dispositivo encontrado.').catch(() => {});
       } else {
-        playText(`${json.devices.length} dispositivos encontrados.`).catch(() => {});
+        playText(`${allDevices.length} dispositivos encontrados.`).catch(() => {});
       }
     } catch (err: any) {
       setError(err.message);
@@ -138,37 +158,69 @@ export default function AparelhosSmartDisplay({
     }
   }, [toast]);
 
-const sendCommand = async (deviceId: string, command: string, params: any = {}) => {
-    setActionLoading(deviceId);
+  // ✅ ETAPA 5 — sendCommand roteado por provider
+  const sendCommand = async (
+    device: SmartDevice,
+    commandData: { type: 'google' | 'tuya'; payload: any }
+  ) => {
+    setActionLoading(device.id);
     try {
-      // 1. Pegue a sessão do usuário logado antes de fazer o fetch
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const isTuya = device.provider === 'tuya' || commandData.type === 'tuya';
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${isTuya ? 'tuya-smart-home' : 'smart-home-devices'}`;
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/smart-home-devices`,
-        {
+      let body: string;
+      if (isTuya) {
+        body = JSON.stringify({
+          action: 'command',
+          company_id: companyId,
+          device_id: device.id,
+          commands: commandData.payload,
+        });
+      } else {
+        // Google: precisa do access_token real
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        body = JSON.stringify({
+          company_id: companyId,
+          action: 'command',
+          device_id: device.id,
+          command: commandData.payload.command,
+          params: commandData.payload.params ?? {},
+        });
+        const res = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // 2. Envie o access_token real do usuário, e não a Anon Key
-            'Authorization': `Bearer ${session?.access_token ?? ''}`, 
+            'Authorization': `Bearer ${session?.access_token ?? ''}`,
           },
-          // Aqui os nomes já estão certinhos (snake_case)
-          body: JSON.stringify({ company_id: companyId, action: 'command', device_id: deviceId, command, params }),
-        }
-      );
+          body,
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        setToast('Comando enviado!');
+        setTimeout(fetchDevices, 1500);
+        return;
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body,
+      });
       const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error);
+      if (!json.success) throw new Error(json.error);
       setToast('Comando enviado!');
       setTimeout(fetchDevices, 1500);
-    } catch (err: any) {
+    } catch {
       setToast('Erro ao executar comando.');
     } finally {
       setActionLoading(null);
     }
   };
-  
+
   const handleClose = () => {
     if (hasClosedRef.current) return;
     hasClosedRef.current = true;
@@ -176,17 +228,35 @@ const sendCommand = async (deviceId: string, command: string, params: any = {}) 
     onClose();
   };
 
-  // ── Executa ação de uma FAQ (via clique ou voz interna) ──
+  // ✅ ETAPA 5 — executeFaqAction roteado por provider
   const executeFaqAction = async (faq: DeviceFAQ) => {
     const p = faq.function_params;
     if (!p?.device_id || !p?.command) return;
     setToast(`Executando: ${faq.question}`);
+
+    // Encontra o device na lista para obter o provider atual
+    const device = devices.find(d => d.id === p.device_id) ?? {
+      id: p.device_id,
+      type: '',
+      displayName: p.device_name ?? '',
+      online: true,
+      traits: {},
+      provider: (p.provider ?? 'google') as 'google' | 'tuya',
+    };
+
+    const isTuya = (p.provider ?? device.provider) === 'tuya';
+
     await sendCommand(
-      p.device_id,
-      p.command === 'turnOn'
-        ? 'sdm.devices.commands.ThermostatMode.SetMode'
-        : 'sdm.devices.commands.ThermostatMode.SetMode',
-      { mode: p.command === 'turnOn' ? 'HEAT' : 'OFF' }
+      device,
+      isTuya
+        ? { type: 'tuya', payload: [{ code: 'switch_1', value: p.command === 'turnOn' }] }
+        : {
+            type: 'google',
+            payload: {
+              command: 'sdm.devices.commands.ThermostatMode.SetMode',
+              params: { mode: p.command === 'turnOn' ? 'HEAT' : 'OFF' },
+            },
+          }
     );
     if (faq.answer) await playText(faq.answer);
   };
@@ -213,13 +283,24 @@ const sendCommand = async (deviceId: string, command: string, params: any = {}) 
       if (matchedFaq) { executeFaqAction(matchedFaq); return; }
 
       // ── 2. Fallback: Ligar/desligar pelo displayName ──
+      // ✅ ETAPA 5 — payload correto por provider no fallback de voz
       devices.forEach(device => {
         const name = normalize(device.displayName);
         if (t.includes(name)) {
           if (['ligar', 'ativar', 'acender', 'on'].some(c => t.includes(c))) {
-            sendCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'HEAT' });
+            sendCommand(
+              device,
+              device.provider === 'tuya'
+                ? { type: 'tuya', payload: [{ code: 'switch_1', value: true }] }
+                : { type: 'google', payload: { command: 'sdm.devices.commands.ThermostatMode.SetMode', params: { mode: 'HEAT' } } }
+            );
           } else if (['desligar', 'apagar', 'off'].some(c => t.includes(c))) {
-            sendCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'OFF' });
+            sendCommand(
+              device,
+              device.provider === 'tuya'
+                ? { type: 'tuya', payload: [{ code: 'switch_1', value: false }] }
+                : { type: 'google', payload: { command: 'sdm.devices.commands.ThermostatMode.SetMode', params: { mode: 'OFF' } } }
+            );
           }
         }
       });
@@ -286,7 +367,7 @@ const sendCommand = async (deviceId: string, command: string, params: any = {}) 
             <div className="text-center py-12">
               <p className="text-4xl mb-4">🔌</p>
               <p className={`${textMuted} text-sm`}>Nenhum dispositivo encontrado.</p>
-              <p className={`${textMuted} text-xs mt-1`}>Certifique-se de ter dispositivos Google Home configurados.</p>
+              <p className={`${textMuted} text-xs mt-1`}>Certifique-se de ter dispositivos Google Home ou Tuya configurados.</p>
             </div>
           )}
 
@@ -301,6 +382,15 @@ const sendCommand = async (deviceId: string, command: string, params: any = {}) 
                   <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${
                     device.online ? 'bg-green-400' : 'bg-gray-400'
                   }`} />
+
+                  {/* Badge provider */}
+                  {device.provider === 'tuya' && (
+                    <div className="absolute top-3 left-3">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400">
+                        Tuya
+                      </span>
+                    </div>
+                  )}
 
                   {/* Ícone e nome */}
                   <div
@@ -317,21 +407,29 @@ const sendCommand = async (deviceId: string, command: string, params: any = {}) 
                     {device.online ? 'Online' : 'Offline'}
                   </p>
 
-                  {/* Ações baseadas no tipo */}
+                  {/* ✅ ETAPA 5 — Botões Ligar/Desligar roteados por provider */}
                   <div className="flex gap-2">
                     {device.online && (
                       <>
-                        {/* Ligar */}
                         <button
-                          onClick={() => sendCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'HEAT' })}
+                          onClick={() => sendCommand(
+                            device,
+                            device.provider === 'tuya'
+                              ? { type: 'tuya', payload: [{ code: 'switch_1', value: true }] }
+                              : { type: 'google', payload: { command: 'sdm.devices.commands.ThermostatMode.SetMode', params: { mode: 'HEAT' } } }
+                          )}
                           disabled={actionLoading === device.id}
                           className="flex-1 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition disabled:opacity-50"
                         >
                           {actionLoading === device.id ? '...' : 'Ligar'}
                         </button>
-                        {/* Desligar */}
                         <button
-                          onClick={() => sendCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'OFF' })}
+                          onClick={() => sendCommand(
+                            device,
+                            device.provider === 'tuya'
+                              ? { type: 'tuya', payload: [{ code: 'switch_1', value: false }] }
+                              : { type: 'google', payload: { command: 'sdm.devices.commands.ThermostatMode.SetMode', params: { mode: 'OFF' } } }
+                          )}
                           disabled={actionLoading === device.id}
                           className="flex-1 py-1.5 text-xs rounded-lg bg-red-500/80 hover:bg-red-600 text-white font-medium transition disabled:opacity-50"
                         >

@@ -122,6 +122,12 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'fichas_producao_conversacional': dynamic(() => import('@/components/assistant/FichaConversacionalDisplay'), { ssr: false }),
   'FichaProducaoConversacionalDisplay': dynamic(() => import('@/components/assistant/FichaConversacionalDisplay'), { ssr: false }),
 
+
+// ── Calculadoras e conversão ──────────────────────────────
+  'ConverterMedidasDisplay': dynamic(() => import('@/components/assistant/ConverterMedidasDisplay'), { ssr: false }),
+  'CalculadoraJurosDisplay': dynamic(() => import('@/components/assistant/CalculadoraJurosDisplay'), { ssr: false }),
+  'CalculadoraIMCDisplay': dynamic(() => import('@/components/assistant/CalculadoraIMCDisplay'), { ssr: false }),
+
   // ── Cadastro e perfil ─────────────────────────────────────
   'RegistrationDisplay': dynamic(() => import('@/components/assistant/RegistrationDisplay'), { ssr: false }),
   'LoginClienteDisplay': dynamic(() => import('@/components/assistant/LoginClienteDisplay'), { ssr: false }),

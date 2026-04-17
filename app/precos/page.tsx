@@ -39,7 +39,7 @@ const PLANOS = [
   {
     id: 'profissional',
     nome: 'Profissional',
-    preco: 'R$ 0,15',
+    preco: 'R$ 0,05',
     periodicidade: 'por interação',
     descricao: 'Para negócios que querem automatizar o atendimento de verdade.',
     destaque: true,
@@ -176,8 +176,8 @@ export default function PrecosPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           {[
-            { icone: '⚡', titulo: 'Rápido de configurar', texto: 'Seu assistente funcionando em menos de 10 minutos, sem precisar de programação.' },
-            { icone: '💸', titulo: 'Pague só pelo uso', texto: 'Sem mensalidade fixa. Você paga R$ 0,15 por interação real com seu cliente.' },
+            { icone: '⚡', titulo: 'Rápido de configurar', texto: 'Seu assistente funcionando em menos de 5 minutos, sem precisar de programação.' },
+            { icone: '💸', titulo: 'Pague só pelo uso', texto: 'Sem mensalidade fixa. Você paga a partir de R$ 0,05 por interação real com seu cliente.' },
             { icone: '🎨', titulo: '100% customizável', texto: 'Adapte o assistente ao seu negócio: nome, personalidade, funções e visual próprio.' },
           ].map(({ icone, titulo, texto }) => (
             <div key={titulo} className="bg-white/5 rounded-xl p-6 border border-white/10">
@@ -239,7 +239,7 @@ export default function PrecosPage() {
               '@type': 'Offer',
               name: p.nome,
               description: p.descricao,
-              price: p.id === 'gratis' ? '0' : p.id === 'profissional' ? '0.15' : undefined,
+              price: p.id === 'gratis' ? '0' : p.id === 'profissional' ? '0.05' : undefined,
               priceCurrency: 'BRL',
               availability: 'https://schema.org/InStock',
             })),

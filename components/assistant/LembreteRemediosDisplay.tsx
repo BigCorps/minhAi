@@ -236,16 +236,24 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
             const dataEvento = new Date(dataAtual);
             dataEvento.setHours(hora, minuto, 0, 0);
             
-            // Cria evento no Google Calendar
-            await supabase.functions.invoke('criar-evento-calendario', {
-              body: {
-                company_id: companyId,
-                summary: `💊 ${nomeRemedio}`,
-                description: `Lembrete de remédio - Dia ${dia + 1}/${totalDias}`,
-                start_time: dataEvento.toISOString(),
-                end_time: new Date(dataEvento.getTime() + 15 * 60000).toISOString(), // +15 min
-              },
-            });
+const { error: calError } = await supabase.functions.invoke('criar-evento-calendario', {
+  body: {
+    company_id: companyId,
+    summary: `💊 ${nomeRemedio}`,
+    description: `Lembrete de remédio - Dia ${dia + 1}/${totalDias}`,
+    start_time: dataEvento.toISOString(),
+    end_time: new Date(dataEvento.getTime() + 15 * 60000).toISOString(),
+    reminders: {
+      useDefault: false,
+      overrides: [{ method: 'popup', minutes: 1 }],
+    },
+  },
+});
+
+if (calError) {
+  console.error(`Erro ao criar evento dia ${dia + 1} horário ${horario}:`, calError);
+  throw new Error(`Falha ao criar evento: ${calError.message}`);
+}
           }
         }
       }

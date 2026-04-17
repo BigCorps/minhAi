@@ -564,6 +564,177 @@ responder_pesquisa: {
     }
   },
 },
+
+converter_medidas: {
+    functionKey: 'converter_medidas',
+    functionName: 'Converter Medidas',
+    category: 'utylities',
+    responseType: 'voice+modal',
+    voiceTriggers: [
+      'converter medidas', 'converter', 'conversão', 'transformar',
+      'quantos', 'quanto é', 'calcular conversão',
+      'converter quilos', 'converter metros', 'converter litros',
+      'converter graus', 'converter celsius', 'converter fahrenheit',
+    ],
+    examplePhrases: [
+      'Converter 5 quilos em gramas',
+      'Quanto é 100 metros em pés?',
+      'Converter 37 graus Celsius para Fahrenheit',
+    ],
+    requiresInput: false,
+    description: 'Converte unidades de medida: peso, comprimento, volume, temperatura, área.',
+    shortDescription: 'Converter unidades de medida',
+    icon: '📐',
+    color: '#0694a2',
+    saveToHistory: false,
+    creditsPerUse: 0,
+    requiresPayment: false,
+    isPremium: false,
+    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+      // Tenta extrair: "5 quilos em gramas" → { valor: 5, de: 'kg', para: 'g' }
+      const mapaUnidades: Record<string, string> = {
+        'quilograma': 'kg', 'quilogramas': 'kg', 'quilo': 'kg', 'quilos': 'kg', 'kg': 'kg',
+        'grama': 'g', 'gramas': 'g', 'g': 'g',
+        'miligrama': 'mg', 'miligramas': 'mg', 'mg': 'mg',
+        'libra': 'lb', 'libras': 'lb', 'lb': 'lb',
+        'onça': 'oz', 'onças': 'oz', 'oz': 'oz',
+        'tonelada': 't', 'toneladas': 't',
+        'metro': 'm', 'metros': 'm',
+        'quilômetro': 'km', 'quilômetros': 'km', 'km': 'km',
+        'centímetro': 'cm', 'centímetros': 'cm', 'cm': 'cm',
+        'milímetro': 'mm', 'milímetros': 'mm', 'mm': 'mm',
+        'milha': 'mi', 'milhas': 'mi',
+        'pé': 'ft', 'pés': 'ft', 'feet': 'ft',
+        'polegada': 'in', 'polegadas': 'in',
+        'litro': 'l', 'litros': 'l',
+        'mililitro': 'ml', 'mililitros': 'ml', 'ml': 'ml',
+        'galão': 'gal', 'galões': 'gal',
+        'celsius': 'C', '°c': 'C',
+        'fahrenheit': 'F', '°f': 'F',
+        'kelvin': 'K',
+        'metro quadrado': 'm2', 'metros quadrados': 'm2',
+        'hectare': 'ha', 'hectares': 'ha',
+      };
+
+      const regex = /(\d+(?:[.,]\d+)?)\s+([a-záéíóúãõâêîôûç\s]+?)\s+(?:em|para|pra)\s+([a-záéíóúãõâêîôûç\s]+)/i;
+      const match = transcript.match(regex);
+
+      let extractedData: Record<string, any> = {};
+      if (match) {
+        const valor = parseFloat(match[1].replace(',', '.'));
+        const deRaw = match[2].trim().toLowerCase();
+        const paraRaw = match[3].trim().toLowerCase();
+        const de = mapaUnidades[deRaw];
+        const para = mapaUnidades[paraRaw];
+        if (valor && de && para) {
+          extractedData = { valor, de, para };
+        }
+      }
+
+      setActiveModal?.({ type: 'ConverterMedidasDisplay', data: { companyId, ...extractedData } });
+      await playText(Object.keys(extractedData).length ? 'Convertendo...' : 'Abrindo a calculadora de conversão.');
+      return true;
+    },
+  },
+
+  calculadora_juros: {
+    functionKey: 'calculadora_juros',
+    functionName: 'Calculadora de Juros',
+    category: 'utylities',
+    responseType: 'voice+modal',
+    voiceTriggers: [
+      'calculadora de juros', 'calcular juros', 'juros compostos', 'juros simples',
+      'calcular parcelas', 'financiamento', 'quanto vou pagar de juros', 'montante final',
+      'calcular financiamento', 'parcelas do empréstimo', 'empréstimo',
+    ],
+    examplePhrases: [
+      'Calcular juros de 10 mil a 2% ao mês por 12 meses',
+      'Calculadora de juros compostos',
+      'Financiamento de 50 mil por 24 meses',
+    ],
+    requiresInput: false,
+    description: 'Calcula juros simples e compostos, parcelas e montante final.',
+    shortDescription: 'Calcular juros e parcelas',
+    icon: '💰',
+    color: '#057a55',
+    saveToHistory: false,
+    creditsPerUse: 0,
+    requiresPayment: false,
+    isPremium: false,
+    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+      // Tenta extrair: "10 mil a 2% ao mês por 12 meses"
+      const capitalMatch = transcript.match(/(\d+(?:[.,]\d+)?)\s*(?:mil\b)?/i);
+      const taxaMatch = transcript.match(/(\d+(?:[.,]\d+)?)\s*%/i);
+      const periodoMatch = transcript.match(/(\d+)\s*(?:meses?|anos?)/i);
+      const modoMatch = /simples/.test(transcript) ? 'simples' : /parcela|financiamento|empréstimo/.test(transcript) ? 'parcelas' : 'compostos';
+
+      let capital: number | undefined;
+      if (capitalMatch) {
+        capital = parseFloat(capitalMatch[1].replace(',', '.'));
+        if (/mil\b/i.test(transcript.slice(transcript.indexOf(capitalMatch[0])))) capital *= 1000;
+      }
+
+      const taxa = taxaMatch ? parseFloat(taxaMatch[1].replace(',', '.')) : undefined;
+      const periodo = periodoMatch ? parseInt(periodoMatch[1]) : undefined;
+
+      setActiveModal?.({
+        type: 'CalculadoraJurosDisplay',
+        data: { companyId, capital, taxa, periodo, modo: modoMatch },
+      });
+      await playText('Abrindo a calculadora de juros.');
+      return true;
+    },
+  },
+
+  calculadora_imc: {
+    functionKey: 'calculadora_imc',
+    functionName: 'Calculadora de IMC',
+    category: 'utylities',
+    responseType: 'voice+modal',
+    voiceTriggers: [
+      'calculadora de imc', 'calcular imc', 'meu imc', 'calcular meu imc',
+      'índice de massa corporal', 'imc', 'peso ideal',
+      'estou acima do peso', 'estou abaixo do peso',
+    ],
+    examplePhrases: [
+      'Calcular meu IMC',
+      'Meu IMC, peso 80 quilos, altura 1,75',
+      'Calcular índice de massa corporal',
+    ],
+    requiresInput: false,
+    description: 'Calcula o Índice de Massa Corporal e exibe a classificação da OMS.',
+    shortDescription: 'Calcular IMC',
+    icon: '⚖️',
+    color: '#7c3aed',
+    saveToHistory: false,
+    creditsPerUse: 0,
+    requiresPayment: false,
+    isPremium: false,
+    handler: async ({ transcript, playText, setActiveModal, companyId }) => {
+      // Tenta extrair peso e altura do transcript
+      // Ex: "peso 80 quilos altura 1,75" ou "80kg 1,75m"
+      const pesoMatch = transcript.match(/(\d+(?:[.,]\d+)?)\s*(?:kg|quilo[s]?|quilograma[s]?)/i);
+      const alturaMatch = transcript.match(/(\d+(?:[.,]\d+)?)\s*(?:m\b|metro[s]?|cm\b|centímetro[s]?)/i);
+
+      let peso: number | undefined;
+      let altura: number | undefined;
+
+      if (pesoMatch) peso = parseFloat(pesoMatch[1].replace(',', '.'));
+      if (alturaMatch) {
+        const val = parseFloat(alturaMatch[1].replace(',', '.'));
+        // Se vier em cm (ex: 175cm), converte para metros
+        altura = /cm|centímetro/i.test(alturaMatch[0]) ? val / 100 : val;
+      }
+
+      setActiveModal?.({
+        type: 'CalculadoraIMCDisplay',
+        data: { companyId, peso, altura },
+      });
+      await playText(peso && altura ? 'Calculando seu IMC...' : 'Abrindo a calculadora de IMC. Informe seu peso e altura.');
+      return true;
+    },
+  },
+
 // ========================================
 // FUNÇÕES DE FILA (8 funções)
 // ========================================

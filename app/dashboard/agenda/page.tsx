@@ -181,7 +181,7 @@ function AgendaPageContent() {
     try {
       setLoadingEvents(true);
       const { data, error } = await supabase.functions.invoke('listar-eventos-google', {
-        body: { company_id: companyId },
+        body: { company_id: companyId, max_results: 500 },
       });
       if (error) throw error;
       const calendarEvents: CalendarEvent[] = (data?.events || []).map((event: any) => ({

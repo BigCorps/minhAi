@@ -660,6 +660,21 @@ case 'minha_posicao_fila':
   });
   break;
 
+        case 'converter_medidas':
+          setActiveModal({ type: 'ConverterMedidasDisplay', data: { companyId } });
+          pt('Abrindo a calculadora de conversão de medidas.').catch(() => {});
+          break;
+
+        case 'calculadora_juros':
+          setActiveModal({ type: 'CalculadoraJurosDisplay', data: { companyId } });
+          pt('Abrindo a calculadora de juros.').catch(() => {});
+          break;
+
+        case 'calculadora_imc':
+          setActiveModal({ type: 'CalculadoraIMCDisplay', data: { companyId } });
+          pt('Abrindo a calculadora de IMC. Informe seu peso e altura.').catch(() => {});
+          break;
+
 case 'modo_fila':
   await stopGoogleSpeech();
   const filaUrl = getContextualRoute('fila', slug);

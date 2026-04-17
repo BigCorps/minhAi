@@ -73,9 +73,6 @@ export const metadata: Metadata = {
     images: [OG_IMAGE],
     creator: '@bigcorpsbr',
   },
-  verification: {
-    google: 'SUBSTITUA_PELO_SEU_GOOGLE_SITE_VERIFICATION_CODE',
-  },
   icons: {
     icon: [
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },

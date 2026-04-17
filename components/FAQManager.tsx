@@ -49,11 +49,14 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [smartDevices, setSmartDevices] = useState<{ id: string; displayName: string }[]>([]);
   const [loadingSmartDevices, setLoadingSmartDevices] = useState(false);
+
+  // ✅ ETAPA 4 — provider adicionado ao smartConfig
   const [smartConfig, setSmartConfig] = useState<{
     device_id: string;
     device_name: string;
     command: 'turnOn' | 'turnOff';
-  }>({ device_id: '', device_name: '', command: 'turnOn' });
+    provider: 'google' | 'tuya';
+  }>({ device_id: '', device_name: '', command: 'turnOn', provider: 'google' });
 
   const supabase = createClient();
 
@@ -73,16 +76,21 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
     loadFunctions();
   }, []);
 
+  // ✅ ETAPA 4 — busca da edge correta conforme provider, e recarrega ao trocar provider
   useEffect(() => {
     if (formData.function_key !== 'aparelhos_smart') return;
     if (smartDevices.length > 0) return;
     setLoadingSmartDevices(true);
+    const edgeFn = smartConfig.provider === 'tuya' ? 'tuya-smart-home' : 'smart-home-devices';
+    const body = smartConfig.provider === 'tuya'
+      ? { action: 'list', company_id: companyId }
+      : { action: 'list', companyId };
     supabase.functions
-      .invoke('smart-home-devices', { body: { action: 'list', companyId } })
+      .invoke(edgeFn, { body })
       .then(({ data }) => setSmartDevices(data?.devices ?? []))
       .catch(() => {})
       .finally(() => setLoadingSmartDevices(false));
-  }, [formData.function_key]);
+  }, [formData.function_key, smartConfig.provider]);
 
   async function loadFAQs() {
     try {
@@ -117,11 +125,16 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
           alert('Selecione um dispositivo smart.');
           return;
         }
+        // ✅ ETAPA 4 — provider incluído + commands Tuya
         parsedParams = {
           action: 'smart_home_command',
+          provider: smartConfig.provider,
           device_id: smartConfig.device_id,
           device_name: smartConfig.device_name,
           command: smartConfig.command,
+          ...(smartConfig.provider === 'tuya' && {
+            commands: [{ code: 'switch_1', value: smartConfig.command === 'turnOn' }],
+          }),
         };
       } else if (formData.function_params_raw.trim()) {
         try {
@@ -216,6 +229,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
         device_id: p.device_id ?? '',
         device_name: p.device_name ?? '',
         command: p.command ?? 'turnOn',
+        provider: p.provider ?? 'google', // ✅ restaura provider ao editar
       });
     }
     setShowAddModal(true);
@@ -225,7 +239,8 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
     setShowAddModal(false);
     setEditingFaq(null);
     setShowSuggestions(false);
-    setSmartConfig({ device_id: '', device_name: '', command: 'turnOn' });
+    // ✅ provider resetado para google ao fechar
+    setSmartConfig({ device_id: '', device_name: '', command: 'turnOn', provider: 'google' });
     setFormData({
       question: '',
       answer: '',
@@ -259,7 +274,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
 
   function clearFunction() {
     setFormData(prev => ({ ...prev, function_key: '', function_params_raw: '' }));
-    setSmartConfig({ device_id: '', device_name: '', command: 'turnOn' });
+    setSmartConfig({ device_id: '', device_name: '', command: 'turnOn', provider: 'google' }); // ✅ provider resetado
     setShowSuggestions(false);
   }
 
@@ -596,6 +611,36 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                     Configurar Comando Smart Home
                   </p>
 
+                  {/* ✅ ETAPA 4 — Seletor de provider */}
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                      Plataforma
+                    </label>
+                    <div className="flex gap-2">
+                      {(['google', 'tuya'] as const).map(p => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => {
+                            setSmartConfig(prev => ({ ...prev, provider: p, device_id: '', device_name: '' }));
+                            setSmartDevices([]);
+                          }}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                            smartConfig.provider === p
+                              ? p === 'tuya'
+                                ? 'bg-purple-600 text-white border-purple-600'
+                                : 'bg-blue-600 text-white border-blue-600'
+                              : isDark
+                                ? 'bg-slate-700 text-white/60 border-white/10'
+                                : 'bg-white text-gray-500 border-gray-200'
+                          }`}
+                        >
+                          {p === 'google' ? '🔵 Google Nest' : '🟣 Tuya / SmartLife'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Seletor de dispositivo */}
                   <div>
                     <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
@@ -605,7 +650,8 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                       <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Carregando dispositivos...</p>
                     ) : smartDevices.length === 0 ? (
                       <p className={`text-xs ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                        Nenhum dispositivo encontrado. Conecte sua conta Google Smart Home.
+                        Nenhum dispositivo encontrado. Conecte sua conta{' '}
+                        {smartConfig.provider === 'tuya' ? 'Tuya / SmartLife' : 'Google Smart Home'}.
                       </p>
                     ) : (
                       <select
@@ -659,7 +705,7 @@ export function FAQManagerClient({ companyId, isDark }: FAQManagerClientProps) {
                     <p className={`text-[10px] font-mono rounded px-2 py-1 ${
                       isDark ? 'bg-slate-900/60 text-white/40' : 'bg-white text-gray-400'
                     }`}>
-                      {`{ action: "smart_home_command", device_id: "${smartConfig.device_id}", command: "${smartConfig.command}" }`}
+                      {`{ action: "smart_home_command", provider: "${smartConfig.provider}", device_id: "${smartConfig.device_id}", command: "${smartConfig.command}"${smartConfig.provider === 'tuya' ? `, commands: [{ code: "switch_1", value: ${smartConfig.command === 'turnOn'} }]` : ''} }`}
                     </p>
                   )}
                 </div>

@@ -67,7 +67,7 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
   const [horarioPrimeiraDose, setHorarioPrimeiraDose] = useState('');
   const [tipoDuracao, setTipoDuracao] = useState<'dias' | 'comprimidos'>('dias');
   const [valorDuracao, setValorDuracao] = useState('');
-  const [modoLembrete, setModoLembrete] = useState<'assistente' | 'calendario' | 'ambos'>('assistente');
+  const [modoLembrete, setModoLembrete] = useState<'assistente' | 'calendario' | 'ambos'>('ambos');
   
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -219,6 +219,12 @@ export default function LembreteRemediosDisplay({ data, onClose, theme = 'dark',
       });
 
       if (insertError) throw insertError;
+
+await supabase
+  .from('company_function_settings')
+  .update({ config: { modo_lembrete: modoLembrete } })
+  .eq('company_id', companyId)
+  .eq('function_key', 'lembrete_remedios');
 
       // 2. Se modo incluir calendario, cria TODOS os eventos até o fim do tratamento
       if ((modoLembrete === 'calendario' || modoLembrete === 'ambos') && googleConnected) {

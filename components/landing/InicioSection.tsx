@@ -1,49 +1,20 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+// app/InicioSection.tsx  ← SEM 'use client' — Server Component puro
 import Link from 'next/link';
 import { LandingAvatarFace } from './LandingAvatarFace';
+import { WordCarousel } from '@/components/landing/WordCarousel';
 
 interface InicioSectionProps {
   theme?: 'dark' | 'light';
 }
 
-const OPCOES = [
-  'Assistente',
-  'Aplicativo',
-  'Funcionário',
-  'Atendente',
-  'Gerente',
-  'Totem',
-  'Auxiliar',
-  'Secretário',
-  'Operador',
-  'Vendedor',
-  'Recepcionista',
-  'Agente',
-  'Analista',
-  'Estoquista',
-  'Consultor',
-  'Coordenador',
-  'Divulgador',
+const MINI_DESTAQUES = [
+  'Rápido e Fácil de Começar',
+  'Pague por Interação',
+  '100% Customizável',
 ];
 
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
   const isDark = theme === 'dark';
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % OPCOES.length);
-        setIsAnimating(false);
-      }, 300);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <div
@@ -53,8 +24,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
       }`}
     >
-      {/* Fundo decorativo sutil */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Fundo decorativo */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div
           className={`absolute -top-1/4 -right-1/4 w-[60%] h-[60%] rounded-full blur-[120px] ${
             isDark ? 'bg-blue-500/10' : 'bg-blue-200/30'
@@ -102,25 +73,10 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               </span>
             </span>
 
+            {/* Linha com o carrossel — client component isolado */}
             <span className="block whitespace-nowrap">
               Sou o{' '}
-              <span
-                className="inline-block relative overflow-hidden text-center"
-                style={{ height: '1.2em', verticalAlign: '-0.30em' }}
-              >
-                {OPCOES.map((palavra) => (
-                  <span key={palavra} className="invisible block h-0 px-1" aria-hidden="true">
-                    {palavra}
-                  </span>
-                ))}
-                <span
-                  className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-in-out ${
-                    isAnimating ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'
-                  } ${isDark ? 'text-green-400' : 'text-green-600'}`}
-                >
-                  {OPCOES[currentIndex]}
-                </span>
-              </span>
+              <WordCarousel isDark={isDark} />
               {' '}IA que
             </span>
 
@@ -144,7 +100,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
           </p>
 
-          {/* Botões CTA — sempre na mesma linha */}
+          {/* Botões CTA */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
             <Link
               href="/login"
@@ -166,7 +122,7 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
 
           {/* Mini destaques */}
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-4 sm:mt-8">
-            {['Rápido e Fácil de Começar', 'Pague por Interação', '100% Customizável'].map((text) => (
+            {MINI_DESTAQUES.map((text) => (
               <span
                 key={text}
                 className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${

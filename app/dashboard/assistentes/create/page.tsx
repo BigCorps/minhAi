@@ -46,21 +46,44 @@ export default function NovaEmpresaPage() {
   }, []);
 
   // ── Slug check ───────────────────────────────────────────
-  const checkSlugAvailability = async (slug: string) => {
-    if (!slug || slug.length < 3) { setSlugStatus('idle'); setSlugError(null); return; }
-    setSlugStatus('checking');
-    setSlugError(null);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('companies').select('id').eq('slug', slug).single();
-      if (error && error.code !== 'PGRST116') {
-        setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); return;
-      }
-      if (data) { setSlugStatus('taken'); setSlugError('Este slug já está em uso. Escolha outro.'); }
-      else { setSlugStatus('available'); setSlugError(null); }
-    } catch { setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); }
-  };
+  const SLUGS_RESERVADOS = new Set([
+  // Subdomínios de infraestrutura
+  'www', 'app', 'api', 'admin', 'mail', 'smtp',
+  // Rotas do Next.js (prefixos de rota)
+  'dashboard', 'login', 'cadastro',
+  // Páginas públicas do minhAi
+  'precos', 'sobre', 'contato', 'docs', 'blog',
+  // Prefixo das páginas de nicho SEO
+  'para',
+  // Assistente de demo público
+  'suporte',
+  // Outras rotas conhecidas
+  'pix', 'ia', 'vendas', 'fila', 'cliente', 'link', 'atendimento',
+]);
+
+const checkSlugAvailability = async (slug: string) => {
+  if (!slug || slug.length < 3) { setSlugStatus('idle'); setSlugError(null); return; }
+
+  // ── Verificar reservados ANTES de bater no banco ──────────────
+  if (SLUGS_RESERVADOS.has(slug.toLowerCase())) {
+    setSlugStatus('taken');
+    setSlugError('Este slug é reservado pelo sistema. Escolha outro.');
+    return;
+  }
+
+  setSlugStatus('checking');
+  setSlugError(null);
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('companies').select('id').eq('slug', slug).single();
+    if (error && error.code !== 'PGRST116') {
+      setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); return;
+    }
+    if (data) { setSlugStatus('taken'); setSlugError('Este slug já está em uso. Escolha outro.'); }
+    else { setSlugStatus('available'); setSlugError(null); }
+  } catch { setSlugStatus('idle'); setSlugError('Erro ao verificar disponibilidade'); }
+};
 
   useEffect(() => {
     if (!isPublic) { setSlugStatus('idle'); setSlugError(null); return; }

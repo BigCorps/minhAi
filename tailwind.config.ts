@@ -9,6 +9,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        nunito: ['var(--font-nunito)', 'sans-serif'],
+      },
       colors: {
         primary: {
           '50': '#fff7ed',

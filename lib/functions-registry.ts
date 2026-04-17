@@ -1764,6 +1764,55 @@ duplicar_imagem: {
     return true;
   },
 },
+
+solicitar_video_chamada: {
+  functionKey: 'solicitar_video_chamada',
+  functionName: 'Solicitar Vídeo Chamada',
+  category: 'services',
+  responseType: 'voice+modal',
+
+  voiceTriggers: [
+    'solicitar vídeo chamada',
+    'iniciar vídeo chamada',
+    'chamada de vídeo',
+    'vídeo chamada',
+    'quero fazer uma vídeo chamada',
+  ],
+
+  examplePhrases: [
+    'Solicitar vídeo chamada',
+    'Iniciar vídeo chamada com proprietário',
+    'Chamar proprietário por vídeo',
+  ],
+
+  requiresInput: false,
+  description: 'Inicia uma vídeo chamada com o proprietário via Daily.co. Disponível apenas para colaboradores logados.',
+  shortDescription: 'Vídeo chamada com proprietário',
+  icon: '🎥',
+  color: '#9333ea',
+
+  saveToHistory: true,
+  creditsPerUse: 5,
+  requiresPayment: false,
+  isPremium: true,
+
+  handler: async ({ playText, setActiveModal, companyId, functionParams }) => {
+    try {
+      setActiveModal?.({
+        type: 'VideoCallRequestDisplay',
+        data: {
+          companyId,
+          profileId: functionParams?.profileId ?? '',
+          profileName: functionParams?.profileName ?? '',
+        },
+      });
+      await playText('Solicitando vídeo chamada com o proprietário...');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+},
   
 fichas_producao_conversacional: {
   functionKey: 'fichas_producao_conversacional',

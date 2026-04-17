@@ -86,6 +86,11 @@ interface SmartDevice {
   displayName: string;
   online: boolean;
   traits: Record<string, any>;
+  // Tuya extras
+  provider?: 'google' | 'tuya';
+  icon?: string;
+  category?: string;
+  status?: any[];
 }
 
 interface GoogleAccount {
@@ -120,13 +125,18 @@ function AgendaPageContent() {
   const [folderPath, setFolderPath] = useState<DriveFolder[]>([]);
   const [loadingDrive, setLoadingDrive] = useState(false);
 
-  // Smart Home
+  // Smart Home — Google
   const [smartDevices, setSmartDevices] = useState<SmartDevice[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
   const [deviceAction, setDeviceAction] = useState<string | null>(null);
   const [quickFaqDevice, setQuickFaqDevice] = useState<SmartDevice | null>(null);
   const [quickFaqAlias, setQuickFaqAlias] = useState('');
   const [savingFaqs, setSavingFaqs] = useState(false);
+
+  // Smart Home — Tuya
+  const [tuyaConnected, setTuyaConnected] = useState(false);
+  const [tuyaDevices, setTuyaDevices] = useState<SmartDevice[]>([]);
+  const [loadingTuyaDevices, setLoadingTuyaDevices] = useState(false);
 
   // General
   const [loading, setLoading] = useState(false);
@@ -137,13 +147,31 @@ function AgendaPageContent() {
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
   const supabase = createClient();
 
+  // ── Detectar retorno do OAuth Tuya ───────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tuya') === 'success') {
+      setTuyaConnected(true);
+      setActiveTab('smarthome');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (params.get('tuya') === 'error') {
+      alert(`Erro ao conectar Tuya: ${params.get('msg') ?? 'desconhecido'}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     if (selectedCompanyId) {
       loadGoogleAccount(selectedCompanyId);
+      checkTuyaConnection(selectedCompanyId);
     } else {
       setGoogleAccount(null);
       setEvents([]);
       setSentEmails([]);
+      setTuyaConnected(false);
+      setTuyaDevices([]);
     }
   }, [selectedCompanyId]);
 
@@ -152,6 +180,16 @@ function AgendaPageContent() {
     if (!selectedCompanyId || !googleAccount) return;
     if (activeTab === 'smarthome' && smartDevices.length === 0) loadSmartDevices();
   }, [activeTab, googleAccount]);
+
+  // ── Verificar se Tuya já está conectado ──────────────────────
+  async function checkTuyaConnection(companyId: string) {
+    const { data } = await supabase
+      .from('companies')
+      .select('tuya_access_token')
+      .eq('id', companyId)
+      .single();
+    if (data?.tuya_access_token) setTuyaConnected(true);
+  }
 
   async function loadGoogleAccount(companyId: string) {
     try {
@@ -273,7 +311,7 @@ function AgendaPageContent() {
         }
       );
       const json = await res.json();
-      setSmartDevices(json.devices || []);
+      setSmartDevices((json.devices || []).map((d: any) => ({ ...d, provider: 'google' })));
     } catch { setSmartDevices([]); }
     finally { setLoadingDevices(false); }
   }
@@ -295,43 +333,83 @@ function AgendaPageContent() {
     finally { setDeviceAction(null); }
   }
 
+  // ── Tuya: iniciar OAuth ───────────────────────────────────────
+  function connectTuya() {
+    if (!selectedCompanyId) return;
+    const state  = `${selectedCompanyId}:us`;
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id:     process.env.NEXT_PUBLIC_TUYA_CLIENT_ID!,
+      redirect_uri:  'https://minhai.app/api/tuya/callback',
+      state,
+    });
+    window.location.href = `https://auth.tuya.com/?${params.toString()}`;
+  }
+
+  // ── Tuya: listar dispositivos ─────────────────────────────────
+  async function loadTuyaDevices() {
+    if (!selectedCompanyId) return;
+    setLoadingTuyaDevices(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tuya-smart-home`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ action: 'list', company_id: selectedCompanyId }),
+        }
+      );
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setTuyaDevices(json.devices ?? []);
+    } catch (err: any) {
+      alert(`Erro ao buscar dispositivos Tuya: ${err.message}`);
+    } finally {
+      setLoadingTuyaDevices(false);
+    }
+  }
+
   async function createQuickFAQs() {
     if (!quickFaqDevice || !quickFaqAlias.trim()) return;
     setSavingFaqs(true);
     try {
-      const alias = quickFaqAlias.trim();
+      const alias    = quickFaqAlias.trim();
+      const provider = quickFaqDevice.provider ?? 'google';
       const faqs = [
         {
-          company_id: selectedCompanyId,
-          question: `Ligar ${alias}`,
-          answer: `Ligando ${alias} para você.`,
-          variations: [`liga ${alias}`, `acende ${alias}`, `turn on ${alias}`],
-          is_active: true,
-          function_key: 'aparelhos_smart',
+          company_id:    selectedCompanyId,
+          question:      `Ligar ${alias}`,
+          answer:        `Ligando ${alias} para você.`,
+          variations:    [`liga ${alias}`, `acende ${alias}`, `turn on ${alias}`],
+          is_active:     true,
+          function_key:  'aparelhos_smart',
           function_params: {
-            action: 'smart_home_command',
-            device_id: quickFaqDevice.id,
+            action:      'smart_home_command',
+            provider,
+            device_id:   quickFaqDevice.id,
             device_name: alias,
-            command: 'turnOn',
+            command:     'turnOn',
+            ...(provider === 'tuya' && { commands: [{ code: 'switch_1', value: true }] }),
           },
         },
         {
-          company_id: selectedCompanyId,
-          question: `Desligar ${alias}`,
-          answer: `Desligando ${alias}.`,
-          variations: [`desliga ${alias}`, `apaga ${alias}`, `turn off ${alias}`],
-          is_active: true,
-          function_key: 'aparelhos_smart',
+          company_id:    selectedCompanyId,
+          question:      `Desligar ${alias}`,
+          answer:        `Desligando ${alias}.`,
+          variations:    [`desliga ${alias}`, `apaga ${alias}`, `turn off ${alias}`],
+          is_active:     true,
+          function_key:  'aparelhos_smart',
           function_params: {
-            action: 'smart_home_command',
-            device_id: quickFaqDevice.id,
+            action:      'smart_home_command',
+            provider,
+            device_id:   quickFaqDevice.id,
             device_name: alias,
-            command: 'turnOff',
+            command:     'turnOff',
+            ...(provider === 'tuya' && { commands: [{ code: 'switch_1', value: false }] }),
           },
         },
       ];
 
-      const supabase = createClient();
       const { error } = await supabase.from('faq_entries').insert(faqs);
       if (error) throw error;
 
@@ -383,8 +461,11 @@ function AgendaPageContent() {
     if (t.includes('light') || t.includes('lamp')) return '💡';
     if (t.includes('thermostat')) return '🌡️';
     if (t.includes('fan')) return '🌀';
-    if (t.includes('tv') || t.includes('display')) return '📺';
+    if (t.includes('tv') || t.includes('display') || t.includes('infrared')) return '📺';
     if (t.includes('speaker')) return '🔊';
+    if (t.includes('air_conditioner')) return '❄️';
+    if (t.includes('curtain')) return '🪟';
+    if (t.includes('sensor')) return '📡';
     return '🔌';
   }
 
@@ -393,7 +474,7 @@ function AgendaPageContent() {
     { key: 'calendar', label: 'Calendário', icon: <CalendarIcon className="w-4 h-4" />, count: events.length },
     { key: 'email', label: 'Emails Enviados', icon: <Send className="w-4 h-4" />, count: sentEmails.length },
     { key: 'drive', label: 'Google Drive', icon: <HardDrive className="w-4 h-4" /> },
-    { key: 'smarthome', label: 'Smart Home', icon: <Home className="w-4 h-4" />, count: smartDevices.length },
+    { key: 'smarthome', label: 'Smart Home', icon: <Home className="w-4 h-4" />, count: smartDevices.length + tuyaDevices.length },
   ];
 
   return (
@@ -479,7 +560,6 @@ function AgendaPageContent() {
                           ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                           : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
                       } ${
-                        // Borda direita entre colunas no mobile
                         tab.key === 'calendar' || tab.key === 'drive'
                           ? 'border-r border-r-gray-200 dark:border-r-white/10'
                           : ''
@@ -547,7 +627,6 @@ function AgendaPageContent() {
               {/* ── EMAILS ENVIADOS ── */}
               {activeTab === 'email' && (
                 <>
-                  
                   {loadingEmails ? (
                     <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
                   ) : sentEmails.length === 0 ? (
@@ -592,127 +671,199 @@ function AgendaPageContent() {
               )}
 
               {/* ── GOOGLE DRIVE ── */}
-{activeTab === 'drive' && (
-  <div className="space-y-4">
-    <div className="flex items-center justify-between">
-      <div>
-        {selectedFolder
-          ? <p className="text-sm text-gray-600 dark:text-gray-400">📁 <strong>{selectedFolder.name}</strong> — {driveImages.length} imagem{driveImages.length !== 1 ? 'ns' : ''}</p>
-          : <p className="text-sm text-gray-400">Selecione uma pasta para ver as imagens</p>
-        }
-      </div>
-      <DrivePickerButton
-        companyId={selectedCompanyId!}
-        onFolderSelected={(id, name) => {
-          setSelectedFolder({ id, name });
-          loadDriveImages(id);
-        }}
-        label={selectedFolder ? 'Trocar pasta' : 'Selecionar pasta'}
-        className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition"
-      />
-    </div>
+              {activeTab === 'drive' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {selectedFolder
+                        ? <p className="text-sm text-gray-600 dark:text-gray-400">📁 <strong>{selectedFolder.name}</strong> — {driveImages.length} imagem{driveImages.length !== 1 ? 'ns' : ''}</p>
+                        : <p className="text-sm text-gray-400">Selecione uma pasta para ver as imagens</p>
+                      }
+                    </div>
+                    <DrivePickerButton
+                      companyId={selectedCompanyId!}
+                      onFolderSelected={(id, name) => {
+                        setSelectedFolder({ id, name });
+                        loadDriveImages(id);
+                      }}
+                      label={selectedFolder ? 'Trocar pasta' : 'Selecionar pasta'}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition"
+                    />
+                  </div>
 
-    {loadingImages ? (
-      <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
-    ) : !selectedFolder ? (
-      <div className="bg-white/50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
-        <HardDrive className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-        <p className="text-gray-500">Clique em "Selecionar pasta" para começar</p>
-      </div>
-    ) : driveImages.length === 0 ? (
-      <p className="text-center py-12 text-sm text-gray-400">Nenhuma imagem encontrada nesta pasta</p>
-    ) : (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {driveImages.map(img => (
-          <div key={img.id} className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800 group relative">
-            <img src={img.thumb} alt={img.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" title={img.name} />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-end p-2 opacity-0 group-hover:opacity-100">
-              <p className="text-white text-xs truncate">{img.name.replace(/\.[^/.]+$/, '')}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-)}
+                  {loadingImages ? (
+                    <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+                  ) : !selectedFolder ? (
+                    <div className="bg-white/50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
+                      <HardDrive className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-gray-500">Clique em "Selecionar pasta" para começar</p>
+                    </div>
+                  ) : driveImages.length === 0 ? (
+                    <p className="text-center py-12 text-sm text-gray-400">Nenhuma imagem encontrada nesta pasta</p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {driveImages.map(img => (
+                        <div key={img.id} className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800 group relative">
+                          <img src={img.thumb} alt={img.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" title={img.name} />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-end p-2 opacity-0 group-hover:opacity-100">
+                            <p className="text-white text-xs truncate">{img.name.replace(/\.[^/.]+$/, '')}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ── SMART HOME ── */}
               {activeTab === 'smarthome' && (
-                <>
-                  {loadingDevices ? (
-                    <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div>
-                  ) : smartDevices.length === 0 ? (
-                    <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
-                      <Home className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Nenhum dispositivo encontrado</h3>
-                      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-                        Certifique-se de ter dispositivos Google Home/Nest vinculados à conta conectada e o Device Access ativado.
-                      </p>
-                      <button onClick={loadSmartDevices} className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition">
-                        Tentar novamente
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                        <p className="text-sm text-green-800 dark:text-green-200">
-                          {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
+                <div className="space-y-6">
+
+                  {/* ── Google Nest ── */}
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      🔵 Google Nest
+                    </h3>
+                    {loadingDevices ? (
+                      <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div>
+                    ) : smartDevices.length === 0 ? (
+                      <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-8 text-center">
+                        <Home className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Nenhum dispositivo Nest encontrado</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-3">
+                          Certifique-se de ter dispositivos Google Nest vinculados à conta conectada e o Device Access ativado.
                         </p>
+                        <button onClick={loadSmartDevices} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition">
+                          Tentar novamente
+                        </button>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {smartDevices.map(device => (
-                          <div key={device.id} className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-2xl">{getDeviceIcon(device.type)}</span>
-                                <div>
-                                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{device.displayName}</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{device.type.split('.').pop()}</p>
+                    ) : (
+                      <>
+                        <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                          <p className="text-sm text-green-800 dark:text-green-200">
+                            🏠 {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {smartDevices.map(device => (
+                            <div key={device.id} className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl">{device.icon ?? getDeviceIcon(device.type)}</span>
+                                  <div>
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{device.displayName}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{device.type.split('.').pop()}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${device.online ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
+                                    {device.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                                    {device.online ? 'Online' : 'Offline'}
+                                  </div>
+                                  <button
+                                    onClick={() => { setQuickFaqDevice(device); setQuickFaqAlias(device.displayName); }}
+                                    title="Criar comando de voz"
+                                    className="p-1 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 transition"
+                                  >
+                                    <Mic className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {/* Badge online/offline */}
-                                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${device.online ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                                  {device.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                                  {device.online ? 'Online' : 'Offline'}
+                              {device.online && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'HEAT' })}
+                                    disabled={deviceAction === device.id}
+                                    className="flex-1 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition disabled:opacity-50"
+                                  >
+                                    {deviceAction === device.id ? '...' : 'Ligar'}
+                                  </button>
+                                  <button
+                                    onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'OFF' })}
+                                    disabled={deviceAction === device.id}
+                                    className="flex-1 py-1.5 text-xs rounded-lg bg-red-500/80 hover:bg-red-600 text-white font-medium transition disabled:opacity-50"
+                                  >
+                                    Desligar
+                                  </button>
                                 </div>
-                                {/* Botão Criar Comando */}
+                              )}
+                              {!device.online && (
+                                <p className="text-xs text-gray-400 text-center">Dispositivo offline</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* ── Tuya / SmartLife ── */}
+                  <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10 p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-purple-800 dark:text-purple-300 flex items-center gap-2">
+                        🔌 Tuya / SmartLife
+                        <span className="text-[10px] font-normal opacity-60">Lâmpadas, Tomadas, Ar, TV...</span>
+                      </h3>
+                      {tuyaConnected && (
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">✅ Conectado</span>
+                      )}
+                    </div>
+
+                    {!tuyaConnected ? (
+                      <div className="text-center py-4 space-y-3">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Conecte sua conta SmartLife para controlar todos os seus dispositivos.
+                        </p>
+                        <button
+                          onClick={connectTuya}
+                          className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition"
+                        >
+                          🔗 Conectar SmartLife / Tuya
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex gap-3">
+                          <button
+                            onClick={loadTuyaDevices}
+                            disabled={loadingTuyaDevices}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+                          >
+                            {loadingTuyaDevices ? '🔄 Buscando...' : '🔄 Sincronizar Dispositivos'}
+                          </button>
+                          <button
+                            onClick={connectTuya}
+                            className="px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition"
+                          >
+                            Reconectar
+                          </button>
+                        </div>
+
+                        {tuyaDevices.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {tuyaDevices.map(device => (
+                              <div key={device.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-white/10 p-3 flex items-center gap-3">
+                                <span className="text-2xl">{device.icon ?? getDeviceIcon(device.type)}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{device.displayName}</p>
+                                  <p className="text-xs text-gray-500">{device.online ? '🟢 Online' : '⚫ Offline'}</p>
+                                </div>
                                 <button
                                   onClick={() => { setQuickFaqDevice(device); setQuickFaqAlias(device.displayName); }}
                                   title="Criar comando de voz"
-                                  className="p-1 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 transition"
+                                  className="p-1 rounded-lg text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
                                 >
                                   <Mic className="w-4 h-4" />
                                 </button>
                               </div>
-                            </div>
-                            {device.online && (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'HEAT' })}
-                                  disabled={deviceAction === device.id}
-                                  className="flex-1 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition disabled:opacity-50"
-                                >
-                                  {deviceAction === device.id ? '...' : 'Ligar'}
-                                </button>
-                                <button
-                                  onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'OFF' })}
-                                  disabled={deviceAction === device.id}
-                                  className="flex-1 py-1.5 text-xs rounded-lg bg-red-500/80 hover:bg-red-600 text-white font-medium transition disabled:opacity-50"
-                                >
-                                  Desligar
-                                </button>
-                              </div>
-                            )}
-                            {!device.online && (
-                              <p className="text-xs text-gray-400 text-center">Dispositivo offline</p>
-                            )}
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    </>
-                  )}
-                </>
+                    )}
+                  </div>
+
+                </div>
               )}
             </>
           )}
@@ -725,7 +876,7 @@ function AgendaPageContent() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                Criar Comando de Voz
+                🎤 Criar Comando de Voz
               </h3>
               <button onClick={() => setQuickFaqDevice(null)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
                 <X className="w-4 h-4 text-gray-500" />
@@ -734,6 +885,9 @@ function AgendaPageContent() {
 
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Dispositivo: <span className="font-semibold text-gray-700 dark:text-white">{quickFaqDevice.displayName}</span>
+              {quickFaqDevice.provider === 'tuya' && (
+                <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">Tuya</span>
+              )}
             </p>
 
             <div>

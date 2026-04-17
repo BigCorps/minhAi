@@ -114,7 +114,7 @@ export default function CalculadoraIMCDisplay({ data, onClose, theme = 'dark', p
           background: P.accentBg,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 22 }}>⚖️</span>
+            
             <span style={{ color: P.textPrimary, fontWeight: 700, fontSize: 16 }}>
               Calculadora de IMC
             </span>

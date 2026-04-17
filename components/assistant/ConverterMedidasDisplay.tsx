@@ -185,7 +185,7 @@ export default function ConverterMedidasDisplay({ data, onClose, theme = 'dark',
           background: P.accentBg,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 22 }}>📐</span>
+            
             <span style={{ color: P.textPrimary, fontWeight: 700, fontSize: 16 }}>
               Converter Medidas
             </span>

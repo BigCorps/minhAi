@@ -93,7 +93,7 @@ const FAQ_PRECOS = [
   },
   {
     q: 'O plano gratuito expira?',
-    a: 'Não. O plano gratuito é para sempre, com limite de 50 interações por mês. Ideal para testar e validar seu caso de uso antes de escalar.',
+    a: 'Não. O plano gratuito é para sempre, você recarrega quando quiser. Ideal para testar e validar seu caso de uso antes de escalar.',
   },
 ];
 

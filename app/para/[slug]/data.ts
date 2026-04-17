@@ -1,0 +1,830 @@
+// app/para/[slug]/data.ts
+// SEO programático — cada entrada = uma página indexável em /para/[slug]
+// Para adicionar nova página: basta adicionar um objeto ao array NICHO_PAGES
+
+export interface NichePage {
+  slug: string;
+  titulo: string;
+  subtitulo: string;
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string[];
+  segmento: string;
+  emoji: string;
+  corDestaque: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow' | 'brown';
+  problema: string;
+  solucao: string;
+  funcoes: string[];
+  casos: { titulo: string; descricao: string }[];
+  faq: { q: string; a: string }[];
+  cta: string;
+}
+
+export const NICHO_PAGES: NichePage[] = [
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANAIS DE ATENDIMENTO
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'ia-para-whatsapp',
+    titulo: 'IA para atendimento no WhatsApp',
+    subtitulo: 'Automatize 100% do atendimento da sua empresa no WhatsApp com um assistente de IA que responde, agenda, cobra e vende 24 horas por dia.',
+    metaTitle: 'IA para atendimento WhatsApp | minhAi',
+    metaDescription: 'Crie um assistente de IA para WhatsApp que responde clientes, agenda compromissos, gera cobranças e vende automaticamente. Comece grátis.',
+    keywords: ['ia para whatsapp', 'chatbot whatsapp', 'assistente virtual whatsapp', 'automação whatsapp', 'bot whatsapp brasil'],
+    segmento: 'WhatsApp',
+    emoji: '💬',
+    corDestaque: 'green',
+    problema: 'Seu time perde horas respondendo sempre as mesmas perguntas no WhatsApp. Clientes ficam sem resposta fora do horário comercial e você perde vendas.',
+    solucao: 'O minhAi se conecta ao WhatsApp da sua empresa e responde automaticamente — com inteligência, contexto e personalidade da sua marca. Configure uma vez e ele trabalha 24/7.',
+    funcoes: [
+      'Respostas automáticas com IA',
+      'Agendamento via WhatsApp',
+      'Envio de cobranças PIX',
+      'Catálogo de produtos interativo',
+      'Transferência para atendente humano',
+      'Envio de SMS de confirmação',
+      'Histórico completo de conversas',
+      'Pesquisa de satisfação automática',
+    ],
+    casos: [
+      { titulo: 'Consultório médico', descricao: 'Pacientes agendam consultas, recebem lembretes e confirmam horários sem ligar para a recepção.' },
+      { titulo: 'Loja de roupas', descricao: 'Clientes tiram dúvidas sobre tamanhos, rastreiam pedidos e recebem link de pagamento pelo WhatsApp.' },
+      { titulo: 'Academia', descricao: 'Alunos renovam planos, agendam aulas e recebem cobranças mensais automaticamente.' },
+    ],
+    faq: [
+      { q: 'Precisa do WhatsApp Business API?', a: 'Sim. O minhAi usa a API oficial da Meta, garantindo estabilidade e conformidade com os termos do WhatsApp.' },
+      { q: 'O assistente consegue transferir para um humano?', a: 'Sim. Você configura palavras-chave ou situações onde o atendimento é transferido para sua equipe.' },
+      { q: 'Funciona fora do horário comercial?', a: 'Sim. O assistente funciona 24 horas por dia, 7 dias por semana, sem custo adicional por horário.' },
+    ],
+    cta: 'Conectar meu WhatsApp',
+  },
+
+  {
+    slug: 'ia-para-instagram',
+    titulo: 'IA para responder o Instagram automaticamente',
+    subtitulo: 'Responda comentários e mensagens diretas do Instagram com IA, converta seguidores em clientes e nunca mais deixe uma mensagem sem resposta.',
+    metaTitle: 'IA para Instagram — Respostas Automáticas | minhAi',
+    metaDescription: 'Automatize respostas no Instagram com IA. Responda DMs, comentários e converta seguidores em clientes 24/7. Integração oficial com a API da Meta.',
+    keywords: ['ia para instagram', 'bot instagram', 'respostas automaticas instagram', 'chatbot instagram', 'automacao instagram'],
+    segmento: 'Instagram',
+    emoji: '📸',
+    corDestaque: 'purple',
+    problema: 'Você posta, o engajamento cresce, mas não dá conta de responder todas as mensagens e comentários. Oportunidades de venda escapam por falta de resposta rápida.',
+    solucao: 'O minhAi monitora seu Instagram e responde mensagens diretas e comentários automaticamente — com a personalidade da sua marca, em português, a qualquer hora.',
+    funcoes: [
+      'Respostas automáticas em DMs',
+      'Resposta inteligente a comentários',
+      'Captura de leads via Instagram',
+      'Envio de link de pagamento PIX na DM',
+      'Integração com catálogo de produtos',
+      'Pesquisa de satisfação automática',
+      'Transferência para atendente humano',
+      'Relatório de interações',
+    ],
+    casos: [
+      { titulo: 'Loja de moda', descricao: 'Seguidores perguntam sobre tamanhos nos comentários e recebem resposta imediata com link para compra.' },
+      { titulo: 'Profissional liberal', descricao: 'Clientes mandam DM pedindo orçamento e recebem automaticamente um formulário e link de agendamento.' },
+      { titulo: 'Infoprodutor', descricao: 'Leads do Instagram são qualificados automaticamente e direcionados para a página de vendas do curso.' },
+    ],
+    faq: [
+      { q: 'É seguro conectar meu Instagram?', a: 'Sim. A integração usa a API oficial da Meta — sem violar os termos de uso da plataforma.' },
+      { q: 'O bot pode ser banido pelo Instagram?', a: 'Não, pois usamos a API oficial. Bots que usam automação não oficial correm esse risco.' },
+      { q: 'Funciona para perfil pessoal?', a: 'Funciona para perfis comerciais do Instagram conectados a uma Página do Facebook.' },
+    ],
+    cta: 'Conectar meu Instagram',
+  },
+
+  {
+    slug: 'link-na-bio-inteligente',
+    titulo: 'Link na bio com IA para Instagram e TikTok',
+    subtitulo: 'Substitua o link da bio por um assistente de IA completo: venda produtos, gere cobranças, agende serviços e atenda clientes — tudo em uma única página.',
+    metaTitle: 'Link na Bio com IA | minhAi',
+    metaDescription: 'Crie um link na bio inteligente com IA. Venda, agende, cobre e atenda clientes direto do Instagram e TikTok. WebApp personalizado, sem mensalidade fixa.',
+    keywords: ['link na bio ia', 'link bio instagram', 'link bio inteligente', 'linktree alternativa ia', 'link bio com chatbot'],
+    segmento: 'Link na Bio',
+    emoji: '🔗',
+    corDestaque: 'purple',
+    problema: 'Seu link na bio leva para uma página estática que só lista outros links. Seguidores chegam e não convertem — não há atendimento, não há venda, não há engajamento.',
+    solucao: 'O minhAi cria um WebApp personalizado com seu nome e visual que funciona como um atendente real: responde perguntas, exibe produtos, agenda serviços e cobra por PIX — tudo pelo link da bio.',
+    funcoes: [
+      'WebApp personalizado (slug.minhai.com.br)',
+      'Catálogo de produtos com imagens',
+      'Pagamento PIX integrado',
+      'Agendamento de serviços',
+      'QR Code para o link',
+      'Tocar música ambiente',
+      'Painel de ofertas e promoções',
+      'Chat com IA em português',
+    ],
+    casos: [
+      { titulo: 'Artesã e criadora de conteúdo', descricao: 'Seguidores acessam o link da bio, veem os produtos, escolhem e pagam via PIX sem sair do celular.' },
+      { titulo: 'Personal trainer', descricao: 'Clientes agendam aulas experimentais, pagam a mensalidade e tiram dúvidas pelo link da bio.' },
+      { titulo: 'Músico independente', descricao: 'Fãs acessam o link, ouvem as músicas mais recentes, compram ingressos e entram em contato via WhatsApp.' },
+    ],
+    faq: [
+      { q: 'Preciso de domínio próprio?', a: 'Não. Você recebe um subdomínio como sualoja.minhai.com.br gratuitamente. Domínio próprio está disponível no plano Consulting.' },
+      { q: 'Funciona no celular?', a: 'Sim. O WebApp é otimizado para mobile e pode ser instalado como aplicativo pelo Chrome.' },
+      { q: 'Posso ter várias páginas de produto?', a: 'Sim. Você cadastra quantos produtos e serviços quiser pelo dashboard.' },
+    ],
+    cta: 'Criar meu link na bio',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PAGAMENTOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'ia-cobranca-pix',
+    titulo: 'IA que cobra clientes automaticamente via PIX',
+    subtitulo: 'Gere cobranças PIX por comando de voz ou chat. Seu assistente envia o link de pagamento, confirma o recebimento e registra tudo automaticamente.',
+    metaTitle: 'IA com Cobrança via PIX Automática | minhAi',
+    metaDescription: 'Automatize cobranças via PIX com IA. Gere links de pagamento por voz, confirme recebimentos e registre transações automaticamente. Sem mensalidade fixa.',
+    keywords: ['ia cobrança pix', 'pix automatico ia', 'gerar pix automatico', 'cobrar cliente pix ia', 'link pagamento pix automatico'],
+    segmento: 'PIX & Pagamentos',
+    emoji: '💸',
+    corDestaque: 'green',
+    problema: 'Gerar cobranças manualmente uma a uma é lento e sujeito a erros. Confirmar pagamentos e avisar clientes consome tempo do seu time.',
+    solucao: 'Diga ao assistente "cobra R$ 150 do João" e o minhAi gera o QR Code PIX, envia o link para o cliente, monitora o pagamento e confirma automaticamente quando receber.',
+    funcoes: [
+      'Geração de PIX por comando de voz',
+      'Link de pagamento PIX personalizado',
+      'Confirmação automática de recebimento',
+      'QR Code PIX na tela',
+      'Registro de pagamentos no dashboard',
+      'Envio de comprovante por email',
+      'Histórico de transações',
+      'Relatório de pagamentos',
+    ],
+    casos: [
+      { titulo: 'Prestador de serviços', descricao: 'Ao terminar o serviço, o assistente gera o PIX na hora. O cliente paga e o sistema confirma automaticamente.' },
+      { titulo: 'Escola de idiomas', descricao: 'Mensalidades geradas automaticamente todo mês e enviadas por WhatsApp com link PIX.' },
+      { titulo: 'Clínica de estética', descricao: 'Paciente agenda, sistema gera PIX antecipado como sinal, confirma e agenda o horário apenas após pagamento.' },
+    ],
+    faq: [
+      { q: 'Qual chave PIX é usada?', a: 'Você cadastra a chave PIX da sua empresa no dashboard. Os pagamentos vão diretamente para sua conta.' },
+      { q: 'O sistema confirma o PIX automaticamente?', a: 'Sim. Via webhook do banco, o sistema detecta o pagamento e atualiza o status em tempo real.' },
+      { q: 'Posso gerar PIX com valor fixo pré-configurado?', a: 'Sim. Você pode configurar valores fixos para serviços ou deixar o assistente perguntar o valor ao cliente.' },
+    ],
+    cta: 'Automatizar minhas cobranças',
+  },
+
+  {
+    slug: 'link-de-pagamento-pix',
+    titulo: 'Link de pagamento PIX para qualquer negócio',
+    subtitulo: 'Gere links de pagamento PIX personalizados por comando de voz, compartilhe pelo WhatsApp e receba na hora. Sem maquininha, sem taxa por transação.',
+    metaTitle: 'Link de Pagamento PIX | minhAi',
+    metaDescription: 'Gere links de pagamento PIX por voz ou chat. Compartilhe pelo WhatsApp, receba na hora. Funciona em qualquer celular, sem maquininha.',
+    keywords: ['link pagamento pix', 'gerar link pix', 'cobrar por link pix', 'link de cobrança pix', 'pix por link whatsapp'],
+    segmento: 'Link PIX',
+    emoji: '🔗',
+    corDestaque: 'green',
+    problema: 'Clientes pedem para pagar por PIX mas você precisa gerar a cobrança manualmente, copiar a chave e ainda conferir se pagou. Todo esse processo é lento e difícil de rastrear.',
+    solucao: 'O minhAi gera o link de pagamento PIX em segundos por comando de voz. O cliente recebe o link, paga em um toque e o sistema confirma automaticamente.',
+    funcoes: [
+      'Geração de link PIX por voz',
+      'QR Code PIX dinâmico na tela',
+      'Compartilhamento via WhatsApp',
+      'Confirmação automática de pagamento',
+      'PIX com valor fixo ou variável',
+      'Histórico de cobranças',
+      'Integração com email de confirmação',
+      'Relatório mensal de recebimentos',
+    ],
+    casos: [
+      { titulo: 'Feirante e ambulante', descricao: 'Exibe o QR Code PIX na tela do celular e confirma o pagamento em tempo real, sem maquininha.' },
+      { titulo: 'Advogado e consultor', descricao: 'Envia link de pagamento dos honorários pelo WhatsApp e o sistema confirma automaticamente quando pago.' },
+      { titulo: 'Delivery próprio', descricao: 'Entregador gera link PIX no momento da entrega e cliente paga na hora pelo celular.' },
+    ],
+    faq: [
+      { q: 'Tem taxa por transação?', a: 'Não. O minhAi não cobra taxa por transação PIX. O pagamento vai direto para sua chave PIX cadastrada.' },
+      { q: 'Funciona sem internet do cliente?', a: 'O cliente precisa de internet para acessar o link e fazer o pagamento. O QR Code pode ser escaneado offline.' },
+      { q: 'Como funciona a confirmação automática?', a: 'O sistema monitora sua chave PIX via webhook e confirma o pagamento em tempo real assim que cair.' },
+    ],
+    cta: 'Gerar meu link PIX',
+  },
+
+  {
+    slug: 'pagamento-nfc-tef',
+    titulo: 'Pagamento por NFC e TEF com IA',
+    subtitulo: 'Aceite pagamentos por aproximação (NFC/Tap to Pay) e integre com maquininha TEF Mercado Pago Point — tudo controlado por comando de voz no seu assistente.',
+    metaTitle: 'Pagamento NFC e TEF com IA | minhAi',
+    metaDescription: 'Integre NFC Tap to Pay e TEF Mercado Pago Point ao seu assistente de IA. Cobre no crédito, débito ou por aproximação com comando de voz.',
+    keywords: ['pagamento nfc ia', 'tap to pay ia', 'tef mercado pago ia', 'pagamento aproximacao ia', 'maquininha ia'],
+    segmento: 'NFC & TEF',
+    emoji: '📲',
+    corDestaque: 'blue',
+    problema: 'Alternar entre o sistema de vendas e a maquininha é lento e gera erros. Digitar o valor manualmente na maquininha aumenta as chances de cobrar errado.',
+    solucao: 'O minhAi integra com NFC (Tap to Pay via InfinitePay) e com TEF Mercado Pago Point. Diga o valor e o assistente abre automaticamente a cobrança na maquininha — sem digitar nada.',
+    funcoes: [
+      'NFC Tap to Pay no crédito (InfinitePay)',
+      'NFC Tap to Pay no débito (InfinitePay)',
+      'TEF Mercado Pago Point Smart',
+      'Cobrança por comando de voz',
+      'Cancelamento e estorno via TEF',
+      'Consulta de saldo Mercado Pago',
+      'Registro automático de vendas',
+      'Relatório de transações',
+    ],
+    casos: [
+      { titulo: 'Restaurante fast food', descricao: 'Atendente fala o valor ao assistente, a maquininha abre a cobrança automaticamente — sem tocar no sistema.' },
+      { titulo: 'Salão de beleza', descricao: 'Ao final do atendimento, assistente cobra no crédito por aproximação — cliente paga com o celular ou cartão.' },
+      { titulo: 'Farmácia', descricao: 'Caixa usa comando de voz para abrir cobrança no TEF, reduzindo erros de digitação e agilizando o atendimento.' },
+    ],
+    faq: [
+      { q: 'Qual maquininha é compatível com TEF?', a: 'O minhAi integra com Mercado Pago Point Smart via SDK TEF oficial.' },
+      { q: 'O NFC precisa de hardware especial?', a: 'Para NFC Tap to Pay, basta um celular Android com NFC e o app InfinitePay instalado. Sem hardware adicional.' },
+      { q: 'Posso usar PIX e TEF no mesmo sistema?', a: 'Sim. O minhAi suporta múltiplos meios de pagamento no mesmo assistente.' },
+    ],
+    cta: 'Integrar minha maquininha',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ATENDIMENTO PRESENCIAL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'totem-autoatendimento',
+    titulo: 'Totem de autoatendimento com IA',
+    subtitulo: 'Instale um assistente de IA no seu estabelecimento. Clientes se atendem sozinhos, fazem pedidos, tiram senhas e pagam — sem precisar de atendente.',
+    metaTitle: 'Totem de Autoatendimento com IA | minhAi',
+    metaDescription: 'Monte um totem de autoatendimento inteligente para seu estabelecimento. IA com voz e touch, fila de senhas, pedidos e pagamento PIX. Fácil de instalar.',
+    keywords: ['totem autoatendimento', 'totem ia', 'quiosque inteligente', 'autoatendimento ia', 'totem digital brasil'],
+    segmento: 'Totem & Quiosque',
+    emoji: '🖥️',
+    corDestaque: 'blue',
+    problema: 'Filas longas frustram seus clientes e sobrecarregam sua equipe. Contratar mais atendentes aumenta o custo operacional sem resolver o problema de pico de movimento.',
+    solucao: 'O minhAi transforma qualquer tablet ou monitor em um totem inteligente com voz e touch. Clientes fazem pedidos e pagam sem precisar de atendente.',
+    funcoes: [
+      'Interface touch otimizada para quiosque',
+      'Atendimento por voz em português',
+      'Fila de senhas com painel em tempo real',
+      'Pedidos e pagamento PIX no totem',
+      'Modo tela cheia com senha de saída',
+      'Painel de ofertas e promoções',
+      'Música ambiente configurável',
+      'Sincronização com painel do atendente',
+    ],
+    casos: [
+      { titulo: 'Restaurante e lanchonete', descricao: 'Clientes fazem pedidos no totem, pagam na hora e recebem a senha. A cozinha recebe o pedido automaticamente.' },
+      { titulo: 'Clínica e consultório', descricao: 'Pacientes chegam, confirmam presença no totem, retiram senha e aguardam chamada — sem passar pela recepção.' },
+      { titulo: 'Órgão público e banco', descricao: 'Cidadãos selecionam o tipo de atendimento, retiram senha e acompanham a fila em tempo real.' },
+    ],
+    faq: [
+      { q: 'Que hardware é necessário?', a: 'Qualquer tablet ou monitor com Chrome. O minhAi é um WebApp — não exige hardware especializado.' },
+      { q: 'Funciona sem internet?', a: 'Requer conexão com a internet, mas opera normalmente com conexões 4G.' },
+      { q: 'O painel da fila aparece em outro monitor?', a: 'Sim. O painel de chamada de senhas pode ser exibido em um monitor separado, em tempo real via Realtime.' },
+    ],
+    cta: 'Montar meu totem',
+  },
+
+  {
+    slug: 'fila-de-atendimento-inteligente',
+    titulo: 'Fila de atendimento digital com IA',
+    subtitulo: 'Elimine filas físicas com um sistema de senhas digitais. Clientes retiram senha pelo totem ou WhatsApp, acompanham a fila em tempo real e são chamados automaticamente.',
+    metaTitle: 'Fila de Atendimento Digital com IA | minhAi',
+    metaDescription: 'Sistema de fila de atendimento digital com IA. Senhas pelo totem ou WhatsApp, painel em tempo real, chamada por voz. Para clínicas, bancos, farmácias e mais.',
+    keywords: ['fila de atendimento digital', 'sistema de senhas ia', 'fila inteligente', 'senha digital atendimento', 'painel fila tempo real'],
+    segmento: 'Fila de Atendimento',
+    emoji: '🎫',
+    corDestaque: 'orange',
+    problema: 'Filas físicas causam aglomeração, irritação nos clientes e desorganização no atendimento. Sem controle de fila, o atendimento fica injusto e caótico.',
+    solucao: 'O minhAi emite senhas digitais pelo totem ou WhatsApp, exibe o painel da fila em tempo real e chama os clientes por voz — com hora estimada de atendimento.',
+    funcoes: [
+      'Emissão de senhas pelo totem',
+      'Emissão de senhas pelo WhatsApp',
+      'Painel de fila em tempo real (Realtime)',
+      'Chamada de senha por voz (TTS)',
+      'QR Code para acompanhar a fila pelo celular',
+      'Múltiplos guichês de atendimento',
+      'Estimativa de tempo de espera',
+      'Relatório de atendimentos do dia',
+    ],
+    casos: [
+      { titulo: 'Farmácia', descricao: 'Clientes retiram senha na entrada, acompanham a fila no celular e são chamados por voz quando chega a vez.' },
+      { titulo: 'Prefeitura e INSS', descricao: 'Cidadãos selecionam o tipo de serviço, retiram senha e acompanham em painel na parede.' },
+      { titulo: 'Banco e cooperativa', descricao: 'Clientes com senha prioritária são identificados e chamados automaticamente antes dos demais.' },
+    ],
+    faq: [
+      { q: 'Clientes podem entrar na fila pelo celular?', a: 'Sim. O QR Code do totem leva o cliente a uma página onde ele acompanha a posição na fila em tempo real.' },
+      { q: 'Posso ter múltiplos guichês?', a: 'Sim. Cada guichê tem seu próprio painel e pode chamar senhas de forma independente.' },
+      { q: 'A chamada de senha é por voz?', a: 'Sim. O sistema anuncia a senha em voz alta usando o sistema de TTS do minhAi.' },
+    ],
+    cta: 'Instalar fila de atendimento',
+  },
+
+  {
+    slug: 'painel-de-ofertas-digital',
+    titulo: 'Painel de ofertas digital para estabelecimentos',
+    subtitulo: 'Exiba promoções, cardápios e produtos em um painel digital com slideshow automático. Atualize de qualquer lugar e atraia mais clientes na sua loja.',
+    metaTitle: 'Painel de Ofertas Digital | minhAi',
+    metaDescription: 'Painel digital de ofertas com IA para restaurantes, lojas e estabelecimentos. Slideshow automático de promoções via Google Drive. Fácil de atualizar.',
+    keywords: ['painel de ofertas digital', 'cardapio digital totem', 'painel promocoes estabelecimento', 'digital signage brasil', 'tela de ofertas loja'],
+    segmento: 'Painel Digital',
+    emoji: '📺',
+    corDestaque: 'red',
+    problema: 'Banners físicos são caros, demoram para trocar e ficam desatualizados. Sem comunicação visual atraente no ponto de venda, os clientes não ficam sabendo das promoções.',
+    solucao: 'O minhAi exibe um slideshow automático de ofertas e promoções diretamente na tela do seu totem ou TV. Você atualiza as imagens no Google Drive e elas aparecem automaticamente.',
+    funcoes: [
+      'Slideshow automático de imagens',
+      'Integração com Google Drive',
+      'Atualização remota em tempo real',
+      'Transições e animações suaves',
+      'Modo tela cheia',
+      'Integrado ao totem de atendimento',
+      'Cardápio digital',
+      'Propaganda e divulgação',
+    ],
+    casos: [
+      { titulo: 'Supermercado', descricao: 'Painel na entrada exibe as ofertas do dia automaticamente. Quando troca a promoção, basta atualizar no Drive.' },
+      { titulo: 'Restaurante', descricao: 'Cardápio digital na parede com fotos dos pratos, preços e promoções do dia — sem impressão.' },
+      { titulo: 'Farmácia', descricao: 'TV na fila exibe promoções de medicamentos e produtos enquanto clientes aguardam atendimento.' },
+    ],
+    faq: [
+      { q: 'Preciso de TV ou monitor especial?', a: 'Qualquer TV com Chrome ou Chromecast funciona. O painel é um WebApp acessado pelo navegador.' },
+      { q: 'Como atualizo as ofertas?', a: 'Basta adicionar ou remover imagens na pasta do Google Drive configurada. O painel atualiza automaticamente.' },
+      { q: 'Consigo controlar o tempo de cada imagem?', a: 'Sim. Você configura o intervalo de troca de slides e as transições pelo dashboard.' },
+    ],
+    cta: 'Criar meu painel digital',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AGENDAMENTO
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'agendamento-clinica-google-agenda',
+    titulo: 'Agendamento para clínicas com Google Agenda e IA',
+    subtitulo: 'Pacientes agendam consultas por voz ou chat, direto no Google Agenda. Lembretes automáticos, confirmação de presença e cobrança PIX — sem recepcionista.',
+    metaTitle: 'Agendamento para Clínicas com Google Agenda | minhAi',
+    metaDescription: 'Agendamento automático para clínicas integrado ao Google Agenda. IA marca consultas por voz, envia lembretes, confirma presença e cobra via PIX.',
+    keywords: ['agendamento clinica google agenda', 'marcar consulta ia', 'agendamento automatico clinica', 'google calendar clinica ia', 'recepcionista ia'],
+    segmento: 'Clínicas & Saúde',
+    emoji: '📅',
+    corDestaque: 'blue',
+    problema: 'Recepcionistas gastam horas marcando e confirmando consultas. Pacientes ligam fora do horário e ficam sem resposta. Faltas sem aviso prejudicam a agenda.',
+    solucao: 'O minhAi integra com o Google Agenda e gerencia toda a comunicação com pacientes — do agendamento ao lembrete, confirmação de presença e cobrança do sinal.',
+    funcoes: [
+      'Agendamento integrado ao Google Agenda',
+      'Criação de eventos por comando de voz',
+      'Lembretes automáticos 24h antes',
+      'Confirmação de presença via WhatsApp',
+      'Cobrança de sinal via PIX',
+      'Lista de espera automática',
+      'Cancelamento e reagendamento por voz',
+      'Histórico de consultas do paciente',
+    ],
+    casos: [
+      { titulo: 'Clínica odontológica', descricao: 'Pacientes agendam, recebem lembrete 24h antes e confirmam presença pelo WhatsApp. Faltas reduziram drasticamente.' },
+      { titulo: 'Psicólogo autônomo', descricao: 'Agenda gerenciada automaticamente. Pacientes pagam a sessão via PIX antes do horário confirmado.' },
+      { titulo: 'Clínica de estética', descricao: 'Clientes agendam procedimentos, recebem instruções pré e pós e avaliam o atendimento automaticamente.' },
+    ],
+    faq: [
+      { q: 'Preciso ter conta Google?', a: 'Sim. O assistente se conecta ao Google Calendar da conta configurada no dashboard.' },
+      { q: 'Posso ter múltiplos profissionais na agenda?', a: 'Sim. Cada profissional pode ter seu próprio calendário Google configurado no sistema.' },
+      { q: 'O paciente recebe confirmação por email?', a: 'Sim. Após o agendamento, o sistema envia confirmação por email e WhatsApp automaticamente.' },
+    ],
+    cta: 'Automatizar minha clínica',
+  },
+
+  {
+    slug: 'assistente-ia-clinica',
+    titulo: 'Assistente de IA completo para clínicas e consultórios',
+    subtitulo: 'Recepcionista digital que agenda consultas, confirma presenças, gera cobranças PIX, emite senhas de fila e atende pacientes 24/7 no WhatsApp.',
+    metaTitle: 'Assistente de IA para Clínicas | minhAi',
+    metaDescription: 'IA para clínicas e consultórios: agendamento automático, lembretes, confirmação via WhatsApp, cobrança PIX e fila de atendimento. Sem mensalidade fixa.',
+    keywords: ['ia para clinica', 'assistente virtual consultorio', 'agendamento automatico clinica', 'chatbot medico', 'recepcionista ia'],
+    segmento: 'Saúde',
+    emoji: '🏥',
+    corDestaque: 'blue',
+    problema: 'Recepcionistas sobrecarregadas, pacientes sem resposta fora do horário e faltas sem aviso que travam a agenda e geram prejuízo.',
+    solucao: 'O minhAi é a recepcionista digital que nunca falta — gerencia agendas, confirma consultas, emite senhas de fila e cobra tudo automaticamente.',
+    funcoes: [
+      'Agendamento automático 24/7',
+      'Lembretes via WhatsApp e SMS',
+      'Fila de atendimento presencial',
+      'Cobrança de consultas via PIX',
+      'Pesquisa de satisfação pós-consulta',
+      'Totem de autoatendimento na recepção',
+      'Consulta de CPF e restrições',
+      'Histórico completo do paciente',
+    ],
+    casos: [
+      { titulo: 'Clínica odontológica', descricao: 'Do agendamento ao pagamento, tudo automatizado. A recepcionista foca em acolher os pacientes na chegada.' },
+      { titulo: 'Psicólogo autônomo', descricao: 'Pacientes agendam, pagam o sinal via PIX e recebem instruções — sem nenhuma interação manual.' },
+      { titulo: 'Clínica de estética', descricao: 'Totem na recepção emite senhas, painel de fila na TV e assistente responde dúvidas pelo WhatsApp.' },
+    ],
+    faq: [
+      { q: 'O sistema funciona fora do horário?', a: 'Sim. O assistente atende pacientes 24h no WhatsApp — inclusive fora do horário comercial.' },
+      { q: 'Posso usar no totem da recepção?', a: 'Sim. O mesmo sistema roda no totem da recepção, emitindo senhas e exibindo promoções.' },
+      { q: 'Como configuro os horários disponíveis?', a: 'Você define a grade de horários pelo dashboard. O assistente só oferece horários disponíveis automaticamente.' },
+    ],
+    cta: 'Automatizar minha clínica',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEGMENTOS ESPECÍFICOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'assistente-ia-restaurante',
+    titulo: 'Assistente de IA para restaurantes e delivery',
+    subtitulo: 'Receba pedidos, exiba o cardápio com IA, processe pagamentos PIX e gerencie a fila — tudo automaticamente, sem atendente no caixa.',
+    metaTitle: 'Assistente de IA para Restaurantes | minhAi',
+    metaDescription: 'IA para restaurantes: pedidos automáticos pelo WhatsApp, cardápio digital interativo, pagamento PIX e gestão de fila. Aumente o faturamento sem contratar mais.',
+    keywords: ['ia para restaurante', 'chatbot restaurante', 'cardapio digital ia', 'pedido automatico whatsapp', 'autoatendimento lanchonete'],
+    segmento: 'Alimentação',
+    emoji: '🍽️',
+    corDestaque: 'red',
+    problema: 'Atender pedidos no WhatsApp manualmente é caótico. Erros de pedido, demora no atendimento e funcionários sobrecarregados nos horários de pico.',
+    solucao: 'O minhAi exibe o cardápio de forma interativa, recebe pedidos, confirma automaticamente e processa o pagamento — sem um atendente precisar digitar nada.',
+    funcoes: [
+      'Cardápio digital interativo',
+      'Recepção de pedidos automática via WhatsApp',
+      'Totem de pedidos no salão',
+      'Pagamento PIX e NFC na hora',
+      'Painel de ofertas e promoções do dia',
+      'Gestão de fila de espera',
+      'Notificação para a cozinha',
+      'Relatório de vendas diário',
+    ],
+    casos: [
+      { titulo: 'Hamburgueria', descricao: 'Clientes fazem pedido pelo WhatsApp, escolhem adicionais e pagam via PIX. A cozinha recebe tudo organizado.' },
+      { titulo: 'Restaurante por kg', descricao: 'Totem na entrada registra o cliente, exibe o cardápio e gera cobrança na saída.' },
+      { titulo: 'Delivery de marmita', descricao: 'Clientes assinam o plano semanal pelo WhatsApp e recebem cobrança automática toda segunda-feira.' },
+    ],
+    faq: [
+      { q: 'Consigo atualizar o cardápio facilmente?', a: 'Sim. Você atualiza pelo dashboard a qualquer momento, sem ajuda técnica.' },
+      { q: 'Funciona para delivery e salão ao mesmo tempo?', a: 'Sim. Pedidos do WhatsApp (delivery) e do totem (salão) são gerenciados de forma integrada.' },
+      { q: 'Como a cozinha recebe os pedidos?', a: 'Em tempo real no painel do atendente. Com plano Consulting, integra com impressoras de comanda.' },
+    ],
+    cta: 'Automatizar meu restaurante',
+  },
+
+  {
+    slug: 'pagina-de-vendas-personalizavel',
+    titulo: 'Página de vendas com IA personalizada',
+    subtitulo: 'Tenha um WebApp próprio com seu nome, logo e cores — um assistente de vendas que atende, convence e cobra seus clientes automaticamente.',
+    metaTitle: 'Página de Vendas com IA Personalizada | minhAi',
+    metaDescription: 'Crie uma página de vendas com assistente de IA personalizado. Seu domínio, seu visual, suas funções. Venda e atenda 24/7 sem contratar mais ninguém.',
+    keywords: ['pagina de vendas com ia', 'assistente de vendas ia', 'webapp personalizado', 'chatbot de vendas', 'loja virtual com ia'],
+    segmento: 'Vendas',
+    emoji: '🛍️',
+    corDestaque: 'purple',
+    problema: 'Você paga caro por ferramentas genéricas de vendas que não refletem a identidade da sua marca.',
+    solucao: 'O minhAi cria um WebApp com o nome, logo, cores e tom de voz da sua empresa. Vende, agenda e cobra — tudo personalizado para o seu negócio.',
+    funcoes: [
+      'Domínio próprio (suaempresa.minhai.com.br)',
+      'Logo, cores e tema customizados',
+      'Catálogo de produtos com IA',
+      'Checkout com PIX integrado',
+      'Modo quiosque para lojas físicas',
+      'Painel de ofertas',
+      'Histórico de compras do cliente',
+      'Relatório de vendas',
+    ],
+    casos: [
+      { titulo: 'Salão de beleza', descricao: 'Clientes agendam, escolhem serviços e pagam pelo WebApp personalizado do salão.' },
+      { titulo: 'Pet shop', descricao: 'Donos de pets fazem pedidos, agendam banho e recebem notificações pelo app.' },
+      { titulo: 'Prestador de serviços', descricao: 'Recebe solicitações, envia orçamentos e cobra tudo pelo próprio WebApp.' },
+    ],
+    faq: [
+      { q: 'Preciso saber programar?', a: 'Não. Configure tudo pelo dashboard em menos de 10 minutos.' },
+      { q: 'Consigo usar meu próprio domínio?', a: 'Sim, no plano Consulting. Nos demais, você recebe sualoja.minhai.com.br.' },
+      { q: 'Funciona no celular?', a: 'Sim. O WebApp é um PWA — funciona no celular e pode ser instalado como aplicativo.' },
+    ],
+    cta: 'Criar minha página de vendas',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMUNICAÇÃO E IA
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'envio-de-email-com-ia',
+    titulo: 'Envio de email automático com IA',
+    subtitulo: 'Dite o conteúdo por voz e o assistente redige, formata e envia o email pelo Gmail automaticamente — para clientes, fornecedores ou sua equipe.',
+    metaTitle: 'Envio de Email com IA por Voz | minhAi',
+    metaDescription: 'Envie emails automaticamente com IA. Dite o conteúdo por voz, o assistente redige e envia pelo Gmail. Confirmações de pagamento, agendamento e mais.',
+    keywords: ['enviar email com ia', 'email automatico ia', 'gmail ia automacao', 'email por voz ia', 'automacao email gmail'],
+    segmento: 'Email & Comunicação',
+    emoji: '📧',
+    corDestaque: 'blue',
+    problema: 'Redigir e enviar emails repetitivos consome horas do seu dia. Confirmações de pagamento, lembretes de consulta e comunicados precisam ser enviados manualmente um a um.',
+    solucao: 'O minhAi integra com o Gmail e envia emails automaticamente: confirmação de agendamento, comprovante de pagamento PIX, avisos para clientes — por comando de voz ou automaticamente após cada ação.',
+    funcoes: [
+      'Envio de emails por comando de voz',
+      'Integração com Gmail (conta Google)',
+      'Email automático pós-pagamento PIX',
+      'Confirmação de agendamento por email',
+      'Templates de email configuráveis',
+      'Envio para múltiplos destinatários',
+      'Histórico de emails enviados',
+      'Emails com formatação rica',
+    ],
+    casos: [
+      { titulo: 'Gestor administrativo', descricao: 'Dita o conteúdo por voz e o assistente redige e envia o email formal automaticamente.' },
+      { titulo: 'Clínica médica', descricao: 'Após cada consulta agendada, o sistema envia email de confirmação com data, horário e instruções.' },
+      { titulo: 'E-commerce', descricao: 'Após confirmação do PIX, cliente recebe email automático com comprovante e prazo de entrega.' },
+    ],
+    faq: [
+      { q: 'Preciso conectar meu Gmail?', a: 'Sim. Você autoriza o acesso ao Gmail pelo dashboard. Os emails saem da sua própria conta.' },
+      { q: 'Posso personalizar o template do email?', a: 'Sim. Você configura o modelo padrão de cada tipo de email pelo dashboard.' },
+      { q: 'O assistente consegue enviar para múltiplas pessoas?', a: 'Sim. Por voz ou por lista configurada, o email pode ser enviado para vários destinatários.' },
+    ],
+    cta: 'Automatizar meus emails',
+  },
+
+  {
+    slug: 'controle-dispositivos-inteligentes',
+    titulo: 'Controle de dispositivos inteligentes com IA',
+    subtitulo: 'Controle luzes, ar-condicionado, TVs e outros dispositivos IoT por comando de voz pelo seu assistente minhAi — integrado ao seu negócio.',
+    metaTitle: 'Controle de Dispositivos Inteligentes com IA | minhAi',
+    metaDescription: 'Controle dispositivos IoT e automação residencial por voz com IA. Ligue TVs, ajuste o ar-condicionado e automatize seu espaço com o assistente minhAi.',
+    keywords: ['controle dispositivos ia', 'iot ia voz', 'automacao inteligente ia', 'casa inteligente ia', 'controle por voz dispositivos'],
+    segmento: 'IoT & Automação',
+    emoji: '🏠',
+    corDestaque: 'blue',
+    problema: 'Gerenciar dispositivos inteligentes exige apps separados, controles físicos e sistemas que não conversam entre si. A automação deveria ser simples — não complicada.',
+    solucao: 'O minhAi centraliza o controle de dispositivos IoT no mesmo assistente de voz que atende seus clientes. Um comando — múltiplos dispositivos respondem.',
+    funcoes: [
+      'Controle por comando de voz',
+      'Integração com dispositivos IoT',
+      'Ligar/desligar TVs e monitores',
+      'Controle de ar-condicionado',
+      'Automação de iluminação',
+      'Cenas programadas (ex: "modo atendimento")',
+      'Integração com Google Home',
+      'Relatório de uso de dispositivos',
+    ],
+    casos: [
+      { titulo: 'Sala de reunião', descricao: 'Diz "iniciar reunião" e o assistente liga a TV, ajusta o ar e escurece as luzes automaticamente.' },
+      { titulo: 'Restaurante', descricao: 'No horário de abertura, um comando liga todas as TVs, ajusta o ar e toca a playlist do ambiente.' },
+      { titulo: 'Clínica', descricao: 'Médico diz "próximo paciente" e o assistente chama a senha, acende a luz da sala e registra o atendimento.' },
+    ],
+    faq: [
+      { q: 'Quais dispositivos são compatíveis?', a: 'Dispositivos com suporte a Google Home, MQTT ou API REST. A lista cresce a cada versão.' },
+      { q: 'Preciso de um hub central?', a: 'Depende do protocolo do dispositivo. Para Google Home, não. Para Zigbee, sim.' },
+      { q: 'Funciona offline?', a: 'A IA de reconhecimento de voz requer internet, mas comandos locais podem funcionar com integração MQTT local.' },
+    ],
+    cta: 'Automatizar meu espaço',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FUNCIONALIDADES EXISTENTES EM DESTAQUE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'consulta-cnpj-cpf-ia',
+    titulo: 'Consulta de CNPJ e CPF com IA por voz',
+    subtitulo: 'Consulte dados de empresas (CNPJ), restrições de CPF, score de crédito e endereço via CEP por comando de voz — tudo em segundos, sem abrir outro sistema.',
+    metaTitle: 'Consulta CNPJ e CPF com IA | minhAi',
+    metaDescription: 'Consulte CNPJ, CPF, score de crédito e CEP por voz com IA. Para fintechs, lojas, clínicas e qualquer negócio que precisa de consultas rápidas.',
+    keywords: ['consulta cnpj ia', 'consultar cpf ia voz', 'score credito ia', 'consulta cep ia', 'verificar empresa cnpj ia'],
+    segmento: 'Consultas & Compliance',
+    emoji: '🔍',
+    corDestaque: 'yellow',
+    problema: 'Consultar CNPJ, CPF e CEP manualmente em sistemas separados é lento e interrompe o fluxo de atendimento. Dados errados causam fraudes e prejuízos.',
+    solucao: 'O minhAi consulta CNPJ, CPF com score de crédito (Quod), CEP com mapa e dados de empresas — por comando de voz, sem abrir nenhum outro sistema.',
+    funcoes: [
+      'Consulta de CNPJ com dados completos',
+      'Score e restrições de CPF (Quod)',
+      'Consulta de CEP com mapa',
+      'Consulta de cotações de moedas',
+      'Análise de fraudes em boletos',
+      'Verificação de links suspeitos',
+      'Histórico de consultas',
+      'Relatório de análise de crédito',
+    ],
+    casos: [
+      { titulo: 'Loja com crediário', descricao: 'Vendedor consulta o CPF do cliente por voz e recebe o score de crédito antes de aprovar o parcelamento.' },
+      { titulo: 'Empresa B2B', descricao: 'Antes de fechar negócio, consulta o CNPJ do fornecedor e verifica situação na Receita Federal por voz.' },
+      { titulo: 'Imobiliária', descricao: 'Consulta CPF do candidato ao aluguel e obtém análise de risco de inadimplência em segundos.' },
+    ],
+    faq: [
+      { q: 'A consulta de CPF é via Serasa ou Quod?', a: 'Via Quod, que possui dados de score, protestos, restrições e probabilidade de inadimplência.' },
+      { q: 'Quantos créditos custa cada consulta?', a: 'Consulta de CPF com score custa 2 créditos. CNPJ e CEP custam 1 crédito cada.' },
+      { q: 'Os dados são em tempo real?', a: 'Sim. As consultas são feitas em tempo real nas APIs oficiais.' },
+    ],
+    cta: 'Ativar consultas por voz',
+  },
+
+  {
+    slug: 'assistente-ia-sem-codigo',
+    titulo: 'Crie um assistente de IA sem saber programar',
+    subtitulo: 'Configure um assistente de IA completo pelo dashboard — sem código, sem técnico, sem mensalidade fixa. Pronto em menos de 10 minutos.',
+    metaTitle: 'Assistente de IA Sem Código | minhAi',
+    metaDescription: 'Crie seu assistente de IA sem programação. Configure funções, personalidade e visual pelo dashboard. Sem código, sem técnico. Comece grátis.',
+    keywords: ['assistente ia sem codigo', 'criar chatbot sem programar', 'ia sem codigo brasil', 'no code ia', 'criar bot sem tecnico'],
+    segmento: 'No-Code',
+    emoji: '🧩',
+    corDestaque: 'green',
+    problema: 'Criar um assistente de IA parece complexo — APIs, servidores, código, integração. A maioria das ferramentas exige um desenvolvedor e meses de trabalho.',
+    solucao: 'O minhAi foi construído do zero para ser configurado por qualquer pessoa. Você escolhe as funções, escreve a personalidade e publica em minutos — sem tocar em código.',
+    funcoes: [
+      'Dashboard visual intuitivo',
+      '+100 funções prontas para ativar',
+      'Personalidade e tom de voz configuráveis',
+      'WebApp publicado automaticamente',
+      'QR Code gerado na hora',
+      'Integrações com 1 clique (WhatsApp, Gmail)',
+      'Suporte via chat com a equipe',
+      'Sem necessidade de servidor ou hosting',
+    ],
+    casos: [
+      { titulo: 'Pequeno empreendedor', descricao: 'Criou um assistente de atendimento para sua barbearia em 15 minutos, sem ajuda de ninguém.' },
+      { titulo: 'Profissional de saúde', descricao: 'Médica configurou agendamento automático e cobrança PIX para sua clínica em uma tarde.' },
+      { titulo: 'Revendedor', descricao: 'Criou um catálogo de produtos interativo com IA para seus clientes sem contratar desenvolvedor.' },
+    ],
+    faq: [
+      { q: 'Realmente não preciso saber programar?', a: 'Não. O minhAi é 100% no-code. Qualquer pessoa que sabe usar um smartphone consegue configurar.' },
+      { q: 'Quanto tempo leva para estar no ar?', a: 'Em média 10 minutos do cadastro até o assistente funcionando e acessível por link.' },
+      { q: 'Preciso contratar hosting ou domínio?', a: 'Não. Tudo está incluído — hosting, subdomínio e certificado SSL.' },
+    ],
+    cta: 'Criar meu assistente agora',
+  },
+
+  {
+    slug: 'alternativa-typebot',
+    titulo: 'Alternativa ao Typebot com voz e IA nativa',
+    subtitulo: 'O minhAi vai além do Typebot: além de fluxos de conversação, tem voz nativa em português, mais de 100 funções prontas e cobrança PIX integrada.',
+    metaTitle: 'Alternativa ao Typebot com IA e Voz | minhAi',
+    metaDescription: 'Procurando alternativa ao Typebot? O minhAi oferece voz nativa, +100 funções, PIX integrado e WebApp personalizado. Sem mensalidade fixa.',
+    keywords: ['alternativa typebot', 'typebot alternativa brasil', 'chatbot brasileiro typebot', 'melhor que typebot', 'typebot com voz'],
+    segmento: 'Alternativas',
+    emoji: '🔄',
+    corDestaque: 'orange',
+    problema: 'O Typebot é ótimo para fluxos de texto, mas não tem voz nativa em português, não tem PIX integrado e requer integrações externas para funções básicas de negócio.',
+    solucao: 'O minhAi foi construído para negócios brasileiros: voz em português, PIX nativo, fila de atendimento, NFC/TEF e mais de 100 funções prontas — sem precisar conectar nada externo.',
+    funcoes: [
+      'Voz nativa em português (Google TTS Neural)',
+      'PIX integrado sem configuração',
+      'NFC e TEF Mercado Pago Point',
+      'Fila de atendimento com senhas',
+      'WebApp personalizado com domínio',
+      '+100 funções prontas (sem código)',
+      'Consultas de CNPJ, CPF e CEP',
+      'Totem de autoatendimento',
+    ],
+    casos: [
+      { titulo: 'Migração de Typebot', descricao: 'Empresa migrou fluxo do Typebot para o minhAi e ganhou atendimento por voz e PIX automático sem custo extra.' },
+      { titulo: 'Totem em clínica', descricao: 'Substituiu fluxo Typebot por minhAi para ter voz na recepção e emissão de senhas integrada.' },
+      { titulo: 'Loja com pagamento', descricao: 'Precisava de PIX nativo no chatbot — o Typebot não tinha; o minhAi já veio com isso.' },
+    ],
+    faq: [
+      { q: 'Posso importar meu fluxo do Typebot?', a: 'Não há importação direta, mas nossa equipe auxilia na migração dos principais fluxos.' },
+      { q: 'O minhAi tem o mesmo visual de builder do Typebot?', a: 'O minhAi usa um modelo diferente: você ativa funções prontas pelo dashboard, sem montar fluxo visual.' },
+      { q: 'O preço é maior que o Typebot?', a: 'O minhAi cobra por interação (R$ 0,15), sem mensalidade obrigatória. O custo final depende do volume de uso.' },
+    ],
+    cta: 'Testar gratuitamente',
+  },
+
+  {
+    slug: 'alternativa-manychat',
+    titulo: 'Alternativa ao ManyChat em português com PIX',
+    subtitulo: 'O minhAi substitui o ManyChat com vantagens para o mercado brasileiro: interface em português, PIX nativo, voz, totem e mais de 100 funções prontas.',
+    metaTitle: 'Alternativa ao ManyChat em Português | minhAi',
+    metaDescription: 'Alternativa brasileira ao ManyChat com PIX integrado, voz em português, fila de atendimento e +100 funções. Sem dólar, sem mensalidade fixa.',
+    keywords: ['alternativa manychat', 'manychat alternativa brasil', 'chatbot brasileiro manychat', 'manychat em portugues', 'melhor que manychat'],
+    segmento: 'Alternativas',
+    emoji: '🔄',
+    corDestaque: 'orange',
+    problema: 'O ManyChat é pago em dólar, tem suporte em inglês e não foi feito para as necessidades do mercado brasileiro — sem PIX, sem voz em português e sem totem.',
+    solucao: 'O minhAi é 100% brasileiro: interface em português, pagamento em reais, PIX nativo, voz neural em português e suporte via WhatsApp da equipe brasileira.',
+    funcoes: [
+      'Interface 100% em português',
+      'Pagamento em reais (sem dólar)',
+      'PIX nativo integrado',
+      'Voz neural em português (Google)',
+      'WhatsApp e Instagram integrados',
+      'Suporte via WhatsApp em português',
+      'Fila de atendimento presencial',
+      'Sem mensalidade obrigatória',
+    ],
+    casos: [
+      { titulo: 'E-commerce nacional', descricao: 'Migrou do ManyChat para o minhAi e passou a cobrar via PIX automaticamente sem integração externa.' },
+      { titulo: 'Clínica de São Paulo', descricao: 'Substituiu ManyChat pelo minhAi para ter suporte em português e agendamento integrado ao Google Agenda.' },
+      { titulo: 'Freelancer de marketing', descricao: 'Parou de pagar em dólar e passou a oferecer minhAi como solução para seus clientes brasileiros.' },
+    ],
+    faq: [
+      { q: 'O minhAi cobra em reais?', a: 'Sim. Todos os planos são cobrados em reais, sem variação cambial.' },
+      { q: 'O suporte é em português?', a: 'Sim. Suporte via WhatsApp e chat, em português, com equipe brasileira.' },
+      { q: 'Posso migrar meus fluxos do ManyChat?', a: 'Nossa equipe auxilia na migração dos principais fluxos no plano Consulting.' },
+    ],
+    cta: 'Migrar para o minhAi',
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MAIS SEGMENTOS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  {
+    slug: 'assistente-ia-academia',
+    titulo: 'Assistente de IA para academias e estúdios',
+    subtitulo: 'Automatize matrículas, renovações de plano, cobranças mensais e agendamento de aulas — sem secretária, sem ligação, sem perder aluno por falta de contato.',
+    metaTitle: 'Assistente de IA para Academias | minhAi',
+    metaDescription: 'IA para academias e estúdios fitness: matrícula automática, cobrança de mensalidade PIX, agendamento de aulas e pesquisa de satisfação. Sem mensalidade fixa.',
+    keywords: ['ia para academia', 'sistema academia ia', 'cobrança mensalidade academia automatica', 'agendamento aulas ia', 'chatbot academia'],
+    segmento: 'Fitness & Bem-estar',
+    emoji: '💪',
+    corDestaque: 'green',
+    problema: 'Secretárias sobrecarregadas com renovações, alunos que somem sem avisar e cobranças de mensalidade feitas manualmente uma a uma.',
+    solucao: 'O minhAi gerencia matrículas, cobra mensalidades via PIX, agenda aulas experimentais e envia lembretes automáticos de renovação.',
+    funcoes: [
+      'Matrícula e cadastro automático',
+      'Cobrança de mensalidade via PIX',
+      'Agendamento de aulas e avaliações',
+      'Lembrete de renovação de plano',
+      'Pesquisa de satisfação dos alunos',
+      'Totem de check-in na entrada',
+      'Fila para avaliação física',
+      'Relatório de inadimplência',
+    ],
+    casos: [
+      { titulo: 'Academia de bairro', descricao: 'Alunos renovam o plano pelo WhatsApp e pagam via PIX sem precisar ir à recepção.' },
+      { titulo: 'Estúdio de pilates', descricao: 'Clientes agendam aulas, recebem lembretes e pagam a mensalidade automaticamente todo mês.' },
+      { titulo: 'Box de CrossFit', descricao: 'Atletas fazem check-in no totem, o sistema registra presença e alerta sobre plano vencendo.' },
+    ],
+    faq: [
+      { q: 'O sistema controla acesso dos alunos?', a: 'O minhAi registra check-in via totem. Integração com catraca está disponível no plano Consulting.' },
+      { q: 'Posso cobrar planos de diferentes durações?', a: 'Sim. Você configura planos mensais, trimestrais e anuais com valores diferentes.' },
+      { q: 'O sistema manda lembrete de vencimento?', a: 'Sim. O assistente envia WhatsApp automático 3 dias antes do plano vencer.' },
+    ],
+    cta: 'Automatizar minha academia',
+  },
+
+  {
+    slug: 'assistente-ia-imobiliaria',
+    titulo: 'Assistente de IA para imobiliárias e corretores',
+    subtitulo: 'Qualifique leads, agende visitas, consulte CNPJ e CPF de compradores e envie contratos digitalizados — tudo por voz e WhatsApp, automaticamente.',
+    metaTitle: 'Assistente de IA para Imobiliárias | minhAi',
+    metaDescription: 'IA para imobiliárias: qualificação de leads, agendamento de visitas, consulta de CPF/CNPJ e digitalização de contratos. Sem mensalidade fixa.',
+    keywords: ['ia para imobiliaria', 'chatbot corretor de imoveis', 'qualificacao leads imobiliaria ia', 'agendamento visita ia', 'assistente virtual corretor'],
+    segmento: 'Imóveis',
+    emoji: '🏢',
+    corDestaque: 'blue',
+    problema: 'Corretores perdem tempo com leads não qualificados, agendamento manual de visitas e processos burocráticos que poderiam ser automatizados.',
+    solucao: 'O minhAi qualifica o lead pelo WhatsApp, agenda a visita no Google Agenda, consulta CPF do comprador e digitaliza contratos por foto.',
+    funcoes: [
+      'Qualificação de leads por WhatsApp',
+      'Agendamento de visitas (Google Agenda)',
+      'Consulta de CPF e restrições',
+      'Digitalização de contratos por foto',
+      'Envio de contratos por email',
+      'QR Code do imóvel no totem',
+      'Pesquisa de satisfação pós-visita',
+      'Relatório de atendimentos',
+    ],
+    casos: [
+      { titulo: 'Imobiliária grande', descricao: 'Leads do Instagram são qualificados automaticamente e encaminhados ao corretor certo por região.' },
+      { titulo: 'Corretor autônomo', descricao: 'Clientes agendam visita pelo WhatsApp, recebem confirmação e endereço — sem interação manual.' },
+      { titulo: 'Construtora', descricao: 'Totem no stand exibe os imóveis, agenda visitas e consulta CPF do cliente na hora.' },
+    ],
+    faq: [
+      { q: 'O assistente consegue mostrar fotos dos imóveis?', a: 'Sim. Você cadastra os imóveis com fotos no dashboard e o assistente exibe para o cliente.' },
+      { q: 'Como funciona a qualificação de leads?', a: 'O assistente faz perguntas configuráveis (tipo de imóvel, orçamento, região) e classifica o lead automaticamente.' },
+      { q: 'Posso integrar com meu CRM?', a: 'Integração com CRMs externos está disponível no plano Consulting via API.' },
+    ],
+    cta: 'Automatizar minha imobiliária',
+  },
+
+  {
+    slug: 'assistente-ia-ecommerce',
+    titulo: 'Assistente de IA para e-commerce e lojas virtuais',
+    subtitulo: 'Responda dúvidas sobre produtos, processe pedidos, gere cobranças PIX e rastreie entregas — tudo com IA integrada ao seu e-commerce.',
+    metaTitle: 'Assistente de IA para E-commerce | minhAi',
+    metaDescription: 'IA para e-commerce: atendimento automático, rastreamento de pedidos, cobrança PIX e catálogo interativo. Reduza abandono de carrinho e aumente vendas.',
+    keywords: ['ia para ecommerce', 'chatbot loja virtual', 'atendimento automatico ecommerce', 'rastreamento pedido ia', 'assistente virtual loja online'],
+    segmento: 'E-commerce',
+    emoji: '🛒',
+    corDestaque: 'purple',
+    problema: 'Clientes abandonam o carrinho por falta de resposta rápida. Atendimento pós-venda sobrecarrega a equipe com perguntas repetitivas sobre prazo e rastreamento.',
+    solucao: 'O minhAi responde dúvidas sobre produtos, processa pedidos com PIX integrado, envia rastreamento automático e coleta avaliações pós-entrega.',
+    funcoes: [
+      'Catálogo de produtos interativo',
+      'Cobrança PIX no ato do pedido',
+      'Rastreamento de entrega automático',
+      'Respostas às perguntas frequentes',
+      'Pesquisa de satisfação pós-compra',
+      'Email automático pós-pagamento',
+      'Notificação de estoque baixo',
+      'Relatório de vendas por período',
+    ],
+    casos: [
+      { titulo: 'Loja de moda online', descricao: 'Clientes tiram dúvidas sobre tamanho por WhatsApp, escolhem o produto e pagam via PIX sem sair da conversa.' },
+      { titulo: 'Distribuidora B2B', descricao: 'Compradores consultam estoque, fazem pedido e recebem nota fiscal por email automaticamente.' },
+      { titulo: 'Infoprodutos', descricao: 'Cliente paga via PIX e recebe o acesso ao produto digital por email automaticamente em segundos.' },
+    ],
+    faq: [
+      { q: 'O minhAi integra com minha plataforma de e-commerce?', a: 'Integração nativa com Shopify, WooCommerce e outras está disponível no plano Consulting.' },
+      { q: 'Como funciona o catálogo de produtos?', a: 'Você cadastra os produtos pelo dashboard com nome, foto, preço e descrição. O assistente exibe automaticamente.' },
+      { q: 'O sistema rastreia entrega automaticamente?', a: 'Sim, com integração às principais transportadoras brasileiras configuradas no plano Consulting.' },
+    ],
+    cta: 'Automatizar meu e-commerce',
+  },
+];
+
+export function getNichoPageBySlug(slug: string): NichePage | undefined {
+  return NICHO_PAGES.find((p) => p.slug === slug);
+}

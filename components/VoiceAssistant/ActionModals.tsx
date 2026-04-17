@@ -123,8 +123,14 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'FichaProducaoConversacionalDisplay': dynamic(() => import('@/components/assistant/FichaConversacionalDisplay'), { ssr: false }),
 
 // ── Vídeo Chamada ─────────────────────────────────────────
-'VideoCallRequestDisplay': dynamic(() => import('@/components/assistant/VideoCallRequestDisplay'), { ssr: false }),
-'VideoCallIncomingDisplay': dynamic(() => import('@/components/assistant/VideoCallIncomingDisplay'), { ssr: false }),
+'VideoCallRequestDisplay': dynamic(
+  () => import('@/components/assistant/VideoCallRequestDisplay'),
+  { ssr: false }
+),
+'VideoCallIncomingDisplay': dynamic(
+  () => import('@/components/assistant/VideoCallIncomingDisplay'),
+  { ssr: false }
+),
   
 // ── Calculadoras e conversão ──────────────────────────────
   'ConverterMedidasDisplay': dynamic(() => import('@/components/assistant/ConverterMedidasDisplay'), { ssr: false }),

@@ -1,6 +1,5 @@
 /**
  * Sistema de Registro de Funções NOVAS - minhAi
- * 
  * ⚠️ IMPORTANTE: Este registry é apenas para NOVAS funções.
  * Funções existentes (WhatsApp, Instagram, PIX, FAQ, ChatGPT) continuam
  * funcionando pelo sistema legado no VoiceAssistant.

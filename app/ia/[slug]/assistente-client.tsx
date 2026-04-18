@@ -41,16 +41,17 @@ export default function AssistenteClient({ company }: AssistenteClientProps) {
 
   // Helper para navegar entre modos (roleta infinita)
   const MODES: AssistenteMode[] = ['full', 'padrao', 'texto'];
-  const navigateMode = (direction: 'left' | 'right') => {
-    const currentIndex = MODES.indexOf(mode);
-    if (direction === 'left') {
-      const newIndex = currentIndex === 0 ? MODES.length - 1 : currentIndex - 1;
-      setMode(MODES[newIndex]);
-    } else {
-      const newIndex = currentIndex === MODES.length - 1 ? 0 : currentIndex + 1;
-      setMode(MODES[newIndex]);
-    }
-  };
+const navigateMode = (direction: 'left' | 'right') => {
+  if (isModalOpenState) return;
+  const currentIndex = MODES.indexOf(mode);
+  if (direction === 'left') {
+    const newIndex = currentIndex === 0 ? MODES.length - 1 : currentIndex - 1;
+    setMode(MODES[newIndex]);
+  } else {
+    const newIndex = currentIndex === MODES.length - 1 ? 0 : currentIndex + 1;
+    setMode(MODES[newIndex]);
+  }
+};
 
   const [showCloseButton, setShowCloseButton] = useState(false);
   const [showControls, setShowControls] = useState(false);

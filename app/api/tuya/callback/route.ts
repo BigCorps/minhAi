@@ -8,6 +8,14 @@ const TUYA_BASE: Record<string, string> = {
   in: 'https://openapi.tuyain.com',
 };
 
+// Area IDs por região (usados na assinatura App Authorization)
+const TUYA_AREA_ID: Record<string, string> = {
+  us: 'AY',
+  eu: 'EU',
+  cn: 'AY',
+  in: 'IN',
+};
+
 async function hmacSha256(secret: string, message: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -52,103 +60,93 @@ export async function GET(req: NextRequest) {
 
   try {
     const timestamp = Date.now().toString();
+    const nonce     = crypto.randomUUID().replace(/-/g, '');
+    const reqId     = crypto.randomUUID().replace(/-/g, '');
+    const areaId    = TUYA_AREA_ID[region] || 'AY';
 
-    // ── Tuya H5 OAuth token exchange ──────────────────────────
-    // Para grant_type=2 (H5 authorization code), a assinatura
-    // NÃO inclui nonce e usa formato simplificado:
-    // signStr = clientId + timestamp + stringToSign
+    // ── Algoritmo "Sign Requests for App Authorization" ───────
+    // Usado quando client_id vem de App Authorization (H5 OAuth)
+    // stringToSign inclui area_id e call_id/req_id como Optional_Signature_key
     const path         = `/v1.0/token?code=${code}&grant_type=2`;
     const emptyHash    = await sha256('');
-    const stringToSign = ['GET', emptyHash, '', path].join('\n');
+    const optionalKey  = `area_id:${areaId}\nreq_id:${reqId}\n`;
+    const stringToSign = ['GET', emptyHash, optionalKey, path].join('\n');
 
-    // SEM nonce — formato correto para H5 OAuth
-    const signStr = clientId + timestamp + stringToSign;
+    // str = clientId + t + nonce + stringToSign (sem access_token para token endpoint)
+    const signStr = clientId + timestamp + nonce + stringToSign;
     const sign    = (await hmacSha256(clientSecret, signStr)).toUpperCase();
 
-    console.log('Tuya H5 OAuth — sign attempt (sem nonce):', {
-      path,
-      clientId,
-      timestamp,
-      signStr,
+    console.log('Tuya App Auth — tentativa 1 (com area_id+req_id):', {
+      path, areaId, reqId, stringToSign
     });
 
-    const tokenRes = await fetch(`${baseUrl}${path}`, {
-      method: 'GET',
+    const headers1: Record<string, string> = {
+      'client_id':        clientId,
+      't':                timestamp,
+      'sign_method':      'HMAC-SHA256',
+      'sign':             sign,
+      'nonce':            nonce,
+      'Signature-Headers': 'area_id:req_id',
+      'area_id':          areaId,
+      'req_id':           reqId,
+      'Content-Type':     'application/json',
+    };
+
+    const res1     = await fetch(`${baseUrl}${path}`, { headers: headers1 });
+    const json1    = await res1.json();
+    console.log('Resposta 1:', JSON.stringify(json1));
+
+    if (json1.success) {
+      return await saveAndRedirect(json1, companyId, region, req);
+    }
+
+    // ── Fallback: sem area_id/req_id mas com nonce ────────────
+    console.log('Tentativa 2 (sem area_id, com nonce)...');
+    const stringToSign2 = ['GET', emptyHash, '', path].join('\n');
+    const signStr2      = clientId + timestamp + nonce + stringToSign2;
+    const sign2         = (await hmacSha256(clientSecret, signStr2)).toUpperCase();
+
+    const res2  = await fetch(`${baseUrl}${path}`, {
       headers: {
-        'client_id':   clientId,
-        't':           timestamp,
-        'sign_method': 'HMAC-SHA256',
-        'sign':        sign,
+        'client_id':    clientId,
+        't':            timestamp,
+        'sign_method':  'HMAC-SHA256',
+        'sign':         sign2,
+        'nonce':        nonce,
         'Content-Type': 'application/json',
       },
     });
+    const json2 = await res2.json();
+    console.log('Resposta 2:', JSON.stringify(json2));
 
-    const tokenJson = await tokenRes.json();
-    console.log('Tuya token response:', JSON.stringify(tokenJson));
-
-    // ── Fallback: tentar COM nonce se der sign invalid ────────
-    if (!tokenJson.success && tokenJson.code === 1004) {
-      console.log('Tentando com nonce...');
-      const nonce      = crypto.randomUUID().replace(/-/g, '');
-      const signStr2   = clientId + timestamp + nonce + stringToSign;
-      const sign2      = (await hmacSha256(clientSecret, signStr2)).toUpperCase();
-
-      const tokenRes2 = await fetch(`${baseUrl}${path}`, {
-        method: 'GET',
-        headers: {
-          'client_id':   clientId,
-          't':           timestamp,
-          'sign_method': 'HMAC-SHA256',
-          'sign':        sign2,
-          'nonce':       nonce,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const tokenJson2 = await tokenRes2.json();
-      console.log('Tuya token response (com nonce):', JSON.stringify(tokenJson2));
-
-      if (tokenJson2.success) {
-        return await saveAndRedirect(tokenJson2, companyId, region, req);
-      }
-
-      // ── Fallback 2: grant_type=4 (alguns projetos H5 usam) ──
-      console.log('Tentando grant_type=4...');
-      const path4      = `/v1.0/token?code=${code}&grant_type=4`;
-      const strSign4   = ['GET', emptyHash, '', path4].join('\n');
-      const signStr4   = clientId + timestamp + strSign4;
-      const sign4      = (await hmacSha256(clientSecret, signStr4)).toUpperCase();
-
-      const tokenRes4 = await fetch(`${baseUrl}${path4}`, {
-        method: 'GET',
-        headers: {
-          'client_id':   clientId,
-          't':           timestamp,
-          'sign_method': 'HMAC-SHA256',
-          'sign':        sign4,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const tokenJson4 = await tokenRes4.json();
-      console.log('Tuya token response (grant_type=4):', JSON.stringify(tokenJson4));
-
-      if (tokenJson4.success) {
-        return await saveAndRedirect(tokenJson4, companyId, region, req);
-      }
-
-      return NextResponse.redirect(
-        new URL(`/dashboard/agenda?tuya=error&msg=${encodeURIComponent(`sign invalid: ${tokenJson4.msg}`)}`, req.url)
-      );
+    if (json2.success) {
+      return await saveAndRedirect(json2, companyId, region, req);
     }
 
-    if (!tokenJson.success) {
-      return NextResponse.redirect(
-        new URL(`/dashboard/agenda?tuya=error&msg=${encodeURIComponent(tokenJson.msg ?? 'token_error')}`, req.url)
-      );
+    // ── Fallback 3: versão antiga sem nonce ───────────────────
+    // sign = HMAC-SHA256(client_id + t, secret)
+    console.log('Tentativa 3 (algoritmo antigo: clientId + t)...');
+    const signOld  = (await hmacSha256(clientSecret, clientId + timestamp)).toUpperCase();
+
+    const res3  = await fetch(`${baseUrl}${path}`, {
+      headers: {
+        'client_id':    clientId,
+        't':            timestamp,
+        'sign_method':  'HMAC-SHA256',
+        'sign':         signOld,
+        'Content-Type': 'application/json',
+      },
+    });
+    const json3 = await res3.json();
+    console.log('Resposta 3:', JSON.stringify(json3));
+
+    if (json3.success) {
+      return await saveAndRedirect(json3, companyId, region, req);
     }
 
-    return await saveAndRedirect(tokenJson, companyId, region, req);
+    return NextResponse.redirect(
+      new URL(`/dashboard/agenda?tuya=error&msg=${encodeURIComponent('sign invalid em todas as tentativas: ' + json3.msg)}`, req.url)
+    );
 
   } catch (err: any) {
     console.error('Tuya callback error:', err);
@@ -184,7 +182,7 @@ async function saveAndRedirect(
     throw error;
   }
 
-  console.log('Tuya OAuth concluído com sucesso. UID:', uid);
+  console.log('✅ Tuya OAuth concluído. UID:', uid);
 
   return NextResponse.redirect(
     new URL('/dashboard/agenda?tuya=success&tab=smarthome', req.url)

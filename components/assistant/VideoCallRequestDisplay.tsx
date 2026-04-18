@@ -71,6 +71,13 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
   const [selectedProfile, setSelectedProfile] = useState<OnlineProfile | null>(null);
   const [callId, setCallId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const [error, setError] = useState<string | null>(null);
 
   const callFrameRef = useRef<DailyCall | null>(null);
@@ -218,7 +225,9 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
         border: `1px solid ${C.border}`,
         borderRadius: '16px',
         width: '100%',
-        maxWidth: status === 'active' ? '900px' : '440px',
+        maxWidth: status === 'active' ? (isMobile ? '100%' : '900px') : '440px',
+        height: status === 'active' ? (isMobile ? '100dvh' : 'auto') : 'auto',
+        borderRadius: status === 'active' && isMobile ? '0' : '16px',
         boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
         overflow: 'hidden',
         transition: 'max-width 0.3s ease',
@@ -230,7 +239,7 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
           style={{
             display: status === 'active' ? 'block' : 'none',
             width: '100%',
-            height: '600px',
+            height: isMobile ? '100%' : '600px',
           }}
         />
 

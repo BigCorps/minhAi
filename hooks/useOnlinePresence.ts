@@ -18,13 +18,11 @@ export function useOnlinePresence({ companyId, profileId, pageLocation }: UseOnl
 
     async function upsertPresence(isOnline: boolean) {
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/online_presence`, {
+        await fetch(`${SUPABASE_URL}/functions/v1/upsert-online-presence`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'apikey': SUPABASE_ANON_KEY,
-            'Prefer': 'resolution=merge-duplicates',
           },
           body: JSON.stringify({
             company_id: companyId,
@@ -39,20 +37,15 @@ export function useOnlinePresence({ companyId, profileId, pageLocation }: UseOnl
             page_location: pageLocation ?? window.location.pathname,
           }),
         });
-
         if (isOnline) isRegisteredRef.current = true;
       } catch (err) {
-        console.warn('[useOnlinePresence] erro ao atualizar presença:', err);
+        console.warn('[useOnlinePresence] erro:', err);
       }
     }
 
-    // Registrar presença ao montar
     upsertPresence(true);
-
-    // Heartbeat a cada 30s
     heartbeatRef.current = setInterval(() => upsertPresence(true), 30_000);
 
-    // Marcar offline ao desmontar
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (isRegisteredRef.current) upsertPresence(false);

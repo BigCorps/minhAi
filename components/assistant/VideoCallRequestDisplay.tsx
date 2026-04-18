@@ -71,6 +71,7 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
   const [selectedProfile, setSelectedProfile] = useState<OnlineProfile | null>(null);
   const [callId, setCallId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -162,10 +163,11 @@ await supabase.removeChannel(broadcastChannel);
 
 async function entrarNaSala(roomUrl: string, token: string) {
   if (!callContainerRef.current) return;
+  setIsEntering(true);
 
   // Mostrar container ANTES de criar o frame
   callContainerRef.current.style.display = 'block';
-  callContainerRef.current.style.height = '600px';
+  callContainerRef.current.style.height = isMobile ? '100%' : '600px';
 
   callFrameRef.current?.destroy();
 
@@ -225,9 +227,9 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
         border: `1px solid ${C.border}`,
         borderRadius: '16px',
         width: '100%',
-        maxWidth: status === 'active' ? (isMobile ? '100%' : '900px') : '440px',
-        height: status === 'active' ? (isMobile ? '100dvh' : 'auto') : 'auto',
-        borderRadius: status === 'active' && isMobile ? '0' : '16px',
+        maxWidth: (status === 'active' || isEntering) ? (isMobile ? '100%' : '900px') : '440px',
+        height: (status === 'active' || isEntering) ? (isMobile ? '100dvh' : 'auto') : 'auto',
+        borderRadius: (status === 'active' || isEntering) && isMobile ? '0' : '16px',
         boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
         overflow: 'hidden',
         transition: 'max-width 0.3s ease',

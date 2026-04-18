@@ -92,7 +92,7 @@ async function atender() {
   await updateStatus('active');
 
   // ← Mostrar container ANTES de criar o frame (manipulação direta do DOM)
-  callContainerRef.current.style.height = isMobile ? '100%' : '80vh';
+  callContainerRef.current.style.height = isMobile ? '100%' : '100%';
   callContainerRef.current.style.display = 'block';
 
   callFrameRef.current?.destroy();
@@ -132,36 +132,36 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
       position: 'fixed', inset: 0, zIndex: 9999,
       background: C.overlay,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '16px',
+      padding: isMobile ? '0' : '16px',
     }}>
       <div style={{
         background: C.bg,
         border: `1px solid ${C.border}`,
-        borderRadius: '16px',
+        borderRadius: isMobile && (status === 'active' || isEntering) ? '0' : '16px',
         width: '100%',
         maxWidth: isMobile ? ((status === 'active' || isEntering) ? '100%' : '360px') : '900px',
-        height: (status === 'active' || isEntering) ? (isMobile ? '100dvh' : 'auto') : 'auto',
-        borderRadius: (status === 'active' || isEntering) && isMobile ? '0' : '16px',
+        height: isMobile && (status === 'active' || isEntering) ? '100dvh' : 'auto',
         boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
         overflow: 'hidden',
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         transition: 'max-width 0.3s ease',
       }}>
 
-        {/* Container do Daily iframe — visível só em active */}
-<div
-  ref={callContainerRef}
-  style={{
-    display: 'none',
-    width: '100%',
-    height: '0px',
-    maxHeight: isMobile ? 'none' : '80vh',
-    borderRadius: isMobile ? '0' : '12px',
-  }}
-/>
-
-        {/* ── ringing ── */}
-        {status === 'ringing' && (
-          <div style={{ padding: '32px 28px', textAlign: 'center' }}>
+        {/* ── Painel esquerdo: info + botões ── */}
+        {/* No mobile só aparece no ringing; no desktop sempre visível */}
+        {(status === 'ringing' || !isMobile) && (
+          <div style={{
+            padding: '32px 28px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: isMobile ? '100%' : '260px',
+            flexShrink: 0,
+            borderRight: !isMobile ? `1px solid ${C.border}` : 'none',
+          }}>
             <div style={{
               width: '72px', height: '72px', borderRadius: '50%',
               background: '#9333ea22', margin: '0 auto 20px',
@@ -180,12 +180,12 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
               {data.callerName}
             </p>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
               {/* Recusar */}
               <button
                 onClick={recusar}
                 style={{
-                  flex: 1, padding: '13px',
+                  width: '100%', padding: '13px',
                   background: C.btnDecline,
                   color: '#fff', border: 'none',
                   borderRadius: '12px',
@@ -205,7 +205,7 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
                 onClick={atender}
                 disabled={loading}
                 style={{
-                  flex: 1, padding: '13px',
+                  width: '100%', padding: '13px',
                   background: C.btnAnswer,
                   color: '#fff', border: 'none',
                   borderRadius: '12px',
@@ -230,6 +230,17 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
             </div>
           </div>
         )}
+
+        {/* ── Painel direito: Daily iframe ── */}
+        <div
+          ref={callContainerRef}
+          style={{
+            display: 'none',
+            flex: 1,
+            minHeight: isMobile ? 'auto' : '500px',
+            maxHeight: isMobile ? 'none' : '80vh',
+          }}
+        />
 
         <style>{`
           @keyframes spin { to { transform: rotate(360deg); } }

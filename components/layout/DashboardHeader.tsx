@@ -3,11 +3,11 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { createClient } from '@/lib/supabase-browser';
-import { User, CreditCard, LogOut, LifeBuoy, Users, Wallet, MessageSquare } from 'lucide-react';
+import { User, CreditCard, LogOut, LifeBuoy, Users, Wallet, MessageSquare, Download } from 'lucide-react';
 import { AssistantSelectorHeader } from '@/components/layout/AssistantSelectorHeader';
 
 interface DashboardHeaderProps {
@@ -17,11 +17,58 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ user }: DashboardHeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const supabase = createClient();
 
   const displayName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
   const showImage = avatarUrl && !imageError;
+
+  // Lógica de Instalação PWA
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const alreadyInstalled = localStorage.getItem('minhai_pwa_installed') === 'true';
+      
+      if (!isStandalone && !alreadyInstalled) {
+        setShowInstallButton(true);
+      }
+    };
+
+    const handleAppInstalled = () => {
+      setShowInstallButton(false);
+      setDeferredPrompt(null);
+      localStorage.setItem('minhai_pwa_installed', 'true');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      localStorage.setItem('minhai_pwa_installed', 'true');
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setShowInstallButton(false);
+      setDeferredPrompt(null);
+    }
+  };
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -34,7 +81,6 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left: Hamburger (Sidebar Component) + Logo */}
-            {/* CORREÇÃO: Garantindo que o container do Sidebar tenha cores explícitas para o ícone hambúrguer */}
             <div className="flex items-center space-x-4 text-gray-700 dark:text-white">
               <Sidebar />
               
@@ -45,6 +91,27 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
             {/* Right: Theme Toggle + User Menu */}
             <div className="flex items-center space-x-4">
+              {showInstallButton && (
+                <button
+                  onClick={handleInstallClick}
+                  className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-600/20 rounded-lg hover:bg-blue-600 hover:text-white transition-all duration-300 text-sm font-medium"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Baixar App</span>
+                </button>
+              )}
+              
+              {/* Ícone de download para mobile */}
+              {showInstallButton && (
+                <button
+                  onClick={handleInstallClick}
+                  className="sm:hidden p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/5 rounded-lg transition"
+                  title="Baixar App"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+              )}
+
               <AssistantSelectorHeader />
               <ThemeToggle />
               
@@ -96,22 +163,22 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                         <CreditCard className="w-4 h-4" />
                         <span>Créditos</span>
                       </Link>
-<Link
-  href="/dashboard/saldo"
-  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
-  onClick={() => setUserMenuOpen(false)}
->
-  <Wallet className="w-4 h-4" />
-  <span>Recebimentos</span>
-</Link>
-<Link
-  href="/dashboard/historico"
-  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
-  onClick={() => setUserMenuOpen(false)}
->
-  <MessageSquare className="w-4 h-4" />
-  <span>Histórico</span>
-</Link>
+                      <Link
+                        href="/dashboard/saldo"
+                        className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Wallet className="w-4 h-4" />
+                        <span>Recebimentos</span>
+                      </Link>
+                      <Link
+                        href="/dashboard/historico"
+                        className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Histórico</span>
+                      </Link>
                       <Link
                         href="/dashboard/indicacoes"
                         className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"

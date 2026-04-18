@@ -163,7 +163,7 @@ const { profile, register: registerProfile, login: loginProfile, logout: logoutP
 const profileRef = useRef(profile);
 useEffect(() => { profileRef.current = profile; }, [profile]);
 
-useOnlinePresence({
+const { onlineProfiles } = useOnlinePresence({
   companyId,
   profileId: profile?.id ?? '',
   nome: profile?.nome ?? '',
@@ -731,6 +731,7 @@ case 'solicitar_video_chamada':
         companyId,
         profileId: currentProfile.id,
         profileName: currentProfile.nome,
+        onlineProfiles, // ← passa a lista já resolvida
       },
     });
     pt('Abrindo vídeo chamada...').catch(() => {});

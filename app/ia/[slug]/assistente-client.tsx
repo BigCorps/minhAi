@@ -81,10 +81,15 @@ const navigateMode = (direction: 'left' | 'right') => {
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
 
   // C. Swipe para navegar entre modos
-  useSwipe({
-    onSwipeLeft: () => navigateMode('right'),
-    onSwipeRight: () => navigateMode('left'),
-  });
+const isModalOpenRef = useRef(false);
+useEffect(() => {
+  isModalOpenRef.current = isModalOpenState;
+}, [isModalOpenState]);
+
+useSwipe({
+  onSwipeLeft: () => { if (!isModalOpenRef.current) navigateMode('right'); },
+  onSwipeRight: () => { if (!isModalOpenRef.current) navigateMode('left'); },
+});
 
   // C. Navegação por teclado (setas ← →)
   useEffect(() => {

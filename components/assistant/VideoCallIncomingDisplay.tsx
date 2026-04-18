@@ -133,14 +133,15 @@ export default function VideoCallIncomingDisplay({ data, onClose, theme = 'dark'
       }}>
 
         {/* Container do Daily iframe — visível só em active */}
-        <div
-          ref={callContainerRef}
-          style={{
-            display: status === 'active' ? 'block' : 'none',
-            width: '100%',
-            height: '600px',
-          }}
-        />
+<div
+  ref={callContainerRef}
+  style={{
+    width: '100%',
+    height: status === 'active' ? '600px' : '0px',
+    overflow: 'hidden',
+    borderRadius: '12px',
+  }}
+/>
 
         {/* ── ringing ── */}
         {status === 'ringing' && (

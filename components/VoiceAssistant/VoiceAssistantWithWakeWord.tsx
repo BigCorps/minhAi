@@ -173,35 +173,56 @@ const { onlineProfiles } = useOnlinePresence({
 const onlineProfilesRef = useRef(onlineProfiles);
 useEffect(() => { onlineProfilesRef.current = onlineProfiles; }, [onlineProfiles]);
 
-// ── Sincroniza profile via evento de login (colaborador faz login no /cliente/slug) ──
+// ── useEffect 1: login via evento (aba /cliente/slug) ────
 useEffect(() => {
   const supabase = createClient();
   let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 
-function subscribeRealtime(profileId: string) {
-  if (realtimeChannel) supabase.removeChannel(realtimeChannel);
-  const channelName = `assistente-${companyId}-${profileId}`;
-  console.log('[Realtime] Inscrevendo no canal:', channelName); // ← adicionar
-  realtimeChannel = supabase.channel(channelName)
-    .on('broadcast', { event: 'incoming-call' }, (payload) => {
-      console.log('[Realtime] incoming-call recebido:', payload); // ← adicionar
-      const { callId, roomUrl, receiverToken, callerName } = payload.payload;
-      setActiveModal({
-        type: 'VideoCallIncomingDisplay',
-        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+  function subscribeRealtime(profileId: string) {
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    const channelName = `assistente-${companyId}-${profileId}`;
+    console.log('[Realtime] Inscrevendo no canal:', channelName);
+    realtimeChannel = supabase.channel(channelName)
+      .on('broadcast', { event: 'incoming-call' }, (payload) => {
+        console.log('[Realtime] incoming-call recebido:', payload);
+        const { callId, roomUrl, receiverToken, callerName } = payload.payload;
+        setActiveModal({
+          type: 'VideoCallIncomingDisplay',
+          data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+        });
+      })
+      .subscribe((status) => {
+        console.log('[Realtime] status canal:', channelName, status);
       });
-    })
-    .subscribe((status) => {
-      console.log('[Realtime] status canal:', channelName, status); // ← adicionar
-    });
-}
+  }
 
-  // Se já há profile ao montar (ex: sessão salva no localStorage)
   if (profileRef.current?.id) {
     subscribeRealtime(profileRef.current.id);
   }
 
-  // ── Inscreve no Realtime quando profile carrega via useProfile (sessão salva) ──
+  const handleProfileLogin = (e: any) => {
+    profileRef.current = e.detail;
+    if (e.detail?.id) subscribeRealtime(e.detail.id);
+  };
+  const handleProfileLogout = () => {
+    profileRef.current = null;
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+  };
+
+  window.addEventListener('eai:profileLogin', handleProfileLogin);
+  window.addEventListener('eai:profileLogout', handleProfileLogout);
+
+  return () => {
+    window.removeEventListener('eai:profileLogin', handleProfileLogin);
+    window.removeEventListener('eai:profileLogout', handleProfileLogout);
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+  };
+}, [companyId]);
+
+// ── useEffect 2: profile carregado via useProfile (sessão salva no localStorage) ──
 useEffect(() => {
   if (!profile?.id) return;
 

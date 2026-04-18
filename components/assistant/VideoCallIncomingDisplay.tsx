@@ -150,7 +150,7 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
 
         {/* ── Painel esquerdo: info + botões ── */}
         {/* No mobile só aparece no ringing; no desktop sempre visível */}
-        {(status === 'ringing' || !isMobile) && (
+        {(status === 'ringing' || !isMobile) && !isEntering && (
           <div style={{
             padding: '32px 28px',
             textAlign: 'center',

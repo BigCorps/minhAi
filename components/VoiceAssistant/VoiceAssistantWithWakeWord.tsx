@@ -163,6 +163,14 @@ const { profile, register: registerProfile, login: loginProfile, logout: logoutP
 const profileRef = useRef(profile);
 useEffect(() => { profileRef.current = profile; }, [profile]);
 
+useOnlinePresence({
+  companyId,
+  profileId: profile?.id ?? '',
+  nome: profile?.nome ?? '',
+  tipo: profile?.tipo ?? '',
+  pageLocation: getContextualRoute('ia', slug ?? ''),
+});
+
 // ── Sincroniza profile via evento de login (colaborador faz login no /cliente/slug) ──
 useEffect(() => {
   const supabase = createClient();
@@ -711,14 +719,12 @@ case 'solicitar_video_chamada':
   await stopGoogleSpeech();
   {
     const currentProfile = profileRef.current;
-    const tiposPermitidos = ['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem'];
-
+    const tiposPermitidos = ['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem', 'administrador'];
     if (!currentProfile || !tiposPermitidos.includes(currentProfile.tipo)) {
-      await pt('Esta função está disponível apenas para colaboradores logados. Faça login no painel do colaborador primeiro.');
+      await pt('Esta função está disponível apenas para colaboradores logados.');
       setIsProcessing(false);
       break;
     }
-
     setActiveModal({
       type: 'VideoCallRequestDisplay',
       data: {
@@ -727,7 +733,7 @@ case 'solicitar_video_chamada':
         profileName: currentProfile.nome,
       },
     });
-    pt('Solicitando vídeo chamada com o proprietário...').catch(() => {});
+    pt('Abrindo vídeo chamada...').catch(() => {});
   }
   break;
 

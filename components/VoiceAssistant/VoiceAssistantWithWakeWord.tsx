@@ -159,9 +159,25 @@ export function VoiceAssistantWithWakeWord({
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);
   const isMobile = useIsMobile();
-  const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
-  const profileRef = useRef(profile);
-  useEffect(() => { profileRef.current = profile; }, [profile]);
+const { profile, register: registerProfile, login: loginProfile, logout: logoutProfile } = useProfile(slug ?? '');
+const profileRef = useRef(profile);
+useEffect(() => { profileRef.current = profile; }, [profile]);
+
+// ── Sincroniza profile via evento de login (colaborador faz login no /cliente/slug) ──
+useEffect(() => {
+  const handleProfileLogin = (e: any) => {
+    profileRef.current = e.detail;
+  };
+  const handleProfileLogout = () => {
+    profileRef.current = null;
+  };
+  window.addEventListener('eai:profileLogin', handleProfileLogin);
+  window.addEventListener('eai:profileLogout', handleProfileLogout);
+  return () => {
+    window.removeEventListener('eai:profileLogin', handleProfileLogin);
+    window.removeEventListener('eai:profileLogout', handleProfileLogout);
+  };
+}, []);
   const groqContextRef = useGroqContext(companyId, profile);
 
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────
@@ -643,25 +659,26 @@ export function VoiceAssistantWithWakeWord({
 
 case 'solicitar_video_chamada':
   await stopGoogleSpeech();
-  if (!profile || !['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem'].includes(profile.tipo)) {
-    await pt('Esta função está disponível apenas para colaboradores logados.');
-    setIsProcessing(false);
-    break;
-  }
-  setActiveModal({
-    type: 'VideoCallRequestDisplay',
-    data: { companyId, profileId: profile.id, profileName: profile.nome },
-  });
-  pt('Solicitando vídeo chamada com o proprietário...').catch(() => {});
-  break;
+  {
+    const currentProfile = profileRef.current;
+    const tiposPermitidos = ['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem'];
 
-case 'fila_atendimento':
-  stopGoogleSpeech();
-  setActiveModal({
-    type: 'FilaAtendimentoDisplay',
-    data: { companyId },
-  });
-  playText('Abrindo painel de atendimento...').catch(() => {});
+    if (!currentProfile || !tiposPermitidos.includes(currentProfile.tipo)) {
+      await pt('Esta função está disponível apenas para colaboradores logados. Faça login no painel do colaborador primeiro.');
+      setIsProcessing(false);
+      break;
+    }
+
+    setActiveModal({
+      type: 'VideoCallRequestDisplay',
+      data: {
+        companyId,
+        profileId: currentProfile.id,
+        profileName: currentProfile.nome,
+      },
+    });
+    pt('Solicitando vídeo chamada com o proprietário...').catch(() => {});
+  }
   break;
 
 case 'gerar_senha':

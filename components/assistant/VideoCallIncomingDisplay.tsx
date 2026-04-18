@@ -139,9 +139,9 @@ async function atender() {
 <div
   ref={callContainerRef}
   style={{
+    display: 'none',
     width: '100%',
-    height: status === 'active' ? '600px' : '0px',
-    overflow: 'hidden',
+    height: '0px',
     borderRadius: '12px',
   }}
 />

@@ -201,6 +201,30 @@ function subscribeRealtime(profileId: string) {
     subscribeRealtime(profileRef.current.id);
   }
 
+  // ── Inscreve no Realtime quando profile carrega via useProfile (sessão salva) ──
+useEffect(() => {
+  if (!profile?.id) return;
+
+  const supabase = createClient();
+  const channelName = `assistente-${companyId}-${profile.id}`;
+  console.log('[Realtime] profile carregado, inscrevendo:', channelName);
+
+  const channel = supabase.channel(channelName)
+    .on('broadcast', { event: 'incoming-call' }, (payload) => {
+      console.log('[Realtime] incoming-call recebido:', payload);
+      const { callId, roomUrl, receiverToken, callerName } = payload.payload;
+      setActiveModal({
+        type: 'VideoCallIncomingDisplay',
+        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+      });
+    })
+    .subscribe((status) => {
+      console.log('[Realtime] status:', status);
+    });
+
+  return () => { supabase.removeChannel(channel); };
+}, [profile?.id, companyId]);
+
   const handleProfileLogin = (e: any) => {
     profileRef.current = e.detail;
     if (e.detail?.id) subscribeRealtime(e.detail.id);

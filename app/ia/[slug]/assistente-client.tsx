@@ -88,13 +88,14 @@ const navigateMode = (direction: 'left' | 'right') => {
 
   // C. Navegação por teclado (setas ← →)
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        navigateMode('left');
-      } else if (e.key === 'ArrowRight') {
-        navigateMode('right');
-      }
-    };
+const handleKeyPress = (e: KeyboardEvent) => {
+  if (isModalOpenState) return;
+  if (e.key === 'ArrowLeft') {
+    navigateMode('left');
+  } else if (e.key === 'ArrowRight') {
+    navigateMode('right');
+  }
+};
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);

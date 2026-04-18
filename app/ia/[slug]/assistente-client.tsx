@@ -94,7 +94,7 @@ useSwipe({
   // C. Navegação por teclado (setas ← →)
   useEffect(() => {
 const handleKeyPress = (e: KeyboardEvent) => {
-  if (isModalOpenState) return;
+  if (isModalOpenRef.current) return;
   if (e.key === 'ArrowLeft') {
     navigateMode('left');
   } else if (e.key === 'ArrowRight') {

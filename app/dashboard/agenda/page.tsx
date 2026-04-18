@@ -334,17 +334,11 @@ function AgendaPageContent() {
   }
 
   // ── Tuya: iniciar OAuth ───────────────────────────────────────
-  function connectTuya() {
-    if (!selectedCompanyId) return;
-    const state  = `${selectedCompanyId}:us`;
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id:     process.env.NEXT_PUBLIC_TUYA_CLIENT_ID!,
-      redirect_uri:  'https://minhai.app/api/tuya/callback',
-      state,
-    });
-    window.location.href = `https://auth.tuya.com/?${params.toString()}`;
-  }
+function connectTuya() {
+  if (!selectedCompanyId) return;
+  const state = `${selectedCompanyId}:us`;
+  window.location.href = `https://app-h5-ue.iot787.com/d/login?client_id=${process.env.NEXT_PUBLIC_TUYA_CLIENT_ID}&redirect_uri=https%3A%2F%2Fminhai.app%2Fapi%2Ftuya%2Fcallback&state=${encodeURIComponent(state)}`;
+}
 
   // ── Tuya: listar dispositivos ─────────────────────────────────
   async function loadTuyaDevices() {

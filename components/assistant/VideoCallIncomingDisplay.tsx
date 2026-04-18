@@ -88,15 +88,16 @@ async function atender() {
 
   callFrameRef.current?.destroy();
 
-  const frame = DailyIframe.createFrame(callContainerRef.current, {
-    showLeaveButton: true,
-    iframeStyle: {
-      width: '100%',
-      height: '100%',
-      border: '0',
-      borderRadius: '12px',
-    },
-  });
+const frame = DailyIframe.createFrame(callContainerRef.current, {
+  showLeaveButton: true,
+  lang: 'pt-BR',
+  iframeStyle: {
+    width: '100%',
+    height: '100%',
+    border: '0',
+    borderRadius: '12px',
+  },
+});
 
   callFrameRef.current = frame;
 

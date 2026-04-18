@@ -44,32 +44,47 @@ export async function GET(req: NextRequest) {
   const clientId     = process.env.TUYA_CLIENT_ID!;
   const clientSecret = process.env.TUYA_CLIENT_SECRET!;
 
+  if (!clientId || !clientSecret) {
+    return NextResponse.redirect(
+      new URL('/dashboard/agenda?tuya=error&msg=missing_credentials', req.url)
+    );
+  }
+
   try {
-    // ── Trocar code por access_token ───────────────────────────
-    const timestamp = Date.now().toString();
-    const nonce     = crypto.randomUUID().replace(/-/g, '');
-    const path      = `/v1.0/token?code=${code}&grant_type=2`;
-    const emptyHash = await sha256('');
+    // ── Assinatura para troca de código OAuth ─────────────────
+    // IMPORTANTE: grant_type=2 (authorization code) NÃO usa access_token
+    // A string de assinatura é: clientId + timestamp + nonce + stringToSign
+    // sem access_token no meio
+    const timestamp  = Date.now().toString();
+    const nonce      = crypto.randomUUID().replace(/-/g, '');
+    const path       = `/v1.0/token?code=${code}&grant_type=2`;
+    const emptyHash  = await sha256('');
     const stringToSign = ['GET', emptyHash, '', path].join('\n');
-    const signStr   = clientId + timestamp + nonce + stringToSign;
-    const sign      = (await hmacSha256(clientSecret, signStr)).toUpperCase();
+
+    // Para grant_type=2, a assinatura NÃO inclui access_token
+    const signStr = clientId + timestamp + nonce + stringToSign;
+    const sign    = (await hmacSha256(clientSecret, signStr)).toUpperCase();
+
+    console.log('Tuya callback — trocando code por token:', { path, clientId, timestamp });
 
     const tokenRes = await fetch(`${baseUrl}${path}`, {
+      method: 'GET',
       headers: {
         'client_id':   clientId,
         't':           timestamp,
         'sign_method': 'HMAC-SHA256',
         'sign':        sign,
         'nonce':       nonce,
+        'Content-Type': 'application/json',
       },
     });
 
     const tokenJson = await tokenRes.json();
+    console.log('Tuya token response:', tokenJson);
 
     if (!tokenJson.success) {
-      console.error('Tuya token exchange error:', tokenJson);
       return NextResponse.redirect(
-        new URL(`/dashboard/agenda?tuya=error&msg=${encodeURIComponent(tokenJson.msg)}`, req.url)
+        new URL(`/dashboard/agenda?tuya=error&msg=${encodeURIComponent(tokenJson.msg ?? 'token_error')}`, req.url)
       );
     }
 
@@ -77,7 +92,7 @@ export async function GET(req: NextRequest) {
       access_token,
       refresh_token,
       uid,
-      expire_time, // segundos até expirar
+      expire_time,
     } = tokenJson.result;
 
     const expiresAt = Date.now() + (expire_time * 1000);
@@ -87,17 +102,19 @@ export async function GET(req: NextRequest) {
     const { error } = await supabase
       .from('companies')
       .update({
-        tuya_access_token:    access_token,
-        tuya_refresh_token:   refresh_token,
-        tuya_user_uid:        uid,
+        tuya_access_token:     access_token,
+        tuya_refresh_token:    refresh_token,
+        tuya_user_uid:         uid,
         tuya_token_expires_at: expiresAt,
-        tuya_region:          region,
+        tuya_region:           region,
       })
       .eq('id', companyId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase update error:', error);
+      throw error;
+    }
 
-    // ── Redirecionar de volta ao Dashboard com sucesso ─────────
     return NextResponse.redirect(
       new URL('/dashboard/agenda?tuya=success&tab=smarthome', req.url)
     );
@@ -105,7 +122,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error('Tuya callback error:', err);
     return NextResponse.redirect(
-      new URL(`/dashboard/agenda?tuya=error&msg=${encodeURIComponent(err.message)}`, req.url)
+      new URL(`/dashboard/agenda?tuya=error&msg=${encodeURIComponent(err.message ?? 'unknown')}`, req.url)
     );
   }
 }

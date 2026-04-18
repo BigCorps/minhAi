@@ -13,7 +13,7 @@ import {
   UserPlus, Users, Loader2, Search, Download, RefreshCw,
   Fingerprint, Camera, ChevronDown, ChevronUp, Shield,
   Monitor, Briefcase, Plus, Trash2, Save, X,
-  AlertCircle, MapPin, Phone, Video, Wifi,
+  AlertCircle, MapPin, Phone,
 } from 'lucide-react';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -623,33 +623,6 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
   const [tipoFiltro, setTipoFiltro] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<CompanyProfile | null>(null);
-  const [onlineProfiles, setOnlineProfiles] = useState<Set<string>>(new Set());
-  const [callingProfileId, setCallingProfileId] = useState<string | null>(null);
-
-  // Carregar e escutar presença online
-  useEffect(() => {
-    async function loadPresence() {
-      const { data } = await supabase
-        .from('online_presence')
-        .select('profile_id')
-        .eq('company_id', companyId)
-        .eq('is_online', true);
-      if (data) setOnlineProfiles(new Set(data.map(d => d.profile_id)));
-    }
-    loadPresence();
-
-    const channel = supabase
-      .channel(`online-presence-${companyId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'online_presence',
-        filter: `company_id=eq.${companyId}`,
-      }, () => loadPresence())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [companyId]);
 
   useEffect(() => {
     load();
@@ -682,54 +655,6 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
     setProfiles(data ?? []);
     setLoading(false);
   }
-
-async function iniciarVideoChamada(receiverProfile: CompanyProfile) {
-  if (callingProfileId) return;
-  setCallingProfileId(receiverProfile.id);
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-video-call`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          company_id: companyId,
-          caller_id: null,        // ← owner não tem company_profile
-          caller_type: 'owner',
-          receiver_id: receiverProfile.id,
-          receiver_type: receiverProfile.tipo,
-        }),
-      }
-    );
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error ?? JSON.stringify(result));
-
-    // Broadcast Realtime para o assistente do colaborador
-    const supabase = createClient();
-    await supabase.channel(`assistente-${companyId}-${receiverProfile.id}`)
-      .send({
-        type: 'broadcast',
-        event: 'incoming-call',
-        payload: {
-          callId: result.call_id,
-          roomUrl: result.room_url,
-          receiverToken: result.receiver_token,
-          callerName: 'Proprietário',
-        },
-      });
-
-    // Owner entra na sala diretamente
-    window.open(result.room_url, '_blank');
-  } catch (err: any) {
-    console.error('Erro ao iniciar chamada:', err);
-    alert('Erro ao iniciar chamada: ' + err.message);
-  } finally {
-    setCallingProfileId(null);
-  }
-}
 
   const filtered = profiles.filter(p => {
     if (tipoFiltro && p.tipo !== tipoFiltro) return false;
@@ -797,7 +722,6 @@ async function iniciarVideoChamada(receiverProfile: CompanyProfile) {
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">PIN</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Último acesso</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Online</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Ações</th>
                 </tr>
               </thead>
@@ -821,31 +745,6 @@ async function iniciarVideoChamada(receiverProfile: CompanyProfile) {
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           p.is_active ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400'
                         }`}>{p.is_active ? 'Ativo' : 'Inativo'}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {onlineProfiles.has(p.id) ? (
-                          <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
-                              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
-                              Online
-                            </span>
-                            <button
-                              onClick={() => iniciarVideoChamada(p)}
-                              disabled={!!callingProfileId}
-                              title="Iniciar vídeo chamada"
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition disabled:opacity-50"
-                            >
-                              {callingProfileId === p.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Video className="w-3 h-3" />
-                              )}
-                              Chamar
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400 dark:text-gray-600">Offline</span>
-                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => { setEditando(p); setModalAberto(true); }}

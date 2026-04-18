@@ -21,6 +21,7 @@ interface Props {
     companyId: string;
     profileId: string;
     profileName: string;
+    onlineProfiles: OnlineProfile[]; // ← novo
   };
   onClose: () => void;
   theme?: 'dark' | 'light';
@@ -76,68 +77,6 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
   const callContainerRef = useRef<HTMLDivElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
-
-  // ── Escutar presença do canal da empresa ──────────────────
-  useEffect(() => {
-    const supabase = createClient();
-    const channelName = `presence-${data.companyId}`;
-
-    const channel = supabase.channel(channelName);
-    channelRef.current = channel;
-
-    function syncPresence() {
-      const state = channel.presenceState<OnlineProfile & { onlineAt: string }>();
-      const profiles: OnlineProfile[] = [];
-
-      for (const [, presences] of Object.entries(state)) {
-        const p = presences[0] as any;
-        // Excluir o próprio colaborador e clientes
-        if (
-          p?.profileId &&
-          p.profileId !== data.profileId &&
-          TIPOS_COM_PRESENCA.includes(p.tipo)
-        ) {
-          profiles.push({
-            profileId: p.profileId,
-            nome: p.nome,
-            tipo: p.tipo,
-            pageLocation: p.pageLocation,
-          });
-        }
-      }
-
-      setOnlineProfiles(profiles);
-    }
-
-channel
-  .on('presence', { event: 'sync' }, () => {
-    console.log('[VideoCall] sync fired');
-    syncPresence();
-  })
-  .on('presence', { event: 'join' }, () => {
-    console.log('[VideoCall] join fired');
-    syncPresence();
-  })
-  .on('presence', { event: 'leave' }, () => {
-    console.log('[VideoCall] leave fired');
-    syncPresence();
-  })
-  .subscribe(async (status) => {
-    console.log('[VideoCall] channel status:', status);
-    if (status === 'SUBSCRIBED') {
-      // Força leitura do estado atual após subscrição
-      setTimeout(() => {
-        console.log('[VideoCall] presenceState:', channel.presenceState());
-        syncPresence();
-      }, 500);
-    }
-  });
-
-    return () => {
-      supabase.removeChannel(channel);
-      channelRef.current = null;
-    };
-  }, [data.companyId, data.profileId]);
 
   // ── Cleanup ao desmontar ──────────────────────────────────
   useEffect(() => {

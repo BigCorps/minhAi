@@ -178,19 +178,23 @@ useEffect(() => {
   const supabase = createClient();
   let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 
-  function subscribeRealtime(profileId: string) {
-    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
-    const channelName = `assistente-${companyId}-${profileId}`;
-    realtimeChannel = supabase.channel(channelName)
-      .on('broadcast', { event: 'incoming-call' }, (payload) => {
-        const { callId, roomUrl, receiverToken, callerName } = payload.payload;
-        setActiveModal({
-          type: 'VideoCallIncomingDisplay',
-          data: { companyId, callId, roomUrl, token: receiverToken, callerName },
-        });
-      })
-      .subscribe();
-  }
+function subscribeRealtime(profileId: string) {
+  if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+  const channelName = `assistente-${companyId}-${profileId}`;
+  console.log('[Realtime] Inscrevendo no canal:', channelName); // ← adicionar
+  realtimeChannel = supabase.channel(channelName)
+    .on('broadcast', { event: 'incoming-call' }, (payload) => {
+      console.log('[Realtime] incoming-call recebido:', payload); // ← adicionar
+      const { callId, roomUrl, receiverToken, callerName } = payload.payload;
+      setActiveModal({
+        type: 'VideoCallIncomingDisplay',
+        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+      });
+    })
+    .subscribe((status) => {
+      console.log('[Realtime] status canal:', channelName, status); // ← adicionar
+    });
+}
 
   // Se já há profile ao montar (ex: sessão salva no localStorage)
   if (profileRef.current?.id) {

@@ -165,20 +165,70 @@ useEffect(() => { profileRef.current = profile; }, [profile]);
 
 // ── Sincroniza profile via evento de login (colaborador faz login no /cliente/slug) ──
 useEffect(() => {
+  const supabase = createClient();
+  let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+  function subscribeRealtime(profileId: string) {
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    const channelName = `assistente-${companyId}-${profileId}`;
+    realtimeChannel = supabase.channel(channelName)
+      .on('broadcast', { event: 'incoming-call' }, (payload) => {
+        const { callId, roomUrl, receiverToken, callerName } = payload.payload;
+        setActiveModal({
+          type: 'VideoCallIncomingDisplay',
+          data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+        });
+      })
+      .subscribe();
+  }
+
+  // Se já há profile ao montar (ex: sessão salva no localStorage)
+  if (profileRef.current?.id) {
+    subscribeRealtime(profileRef.current.id);
+  }
+
   const handleProfileLogin = (e: any) => {
     profileRef.current = e.detail;
+    if (e.detail?.id) subscribeRealtime(e.detail.id);
   };
   const handleProfileLogout = () => {
     profileRef.current = null;
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
   };
+
   window.addEventListener('eai:profileLogin', handleProfileLogin);
   window.addEventListener('eai:profileLogout', handleProfileLogout);
+
   return () => {
     window.removeEventListener('eai:profileLogin', handleProfileLogin);
     window.removeEventListener('eai:profileLogout', handleProfileLogout);
+    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
   };
-}, []);
+}, [companyId]);
   const groqContextRef = useGroqContext(companyId, profile);
+
+  // ── Listener Realtime para chamada incoming do dashboard ──
+useEffect(() => {
+  if (!profile?.id) return;
+
+  const supabase = createClient();
+  const channelName = `assistente-${companyId}-${profile.id}`;
+
+  const channel = supabase.channel(channelName)
+    .on('broadcast', { event: 'incoming-call' }, (payload) => {
+      const { callId, roomUrl, receiverToken, callerName } = payload.payload;
+      setActiveModal({
+        type: 'VideoCallIncomingDisplay',
+        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
+      });
+    })
+    .subscribe();
+
+  return () => { supabase.removeChannel(channel); };
+}, [profile?.id, companyId]);
 
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────
   const faqs = useFAQs(companyId);

@@ -140,7 +140,7 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
         borderRadius: isMobile && (status === 'active' || isEntering) ? '0' : '16px',
         width: '100%',
         maxWidth: isMobile ? ((status === 'active' || isEntering) ? '100%' : '360px') : '900px',
-        height: isMobile && (status === 'active' || isEntering) ? '100dvh' : 'auto',
+        height: isMobile && (status === 'active' || isEntering) ? '100dvh' : (isMobile ? 'auto' : '80vh'),
         boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
         overflow: 'hidden',
         display: 'flex',

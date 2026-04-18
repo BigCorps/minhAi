@@ -14,7 +14,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import DailyIframe, { type DailyCall } from '@daily-co/daily-js';
 import { createClient } from '@/lib/supabase-browser';
-import { TIPOS_COM_PRESENCA, type OnlineProfile } from '@/hooks/useOnlinePresence';
+import type { OnlineProfile } from '@/hooks/useOnlinePresence';
 
 interface Props {
   data: {
@@ -67,7 +67,7 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
   const C = theme === 'dark' ? DARK : LIGHT;
 
   const [status, setStatus] = useState<'list' | 'calling' | 'active'>('list');
-  const [onlineProfiles, setOnlineProfiles] = useState<OnlineProfile[]>([]);
+  const onlineProfiles: OnlineProfile[] = data.onlineProfiles ?? [];
   const [selectedProfile, setSelectedProfile] = useState<OnlineProfile | null>(null);
   const [callId, setCallId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,7 +76,6 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
   const callFrameRef = useRef<DailyCall | null>(null);
   const callContainerRef = useRef<HTMLDivElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
 
   // ── Cleanup ao desmontar ──────────────────────────────────
   useEffect(() => {

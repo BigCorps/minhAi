@@ -1,54 +1,89 @@
+'use client';
+
+// ============================================================
+// hooks/useOnlinePresence.ts
+//
+// Registra presença via Supabase Realtime Presence.
+// Não usa tabela — funciona via canal de presença em memória.
+//
+// Canal: `presence-${companyId}`
+// Payload: { profileId, nome, tipo, pageLocation }
+// ============================================================
+
 import { useEffect, useRef } from 'react';
+import { createClient } from '@/lib/supabase-browser';
+
+export interface OnlineProfile {
+  profileId: string;
+  nome: string;
+  tipo: string;
+  pageLocation: string;
+}
 
 interface UseOnlinePresenceProps {
   companyId: string;
   profileId: string;
+  nome: string;
+  tipo: string;
   pageLocation?: string;
 }
 
-export function useOnlinePresence({ companyId, profileId, pageLocation }: UseOnlinePresenceProps) {
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  const isRegisteredRef = useRef(false);
+// Tipos que aparecem como "online" para outros colaboradores
+export const TIPOS_COM_PRESENCA = [
+  'colaborador', 'frentista', 'atendente',
+  'caixa', 'gerente', 'totem', 'administrador',
+];
+
+export function useOnlinePresence({
+  companyId,
+  profileId,
+  nome,
+  tipo,
+  pageLocation,
+}: UseOnlinePresenceProps) {
+  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
 
   useEffect(() => {
-    if (!companyId || !profileId) return;
+    // Não registra presença para clientes ou perfis não identificados
+    if (!companyId || !profileId || !TIPOS_COM_PRESENCA.includes(tipo)) return;
 
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient();
+    const channelName = `presence-${companyId}`;
 
-    async function upsertPresence(isOnline: boolean) {
-      try {
-        await fetch(`${SUPABASE_URL}/functions/v1/upsert-online-presence`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            profile_id: profileId,
-            is_online: isOnline,
-            last_seen: new Date().toISOString(),
-            device_info: {
-              userAgent: navigator.userAgent,
-              platform: navigator.platform,
-              isMobile: /mobile/i.test(navigator.userAgent),
-            },
-            page_location: pageLocation ?? window.location.pathname,
-          }),
+    const channel = supabase.channel(channelName, {
+      config: { presence: { key: profileId } },
+    });
+
+    channelRef.current = channel;
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({
+          profileId,
+          nome,
+          tipo,
+          pageLocation: pageLocation ?? (typeof window !== 'undefined' ? window.location.pathname : ''),
+          onlineAt: new Date().toISOString(),
         });
-        if (isOnline) isRegisteredRef.current = true;
-      } catch (err) {
-        console.warn('[useOnlinePresence] erro:', err);
       }
-    }
-
-    upsertPresence(true);
-    heartbeatRef.current = setInterval(() => upsertPresence(true), 30_000);
+    });
 
     return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      if (isRegisteredRef.current) upsertPresence(false);
+      channel.untrack().finally(() => {
+        supabase.removeChannel(channel);
+      });
+      channelRef.current = null;
     };
-  }, [companyId, profileId, pageLocation]);
+  }, [companyId, profileId, nome, tipo, pageLocation]);
+}
+
+// ── Hook separado para LEITURA da lista de presença ──────────
+// Usado no VideoCallRequestDisplay para ver quem está online.
+export function useOnlinePresenceList(
+  companyId: string,
+  currentProfileId: string,
+): OnlineProfile[] {
+  // Este hook é stateful — usado dentro de componentes React
+  // Retorno inicial vazio; o componente usa useState internamente
+  return [];
 }

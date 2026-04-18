@@ -683,51 +683,53 @@ function AbaColaboradores({ companyId }: { companyId: string }) {
     setLoading(false);
   }
 
-  async function iniciarVideoChamada(receiverProfile: CompanyProfile) {
-    if (callingProfileId) return;
-    setCallingProfileId(receiverProfile.id);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-video-call`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            company_id: companyId,
-            caller_id: receiverProfile.id, // owner não tem profile, usamos o do colaborador como ref
-            caller_type: 'owner',
-            receiver_id: receiverProfile.id,
-            receiver_type: receiverProfile.tipo,
-          }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
+async function iniciarVideoChamada(receiverProfile: CompanyProfile) {
+  if (callingProfileId) return;
+  setCallingProfileId(receiverProfile.id);
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-video-call`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          caller_id: null,        // ← owner não tem company_profile
+          caller_type: 'owner',
+          receiver_id: receiverProfile.id,
+          receiver_type: receiverProfile.tipo,
+        }),
+      }
+    );
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error ?? JSON.stringify(result));
 
-      // Notificar o assistente via Realtime broadcast
-      await supabase.channel(`assistente-${companyId}-${receiverProfile.id}`)
-        .send({
-          type: 'broadcast',
-          event: 'incoming-call',
-          payload: {
-            callId: result.call_id,
-            roomUrl: result.room_url,
-            receiverToken: result.receiver_token,
-            callerName: 'Proprietário',
-          },
-        });
+    // Broadcast Realtime para o assistente do colaborador
+    const supabase = createClient();
+    await supabase.channel(`assistente-${companyId}-${receiverProfile.id}`)
+      .send({
+        type: 'broadcast',
+        event: 'incoming-call',
+        payload: {
+          callId: result.call_id,
+          roomUrl: result.room_url,
+          receiverToken: result.receiver_token,
+          callerName: 'Proprietário',
+        },
+      });
 
-      // Abrir sala para o owner
-      window.open(result.room_url, '_blank');
-    } catch (err: any) {
-      alert('Erro ao iniciar chamada: ' + err.message);
-    } finally {
-      setCallingProfileId(null);
-    }
+    // Owner entra na sala diretamente
+    window.open(result.room_url, '_blank');
+  } catch (err: any) {
+    console.error('Erro ao iniciar chamada:', err);
+    alert('Erro ao iniciar chamada: ' + err.message);
+  } finally {
+    setCallingProfileId(null);
   }
+}
 
   const filtered = profiles.filter(p => {
     if (tipoFiltro && p.tipo !== tipoFiltro) return false;

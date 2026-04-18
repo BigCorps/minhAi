@@ -170,6 +170,8 @@ const { onlineProfiles } = useOnlinePresence({
   tipo: profile?.tipo ?? '',
   pageLocation: getContextualRoute('ia', slug ?? ''),
 });
+const onlineProfilesRef = useRef(onlineProfiles);
+useEffect(() => { onlineProfilesRef.current = onlineProfiles; }, [onlineProfiles]);
 
 // ── Sincroniza profile via evento de login (colaborador faz login no /cliente/slug) ──
 useEffect(() => {
@@ -699,9 +701,9 @@ case 'solicitar_video_chamada':
   await stopGoogleSpeech();
   {
     const currentProfile = profileRef.current;
+    const currentOnlineProfiles = onlineProfilesRef.current; // ← ref atualizado
     console.log('[VideoCall] profile atual:', currentProfile);
-    console.log('[VideoCall] onlineProfiles:', onlineProfiles);
-    console.log('[VideoCall] onlineProfiles length:', onlineProfiles?.length);
+    console.log('[VideoCall] onlineProfiles (ref):', currentOnlineProfiles);
     const tiposPermitidos = ['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem', 'administrador'];
     if (!currentProfile || !tiposPermitidos.includes(currentProfile.tipo)) {
       await pt('Esta função está disponível apenas para colaboradores logados.');
@@ -714,7 +716,7 @@ case 'solicitar_video_chamada':
         companyId,
         profileId: currentProfile.id,
         profileName: currentProfile.nome,
-        onlineProfiles, // ← passa a lista já resolvida
+        onlineProfiles: currentOnlineProfiles, // ← ref atualizado
       },
     });
     pt('Abrindo vídeo chamada...').catch(() => {});

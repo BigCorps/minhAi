@@ -92,7 +92,7 @@ async function atender() {
   await updateStatus('active');
 
   // ← Mostrar container ANTES de criar o frame (manipulação direta do DOM)
-  callContainerRef.current.style.height = '600px';
+  callContainerRef.current.style.height = isMobile ? '100%' : '80vh';
   callContainerRef.current.style.display = 'block';
 
   callFrameRef.current?.destroy();
@@ -154,6 +154,7 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
     display: 'none',
     width: '100%',
     height: '0px',
+    maxHeight: isMobile ? 'none' : '80vh',
     borderRadius: isMobile ? '0' : '12px',
   }}
 />

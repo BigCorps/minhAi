@@ -167,7 +167,7 @@ async function entrarNaSala(roomUrl: string, token: string) {
 
   // Mostrar container ANTES de criar o frame
   callContainerRef.current.style.display = 'block';
-  callContainerRef.current.style.height = isMobile ? '100%' : '600px';
+  callContainerRef.current.style.height = isMobile ? '100%' : '80vh';
 
   callFrameRef.current?.destroy();
 
@@ -241,7 +241,8 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
           style={{
             display: status === 'active' ? 'block' : 'none',
             width: '100%',
-            height: isMobile ? '100%' : '600px',
+            height: isMobile ? '100%' : '80vh',
+            maxHeight: isMobile ? 'none' : '80vh',
           }}
         />
 

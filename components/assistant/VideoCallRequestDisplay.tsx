@@ -153,32 +153,36 @@ await supabase.removeChannel(broadcastChannel);
     }
   }
 
-  async function entrarNaSala(roomUrl: string, token: string) {
-    if (!callContainerRef.current) return;
+async function entrarNaSala(roomUrl: string, token: string) {
+  if (!callContainerRef.current) return;
 
-    callFrameRef.current?.destroy();
+  // Mostrar container ANTES de criar o frame
+  callContainerRef.current.style.display = 'block';
+  callContainerRef.current.style.height = '600px';
 
-    const frame = DailyIframe.createFrame(callContainerRef.current, {
-      showLeaveButton: true,
-      iframeStyle: {
-        width: '100%',
-        height: '100%',
-        border: '0',
-        borderRadius: '12px',
-      },
-    });
+  callFrameRef.current?.destroy();
 
-    callFrameRef.current = frame;
+  const frame = DailyIframe.createFrame(callContainerRef.current, {
+    showLeaveButton: true,
+    iframeStyle: {
+      width: '100%',
+      height: '100%',
+      border: '0',
+      borderRadius: '12px',
+    },
+  });
 
-    frame.on('left-meeting', () => {
-      frame.destroy();
-      callFrameRef.current = null;
-      onClose();
-    });
+  callFrameRef.current = frame;
 
-    await frame.join({ url: roomUrl, token });
-    setStatus('active');
-  }
+  frame.on('left-meeting', () => {
+    frame.destroy();
+    callFrameRef.current = null;
+    onClose();
+  });
+
+  await frame.join({ url: roomUrl, token });
+  setStatus('active');
+}
 
   async function cancelCall() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);

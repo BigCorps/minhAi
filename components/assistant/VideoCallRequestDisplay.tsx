@@ -109,11 +109,29 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
       setOnlineProfiles(profiles);
     }
 
-    channel
-      .on('presence', { event: 'sync' }, syncPresence)
-      .on('presence', { event: 'join' }, syncPresence)
-      .on('presence', { event: 'leave' }, syncPresence)
-      .subscribe();
+channel
+  .on('presence', { event: 'sync' }, () => {
+    console.log('[VideoCall] sync fired');
+    syncPresence();
+  })
+  .on('presence', { event: 'join' }, () => {
+    console.log('[VideoCall] join fired');
+    syncPresence();
+  })
+  .on('presence', { event: 'leave' }, () => {
+    console.log('[VideoCall] leave fired');
+    syncPresence();
+  })
+  .subscribe(async (status) => {
+    console.log('[VideoCall] channel status:', status);
+    if (status === 'SUBSCRIBED') {
+      // Força leitura do estado atual após subscrição
+      setTimeout(() => {
+        console.log('[VideoCall] presenceState:', channel.presenceState());
+        syncPresence();
+      }, 500);
+    }
+  });
 
     return () => {
       supabase.removeChannel(channel);

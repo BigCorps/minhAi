@@ -75,38 +75,41 @@ export default function VideoCallIncomingDisplay({ data, onClose, theme = 'dark'
     );
   }
 
-  async function atender() {
-    if (!callContainerRef.current) return;
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setLoading(true);
+async function atender() {
+  if (!callContainerRef.current) return;
+  if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  setLoading(true);
 
-    await updateStatus('active');
+  await updateStatus('active');
 
-    // Destruir frame anterior se existir
-    callFrameRef.current?.destroy();
+  // ← Mostrar container ANTES de criar o frame (manipulação direta do DOM)
+  callContainerRef.current.style.height = '600px';
+  callContainerRef.current.style.display = 'block';
 
-    const frame = DailyIframe.createFrame(callContainerRef.current, {
-      showLeaveButton: true,
-      iframeStyle: {
-        width: '100%',
-        height: '100%',
-        border: '0',
-        borderRadius: '12px',
-      },
-    });
+  callFrameRef.current?.destroy();
 
-    callFrameRef.current = frame;
+  const frame = DailyIframe.createFrame(callContainerRef.current, {
+    showLeaveButton: true,
+    iframeStyle: {
+      width: '100%',
+      height: '100%',
+      border: '0',
+      borderRadius: '12px',
+    },
+  });
 
-    frame.on('left-meeting', () => {
-      frame.destroy();
-      callFrameRef.current = null;
-      onClose();
-    });
+  callFrameRef.current = frame;
 
-    await frame.join({ url: data.roomUrl, token: data.token });
-    setStatus('active');
-    setLoading(false);
-  }
+  frame.on('left-meeting', () => {
+    frame.destroy();
+    callFrameRef.current = null;
+    onClose();
+  });
+
+  await frame.join({ url: data.roomUrl, token: data.token });
+  setStatus('active'); // ← só depois do join
+  setLoading(false);
+}
 
   async function recusar() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);

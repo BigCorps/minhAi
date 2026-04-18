@@ -12,7 +12,6 @@ import dynamic from 'next/dynamic';
 import { useProfile } from '@/hooks/useProfile';
 import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';
 import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
-import { useOnlinePresence } from '@/hooks/useOnlinePresence';
 
 const ClienteDashboard     = dynamic(() => import('@/components/cliente/dashboards/ClienteDashboard'));
 const ColaboradorDashboard = dynamic(() => import('@/components/cliente/dashboards/ColaboradorDashboard'));
@@ -35,85 +34,65 @@ const DASHBOARD_MAP: Record<string, React.ComponentType<any>> = {
 
 // Mapeia functionKey (snake_case) → nome do componente no MODAL_COMPONENTS
 const FUNCTION_KEY_TO_MODAL: Record<string, string> = {
-  registrar_venda:         'RegistrarVendaDisplay',
-  ver_clientes:            'VerClientesDisplay',
-  validar_cupom:           'ValidarCupomDisplay',
-  chamar_gerente:          'ChamarGerenteDisplay',
-  fechar_caixa:            'FecharCaixaDisplay',
-  trocar_turno:            'TrocarTurnoDisplay',
-  relatorio_vendas:        'RelatorioVendasDisplay',
-  minhas_compras:          'MinhasComprasDisplay',
-  meu_cupom:               'MeuCupomDisplay',
-  procurar_produto:        'ProcurarProdutoDisplay',
-  lista_compras:           'ListaComprasDisplay',
-  ver_produto:             'VerProdutoDisplay',
-  pix_generate:            'PIXConfirmationModal',
-  send_email:              'SendEmailModal',
-  create_event:            'CreateEventModal',
-  view_agenda:             'ViewAgendaModal',
-  ler_qrcode:              'LerQRCodeDisplay',
-  ler_codigo_barras:       'LerCodigoBarrasDisplay',
-  clima_tempo:             'ClimaTempoDisplay',
-  consultar_cep:           'ConsultarCEPDisplay',
-  consultar_cpf:           'ConsultarCpfModal',
-  consultar_cnpj:          'ConsultarCnpjModal',
-  consultar_placa:         'ConsultarPlacaModal',
-  cotacao_moedas:          'CotacaoMoedasDisplay',
-  cronometro:              'CronometroDisplay',
-  temporizador:            'TemporizadorDisplay',
-  relogio_mundial:         'RelogioMundialDisplay',
-  alarme:                  'AlarmeDisplay',
-  lembrete_remedios:       'LembreteRemediosDisplay',
-  criar_nota:              'CriarNotaDisplay',
-  criar_lembrete:          'CriarLembreteDisplay',
-  enviar_arquivo:          'EnviarArquivoDisplay',
-  converter_arquivo:       'ConverterArquivoDisplay',
-  editar_imagem:           'EditarImagemDisplay',
-  remover_fundo:           'RemoverFundoDisplay',
-  ver_noticias:            'VerNoticiasDisplay',
-  rastreio_correios:       'RastreioCorreiosDisplay',
-  tracar_rota:             'TracarRotaDisplay',
-  tocar_video:             'TocarVideoDisplay',
-  tocar_musica:            'TocarMusicaDisplay',
-  cardapio:                'CardapioDisplay',
-  painel_ofertas:          'PainelOfertasDisplay',
-  qrcode:                  'QRCodeDisplay',
-  wifi_qrcode:             'WifiQRCodeDisplay',
-  gerar_qrcode:            'GerarQRCodeDisplay',
-  nosso_qrcode:            'NossoQRCodeDisplay',
-  endereco:                'EnderecoDisplay',
-  nossa_marca:             'NossaMarcaDisplay',
-  meu_sistema:             'MeuSistemaDisplay',
-  video_instrucoes:        'VideoInstrucoesDisplay',
-  translate_text:          'TranslateTextModal',
-  transcribe_audio:        'TranscribeAudioModal',
-  login_cliente:           'LoginClienteDisplay',
-  registration:            'RegistrationDisplay',
-  fichas_producao:         'FichaProducaoDisplay',
-  fila_atendimento:        'FilaAtendimentoDisplay',
-  gerar_senha:             'GerarSenhaDisplay',
-  painel_fila:             'PainelFilaDisplay',
-  solicitar_video_chamada: 'VideoCallRequestDisplay',
+  registrar_venda:   'RegistrarVendaDisplay',
+  ver_clientes:      'VerClientesDisplay',
+  validar_cupom:     'ValidarCupomDisplay',
+  chamar_gerente:    'ChamarGerenteDisplay',
+  fechar_caixa:      'FecharCaixaDisplay',
+  trocar_turno:      'TrocarTurnoDisplay',
+  relatorio_vendas:  'RelatorioVendasDisplay',
+  minhas_compras:    'MinhasComprasDisplay',
+  meu_cupom:         'MeuCupomDisplay',
+  procurar_produto:  'ProcurarProdutoDisplay',
+  lista_compras:     'ListaComprasDisplay',
+  ver_produto:       'VerProdutoDisplay',
+  pix_generate:      'PIXConfirmationModal',
+  send_email:        'SendEmailModal',
+  create_event:      'CreateEventModal',
+  view_agenda:       'ViewAgendaModal',
+  ler_qrcode:        'LerQRCodeDisplay',
+  ler_codigo_barras: 'LerCodigoBarrasDisplay',
+  clima_tempo:       'ClimaTempoDisplay',
+  consultar_cep:     'ConsultarCEPDisplay',
+  consultar_cpf:     'ConsultarCpfModal',
+  consultar_cnpj:    'ConsultarCnpjModal',
+  consultar_placa:   'ConsultarPlacaModal',
+  cotacao_moedas:    'CotacaoMoedasDisplay',
+  cronometro:        'CronometroDisplay',
+  temporizador:      'TemporizadorDisplay',
+  relogio_mundial:   'RelogioMundialDisplay',
+  alarme:            'AlarmeDisplay',
+  lembrete_remedios: 'LembreteRemediosDisplay',
+  criar_nota:        'CriarNotaDisplay',
+  criar_lembrete:    'CriarLembreteDisplay',
+  enviar_arquivo:    'EnviarArquivoDisplay',
+  converter_arquivo: 'ConverterArquivoDisplay',
+  editar_imagem:     'EditarImagemDisplay',
+  remover_fundo:     'RemoverFundoDisplay',
+  ver_noticias:      'VerNoticiasDisplay',
+  rastreio_correios: 'RastreioCorreiosDisplay',
+  tracar_rota:       'TracarRotaDisplay',
+  tocar_video:       'TocarVideoDisplay',
+  tocar_musica:      'TocarMusicaDisplay',
+  cardapio:          'CardapioDisplay',
+  painel_ofertas:    'PainelOfertasDisplay',
+  qrcode:            'QRCodeDisplay',
+  wifi_qrcode:       'WifiQRCodeDisplay',
+  gerar_qrcode:      'GerarQRCodeDisplay',
+  nosso_qrcode:      'NossoQRCodeDisplay',
+  endereco:          'EnderecoDisplay',
+  nossa_marca:       'NossaMarcaDisplay',
+  meu_sistema:       'MeuSistemaDisplay',
+  video_instrucoes:  'VideoInstrucoesDisplay',
+  translate_text:    'TranslateTextModal',
+  transcribe_audio:  'TranscribeAudioModal',
+  login_cliente:     'LoginClienteDisplay',
+  registration:      'RegistrationDisplay',
+  fichas_producao:   'FichaProducaoDisplay',
+  fila_atendimento:  'FilaAtendimentoDisplay',
+  gerar_senha:       'GerarSenhaDisplay',
+  painel_fila:       'PainelFilaDisplay',
 };
-
-// ── Componente isolado para registrar presença ────────────────
-// Renderiza null — só ativa o hook após profile estar disponível.
-function PresenceRegistrar({
-  companyId,
-  profileId,
-  slug,
-}: {
-  companyId: string;
-  profileId: string;
-  slug: string;
-}) {
-  useOnlinePresence({
-    companyId,
-    profileId,
-    pageLocation: `/cliente/${slug}`,
-  });
-  return null;
-}
 
 interface ClientePageProps {
   company: {
@@ -150,8 +129,12 @@ export default function ClientePage({ company }: ClientePageProps) {
   useEffect(() => {
     const handleFunctionClick = (e: CustomEvent) => {
       const { functionKey, ...rest } = e.detail;
+
+      // Traduz functionKey → nome do componente no MODAL_COMPONENTS
       const modalType = FUNCTION_KEY_TO_MODAL[functionKey] ?? functionKey;
+
       console.log('[ClientePage] Função chamada:', functionKey, '→', modalType, rest);
+
       setActiveModal({ type: modalType, data: { companyId: company.id, ...rest } });
     };
 
@@ -192,27 +175,12 @@ export default function ClientePage({ company }: ClientePageProps) {
     );
   }
 
-  // Profile ausente — redirecionamento em andamento
   if (!profile) return null;
 
   const Dashboard = DASHBOARD_MAP[profile.tipo] ?? ColaboradorDashboard;
 
-  // Tipos que registram presença (excluir clientes comuns)
-  const tiposComPresenca = ['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem', 'administrador'];
-  const deveRegistrarPresenca = tiposComPresenca.includes(profile.tipo);
-
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${bgPage}`}>
-
-      {/* Registra presença apenas para colaboradores/funcionários, não para clientes */}
-      {deveRegistrarPresenca && (
-        <PresenceRegistrar
-          companyId={company.id}
-          profileId={profile.id}
-          slug={company.slug}
-        />
-      )}
-
       <SlugHeaderWrapper
         company={company}
         slug={company.slug}

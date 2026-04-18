@@ -245,28 +245,6 @@ useEffect(() => {
 
   return () => { supabase.removeChannel(channel); };
 }, [profile?.id, companyId]);
-
-  const handleProfileLogin = (e: any) => {
-    profileRef.current = e.detail;
-    if (e.detail?.id) subscribeRealtime(e.detail.id);
-  };
-  const handleProfileLogout = () => {
-    profileRef.current = null;
-    if (realtimeChannel) {
-      supabase.removeChannel(realtimeChannel);
-      realtimeChannel = null;
-    }
-  };
-
-  window.addEventListener('eai:profileLogin', handleProfileLogin);
-  window.addEventListener('eai:profileLogout', handleProfileLogout);
-
-  return () => {
-    window.removeEventListener('eai:profileLogin', handleProfileLogin);
-    window.removeEventListener('eai:profileLogout', handleProfileLogout);
-    if (realtimeChannel) supabase.removeChannel(realtimeChannel);
-  };
-}, [companyId]);
   const groqContextRef = useGroqContext(companyId, profile);
 
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────

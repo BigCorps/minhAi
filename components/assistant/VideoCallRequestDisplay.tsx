@@ -125,19 +125,20 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
       setStatus('calling');
 
       // Broadcast Realtime para o receiver
-      const supabase = createClient();
-      await supabase
-        .channel(`assistente-${data.companyId}-${receiver.profileId}`)
-        .send({
-          type: 'broadcast',
-          event: 'incoming-call',
-          payload: {
-            callId: result.call_id,
-            roomUrl: result.room_url,
-            receiverToken: result.receiver_token,
-            callerName: data.profileName,
-          },
-        });
+const supabase = createClient();
+const broadcastChannel = supabase.channel(`assistente-${data.companyId}-${receiver.profileId}`);
+await broadcastChannel.subscribe();
+await broadcastChannel.send({
+  type: 'broadcast',
+  event: 'incoming-call',
+  payload: {
+    callId: result.call_id,
+    roomUrl: result.room_url,
+    receiverToken: result.receiver_token,
+    callerName: data.profileName,
+  },
+});
+await supabase.removeChannel(broadcastChannel);
 
       // Caller entra na sala
       await entrarNaSala(result.room_url, result.caller_token);

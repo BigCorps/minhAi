@@ -40,6 +40,13 @@ export default function VideoCallIncomingDisplay({ data, onClose, theme = 'dark'
   const C = theme === 'dark' ? DARK : LIGHT;
   const [status, setStatus] = useState<'ringing' | 'active'>('ringing');
   const [loading, setLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const callFrameRef = useRef<DailyCall | null>(null);
   const callContainerRef = useRef<HTMLDivElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -130,7 +137,9 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
         border: `1px solid ${C.border}`,
         borderRadius: '16px',
         width: '100%',
-        maxWidth: status === 'active' ? '900px' : '360px',
+        maxWidth: status === 'active' ? (isMobile ? '100%' : '900px') : '360px',
+        height: status === 'active' ? (isMobile ? '100dvh' : 'auto') : 'auto',
+        borderRadius: status === 'active' && isMobile ? '0' : '16px',
         boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
         overflow: 'hidden',
         transition: 'max-width 0.3s ease',
@@ -143,7 +152,7 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
     display: 'none',
     width: '100%',
     height: '0px',
-    borderRadius: '12px',
+    borderRadius: isMobile ? '0' : '12px',
   }}
 />
 

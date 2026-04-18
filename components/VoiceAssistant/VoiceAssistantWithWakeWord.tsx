@@ -218,26 +218,6 @@ useEffect(() => {
 }, [companyId]);
   const groqContextRef = useGroqContext(companyId, profile);
 
-  // ── Listener Realtime para chamada incoming do dashboard ──
-useEffect(() => {
-  if (!profile?.id) return;
-
-  const supabase = createClient();
-  const channelName = `assistente-${companyId}-${profile.id}`;
-
-  const channel = supabase.channel(channelName)
-    .on('broadcast', { event: 'incoming-call' }, (payload) => {
-      const { callId, roomUrl, receiverToken, callerName } = payload.payload;
-      setActiveModal({
-        type: 'VideoCallIncomingDisplay',
-        data: { companyId, callId, roomUrl, token: receiverToken, callerName },
-      });
-    })
-    .subscribe();
-
-  return () => { supabase.removeChannel(channel); };
-}, [profile?.id, companyId]);
-
   // ── Ponto 2: Hook de FAQs ─────────────────────────────────
   const faqs = useFAQs(companyId);
   const faqsRef = useRef<typeof faqs>([]);
@@ -719,6 +699,9 @@ case 'solicitar_video_chamada':
   await stopGoogleSpeech();
   {
     const currentProfile = profileRef.current;
+    console.log('[VideoCall] profile atual:', currentProfile);
+    console.log('[VideoCall] onlineProfiles:', onlineProfiles);
+    console.log('[VideoCall] onlineProfiles length:', onlineProfiles?.length);
     const tiposPermitidos = ['colaborador', 'frentista', 'atendente', 'caixa', 'gerente', 'totem', 'administrador'];
     if (!currentProfile || !tiposPermitidos.includes(currentProfile.tipo)) {
       await pt('Esta função está disponível apenas para colaboradores logados.');

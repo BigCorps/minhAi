@@ -40,6 +40,7 @@ export default function VideoCallIncomingDisplay({ data, onClose, theme = 'dark'
   const C = theme === 'dark' ? DARK : LIGHT;
   const [status, setStatus] = useState<'ringing' | 'active'>('ringing');
   const [loading, setLoading] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -85,6 +86,7 @@ export default function VideoCallIncomingDisplay({ data, onClose, theme = 'dark'
 async function atender() {
   if (!callContainerRef.current) return;
   if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  setIsEntering(true);
   setLoading(true);
 
   await updateStatus('active');
@@ -137,9 +139,9 @@ const frame = DailyIframe.createFrame(callContainerRef.current, {
         border: `1px solid ${C.border}`,
         borderRadius: '16px',
         width: '100%',
-        maxWidth: status === 'active' ? (isMobile ? '100%' : '900px') : '360px',
-        height: status === 'active' ? (isMobile ? '100dvh' : 'auto') : 'auto',
-        borderRadius: status === 'active' && isMobile ? '0' : '16px',
+        maxWidth: (status === 'active' || isEntering) ? (isMobile ? '100%' : '900px') : '360px',
+        height: (status === 'active' || isEntering) ? (isMobile ? '100dvh' : 'auto') : 'auto',
+        borderRadius: (status === 'active' || isEntering) && isMobile ? '0' : '16px',
         boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
         overflow: 'hidden',
         transition: 'max-width 0.3s ease',

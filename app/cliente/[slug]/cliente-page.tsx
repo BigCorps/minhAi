@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { useProfile } from '@/hooks/useProfile';
 import SlugHeaderWrapper from '@/app/ia/[slug]/SlugHeaderWrapper';
 import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
+import { useOnlinePresence } from '@/hooks/useOnlinePresence';
 
 const ClienteDashboard     = dynamic(() => import('@/components/cliente/dashboards/ClienteDashboard'));
 const ColaboradorDashboard = dynamic(() => import('@/components/cliente/dashboards/ColaboradorDashboard'));
@@ -92,6 +93,7 @@ const FUNCTION_KEY_TO_MODAL: Record<string, string> = {
   fila_atendimento:  'FilaAtendimentoDisplay',
   gerar_senha:       'GerarSenhaDisplay',
   painel_fila:       'PainelFilaDisplay',
+  solicitar_video_chamada: 'VideoCallRequestDisplay',
 };
 
 interface ClientePageProps {
@@ -110,6 +112,12 @@ interface ClientePageProps {
 export default function ClientePage({ company }: ClientePageProps) {
   const router = useRouter();
   const { profile, loading } = useProfile(company.slug);
+
+  useOnlinePresence({
+    companyId: company.id,
+    profileId: profile?.id ?? '',
+    pageLocation: `/cliente/${company.slug}`,
+  });
 
   // ── Estado para controle de modais ──
   const [activeModal, setActiveModal] = useState<{ type: string; data: any } | null>(null);

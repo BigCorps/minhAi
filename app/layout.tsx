@@ -143,52 +143,6 @@ const jsonLd = {
       inLanguage: 'pt-BR',
       publisher: { '@id': `${APP_URL}/#organization` },
     },
-    {
-      '@type': 'FAQPage',
-      '@id': `${APP_URL}/#faq`,
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: 'O que é o minhAi?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'O minhAi é uma plataforma SaaS brasileira que permite criar assistentes de IA personalizados com voz e texto para empresas. Funciona 24/7 com mais de 100 funções configuráveis, incluindo atendimento ao cliente, agendamento, cobranças via PIX, fila de atendimento e integração com WhatsApp.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Quanto custa o minhAi?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'O minhAi oferece um plano gratuito para começar. O modelo de cobrança é pay-per-use — você paga apenas por interação, sem mensalidade fixa obrigatória.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'O minhAi funciona com WhatsApp?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Sim. O minhAi possui integração com WhatsApp e Instagram via API oficial da Meta.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Preciso saber programar para usar o minhAi?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Não. O minhAi foi projetado para ser configurado sem código. Você acessa o dashboard, configura as funções desejadas e seu assistente está pronto em minutos.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'O minhAi é compatível com totem e quiosque?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Sim. O minhAi possui modo totem com interação por voz e touch screen, ideal para estabelecimentos comerciais que desejam automatizar o atendimento presencial.',
-          },
-        },
-      ],
-    },
   ],
 };
 

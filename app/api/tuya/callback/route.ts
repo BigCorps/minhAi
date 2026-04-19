@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@supabase/supabase-js';
 
 const TUYA_BASE: Record<string, string> = {
   'us-east': 'https://openapi-ueaz.tuyaus.com',
@@ -77,42 +77,45 @@ export async function GET(req: NextRequest) {
     process.env.NEXT_PUBLIC_TUYA_CLIENT_SECRET ??
     '';
 
-const identifier =
-  process.env.TUYA_IDENTIFIER ??
-  process.env.NEXT_PUBLIC_TUYA_IDENTIFIER ??
-  '';
+  const identifier =
+    process.env.TUYA_IDENTIFIER ??
+    process.env.NEXT_PUBLIC_TUYA_IDENTIFIER ??
+    '';
 
-if (!clientId || !clientSecret || !identifier) {
-  return NextResponse.redirect(
-    new URL('/dashboard/agenda?tuya=error&msg=missing_credentials', req.url)
-  );
-}
+  if (!clientId || !clientSecret || !identifier) {
+    return NextResponse.redirect(
+      new URL('/dashboard/agenda?tuya=error&msg=missing_credentials', req.url)
+    );
+  }
 
-const emptyHash = await sha256('');
-const requestPath = buildTokenRequestPath(code);
-const timestamp = Date.now().toString();
-const nonce = crypto.randomUUID().replace(/-/g, '');
+  let json: any;
 
-const stringToSign = buildStringToSign('GET', emptyHash, '', requestPath);
-const signStr = clientId + timestamp + nonce + identifier + stringToSign;
-const sign = (await hmacSha256(clientSecret, signStr)).toUpperCase();
+  try {
+    const emptyHash = await sha256('');
+    const requestPath = buildTokenRequestPath(code);
+    const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID().replace(/-/g, '');
 
-  console.log('[Tuya] requestPath:', requestPath);
-  console.log('[Tuya] stringToSign:', JSON.stringify(stringToSign));
-  console.log('[Tuya] signStr:', JSON.stringify(signStr));
+    const stringToSign = buildStringToSign('GET', emptyHash, '', requestPath);
+    const signStr = clientId + timestamp + nonce + identifier + stringToSign;
+    const sign = (await hmacSha256(clientSecret, signStr)).toUpperCase();
 
-const res = await fetch(`${baseUrl}${requestPath}`, {
-  method: 'GET',
-  headers: {
-    client_id: clientId,
-    t: timestamp,
-    sign_method: 'HMAC-SHA256',
-    sign,
-    nonce,
-    identifier,
-    'Content-Type': 'application/json',
-  },
-});
+    console.log('[Tuya] requestPath:', requestPath);
+    console.log('[Tuya] stringToSign:', JSON.stringify(stringToSign));
+    console.log('[Tuya] signStr:', JSON.stringify(signStr));
+
+    const res = await fetch(`${baseUrl}${requestPath}`, {
+      method: 'GET',
+      headers: {
+        client_id: clientId,
+        t: timestamp,
+        sign_method: 'HMAC-SHA256',
+        sign,
+        nonce,
+        identifier,
+        'Content-Type': 'application/json',
+      },
+    });
 
     json = await res.json();
     console.log('[Tuya] response:', JSON.stringify(json));
@@ -158,7 +161,25 @@ async function saveAndRedirect(
 
   const expiresAt = Date.now() + expire_time * 1000;
 
-  const supabase = createClient();
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    '';
+
+  const supabaseServiceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE ||
+    '';
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error('[Tuya] Missing Supabase service credentials');
+    return NextResponse.redirect(
+      new URL('/dashboard/agenda?tuya=error&msg=missing_supabase_credentials', req.url)
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
   const { error } = await supabase
     .from('companies')
     .update({

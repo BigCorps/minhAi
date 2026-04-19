@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
         sign_method: 'HMAC-SHA256',
         sign,
         nonce,
-        identifier,
+        identifier, // Adicionado identifier ao header
         'Content-Type': 'application/json',
       },
     });

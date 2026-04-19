@@ -86,7 +86,6 @@ interface SmartDevice {
   displayName: string;
   online: boolean;
   traits: Record<string, any>;
-  // Tuya extras
   provider?: 'google' | 'tuya';
   icon?: string;
   category?: string;
@@ -97,6 +96,14 @@ interface GoogleAccount {
   id: string;
   google_email: string;
   is_active: boolean;
+}
+
+// Plano B: modal de login Tuya com credenciais
+interface TuyaLoginForm {
+  username: string;
+  password: string;
+  country_code: string;
+  schema: 'smartLife' | 'tuyaSmart';
 }
 
 type ActiveTab = 'calendar' | 'email' | 'drive' | 'smarthome';
@@ -133,10 +140,21 @@ function AgendaPageContent() {
   const [quickFaqAlias, setQuickFaqAlias] = useState('');
   const [savingFaqs, setSavingFaqs] = useState(false);
 
-  // Smart Home — Tuya
+  // Smart Home — Tuya (Plano B)
   const [tuyaConnected, setTuyaConnected] = useState(false);
   const [tuyaDevices, setTuyaDevices] = useState<SmartDevice[]>([]);
   const [loadingTuyaDevices, setLoadingTuyaDevices] = useState(false);
+
+  // Modal de login Tuya
+  const [showTuyaLoginModal, setShowTuyaLoginModal] = useState(false);
+  const [tuyaLoginForm, setTuyaLoginForm] = useState<TuyaLoginForm>({
+    username: '',
+    password: '',
+    country_code: '55',
+    schema: 'smartLife',
+  });
+  const [tuyaLoginLoading, setTuyaLoginLoading] = useState(false);
+  const [tuyaLoginError, setTuyaLoginError] = useState<string | null>(null);
 
   // General
   const [loading, setLoading] = useState(false);
@@ -146,21 +164,6 @@ function AgendaPageContent() {
   const { resolvedTheme } = useTheme();
   const theme = (resolvedTheme as 'dark' | 'light') || 'dark';
   const supabase = createClient();
-
-  // ── Detectar retorno do OAuth Tuya ───────────────────────────
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('tuya') === 'success') {
-      setTuyaConnected(true);
-      setActiveTab('smarthome');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    if (params.get('tuya') === 'error') {
-      alert(`Erro ao conectar Tuya: ${params.get('msg') ?? 'desconhecido'}`);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
 
   useEffect(() => {
     if (selectedCompanyId) {
@@ -181,7 +184,7 @@ function AgendaPageContent() {
     if (activeTab === 'smarthome' && smartDevices.length === 0) loadSmartDevices();
   }, [activeTab, googleAccount]);
 
-  // ── Verificar se Tuya já está conectado ──────────────────────
+  // ── Verificar se Tuya já está conectado ──────────────────────────────────
   async function checkTuyaConnection(companyId: string) {
     const { data } = await supabase
       .from('companies')
@@ -333,25 +336,63 @@ function AgendaPageContent() {
     finally { setDeviceAction(null); }
   }
 
-  // ── Tuya: iniciar OAuth ───────────────────────────────────────
-function connectTuya() {
-  if (!selectedCompanyId) return;
+  // ── Tuya Plano B: login com credenciais ──────────────────────────────────
+  async function handleTuyaLogin() {
+    if (!selectedCompanyId) return;
+    const { username, password, country_code, schema } = tuyaLoginForm;
 
-  const state = encodeURIComponent(`${selectedCompanyId}:us-east`);
+    if (!username.trim() || !password.trim()) {
+      setTuyaLoginError('Preencha usuário e senha.');
+      return;
+    }
 
-  const redirect = encodeURIComponent(
-    'https://minhai.app/api/tuya/callback'
-  );
+    setTuyaLoginLoading(true);
+    setTuyaLoginError(null);
 
-  window.location.href =
-    `https://app-h5-ue.iot787.com/d/login` +
-    `?response_type=code` +
-    `&client_id=${process.env.NEXT_PUBLIC_TUYA_CLIENT_ID}` +
-    `&redirect_uri=${redirect}` +
-    `&state=${state}`;
-}
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tuya-smart-home`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            action: 'login',
+            company_id: selectedCompanyId,
+            username: username.trim(),
+            password: password.trim(),
+            country_code: country_code.trim(),
+            schema,
+          }),
+        }
+      );
 
-  // ── Tuya: listar dispositivos ─────────────────────────────────
+      const json = await res.json();
+
+      if (json.error) {
+        setTuyaLoginError(`Erro: ${json.error}${json.code ? ` (código ${json.code})` : ''}`);
+        return;
+      }
+
+      // Sucesso
+      setTuyaConnected(true);
+      setShowTuyaLoginModal(false);
+      setTuyaLoginForm({ username: '', password: '', country_code: '55', schema: 'smartLife' });
+    } catch (err: any) {
+      setTuyaLoginError(`Erro de conexão: ${err.message}`);
+    } finally {
+      setTuyaLoginLoading(false);
+    }
+  }
+
+  function openTuyaLoginModal() {
+    setTuyaLoginError(null);
+    setShowTuyaLoginModal(true);
+  }
+
+  // ── Tuya: listar dispositivos ─────────────────────────────────────────────
   async function loadTuyaDevices() {
     if (!selectedCompanyId) return;
     setLoadingTuyaDevices(true);
@@ -366,7 +407,9 @@ function connectTuya() {
       );
       const json = await res.json();
       if (json.error) throw new Error(json.error);
-      setTuyaDevices(json.devices ?? []);
+      setTuyaDevices(
+        (json.devices ?? []).map((d: any) => ({ ...d, provider: 'tuya' }))
+      );
     } catch (err: any) {
       alert(`Erro ao buscar dispositivos Tuya: ${err.message}`);
     } finally {
@@ -474,7 +517,7 @@ function connectTuya() {
     return '🔌';
   }
 
-  // ── Tab config ───────────────────────────────────────────
+  // ── Tab config ────────────────────────────────────────────────────────────
   const tabs: { key: ActiveTab; label: string; icon: React.ReactNode; count?: number }[] = [
     { key: 'calendar', label: 'Calendário', icon: <CalendarIcon className="w-4 h-4" />, count: events.length },
     { key: 'email', label: 'Emails Enviados', icon: <Send className="w-4 h-4" />, count: sentEmails.length },
@@ -554,7 +597,7 @@ function connectTuya() {
                   </div>
                 </div>
 
-                {/* ── Tabs: 2 por linha no mobile, 4 no desktop ── */}
+                {/* Tabs: 2 por linha no mobile, 4 no desktop */}
                 <div className="grid grid-cols-2 md:grid-cols-4 border-b border-gray-200 dark:border-white/10">
                   {tabs.map(tab => (
                     <button
@@ -665,7 +708,7 @@ function connectTuya() {
                           </button>
                           {expandedEmail === email.id && email.body && (
                             <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                               <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{email.body}</div>
+                              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{email.body}</div>
                             </div>
                           )}
                         </div>
@@ -724,7 +767,7 @@ function connectTuya() {
               {activeTab === 'smarthome' && (
                 <div className="space-y-6">
 
-                  {/* ── Google Nest ── */}
+                  {/* Google Nest */}
                   <div>
                     <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                       🔵 Google Nest
@@ -802,7 +845,7 @@ function connectTuya() {
                     )}
                   </div>
 
-                  {/* ── Tuya / SmartLife ── */}
+                  {/* Tuya / SmartLife — Plano B */}
                   <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10 p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-bold text-purple-800 dark:text-purple-300 flex items-center gap-2">
@@ -820,7 +863,7 @@ function connectTuya() {
                           Conecte sua conta SmartLife para controlar todos os seus dispositivos.
                         </p>
                         <button
-                          onClick={connectTuya}
+                          onClick={openTuyaLoginModal}
                           className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition"
                         >
                           🔗 Conectar SmartLife / Tuya
@@ -828,7 +871,7 @@ function connectTuya() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 flex-wrap">
                           <button
                             onClick={loadTuyaDevices}
                             disabled={loadingTuyaDevices}
@@ -837,7 +880,7 @@ function connectTuya() {
                             {loadingTuyaDevices ? '🔄 Buscando...' : '🔄 Sincronizar Dispositivos'}
                           </button>
                           <button
-                            onClick={connectTuya}
+                            onClick={openTuyaLoginModal}
                             className="px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition"
                           >
                             Reconectar
@@ -875,53 +918,180 @@ function connectTuya() {
         </div>
       </div>
 
-      {/* Modal: Criar Comando de Voz */}
-      {quickFaqDevice && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                🎤 Criar Comando de Voz
+      {/* ── Modal: Login Tuya (Plano B) ─────────────────────────────────────── */}
+      {showTuyaLoginModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              background: theme === 'dark' ? '#0f172a' : '#ffffff',
+              border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderRadius: '1rem',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
+              width: '100%', maxWidth: '400px',
+              padding: '1.5rem',
+              display: 'flex', flexDirection: 'column', gap: '1rem',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: theme === 'dark' ? '#fff' : '#111827', margin: 0 }}>
+                🔌 Conectar SmartLife / Tuya
               </h3>
-              <button onClick={() => setQuickFaqDevice(null)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
-                <X className="w-4 h-4 text-gray-500" />
+              <button
+                onClick={() => setShowTuyaLoginModal(false)}
+                style={{
+                  padding: '4px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                  background: 'transparent', color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Dispositivo: <span className="font-semibold text-gray-700 dark:text-white">{quickFaqDevice.displayName}</span>
-              {quickFaqDevice.provider === 'tuya' && (
-                <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">Tuya</span>
-              )}
+            {/* Info */}
+            <p style={{ fontSize: '0.75rem', color: theme === 'dark' ? '#9ca3af' : '#6b7280', margin: 0 }}>
+              Use as credenciais do app SmartLife ou TuyaSmart. Elas são usadas apenas para autenticar seus dispositivos e não são armazenadas.
             </p>
 
+            {/* App selector */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-1">
-                Apelido do dispositivo
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#374151', marginBottom: '4px' }}>
+                App
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {(['smartLife', 'tuyaSmart'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setTuyaLoginForm(f => ({ ...f, schema: s }))}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: '8px', cursor: 'pointer',
+                      fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.15s',
+                      border: tuyaLoginForm.schema === s ? '2px solid #9333ea' : `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.15)' : '#d1d5db'}`,
+                      background: tuyaLoginForm.schema === s
+                        ? (theme === 'dark' ? 'rgba(147,51,234,0.2)' : '#f3e8ff')
+                        : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f9fafb'),
+                      color: tuyaLoginForm.schema === s ? '#9333ea' : (theme === 'dark' ? '#d1d5db' : '#374151'),
+                    }}
+                  >
+                    {s === 'smartLife' ? '📱 SmartLife' : '🔧 TuyaSmart'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* País */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#374151', marginBottom: '4px' }}>
+                Código do país
+              </label>
+              <select
+                value={tuyaLoginForm.country_code}
+                onChange={e => setTuyaLoginForm(f => ({ ...f, country_code: e.target.value }))}
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.875rem',
+                  border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`,
+                  background: theme === 'dark' ? '#1e293b' : '#fff',
+                  color: theme === 'dark' ? '#fff' : '#111827',
+                }}
+              >
+                <option value="55">🇧🇷 +55 Brasil</option>
+                <option value="1">🇺🇸 +1 EUA / Canadá</option>
+                <option value="44">🇬🇧 +44 Reino Unido</option>
+                <option value="351">🇵🇹 +351 Portugal</option>
+                <option value="54">🇦🇷 +54 Argentina</option>
+                <option value="56">🇨🇱 +56 Chile</option>
+                <option value="57">🇨🇴 +57 Colômbia</option>
+                <option value="52">🇲🇽 +52 México</option>
+                <option value="34">🇪🇸 +34 Espanha</option>
+              </select>
+            </div>
+
+            {/* Username */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#374151', marginBottom: '4px' }}>
+                Email ou telefone
               </label>
               <input
                 type="text"
-                value={quickFaqAlias}
-                onChange={(e) => setQuickFaqAlias(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Ex: Luz da Sala, TV do Quarto..."
+                value={tuyaLoginForm.username}
+                onChange={e => setTuyaLoginForm(f => ({ ...f, username: e.target.value }))}
+                placeholder="seu@email.com"
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.875rem',
+                  border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`,
+                  background: theme === 'dark' ? '#1e293b' : '#fff',
+                  color: theme === 'dark' ? '#fff' : '#111827',
+                  boxSizing: 'border-box',
+                }}
               />
-              <p className="text-[10px] text-gray-400 mt-1">
-                Serão criados: "Ligar {quickFaqAlias || '...'}" e "Desligar {quickFaqAlias || '...'}"
-              </p>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            {/* Password */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#374151', marginBottom: '4px' }}>
+                Senha
+              </label>
+              <input
+                type="password"
+                value={tuyaLoginForm.password}
+                onChange={e => setTuyaLoginForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="••••••••"
+                onKeyDown={e => e.key === 'Enter' && handleTuyaLogin()}
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.875rem',
+                  border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`,
+                  background: theme === 'dark' ? '#1e293b' : '#fff',
+                  color: theme === 'dark' ? '#fff' : '#111827',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Erro */}
+            {tuyaLoginError && (
+              <p style={{ fontSize: '0.75rem', color: '#ef4444', margin: 0, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', borderRadius: '8px' }}>
+                {tuyaLoginError}
+              </p>
+            )}
+
+            {/* Botões */}
+            <div style={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
               <button
-                onClick={createQuickFAQs}
-                disabled={savingFaqs || !quickFaqAlias.trim()}
-                className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                onClick={handleTuyaLogin}
+                disabled={tuyaLoginLoading}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '12px', border: 'none', cursor: tuyaLoginLoading ? 'not-allowed' : 'pointer',
+                  background: tuyaLoginLoading ? '#6b21a8' : '#9333ea',
+                  color: '#fff', fontSize: '0.875rem', fontWeight: 600,
+                  opacity: tuyaLoginLoading ? 0.7 : 1, transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                }}
               >
-                {savingFaqs ? 'Criando...' : 'Criar Comandos'}
+                {tuyaLoginLoading && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                  </svg>
+                )}
+                {tuyaLoginLoading ? 'Conectando...' : 'Conectar'}
               </button>
               <button
-                onClick={() => setQuickFaqDevice(null)}
-                className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-white rounded-xl text-sm font-semibold transition"
+                onClick={() => setShowTuyaLoginModal(false)}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  background: theme === 'dark' ? '#334155' : '#e5e7eb',
+                  color: theme === 'dark' ? '#fff' : '#374151',
+                  fontSize: '0.875rem', fontWeight: 600, transition: 'all 0.15s',
+                }}
               >
                 Cancelar
               </button>
@@ -929,6 +1099,110 @@ function connectTuya() {
           </div>
         </div>
       )}
+
+      {/* ── Modal: Criar Comando de Voz ──────────────────────────────────────── */}
+      {quickFaqDevice && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              background: theme === 'dark' ? '#0f172a' : '#ffffff',
+              border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderRadius: '1rem',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
+              width: '100%', maxWidth: '360px',
+              padding: '1.5rem',
+              display: 'flex', flexDirection: 'column', gap: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: theme === 'dark' ? '#fff' : '#111827', margin: 0 }}>
+                🎤 Criar Comando de Voz
+              </h3>
+              <button
+                onClick={() => setQuickFaqDevice(null)}
+                style={{
+                  padding: '4px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                  background: 'transparent', color: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.75rem', color: theme === 'dark' ? '#9ca3af' : '#6b7280', margin: 0 }}>
+              Dispositivo: <strong style={{ color: theme === 'dark' ? '#fff' : '#111827' }}>{quickFaqDevice.displayName}</strong>
+              {quickFaqDevice.provider === 'tuya' && (
+                <span style={{
+                  marginLeft: '8px', padding: '1px 6px', fontSize: '0.625rem',
+                  background: theme === 'dark' ? 'rgba(147,51,234,0.3)' : '#f3e8ff',
+                  color: '#9333ea', borderRadius: '9999px',
+                }}>Tuya</span>
+              )}
+            </p>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: theme === 'dark' ? 'rgba(255,255,255,0.8)' : '#374151', marginBottom: '4px' }}>
+                Apelido do dispositivo
+              </label>
+              <input
+                type="text"
+                value={quickFaqAlias}
+                onChange={(e) => setQuickFaqAlias(e.target.value)}
+                placeholder="Ex: Luz da Sala, TV do Quarto..."
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '0.875rem',
+                  border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`,
+                  background: theme === 'dark' ? '#1e293b' : '#fff',
+                  color: theme === 'dark' ? '#fff' : '#111827',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <p style={{ fontSize: '0.625rem', color: theme === 'dark' ? '#6b7280' : '#9ca3af', marginTop: '4px' }}>
+                Serão criados: "Ligar {quickFaqAlias || '...'}" e "Desligar {quickFaqAlias || '...'}"
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
+              <button
+                onClick={createQuickFAQs}
+                disabled={savingFaqs || !quickFaqAlias.trim()}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '12px', border: 'none',
+                  cursor: (savingFaqs || !quickFaqAlias.trim()) ? 'not-allowed' : 'pointer',
+                  background: '#16a34a', color: '#fff',
+                  fontSize: '0.875rem', fontWeight: 600,
+                  opacity: (savingFaqs || !quickFaqAlias.trim()) ? 0.5 : 1,
+                }}
+              >
+                {savingFaqs ? 'Criando...' : 'Criar Comandos'}
+              </button>
+              <button
+                onClick={() => setQuickFaqDevice(null)}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  background: theme === 'dark' ? '#334155' : '#e5e7eb',
+                  color: theme === 'dark' ? '#fff' : '#374151',
+                  fontSize: '0.875rem', fontWeight: 600,
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

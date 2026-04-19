@@ -1792,7 +1792,7 @@ solicitar_video_chamada: {
   color: '#9333ea',
 
   saveToHistory: true,
-  creditsPerUse: 5,
+  creditsPerUse: 1,
   requiresPayment: false,
   isPremium: true,
 

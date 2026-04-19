@@ -337,14 +337,16 @@ function AgendaPageContent() {
 function connectTuya() {
   if (!selectedCompanyId) return;
 
-  const clientId = process.env.NEXT_PUBLIC_TUYA_CLIENT_ID!;
-  const redirect = encodeURIComponent('https://minhai.app/api/tuya/callback');
   const state = encodeURIComponent(`${selectedCompanyId}:us-east`);
 
+  const redirect = encodeURIComponent(
+    'https://minhai.app/api/tuya/callback'
+  );
+
   window.location.href =
-    `https://auth.tuya.com/oauth/authorize` +
+    `https://app-h5-ue.iot787.com/d/login` +
     `?response_type=code` +
-    `&client_id=${clientId}` +
+    `&client_id=${process.env.NEXT_PUBLIC_TUYA_CLIENT_ID}` +
     `&redirect_uri=${redirect}` +
     `&state=${state}`;
 }

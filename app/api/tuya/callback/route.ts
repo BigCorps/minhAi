@@ -35,6 +35,7 @@ function buildStringToSign(
   optionalKey: string,
   path: string
 ): string {
+  // A stringToSign DEVE ter 4 partes separadas por \n
   return [method, bodyHash, optionalKey, path].join('\n');
 }
 
@@ -42,6 +43,7 @@ function buildTokenRequestPath(code: string): string {
   const params = new URLSearchParams();
   params.append('grant_type', '2');
   params.append('code', code);
+  // Importante: a URL na stringToSign deve incluir os parâmetros ordenados
   return `/v1.0/token?${params.toString()}`;
 }
 
@@ -96,6 +98,9 @@ export async function GET(req: NextRequest) {
     const timestamp = Date.now().toString();
     const nonce = crypto.randomUUID().replace(/-/g, '');
 
+    // CORREÇÃO DA ASSINATURA PARA APP AUTHORIZATION:
+    // A Tuya exige: sign = HMAC-SHA256(client_id + t + nonce + identifier + stringToSign, secret)
+    // E a stringToSign é: Method + "\n" + Content-SHA256 + "\n" + Headers + "\n" + URL
     const stringToSign = buildStringToSign('GET', emptyHash, '', requestPath);
     const signStr = clientId + timestamp + nonce + identifier + stringToSign;
     const sign = (await hmacSha256(clientSecret, signStr)).toUpperCase();
@@ -110,9 +115,9 @@ export async function GET(req: NextRequest) {
         client_id: clientId,
         t: timestamp,
         sign_method: 'HMAC-SHA256',
-        sign,
-        nonce,
-        identifier, // Adicionado identifier ao header
+        sign: sign,
+        nonce: nonce,
+        identifier: identifier,
         'Content-Type': 'application/json',
       },
     });
@@ -133,7 +138,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.redirect(
     new URL(
       `/dashboard/agenda?tuya=error&msg=${encodeURIComponent(
-        'sign invalid: ' + (json?.msg ?? 'unknown')
+        'Tuya Error: ' + (json?.msg ?? 'unknown') + ' (Code: ' + (json?.code ?? 'N/A') + ')'
       )}`,
       req.url
     )

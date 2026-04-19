@@ -35,16 +35,7 @@ function buildStringToSign(
   optionalKey: string,
   path: string
 ): string {
-  // A stringToSign DEVE ter 4 partes separadas por \n
   return [method, bodyHash, optionalKey, path].join('\n');
-}
-
-function buildTokenRequestPath(code: string): string {
-  const params = new URLSearchParams();
-  params.append('grant_type', '2');
-  params.append('code', code);
-  // Importante: a URL na stringToSign deve incluir os parâmetros ordenados
-  return `/v1.0/token?${params.toString()}`;
 }
 
 export async function GET(req: NextRequest) {
@@ -94,18 +85,24 @@ export async function GET(req: NextRequest) {
 
   try {
     const emptyHash = await sha256('');
-    const requestPath = buildTokenRequestPath(code);
     const timestamp = Date.now().toString();
     const nonce = crypto.randomUUID().replace(/-/g, '');
 
-    // CORREÇÃO DA ASSINATURA PARA APP AUTHORIZATION:
-    // A Tuya exige: sign = HMAC-SHA256(client_id + t + nonce + identifier + stringToSign, secret)
-    // E a stringToSign é: Method + "\n" + Content-SHA256 + "\n" + Headers + "\n" + URL
-    const stringToSign = buildStringToSign('GET', emptyHash, '', requestPath);
+    // CORREÇÃO CRÍTICA:
+    // O URL usado na assinatura (stringToSign) deve conter apenas grant_type=2 — SEM o code.
+    // O code vai apenas na URL real da requisição HTTP.
+    // Ref: https://developer.tuya.com/en/docs/iot/new-app-singnature?id=Kdnqza5d7iwkc
+    const signPath = `/v1.0/token?grant_type=2`;
+    const requestPath = `/v1.0/token?grant_type=2&code=${code}`;
+
+    // App Authorization token request:
+    // str = client_id + t + nonce + identifier + stringToSign
+    const stringToSign = buildStringToSign('GET', emptyHash, '', signPath);
     const signStr = clientId + timestamp + nonce + identifier + stringToSign;
     const sign = (await hmacSha256(clientSecret, signStr)).toUpperCase();
 
-    console.log('[Tuya] requestPath:', requestPath);
+    console.log('[Tuya] signPath (para assinar):', signPath);
+    console.log('[Tuya] requestPath (URL real):', requestPath);
     console.log('[Tuya] stringToSign:', JSON.stringify(stringToSign));
     console.log('[Tuya] signStr:', JSON.stringify(signStr));
 

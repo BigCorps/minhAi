@@ -4,6 +4,7 @@ import { Nunito } from 'next/font/google';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AssistantProvider } from '@/contexts/AssistantContext';
 import RegisterSW from '@/components/RegisterSW';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import 'react-image-crop/dist/ReactCrop.css';
 
@@ -163,6 +164,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </AssistantProvider>
         </ThemeProvider>
         <RegisterSW />
+        <Analytics />
       </body>
     </html>
   );

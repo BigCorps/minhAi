@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -538,42 +539,31 @@ function connectTuya() {
                         <p className="text-sm text-green-600 dark:text-green-400 font-semibold">{googleAccount.google_email}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleRefresh}
-                        disabled={loadingEvents || loadingEmails || loadingDrive || loadingDevices}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${(loadingEvents || loadingEmails || loadingDrive || loadingDevices) ? 'animate-spin' : ''}`} />
-                        Atualizar
-                      </button>
-                      <button onClick={handleGoToConnect} className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition">
-                        Gerenciar
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleRefresh}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Atualizar
+                    </button>
                   </div>
                 </div>
 
-                {/* ── Tabs: 2 por linha no mobile, 4 no desktop ── */}
-                <div className="grid grid-cols-2 md:grid-cols-4 border-b border-gray-200 dark:border-white/10">
-                  {tabs.map(tab => (
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 dark:border-white/10">
+                  {tabs.map((tab) => (
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
-                      className={`px-3 py-3 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5 border-b-2 ${
-                        activeTab === tab.key
-                          ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                          : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
-                      } ${
-                        tab.key === 'calendar' || tab.key === 'drive'
-                          ? 'border-r border-r-gray-200 dark:border-r-white/10'
-                          : ''
-                      }`}
+                      className={`flex items-center gap-2 py-3 px-6 text-sm font-medium ${activeTab === tab.key
+                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}
+                      `}
                     >
                       {tab.icon}
-                      <span className="truncate">{tab.label}</span>
-                      {tab.count !== undefined && tab.count > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full hidden sm:inline">
+                      {tab.label}
+                      {tab.count !== undefined && (
+                        <span className="ml-1 px-2 py-0.5 bg-gray-200 dark:bg-white/10 rounded-full text-xs font-semibold text-gray-700 dark:text-gray-300">
                           {tab.count}
                         </span>
                       )}
@@ -582,348 +572,311 @@ function connectTuya() {
                 </div>
               </div>
 
-              {/* ── CALENDÁRIO ── */}
-              {activeTab === 'calendar' && (
-                <>
-                  <div className="mb-4 p-3 bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => handleNav('prev')} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition text-gray-700 dark:text-gray-300">
-                          <ChevronLeft className="w-5 h-5" />
+              {/* Conteúdo das Tabs */}
+              <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-6">
+                {activeTab === 'calendar' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{currentTitle}</h2>
+                      <div className="flex space-x-2">
+                        <button onClick={() => handleNav('prev')} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10">
+                          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                         </button>
-                        <button onClick={() => handleNav('today')} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition">
+                        <button onClick={() => handleNav('today')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium">
                           Hoje
                         </button>
-                        <button onClick={() => handleNav('next')} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition text-gray-700 dark:text-gray-300">
-                          <ChevronRight className="w-5 h-5" />
+                        <button onClick={() => handleNav('next')} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10">
+                          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                         </button>
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 dark:text-white capitalize">{currentTitle}</div>
-                      <div className="flex gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
-                        {(['dayGridMonth', 'timeGridWeek', 'listWeek'] as const).map((v, i) => (
-                          <button key={v} onClick={() => handleViewChange(v)}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${activeView === v ? 'bg-blue-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'}`}>
-                            {['Mês', 'Semana', 'Lista'][i]}
-                          </button>
-                        ))}
+                        <select
+                          value={activeView}
+                          onChange={(e) => handleViewChange(e.target.value as 'dayGridMonth' | 'timeGridWeek' | 'listWeek')}
+                          className="bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium py-2 pl-3 pr-8"
+                        >
+                          <option value="dayGridMonth">Mês</option>
+                          <option value="timeGridWeek">Semana</option>
+                          <option value="listWeek">Lista</option>
+                        </select>
                       </div>
                     </div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
                     {loadingEvents ? (
-                      <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                      </div>
                     ) : (
                       <FullCalendar
                         ref={calendarRef}
                         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
                         initialView="dayGridMonth"
-                        headerToolbar={false}
                         events={events}
                         locale={ptBrLocale}
+                        headerToolbar={false}
                         height="auto"
-                        allDayText="Dia inteiro"
-                        datesSet={(info) => { setCurrentTitle(info.view.title); setActiveView(info.view.type as any); }}
+                        dayMaxEvents={true}
+                        eventTimeFormat={{
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          meridiem: false,
+                          hour12: false,
+                        }}
+                        eventClick={(info) => {
+                          alert(`Evento: ${info.event.title}\nDescrição: ${info.event.extendedProps.description || 'N/A'}\nLocal: ${info.event.extendedProps.location || 'N/A'}`);
+                        }}
+                        datesSet={(dateInfo) => {
+                          setCurrentTitle(dateInfo.view.title);
+                        }}
+                        themeSystem={theme === 'dark' ? 'standard' : 'bootstrap5'}
                       />
                     )}
                   </div>
-                </>
-              )}
+                )}
 
-              {/* ── EMAILS ENVIADOS ── */}
-              {activeTab === 'email' && (
-                <>
-                  {loadingEmails ? (
-                    <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
-                  ) : sentEmails.length === 0 ? (
-                    <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
-                      <Mail className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Nenhum email enviado</h3>
-                      <p className="text-gray-600 dark:text-gray-400">Os emails enviados pelo assistente aparecerão aqui.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {sentEmails.map((email) => (
-                        <div key={email.id} className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden hover:border-blue-500/30 transition">
-                          <button onClick={() => setExpandedEmail(expandedEmail === email.id ? null : email.id)} className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">Para: {email.to.join(', ')}</p>
-                                  {email.hasAttachments && <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                                </div>
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 truncate">{email.subject || '(Sem assunto)'}</h3>
-                                <p className="text-sm text-gray-500 truncate">{email.snippet}</p>
-                              </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <Clock className="w-3 h-3" />{formatDate(email.date)}
-                                </div>
-                                {expandedEmail === email.id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                              </div>
-                            </div>
-                          </button>
-                          {expandedEmail === email.id && email.body && (
-                            <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: email.body }} />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* ── GOOGLE DRIVE ── */}
-              {activeTab === 'drive' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {selectedFolder
-                        ? <p className="text-sm text-gray-600 dark:text-gray-400">📁 <strong>{selectedFolder.name}</strong> — {driveImages.length} imagem{driveImages.length !== 1 ? 'ns' : ''}</p>
-                        : <p className="text-sm text-gray-400">Selecione uma pasta para ver as imagens</p>
-                      }
-                    </div>
-                    <DrivePickerButton
-                      companyId={selectedCompanyId!}
-                      onFolderSelected={(id, name) => {
-                        setSelectedFolder({ id, name });
-                        loadDriveImages(id);
-                      }}
-                      label={selectedFolder ? 'Trocar pasta' : 'Selecionar pasta'}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition"
-                    />
-                  </div>
-
-                  {loadingImages ? (
-                    <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
-                  ) : !selectedFolder ? (
-                    <div className="bg-white/50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-12 text-center">
-                      <HardDrive className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-gray-500">Clique em "Selecionar pasta" para começar</p>
-                    </div>
-                  ) : driveImages.length === 0 ? (
-                    <p className="text-center py-12 text-sm text-gray-400">Nenhuma imagem encontrada nesta pasta</p>
-                  ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {driveImages.map(img => (
-                        <div key={img.id} className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800 group relative">
-                          <img src={img.thumb} alt={img.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" title={img.name} />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-end p-2 opacity-0 group-hover:opacity-100">
-                            <p className="text-white text-xs truncate">{img.name.replace(/\.[^/.]+$/, '')}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── SMART HOME ── */}
-              {activeTab === 'smarthome' && (
-                <div className="space-y-6">
-
-                  {/* ── Google Nest ── */}
+                {activeTab === 'email' && (
                   <div>
-                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      🔵 Google Nest
-                    </h3>
-                    {loadingDevices ? (
-                      <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div>
-                    ) : smartDevices.length === 0 ? (
-                      <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-8 text-center">
-                        <Home className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Nenhum dispositivo Nest encontrado</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-3">
-                          Certifique-se de ter dispositivos Google Nest vinculados à conta conectada e o Device Access ativado.
-                        </p>
-                        <button onClick={loadSmartDevices} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition">
-                          Tentar novamente
-                        </button>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Emails Enviados</h2>
+                    {loadingEmails ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                       </div>
+                    ) : sentEmails.length === 0 ? (
+                      <p className="text-gray-600 dark:text-gray-400">Nenhum email enviado encontrado.</p>
                     ) : (
-                      <>
-                        <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                          <p className="text-sm text-green-800 dark:text-green-200">
-                            🏠 {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {smartDevices.map(device => (
-                            <div key={device.id} className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-4">
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-2xl">{device.icon ?? getDeviceIcon(device.type)}</span>
-                                  <div>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{device.displayName}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{device.type.split('.').pop()}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${device.online ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-400'}`}>
-                                    {device.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                                    {device.online ? 'Online' : 'Offline'}
-                                  </div>
-                                  <button
-                                    onClick={() => { setQuickFaqDevice(device); setQuickFaqAlias(device.displayName); }}
-                                    title="Criar comando de voz"
-                                    className="p-1 rounded-lg text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 transition"
-                                  >
-                                    <Mic className="w-4 h-4" />
-                                  </button>
-                                </div>
+                      <div className="space-y-4">
+                        {sentEmails.map((email) => (
+                          <div key={email.id} className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-200 dark:border-white/10">
+                            <div
+                              className="flex justify-between items-center cursor-pointer"
+                              onClick={() => setExpandedEmail(expandedEmail === email.id ? null : email.id)}
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">Assunto: {email.subject || '(Sem Assunto)'}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Para: {email.to.join(', ')}</p>
                               </div>
-                              {device.online && (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'HEAT' })}
-                                    disabled={deviceAction === device.id}
-                                    className="flex-1 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition disabled:opacity-50"
-                                  >
-                                    {deviceAction === device.id ? '...' : 'Ligar'}
-                                  </button>
-                                  <button
-                                    onClick={() => sendDeviceCommand(device.id, 'sdm.devices.commands.ThermostatMode.SetMode', { mode: 'OFF' })}
-                                    disabled={deviceAction === device.id}
-                                    className="flex-1 py-1.5 text-xs rounded-lg bg-red-500/80 hover:bg-red-600 text-white font-medium transition disabled:opacity-50"
-                                  >
-                                    Desligar
-                                  </button>
-                                </div>
-                              )}
-                              {!device.online && (
-                                <p className="text-xs text-gray-400 text-center">Dispositivo offline</p>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(email.date)}</p>
+                                {expandedEmail === email.id ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </>
+                            {expandedEmail === email.id && (
+                              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 text-sm text-gray-700 dark:text-gray-300">
+                                <p className="mb-2">De: {email.from}</p>
+                                <p className="mb-2">Snippet: {email.snippet}</p>
+                                {email.hasAttachments && (
+                                  <p className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                                    <Paperclip className="w-4 h-4" /> Anexos
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
+                )}
 
-                  {/* ── Tuya / SmartLife ── */}
-                  <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10 p-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-purple-800 dark:text-purple-300 flex items-center gap-2">
-                        🔌 Tuya / SmartLife
-                        <span className="text-[10px] font-normal opacity-60">Lâmpadas, Tomadas, Ar, TV...</span>
-                      </h3>
-                      {tuyaConnected && (
-                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">✅ Conectado</span>
-                      )}
+                {activeTab === 'drive' && (
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Google Drive</h2>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            const newPath = [...folderPath];
+                            newPath.pop();
+                            setFolderPath(newPath);
+                            const parentId = newPath.length > 0 ? newPath[newPath.length - 1].id : null;
+                            loadDriveFolders(parentId);
+                          }}
+                          disabled={folderPath.length === 0}
+                          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        </button>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {folderPath.length === 0 ? 'Meu Drive' : folderPath.map(f => f.name).join(' / ')}
+                        </span>
+                      </div>
+                      <DrivePickerButton companyId={selectedCompanyId} />
                     </div>
 
-                    {!tuyaConnected ? (
-                      <div className="text-center py-4 space-y-3">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Conecte sua conta SmartLife para controlar todos os seus dispositivos.
+                    {loadingDrive ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {driveFolders.map((folder) => (
+                          <div
+                            key={folder.id}
+                            onClick={() => {
+                              setFolderPath([...folderPath, folder]);
+                              loadDriveFolders(folder.id);
+                            }}
+                            className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 rounded-lg p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                          >
+                            <Folder className="w-6 h-6 text-blue-500" />
+                            <span className="text-gray-900 dark:text-white font-medium">{folder.name}</span>
+                          </div>
+                        ))}
+                        {driveImages.map((image) => (
+                          <a
+                            key={image.id}
+                            href={image.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                          >
+                            <ImageIcon className="w-6 h-6 text-green-500" />
+                            <span className="text-gray-900 dark:text-white font-medium">{image.name}</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'smarthome' && (
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Smart Home</h2>
+
+                    {!tuyaConnected && (
+                      <div className="bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg mb-4 flex items-center justify-between">
+                        <p className="flex items-center gap-2">
+                          <AlertCircle className="w-5 h-5" />
+                          Sua conta Tuya não está conectada. Conecte para gerenciar dispositivos.
                         </p>
                         <button
                           onClick={connectTuya}
-                          className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition"
+                          className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors"
                         >
-                          🔗 Conectar SmartLife / Tuya
+                          Conectar Tuya
                         </button>
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex gap-3">
-                          <button
-                            onClick={loadTuyaDevices}
-                            disabled={loadingTuyaDevices}
-                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
-                          >
-                            {loadingTuyaDevices ? '🔄 Buscando...' : '🔄 Sincronizar Dispositivos'}
-                          </button>
-                          <button
-                            onClick={connectTuya}
-                            className="px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition"
-                          >
-                            Reconectar
-                          </button>
-                        </div>
+                    )}
 
-                        {tuyaDevices.length > 0 && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {tuyaDevices.map(device => (
-                              <div key={device.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-white/10 p-3 flex items-center gap-3">
-                                <span className="text-2xl">{device.icon ?? getDeviceIcon(device.type)}</span>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{device.displayName}</p>
-                                  <p className="text-xs text-gray-500">{device.online ? '🟢 Online' : '⚫ Offline'}</p>
-                                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {loadingDevices || loadingTuyaDevices ? (
+                        <div className="flex items-center justify-center py-12 col-span-full">
+                          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                        </div>
+                      ) : (
+                        <>
+                          {smartDevices.map((device) => (
+                            <div key={device.id} className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-200 dark:border-white/10 flex flex-col">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-2xl">{getDeviceIcon(device.type)}</span>
+                                {device.online ? (
+                                  <Wifi className="w-5 h-5 text-green-500" />
+                                ) : (
+                                  <WifiOff className="w-5 h-5 text-red-500" />
+                                )}
+                              </div>
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{device.displayName}</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Google Home</p>
+                              <div className="mt-auto flex space-x-2">
                                 <button
-                                  onClick={() => { setQuickFaqDevice(device); setQuickFaqAlias(device.displayName); }}
-                                  title="Criar comando de voz"
-                                  className="p-1 rounded-lg text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
+                                  onClick={() => sendDeviceCommand(device.id, 'turnOn')}
+                                  disabled={deviceAction === device.id}
+                                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <Mic className="w-4 h-4" />
+                                  Ligar
+                                </button>
+                                <button
+                                  onClick={() => sendDeviceCommand(device.id, 'turnOff')}
+                                  disabled={deviceAction === device.id}
+                                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Desligar
                                 </button>
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                              <button
+                                onClick={() => {
+                                  setQuickFaqDevice(device);
+                                  setQuickFaqAlias(device.displayName);
+                                }}
+                                className="mt-2 w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                Criar Comandos Rápidos
+                              </button>
+                            </div>
+                          ))}
 
-                </div>
-              )}
+                          {tuyaDevices.map((device) => (
+                            <div key={device.id} className="bg-gray-50 dark:bg-white/5 rounded-lg p-4 border border-gray-200 dark:border-white/10 flex flex-col">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-2xl">{device.icon}</span>
+                                {device.online ? (
+                                  <Wifi className="w-5 h-5 text-green-500" />
+                                ) : (
+                                  <WifiOff className="w-5 h-5 text-red-500" />
+                                )}
+                              </div>
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{device.displayName}</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Tuya</p>
+                              <div className="mt-auto flex space-x-2">
+                                <button
+                                  onClick={() => sendDeviceCommand(device.id, 'turnOn', { provider: 'tuya', commands: [{ code: 'switch_1', value: true }] })}
+                                  disabled={deviceAction === device.id}
+                                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Ligar
+                                </button>
+                                <button
+                                  onClick={() => sendDeviceCommand(device.id, 'turnOff', { provider: 'tuya', commands: [{ code: 'switch_1', value: false }] })}
+                                  disabled={deviceAction === device.id}
+                                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Desligar
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setQuickFaqDevice(device);
+                                  setQuickFaqAlias(device.displayName);
+                                }}
+                                className="mt-2 w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                Criar Comandos Rápidos
+                              </button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Modal: Criar Comando de Voz */}
       {quickFaqDevice && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                🎤 Criar Comando de Voz
-              </h3>
-              <button onClick={() => setQuickFaqDevice(null)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition">
-                <X className="w-4 h-4 text-gray-500" />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg max-w-md w-full">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Criar Comandos Rápidos para {quickFaqDevice.displayName}</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Defina um apelido para o dispositivo para criar comandos de voz como "Ligar [Apelido]" e "Desligar [Apelido]".</p>
+            <input
+              type="text"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              placeholder="Ex: Luz da Sala"
+              value={quickFaqAlias}
+              onChange={(e) => setQuickFaqAlias(e.target.value)}
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setQuickFaqDevice(null)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors"
+              >
+                Cancelar
               </button>
-            </div>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Dispositivo: <span className="font-semibold text-gray-700 dark:text-white">{quickFaqDevice.displayName}</span>
-              {quickFaqDevice.provider === 'tuya' && (
-                <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">Tuya</span>
-              )}
-            </p>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-white/80 mb-1">
-                Apelido do dispositivo
-              </label>
-              <input
-                type="text"
-                value={quickFaqAlias}
-                onChange={(e) => setQuickFaqAlias(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Ex: Luz da Sala, TV do Quarto..."
-              />
-              <p className="text-[10px] text-gray-400 mt-1">
-                Serão criados: "Ligar {quickFaqAlias || '...'}" e "Desligar {quickFaqAlias || '...'}"
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-2">
               <button
                 onClick={createQuickFAQs}
                 disabled={savingFaqs || !quickFaqAlias.trim()}
-                className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {savingFaqs ? 'Criando...' : 'Criar Comandos'}
-              </button>
-              <button
-                onClick={() => setQuickFaqDevice(null)}
-                className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-white rounded-xl text-sm font-semibold transition"
-              >
-                Cancelar
+                {savingFaqs ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Criar Comandos'}
               </button>
             </div>
           </div>
@@ -935,11 +888,7 @@ function connectTuya() {
 
 export default function AgendaPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    }>
+    <Suspense fallback={<div>Carregando...</div>}>
       <AgendaPageContent />
     </Suspense>
   );

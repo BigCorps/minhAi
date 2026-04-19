@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-browser';
 
 const TUYA_BASE: Record<string, string> = {
-  us-east: 'https://openapi-ueaz.tuyaus.com'
+  'us-east': 'https://openapi-ueaz.tuyaus.com',
 };
 
 async function hmacSha256(secret: string, message: string): Promise<string> {
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const baseUrl = TUYA_BASE[region] || TUYA_BASE.us-east;
+  const baseUrl = TUYA_BASE[region] || TUYA_BASE['us-east'];
 
   const clientId =
     process.env.TUYA_CLIENT_ID ??

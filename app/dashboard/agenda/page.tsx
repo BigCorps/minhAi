@@ -338,7 +338,6 @@ function AgendaPageContent() {
 
   // ── Tuya Plano B: login com credenciais ──────────────────────────────────
   async function handleTuyaLogin() {
-    console.log('[Tuya] handleTuyaLogin chamado', tuyaLoginForm);
     if (!selectedCompanyId) return;
     const { username, password, country_code, schema } = tuyaLoginForm;
 
@@ -351,33 +350,24 @@ function AgendaPageContent() {
     setTuyaLoginError(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tuya-smart-home`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            action: 'login',
-            company_id: selectedCompanyId,
-            username: username.trim(),
-            password: password.trim(),
-            country_code: country_code.trim(),
-            schema,
-          }),
-        }
-      );
+      const { data: json, error } = await supabase.functions.invoke('tuya-smart-home', {
+        body: {
+          action: 'login',
+          company_id: selectedCompanyId,
+          username: username.trim(),
+          password: password.trim(),
+          country_code: country_code.trim(),
+          schema,
+        },
+      });
 
-      const json = await res.json();
+      if (error) throw error;
 
-      if (json.error) {
+      if (json?.error) {
         setTuyaLoginError(`Erro: ${json.error}${json.code ? ` (código ${json.code})` : ''}`);
         return;
       }
 
-      // Sucesso
       setTuyaConnected(true);
       setShowTuyaLoginModal(false);
       setTuyaLoginForm({ username: '', password: '', country_code: '55', schema: 'smartLife' });
@@ -398,18 +388,13 @@ function AgendaPageContent() {
     if (!selectedCompanyId) return;
     setLoadingTuyaDevices(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tuya-smart-home`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ action: 'list', company_id: selectedCompanyId }),
-        }
-      );
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
+      const { data: json, error } = await supabase.functions.invoke('tuya-smart-home', {
+        body: { action: 'list', company_id: selectedCompanyId },
+      });
+      if (error) throw error;
+      if (json?.error) throw new Error(json.error);
       setTuyaDevices(
-        (json.devices ?? []).map((d: any) => ({ ...d, provider: 'tuya' }))
+        (json?.devices ?? []).map((d: any) => ({ ...d, provider: 'tuya' }))
       );
     } catch (err: any) {
       alert(`Erro ao buscar dispositivos Tuya: ${err.message}`);

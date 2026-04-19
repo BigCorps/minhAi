@@ -337,13 +337,14 @@ function AgendaPageContent() {
 function connectTuya() {
   if (!selectedCompanyId) return;
 
-  const clientId = process.env.NEXT_PUBLIC_TUYA_CLIENT_ID;
+  const clientId = process.env.NEXT_PUBLIC_TUYA_CLIENT_ID!;
   const redirect = encodeURIComponent('https://minhai.app/api/tuya/callback');
   const state = encodeURIComponent(`${selectedCompanyId}:us-east`);
 
   window.location.href =
-    `https://openapi-ueaz.tuyaus.com/v1.0/apps/${clientId}/authorize` +
+    `https://auth.tuya.com/oauth/authorize` +
     `?response_type=code` +
+    `&client_id=${clientId}` +
     `&redirect_uri=${redirect}` +
     `&state=${state}`;
 }

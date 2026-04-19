@@ -984,7 +984,7 @@ function AgendaPageContent() {
                       color: tuyaLoginForm.schema === s ? '#9333ea' : (theme === 'dark' ? '#d1d5db' : '#374151'),
                     }}
                   >
-                    {s === 'smartLife' ? '📱 SmartLife' : '🔧 TuyaSmart'}
+                    {s === 'smartLife' ? 'SmartLife' : 'TuyaSmart'}
                   </button>
                 ))}
               </div>

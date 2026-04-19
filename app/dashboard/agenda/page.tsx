@@ -344,11 +344,7 @@ function connectTuya() {
   );
 
   window.location.href =
-    `https://app-h5-ue.iot787.com/d/login` +
-    `?response_type=code` +
-    `&client_id=${process.env.NEXT_PUBLIC_TUYA_CLIENT_ID}` +
-    `&redirect_uri=${redirect}` +
-    `&state=${state}`;
+    `https://app-h5-ue.iot787.com/d/login?client_id=matcpnhjgpejpp43ppc4&redirect_uri=https%3A%2F%2Fminhai.app%2Fapi%2Ftuya%2Fcallback`;
 }
 
   // ── Tuya: listar dispositivos ─────────────────────────────────

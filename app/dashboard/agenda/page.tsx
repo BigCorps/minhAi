@@ -12,7 +12,7 @@ import {
   Link2,
   Loader2,
   AlertCircle,
-  ChevronLeft,F
+  ChevronLeft,
   ChevronRight,
   Settings,
   RefreshCw,

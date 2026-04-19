@@ -77,44 +77,42 @@ export async function GET(req: NextRequest) {
     process.env.NEXT_PUBLIC_TUYA_CLIENT_SECRET ??
     '';
 
-  const identifier =
-    process.env.TUYA_IDENTIFIER ??
-    process.env.NEXT_PUBLIC_TUYA_IDENTIFIER ??
-    '';
+const identifier =
+  process.env.TUYA_IDENTIFIER ??
+  process.env.NEXT_PUBLIC_TUYA_IDENTIFIER ??
+  '';
 
-  if (!clientId || !clientSecret || !identifier) {
-    return NextResponse.redirect(
-      new URL('/dashboard/agenda?tuya=error&msg=missing_credentials', req.url)
-    );
-  }
+if (!clientId || !clientSecret || !identifier) {
+  return NextResponse.redirect(
+    new URL('/dashboard/agenda?tuya=error&msg=missing_credentials', req.url)
+  );
+}
 
-  const emptyHash = await sha256('');
-  const requestPath = buildTokenRequestPath(code);
-  const timestamp = Date.now().toString();
-  const nonce = crypto.randomUUID().replace(/-/g, '');
+const emptyHash = await sha256('');
+const requestPath = buildTokenRequestPath(code);
+const timestamp = Date.now().toString();
+const nonce = crypto.randomUUID().replace(/-/g, '');
 
-  const stringToSign = buildStringToSign('GET', emptyHash, '', requestPath);
-  const signStr = clientId + timestamp + nonce + stringToSign;
-  const sign = (await hmacSha256(clientSecret, signStr)).toUpperCase();
+const stringToSign = buildStringToSign('GET', emptyHash, '', requestPath);
+const signStr = clientId + timestamp + nonce + identifier + stringToSign;
+const sign = (await hmacSha256(clientSecret, signStr)).toUpperCase();
 
   console.log('[Tuya] requestPath:', requestPath);
   console.log('[Tuya] stringToSign:', JSON.stringify(stringToSign));
   console.log('[Tuya] signStr:', JSON.stringify(signStr));
 
-  let json: any;
-
-  try {
-    const res = await fetch(`${baseUrl}${requestPath}`, {
-      method: 'GET',
-      headers: {
-        client_id: clientId,
-        t: timestamp,
-        sign_method: 'HMAC-SHA256',
-        sign,
-        nonce,
-        'Content-Type': 'application/json',
-      },
-    });
+const res = await fetch(`${baseUrl}${requestPath}`, {
+  method: 'GET',
+  headers: {
+    client_id: clientId,
+    t: timestamp,
+    sign_method: 'HMAC-SHA256',
+    sign,
+    nonce,
+    identifier,
+    'Content-Type': 'application/json',
+  },
+});
 
     json = await res.json();
     console.log('[Tuya] response:', JSON.stringify(json));

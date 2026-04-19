@@ -770,7 +770,7 @@ function AgendaPageContent() {
                   {/* Google Nest */}
                   <div>
                     <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      🔵 Google Nest
+                      Google Nest
                     </h3>
                     {loadingDevices ? (
                       <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div>
@@ -789,7 +789,7 @@ function AgendaPageContent() {
                       <>
                         <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
                           <p className="text-sm text-green-800 dark:text-green-200">
-                            🏠 {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
+                            {smartDevices.length} dispositivo{smartDevices.length !== 1 ? 's' : ''} encontrado{smartDevices.length !== 1 ? 's' : ''} · {smartDevices.filter(d => d.online).length} online
                           </p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -849,7 +849,7 @@ function AgendaPageContent() {
                   <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10 p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-bold text-purple-800 dark:text-purple-300 flex items-center gap-2">
-                        🔌 Tuya / SmartLife
+                        Tuya / SmartLife
                         <span className="text-[10px] font-normal opacity-60">Lâmpadas, Tomadas, Ar, TV...</span>
                       </h3>
                       {tuyaConnected && (
@@ -866,7 +866,7 @@ function AgendaPageContent() {
                           onClick={openTuyaLoginModal}
                           className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition"
                         >
-                          🔗 Conectar SmartLife / Tuya
+                          Conectar SmartLife / Tuya
                         </button>
                       </div>
                     ) : (
@@ -943,7 +943,7 @@ function AgendaPageContent() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: theme === 'dark' ? '#fff' : '#111827', margin: 0 }}>
-                🔌 Conectar SmartLife / Tuya
+                Conectar SmartLife / Tuya
               </h3>
               <button
                 onClick={() => setShowTuyaLoginModal(false)}

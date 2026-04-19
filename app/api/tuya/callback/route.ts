@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   const nonce = crypto.randomUUID().replace(/-/g, '');
 
   const stringToSign = buildStringToSign('GET', emptyHash, '', requestPath);
-  const signStr = clientId + timestamp + nonce + identifier + stringToSign;
+  const signStr = clientId + timestamp + nonce + stringToSign;
   const sign = (await hmacSha256(clientSecret, signStr)).toUpperCase();
 
   console.log('[Tuya] requestPath:', requestPath);
@@ -112,7 +112,6 @@ export async function GET(req: NextRequest) {
         sign_method: 'HMAC-SHA256',
         sign,
         nonce,
-        identifier,
         'Content-Type': 'application/json',
       },
     });

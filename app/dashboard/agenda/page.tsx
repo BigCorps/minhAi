@@ -665,7 +665,7 @@ function connectTuya() {
                           </button>
                           {expandedEmail === email.id && email.body && (
                             <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                               <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{email.body}</div>
+                              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: email.body }} />
                             </div>
                           )}
                         </div>

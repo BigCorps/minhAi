@@ -12,7 +12,7 @@ import {
   Link2,
   Loader2,
   AlertCircle,
-  ChevronLeft,
+  ChevronLeft,F
   ChevronRight,
   Settings,
   RefreshCw,
@@ -338,6 +338,7 @@ function AgendaPageContent() {
 
   // ── Tuya Plano B: login com credenciais ──────────────────────────────────
   async function handleTuyaLogin() {
+    console.log('[Tuya] handleTuyaLogin chamado', tuyaLoginForm);
     if (!selectedCompanyId) return;
     const { username, password, country_code, schema } = tuyaLoginForm;
 

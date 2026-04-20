@@ -155,7 +155,7 @@ export default function FuncaoCardsSlide({
         </div>
 
         <p className={`text-xs ${isDark ? 'text-white/20' : 'text-gray-300'}`}>
-          {currentIndex < totalCount - 1 ? 'Role para ver mais funções →' : 'Próximo: Nossos Planos →'}
+          {currentIndex < totalCount - 1 ? 'Role para ver mais funções →' : 'Próximo: Informações →'}
         </p>
       </div>
     </div>

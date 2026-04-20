@@ -83,7 +83,7 @@ export function Sidebar() {
                   theme === 'dark' ? 'text-white' : 'text-gray-900'
                 }`}
               >
-                Menu Principal
+                Menu Assistentes
               </h3>
             </div>
 

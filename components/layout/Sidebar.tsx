@@ -74,18 +74,14 @@ export function Sidebar() {
             }`}
           >
             <div
-              className={`px-4 py-3 border-b mb-2 ${
-                theme === 'dark' ? 'border-white/10' : 'border-gray-100'
-              }`}
-            >
-              <h3
-                className={`text-sm font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                Menu Assistentes
-              </h3>
-            </div>
+  className={`px-4 py-2 border-b mb-1 ${
+    theme === 'dark' ? 'border-white/5' : 'border-gray-100'
+  }`}
+>
+  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+    Menu Assistentes
+  </p>
+</div>
 
             <nav className="flex flex-col">
               {menuItems.map((item) => {

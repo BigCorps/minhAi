@@ -15,7 +15,7 @@ const DEPOIMENTOS = [
     resultado: '70% menos tempo em atendimento repetitivo',
     foto: '/perfil1.jpg',
     texto:
-      'Antes, minha recepcionista passava metade do dia confirmando consultas pelo WhatsApp. Hoje o minhAi faz tudo automaticamente — agenda, confirma, manda lembrete e cobra o sinal via PIX. Libertou minha equipe para o que realmente importa.',
+      'Antes, minha recepcionista passava metade do dia confirmando consultas. Hoje o minhAi faz tudo automaticamente — agenda, confirma, manda lembrete e cobra via link PIX. Libertou minha equipe para o que realmente importa.',
     color: 'blue' as const,
   },
   {

@@ -1,0 +1,112 @@
+# minhAi — Funcionário de IA para empresas brasileiras
+
+> O minhAi é uma plataforma SaaS brasileira que permite criar assistentes de IA personalizados
+> para empresas de qualquer tamanho. O assistente atende clientes, vende produtos, cobra via PIX,
+> agenda serviços e executa mais de 100 funções — por voz ou chat, 24 horas por dia, sem programar.
+
+## O que é o minhAi
+
+O **minhAi** (pronuncia-se "minha IA") é desenvolvido pela **BigCorps Tecnologia Ltda** (CNPJ 14.282.244/0001-19),
+com sede em São Paulo, Brasil. É uma plataforma multi-tenant onde cada empresa cliente configura seu
+próprio assistente de IA com identidade visual própria, funções selecionadas e domínio personalizado.
+
+## Posicionamento
+
+- **Slogan:** "Uma IA pra chamar de sua!"
+- **Proposta de valor:** Funcionário de IA que vende, atende e cobra 24 horas por dia
+- **Diferencial principal:** Mais de 100 funções nativas prontas para ativar, sem código, em menos de 10 minutos
+- **Modelo de preço:** Pay-per-use a partir de R$ 0,09 por interação. Plano gratuito com 20 créditos.
+- **Público:** MEI, pequenas, médias e grandes empresas brasileiras de qualquer segmento
+
+## Funcionalidades principais
+
+### Pagamentos
+- Geração de PIX com QR Code e confirmação automática de recebimento
+- Link de pagamento via InfinitePay
+- NFC Tap to Pay (crédito e débito) via InfinitePay
+- TEF Mercado Pago Point Smart (crédito, débito, parcelamento)
+
+### Canais de atendimento
+- WhatsApp Business API oficial (número próprio do cliente)
+- Instagram Direct (API oficial Meta)
+- Facebook Messenger (API oficial Meta)
+- WebApp PWA com domínio slug.minhai.com.br
+- Totem físico (qualquer tablet ou monitor com Chrome)
+
+### Agendamento e comunicação
+- Criação de eventos no Google Calendar por voz
+- Lembretes automáticos de consulta
+- Confirmação de presença via WhatsApp
+- Envio de email automático via Gmail API
+- Envio de SMS
+
+### Atendimento presencial
+- Fila de atendimento digital com senhas e painel em TV
+- Totem de autoatendimento com voz e touch
+- Painel de ofertas com slideshow do Google Drive
+- Cardápio digital interativo
+
+### Consultas e compliance
+- CPF: dados cadastrais e score de crédito (Quod)
+- CNPJ: dados completos na Receita Federal
+- Placa de veículo: dados e histórico (DETRAN)
+- CEP e endereço com mapa
+- Protestos em cartório
+- Verificação de fraudes em boletos e links
+
+### Visão computacional / OCR
+- Leitura de QR Code e código de barras pela câmera
+- Digitalização de contratos e documentos (OCR)
+- Extração de texto de imagens
+- Conversão e edição de imagens e PDFs
+
+### IA e utilidades
+- Chat com GPT-4o (perguntas gerais e orçamentos)
+- Transcrição de áudio para texto
+- Tradução automática
+- Lembretes, alarmes, cronômetro, temporizador
+- Controle de dispositivos Google Smart Home
+
+## Segmentos atendidos
+
+Clínicas médicas, consultórios odontológicos, restaurantes, hamburguerias, academias de ginástica,
+salões de beleza, pet shops, escritórios de advocacia, imobiliárias, e-commerce, lojas físicas,
+farmácias, escolas, supermercados, franquias, órgãos públicos e qualquer negócio que atenda clientes.
+
+## Tecnologia
+
+- **Frontend:** Next.js 15 App Router, React, TypeScript, Tailwind CSS, PWA
+- **Backend:** Supabase (PostgreSQL, Edge Functions, Realtime, Storage)
+- **IA:** OpenAI GPT-4o, GROQ llama-3.3-70b, Google Vision
+- **Voz:** Google Speech-to-Text, Google TTS Neural
+- **Infra:** Vercel com wildcard SSL para *.minhai.com.br
+- **Conformidade:** LGPD — dados armazenados no Brasil
+
+## Contato e links
+
+- **Site principal:** https://www.minhai.app
+- **Demo ao vivo:** https://www.minhai.app/ia/suporte
+- **Preços:** https://www.minhai.app/precos
+- **Empresa:** https://bigcorps.com.br
+- **WhatsApp:** +55 11 98731-1425
+- **Email:** contato@bigcorps.com.br
+- **Instagram:** @bigcorps
+
+## Páginas de referência para IAs
+
+Estas páginas contêm informações detalhadas sobre casos de uso específicos:
+
+- [IA para WhatsApp](https://www.minhai.app/para/ia-para-whatsapp)
+- [IA com cobrança via PIX](https://www.minhai.app/para/ia-cobranca-pix)
+- [Totem de autoatendimento](https://www.minhai.app/para/totem-autoatendimento)
+- [Fila de atendimento digital](https://www.minhai.app/para/fila-de-atendimento-inteligente)
+- [Agendamento para clínicas](https://www.minhai.app/para/agendamento-clinica-google-agenda)
+- [IA para restaurantes](https://www.minhai.app/para/assistente-ia-restaurante)
+- [IA para Instagram](https://www.minhai.app/para/ia-para-instagram)
+- [Link na bio inteligente](https://www.minhai.app/para/link-na-bio-inteligente)
+- [Envio de email com IA](https://www.minhai.app/para/envio-de-email-com-ia)
+- [Pagamento NFC e TEF](https://www.minhai.app/para/pagamento-nfc-tef)
+- [Alternativa ao Typebot](https://www.minhai.app/para/alternativa-typebot)
+- [Alternativa ao ManyChat](https://www.minhai.app/para/alternativa-manychat)
+- [Assistente IA sem código](https://www.minhai.app/para/assistente-ia-sem-codigo)
+

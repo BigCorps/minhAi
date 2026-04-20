@@ -9,7 +9,7 @@ const FAQS = [
   {
     pergunta: 'Preciso saber programar para usar o minhAi?',
     resposta:
-      'Não. O minhAi foi feito para ser configurado por qualquer pessoa, sem nenhum código. Você acessa o dashboard, escolhe as funções que quer ativar, escreve a personalidade do assistente e publica. Todo o processo leva menos de 10 minutos.',
+      'Não. O minhAi foi feito para ser configurado por qualquer pessoa, sem nenhum código. Você acessa o dashboard, escolhe as funções que quer ativar, escreve a personalidade do assistente e publica. Todo o processo leva menos de 5 minutos.',
   },
   {
     pergunta: 'O minhAi vai substituir minha equipe?',
@@ -29,7 +29,7 @@ const FAQS = [
   {
     pergunta: 'Quanto tempo leva para configurar?',
     resposta:
-      'A maioria dos clientes configura o primeiro assistente em menos de 10 minutos. Para assistentes mais completos — com cardápio, produtos, integração com WhatsApp e PIX — a configuração leva entre 30 minutos e 1 hora.',
+      'A maioria dos clientes configura o primeiro assistente em menos de 5 minutos. Para assistentes mais completos — com cardápio, produtos, integração com WhatsApp e PIX — e você pode sempre ajustar e implementar mais coisas quando quiser',
   },
   {
     pergunta: 'Posso testar antes de pagar?',

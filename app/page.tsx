@@ -287,6 +287,11 @@ const NAV_SECTIONS = ['inicio', 'recursos', 'funcoes', 'precos', 'contato'];
 function getSectionNavGroup(sectionId: string): string {
   if (sectionId.startsWith('funcao-')) return 'funcoes';
   if (sectionId.startsWith('recurso-')) return 'recursos';
+  // Seções novas — mapeiam para o nav item mais próximo contextualmente
+  if (sectionId === 'provas-sociais') return 'inicio';
+  if (sectionId === 'como-funciona') return 'recursos';
+  if (sectionId === 'depoimentos') return 'precos';
+  if (sectionId === 'faq') return 'precos';
   return sectionId;
 }
 

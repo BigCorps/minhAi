@@ -3,10 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/landing/Header';
 import InicioSection from '@/components/landing/InicioSection';
+import ProvasSociaisSection from '@/components/landing/ProvasSociaisSection';
+import ComoFuncionaSection from '@/components/landing/ComoFuncionaSection';
 import RecursoImageSlide from '@/components/landing/RecursoImageSlide';
 import RecursoCardsSlide from '@/components/landing/RecursoCardsSlide';
 import VantagensSlide from '@/components/landing/VantagensSlide';
 import FuncaoCardsSlide from '@/components/landing/FuncaoCardsSlide';
+import DepoimentosSection from '@/components/landing/DepoimentosSection';
+import FAQSection from '@/components/landing/FAQSection';
 import {
   QrCode,
   CreditCard,
@@ -27,11 +31,7 @@ import PrecosSection from '@/components/landing/PrecosSection';
 import ContatoSection from '@/components/landing/ContatoSection';
 
 // ============================================================
-// RECURSOS - 4 páginas:
-// 1) Dispositivos (imagem + texto)
-// 2) API/Conexões (imagem + texto)
-// 3) Vantagens (imagem + texto)
-// 4) Cards de recursos (4 cards)
+// RECURSOS — 5 slides
 // ============================================================
 const RECURSO_CARDS = [
   {
@@ -40,10 +40,10 @@ const RECURSO_CARDS = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    title: 'Custo Baixo',
-    highlight: 'R$ 0,09',
-    highlightLabel: 'por interação (a partir)',
-    description: 'Planos com custo baixo por interação. Uma economia de até 90% comparado a atendimento humano tradicional.',
+    title: 'Economia real',
+    highlight: 'até 90% mais barato',
+    highlightLabel: 'que atendimento humano',
+    description: 'R$ 0,09 por interação. Compare com salário + encargos de um atendente e a diferença é enorme — sem perder qualidade.',
     color: 'green' as const,
   },
   {
@@ -52,10 +52,10 @@ const RECURSO_CARDS = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
       </svg>
     ),
-    title: 'Totalmente Customizável',
+    title: 'Sua cara, seu jeito',
     highlight: '100%',
     highlightLabel: 'personalizado',
-    description: 'Configure palavras de ativação, saudações, prompts e funções personalizadas para cada assistente.',
+    description: 'Configure palavras de ativação, saudações, prompts e funções para cada assistente. A IA fala como você quer.',
     color: 'blue' as const,
   },
   {
@@ -64,10 +64,10 @@ const RECURSO_CARDS = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
       </svg>
     ),
-    title: 'Rápido e Fácil',
+    title: 'Pronto em 5 minutos',
     highlight: '< 5 min',
     highlightLabel: 'para configurar',
-    description: 'Configure em minutos. Sem necessidade de código ou conhecimento técnico para começar.',
+    description: 'Sem código, sem técnico, sem complicação. Qualquer pessoa consegue criar e publicar seu assistente em minutos.',
     color: 'green' as const,
   },
   {
@@ -76,50 +76,49 @@ const RECURSO_CARDS = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    title: 'Atendimento 24 Horas',
+    title: 'Trabalha enquanto você dorme',
     highlight: '24/7',
     highlightLabel: 'sempre disponível',
-    description: 'Seu assistente nunca dorme. Atendimento automático a qualquer hora do dia ou da noite, sem custos extras.',
+    description: 'Seu Funcionário IA nunca para. Atende, vende e cobra a qualquer hora — fins de semana e feriados incluídos.',
     color: 'blue' as const,
   },
 ];
 
-// Slides de recursos com imagem (páginas 1, 2, 3)
 const RECURSO_IMAGE_SLIDES = [
   {
     id: 'recurso-dispositivos',
-    label: 'Compatibilidade',
-    title: 'Roda em Qualquer Dispositivo',
+    label: 'Compatibilidade total',
+    title: 'Funciona onde seu cliente está',
     description:
-      'Celulares, computadores, notebooks, TVs, totens, PDVs — qualquer aparelho com um navegador web e uma tela já é suficiente para rodar o seu funcionário IA. Sem instalações, sem hardware especial, sem limites de plataforma. Conecte tambem suas contas Whatsapp, Instagram e Facebook para o assistente responder por você automaticamente.',
+      'Celular, computador, tablet, totem, TV ou PDV — se tem tela e navegador, roda o minhAi. Conecte também WhatsApp, Instagram e Facebook: um assistente único que responde em todos os canais ao mesmo tempo, sem você monitorar nada.',
     imageSrc: '/dispositivos.png',
-    imageAlt: 'Dispositivos compatíveis com minhAi',
+    imageAlt: 'Dispositivos compatíveis com minhAi — celular, tablet, totem e computador',
     color: 'blue' as const,
   },
   {
     id: 'recurso-api',
-    label: 'Integrações',
-    title: 'Conexões e Serviços Profissionais',
+    label: 'Integrações nativas',
+    title: 'Conectado ao que você já usa',
     description:
-      'Utilizamos as melhores plataformas do mercado — Google (Agenda, Gmail, Youtube, Maps), Meta (Whatsapp, Instagram, Facebook), AWS, OpenAI, Banco Inter, InfinitePay e muito mais — além de uma vasta rede de APIs para garantir que o seu funcionário IA entregue as funções mais completas e confiáveis do segmento.',
+      'Google Agenda, Gmail, WhatsApp Business API, Mercado Pago, InfinitePay, YouTube, Maps, Banco Inter — tudo nativo, sem zapier, sem desenvolvimento adicional. O minhAi já vem integrado com as ferramentas que fazem seu negócio funcionar.',
     imageSrc: '/api.png',
-    imageAlt: 'Integrações e APIs do minhAi',
+    imageAlt: 'Integrações nativas do minhAi — Google, Meta, Mercado Pago e mais',
     color: 'green' as const,
   },
   {
     id: 'recurso-vantagens',
-    label: 'Vantagens',
-    title: 'Maior Eficiência Operacional',
+    label: 'Escale sem contratar',
+    title: 'Atenda 10x mais sem aumentar sua equipe',
     description:
-      'O assistente automatiza tarefas repetitivas e responde imediatamente às solicitações, liberando a equipe para atividades estratégicas. Com tecnologia de ponta em constante evolução, não há interrupções nem gargalos no atendimento — acelerando processos internos, aumentando a produtividade e auxiliando funcionários ou clientes com a maior efetividade.',
+      'Um Funcionário IA não tira férias, não falta, não pede aumento e atende centenas de clientes ao mesmo tempo. Libere sua equipe para o que realmente importa — enquanto o assistente resolve o repetitivo, 24 horas por dia.',
     imageSrc: '/vantagens.png',
-    imageAlt: 'Vantagens do minhAi',
+    imageAlt: 'Eficiência operacional com minhAi — automatize atendimento e escale seu negócio',
     color: 'blue' as const,
   },
   {
     id: 'recurso-extras',
     label: 'Extras',
-    title: 'Mais vantagens para você',
+    title: 'Mais vantagens que fazem diferença',
     description: null,
     imageSrc: null,
     imageAlt: null,
@@ -127,7 +126,7 @@ const RECURSO_IMAGE_SLIDES = [
   },
   {
     id: 'recurso-cards',
-    label: null, // cards slide, no label needed here
+    label: null,
     title: null,
     description: null,
     imageSrc: null,
@@ -136,131 +135,131 @@ const RECURSO_IMAGE_SLIDES = [
   },
 ];
 
-const TOTAL_RECURSO_SLIDES = RECURSO_IMAGE_SLIDES.length; // 5
+const TOTAL_RECURSO_SLIDES = RECURSO_IMAGE_SLIDES.length;
 
 // ============================================================
-// FUNÇÕES - 4 páginas de cards (4 + 3 + 4 + 3 = 14 categorias)
+// FUNÇÕES — 4 páginas com copy orientado a benefício
 // ============================================================
 const FUNCAO_PAGES = [
-  // Página 1 — 3 cards
+  // Página 1 — VENDER MAIS
   {
     id: 'funcao-page-1',
     cards: [
       {
-        title: 'Contatos',
+        title: 'Clientes chegam até você',
         icon: <QrCode />,
         color: 'blue' as const,
         description:
-          'Conecte seus clientes aos seus canais em segundos. Exibe QR Codes personalizados para Redes Sociais, Telefones e Site. Facilite o acesso ao WhatsApp, Instagram, ligações diretas e outras redes sociais, aumentando conversão e engajamento.',
+          'WhatsApp, Instagram, ligação direta — QR Codes que conectam seu cliente ao canal certo na hora. Aumente conversão e engajamento sem esforço.',
       },
       {
-        title: 'Financeiro',
+        title: 'Cobra e recebe sozinho',
         icon: <CreditCard />,
         color: 'green' as const,
         description:
-          'Cobranças rápidas, seguras e automatizadas. Geração de Pix, Débito e Crédito via NFC e Link de Pagamento diretamente pelo assistente com confirmação automática. Simplifique o processo de cobrança e aumente a taxa de pagamento imediato.',
+          'PIX, crédito, débito e link de pagamento direto pelo assistente — com confirmação automática. Sem você precisar verificar nada.',
       },
       {
-        title: 'Multimídia',
+        title: 'Entretenha enquanto vende',
         icon: <Play />,
         color: 'blue' as const,
         description:
-          'Experiência interativa e envolvente. Vídeos, Tutoriais, Publicidades, Playlists, Modo Sequência e Música sob comando. Ideal para totens, recepções, lojas, academias e ambientes corporativos.',
+          'Vídeos, playlists, tutoriais e publicidade no totem enquanto o cliente espera. Venda mais com experiência — ideal para totens e recepções.',
       },
     ],
   },
-  // Página 2 — 4 cards
+  // Página 2 — ATENDER MAIS
   {
     id: 'funcao-page-2',
     cards: [
       {
-        title: 'Informação',
+        title: 'Responde por você, sempre',
         icon: <Radio />,
         color: 'green' as const,
         description:
-          'Informações atualizadas em tempo real. Apresenta dados sobre o minhAi, sua Marca, Notícias, Feriados Nacionais e tambêm Câmbio. Mantenha clientes e colaboradores sempre informados com respostas instantâneas.',
+          'Notícias, câmbio, feriados, informações da sua marca — o assistente responde antes de você precisar digitar uma palavra.',
       },
       {
-        title: 'Consultas',
+        title: 'Valide antes de fechar negócio',
         icon: <Search />,
         color: 'blue' as const,
         description:
-          'Verificações rápidas e confiáveis. Consulta a Dados de CNPJ, CPF, Placa de Veículo, Leilões, Restrições de CPF e CNPJ. Ferramenta ideal para empresas que precisam validar informações antes de fechar negócios.',
+          'CNPJ, CPF, placa de veículo, restrições de crédito — consulta em segundos direto pelo assistente, sem sair do atendimento.',
       },
       {
-        title: 'Localização',
+        title: 'Leva o cliente até você',
         icon: <MapPin />,
         color: 'green' as const,
         description:
-          'Geolocalização inteligente e precisa. Mostra o Endereço, Busca CEPs, Traça Rota, verifica Trânsito em tempo real e Consulta DDD. Facilite deslocamentos e atendimento logístico.',
+          'Endereço no mapa, CEP, rota e trânsito em tempo real — o assistente guia seu cliente até a sua porta.',
       },
       {
-        title: 'Agendamento',
+        title: 'Agenda lota sozinha',
         icon: <CalendarDays />,
         color: 'blue' as const,
         description:
-          'Organização automatizada e eficiente. Marcação de Eventos, Consultas, Mostra Agenda e Calendário, Confirma Presença, Reagenda compromissos e até Envia e lê E-mails. Reduza faltas e melhore a gestão do tempo.',
+          'Marcação, confirmação e reagendamento automático no Google Agenda. Envia lembrete para reduzir faltas — e libera sua recepção.',
       },
     ],
   },
-  // Página 3 — 3 cards
+  // Página 3 — CONHECER MAIS
   {
     id: 'funcao-page-3',
     cards: [
       {
-        title: 'Conhecimento',
+        title: 'IA que sabe tudo do seu negócio',
         icon: <Brain />,
         color: 'green' as const,
         description:
-          'Inteligência avançada ao seu alcance. Responde perguntas gerais, gera Orçamentos, Perguntas e Respostas inteligentes, Tradução, Transcrição de Áudio e consulta a Previsão do Tempo. Um verdadeiro centro de inteligência operacional.',
+          'Responde perguntas gerais, gera orçamentos, traduz, transcreve áudio e consulta o tempo. Um consultor digital disponível 24 horas.',
       },
       {
-        title: 'Utilitários',
+        title: 'Produtividade no dia a dia',
         icon: <Wrench />,
         color: 'blue' as const,
         description:
-          'Ferramentas práticas para o dia a dia. Controla Aparelhos Smart, Cria Lembretes, Cronômetro, Temporizador e Relógio Mundial. Recursos simples que aumentam produtividade e organização.',
+          'Aparelhos smart, lembretes, cronômetro, relógio mundial — ferramentas simples que economizam minutos todos os dias.',
       },
       {
-        title: 'Identificação',
+        title: 'Controle de acesso e filas',
         icon: <BadgeCheck />,
         color: 'green' as const,
         description:
-          'Controle e segurança automatizados. Reconhecimento Facial, Registro de Ponto, Fila de Atendimento, Geração de Senha e Cadastro de Cliente. Ideal para empresas que precisam organizar fluxo e validar acessos.',
+          'Cadastro de clientes, fila de atendimento com senha digital, reconhecimento facial e videochamada entre colaboradores.',
       },
     ],
   },
-  // Página 4 — 4 cards
+  // Página 4 — OPERAR MAIS
   {
     id: 'funcao-page-4',
     cards: [
       {
-        title: 'Arquivos',
+        title: 'Edite e converta com IA',
         icon: <FolderOpen />,
         color: 'blue' as const,
         description:
-          'Edição e conversão de documentos com IA. Remover Fundo, Duplicar Imagem, Editar Imagem e Converção de Arquivos automaticamente. Agilidade para marketing, administrativo e operacional.',
+          'Remover fundo, duplicar imagem, editar foto, converter arquivos e juntar PDFs — tudo pelo assistente, sem precisar de outro software.',
       },
       {
-        title: 'Serviços',
+        title: 'Impressão, cardápio e suporte',
         icon: <ConciergeBell />,
         color: 'green' as const,
         description:
-          'Soluções operacionais completas. Auxilia os clientes a Imprimir documentos, exibe Tabela de Preços, Cardápio (Menu), Emite Recibos e Chamado ao Suporte agilizado. Facilite o atendimento presencial e digital.',
+          'Imprime recibos na térmica, exibe cardápio digital, emite segunda via de boleto e aciona o gerente com um toque.',
       },
       {
-        title: 'Comercial',
+        title: 'Vendedor digital ativo 24h',
         icon: <ShoppingCart />,
         color: 'blue' as const,
         description:
-          'Aumente suas vendas com inteligência. Recomenda e Cadastra Produtos, gera Avaliações, com modo Totem de Vendas, Resposta de Pesquisas e Consulta ao Estoque. Transforme o assistente em um vendedor digital ativo 24h.',
+          'Recomenda produtos, registra vendas, consulta estoque, processa pedidos e coleta avaliações — sem vendedor físico presente.',
       },
       {
-        title: 'Câmera',
+        title: 'Leia e valide com a câmera',
         icon: <Camera />,
         color: 'green' as const,
         description:
-          'Leitura e validação instantânea. Leitura de QR Codes e Código de Barras, Envia Arquivos, Validação de Cupom e Verificação de Acesso. Ideal para controle de entradas, promoções e operações rápidas.',
+          'QR Codes, código de barras, envio de arquivo por foto, validação de cupom e controle de acesso — tudo pela câmera do dispositivo.',
       },
     ],
   },
@@ -269,12 +268,16 @@ const FUNCAO_PAGES = [
 const TOTAL_FUNCAO_PAGES = FUNCAO_PAGES.length;
 
 // ============================================================
-// IDs DE TODAS AS SEÇÕES
+// IDs — inclui novas seções
 // ============================================================
 const ALL_SECTION_IDS = [
   'inicio',
+  'provas-sociais',
+  'como-funciona',
   ...RECURSO_IMAGE_SLIDES.map((r) => r.id),
   ...FUNCAO_PAGES.map((f) => f.id),
+  'depoimentos',
+  'faq',
   'precos',
   'contato',
 ];
@@ -290,7 +293,6 @@ function getSectionNavGroup(sectionId: string): string {
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
-
 export default function LandingPage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [activeSectionId, setActiveSectionId] = useState('inicio');
@@ -304,7 +306,6 @@ export default function LandingPage() {
     if (mq.matches) setTheme('light');
   }, []);
 
-  // Fallback dvh para browsers antigos
   useEffect(() => {
     function setVh() {
       document.documentElement.style.setProperty('--dvh', `${window.innerHeight * 0.01}px`);
@@ -391,9 +392,6 @@ export default function LandingPage() {
   const canGoLeft = currentAllIndex > 0;
   const canGoRight = currentAllIndex < ALL_SECTION_IDS.length - 1;
 
-  // Compute which recurso slide index we're on
-  const activeRecursoIndex = RECURSO_IMAGE_SLIDES.findIndex((r) => r.id === activeSectionId);
-
   return (
     <div className={`relative h-dvh-safe w-screen overflow-hidden transition-colors duration-500 ${
       isDark ? 'bg-slate-950 text-white' : 'bg-white text-gray-900'
@@ -410,6 +408,7 @@ export default function LandingPage() {
         ref={scrollContainerRef}
         className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        aria-label="Seções da landing page minhAi"
       >
         <style jsx>{`main::-webkit-scrollbar { display: none; }`}</style>
         <style jsx global>{`
@@ -417,16 +416,27 @@ export default function LandingPage() {
         `}</style>
 
         {/* INÍCIO */}
-        <section id="inicio" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always">
+        <section id="inicio" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Início">
           <InicioSection theme={theme} />
         </section>
 
-        {/* RECURSOS - Páginas 1, 2, 3: imagem + texto */}
+        {/* PROVAS SOCIAIS — nova */}
+        <section id="provas-sociais" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Quem usa o minhAi">
+          <ProvasSociaisSection theme={theme} />
+        </section>
+
+        {/* COMO FUNCIONA — nova */}
+        <section id="como-funciona" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Como funciona o minhAi">
+          <ComoFuncionaSection theme={theme} />
+        </section>
+
+        {/* RECURSOS — slides 1, 2, 3 com imagem */}
         {RECURSO_IMAGE_SLIDES.slice(0, 3).map((slide, index) => (
           <section
             key={slide.id}
             id={slide.id}
             className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
+            aria-label={slide.title || slide.label || 'Recurso'}
           >
             <RecursoImageSlide
               theme={theme}
@@ -443,37 +453,23 @@ export default function LandingPage() {
           </section>
         ))}
 
-        {/* RECURSOS - Página 4: Extras (WebApp, Indicação, Link PIX) */}
-        <section
-          id="recurso-extras"
-          className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
-        >
-          <VantagensSlide
-            theme={theme}
-            currentIndex={3}
-            totalCount={TOTAL_RECURSO_SLIDES}
-          />
+        {/* RECURSOS — slide 4: extras (WebApp, Indicação, PIX) */}
+        <section id="recurso-extras" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Vantagens extras">
+          <VantagensSlide theme={theme} currentIndex={3} totalCount={TOTAL_RECURSO_SLIDES} />
         </section>
 
-        {/* RECURSOS - Página 5: 4 cards */}
-        <section
-          id="recurso-cards"
-          className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
-        >
-          <RecursoCardsSlide
-            theme={theme}
-            recursos={RECURSO_CARDS}
-            currentIndex={4}
-            totalCount={TOTAL_RECURSO_SLIDES}
-          />
+        {/* RECURSOS — slide 5: 4 cards */}
+        <section id="recurso-cards" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Diferenciais">
+          <RecursoCardsSlide theme={theme} recursos={RECURSO_CARDS} currentIndex={4} totalCount={TOTAL_RECURSO_SLIDES} />
         </section>
 
-        {/* FUNÇÕES — 4 páginas de cards */}
+        {/* FUNÇÕES — 4 páginas */}
         {FUNCAO_PAGES.map((page, index) => (
           <section
             key={page.id}
             id={page.id}
             className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always"
+            aria-label={`Funções — página ${index + 1}`}
           >
             <FuncaoCardsSlide
               theme={theme}
@@ -484,13 +480,23 @@ export default function LandingPage() {
           </section>
         ))}
 
+        {/* DEPOIMENTOS — nova */}
+        <section id="depoimentos" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Depoimentos de clientes">
+          <DepoimentosSection theme={theme} />
+        </section>
+
+        {/* FAQ — nova */}
+        <section id="faq" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Perguntas frequentes">
+          <FAQSection theme={theme} />
+        </section>
+
         {/* PREÇOS */}
-        <section id="precos" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always">
+        <section id="precos" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Planos e preços">
           <PrecosSection theme={theme} />
         </section>
 
         {/* CONTATO */}
-        <section id="contato" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always">
+        <section id="contato" className="w-screen h-dvh-safe flex-shrink-0 snap-start snap-always" aria-label="Contato e CTA final">
           <ContatoSection theme={theme} />
         </section>
       </main>
@@ -503,9 +509,7 @@ export default function LandingPage() {
         } ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/5 hover:bg-black/10'}`}
         aria-label="Seção anterior"
       >
-        <svg className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:-translate-x-0.5 ${
-          isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'
-        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:-translate-x-0.5 ${isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
       </button>
@@ -518,9 +522,7 @@ export default function LandingPage() {
         } ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-black/5 border-black/5 hover:bg-black/10'}`}
         aria-label="Próxima seção"
       >
-        <svg className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:translate-x-0.5 ${
-          isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'
-        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:translate-x-0.5 ${isDark ? 'text-white/30 group-hover:text-white/60' : 'text-gray-300 group-hover:text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>

@@ -6,9 +6,9 @@ interface ProvasSociaisSectionProps {
 }
 
 const NUMEROS = [
-  { valor: '3.000+',   label: 'empresas ativas',         color: 'blue' as const },
+  { valor: '30+',   label: 'empresas ativas',         color: 'blue' as const },
   { valor: '100+',     label: 'funções nativas',          color: 'green' as const },
-  { valor: 'R$ 0,09', label: 'por interação (a partir)', color: 'blue' as const },
+  { valor: 'R$ 0,05', label: 'por interação (a partir)', color: 'blue' as const },
   { valor: '24/7',     label: 'sempre disponível',        color: 'green' as const },
 ];
 
@@ -58,7 +58,7 @@ export default function ProvasSociaisSection({ theme = 'dark' }: ProvasSociaisSe
             {' '}seu atendimento
           </h2>
           <p className={`text-sm sm:text-base max-w-xl mx-auto ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
-            Do MEI ao grupo empresarial — qualquer negócio que atende cliente pode ter um Funcionário de IA.
+            De Profissionais liberais, MEIs, Pequenas, Médias e grandes Empresas — qualquer negócio com clientes e funcionários, pode ter um Assistente IA.
           </p>
         </div>
 

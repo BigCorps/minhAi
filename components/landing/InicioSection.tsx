@@ -1,4 +1,4 @@
-// app/InicioSection.tsx  ← SEM 'use client' — Server Component puro
+// app/InicioSection.tsx — Server Component puro (sem 'use client')
 import Link from 'next/link';
 import { LandingAvatarFace } from './LandingAvatarFace';
 import { WordCarousel } from '@/components/landing/WordCarousel';
@@ -8,9 +8,9 @@ interface InicioSectionProps {
 }
 
 const MINI_DESTAQUES = [
-  'Rápido e Fácil de Começar',
-  'Pague por Interação',
-  '100% Customizável',
+  'Sem cartão de crédito',
+  'Funciona em 5 minutos',
+  '100% em português',
 ];
 
 export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
@@ -26,87 +26,63 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
     >
       {/* Fundo decorativo */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div
-          className={`absolute -top-1/4 -right-1/4 w-[60%] h-[60%] rounded-full blur-[120px] ${
-            isDark ? 'bg-blue-500/10' : 'bg-blue-200/30'
-          }`}
-        />
-        <div
-          className={`absolute -bottom-1/4 -left-1/4 w-[50%] h-[50%] rounded-full blur-[100px] ${
-            isDark ? 'bg-green-500/8' : 'bg-green-200/20'
-          }`}
-        />
+        <div className={`absolute -top-1/4 -right-1/4 w-[60%] h-[60%] rounded-full blur-[120px] ${isDark ? 'bg-blue-500/10' : 'bg-blue-200/30'}`} />
+        <div className={`absolute -bottom-1/4 -left-1/4 w-[50%] h-[50%] rounded-full blur-[100px] ${isDark ? 'bg-green-500/8' : 'bg-green-200/20'}`} />
       </div>
 
-      {/* Conteúdo principal */}
       <div className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 gap-3 sm:gap-6 md:gap-16 pt-14 md:pt-0">
 
         {/* AVATAR */}
         <div className="flex-shrink-0 order-1 md:order-2 flex items-center justify-center">
-          <div className="
-            relative transition-all duration-500
-            w-[42vw] h-[42vw]
-            sm:w-[38vw] sm:h-[38vw]
-            md:w-80 md:h-80
-            lg:w-[22rem] lg:h-[22rem]
-            xl:w-[26rem] xl:h-[26rem]
-          ">
+          <div className="relative transition-all duration-500 w-[42vw] h-[42vw] sm:w-[38vw] sm:h-[38vw] md:w-80 md:h-80 lg:w-[22rem] lg:h-[22rem] xl:w-[26rem] xl:h-[26rem]">
             <LandingAvatarFace theme={theme} />
           </div>
         </div>
 
         {/* TEXTO + CTAs */}
         <div className="flex-1 text-center order-2 md:order-1 max-w-xl">
-          <h1
-            className={`font-bold leading-[1.15] mb-3 sm:mb-6 transition-colors
-              text-xl sm:text-4xl md:text-4xl lg:text-[2.75rem]
-              ${isDark ? 'text-white' : 'text-gray-900'}
-            `}
-          >
+
+          {/* Badge */}
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mb-3 ${
+            isDark ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-green-100 text-green-700 border border-green-200'
+          }`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" aria-hidden="true" />
+            Mais de 100 funções para o seu negócio
+          </div>
+
+          <h1 className={`font-bold leading-[1.15] mb-3 sm:mb-5 transition-colors text-xl sm:text-4xl md:text-4xl lg:text-[2.75rem] ${isDark ? 'text-white' : 'text-gray-900'}`}>
             <span className="block whitespace-nowrap">
-              <span
-                className={`font-bold text-2xl sm:text-4xl md:text-5xl lg:text-5xl
-                  ${isDark ? 'text-blue-400' : 'text-blue-600'}
-                `}
-              >
+              <span className={`font-bold text-2xl sm:text-4xl md:text-5xl lg:text-5xl ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                 Uma IA pra chamar de sua!
               </span>
             </span>
 
-            {/* Linha com o carrossel — client component isolado */}
             <span className="block whitespace-nowrap">
-              Sou o{' '}
+              Seu{' '}
               <WordCarousel isDark={isDark} />
               {' '}IA que
             </span>
 
             <span className="block whitespace-nowrap">
-              faz + de 100 funções{' '}
-              <span className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                pra você
+              vende, atende e cobra{' '}
+              <span className={isDark ? 'text-green-400' : 'text-green-600'}>
+                24h por dia.
               </span>
-              !
             </span>
           </h1>
 
-          <p
-            className={`text-sm sm:text-base md:text-lg max-w-lg mb-4 sm:mb-8 leading-relaxed transition-colors mx-auto
-              ${isDark ? 'text-white/55' : 'text-gray-600'}
-            `}
-          >
-            Personalize seu assistente e transforme a experiência dos seus clientes com um
-            funcionário de voz e texto que trabalha 24/7. Tenha seu próprio WebApp personalizado
-            e configure do seu jeito para responder perguntas, executar funções, gerar cobranças,
-            agendar consultas, recomendar vídeos, vender, cadastrar, fila de atendimento e muito mais.
+          <p className={`text-sm sm:text-base md:text-lg max-w-lg mb-4 sm:mb-7 leading-relaxed transition-colors mx-auto ${isDark ? 'text-white/55' : 'text-gray-600'}`}>
+            Nunca mais perca venda por falta de resposta.
+            Configure em minutos, sem programar — e deixe a IA trabalhar enquanto você descansa.
           </p>
 
-          {/* Botões CTA */}
+          {/* CTAs */}
           <div className="flex flex-row items-center justify-center gap-2 sm:gap-4">
             <Link
               href="/login"
               className="flex-1 sm:flex-none px-4 sm:px-8 py-2.5 sm:py-3.5 bg-[#A4C61E] text-white rounded-full hover:brightness-110 transition-all duration-300 font-bold text-xs sm:text-base text-center shadow-lg hover:shadow-xl hover:scale-105"
             >
-              Comece Gratuitamente
+              Criar meu Funcionário IA grátis
             </Link>
             <Link
               href="/ia/suporte"
@@ -116,30 +92,28 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
                   : 'border-blue-600/50 text-blue-600 hover:bg-blue-50 hover:border-blue-600'
               }`}
             >
-              Ver Demonstração
+              Ver demonstração ao vivo
             </Link>
           </div>
 
           {/* Mini destaques */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-4 sm:mt-8">
-            {MINI_DESTAQUES.map((text) => (
-              <span
-                key={text}
-                className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${
-                  isDark ? 'text-white/35' : 'text-gray-400'
-                }`}
-              >
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-4 sm:mt-6">
+            {MINI_DESTAQUES.map((text, i) => (
+              <span key={text} className={`flex items-center gap-1.5 text-xs transition-colors font-medium ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                {i > 0 && <span className={isDark ? 'text-white/15 mr-1' : 'text-gray-200 mr-1'}>·</span>}
+                <svg className={`w-3 h-3 flex-shrink-0 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
                 {text}
               </span>
             ))}
           </div>
 
-          {/* Traço + Slogan */}
-          <div className="flex justify-center my-4 sm:my-5">
-            <div className={`h-px w-32 ${isDark ? 'bg-white/35' : 'bg-gray-400'}`} />
+          <div className="flex justify-center my-3 sm:my-4">
+            <div className={`h-px w-28 ${isDark ? 'bg-white/20' : 'bg-gray-300'}`} />
           </div>
-          <span className={`text-xs font-medium ${isDark ? 'text-white/35' : 'text-gray-400'}`}>
-            minhAi - Uma IA pra chamar de sua!
+          <span className={`text-xs font-medium ${isDark ? 'text-white/25' : 'text-gray-400'}`}>
+            minhAi — Uma IA pra chamar de sua!
           </span>
         </div>
       </div>

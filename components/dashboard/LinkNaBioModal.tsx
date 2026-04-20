@@ -446,7 +446,7 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
           {/* Abas */}
           <div style={{ display: 'flex', gap: 0 }}>
             <button style={tabStyle(tab === 'links')} onClick={() => setTab('links')}>
-              Informações e Links
+              Bio / Links
             </button>
             <button style={tabStyle(tab === 'contato')} onClick={() => setTab('contato')}>
               Contato
@@ -486,7 +486,7 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
               {!showForm && (
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
-                    Descrição / Bio da empresa
+                    Bio / Descrição da empresa
                   </label>
                   {loadingBio ? (
                     <div style={{ height: 80, borderRadius: 10, background: p.surface, border: `1px solid ${p.border}` }} />

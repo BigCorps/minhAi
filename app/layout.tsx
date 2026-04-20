@@ -229,15 +229,8 @@ const jsonLd = {
         '@type': 'Organization',
         '@id': `${APP_URL}/#organization`,
       },
-
-      // Avaliação agregada — fictícia até ter dados reais
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.9',
-        reviewCount: '127',
-        bestRating: '5',
-        worstRating: '1',
-      },
+      // aggregateRating removido — Google exige avaliações visíveis no HTML.
+      // Adicionar quando tiver reviews reais em página estática.
     },
 
     // ── Organização ────────────────────────────────────────────────────────────

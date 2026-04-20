@@ -301,6 +301,32 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
     setChecking(false);
   };
 
+  // ── Bio / descrição da empresa ───────────────────────────
+  const [bio, setBio] = useState('');
+  const [loadingBio, setLoadingBio] = useState(true);
+  const [savingBio, setSavingBio] = useState(false);
+  const [bioDirty, setBioDirty] = useState(false);
+
+  const loadBio = useCallback(async () => {
+    setLoadingBio(true);
+    const { data } = await supabase.from('companies')
+      .select('brand_description').eq('id', companyId).single();
+    setBio(data?.brand_description ?? '');
+    setLoadingBio(false);
+  }, [companyId]);
+
+  useEffect(() => { loadBio(); }, [loadBio]);
+
+  const handleSaveBio = async () => {
+    setSavingBio(true);
+    const { error } = await supabase.from('companies')
+      .update({ brand_description: bio || null, updated_at: new Date().toISOString() })
+      .eq('id', companyId);
+    setSavingBio(false);
+    if (error) showToast('Erro ao salvar.', 'error');
+    else { showToast('Descrição salva!'); setBioDirty(false); }
+  };
+
   // ────────────────────────────────────────────────────────
   // ABA CONTATO
   // ────────────────────────────────────────────────────────
@@ -419,11 +445,11 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
 
           {/* Abas */}
           <div style={{ display: 'flex', gap: 0 }}>
-            <button style={tabStyle(tab === 'contato')} onClick={() => setTab('contato')}>
-              Contato
-            </button>
             <button style={tabStyle(tab === 'links')} onClick={() => setTab('links')}>
-              Links customizados
+              ✦ Outros
+            </button>
+            <button style={tabStyle(tab === 'contato')} onClick={() => setTab('contato')}>
+              📞 Contato
             </button>
           </div>
         </div>
@@ -453,6 +479,50 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Bio da empresa */}
+              {!showForm && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                    Descrição / Bio da empresa
+                  </label>
+                  {loadingBio ? (
+                    <div style={{ height: 80, borderRadius: 10, background: p.surface, border: `1px solid ${p.border}` }} />
+                  ) : (
+                    <>
+                      <textarea
+                        value={bio}
+                        onChange={e => { setBio(e.target.value); setBioDirty(true); }}
+                        placeholder="Escreva uma breve descrição da sua empresa para aparecer na página de links..."
+                        rows={3}
+                        maxLength={300}
+                        style={{
+                          width: '100%', padding: '10px 12px',
+                          borderRadius: 10, border: `1px solid ${bioDirty ? p.borderFocus : p.inputBorder}`,
+                          background: p.input, color: p.text,
+                          fontSize: 13, lineHeight: 1.5,
+                          resize: 'vertical', outline: 'none',
+                          boxSizing: 'border-box', fontFamily: 'inherit',
+                          transition: 'border-color 0.15s',
+                        }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                        <span style={{ fontSize: 11, color: p.textMuted }}>{bio.length}/300 caracteres</span>
+                        {bioDirty && (
+                          <button
+                            onClick={handleSaveBio}
+                            disabled={savingBio}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, border: 'none', background: p.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingBio ? 0.7 : 1 }}
+                          >
+                            <Ico.Save s={12} c="#fff" />
+                            {savingBio ? 'Salvando...' : 'Salvar bio'}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

@@ -64,9 +64,9 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
             </span>
 
             <span className="block whitespace-nowrap">
-              vende, atende e cobra{' '}
+              vende e atende{' '}
               <span className={isDark ? 'text-green-400' : 'text-green-600'}>
-                24h por dia.
+                24 horas.
               </span>
             </span>
           </h1>

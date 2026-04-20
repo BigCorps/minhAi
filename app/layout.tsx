@@ -6,6 +6,8 @@ import { AssistantProvider } from '@/contexts/AssistantContext';
 import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
 import 'react-image-crop/dist/ReactCrop.css';
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // ─── Fonte Nunito ─────────────────────────────────────────────────────────────
 const nunito = Nunito({

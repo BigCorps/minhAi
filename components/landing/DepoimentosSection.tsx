@@ -10,7 +10,7 @@ const DEPOIMENTOS = [
     nome: 'Dra. Ana Oliveira',
     cargo: 'Proprietária',
     empresa: 'Clínica VidaSaúde',
-    segmento: '🏥 Saúde',
+    segmento: 'Saúde',
     estrelas: 5,
     resultado: '70% menos tempo em atendimento repetitivo',
     texto:
@@ -21,7 +21,7 @@ const DEPOIMENTOS = [
     nome: 'Carlos Mendes',
     cargo: 'Proprietário',
     empresa: 'Hamburgueria do Carlos',
-    segmento: '🍕 Alimentação',
+    segmento: 'Alimentação',
     estrelas: 5,
     resultado: 'Atende 3x mais pedidos no horário de pico',
     texto:
@@ -32,7 +32,7 @@ const DEPOIMENTOS = [
     nome: 'Dr. Roberto Faria',
     cargo: 'Advogado',
     empresa: 'Faria & Associados',
-    segmento: '⚖️ Jurídico',
+    segmento: 'Jurídico',
     estrelas: 5,
     resultado: 'Atendimento profissional sem contratar ninguém',
     texto:

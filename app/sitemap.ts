@@ -1,4 +1,4 @@
-// app/sitemap.ts — versão atualizada com páginas de nicho
+// app/sitemap.ts — versão completa com todas as páginas
 import { MetadataRoute } from 'next';
 import { NICHO_PAGES } from './para/[slug]/data';
 
@@ -7,6 +7,7 @@ const BASE_URL = 'https://www.minhai.app';
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
+  // ── Páginas principais — alta prioridade ─────────────────────────────────
   const paginasPrincipais: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
@@ -18,41 +19,55 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${BASE_URL}/precos`,
       lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.9,
+      priority: 0.95,
     },
     {
       url: `${BASE_URL}/sobre`,
       lastModified: now,
       changeFrequency: 'monthly',
-      priority: 0.7,
+      priority: 0.75,
     },
     {
       url: `${BASE_URL}/contato`,
       lastModified: now,
       changeFrequency: 'monthly',
-      priority: 0.6,
+      priority: 0.65,
     },
     {
       url: `${BASE_URL}/docs`,
       lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.7,
+      priority: 0.80,
     },
+    {
+      url: `${BASE_URL}/blog`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.75,
+    },
+  ];
+
+  // ── Demo pública — indexável por crawlers de IA ──────────────────────────
+  const paginasDemo: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/ia/suporte`,
       lastModified: now,
       changeFrequency: 'monthly',
-      priority: 0.5,
+      priority: 0.60,
     },
   ];
 
-  // Páginas de nicho — geradas automaticamente a partir dos dados
+  // ── Páginas de nicho — SEO programático (cauda longa) ───────────────────
   const paginasNicho: MetadataRoute.Sitemap = NICHO_PAGES.map((p) => ({
     url: `${BASE_URL}/para/${p.slug}`,
     lastModified: now,
     changeFrequency: 'monthly' as const,
-    priority: 0.85, // Alta prioridade — são as páginas de conversão de cauda longa
+    priority: 0.88,
   }));
 
-  return [...paginasPrincipais, ...paginasNicho];
+  return [
+    ...paginasPrincipais,
+    ...paginasDemo,
+    ...paginasNicho,
+  ];
 }

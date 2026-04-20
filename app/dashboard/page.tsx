@@ -8,7 +8,7 @@ import { CreditsProgressChartWrapper } from '@/components/CreditsProgressChartWr
 import SetupBanner from '@/components/dashboard/SetupBanner';
 import { PushNotificationSetup } from '@/components/dashboard/PushNotificationSetup';
 import ModoToggle from '@/components/dashboard/ModoToggle';
-import LinkNaBioModalWrapper from '@/components/dashboard/LinkNaBioModalWrapper';
+import LinkNaBioContextWrapper from '@/components/dashboard/LinkNaBioContextWrapper';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -46,19 +46,6 @@ export default async function DashboardPage() {
     }
   } catch (e) { console.error(e); }
 
-    const firstCompany = userCompanies?.[0] ?? null;
- 
-  // Buscar modo_links_enabled da primeira empresa (para o toggle)
-  let firstCompanyData: { id: string; modo_links_enabled: boolean; slug: string } | null = null;
-  if (firstCompany) {
-    const { data: cd } = await supabase
-      .from('companies')
-      .select('id, slug, modo_links_enabled')
-      .eq('id', firstCompany.id)
-      .single();
-    firstCompanyData = cd ?? null;
-  }
-
   const displayName = user?.user_metadata?.name || user?.email || 'Usuário';
 
   return (
@@ -86,13 +73,7 @@ export default async function DashboardPage() {
             userId={user.id}
             className="bg-[#ADFF2F] hover:bg-[#96e028] text-black border-none"
           />
-          {firstCompanyData && (
-            <LinkNaBioModalWrapper
-              companyId={firstCompanyData.id}
-              slug={firstCompanyData.slug}
-              initialEnabled={firstCompanyData.modo_links_enabled ?? false}
-            />
-          )}
+          <LinkNaBioContextWrapper />
         </div>
       </div>
 

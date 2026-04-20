@@ -446,10 +446,10 @@ export default function LinkNaBioModal({ companyId, slug, onClose }: LinkNaBioMo
           {/* Abas */}
           <div style={{ display: 'flex', gap: 0 }}>
             <button style={tabStyle(tab === 'links')} onClick={() => setTab('links')}>
-              ✦ Outros
+              Informações e Links
             </button>
             <button style={tabStyle(tab === 'contato')} onClick={() => setTab('contato')}>
-              📞 Contato
+              Contato
             </button>
           </div>
         </div>

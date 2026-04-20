@@ -13,6 +13,7 @@ const DEPOIMENTOS = [
     segmento: 'Saúde',
     estrelas: 5,
     resultado: '70% menos tempo em atendimento repetitivo',
+    foto: '/perfil1.jpg',
     texto:
       'Antes, minha recepcionista passava metade do dia confirmando consultas pelo WhatsApp. Hoje o minhAi faz tudo automaticamente — agenda, confirma, manda lembrete e cobra o sinal via PIX. Libertou minha equipe para o que realmente importa.',
     color: 'blue' as const,
@@ -24,6 +25,7 @@ const DEPOIMENTOS = [
     segmento: 'Alimentação',
     estrelas: 5,
     resultado: 'Atende 3x mais pedidos no horário de pico',
+    foto: '/perfil2.jpg',
     texto:
       'Colocamos o minhAi no totem da loja e no WhatsApp do delivery. O assistente recebe o pedido, manda para a cozinha e já cobra o PIX. Nas sextas à noite, que eram um caos, agora flui tranquilo — sem aumentar minha equipe.',
     color: 'green' as const,
@@ -35,6 +37,7 @@ const DEPOIMENTOS = [
     segmento: 'Jurídico',
     estrelas: 5,
     resultado: 'Atendimento profissional sem contratar ninguém',
+    foto: '/perfil3.jpg',
     texto:
       'Sou advogado autônomo e não tinha como contratar recepcionista. O minhAi agenda reuniões, responde dúvidas básicas dos clientes e digitaliza contratos com a câmera. Parece que tenho uma secretária, mas pago centavos por interação.',
     color: 'blue' as const,
@@ -152,12 +155,12 @@ export default function DepoimentosSection({ theme = 'dark' }: DepoimentosSectio
 
                 {/* Autor */}
                 <div className="flex items-center gap-3">
-                  {/* Avatar gerado por iniciais */}
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${
-                    isDark ? 'bg-white/10 text-white/70' : 'bg-gray-100 text-gray-600'
-                  }`} aria-hidden="true">
-                    {d.nome.split(' ').map(n => n[0]).slice(0, 2).join('')}
-                  </div>
+                  {/* Avatar com foto */}
+                  <img
+                    src={d.foto}
+                    alt={d.nome}
+                    className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                  />
                   <div itemProp="author" itemScope itemType="https://schema.org/Person">
                     <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-gray-900'}`} itemProp="name">
                       {d.nome}

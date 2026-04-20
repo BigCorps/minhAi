@@ -145,8 +145,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                     <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 py-2 z-50">
                       <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
-                      </div>
+  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Menu Usuário</p>
+</div>
+
                       <Link 
                         href="/dashboard/perfil" 
                         className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"

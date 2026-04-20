@@ -72,8 +72,8 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
           </h1>
 
           <p className={`text-sm sm:text-base md:text-lg max-w-lg mb-4 sm:mb-7 leading-relaxed transition-colors mx-auto ${isDark ? 'text-white/55' : 'text-gray-600'}`}>
-            Nunca mais perca venda por falta de resposta.
-            Configure em minutos, sem programar — e deixe a IA trabalhar enquanto você descansa.
+            Nunca mais perca venda por falta de atendimento.
+            Configure em minutos, sem programar — e deixe a IA trabalhar, facilitando a gestão com seus clientes e funcionários, enquanto você descansa.
           </p>
 
           {/* CTAs */}

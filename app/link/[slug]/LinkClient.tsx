@@ -322,7 +322,8 @@ export default function LinkClient({ company, links, slug }: Props) {
             <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: palette.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Contato
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+            {/* coluna única — todos os botões com largura 100% igual */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
               {contactLinks.map((c) => {
                 const val = String(company[c.field] ?? '');
                 return (
@@ -332,30 +333,32 @@ export default function LinkClient({ company, links, slug }: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '8px 14px',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '12px 16px',
                       borderRadius: 12,
                       background: palette.card,
                       border: `1px solid ${palette.cardBorder}`,
                       color: palette.text,
                       textDecoration: 'none',
-                      fontSize: 13, fontWeight: 500,
+                      fontSize: 14, fontWeight: 500,
                       transition: 'all 0.15s ease',
                       cursor: 'pointer',
+                      width: '100%',
+                      boxSizing: 'border-box',
                     }}
                     onMouseEnter={e => {
                       (e.currentTarget as HTMLElement).style.background = palette.cardHover;
                       (e.currentTarget as HTMLElement).style.borderColor = `${c.color}50`;
-                      (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1.01)';
                     }}
                     onMouseLeave={e => {
                       (e.currentTarget as HTMLElement).style.background = palette.card;
                       (e.currentTarget as HTMLElement).style.borderColor = palette.cardBorder;
-                      (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
                     }}
                   >
-                    <span style={{ color: c.color, display: 'flex', alignItems: 'center' }}>{c.icon}</span>
-                    {c.label}
+                    <span style={{ color: c.color, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{c.icon}</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>{c.label}</span>
                   </a>
                 );
               })}

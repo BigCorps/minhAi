@@ -57,18 +57,14 @@ export function UserMenu({ user, theme }: UserMenuProps) {
           </div>
         )}
         
-        <div className="hidden md:block text-left">
-          <p className={`text-sm font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Menu Usuário
-          </p>
-          <p className={`text-xs ${
-            theme === 'dark' ? 'text-white/60' : 'text-gray-500'
-          }`}>
-            Menu Usuário
-          </p>
-        </div>
+        <div className="flex-1 min-w-0">
+  <p className={`text-xs truncate ${
+    theme === 'dark' ? 'text-white/60' : 'text-gray-500'
+  }`}>
+    Menu Usuário
+  </p>
+</div>
+
         
         <svg 
           className={`w-4 h-4 transition-transform hidden md:block ${
@@ -116,19 +112,14 @@ export function UserMenu({ user, theme }: UserMenuProps) {
                   </span>
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {displayName}
-                </p>
-                <p className={`text-xs truncate ${
-                  theme === 'dark' ? 'text-white/60' : 'text-gray-500'
-                }`}>
-                  {user.email}
-                </p>
-              </div>
-            </div>
+              <div className="hidden md:block text-left">
+  <p className={`text-xs ${
+    theme === 'dark' ? 'text-white/60' : 'text-gray-500'
+  }`}>
+    Menu Usuário
+  </p>
+</div>
+
 
             {/* Menu Items */}
             <div className="py-2">

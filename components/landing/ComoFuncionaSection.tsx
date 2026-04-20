@@ -8,16 +8,14 @@ interface ComoFuncionaSectionProps {
 const PASSOS = [
   {
     numero: '01',
-    emoji: '⚙️',
     titulo: 'Configure em minutos',
     descricao:
       'Crie seu assistente, escolha as funções que quer ativar e escreva a personalidade dele. Sem código, sem técnico, sem complicação. Tudo pelo dashboard — qualquer pessoa consegue.',
-    destaque: 'Pronto em menos de 10 minutos',
+    destaque: 'Pronto em menos de 5 minutos',
     color: 'blue' as const,
   },
   {
     numero: '02',
-    emoji: '🔗',
     titulo: 'Conecte seus canais',
     descricao:
       'WhatsApp, Instagram, Facebook, totem físico, link na bio ou WebApp com sua marca — seu Funcionário IA responde em todos os canais ao mesmo tempo, com a mesma qualidade.',
@@ -26,7 +24,6 @@ const PASSOS = [
   },
   {
     numero: '03',
-    emoji: '💰',
     titulo: 'Venda e atenda 24/7',
     descricao:
       'Seu assistente responde clientes, qualifica leads, gera cobranças PIX, agenda serviços e consulta o estoque — enquanto você faz outra coisa ou está dormindo.',
@@ -118,7 +115,7 @@ export default function ComoFuncionaSection({ theme = 'dark' }: ComoFuncionaSect
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c.numBg}`}>
                     <span className={`text-lg font-black ${c.numText}`}>{passo.numero}</span>
                   </div>
-                  <span className="text-2xl" aria-hidden="true">{passo.emoji}</span>
+                 
                 </div>
 
                 {/* Conteúdo */}

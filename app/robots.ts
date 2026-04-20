@@ -4,40 +4,58 @@ import { MetadataRoute } from 'next';
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      // ── Crawlers de busca tradicionais ──────────────────────────────────────
+
+      // ── Crawlers de busca tradicionais ─────────────────────────────────────
       {
-        userAgent: ['Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot'],
+        userAgent: ['Googlebot', 'Bingbot', 'Slurp', 'DuckDuckBot', 'Yandex'],
         allow: '/',
         disallow: [
           '/dashboard/',
-          '/ia/',
+          '/ia/',          // assistentes de clientes — não indexar
           '/api/',
           '/vendas/',
           '/fila/',
           '/pix/',
+          '/link/',
           '/login',
           '/cadastro',
+          '/cliente/',
         ],
       },
 
-      // ── Crawlers de IA — liberar conteúdo público ────────────────────────────
+      // ── Googlebot imagens — liberar para rich results ───────────────────────
+      {
+        userAgent: 'Googlebot-Image',
+        allow: ['/icons/', '/og-image.png', '/dispositivos.png', '/api.png', '/vantagens.png', '/webapp.png'],
+        disallow: '/dashboard/',
+      },
+
+      // ── Crawlers de IA — liberar conteúdo público para citação ─────────────
+      // Estes bots indexam para ChatGPT, Claude, Perplexity, etc.
       {
         userAgent: [
-          'OAI-SearchBot',   // ChatGPT / OpenAI
-          'GPTBot',          // OpenAI training
-          'ClaudeBot',       // Anthropic
-          'PerplexityBot',   // Perplexity
-          'YouBot',          // You.com
-          'cohere-ai',       // Cohere
-          'Applebot',        // Apple Siri / Spotlight
+          'GPTBot',            // OpenAI — ChatGPT training e search
+          'OAI-SearchBot',     // OpenAI — ChatGPT search em tempo real
+          'ClaudeBot',         // Anthropic — Claude
+          'anthropic-ai',      // Anthropic — crawler alternativo
+          'PerplexityBot',     // Perplexity AI
+          'YouBot',            // You.com
+          'cohere-ai',         // Cohere
+          'Applebot',          // Apple Siri / Spotlight
+          'Applebot-Extended', // Apple extended crawling
+          'Google-Extended',   // Google Gemini training
+          'CCBot',             // Common Crawl (base de vários LLMs)
+          'Meta-ExternalAgent', // Meta AI
+          'Bytespider',        // ByteDance / TikTok AI
         ],
         allow: [
           '/',
-          '/sobre',
           '/precos',
+          '/sobre',
           '/contato',
           '/docs',
           '/blog',
+          '/para/',   // todas as páginas de nicho SEO
         ],
         disallow: [
           '/dashboard/',
@@ -46,17 +64,29 @@ export default function robots(): MetadataRoute.Robots {
           '/vendas/',
           '/fila/',
           '/pix/',
+          '/link/',
           '/login',
           '/cadastro',
+          '/cliente/',
         ],
       },
 
-      // ── Bloquear scrapers comerciais não autorizados ─────────────────────────
+      // ── Scrapers comerciais — bloquear ──────────────────────────────────────
       {
-        userAgent: ['SemrushBot', 'AhrefsBot', 'MJ12bot', 'DotBot', 'BLEXBot'],
+        userAgent: [
+          'SemrushBot',
+          'SemrushBot-SA',
+          'AhrefsBot',
+          'MJ12bot',
+          'DotBot',
+          'BLEXBot',
+          'PetalBot',
+          'DataForSeoBot',
+        ],
         disallow: '/',
       },
     ],
+
     sitemap: 'https://www.minhai.app/sitemap.xml',
     host: 'https://www.minhai.app',
   };

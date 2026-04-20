@@ -43,7 +43,7 @@ const RECURSO_CARDS = [
     title: 'Economia real',
     highlight: 'até 90% mais barato',
     highlightLabel: 'que atendimento humano',
-    description: 'R$ 0,09 por interação. Compare com salário + encargos de um atendente e a diferença é enorme — sem perder qualidade.',
+    description: 'R$ 0,05 por interação. Compare com salário + encargos de um atendente, ou contratar um serviço de autoatendimento, e a diferença é enorme — sem perder qualidade.',
     color: 'green' as const,
   },
   {

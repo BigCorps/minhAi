@@ -61,12 +61,12 @@ export function UserMenu({ user, theme }: UserMenuProps) {
           <p className={`text-sm font-semibold ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
-            {displayName}
+            Menu Usuário
           </p>
           <p className={`text-xs ${
             theme === 'dark' ? 'text-white/60' : 'text-gray-500'
           }`}>
-            {user.email}
+            Menu Usuário
           </p>
         </div>
         

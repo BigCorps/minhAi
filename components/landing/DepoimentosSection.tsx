@@ -93,7 +93,7 @@ export default function DepoimentosSection({ theme = 'dark' }: DepoimentosSectio
 
         {/* Header */}
         <div className="text-center">
-          <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${isDark ? 'text-yellow-400/70' : 'text-yellow-600/70'}`}>
+          <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${isDark ? 'text-green-400/70' : 'text-green-600/70'}`}>
             O que dizem os clientes
           </p>
           <h2
@@ -101,7 +101,7 @@ export default function DepoimentosSection({ theme = 'dark' }: DepoimentosSectio
             className={`text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
             Negócios reais,{' '}
-            <span className={isDark ? 'text-yellow-400' : 'text-yellow-600'}>resultados reais</span>
+            <span className={isDark ? 'text-green-400' : 'text-green-600'}>resultados reais</span>
           </h2>
           <p className={`text-sm sm:text-base max-w-xl mx-auto ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
             Veja como empresas de diferentes segmentos usam o minhAi para vender mais, atender melhor e economizar.

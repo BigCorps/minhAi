@@ -122,8 +122,15 @@ export default function DepoimentosSection({ theme = 'dark' }: DepoimentosSectio
                 itemScope
                 itemType="https://schema.org/Review"
               >
-                {/* Aspas decorativas */}
-                <span className={`absolute top-4 right-5 text-5xl font-serif leading-none select-none ${c.quote}`} aria-hidden="true">"</span>
+{/* Aspas decorativas */}
+<svg 
+  className={`absolute top-5 right-5 w-8 h-8 ${c.quote}`} 
+  aria-hidden="true" 
+  fill="currentColor" 
+  viewBox="0 0 24 24"
+>
+  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+</svg>
 
                 {/* Estrelas */}
                 <div className="flex gap-0.5" aria-label={`${d.estrelas} estrelas`}>

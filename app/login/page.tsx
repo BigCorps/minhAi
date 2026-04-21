@@ -29,28 +29,44 @@ export default function LoginPage() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
 
+    // Timeout de segurança: se a RPC travar, libera o spinner em 3s
+    const safetyTimeout = setTimeout(() => {
+      setIsCheckingBiometrics(false);
+    }, 3000);
+
     const checkBiometricAvailability = async () => {
-      if (browserSupportsWebAuthn()) {
+      try {
+        if (!browserSupportsWebAuthn()) return;
+
         const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
         setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
 
-        const lastUserEmail = localStorage.getItem('lastLoggedInUser') 
-          || document.cookie.match(/lastLoggedInUser=([^;]+)/)?.[1] 
-          || null;
-        if (lastUserEmail) {
-          try {
-            const { data, error } = await supabase.rpc('has_webauthn_credential_by_email', { p_email: lastUserEmail });
-            if (!error && data === true) {
-              setBiometricUserEmail(lastUserEmail);
-            }
-          } catch (err) {
-            console.error("Falha ao verificar disponibilidade de biometria:", err);
-          }
+        const lastUserEmail =
+          localStorage.getItem('lastLoggedInUser') ||
+          document.cookie.match(/lastLoggedInUser=([^;]+)/)?.[1] ||
+          null;
+
+        if (!lastUserEmail) return;
+
+        const { data, error } = await supabase.rpc(
+          'has_webauthn_credential_by_email',
+          { p_email: lastUserEmail }
+        );
+
+        if (!error && data === true) {
+          setBiometricUserEmail(lastUserEmail);
         }
+      } catch (err) {
+        console.error('Falha ao verificar disponibilidade de biometria:', err);
+      } finally {
+        clearTimeout(safetyTimeout);
+        setIsCheckingBiometrics(false);
       }
-      setIsCheckingBiometrics(false);
     };
+
     checkBiometricAvailability();
+
+    return () => clearTimeout(safetyTimeout);
   }, [supabase]);
 
   async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
@@ -68,19 +84,15 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: { name },
-          },
+          options: { data: { name } },
         });
 
         if (error) throw error;
 
-        // Com "Confirm email" OFF no Supabase, a sessão já vem populada
         if (data.session) {
           localStorage.setItem('lastLoggedInUser', email);
           router.push('/dashboard');
         } else {
-          // Fallback: caso "Confirm email" esteja ON
           alert('Cadastro realizado! Verifique seu email para confirmar.');
           setMode('login');
         }
@@ -107,18 +119,20 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { data: options, error: optionsError } = await supabase.functions.invoke('webauthn-authentication-options');
+      const { data: options, error: optionsError } = await supabase.functions.invoke(
+        'webauthn-authentication-options'
+      );
       if (optionsError) throw new Error('Não foi possível iniciar a biometria.');
 
       const authResponse = await startAuthentication(options);
 
       const { data: verification, error: verificationError } = await supabase.functions.invoke(
-        'webauthn-verify-authentication', 
-        { 
-          body: { 
-            expectedChallenge: options.challenge, 
-            authenticationResponse: authResponse 
-          } 
+        'webauthn-verify-authentication',
+        {
+          body: {
+            expectedChallenge: options.challenge,
+            authenticationResponse: authResponse,
+          },
         }
       );
 
@@ -127,12 +141,12 @@ export default function LoginPage() {
       }
 
       const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
-        'webauthn-create-session', 
-        { 
-          body: { 
-            email: verification.email, 
-            user_id: verification.user_id 
-          } 
+        'webauthn-create-session',
+        {
+          body: {
+            email: verification.email,
+            user_id: verification.user_id,
+          },
         }
       );
 
@@ -164,11 +178,8 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-
       if (error) throw error;
     } catch (error: any) {
       setError(error.message || 'Erro ao fazer login com Google.');
@@ -183,11 +194,8 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-
       if (error) throw error;
     } catch (error: any) {
       setError(error.message || 'Erro ao fazer login com Facebook.');
@@ -197,8 +205,8 @@ export default function LoginPage() {
 
   return (
     <div className={`min-h-screen flex items-center justify-center px-4 py-6 transition-colors duration-500 ${
-      theme === 'dark' 
-        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+      theme === 'dark'
+        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
         : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
     }`}>
       
@@ -223,15 +231,15 @@ export default function LoginPage() {
 
       <div className="max-w-md w-full">
         <div className={`rounded-2xl shadow-xl p-5 sm:p-8 transition-colors ${
-          theme === 'dark' 
-            ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10' 
+          theme === 'dark'
+            ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10'
             : 'bg-white'
         }`}>
           <div className="text-center mb-4 sm:mb-8">
-            <Image 
-              src="/logo.png" 
-              alt="eAi" 
-              width={190} 
+            <Image
+              src="/logo.png"
+              alt="minhAi"
+              width={190}
               height={98}
               className="mx-auto mb-2 sm:mb-4 rounded-xl"
             />
@@ -243,9 +251,7 @@ export default function LoginPage() {
             <p className={`transition-colors ${
               theme === 'dark' ? 'text-white/60' : 'text-gray-600'
             }`}>
-              {mode === 'login' 
-                ? 'Acesse sua conta' 
-                : 'Crie sua conta para começar'}
+              {mode === 'login' ? 'Acesse sua conta' : 'Crie sua conta para começar'}
             </p>
           </div>
 
@@ -256,6 +262,7 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* Bloco de biometria — spinner ou botão */}
           {isCheckingBiometrics ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -263,12 +270,16 @@ export default function LoginPage() {
           ) : mode === 'login' && biometricUserEmail ? (
             <div className="mb-3 sm:mb-6 space-y-3 sm:space-y-4">
               <div className={`text-center p-3 sm:p-4 rounded-2xl border ${
-                theme === 'dark' 
-                  ? 'bg-slate-700/50 border-white/10' 
+                theme === 'dark'
+                  ? 'bg-slate-700/50 border-white/10'
                   : 'bg-blue-50 border-blue-100'
               }`}>
-                <p className={`text-sm mb-1 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>Entrar como</p>
-                <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{biometricUserEmail}</p>
+                <p className={`text-sm mb-1 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
+                  Entrar como
+                </p>
+                <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  {biometricUserEmail}
+                </p>
               </div>
 
               <button
@@ -280,8 +291,12 @@ export default function LoginPage() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    {biometricType === 'face' ? <Smile className="w-6 h-6" /> : <Fingerprint className="w-6 h-6" />}
-                    <span>{biometricType === 'face' ? 'Entrar com Rosto' : 'Entrar com Digital'}</span>
+                    {biometricType === 'face'
+                      ? <Smile className="w-6 h-6" />
+                      : <Fingerprint className="w-6 h-6" />}
+                    <span>
+                      {biometricType === 'face' ? 'Entrar com Rosto' : 'Entrar com Digital'}
+                    </span>
                   </>
                 )}
               </button>
@@ -289,7 +304,9 @@ export default function LoginPage() {
               <button
                 onClick={() => setBiometricUserEmail(null)}
                 className={`w-full text-sm transition-colors ${
-                  theme === 'dark' ? 'text-white/40 hover:text-white/60' : 'text-gray-500 hover:text-gray-700'
+                  theme === 'dark'
+                    ? 'text-white/40 hover:text-white/60'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 Entrar com outra conta
@@ -297,10 +314,14 @@ export default function LoginPage() {
 
               <div className="relative my-3 sm:my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className={`w-full border-t ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}></div>
+                  <div className={`w-full border-t ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`} />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className={`px-2 ${theme === 'dark' ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'}`}>ou use seu e-mail</span>
+                  <span className={`px-2 ${
+                    theme === 'dark' ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'
+                  }`}>
+                    ou use seu e-mail
+                  </span>
                 </div>
               </div>
             </div>
@@ -357,7 +378,7 @@ export default function LoginPage() {
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"
                   required
@@ -392,12 +413,14 @@ export default function LoginPage() {
             <div className="absolute inset-0 flex items-center">
               <div className={`w-full border-t transition-colors ${
                 theme === 'dark' ? 'border-white/10' : 'border-gray-300'
-              }`}></div>
+              }`} />
             </div>
             <div className="relative flex justify-center text-sm">
               <span className={`px-2 transition-colors ${
                 theme === 'dark' ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'
-              }`}>ou</span>
+              }`}>
+                ou
+              </span>
             </div>
           </div>
 
@@ -419,7 +442,9 @@ export default function LoginPage() {
               </svg>
               <span className={`font-medium transition-colors ${
                 theme === 'dark' ? 'text-white/90' : 'text-gray-700'
-              }`}>Continuar com Google</span>
+              }`}>
+                Continuar com Google
+              </span>
             </button>
 
             <button
@@ -436,7 +461,9 @@ export default function LoginPage() {
               </svg>
               <span className={`font-medium transition-colors ${
                 theme === 'dark' ? 'text-white/90' : 'text-gray-700'
-              }`}>Continuar com Facebook</span>
+              }`}>
+                Continuar com Facebook
+              </span>
             </button>
           </div>
 
@@ -452,15 +479,15 @@ export default function LoginPage() {
                   : 'text-blue-600 hover:text-blue-700'
               }`}
             >
-              {mode === 'login' 
-                ? 'Não tem conta? Criar conta' 
+              {mode === 'login'
+                ? 'Não tem conta? Criar conta'
                 : 'Já tem conta? Fazer login'}
             </button>
           </div>
 
           <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-              <Link 
+              <Link
                 href="/termos"
                 className={`transition-colors ${
                   theme === 'dark'
@@ -473,7 +500,7 @@ export default function LoginPage() {
               <span className={`hidden sm:inline ${
                 theme === 'dark' ? 'text-white/30' : 'text-gray-300'
               }`}>•</span>
-              <Link 
+              <Link
                 href="/aviso"
                 className={`transition-colors ${
                   theme === 'dark'
@@ -484,9 +511,8 @@ export default function LoginPage() {
                 Aviso de Privacidade
               </Link>
             </div>
-            {/* NOVO CÓDIGO ADICIONADO AQUI */}
             <div className="mt-4 text-center">
-              <a 
+              <a
                 href="https://minhai.app"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -499,7 +525,6 @@ export default function LoginPage() {
                 minhAi - Uma IA pra chamar de sua!
               </a>
             </div>
-            {/* FIM DO NOVO CÓDIGO */}
           </div>
         </div>
       </div>

@@ -28,6 +28,8 @@
     "@simplewebauthn/browser": "^13.2.2",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.39.3",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "@zxing/library": "^0.21.3",
     "canvas": "^3.2.2",
     "class-variance-authority": "^0.7.1",

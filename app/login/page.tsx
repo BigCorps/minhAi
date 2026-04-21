@@ -35,47 +35,36 @@ export default function LoginPage() {
     }, 3000);
 
     const checkBiometricAvailability = async () => {
-      try {
-        if (!browserSupportsWebAuthn()) return;
+  try {
+    if (!browserSupportsWebAuthn()) return;
 
-        const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
-        setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
+    const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
+    setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
 
-        const lastUserEmail =
-          localStorage.getItem('lastLoggedInUser') ||
-          document.cookie.match(/lastLoggedInUser=([^;]+)/)?.[1] ||
-          null;
+    const lastUserEmail =
+      localStorage.getItem('lastLoggedInUser') ||
+      document.cookie.match(/lastLoggedInUser=([^;]+)/)?.[1] ||
+      null;
 
-        if (!lastUserEmail) return;
+    if (!lastUserEmail) return;
 
-        // Race: RPC vs timeout de 2.5s — resolve cold start em mobile
-        const rpcPromise = supabase.rpc(
-          'has_webauthn_credential_by_email',
-          { p_email: lastUserEmail }
-        );
+    // Query direta — sem RPC, sem cold start
+    const { data, error } = await supabase
+      .from('webauthn_credentials')
+      .select('id')
+      .eq('user_email', lastUserEmail)
+      .limit(1);
 
-        const timeoutPromise = new Promise<{ data: null; error: Error }>(
-          (resolve) => setTimeout(
-            () => resolve({ data: null, error: new Error('timeout') }),
-            2500
-          )
-        );
-
-        const { data, error: rpcError } = await Promise.race([
-          rpcPromise,
-          timeoutPromise,
-        ]);
-
-        if (!rpcError && data === true) {
-          setBiometricUserEmail(lastUserEmail);
-        }
-      } catch (err) {
-        console.error('Falha ao verificar biometria:', err);
-      } finally {
-        clearTimeout(safetyTimeout);
-        setIsCheckingBiometrics(false);
-      }
-    };
+    if (!error && data && data.length > 0) {
+      setBiometricUserEmail(lastUserEmail);
+    }
+  } catch (err) {
+    console.error('Falha ao verificar biometria:', err);
+  } finally {
+    clearTimeout(safetyTimeout);
+    setIsCheckingBiometrics(false);
+  }
+};
 
     checkBiometricAvailability();
 

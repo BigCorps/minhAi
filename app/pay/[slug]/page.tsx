@@ -1,5 +1,5 @@
 import { redirect, notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase-admin';
+import { createClient } from '@supabase/supabase-js';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -10,7 +10,10 @@ export default async function PayRedirectPage({ params }: Props) {
 
   if (!slug || slug.length !== 6) notFound();
 
-  const supabase = createClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data, error } = await supabase
     .from('short_links')
@@ -21,7 +24,6 @@ export default async function PayRedirectPage({ params }: Props) {
   if (error || !data?.original_url) notFound();
 
   if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    // Link expirado — page simples ou notFound
     notFound();
   }
 

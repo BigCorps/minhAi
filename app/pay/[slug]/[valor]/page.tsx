@@ -1,5 +1,7 @@
-import { redirect, notFound } from 'next/navigation';
+// app/pay/[slug]/[valor]/page.tsx
+import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import PayValorClient from './PayValorClient';
 
 interface Props {
   params: Promise<{ slug: string; valor: string }>;
@@ -8,51 +10,28 @@ interface Props {
 export default async function PayValorPage({ params }: Props) {
   const { slug, valor } = await params;
 
-  // Valida o valor
   const valorNum = parseFloat(valor.replace(',', '.'));
   if (isNaN(valorNum) || valorNum <= 0 || valorNum > 100000) notFound();
-
-  const amount_cents = Math.round(valorNum * 100);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Busca a empresa pelo slug
-  const { data: company, error: companyError } = await supabase
+  const { data: company } = await supabase
     .from('companies')
-    .select('id, infinitepay_handle')
+    .select('id, name, slug, infinitepay_handle')
     .eq('slug', slug)
     .eq('is_active', true)
     .single();
 
-  if (companyError || !company) notFound();
-  if (!company.infinitepay_handle) notFound();
+  if (!company || !company.infinitepay_handle) notFound();
 
-  // Gera a cobrança chamando a edge function
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gerar-cobranca-infinitepay`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-      body: JSON.stringify({
-        company_id: company.id,
-        amount_cents,
-        tipo: 'LINK_PAGAMENTO',
-        descricao: `Link pay/${slug}/${valor}`,
-      }),
-    }
+  return (
+    <PayValorClient
+      companyId={company.id}
+      companyName={company.name}
+      amountCents={Math.round(valorNum * 100)}
+    />
   );
-
-  if (!response.ok) notFound();
-
-  const data = await response.json();
-  if (!data.success || !data.link_cobranca) notFound();
-
-  // Redireciona direto para o checkout InfinitePay
-  redirect(data.link_cobranca);
 }

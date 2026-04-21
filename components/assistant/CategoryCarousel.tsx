@@ -15,7 +15,6 @@ interface AssistantFunction {
   function_key: string;
   function_name: string;
   short_description: string;
-  description: string;
   function_category: string;
   icon: string;
   color: string;
@@ -59,6 +58,7 @@ export default function CategoryCarousel({
   hideDisabledFunctions = false,
   autoScroll = true,
 }: CategoryCarouselProps) {
+  // ✅ Usa o client singleton do projeto em vez de criar um novo a cada render
   const supabase = createClient();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -68,16 +68,16 @@ export default function CategoryCarousel({
   const [clickedChipRect, setClickedChipRect] = useState<DOMRect | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    const onOpen = () => setIsModalOpen(true);
-    const onClose = () => setIsModalOpen(false);
-    window.addEventListener('eai:modalOpen', onOpen);
-    window.addEventListener('eai:modalClose', onClose);
-    return () => {
-      window.removeEventListener('eai:modalOpen', onOpen);
-      window.removeEventListener('eai:modalClose', onClose);
-    };
-  }, []);
+useEffect(() => {
+  const onOpen = () => setIsModalOpen(true);
+  const onClose = () => setIsModalOpen(false);
+  window.addEventListener('eai:modalOpen', onOpen);
+  window.addEventListener('eai:modalClose', onClose);
+  return () => {
+    window.removeEventListener('eai:modalOpen', onOpen);
+    window.removeEventListener('eai:modalClose', onClose);
+  };
+}, []);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -85,6 +85,7 @@ export default function CategoryCarousel({
 
   const isDark = theme === 'dark';
 
+  // Detectar mobile
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -92,45 +93,9 @@ export default function CategoryCarousel({
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // Carregar funções e agrupar por categoria
   useEffect(() => {
     async function loadFunctions() {
-      // ── Modo Demo (Landing Page) ───────────────────────────────────────────
-      if (companyId === 'demo') {
-        const { data: functions } = await supabase
-          .from('assistant_functions')
-          .select('*')
-          .eq('is_active', true)
-          .not('function_key', 'in', '("pix_confirm","pix_cancel")')
-          .order('display_order');
-
-        if (!functions) return;
-
-        const processedFunctions = functions.map((fn) => ({
-          ...fn,
-          is_enabled_for_company: true,
-        }));
-
-        const grouped = CATEGORIES.map((cat) => {
-          const categoryFunctions = processedFunctions.filter(
-            (fn) => fn.function_category === cat.key
-          );
-          return {
-            ...cat,
-            functions: categoryFunctions,
-            hasEnabledFunctions: categoryFunctions.length > 0,
-          };
-        }).filter((cat) => cat.functions.length > 0);
-
-        setCategories(grouped);
-
-        // ✅ Emite dados completos para o LandingDemoFooter popular o cache
-        window.dispatchEvent(
-          new CustomEvent('eai:functionsLoaded', { detail: processedFunctions })
-        );
-        return;
-      }
-
-      // ── Modo normal (empresa real) ─────────────────────────────────────────
       const { data: functions } = await supabase
         .from('assistant_functions')
         .select('*')
@@ -149,16 +114,19 @@ export default function CategoryCarousel({
         settings?.map((s) => [s.function_key, s.is_enabled]) || []
       );
 
+      // Marcar funções como enabled/disabled
       const processedFunctions = functions.map((fn) => ({
         ...fn,
         is_enabled_for_company: settingsMap.get(fn.function_key) ?? true,
       }));
 
+      // Filtrar funções desabilitadas se necessário
       let filteredFunctions = processedFunctions;
       if (hideDisabledFunctions) {
         filteredFunctions = processedFunctions.filter((fn) => fn.is_enabled_for_company);
       }
 
+      // Agrupar por categoria
       const grouped = CATEGORIES.map((cat) => {
         const categoryFunctions = filteredFunctions.filter(
           (fn) => fn.function_category === cat.key
@@ -178,6 +146,7 @@ export default function CategoryCarousel({
     loadFunctions();
   }, [companyId, hideDisabledFunctions]);
 
+  // Click outside detection
   useEffect(() => {
     if (!activeCategory) return;
 
@@ -227,6 +196,7 @@ export default function CategoryCarousel({
     setClickedChipRect(null);
   };
 
+  // Handlers centralizados de pause/resume
   const pauseAnimation = useCallback(() => {
     if (carouselRef.current && autoScroll) {
       carouselRef.current.style.animationPlayState = 'paused';
@@ -276,11 +246,11 @@ export default function CategoryCarousel({
     };
   };
 
-  return (
-    <div className={`relative w-full transition-all duration-500 ease-in-out ${
-      isModalOpen ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'
-    }`}>
-
+return (
+  <div className={`relative w-full transition-all duration-500 ease-in-out ${
+    isModalOpen ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'
+  }`}>
+    
       {/* Painel flutuante de funções */}
       {activeCategory && (
         <div
@@ -347,7 +317,7 @@ export default function CategoryCarousel({
         </div>
       )}
 
-      {/* ✅ Container do carrossel — visual original restaurado */}
+      {/* Container do carrossel */}
       <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           <div

@@ -127,62 +127,78 @@ export default function LoginPage() {
   }
 
   async function handleBiometricLogin() {
-    if (!biometricUserEmail) return;
-    setLoading(true);
-    setError(null);
+  if (!biometricUserEmail) return;
+  setLoading(true);
+  setError(null);
 
-    try {
-      const { data: options, error: optionsError } = await supabase.functions.invoke(
-        'webauthn-authentication-options'
-      );
-      if (optionsError) throw new Error('Não foi possível iniciar a biometria.');
+  try {
+    // ← passa o email para a edge montar o allowCredentials
+    const { data: options, error: optionsError } = await supabase.functions.invoke(
+      'webauthn-authentication-options',
+      { body: { email: biometricUserEmail } }
+    );
+    if (optionsError) throw new Error('Não foi possível iniciar a biometria.');
 
-      const authResponse = await startAuthentication(options);
+    const authResponse = await startAuthentication(options);
 
-      const { data: verification, error: verificationError } = await supabase.functions.invoke(
-        'webauthn-verify-authentication',
-        {
-          body: {
-            expectedChallenge: options.challenge,
-            authenticationResponse: authResponse,
-          },
-        }
-      );
-
-      if (verificationError || !verification.success) {
-        throw new Error(verification?.error || 'Falha na verificação biométrica.');
+    const { data: verification, error: verificationError } = await supabase.functions.invoke(
+      'webauthn-verify-authentication',
+      {
+        body: {
+          expectedChallenge: options.challenge,
+          authenticationResponse: authResponse,
+        },
       }
+    );
 
-      const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
-        'webauthn-create-session',
-        {
-          body: {
-            email: verification.email,
-            user_id: verification.user_id,
-          },
-        }
-      );
-
-      if (sessionError || !sessionData.success) {
-        throw new Error('Falha ao estabelecer a sessão.');
-      }
-
-      const { error: setSessionError } = await supabase.auth.setSession({
-        access_token: sessionData.session.access_token,
-        refresh_token: sessionData.session.refresh_token,
-      });
-
-      if (setSessionError) throw setSessionError;
-
-      localStorage.setItem('lastLoggedInUser', verification.email);
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Erro no login biométrico:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
+    if (verificationError || !verification.success) {
+      throw new Error(verification?.error || 'Falha na verificação biométrica.');
     }
+
+    const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
+      'webauthn-create-session',
+      {
+        body: {
+          email: verification.email,
+          user_id: verification.user_id,
+        },
+      }
+    );
+
+    if (sessionError || !sessionData.success) {
+      throw new Error('Falha ao estabelecer a sessão.');
+    }
+
+    const { error: setSessionError } = await supabase.auth.setSession({
+      access_token: sessionData.session.access_token,
+      refresh_token: sessionData.session.refresh_token,
+    });
+
+    if (setSessionError) throw setSessionError;
+
+    localStorage.setItem('lastLoggedInUser', verification.email);
+    router.push('/dashboard');
+  } catch (error: any) {
+    console.error('Erro no login biométrico:', error);
+
+    const msg: string = error.message || '';
+    if (
+      msg.includes('timed out') ||
+      msg.includes('not allowed') ||
+      msg.includes('cancelled') ||
+      msg.includes('canceled')
+    ) {
+      setError('Autenticação cancelada ou expirada. Tente novamente ou use email e senha.');
+    } else if (msg.includes('No credentials') || msg.includes('not found')) {
+      setError('Biometria não encontrada neste dispositivo. Cadastre novamente no Perfil.');
+    } else {
+      setError('Falha na autenticação biométrica. Use email e senha.');
+    }
+  } finally {
+    setLoading(false);
+    // biometricUserEmail não é limpo — botão permanece visível para tentar de novo
   }
+}
 
   async function handleGoogleLogin() {
     setLoading(true);

@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createPortal } from 'react-dom';
 import { X, Link, Smartphone, CreditCard, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
@@ -81,62 +82,26 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
   useEffect(() => { gerarCobranca(); }, []);
 
   // Recognition de voz na etapa de pagamento
-useEffect(() => {
-  if (stage !== 'awaiting_payment') return;
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+  useModalVoiceCommand({
+    active: stage === 'awaiting_payment',
+    onTranscript: (transcript) => {
+      console.log('🎤 [Pagamento] Ouviu:', transcript);
 
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  const voiceRecognition = new SpeechRecognition();
+      const CONFIRM_TRIGGERS = [
+        'confirmar pagamento', 'confirmar', 'confirma', 'pagamento recebido',
+        'pago', 'recebi', 'foi pago', 'cliente pagou', 'pagou',
+        'pode confirmar', 'confirme', 'sim',
+      ];
+      const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'fechar', 'nao', 'sair', 'fecha'];
 
-  voiceRecognition.lang = 'pt-BR';
-  voiceRecognition.continuous = false;
-  voiceRecognition.interimResults = false;
-  voiceRecognition.maxAlternatives = 3;
-
-  const CONFIRM_TRIGGERS = [
-    'confirmar pagamento', 'confirmar', 'confirma', 'pagamento recebido',
-    'pago', 'recebi', 'foi pago', 'cliente pagou', 'pagou',
-    'pode confirmar', 'confirme', 'sim',
-  ];
-
-  const CANCEL_TRIGGERS = [
-    'cancelar', 'cancela', 'fechar', 'não', 'sair', 'fecha',
-  ];
-
-  voiceRecognition.onresult = (event: any) => {
-    const transcript = event.results[0][0].transcript.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[.,!?;:]+/g, '');
-
-    console.log('🎤 [Pagamento] Ouviu:', transcript);
-
-    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-      console.log('✅ Confirmação de pagamento por voz');
-      handleConfirmarPagamentoRef.current();
-    } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
-      console.log('❌ Fechar detectado por voz');
-      window.speechSynthesis.cancel();
-      onCloseRef.current();
-    } else {
-      try { voiceRecognition.stop(); } catch (e) {}
-      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
+      if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+        handleConfirmarPagamentoRef.current();
+      } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+        window.speechSynthesis.cancel();
+        onCloseRef.current();
+      }
     }
-  };
-
-  voiceRecognition.onerror = (event: any) => {
-    if (event.error === 'no-speech') {
-      try { voiceRecognition.stop(); } catch (e) {}
-      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
-    }
-  };
-
-  voiceRecognition.start();
-  console.log('👂 [Pagamento] Ouvindo comandos de pagamento...');
-
-  return () => {
-    try { voiceRecognition.stop(); } catch (e) {}
-  };
-}, [stage]);
+  });
 
   // fetch() direto para capturar o status HTTP real
   // HTTP 400 + pending:true → aviso amarelo inline, modal NÃO fecha

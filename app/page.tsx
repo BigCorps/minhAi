@@ -537,7 +537,7 @@ export default function LandingPage() {
 
 
       {/* INDICADOR DE PROGRESSO */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
+      <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">
         {NAV_SECTIONS.map((navId) => {
           const isActive = activeNavItem === navId;
           return (

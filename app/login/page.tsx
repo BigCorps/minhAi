@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
-  Mail, Lock, Eye, EyeOff, Loader2, 
+  Eye, EyeOff, Loader2, 
   Fingerprint, Smile, AlertCircle 
 } from 'lucide-react';
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser';
+import { useTurnstile } from '@/hooks/useTurnstile';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,8 @@ export default function LoginPage() {
   const [isCheckingBiometrics, setIsCheckingBiometrics] = useState(true);
   const [biometricType, setBiometricType] = useState<'fingerprint' | 'face' | 'unknown'>('unknown');
 
+  const { getToken, TurnstileWidget } = useTurnstile();
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -29,7 +32,6 @@ export default function LoginPage() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
 
-    // Fallback absoluto: se tudo travar, libera o spinner em 3s
     const safetyTimeout = setTimeout(() => {
       setIsCheckingBiometrics(false);
     }, 3000);
@@ -48,7 +50,6 @@ export default function LoginPage() {
 
         if (!lastUserEmail) return;
 
-        // Race: RPC vs timeout de 2.5s — resolve cold start em mobile
         const rpcPromise = supabase.rpc(
           'has_webauthn_credential_by_email',
           { p_email: lastUserEmail }
@@ -78,7 +79,6 @@ export default function LoginPage() {
     };
 
     checkBiometricAvailability();
-
     return () => clearTimeout(safetyTimeout);
   }, [supabase]);
 
@@ -86,6 +86,20 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Turnstile: valida se disponível, pula silenciosamente se não
+    const token = await getToken();
+    if (token) {
+      const { data: td, error: te } = await supabase.functions.invoke(
+        'validate-turnstile',
+        { body: { token } }
+      );
+      if (te || !td?.success) {
+        setError(td?.error || 'Verificação de segurança falhou. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+    }
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
@@ -127,83 +141,80 @@ export default function LoginPage() {
   }
 
   async function handleBiometricLogin() {
-  if (!biometricUserEmail) return;
-  setLoading(true);
-  setError(null);
+    if (!biometricUserEmail) return;
+    setLoading(true);
+    setError(null);
 
-  try {
-    // ← passa o email para a edge montar o allowCredentials
-    const { data: options, error: optionsError } = await supabase.functions.invoke(
-      'webauthn-authentication-options',
-      { body: { email: biometricUserEmail } }
-    );
-    if (optionsError) throw new Error('Não foi possível iniciar a biometria.');
+    try {
+      const { data: options, error: optionsError } = await supabase.functions.invoke(
+        'webauthn-authentication-options',
+        { body: { email: biometricUserEmail } }
+      );
+      if (optionsError) throw new Error('Não foi possível iniciar a biometria.');
 
-    const authResponse = await startAuthentication(options);
+      const authResponse = await startAuthentication(options);
 
-    const { data: verification, error: verificationError } = await supabase.functions.invoke(
-      'webauthn-verify-authentication',
-      {
-        body: {
-          expectedChallenge: options.challenge,
-          authenticationResponse: authResponse,
-        },
+      const { data: verification, error: verificationError } = await supabase.functions.invoke(
+        'webauthn-verify-authentication',
+        {
+          body: {
+            expectedChallenge: options.challenge,
+            authenticationResponse: authResponse,
+          },
+        }
+      );
+
+      if (verificationError || !verification.success) {
+        throw new Error(verification?.error || 'Falha na verificação biométrica.');
       }
-    );
 
-    if (verificationError || !verification.success) {
-      throw new Error(verification?.error || 'Falha na verificação biométrica.');
-    }
+      const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
+        'webauthn-create-session',
+        {
+          body: {
+            email: verification.email,
+            user_id: verification.user_id,
+          },
+        }
+      );
 
-    const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
-      'webauthn-create-session',
-      {
-        body: {
-          email: verification.email,
-          user_id: verification.user_id,
-        },
+      if (sessionError || !sessionData.success) {
+        throw new Error('Falha ao estabelecer a sessão.');
       }
-    );
 
-    if (sessionError || !sessionData.success) {
-      throw new Error('Falha ao estabelecer a sessão.');
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: sessionData.session.access_token,
+        refresh_token: sessionData.session.refresh_token,
+      });
+
+      if (setSessionError) throw setSessionError;
+
+      localStorage.setItem('lastLoggedInUser', verification.email);
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error('Erro no login biométrico:', error);
+
+      const msg: string = error.message || '';
+      if (
+        msg.includes('timed out') ||
+        msg.includes('not allowed') ||
+        msg.includes('cancelled') ||
+        msg.includes('canceled')
+      ) {
+        setError('Autenticação cancelada ou expirada. Tente novamente ou use email e senha.');
+      } else if (msg.includes('No credentials') || msg.includes('not found')) {
+        setError('Biometria não encontrada neste dispositivo. Cadastre novamente no Perfil.');
+      } else {
+        setError('Falha na autenticação biométrica. Use email e senha.');
+      }
+    } finally {
+      setLoading(false);
     }
-
-    const { error: setSessionError } = await supabase.auth.setSession({
-      access_token: sessionData.session.access_token,
-      refresh_token: sessionData.session.refresh_token,
-    });
-
-    if (setSessionError) throw setSessionError;
-
-    localStorage.setItem('lastLoggedInUser', verification.email);
-    router.push('/dashboard');
-  } catch (error: any) {
-    console.error('Erro no login biométrico:', error);
-
-    const msg: string = error.message || '';
-    if (
-      msg.includes('timed out') ||
-      msg.includes('not allowed') ||
-      msg.includes('cancelled') ||
-      msg.includes('canceled')
-    ) {
-      setError('Autenticação cancelada ou expirada. Tente novamente ou use email e senha.');
-    } else if (msg.includes('No credentials') || msg.includes('not found')) {
-      setError('Biometria não encontrada neste dispositivo. Cadastre novamente no Perfil.');
-    } else {
-      setError('Falha na autenticação biométrica. Use email e senha.');
-    }
-  } finally {
-    setLoading(false);
-    // biometricUserEmail não é limpo — botão permanece visível para tentar de novo
   }
-}
 
   async function handleGoogleLogin() {
     setLoading(true);
     setError(null);
-
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -219,7 +230,6 @@ export default function LoginPage() {
   async function handleFacebookLogin() {
     setLoading(true);
     setError(null);
-
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
@@ -265,7 +275,6 @@ export default function LoginPage() {
             : 'bg-white'
         }`}>
 
-          {/* Logo e título */}
           <div className="text-center mb-4 sm:mb-8">
             <Image
               src="/logo.png"
@@ -286,7 +295,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Erro */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
@@ -294,7 +302,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Biometria */}
           {isCheckingBiometrics ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -361,7 +368,6 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          {/* Formulário email/senha */}
           <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
             {mode === 'signup' && (
               <div>
@@ -435,6 +441,8 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {TurnstileWidget}
+
             <button
               type="submit"
               disabled={loading}
@@ -444,7 +452,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divisor */}
           <div className="relative my-3 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className={`w-full border-t transition-colors ${
@@ -460,7 +467,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* OAuth */}
           <div className="space-y-3">
             <button
               onClick={handleGoogleLogin}
@@ -504,7 +510,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Trocar modo */}
           <div className="mt-3 sm:mt-4 text-center">
             <button
               onClick={() => {
@@ -523,7 +528,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Footer */}
           <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
               <Link

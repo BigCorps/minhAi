@@ -15,6 +15,7 @@ interface AssistantFunction {
   function_key: string;
   function_name: string;
   short_description: string;
+  description: string;
   function_category: string;
   icon: string;
   color: string;
@@ -58,7 +59,6 @@ export default function CategoryCarousel({
   hideDisabledFunctions = false,
   autoScroll = true,
 }: CategoryCarouselProps) {
-  // ✅ Usa o client singleton do projeto em vez de criar um novo a cada render
   const supabase = createClient();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -68,16 +68,16 @@ export default function CategoryCarousel({
   const [clickedChipRect, setClickedChipRect] = useState<DOMRect | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-useEffect(() => {
-  const onOpen = () => setIsModalOpen(true);
-  const onClose = () => setIsModalOpen(false);
-  window.addEventListener('eai:modalOpen', onOpen);
-  window.addEventListener('eai:modalClose', onClose);
-  return () => {
-    window.removeEventListener('eai:modalOpen', onOpen);
-    window.removeEventListener('eai:modalClose', onClose);
-  };
-}, []);
+  useEffect(() => {
+    const onOpen = () => setIsModalOpen(true);
+    const onClose = () => setIsModalOpen(false);
+    window.addEventListener('eai:modalOpen', onOpen);
+    window.addEventListener('eai:modalClose', onClose);
+    return () => {
+      window.removeEventListener('eai:modalOpen', onOpen);
+      window.removeEventListener('eai:modalClose', onClose);
+    };
+  }, []);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -96,6 +96,43 @@ useEffect(() => {
   // Carregar funções e agrupar por categoria
   useEffect(() => {
     async function loadFunctions() {
+      // ── Modo Demo (Landing Page) ───────────────────────────────────────────
+      if (companyId === 'demo') {
+        const { data: functions } = await supabase
+          .from('assistant_functions')
+          .select('*')
+          .eq('is_active', true)
+          .not('function_key', 'in', '("pix_confirm","pix_cancel")')
+          .order('display_order');
+
+        if (!functions) return;
+
+        const processedFunctions = functions.map((fn) => ({
+          ...fn,
+          is_enabled_for_company: true,
+        }));
+
+        const grouped = CATEGORIES.map((cat) => {
+          const categoryFunctions = processedFunctions.filter(
+            (fn) => fn.function_category === cat.key
+          );
+          return {
+            ...cat,
+            functions: categoryFunctions,
+            hasEnabledFunctions: categoryFunctions.length > 0,
+          };
+        }).filter((cat) => cat.functions.length > 0);
+
+        setCategories(grouped);
+
+        // ✅ Emite dados completos para o DemoFunctionModal popular o cache
+        window.dispatchEvent(
+          new CustomEvent('eai:functionsLoaded', { detail: processedFunctions })
+        );
+        return;
+      }
+
+      // ── Modo normal (empresa real) ─────────────────────────────────────────
       const { data: functions } = await supabase
         .from('assistant_functions')
         .select('*')
@@ -114,19 +151,16 @@ useEffect(() => {
         settings?.map((s) => [s.function_key, s.is_enabled]) || []
       );
 
-      // Marcar funções como enabled/disabled
       const processedFunctions = functions.map((fn) => ({
         ...fn,
         is_enabled_for_company: settingsMap.get(fn.function_key) ?? true,
       }));
 
-      // Filtrar funções desabilitadas se necessário
       let filteredFunctions = processedFunctions;
       if (hideDisabledFunctions) {
         filteredFunctions = processedFunctions.filter((fn) => fn.is_enabled_for_company);
       }
 
-      // Agrupar por categoria
       const grouped = CATEGORIES.map((cat) => {
         const categoryFunctions = filteredFunctions.filter(
           (fn) => fn.function_category === cat.key
@@ -196,7 +230,6 @@ useEffect(() => {
     setClickedChipRect(null);
   };
 
-  // Handlers centralizados de pause/resume
   const pauseAnimation = useCallback(() => {
     if (carouselRef.current && autoScroll) {
       carouselRef.current.style.animationPlayState = 'paused';
@@ -246,11 +279,11 @@ useEffect(() => {
     };
   };
 
-return (
-  <div className={`relative w-full transition-all duration-500 ease-in-out ${
-    isModalOpen ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'
-  }`}>
-    
+  return (
+    <div className={`relative w-full transition-all duration-500 ease-in-out ${
+      isModalOpen ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'
+    }`}>
+
       {/* Painel flutuante de funções */}
       {activeCategory && (
         <div
@@ -276,7 +309,7 @@ return (
               {CATEGORIES.find((c) => c.key === activeCategory)?.name}
             </div>
 
-            <div className="overflow-hidden">
+            <div className="overflow-y-auto" style={{ maxHeight: '306px' }}>
               {categories
                 .find((c) => c.key === activeCategory)
                 ?.functions.map((fn) => {
@@ -298,6 +331,9 @@ return (
                       onClick={() => handleFunctionClick(fn)}
                     >
                       <span className="font-medium text-[11px] leading-tight block">
+                        {fn.icon && fn.icon !== '' && (
+                          <span className="mr-1.5">{fn.icon}</span>
+                        )}
                         {fn.function_name}
                       </span>
 
@@ -317,8 +353,8 @@ return (
         </div>
       )}
 
-      {/* Container do carrossel */}
-      <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
+      {/* Container do carrossel — fundo transparente */}
+      <div className="w-full py-3 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           <div
             onMouseEnter={pauseAnimation}
@@ -330,8 +366,8 @@ return (
             <div
               ref={carouselRef}
               className={autoScroll
-                ? 'flex gap-3 pl-3 w-max'
-                : 'flex gap-3 flex-wrap justify-center w-full px-4'
+                ? 'flex gap-2.5 pl-3 w-max'
+                : 'flex gap-2.5 flex-wrap justify-center w-full px-4'
               }
               style={autoScroll ? {
                 animation: `scroll-infinite ${scrollDuration}s linear infinite`,
@@ -354,23 +390,34 @@ return (
                     }}
                     onClick={(e) => handleCategoryClick(category, e)}
                     disabled={!hasEnabled}
-                    className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
-                      theme === 'dark'
-                        ? 'bg-white/10 hover:bg-white/20 text-white'
-                        : 'bg-white hover:bg-gray-50 text-gray-900'
-                    } ${!hasEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    className={`
+                      flex-shrink-0 px-4 py-2 rounded-xl font-medium
+                      transition-all duration-200 flex items-center gap-2
+                      hover:scale-105 active:scale-95
+                      ${!hasEnabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
                     style={{
-                      borderLeft: `4px solid ${borderColor}`,
-                      boxShadow: theme === 'dark'
-                        ? '0 2px 4px rgba(0, 0, 0, 0.2)'
-                        : '0 2px 8px rgba(0, 0, 0, 0.05)',
+                      // ✅ Fundo transparente — sem bg sólido, igual ao carrossel do assistente
+                      background: isActive
+                        ? isDark
+                          ? 'rgba(255, 255, 255, 0.15)'
+                          : 'rgba(0, 0, 0, 0.07)'
+                        : isDark
+                          ? 'rgba(255, 255, 255, 0.06)'
+                          : 'rgba(0, 0, 0, 0.04)',
+                      borderLeft: `3px solid ${borderColor}`,
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                      borderLeftWidth: '3px',
+                      borderLeftColor: borderColor,
+                      color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)',
+                      backdropFilter: 'blur(4px)',
                       ...(isActive && {
                         transform: 'scale(1.05)',
-                        backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.05)',
+                        boxShadow: `0 0 0 1px ${borderColor}40`,
                       }),
                     }}
                   >
-                    <span className="text-sm font-semibold whitespace-nowrap">
+                    <span className="text-xs font-semibold whitespace-nowrap">
                       {category.name}
                     </span>
                   </button>
@@ -383,10 +430,9 @@ return (
 
       <style jsx>{`
         @keyframes scroll-infinite {
-          0% { transform: translateX(0); }
+          0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>

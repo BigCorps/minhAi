@@ -10,10 +10,10 @@ interface Company {
 }
 
 interface Props {
-  companies: Company[];
+  companies?: Company[];
 }
 
-export default function PixLinkContent({ companies }: Props) {
+export default function PixLinkContent({ companies = [] }: Props) {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [valor, setValor] = useState('');
   const [copied, setCopied] = useState(false);
@@ -61,15 +61,21 @@ export default function PixLinkContent({ companies }: Props) {
         <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
           Assistente
         </label>
-        <select
-          value={selectedCompany?.id ?? ''}
-          onChange={(e) => setSelectedCompany(companies.find(c => c.id === e.target.value) ?? null)}
-          className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-        >
-          {companies.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        {companies.length === 0 ? (
+          <div className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-slate-500">
+            Carregando assistentes...
+          </div>
+        ) : (
+          <select
+            value={selectedCompany?.id ?? ''}
+            onChange={(e) => setSelectedCompany(companies.find(c => c.id === e.target.value) ?? null)}
+            className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          >
+            {companies.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Valor opcional */}

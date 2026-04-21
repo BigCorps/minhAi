@@ -1,64 +1,44 @@
+// lib/short-links.ts
 import { createClient } from '@/lib/supabase-browser';
 
-/**
- * Gera um short link para upload ou download.
- * Usar nos hooks do lado do cliente (browser).
- *
- */
+function generateSlug(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export async function createShortLink(
-  type: 'upload' | 'download',
-  targetToken: string,
+  originalUrl: string,
   companyId: string,
-  expiresAt: string,
+  userId?: string
 ): Promise<string> {
   const supabase = createClient();
 
-  const { data: slug, error } = await supabase.rpc('generate_short_slug');
+  // Tenta até 3 vezes em caso de colisão de slug (extremamente raro, mas seguro)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const slug = generateSlug();
 
-  if (error || !slug) {
-    throw new Error('Erro ao gerar slug: ' + (error?.message ?? 'resposta vazia'));
+    const { error } = await supabase.from('short_links').insert({
+      slug,
+      original_url: originalUrl,
+      company_id: companyId,
+      user_id: userId ?? null,
+    });
+
+    if (!error) {
+      return `https://minhai.app/pay/${slug}`;
+    }
+
+    // Se foi colisão de slug (unique constraint), tenta de novo
+    if (!error.message.includes('unique')) {
+      throw new Error(`Erro ao criar link curto: ${error.message}`);
+    }
   }
 
-  const { error: insertError } = await supabase.from('short_links').insert({
-    slug,
-    type,
-    target_token: targetToken,
-    company_id: companyId,
-    expires_at: expiresAt,
-  });
-
-  if (insertError) {
-    throw new Error('Erro ao salvar short link: ' + insertError.message);
-  }
-
-  return `https://minhai.app/link/${slug}`;
-}
-
-/**
- * Versão server-side para Edge Functions Deno.
- * Recebe o supabase client já inicializado com service_role_key.
- */
-export async function createShortLinkServer(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  type: 'upload' | 'download',
-  targetToken: string,
-  companyId: string,
-  expiresAt: string,
-): Promise<string> {
-  const { data: slug, error } = await supabase.rpc('generate_short_slug');
-
-  if (error || !slug) {
-    throw new Error('Erro ao gerar slug: ' + (error?.message ?? 'resposta vazia'));
-  }
-
-  await supabase.from('short_links').insert({
-    slug,
-    type,
-    target_token: targetToken,
-    company_id: companyId,
-    expires_at: expiresAt,
-  });
-
-  return `https://minhai.app/link/${slug}`;
+  // Fallback: retorna a URL original se não conseguir criar o link curto
+  console.warn('[short-links] Não foi possível criar slug único. Retornando URL original.');
+  return originalUrl;
 }

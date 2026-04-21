@@ -127,5 +127,5 @@ export function useTurnstile() {
     <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
   );
 
-  return { getToken, TurnstileWidget, ready };
+  return { getToken, containerRef, ready
 }

@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [isCheckingBiometrics, setIsCheckingBiometrics] = useState(true);
   const [biometricType, setBiometricType] = useState<'fingerprint' | 'face' | 'unknown'>('unknown');
 
-  const { getToken, TurnstileWidget } = useTurnstile();
+  const { getToken, containerRef, ready: turnstileReady } = useTurnstile();
 
   const router = useRouter();
   const supabase = createClient();
@@ -441,7 +441,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {TurnstileWidget}
+            <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
 
             <button
               type="submit"

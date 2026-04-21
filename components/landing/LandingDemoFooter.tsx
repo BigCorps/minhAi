@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import CategoryCarousel from '@/components/assistant/CategoryCarousel';
-import { ActionModals } from '@/components/assistant/VoiceAssistant/ActionModals';
+import { ActionModals } from '@/components/VoiceAssistant/ActionModals';
 
 interface LandingDemoFooterProps {
   theme?: 'dark' | 'light';

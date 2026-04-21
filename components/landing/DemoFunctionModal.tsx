@@ -1,84 +1,194 @@
 'use client';
 
-import { X, CheckCircle2, Zap, Info, ArrowRight } from 'lucide-react';
+// components/landing/DemoFunctionModal.tsx
+// Modal de demonstração da landing page.
+// Mostra os dados reais da função (nome, descrição, ícone, cor do banco)
+// mas NÃO executa nenhuma ação — apenas apresenta e convida ao cadastro.
+
+import { createPortal } from 'react-dom';
+import { useEffect, useState } from 'react';
+import { X, ArrowRight, Zap, Lock } from 'lucide-react';
+import Link from 'next/link';
+import type { DemoFunctionData } from './LandingDemoFooter';
 
 interface DemoFunctionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  functionData: {
-    name: string;
-    description: string;
-    category: string;
-    icon?: string;
-  } | null;
+  functionData: DemoFunctionData | null;
   theme?: 'dark' | 'light';
 }
 
-export function DemoFunctionModal({ isOpen, onClose, functionData, theme = 'dark' }: DemoFunctionModalProps) {
-  if (!isOpen || !functionData) return null;
+// Mapa de categorias para label amigável e emoji
+const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
+  ai_assistant:  { label: 'Inteligência Artificial', emoji: '🤖' },
+  payment:       { label: 'Financeiro',               emoji: '💳' },
+  schedule:      { label: 'Agendamento',              emoji: '📅' },
+  products:      { label: 'Comercial',                emoji: '🛍️' },
+  biometry:      { label: 'Identificação',            emoji: '👤' },
+  knowledge:     { label: 'Consultas',                emoji: '🔍' },
+  codes:         { label: 'Câmera & Códigos',         emoji: '📷' },
+  images:        { label: 'Arquivos & Imagens',       emoji: '🖼️' },
+  video:         { label: 'Multimídia',               emoji: '▶️' },
+  contact:       { label: 'Contatos',                 emoji: '🟢' },
+  services:      { label: 'Serviços',                 emoji: '🟠' },
+  configuration: { label: 'Localização',              emoji: '📍' },
+  information:   { label: 'Informação',               emoji: '📡' },
+  utylities:     { label: 'Utilitários',              emoji: '⏱️' },
+};
+
+export function DemoFunctionModal({
+  isOpen,
+  onClose,
+  functionData,
+  theme = 'dark',
+}: DemoFunctionModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Fechar com ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, [isOpen, onClose]);
+
+  // Disparar evento para o carrossel sumir enquanto modal está aberto
+  useEffect(() => {
+    if (isOpen) {
+      window.dispatchEvent(new CustomEvent('eai:modalOpen'));
+    } else {
+      window.dispatchEvent(new CustomEvent('eai:modalClose'));
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !functionData || !mounted) return null;
 
   const isDark = theme === 'dark';
+  const catInfo = CATEGORY_LABELS[functionData.category] ?? { label: 'Demonstração', emoji: '✨' };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
-        className={`relative w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 border ${
+  // Cor principal da função (do banco) ou fallback azul
+  const accentColor = functionData.color && functionData.color !== '#' && functionData.color.startsWith('#')
+    ? functionData.color
+    : '#3B82F6';
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className={`relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border ${
           isDark ? 'bg-slate-900 border-white/10' : 'bg-white border-gray-200'
         }`}
+        style={{ animation: 'demoModalIn 0.25s ease-out' }}
       >
-        {/* Header com Badge */}
-        <div className={`px-6 py-5 border-b ${isDark ? 'border-white/10' : 'border-gray-100'} flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Função Ativa</span>
-            </div>
+        {/* Faixa colorida no topo com a cor da função */}
+        <div
+          className="h-1.5 w-full"
+          style={{ background: `linear-gradient(90deg, ${accentColor}, ${accentColor}88)` }}
+        />
+
+        {/* Header */}
+        <div className={`px-5 py-4 border-b flex items-center justify-between ${
+          isDark ? 'border-white/8' : 'border-gray-100'
+        }`}>
+          <div className="flex items-center gap-2">
+            {/* Badge categoria */}
+            <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+              isDark ? 'bg-white/8 text-white/60' : 'bg-gray-100 text-gray-500'
+            }`}>
+              <span aria-hidden="true">{catInfo.emoji}</span>
+              {catInfo.label}
+            </span>
+            {/* Badge demo */}
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <Zap className="w-3 h-3 fill-current" aria-hidden="true" />
+              Demo
+            </span>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-gray-100 text-slate-500'}`}
+            className={`p-1.5 rounded-xl transition-colors ${
+              isDark ? 'hover:bg-white/8 text-slate-400' : 'hover:bg-gray-100 text-slate-500'
+            }`}
+            aria-label="Fechar"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Conteúdo */}
-        <div className="p-8 flex flex-col items-center text-center">
-          <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl ${
-            isDark ? 'bg-blue-600/20 text-blue-400' : 'bg-blue-50 text-blue-600'
-          }`}>
-            <Info className="w-10 h-10" />
+        <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
+
+          {/* Ícone da função com cor do banco */}
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl shadow-lg"
+            style={{
+              backgroundColor: `${accentColor}20`,
+              border: `1.5px solid ${accentColor}40`,
+            }}
+            aria-hidden="true"
+          >
+            {functionData.icon && functionData.icon !== '' ? functionData.icon : '⚡'}
           </div>
-          
-          <h2 className={`text-2xl font-bold mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+
+          {/* Nome real da função */}
+          <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {functionData.name}
           </h2>
-          
-          <p className={`text-sm leading-relaxed mb-8 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            {functionData.description || "Esta função permite automatizar processos e facilitar o dia a dia do seu negócio através de inteligência artificial nativa."}
+
+          {/* Descrição real do banco */}
+          <p className={`text-xs leading-relaxed mb-5 max-w-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            {functionData.short_description || functionData.description}
           </p>
 
-          <div className={`w-full p-4 rounded-2xl border mb-8 flex items-start gap-3 text-left ${
-            isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'
+          {/* Aviso de modo demo */}
+          <div className={`w-full px-4 py-3 rounded-2xl border mb-5 flex items-start gap-3 text-left ${
+            isDark ? 'bg-amber-500/8 border-amber-500/20' : 'bg-amber-50 border-amber-200'
           }`}>
-            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+            <Lock className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} aria-hidden="true" />
             <div>
-              <p className={`text-xs font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Como funciona?</p>
-              <p className={`text-[11px] leading-tight ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Basta solicitar ao assistente por voz ou texto. A IA processa o comando e abre a interface específica para você em segundos.
+              <p className={`text-[11px] font-bold mb-0.5 ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                Modo demonstração
+              </p>
+              <p className={`text-[10px] leading-snug ${isDark ? 'text-amber-400/80' : 'text-amber-700'}`}>
+                Esta é uma prévia da função. Crie sua conta grátis para ativá-la com dados reais do seu negócio.
               </p>
             </div>
           </div>
 
-          <button 
-            onClick={onClose}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group"
+          {/* CTA principal — leva para /login */}
+          <Link
+            href="/login"
+            className="w-full py-3.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2 group transition-all hover:brightness-110 hover:scale-[1.02] shadow-lg"
+            style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)` }}
           >
-            Entendi, quero usar
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            Ativar esta função no meu negócio
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
+          </Link>
+
+          {/* Link secundário */}
+          <button
+            onClick={onClose}
+            className={`mt-3 text-xs font-medium transition-colors ${
+              isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Continuar explorando as funções
           </button>
         </div>
       </div>
-    </div>
+
+      <style jsx global>{`
+        @keyframes demoModalIn {
+          from { opacity: 0; transform: scale(0.92) translateY(12px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
+    </div>,
+    document.body
   );
 }

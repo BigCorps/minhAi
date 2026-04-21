@@ -54,7 +54,7 @@ export default function NovaEmpresaPage() {
   // Páginas públicas do minhAi
   'precos', 'sobre', 'contato', 'docs', 'blog',
   // Prefixo das páginas de nicho SEO
-  'para',
+  'para', 'api',
   // Assistente de demo público
   'suporte',
   // Outras rotas conhecidas

@@ -108,13 +108,6 @@ export default function InicioSection({ theme = 'dark' }: InicioSectionProps) {
               </span>
             ))}
           </div>
-
-          <div className="flex justify-center my-3 sm:my-4">
-            <div className={`h-px w-28 ${isDark ? 'bg-white/20' : 'bg-gray-300'}`} />
-          </div>
-          <span className={`text-xs font-medium ${isDark ? 'text-white/25' : 'text-gray-400'}`}>
-            minhAi — Uma IA pra chamar de sua!
-          </span>
         </div>
       </div>
     </div>

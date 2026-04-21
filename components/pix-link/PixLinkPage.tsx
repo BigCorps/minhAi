@@ -29,7 +29,7 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
 
   const supabase = createClient();
-  const { getToken, TurnstileWidget, ready: turnstileReady } = useTurnstile();
+  const { getToken, containerRef, ready: turnstileReady } = useTurnstile();
 
   useEffect(() => {
     setMounted(true);
@@ -203,7 +203,7 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
     return (
       <>
         <ThemeButton />
-        {TurnstileWidget}
+        <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
         {turnstileError && (
           <div style={{
             position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',

@@ -18,7 +18,7 @@ const VANTAGENS = [
     title: 'Seu próprio App, sem App Store',
     highlight: 'PWA instalável',
     description:
-      'WebApp com sua marca direto na tela do cliente — sem publicar na Play Store ou App Store. Funciona como app nativo, com sua logo e cores.',
+      'WebApp com sua marca direto na tela do cliente — sem publicar na Play Store ou App Store. Funciona como app nativo, com seu logo e nome.',
     color: 'blue' as const,
   },
   {
@@ -42,10 +42,10 @@ const VANTAGENS = [
         <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M15 15h2v2h-2zM19 15h2v4h-4v-2h2zM15 19h2v2h-2z" />
       </svg>
     ),
-    title: 'Cobra pelo WhatsApp com 1 mensagem',
+    title: 'Cobre pelo WhatsApp com 1 mensagem',
     highlight: 'PIX instantâneo',
     description:
-      'Gere cobrança PIX por voz ou chat, envie o link e o assistente confirma o pagamento automaticamente. Sem maquininha, sem digitação manual.',
+      'Gere cobrança PIX por voz ou chat, envie o link Pix com confirmação automática. Sem maquininha, sem complicação e sem comprovantes falsos.',
     color: 'blue' as const,
   },
 ];
@@ -81,7 +81,7 @@ export default function VantagensSlide({ theme = 'dark', currentIndex, totalCoun
           <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-5 ${
             isDark ? 'bg-green-500/10 text-green-400' : 'bg-green-100 text-green-600'
           }`}>
-            Extras
+            Vantagens
           </span>
 
           <h2

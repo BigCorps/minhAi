@@ -520,6 +520,8 @@ export default function LandingPage() {
         </svg>
       </button>
 
+<LandingDemoFooter theme={theme} />
+
       {/* SETA DIREITA */}
       <button
         onClick={navigateNext}
@@ -532,16 +534,6 @@ export default function LandingPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
-
-export default function LandingPage() {
-  return (
-    <div className="min-h-screen">
-      {/* Seu conteúdo da Landing */}
-      
-      <LandingDemoFooter theme="dark" />
-    </div>
-  );
-}
 
 
       {/* INDICADOR DE PROGRESSO */}

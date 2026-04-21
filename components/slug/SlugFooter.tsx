@@ -84,13 +84,13 @@ export default function SlugFooter({ theme, slug, webapp_enabled, has_consulting
 
   // Se o webapp estiver ativo e o slug disponível, aponta para o subdomínio próprio
   const hasWebapp = webapp_enabled && slug;
-  const href = hasWebapp ? `https://${slug}.minhai.app` : 'https://minhai.app';
+  const href = hasWebapp ? `https://${slug}.minhai.com.br` : 'https://minhai.app';
 
-  // Texto do link: "[slug].minhAi.app" ou "minhAi.app"
+  // Texto do link: "[slug].minhAi.com.br" ou "minhAi.app"
   const linkLabel = hasWebapp ? (
     <>
       <span className="opacity-50">{slug}</span>
-      <span>.minhAi.app</span>
+      <span>.minhAi.com.br</span>
     </>
   ) : (
     'minhAi.app'

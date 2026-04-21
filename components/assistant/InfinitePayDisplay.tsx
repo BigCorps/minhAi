@@ -5,7 +5,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createPortal } from 'react-dom';
 import { X, Link, Smartphone, CreditCard, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
 
 interface InfinitePayDisplayProps {
   data: {
@@ -27,8 +26,10 @@ function formatBRL(cents: number): string {
 
 export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: InfinitePayDisplayProps) {
   const CONFIRMED_CLOSE_DELAY = 3000;
-  const supabase = createClient();
   const isDark = theme === 'dark';
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   const [stage, setStage] = useState<Stage>('generating');
   const [link, setLink] = useState('');
@@ -58,16 +59,23 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
     setErrorMsg('');
     setPendingMsg('');
     try {
-      const { data: res, error } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
-        body: {
+      const response = await fetch(`${supabaseUrl}/functions/v1/gerar-cobranca-infinitepay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
           company_id: data.companyId,
           amount_cents: data.amount_cents,
           tipo: data.tipo,
-          nfc_payment_method: data.nfc_payment_method,
+          nfc_payment_method: data.nfc_payment_method || undefined,
           telefone: data.telefone ? data.telefone.replace(/\D/g, '') : undefined,
-        },
+        }),
       });
-      if (error || !res?.success) throw new Error(error?.message || res?.error || 'Erro ao gerar cobrança');
+      const res = await response.json();
+      if (!response.ok || !res?.success) throw new Error(res?.error || 'Erro ao gerar cobrança');
       setLink(res.link_cobranca);
       setCobrancaId(res.cobranca_id);
       setStage('awaiting_payment');
@@ -76,12 +84,12 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
       setErrorMsg(err.message);
       setStage('error');
     }
-  }, [supabase, data, isNFC]);
+  }, [supabaseUrl, supabaseAnonKey, data, isNFC]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { gerarCobranca(); }, []);
 
-  // Recognition de voz na etapa de pagamento
+  // Reconhecimento de voz na etapa de pagamento
   useModalVoiceCommand({
     active: stage === 'awaiting_payment',
     onTranscript: (transcript) => {
@@ -111,8 +119,6 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
     setIsConfirming(true);
     setPendingMsg('');
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
       const response = await fetch(`${supabaseUrl}/functions/v1/confirmar-pagamento-infinitepay`, {
         method: 'POST',
         headers: {
@@ -138,7 +144,7 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
     } finally {
       setIsConfirming(false);
     }
-  }, [cobrancaId, data.companyId, isConfirming, onClose]);
+  }, [cobrancaId, data.companyId, isConfirming, onClose, supabaseUrl, supabaseAnonKey]);
 
   useEffect(() => {
     handleManualCloseRef.current = handleManualClose;
@@ -186,14 +192,14 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
           {stage === 'awaiting_payment' && (
             <div className="space-y-4">
 
-                  <div className="flex justify-center">
-      <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-        isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
-      }`}>
-        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-        Ouvindo... diga "CONFIRMAR PAGAMENTO" ou "FECHAR"
-      </div>
-    </div>
+              <div className="flex justify-center">
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                  isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
+                }`}>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  Ouvindo... diga "CONFIRMAR PAGAMENTO" ou "FECHAR"
+                </div>
+              </div>
 
               {/* NFC */}
               {isNFC && (

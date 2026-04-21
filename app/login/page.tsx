@@ -29,38 +29,58 @@ export default function LoginPage() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(isDark ? 'dark' : 'light');
 
+    // Fallback absoluto: se tudo travar, libera o spinner em 3s
+    const safetyTimeout = setTimeout(() => {
+      setIsCheckingBiometrics(false);
+    }, 3000);
+
     const checkBiometricAvailability = async () => {
-  try {
-    if (!browserSupportsWebAuthn()) return;
+      try {
+        if (!browserSupportsWebAuthn()) return;
 
-    const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
-    setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
+        const isLikelyFaceID = /iPhone/i.test(navigator.userAgent);
+        setBiometricType(isLikelyFaceID ? 'face' : 'fingerprint');
 
-    const lastUserEmail =
-      localStorage.getItem('lastLoggedInUser') ||
-      document.cookie.match(/lastLoggedInUser=([^;]+)/)?.[1] ||
-      null;
+        const lastUserEmail =
+          localStorage.getItem('lastLoggedInUser') ||
+          document.cookie.match(/lastLoggedInUser=([^;]+)/)?.[1] ||
+          null;
 
-    if (!lastUserEmail) return;
+        if (!lastUserEmail) return;
 
-    // Race: RPC vs timeout de 2.5s
-    const { data, error } = await Promise.race([
-      supabase.rpc('has_webauthn_credential_by_email', { p_email: lastUserEmail }),
-      new Promise<{ data: null; error: Error }>((resolve) =>
-        setTimeout(() => resolve({ data: null, error: new Error('timeout') }), 2500)
-      ),
-    ]);
+        // Race: RPC vs timeout de 2.5s — resolve cold start em mobile
+        const rpcPromise = supabase.rpc(
+          'has_webauthn_credential_by_email',
+          { p_email: lastUserEmail }
+        );
 
-    if (!error && data === true) {
-      setBiometricUserEmail(lastUserEmail);
-    }
-  } catch (err) {
-    console.error('Falha ao verificar biometria:', err);
-  } finally {
-    clearTimeout(safetyTimeout);
-    setIsCheckingBiometrics(false);
-  }
-};
+        const timeoutPromise = new Promise<{ data: null; error: Error }>(
+          (resolve) => setTimeout(
+            () => resolve({ data: null, error: new Error('timeout') }),
+            2500
+          )
+        );
+
+        const { data, error: rpcError } = await Promise.race([
+          rpcPromise,
+          timeoutPromise,
+        ]);
+
+        if (!rpcError && data === true) {
+          setBiometricUserEmail(lastUserEmail);
+        }
+      } catch (err) {
+        console.error('Falha ao verificar biometria:', err);
+      } finally {
+        clearTimeout(safetyTimeout);
+        setIsCheckingBiometrics(false);
+      }
+    };
+
+    checkBiometricAvailability();
+
+    return () => clearTimeout(safetyTimeout);
+  }, [supabase]);
 
   async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -77,19 +97,15 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: { name },
-          },
+          options: { data: { name } },
         });
 
         if (error) throw error;
 
-        // Com "Confirm email" OFF no Supabase, a sessão já vem populada
         if (data.session) {
           localStorage.setItem('lastLoggedInUser', email);
           router.push('/dashboard');
         } else {
-          // Fallback: caso "Confirm email" esteja ON
           alert('Cadastro realizado! Verifique seu email para confirmar.');
           setMode('login');
         }
@@ -116,32 +132,34 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { data: options, error: optionsError } = await supabase.functions.invoke('webauthn-authentication-options');
+      const { data: options, error: optionsError } = await supabase.functions.invoke(
+        'webauthn-authentication-options'
+      );
       if (optionsError) throw new Error('Não foi possível iniciar a biometria.');
 
       const authResponse = await startAuthentication(options);
 
       const { data: verification, error: verificationError } = await supabase.functions.invoke(
-        'webauthn-verify-authentication', 
-        { 
-          body: { 
-            expectedChallenge: options.challenge, 
-            authenticationResponse: authResponse 
-          } 
+        'webauthn-verify-authentication',
+        {
+          body: {
+            expectedChallenge: options.challenge,
+            authenticationResponse: authResponse,
+          },
         }
       );
 
       if (verificationError || !verification.success) {
-        throw new Error(verification.error || 'Falha na verificação biométrica.');
+        throw new Error(verification?.error || 'Falha na verificação biométrica.');
       }
 
       const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
-        'webauthn-create-session', 
-        { 
-          body: { 
-            email: verification.email, 
-            user_id: verification.user_id 
-          } 
+        'webauthn-create-session',
+        {
+          body: {
+            email: verification.email,
+            user_id: verification.user_id,
+          },
         }
       );
 
@@ -173,11 +191,8 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-
       if (error) throw error;
     } catch (error: any) {
       setError(error.message || 'Erro ao fazer login com Google.');
@@ -192,11 +207,8 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-
       if (error) throw error;
     } catch (error: any) {
       setError(error.message || 'Erro ao fazer login com Facebook.');
@@ -206,11 +218,11 @@ export default function LoginPage() {
 
   return (
     <div className={`min-h-screen flex items-center justify-center px-4 py-6 transition-colors duration-500 ${
-      theme === 'dark' 
-        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+      theme === 'dark'
+        ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950'
         : 'bg-gradient-to-br from-blue-50 via-white to-blue-50'
     }`}>
-      
+
       <button
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         className={`fixed top-6 right-6 z-50 p-3 rounded-full backdrop-blur-xl border transition-all hover:scale-110 ${
@@ -232,15 +244,17 @@ export default function LoginPage() {
 
       <div className="max-w-md w-full">
         <div className={`rounded-2xl shadow-xl p-5 sm:p-8 transition-colors ${
-          theme === 'dark' 
-            ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10' 
+          theme === 'dark'
+            ? 'bg-slate-800/50 backdrop-blur-xl border border-white/10'
             : 'bg-white'
         }`}>
+
+          {/* Logo e título */}
           <div className="text-center mb-4 sm:mb-8">
-            <Image 
-              src="/logo.png" 
-              alt="eAi" 
-              width={190} 
+            <Image
+              src="/logo.png"
+              alt="minhAi"
+              width={190}
               height={98}
               className="mx-auto mb-2 sm:mb-4 rounded-xl"
             />
@@ -252,12 +266,11 @@ export default function LoginPage() {
             <p className={`transition-colors ${
               theme === 'dark' ? 'text-white/60' : 'text-gray-600'
             }`}>
-              {mode === 'login' 
-                ? 'Acesse sua conta' 
-                : 'Crie sua conta para começar'}
+              {mode === 'login' ? 'Acesse sua conta' : 'Crie sua conta para começar'}
             </p>
           </div>
 
+          {/* Erro */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
@@ -265,6 +278,7 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* Biometria */}
           {isCheckingBiometrics ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -272,12 +286,16 @@ export default function LoginPage() {
           ) : mode === 'login' && biometricUserEmail ? (
             <div className="mb-3 sm:mb-6 space-y-3 sm:space-y-4">
               <div className={`text-center p-3 sm:p-4 rounded-2xl border ${
-                theme === 'dark' 
-                  ? 'bg-slate-700/50 border-white/10' 
+                theme === 'dark'
+                  ? 'bg-slate-700/50 border-white/10'
                   : 'bg-blue-50 border-blue-100'
               }`}>
-                <p className={`text-sm mb-1 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>Entrar como</p>
-                <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{biometricUserEmail}</p>
+                <p className={`text-sm mb-1 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'}`}>
+                  Entrar como
+                </p>
+                <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  {biometricUserEmail}
+                </p>
               </div>
 
               <button
@@ -289,8 +307,12 @@ export default function LoginPage() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    {biometricType === 'face' ? <Smile className="w-6 h-6" /> : <Fingerprint className="w-6 h-6" />}
-                    <span>{biometricType === 'face' ? 'Entrar com Rosto' : 'Entrar com Digital'}</span>
+                    {biometricType === 'face'
+                      ? <Smile className="w-6 h-6" />
+                      : <Fingerprint className="w-6 h-6" />}
+                    <span>
+                      {biometricType === 'face' ? 'Entrar com Rosto' : 'Entrar com Digital'}
+                    </span>
                   </>
                 )}
               </button>
@@ -298,7 +320,9 @@ export default function LoginPage() {
               <button
                 onClick={() => setBiometricUserEmail(null)}
                 className={`w-full text-sm transition-colors ${
-                  theme === 'dark' ? 'text-white/40 hover:text-white/60' : 'text-gray-500 hover:text-gray-700'
+                  theme === 'dark'
+                    ? 'text-white/40 hover:text-white/60'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 Entrar com outra conta
@@ -306,15 +330,22 @@ export default function LoginPage() {
 
               <div className="relative my-3 sm:my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className={`w-full border-t ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}></div>
+                  <div className={`w-full border-t ${
+                    theme === 'dark' ? 'border-white/10' : 'border-gray-200'
+                  }`} />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className={`px-2 ${theme === 'dark' ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'}`}>ou use seu e-mail</span>
+                  <span className={`px-2 ${
+                    theme === 'dark' ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'
+                  }`}>
+                    ou use seu e-mail
+                  </span>
                 </div>
               </div>
             </div>
           ) : null}
 
+          {/* Formulário email/senha */}
           <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
             {mode === 'signup' && (
               <div>
@@ -366,7 +397,7 @@ export default function LoginPage() {
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"
                   required
@@ -397,19 +428,23 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Divisor */}
           <div className="relative my-3 sm:my-6">
             <div className="absolute inset-0 flex items-center">
               <div className={`w-full border-t transition-colors ${
                 theme === 'dark' ? 'border-white/10' : 'border-gray-300'
-              }`}></div>
+              }`} />
             </div>
             <div className="relative flex justify-center text-sm">
               <span className={`px-2 transition-colors ${
                 theme === 'dark' ? 'bg-slate-800/50 text-white/40' : 'bg-white text-gray-500'
-              }`}>ou</span>
+              }`}>
+                ou
+              </span>
             </div>
           </div>
 
+          {/* OAuth */}
           <div className="space-y-3">
             <button
               onClick={handleGoogleLogin}
@@ -428,7 +463,9 @@ export default function LoginPage() {
               </svg>
               <span className={`font-medium transition-colors ${
                 theme === 'dark' ? 'text-white/90' : 'text-gray-700'
-              }`}>Continuar com Google</span>
+              }`}>
+                Continuar com Google
+              </span>
             </button>
 
             <button
@@ -445,10 +482,13 @@ export default function LoginPage() {
               </svg>
               <span className={`font-medium transition-colors ${
                 theme === 'dark' ? 'text-white/90' : 'text-gray-700'
-              }`}>Continuar com Facebook</span>
+              }`}>
+                Continuar com Facebook
+              </span>
             </button>
           </div>
 
+          {/* Trocar modo */}
           <div className="mt-3 sm:mt-4 text-center">
             <button
               onClick={() => {
@@ -461,15 +501,16 @@ export default function LoginPage() {
                   : 'text-blue-600 hover:text-blue-700'
               }`}
             >
-              {mode === 'login' 
-                ? 'Não tem conta? Criar conta' 
+              {mode === 'login'
+                ? 'Não tem conta? Criar conta'
                 : 'Já tem conta? Fazer login'}
             </button>
           </div>
 
+          {/* Footer */}
           <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-              <Link 
+              <Link
                 href="/termos"
                 className={`transition-colors ${
                   theme === 'dark'
@@ -482,7 +523,7 @@ export default function LoginPage() {
               <span className={`hidden sm:inline ${
                 theme === 'dark' ? 'text-white/30' : 'text-gray-300'
               }`}>•</span>
-              <Link 
+              <Link
                 href="/aviso"
                 className={`transition-colors ${
                   theme === 'dark'
@@ -493,9 +534,8 @@ export default function LoginPage() {
                 Aviso de Privacidade
               </Link>
             </div>
-            {/* NOVO CÓDIGO ADICIONADO AQUI */}
             <div className="mt-4 text-center">
-              <a 
+              <a
                 href="https://minhai.app"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -508,8 +548,8 @@ export default function LoginPage() {
                 minhAi - Uma IA pra chamar de sua!
               </a>
             </div>
-            {/* FIM DO NOVO CÓDIGO */}
           </div>
+
         </div>
       </div>
     </div>

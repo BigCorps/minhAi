@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AssistantProvider } from '@/contexts/AssistantContext';
 import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'react-image-crop/dist/ReactCrop.css';
 

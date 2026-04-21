@@ -2,9 +2,9 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useModalVoiceCommand } from '@/components/VoiceAssistant/hooks/useModalVoiceCommand';
 import { createPortal } from 'react-dom';
 import { X, Link, Smartphone, CreditCard, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { createClient } from '@/lib/supabase-browser';
 
 interface InfinitePayDisplayProps {
   data: {
@@ -26,10 +26,8 @@ function formatBRL(cents: number): string {
 
 export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: InfinitePayDisplayProps) {
   const CONFIRMED_CLOSE_DELAY = 3000;
+  const supabase = createClient();
   const isDark = theme === 'dark';
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   const [stage, setStage] = useState<Stage>('generating');
   const [link, setLink] = useState('');
@@ -59,23 +57,16 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
     setErrorMsg('');
     setPendingMsg('');
     try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/gerar-cobranca-infinitepay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({
+      const { data: res, error } = await supabase.functions.invoke('gerar-cobranca-infinitepay', {
+        body: {
           company_id: data.companyId,
           amount_cents: data.amount_cents,
           tipo: data.tipo,
-          nfc_payment_method: data.nfc_payment_method || undefined,
+          nfc_payment_method: data.nfc_payment_method,
           telefone: data.telefone ? data.telefone.replace(/\D/g, '') : undefined,
-        }),
+        },
       });
-      const res = await response.json();
-      if (!response.ok || !res?.success) throw new Error(res?.error || 'Erro ao gerar cobrança');
+      if (error || !res?.success) throw new Error(error?.message || res?.error || 'Erro ao gerar cobrança');
       setLink(res.link_cobranca);
       setCobrancaId(res.cobranca_id);
       setStage('awaiting_payment');
@@ -84,32 +75,68 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
       setErrorMsg(err.message);
       setStage('error');
     }
-  }, [supabaseUrl, supabaseAnonKey, data, isNFC]);
+  }, [supabase, data, isNFC]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { gerarCobranca(); }, []);
 
-  // Reconhecimento de voz na etapa de pagamento
-  useModalVoiceCommand({
-    active: stage === 'awaiting_payment',
-    onTranscript: (transcript) => {
-      console.log('🎤 [Pagamento] Ouviu:', transcript);
+  // Recognition de voz na etapa de pagamento
+useEffect(() => {
+  if (stage !== 'awaiting_payment') return;
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
 
-      const CONFIRM_TRIGGERS = [
-        'confirmar pagamento', 'confirmar', 'confirma', 'pagamento recebido',
-        'pago', 'recebi', 'foi pago', 'cliente pagou', 'pagou',
-        'pode confirmar', 'confirme', 'sim',
-      ];
-      const CANCEL_TRIGGERS = ['cancelar', 'cancela', 'fechar', 'nao', 'sair', 'fecha'];
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const voiceRecognition = new SpeechRecognition();
 
-      if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
-        handleConfirmarPagamentoRef.current();
-      } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
-        window.speechSynthesis.cancel();
-        onCloseRef.current();
-      }
+  voiceRecognition.lang = 'pt-BR';
+  voiceRecognition.continuous = false;
+  voiceRecognition.interimResults = false;
+  voiceRecognition.maxAlternatives = 3;
+
+  const CONFIRM_TRIGGERS = [
+    'confirmar pagamento', 'confirmar', 'confirma', 'pagamento recebido',
+    'pago', 'recebi', 'foi pago', 'cliente pagou', 'pagou',
+    'pode confirmar', 'confirme', 'sim',
+  ];
+
+  const CANCEL_TRIGGERS = [
+    'cancelar', 'cancela', 'fechar', 'não', 'sair', 'fecha',
+  ];
+
+  voiceRecognition.onresult = (event: any) => {
+    const transcript = event.results[0][0].transcript.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.,!?;:]+/g, '');
+
+    console.log('🎤 [Pagamento] Ouviu:', transcript);
+
+    if (CONFIRM_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('✅ Confirmação de pagamento por voz');
+      handleConfirmarPagamentoRef.current();
+    } else if (CANCEL_TRIGGERS.some(t => transcript.includes(t))) {
+      console.log('❌ Fechar detectado por voz');
+      window.speechSynthesis.cancel();
+      onCloseRef.current();
+    } else {
+      try { voiceRecognition.stop(); } catch (e) {}
+      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
     }
-  });
+  };
+
+  voiceRecognition.onerror = (event: any) => {
+    if (event.error === 'no-speech') {
+      try { voiceRecognition.stop(); } catch (e) {}
+      setTimeout(() => { try { voiceRecognition.start(); } catch (e) {} }, 300);
+    }
+  };
+
+  voiceRecognition.start();
+  console.log('👂 [Pagamento] Ouvindo comandos de pagamento...');
+
+  return () => {
+    try { voiceRecognition.stop(); } catch (e) {}
+  };
+}, [stage]);
 
   // fetch() direto para capturar o status HTTP real
   // HTTP 400 + pending:true → aviso amarelo inline, modal NÃO fecha
@@ -119,6 +146,8 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
     setIsConfirming(true);
     setPendingMsg('');
     try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
       const response = await fetch(`${supabaseUrl}/functions/v1/confirmar-pagamento-infinitepay`, {
         method: 'POST',
         headers: {
@@ -144,7 +173,7 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
     } finally {
       setIsConfirming(false);
     }
-  }, [cobrancaId, data.companyId, isConfirming, onClose, supabaseUrl, supabaseAnonKey]);
+  }, [cobrancaId, data.companyId, isConfirming, onClose]);
 
   useEffect(() => {
     handleManualCloseRef.current = handleManualClose;
@@ -192,14 +221,14 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
           {stage === 'awaiting_payment' && (
             <div className="space-y-4">
 
-              <div className="flex justify-center">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-                  isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
-                }`}>
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  Ouvindo... diga "CONFIRMAR PAGAMENTO" ou "FECHAR"
-                </div>
-              </div>
+                  <div className="flex justify-center">
+      <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+        isDark ? 'bg-green-900/30 text-green-300 border border-green-700' : 'bg-green-50 text-green-700 border border-green-200'
+      }`}>
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+        Ouvindo... diga "CONFIRMAR PAGAMENTO" ou "FECHAR"
+      </div>
+    </div>
 
               {/* NFC */}
               {isNFC && (

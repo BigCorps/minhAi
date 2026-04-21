@@ -1,7 +1,6 @@
-// components/dashboard/PixLinkContent.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Copy, Check, ExternalLink, Link } from 'lucide-react';
 
 interface Company {
@@ -15,9 +14,15 @@ interface Props {
 }
 
 export default function PixLinkContent({ companies }: Props) {
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(companies[0] ?? null);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [valor, setValor] = useState('');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (companies.length > 0 && !selectedCompany) {
+      setSelectedCompany(companies[0]);
+    }
+  }, [companies]);
 
   const baseUrl = selectedCompany
     ? `https://minhai.app/pix/${selectedCompany.slug}`

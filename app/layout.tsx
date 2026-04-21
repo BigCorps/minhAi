@@ -5,8 +5,6 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { AssistantProvider } from '@/contexts/AssistantContext';
 import RegisterSW from '@/components/RegisterSW';
 import './globals.css';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import 'react-image-crop/dist/ReactCrop.css';
 
 // ─── Fonte Nunito ─────────────────────────────────────────────────────────────
@@ -317,8 +315,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </AssistantProvider>
         </ThemeProvider>
         <RegisterSW />
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

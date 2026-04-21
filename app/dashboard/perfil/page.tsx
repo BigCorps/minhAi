@@ -22,6 +22,10 @@ export default function PerfilPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Documento states
+  const [documento, setDocumento] = useState('');
+  const [documentoTipo, setDocumentoTipo] = useState<'cpf' | 'cnpj'>('cpf');
+
   // Pix states
   const [pixKey, setPixKey] = useState('');
   const [pixKeyType, setPixKeyType] = useState('cpf');
@@ -42,14 +46,13 @@ export default function PerfilPage() {
           setUser(authUser);
           setUserName(authUser.user_metadata?.name || '');
           
-          // Load user profile (Pix)
+          // Load user profile
           const { data: profileData, error: profileError } = await supabase
             .from('user_profiles')
             .select('*')
             .eq('user_id', authUser.id)
             .single();
           
-          // Handle case where no profile exists yet (PGRST116)
           if (profileError && profileError.code !== 'PGRST116') {
             throw profileError;
           }
@@ -58,6 +61,8 @@ export default function PerfilPage() {
             setProfile(profileData);
             setPixKey(profileData.withdrawal_pix_key || '');
             setPixKeyType(profileData.withdrawal_pix_key_type || 'cpf');
+            setDocumento(profileData.documento || '');
+            setDocumentoTipo(profileData.documento_tipo || 'cpf');
           }
 
           // Load authenticators
@@ -81,6 +86,21 @@ export default function PerfilPage() {
     loadData();
   }, [supabase]);
 
+  function formatDocumento(value: string, tipo: 'cpf' | 'cnpj') {
+    const digits = value.replace(/\D/g, '');
+    if (tipo === 'cpf') {
+      return digits.slice(0, 11).replace(
+        /(\d{3})(\d{3})(\d{3})(\d{0,2})/,
+        (_, a, b, c, d) => d ? `${a}.${b}.${c}-${d}` : c ? `${a}.${b}.${c}` : b ? `${a}.${b}` : a
+      );
+    } else {
+      return digits.slice(0, 14).replace(
+        /(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/,
+        (_, a, b, c, d, e) => e ? `${a}.${b}.${c}/${d}-${e}` : d ? `${a}.${b}.${c}/${d}` : c ? `${a}.${b}.${c}` : b ? `${a}.${b}` : a
+      );
+    }
+  }
+
   async function handleUpdateProfile(e: React.FormEvent) {
     e.preventDefault();
     setUpdating(true);
@@ -96,19 +116,27 @@ export default function PerfilPage() {
         setUser({ ...user, user_metadata: { ...user.user_metadata, name: userName } });
       }
 
-      // Update Pix key in user_profiles table
+      // Update profile including documento
       const { error: pixError } = await supabase
         .from('user_profiles')
         .upsert({
-          user_id: user.id,
-          withdrawal_pix_key: pixKey,
+          user_id:                 user.id,
+          withdrawal_pix_key:      pixKey,
           withdrawal_pix_key_type: pixKeyType,
-          updated_at: new Date().toISOString()
+          documento:               documento.replace(/\D/g, '') || null,
+          documento_tipo:          documento ? documentoTipo : null,
+          updated_at:              new Date().toISOString()
         }, { onConflict: 'user_id' });
 
       if (pixError) throw pixError;
       
-      setProfile({ ...profile, withdrawal_pix_key: pixKey, withdrawal_pix_key_type: pixKeyType });
+      setProfile({
+        ...profile,
+        withdrawal_pix_key:      pixKey,
+        withdrawal_pix_key_type: pixKeyType,
+        documento:               documento.replace(/\D/g, '') || null,
+        documento_tipo:          documentoTipo,
+      });
       setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
@@ -135,12 +163,8 @@ export default function PerfilPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-
       setMessage({ type: 'success', text: 'Senha alterada com sucesso!' });
       setNewPassword('');
       setConfirmPassword('');
@@ -151,7 +175,7 @@ export default function PerfilPage() {
     }
   }
 
-async function registerBiometry() {
+  async function registerBiometry() {
     setRegisteringBiometry(true);
     setMessage(null);
 
@@ -159,7 +183,7 @@ async function registerBiometry() {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) throw new Error('Usuário não autenticado.');
 
-      const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const SUPABASE_URL     = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
       const headers = {
@@ -168,10 +192,8 @@ async function registerBiometry() {
         'Authorization': `Bearer ${session.access_token}`,
       };
 
-      // 1. Get registration options
       const optionsRes = await fetch(`${SUPABASE_URL}/functions/v1/webauthn-registration-options`, {
-        method: 'POST',
-        headers,
+        method: 'POST', headers,
       });
       if (!optionsRes.ok) {
         const err = await optionsRes.json();
@@ -179,10 +201,8 @@ async function registerBiometry() {
       }
       const options = await optionsRes.json();
 
-      // 2. Start browser registration
       const regResponse = await startRegistration(options);
 
-      // 3. Verify registration
       const verifyRes = await fetch(`${SUPABASE_URL}/functions/v1/webauthn-verify-registration`, {
         method: 'POST',
         headers,
@@ -196,12 +216,8 @@ async function registerBiometry() {
         throw new Error(err.error || 'Falha na verificação biométrica.');
       }
       const verification = await verifyRes.json();
+      if (!verification.verified) throw new Error(verification?.error || 'Falha na verificação biométrica.');
 
-      if (!verification.verified) {
-        throw new Error(verification?.error || 'Falha na verificação biométrica.');
-      }
-
-      // Refresh authenticators list
       const { data: authData, error: authDataError } = await supabase
         .from('webauthn_credentials')
         .select('*')
@@ -225,9 +241,7 @@ async function registerBiometry() {
     try {
       const { data: result, error: removeError } = await supabase.functions.invoke(
         'webauthn-remove-credential',
-        {
-          body: { credentialId },
-        }
+        { body: { credentialId } }
       );
 
       if (removeError || !result.success) {
@@ -250,7 +264,7 @@ async function registerBiometry() {
   }
 
   const isGoogleUser = user?.app_metadata?.provider === 'google';
-  const hasPixKey = !!profile?.withdrawal_pix_key;
+  const hasPixKey    = !!profile?.withdrawal_pix_key;
 
   return (
     <div className="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
@@ -299,7 +313,7 @@ async function registerBiometry() {
           </div>
         )}
 
-        {/* Biometria - Horizontal compacto */}
+        {/* Biometria */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-gray-100 dark:border-white/5">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center gap-3 lg:flex-1">
@@ -337,7 +351,6 @@ async function registerBiometry() {
             )}
           </div>
 
-          {/* Lista de dispositivos - colapsável */}
           {isBiometrySupported && authenticators.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-100 dark:border-white/5 space-y-3">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Dispositivos Cadastrados</p>
@@ -375,6 +388,8 @@ async function registerBiometry() {
             </div>
 
             <form onSubmit={handleUpdateProfile} className="space-y-6">
+
+              {/* Nome */}
               <div>
                 <label htmlFor="userName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome</label>
                 <input
@@ -385,6 +400,41 @@ async function registerBiometry() {
                   placeholder="Seu nome completo"
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 />
+              </div>
+
+              {/* Tipo de documento */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tipo de Documento
+                </label>
+                <select
+                  value={documentoTipo}
+                  onChange={(e) => {
+                    setDocumentoTipo(e.target.value as 'cpf' | 'cnpj');
+                    setDocumento(''); // limpa ao trocar tipo
+                  }}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                >
+                  <option value="cpf">CPF</option>
+                  <option value="cnpj">CNPJ</option>
+                </select>
+              </div>
+
+              {/* Número do documento */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {documentoTipo === 'cpf' ? 'CPF' : 'CNPJ'}
+                </label>
+                <input
+                  type="text"
+                  value={documento}
+                  onChange={(e) => setDocumento(formatDocumento(e.target.value, documentoTipo))}
+                  placeholder={documentoTipo === 'cpf' ? '000.000.000-00' : '00.000.000/0001-00'}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Utilizado para emissão de nota de serviço referente aos seus recebimentos na plataforma.
+                </p>
               </div>
 
               <button

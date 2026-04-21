@@ -18,7 +18,7 @@ export default function PayValorClient({ companyId, companyName, amountCents }: 
   const [stage, setStage] = useState<Stage>('verifying');
   const [errorMsg, setErrorMsg] = useState('');
   const supabase = createClient();
-  const { getToken, TurnstileWidget, ready: turnstileReady } = useTurnstile();
+  const { getToken, containerRef, ready: turnstileReady } = useTurnstile();
 
   const amountBRL = (amountCents / 100).toLocaleString('pt-BR', {
     style: 'currency', currency: 'BRL',
@@ -74,7 +74,7 @@ export default function PayValorClient({ companyId, companyName, amountCents }: 
       minHeight: '100vh', background: '#020617',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
     }}>
-      {TurnstileWidget}
+      <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
 
       <div style={{
         background: '#0f172a', border: '1px solid #334155',
@@ -133,7 +133,7 @@ export default function PayValorClient({ companyId, companyName, amountCents }: 
         )}
 
         <p style={{ color: '#1e293b', fontSize: '11px', marginTop: '24px' }}>
-          Protegido por Cloudflare Turnstile
+          Captcha automático via Cloudflare
         </p>
       </div>
 

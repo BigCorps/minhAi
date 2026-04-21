@@ -11,7 +11,6 @@ import VantagensSlide from '@/components/landing/VantagensSlide';
 import FuncaoCardsSlide from '@/components/landing/FuncaoCardsSlide';
 import DepoimentosSection from '@/components/landing/DepoimentosSection';
 import FAQSection from '@/components/landing/FAQSection';
-import { LandingDemoFooter } from '@/components/landing/LandingDemoFooter';
 import {
   QrCode,
   CreditCard,
@@ -520,8 +519,6 @@ export default function LandingPage() {
         </svg>
       </button>
 
-<LandingDemoFooter theme={theme} />
-
       {/* SETA DIREITA */}
       <button
         onClick={navigateNext}
@@ -534,7 +531,6 @@ export default function LandingPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
-
 
       {/* INDICADOR DE PROGRESSO */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2">

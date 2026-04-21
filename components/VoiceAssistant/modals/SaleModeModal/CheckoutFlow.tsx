@@ -312,10 +312,26 @@ useEffect(() => {
         });
         if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar link de pagamento');
         await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
-        setCobrancaId(cobData.cobranca_id);
-        setLinkCobranca(cobData.link_cobranca);
-        setStep('aguardando');
-        playText?.('Link de pagamento gerado. Abra o link para o cliente pagar.').catch(() => {}); return;
+        // DEPOIS
+setCobrancaId(cobData.cobranca_id);
+
+// Gera link curto minhai.app/pay/XXXXXX
+let urlParaExibir = cobData.link_cobranca;
+try {
+  const { createShortLink } = await import('@/lib/short-links');
+  urlParaExibir = await createShortLink(
+    cobData.link_cobranca,
+    companyId,
+    cobData.cobranca_id
+  );
+} catch {
+  // fallback silencioso: usa URL original
+}
+
+setLinkCobranca(urlParaExibir);
+setStep('aguardando');
+playText?.('Link de pagamento gerado. Abra o link para o cliente pagar.').catch(() => {});
+return;
       }
 
       if (metodo === 'tef') {

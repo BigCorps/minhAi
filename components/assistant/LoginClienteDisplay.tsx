@@ -22,6 +22,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useProfile } from '@/hooks/useProfile';
+import { useTurnstile } from '@/hooks/useTurnstile';
 
 interface LoginClienteDisplayProps {
   data: {
@@ -74,6 +75,7 @@ export default function LoginClienteDisplay({
 }: LoginClienteDisplayProps) {
   const C = theme === 'dark' ? DARK : LIGHT;
   const { profile, loading, login, logout, register } = useProfile(data.slug);
+  const { getToken, containerRef } = useTurnstile();
 
   type Mode = 'loading' | 'logado' | 'login_cliente' | 'login_colab' | 'cadastro';
   const [mode, setMode]           = useState<Mode>('loading');
@@ -128,6 +130,11 @@ export default function LoginClienteDisplay({
     const identifier = formValues.email || formValues.telefone;
     if (!identifier) { setError('Informe seu e-mail ou telefone.'); return; }
     setSubmitting(true); setError('');
+    const token = await getToken();
+    if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+      setError('Verificação de segurança falhou. Tente novamente.');
+      setSubmitting(false); return;
+    }
     const result = await login(identifier, formValues.senha);
     setSubmitting(false);
     if (!result.success) {
@@ -144,7 +151,11 @@ export default function LoginClienteDisplay({
     if (!identifier) { setError('Informe seu identificador ou e-mail.'); return; }
     if (!formValues.pin?.trim()) { setError('Informe seu PIN.'); return; }
     setSubmitting(true); setError('');
-    // A Edge Function auth-profile aceita pin como credencial
+    const token = await getToken();
+    if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+      setError('Verificação de segurança falhou. Tente novamente.');
+      setSubmitting(false); return;
+    }
     const result = await login(identifier, formValues.pin);
     setSubmitting(false);
     if (!result.success) {
@@ -159,6 +170,11 @@ export default function LoginClienteDisplay({
   const handleCadastro = async () => {
     if (!formValues.nome?.trim()) { setError('Nome é obrigatório.'); return; }
     setSubmitting(true); setError('');
+    const token = await getToken();
+    if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+      setError('Verificação de segurança falhou. Tente novamente.');
+      setSubmitting(false); return;
+    }
     const result = await register(formValues);
     setSubmitting(false);
     if (!result.success) {
@@ -326,7 +342,6 @@ export default function LoginClienteDisplay({
                     Criar conta
                   </button>
                 </div>
-                {/* ✅ NOVO: link para login de colaborador */}
                 <button
                   onClick={() => { setMode('login_colab'); setError(''); setFormValues({}); }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMuted, fontSize: '0.75rem' }}>
@@ -336,7 +351,7 @@ export default function LoginClienteDisplay({
             </div>
           )}
 
-          {/* ✅ NOVO: Login colaborador (identificador + PIN) */}
+          {/* Login colaborador (identificador + PIN) */}
           {mode === 'login_colab' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
 
@@ -429,6 +444,10 @@ export default function LoginClienteDisplay({
               )}
             </div>
           )}
+
+          {/* Turnstile — widget invisível, necessário para getToken() funcionar */}
+          <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
+
         </div>
       </div>
 

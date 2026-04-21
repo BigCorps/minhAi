@@ -68,10 +68,29 @@ export default function InfinitePayDisplay({ data, onClose, theme = 'dark' }: In
         },
       });
       if (error || !res?.success) throw new Error(error?.message || res?.error || 'Erro ao gerar cobrança');
-      setLink(res.link_cobranca);
-      setCobrancaId(res.cobranca_id);
-      setStage('awaiting_payment');
-      if (isNFC) window.open(res.link_cobranca, '_blank');
+      // DEPOIS
+setCobrancaId(res.cobranca_id);
+
+if (isNFC) {
+  // NFC: abre app InfinitePay direto — link curto não faz sentido
+  setLink(res.link_cobranca);
+  window.open(res.link_cobranca, '_blank');
+} else {
+  // Link de pagamento: gera URL curta minhai.app/pay/XXXXXX
+  try {
+    const { createShortLink } = await import('@/lib/short-links');
+    const shortUrl = await createShortLink(
+      res.link_cobranca,
+      data.companyId,
+      res.cobranca_id  // rastreio opcional
+    );
+    setLink(shortUrl);
+  } catch {
+    setLink(res.link_cobranca); // fallback: URL original
+  }
+}
+
+setStage('awaiting_payment');
     } catch (err: any) {
       setErrorMsg(err.message);
       setStage('error');

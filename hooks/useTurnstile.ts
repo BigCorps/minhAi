@@ -6,11 +6,13 @@
 // um método para obter o token de verificação.
 //
 // Uso:
-//   const { getToken, TurnstileWidget } = useTurnstile();
+//   const { getToken, containerRef } = useTurnstile();
+//   // No JSX do componente (.tsx):
+//   <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
 //   ...
 //   const token = await getToken();
-//   if (!token) { setError('Verificação falhou'); return; }
-//   // prosseguir com a ação
+//   if (token) { /* valida na edge */ }
+//   // se token for null, Turnstile indisponível — prosseguir normalmente
 // ============================================================
 
 import { useEffect, useRef, useCallback, useState } from 'react';
@@ -42,8 +44,8 @@ export function useTurnstile() {
       return;
     }
     const script = document.createElement('script');
-    script.id  = SCRIPT_ID;
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.id    = SCRIPT_ID;
+    script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
     script.async = true;
     script.onload = () => setReady(true);
     document.head.appendChild(script);
@@ -82,25 +84,22 @@ export function useTurnstile() {
   /**
    * Obtém o token do Turnstile.
    * - Se o token já existe (widget invisible completou), retorna direto.
-   * - Aguarda até 8s para o widget completar (modo managed/invisible).
-   * - Retorna null se não houver SITE_KEY (dev sem configuração).
+   * - Aguarda até 8s para o widget completar.
+   * - Retorna null se não houver SITE_KEY ou Turnstile indisponível.
    */
   const getToken = useCallback(async (): Promise<string | null> => {
     if (!SITE_KEY) return null; // dev bypass — edge também ignora
 
-    // Token já disponível
     if (tokenRef.current) {
       const t = tokenRef.current;
       tokenRef.current = null; // tokens são single-use
       return t;
     }
 
-    // Reset para forçar nova verificação
     if (widgetIdRef.current && window.turnstile) {
       window.turnstile.reset(widgetIdRef.current);
     }
 
-    // Aguarda o callback com timeout
     return new Promise((resolve) => {
       const start = Date.now();
       const interval = setInterval(() => {
@@ -119,13 +118,6 @@ export function useTurnstile() {
     });
   }, []);
 
-  /**
-   * Div invisível que deve ser renderizado no JSX do componente.
-   * Coloque em qualquer lugar do return — ele não ocupa espaço visual.
-   */
-  const TurnstileWidget = (
-    <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
-  );
-
-  return { getToken, containerRef, ready
+  // containerRef é passado para o componente — o JSX fica no .tsx
+  return { getToken, containerRef, ready };
 }

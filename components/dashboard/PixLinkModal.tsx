@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { X, Copy, Check, ExternalLink, Link } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Link, ChevronDown } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -21,6 +21,8 @@ export default function PixLinkModal({ onClose }: Props) {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [valor, setValor] = useState('');
   const [copied, setCopied] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -33,6 +35,17 @@ export default function PixLinkModal({ onClose }: Props) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   async function loadCompanies() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -100,15 +113,33 @@ export default function PixLinkModal({ onClose }: Props) {
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
               Assistente
             </label>
-            <select
-              value={selectedCompany?.id ?? ''}
-              onChange={(e) => setSelectedCompany(companies.find(c => c.id === e.target.value) ?? null)}
-              className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition dark:[color-scheme:dark]"
-            >
-              {companies.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <div ref={dropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(o => !o)}
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition flex items-center justify-between"
+              >
+                <span>{selectedCompany?.name ?? 'Selecione...'}</span>
+                <ChevronDown className={`w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {dropdownOpen && (
+                <ul className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
+                  {companies.map(c => (
+                    <li
+                      key={c.id}
+                      onClick={() => { setSelectedCompany(c); setDropdownOpen(false); }}
+                      className={`px-3.5 py-2.5 text-sm cursor-pointer transition
+                        ${selectedCompany?.id === c.id
+                          ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                          : 'text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-white/5'
+                        }`}
+                    >
+                      {c.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           {/* Valor opcional */}

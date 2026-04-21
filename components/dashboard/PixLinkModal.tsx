@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { X, Copy, Check, ExternalLink, Link, ChevronDown } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Link, ChevronDown, Zap } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -13,8 +13,10 @@ interface Company {
 
 interface Props {
   onClose: () => void;
-  isDark?: boolean; // mantido por compatibilidade, mas o tema é controlado pelo Tailwind
+  isDark?: boolean;
 }
+
+type Tab = 'pix' | 'pay';
 
 export default function PixLinkModal({ onClose }: Props) {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -22,6 +24,7 @@ export default function PixLinkModal({ onClose }: Props) {
   const [valor, setValor] = useState('');
   const [copied, setCopied] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('pix');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -47,6 +50,12 @@ export default function PixLinkModal({ onClose }: Props) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Resetar estado ao trocar de aba
+  useEffect(() => {
+    setValor('');
+    setCopied(false);
+  }, [activeTab]);
+
   async function loadCompanies() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -62,12 +71,22 @@ export default function PixLinkModal({ onClose }: Props) {
     }
   }
 
-  const baseUrl = selectedCompany
+  // URLs geradas conforme a aba ativa
+  const baseUrlPix = selectedCompany
     ? `https://minhai.app/pix/${selectedCompany.slug}`
     : '';
-  const fullUrl = valor && parseFloat(valor) > 0
-    ? `${baseUrl}/${valor}`
-    : baseUrl;
+  const fullUrlPix = valor && parseFloat(valor) > 0
+    ? `${baseUrlPix}/${valor}`
+    : baseUrlPix;
+
+  const baseUrlPay = selectedCompany
+    ? `https://minhai.app/pay/${selectedCompany.slug}`
+    : '';
+  const fullUrlPay = valor && parseFloat(valor) > 0
+    ? `${baseUrlPay}/${valor}`
+    : '';  // pay sem valor não faz sentido — cobrança precisa de valor
+
+  const fullUrl = activeTab === 'pix' ? fullUrlPix : fullUrlPay;
 
   function copy() {
     if (!fullUrl) return;
@@ -91,10 +110,10 @@ export default function PixLinkModal({ onClose }: Props) {
             </div>
             <div>
               <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                Link PIX
+                Gerar Link de Cobrança
               </h2>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                Gere um PIX com ou sem o valor para compartilhar facilmente e já confirmar o pagamento via email e no dashboard
+                Compartilhe um link para receber pagamentos facilmente
               </p>
             </div>
           </div>
@@ -106,7 +125,40 @@ export default function PixLinkModal({ onClose }: Props) {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100 dark:border-white/10">
+          <button
+            onClick={() => setActiveTab('pix')}
+            className={`flex-1 py-3 text-sm font-semibold transition flex items-center justify-center gap-2 ${
+              activeTab === 'pix'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/10'
+                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            PIX
+          </button>
+          <button
+            onClick={() => setActiveTab('pay')}
+            className={`flex-1 py-3 text-sm font-semibold transition flex items-center justify-center gap-2 ${
+              activeTab === 'pay'
+                ? 'text-violet-600 dark:text-violet-400 border-b-2 border-violet-600 dark:border-violet-400 bg-violet-50/50 dark:bg-violet-900/10'
+                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Link InfinitePay
+          </button>
+        </div>
+
         <div className="p-6 space-y-5">
+
+          {/* Descrição da aba */}
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            {activeTab === 'pix'
+              ? 'Gere um PIX com ou sem valor. Sem valor, o cliente digita o valor ao abrir o link.'
+              : 'Gera uma cobrança InfinitePay ao abrir o link. O valor é obrigatório.'}
+          </p>
 
           {/* Selecionar assistente */}
           <div>
@@ -142,10 +194,13 @@ export default function PixLinkModal({ onClose }: Props) {
             </div>
           </div>
 
-          {/* Valor opcional */}
+          {/* Valor */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
-              Valor <span className="normal-case font-normal text-gray-400 dark:text-slate-500">(opcional)</span>
+              Valor{' '}
+              {activeTab === 'pix'
+                ? <span className="normal-case font-normal text-gray-400 dark:text-slate-500">(opcional)</span>
+                : <span className="normal-case font-normal text-red-400">*obrigatório</span>}
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400 dark:text-slate-500">
@@ -157,19 +212,36 @@ export default function PixLinkModal({ onClose }: Props) {
                 min="0"
                 value={valor}
                 onChange={(e) => setValor(e.target.value)}
-                placeholder="Deixe vazio para o cliente digitar"
+                placeholder={activeTab === 'pix' ? 'Deixe vazio para o cliente digitar' : 'Digite o valor da cobrança'}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
             </div>
+            {activeTab === 'pay' && (!valor || parseFloat(valor) <= 0) && (
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
+                Informe o valor para gerar o link de cobrança InfinitePay.
+              </p>
+            )}
           </div>
 
           {/* URL gerada */}
           {fullUrl && (
-            <div className="rounded-xl p-4 bg-blue-50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400 mb-2">
+            <div className={`rounded-xl p-4 border ${
+              activeTab === 'pix'
+                ? 'bg-blue-50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/10'
+                : 'bg-violet-50 dark:bg-violet-500/5 border-violet-100 dark:border-violet-500/10'
+            }`}>
+              <p className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${
+                activeTab === 'pix'
+                  ? 'text-blue-500 dark:text-blue-400'
+                  : 'text-violet-500 dark:text-violet-400'
+              }`}>
                 Link gerado
               </p>
-              <p className="text-sm font-mono text-blue-700 dark:text-blue-300 break-all leading-relaxed">
+              <p className={`text-sm font-mono break-all leading-relaxed ${
+                activeTab === 'pix'
+                  ? 'text-blue-700 dark:text-blue-300'
+                  : 'text-violet-700 dark:text-violet-300'
+              }`}>
                 {fullUrl}
               </p>
             </div>
@@ -182,14 +254,15 @@ export default function PixLinkModal({ onClose }: Props) {
               disabled={!fullUrl}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 copied
-                  ? 'bg-green-500 dark:bg-green-600 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20'
+                  ? 'bg-green-500 text-white'
+                  : activeTab === 'pix'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20'
+                    : 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm shadow-violet-500/20'
               }`}
             >
               {copied
-                ? <><Check className="w-4 h-4" /> Copiado!</>
-                : <><Copy className="w-4 h-4" /> Copiar Link</>
-              }
+                ? <><Check className="w-4 h-4" />Copiado!</>
+                : <><Copy className="w-4 h-4" />Copiar Link</>}
             </button>
             <button
               onClick={() => fullUrl && window.open(fullUrl, '_blank')}

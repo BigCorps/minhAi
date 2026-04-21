@@ -103,7 +103,7 @@ export default function PixLinkModal({ onClose }: Props) {
             <select
               value={selectedCompany?.id ?? ''}
               onChange={(e) => setSelectedCompany(companies.find(c => c.id === e.target.value) ?? null)}
-              className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition"
+              className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition dark:[color-scheme:dark]"
             >
               {companies.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>

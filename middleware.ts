@@ -11,7 +11,7 @@ const PLAN_PROTECTED_ROUTES = [
 // Subdomínios reservados — nunca tratar como slug de cliente
 const RESERVED_SUBDOMAINS = [
   // Infraestrutura
-  'www', 'app', 'api', 'admin', 'mail', 'smtp',
+  'www', 'app', 'api', 'pay', 'admin', 'mail', 'smtp',
   // Rotas do sistema (evita subdomínio que colide com rota)
   'dashboard', 'login', 'cadastro',
   // Páginas públicas
@@ -26,13 +26,19 @@ const RESERVED_SUBDOMAINS = [
 // Mesmo em subdomínios de cliente, esses paths devem passar direto
 const CRAWLER_PASSTHROUGH = ['/robots.txt', '/sitemap.xml', '/sitemap.ts'];
 
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname;
 
+
   // ── 0. PASSTHROUGH PARA CRAWLERS ─────────────────────────────────────────
-  // robots.txt e sitemap.xml nunca devem ser interceptados — passam direto
   if (CRAWLER_PASSTHROUGH.some(p => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // ── 0.5. PASSTHROUGH PARA /pay (links curtos de pagamento) ───────────────
+  if (pathname.startsWith('/pay/')) {
     return NextResponse.next();
   }
 
@@ -77,7 +83,7 @@ export async function middleware(request: NextRequest) {
       // ── Rewrite do slug com suporte a rotas específicas ───────────────────
       const url = request.nextUrl.clone();
 
-      const SPECIAL_ROUTES = ['/vendas', '/fila', '/cliente', '/link'];
+      const SPECIAL_ROUTES = ['/vendas', '/fila', '/pay', '/cliente', '/link'];
       const isSpecialRoute = SPECIAL_ROUTES.some(route => pathname.startsWith(route));
 
       if (isSpecialRoute) {

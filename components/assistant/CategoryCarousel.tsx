@@ -85,7 +85,6 @@ export default function CategoryCarousel({
 
   const isDark = theme === 'dark';
 
-  // Detectar mobile
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -93,7 +92,6 @@ export default function CategoryCarousel({
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Carregar funções e agrupar por categoria
   useEffect(() => {
     async function loadFunctions() {
       // ── Modo Demo (Landing Page) ───────────────────────────────────────────
@@ -125,7 +123,7 @@ export default function CategoryCarousel({
 
         setCategories(grouped);
 
-        // ✅ Emite dados completos para o DemoFunctionModal popular o cache
+        // ✅ Emite dados completos para o LandingDemoFooter popular o cache
         window.dispatchEvent(
           new CustomEvent('eai:functionsLoaded', { detail: processedFunctions })
         );
@@ -180,7 +178,6 @@ export default function CategoryCarousel({
     loadFunctions();
   }, [companyId, hideDisabledFunctions]);
 
-  // Click outside detection
   useEffect(() => {
     if (!activeCategory) return;
 
@@ -309,7 +306,7 @@ export default function CategoryCarousel({
               {CATEGORIES.find((c) => c.key === activeCategory)?.name}
             </div>
 
-            <div className="overflow-y-auto" style={{ maxHeight: '306px' }}>
+            <div className="overflow-hidden">
               {categories
                 .find((c) => c.key === activeCategory)
                 ?.functions.map((fn) => {
@@ -331,9 +328,6 @@ export default function CategoryCarousel({
                       onClick={() => handleFunctionClick(fn)}
                     >
                       <span className="font-medium text-[11px] leading-tight block">
-                        {fn.icon && fn.icon !== '' && (
-                          <span className="mr-1.5">{fn.icon}</span>
-                        )}
                         {fn.function_name}
                       </span>
 
@@ -353,8 +347,8 @@ export default function CategoryCarousel({
         </div>
       )}
 
-      {/* Container do carrossel — fundo transparente */}
-      <div className="w-full py-3 overflow-x-auto md:overflow-hidden no-scrollbar">
+      {/* ✅ Container do carrossel — visual original restaurado */}
+      <div className="w-full py-4 overflow-x-auto md:overflow-hidden no-scrollbar">
         <div className="relative w-full">
           <div
             onMouseEnter={pauseAnimation}
@@ -366,8 +360,8 @@ export default function CategoryCarousel({
             <div
               ref={carouselRef}
               className={autoScroll
-                ? 'flex gap-2.5 pl-3 w-max'
-                : 'flex gap-2.5 flex-wrap justify-center w-full px-4'
+                ? 'flex gap-3 pl-3 w-max'
+                : 'flex gap-3 flex-wrap justify-center w-full px-4'
               }
               style={autoScroll ? {
                 animation: `scroll-infinite ${scrollDuration}s linear infinite`,
@@ -390,34 +384,23 @@ export default function CategoryCarousel({
                     }}
                     onClick={(e) => handleCategoryClick(category, e)}
                     disabled={!hasEnabled}
-                    className={`
-                      flex-shrink-0 px-4 py-2 rounded-xl font-medium
-                      transition-all duration-200 flex items-center gap-2
-                      hover:scale-105 active:scale-95
-                      ${!hasEnabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-                    `}
+                    className={`flex-shrink-0 px-5 py-3 rounded-xl font-medium transition-all flex items-center gap-2 hover:scale-105 active:scale-95 ${
+                      theme === 'dark'
+                        ? 'bg-white/10 hover:bg-white/20 text-white'
+                        : 'bg-white hover:bg-gray-50 text-gray-900'
+                    } ${!hasEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                     style={{
-                      // ✅ Fundo transparente — sem bg sólido, igual ao carrossel do assistente
-                      background: isActive
-                        ? isDark
-                          ? 'rgba(255, 255, 255, 0.15)'
-                          : 'rgba(0, 0, 0, 0.07)'
-                        : isDark
-                          ? 'rgba(255, 255, 255, 0.06)'
-                          : 'rgba(0, 0, 0, 0.04)',
-                      borderLeft: `3px solid ${borderColor}`,
-                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-                      borderLeftWidth: '3px',
-                      borderLeftColor: borderColor,
-                      color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)',
-                      backdropFilter: 'blur(4px)',
+                      borderLeft: `4px solid ${borderColor}`,
+                      boxShadow: theme === 'dark'
+                        ? '0 2px 4px rgba(0, 0, 0, 0.2)'
+                        : '0 2px 8px rgba(0, 0, 0, 0.05)',
                       ...(isActive && {
                         transform: 'scale(1.05)',
-                        boxShadow: `0 0 0 1px ${borderColor}40`,
+                        backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.05)',
                       }),
                     }}
                   >
-                    <span className="text-xs font-semibold whitespace-nowrap">
+                    <span className="text-sm font-semibold whitespace-nowrap">
                       {category.name}
                     </span>
                   </button>
@@ -430,9 +413,10 @@ export default function CategoryCarousel({
 
       <style jsx>{`
         @keyframes scroll-infinite {
-          0%   { transform: translateX(0); }
+          0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>

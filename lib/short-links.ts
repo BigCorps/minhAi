@@ -13,7 +13,7 @@ function generateSlug(): string {
 export async function createShortLink(
   originalUrl: string,
   companyId: string,
-  userId?: string
+  cobrancaId?: string
 ): Promise<string> {
   const supabase = createClient();
 
@@ -25,7 +25,7 @@ export async function createShortLink(
       slug,
       original_url: originalUrl,
       company_id: companyId,
-      user_id: userId ?? null,
+      cobranca_id: cobrancaId ?? null
     });
 
     if (!error) {

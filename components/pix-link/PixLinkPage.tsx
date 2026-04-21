@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-browser';
+import { useTurnstile } from '@/hooks/useTurnstile';
 import PixValueForm from './PixValueForm';
 import PixQRCodeDisplay from './PixQRCodeDisplay';
 
@@ -25,7 +26,10 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [autoChecking, setAutoChecking] = useState(false);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
+
   const supabase = createClient();
+  const { getToken, TurnstileWidget, ready: turnstileReady } = useTurnstile();
 
   useEffect(() => {
     setMounted(true);
@@ -34,12 +38,12 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
     setTheme(saved || (prefersDark ? 'dark' : 'light'));
   }, []);
 
-  // Se veio com valor na URL, gera automático
+  // Se veio com valor na URL, aguarda o Turnstile estar pronto antes de gerar
   useEffect(() => {
-    if (initialAmount && initialAmount > 0) {
+    if (initialAmount && initialAmount > 0 && turnstileReady) {
       generatePix(initialAmount);
     }
-  }, []);
+  }, [turnstileReady]);
 
   // Aguarda 30s após o PIX ser gerado antes de começar o auto-check
   useEffect(() => {
@@ -76,7 +80,21 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
 
   async function generatePix(value: number) {
     setLoading(true);
+    setTurnstileError(null);
     try {
+      // Turnstile: valida se disponível, pula silenciosamente se não
+      const token = await getToken();
+      if (token) {
+        const { data: td, error: te } = await supabase.functions.invoke(
+          'validate-turnstile',
+          { body: { token } }
+        );
+        if (te || !td?.success) {
+          setTurnstileError(td?.error || 'Verificação de segurança falhou. Tente novamente.');
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('gerar-pix-assistente', {
         body: {
           company_id: company.id,
@@ -116,7 +134,6 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
 
   const isDark = theme === 'dark';
 
-  // Botão de tema flutuante
   const ThemeButton = () => (
     <button
       onClick={toggleTheme}
@@ -186,6 +203,18 @@ export default function PixLinkPage({ company, initialAmount }: Props) {
     return (
       <>
         <ThemeButton />
+        {TurnstileWidget}
+        {turnstileError && (
+          <div style={{
+            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 100, background: '#fef2f2', border: '1px solid #fecaca',
+            borderRadius: '10px', padding: '12px 20px',
+            color: '#dc2626', fontSize: '13px', fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxWidth: '360px', textAlign: 'center',
+          }}>
+            {turnstileError}
+          </div>
+        )}
         <PixValueForm
           company={company}
           initialAmount={initialAmount}

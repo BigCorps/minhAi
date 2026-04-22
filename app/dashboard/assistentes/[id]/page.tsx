@@ -54,8 +54,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
       assistant_role: formData.get('assistant_role') as string,
       hide_disabled_functions_carousel: formData.get('hide_disabled_functions_carousel') === 'on',
       carousel_auto_scroll: formData.get('carousel_auto_scroll') === 'on',
-      assistant_avatar_type: formData.get('assistant_avatar_type') as string,
-      wake_word_enabled: formData.get('wake_word_enabled') === 'on',
     };
 
     try {
@@ -278,49 +276,6 @@ export default function EditarAssistentePage({ params }: PageProps) {
                     id="carousel_auto_scroll"
                     name="carousel_auto_scroll"
                     defaultChecked={assistant.carousel_auto_scroll ?? true}
-                    className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
-                  />
-                </div>
-              </div>
-
-              {/* Visual e Comportamento do Assistente */}
-              <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-white/10">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Visual e Comportamento</h3>
-
-                {/* Avatar */}
-                <div>
-                  <label htmlFor="assistant_avatar_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Avatar do Assistente
-                  </label>
-                  <select
-                    id="assistant_avatar_type"
-                    name="assistant_avatar_type"
-                    defaultValue={assistant.assistant_avatar_type ?? 'face'}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition"
-                  >
-                    <option value="face">🧠 Rosto (expressões animadas)</option>
-                    <option value="orb">🔮 Orbe (partículas animadas)</option>
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    O Rosto exibe olhos e expressões. O Orbe é um modo mais minimalista e abstrato.
-                  </p>
-                </div>
-
-                {/* Wake Word Enabled */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5">
-                  <div>
-                    <label htmlFor="wake_word_enabled" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Ativação por palavra-chave
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Quando desativado, o assistente inicia diretamente em modo de escuta contínua
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    id="wake_word_enabled"
-                    name="wake_word_enabled"
-                    defaultChecked={assistant.wake_word_enabled ?? true}
                     className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-slate-700 dark:border-slate-600"
                   />
                 </div>

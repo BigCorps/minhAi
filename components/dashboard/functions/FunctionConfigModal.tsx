@@ -3677,11 +3677,26 @@ const PrintAutoSection = ({
   printKey: 'local' | 'remota' | 'recibo';
   hasActivePlan: boolean;
 }) => {
-  const TOGGLES = [
-    { key: 'print_on_purchase' as const, label: 'Imprimir ao finalizar compra', description: 'Imprime recibo/comprovante automaticamente ao confirmar um pedido no Modo Venda.', value: settings.print_on_purchase ?? false },
-    { key: 'print_on_queue' as const, label: 'Imprimir senha da fila', description: 'Imprime a senha automaticamente quando o cliente retira uma senha na fila de atendimento.', value: settings.print_on_queue ?? false },
-    { key: 'print_on_payment' as const, label: 'Imprimir ao confirmar PIX', description: 'Imprime comprovante automaticamente após a confirmação de pagamento via PIX.', value: settings.print_on_payment ?? false },
-  ];
+const TOGGLES = [
+  { 
+    key: 'print_auto_type_purchase', // Antes era print_on_purchase
+    label: 'Imprimir ao finalizar compra', 
+    description: 'Imprime recibo automaticamente no Modo Venda.', 
+    value: settings.print_auto_type_purchase === printKey // Verifica se este formulário é o ativo para Vendas
+  },
+  { 
+    key: 'print_auto_type_queue', // Antes era print_on_queue
+    label: 'Imprimir senha da fila', 
+    description: 'Imprime a senha na fila de atendimento.', 
+    value: settings.print_auto_type_queue === printKey 
+  },
+  { 
+    key: 'print_auto_type_payment', // Antes era print_on_payment
+    label: 'Imprimir ao confirmar PIX', 
+    description: 'Imprime comprovante após confirmação de PIX.', 
+    value: settings.print_auto_type_payment === printKey 
+  },
+];
   return (
     <div className="space-y-3">
       <div className="border-t border-gray-200 dark:border-white/10 my-2" />
@@ -3709,7 +3724,17 @@ const PrintAutoSection = ({
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
             </div>
             <div className="relative flex-shrink-0">
-              <input type="checkbox" checked={value} onChange={e => onChange(key, e.target.checked)} className="sr-only peer" disabled={!hasActivePlan} />
+              <input 
+  type="checkbox" 
+  checked={value} 
+  onChange={e => {
+    // Se ligar, salva o nome do tipo (ex: 'recibo'). Se desligar, salva vazio ou 'none'
+    const newValue = e.target.checked ? printKey : null;
+    onChange(key, newValue);
+  }}
+  className="sr-only peer" 
+  disabled={!hasActivePlan} 
+/>
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500" />
             </div>
           </label>

@@ -137,29 +137,31 @@ export default function TermsPage() {
               <h2>3. Conta de Usuário</h2>
               <p>Para utilizar o minhAi, você deve criar uma conta fornecendo informações precisas e completas. Você é responsável por manter a confidencialidade de sua senha e por todas as atividades que ocorram em sua conta.</p>
 
-<h2>4. Integração com Serviços de Terceiros</h2>
+              <h2>4. Integração com Serviços de Terceiros</h2>
 
-<h3>4.1 Google</h3>
-<p>Ao conectar sua conta Google ao minhAi, você nos autoriza a acessar apenas os dados necessários para as funcionalidades que você utilizar:</p>
-<ul>
-  <li><strong>Gmail:</strong> Envio de emails compostos por você via comando de voz</li>
-  <li><strong>Google Calendar:</strong> Criação e visualização de eventos por comando de voz</li>
-  <li><strong>Google Drive:</strong> Leitura de imagens em pastas selecionadas por você para exibição em painéis digitais</li>
-  <li><strong>YouTube:</strong> Busca e reprodução de vídeos solicitados por você</li>
-  <li><strong>Smart Device Management:</strong> Controle de dispositivos Google Nest/Home da sua conta por comando de voz</li>
-</ul>
-<p>O uso dos dados das APIs do Google segue estritamente a <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado. Não utilizamos dados do Google para fins de publicidade ou marketing e não vendemos esses dados a terceiros.</p>
+              <h3>4.1 Google</h3>
+              <p>Ao conectar sua conta Google ao minhAi, você nos autoriza a acessar apenas os dados necessários para as funcionalidades que você utilizar:</p>
+              <ul>
+                <li><strong>Gmail:</strong> Envio de emails compostos por você via comando de voz</li>
+                <li><strong>Google Calendar:</strong> Criação e visualização de eventos por comando de voz</li>
+                <li><strong>Google Drive:</strong> Leitura de imagens em pastas selecionadas por você para exibição em painéis digitais</li>
+                <li><strong>YouTube:</strong> Busca e reprodução de vídeos solicitados por você</li>
+                <li><strong>Smart Device Management:</strong> Controle de dispositivos Google Nest/Home da sua conta por comando de voz</li>
+                <li><strong>Google Meet:</strong> Criação de reuniões agendadas via assistente de voz, com envio de convite por email aos participantes através do Google Calendar</li>
+                <li><strong>Google Business Profile:</strong> Leitura e sincronização de informações da sua empresa (nome, endereço, horários, avaliações) com o assistente, para responder perguntas de clientes e monitorar sua reputação online</li>
+              </ul>
+              <p>O uso dos dados das APIs do Google segue estritamente a <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado. Não utilizamos dados do Google para fins de publicidade ou marketing e não vendemos esses dados a terceiros.</p>
 
-<h3>4.2 Meta (Facebook, Instagram, WhatsApp)</h3>
-<p>Ao conectar suas contas Meta ao minhAi, você nos autoriza a:</p>
-<ul>
-  <li>Acessar e gerenciar mensagens para que o assistente possa responder em seu nome</li>
-  <li>Publicar conteúdo previamente aprovado por você</li>
-</ul>
-<p>Você é responsável por garantir que o uso está em conformidade com os Termos de Serviço da Meta.</p>
+              <h3>4.2 Meta (Facebook, Instagram, WhatsApp)</h3>
+              <p>Ao conectar suas contas Meta ao minhAi, você nos autoriza a:</p>
+              <ul>
+                <li>Acessar e gerenciar mensagens para que o assistente possa responder em seu nome</li>
+                <li>Publicar conteúdo previamente aprovado por você</li>
+              </ul>
+              <p>Você é responsável por garantir que o uso está em conformidade com os Termos de Serviço da Meta.</p>
 
-<h3>4.3 Revogação de Acesso</h3>
-<p>Você pode revogar o acesso do minhAi às suas contas a qualquer momento através das configurações da plataforma ou diretamente nas configurações de aplicativos do Google ou da Meta.</p>
+              <h3>4.3 Revogação de Acesso</h3>
+              <p>Você pode revogar o acesso do minhAi às suas contas a qualquer momento através das configurações da plataforma ou diretamente nas configurações de aplicativos do Google ou da Meta.</p>
 
               <h2>5. Assistente de IA</h2>
               

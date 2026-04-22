@@ -1571,17 +1571,18 @@ setLoading(false); // ← fora do if, dentro do load()
     setSalvando(null);
   }
 
-  async function toggleImpressao(
+async function toggleImpressao(
   field: 'print_auto_type_purchase' | 'print_auto_type_queue' | 'print_auto_type_payment',
-  atual: boolean
+  ativo: boolean
 ) {
-    if (!hasActivePlan) return;
-    await supabase
-      .from('companies')
-      .update({ [field]: !atual })
-      .eq('id', companyId);
-    setConfig(prev => ({ ...prev, [field]: !atual }));
-  }
+  if (!hasActivePlan) return;
+  const novoValor = ativo ? null : (config.print_auto_type ?? 'local');
+  await supabase
+    .from('companies')
+    .update({ [field]: novoValor })  // ← string ou null
+    .eq('id', companyId);
+  setConfig(prev => ({ ...prev, [field]: novoValor }));
+}
 
   async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
     if (!hasActivePlan) return;

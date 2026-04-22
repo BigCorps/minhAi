@@ -245,15 +245,19 @@ const MODAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
 // ── Props ─────────────────────────────────────────────────────
 interface ActionModalsProps {
-  activeModal: {
-    type: string;
-    data: any;
-  } | null;
+  activeModal: { type: string; data: any } | null;
   onClose: () => void;
   theme: 'dark' | 'light';
   onConfirmPix?: (data: any) => void;
   onCancelPix?: () => void;
   playText?: (text: string) => Promise<void>;
+  // ✅ ADICIONAR
+  printConfig?: {
+    print_on_purchase: boolean;
+    print_on_queue: boolean;
+    print_on_payment: boolean;
+    hasActivePlan: boolean;
+  };
 }
 
 // ── Componente ────────────────────────────────────────────────
@@ -264,6 +268,7 @@ export function ActionModals({
   onConfirmPix,
   onCancelPix,
   playText,
+  printConfig,
 }: ActionModalsProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -307,6 +312,9 @@ export function ActionModals({
       playText={playText}
       onConfirmPix={onConfirmPix}
       onCancelPix={onCancelPix}
+      printOnQueue={printConfig?.print_on_queue}
+      printOnPayment={printConfig?.print_on_payment}
+      hasActivePlan={printConfig?.hasActivePlan}
     />,
     document.body
   );

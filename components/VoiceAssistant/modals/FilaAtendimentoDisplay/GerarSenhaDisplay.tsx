@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
+import { triggerAutoPrint, formatQueueReceipt } from '@/lib/auto-print';
+import { useTurnstile } from '@/hooks/useTurnstile';
 import { 
   MapPin, 
   Clock, 
@@ -40,6 +42,9 @@ interface GerarSenhaDisplayProps {
   onClose: () => void;
   theme?: 'dark' | 'light';
   playText?: (text: string) => Promise<void>;
+  /** Se true, exibe botão de impressão ao gerar senha (requer plano ativo) */
+  printOnQueue?: boolean;
+  hasActivePlan?: boolean;
 }
 
 interface FilaSenha {
@@ -65,6 +70,8 @@ export default function GerarSenhaDisplay({
   onClose,
   theme = 'dark',
   playText,
+  printOnQueue = false,
+  hasActivePlan = false,
 }: GerarSenhaDisplayProps) {
   const colors = theme === 'dark' ? DARK : LIGHT;
   const { companyId, slug } = data;
@@ -79,6 +86,52 @@ export default function GerarSenhaDisplay({
   const [isMobile, setIsMobile] = useState(false);
 
   const supabase = createClient();
+  const { getToken, containerRef } = useTurnstile();
+
+  const [printAutoType, setPrintAutoType] = useState<'local' | 'remota' | 'recibo'>('local');
+  const [companyNameStr, setCompanyNameStr] = useState('');
+
+  // Buscar print_auto_type e nome da empresa para impressão automática
+  useEffect(() => {
+    if (!printOnQueue) return;
+    supabase
+      .from('companies')
+      .select('print_auto_type, name')
+      .eq('id', companyId)
+      .maybeSingle()
+      .then(({ data: co }) => {
+        if (co?.print_auto_type) setPrintAutoType(co.print_auto_type);
+        if (co?.name) setCompanyNameStr(co.name);
+      })
+      .catch(() => {});
+  }, [printOnQueue, companyId]);
+
+  const handleAutoPrint = async (senhaData: FilaSenha, pos: number, tempo: number) => {
+    if (!hasActivePlan || !printOnQueue) return;
+
+    const receiptContent = formatQueueReceipt({
+      companyName: companyNameStr,
+      senhaCompleta: senhaData.senha_completa,
+      posicao: pos,
+      tempoEstimado: tempo,
+    });
+
+    const result = await triggerAutoPrint({
+      companyId,
+      trigger: 'queue',
+      content: receiptContent,
+    });
+
+    if (result.useWindowPrint) {
+      window.print();
+    } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
+      try {
+        const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+        await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
+      } catch (e) { console.error('Erro impressão térmica:', e); }
+    }
+    // remota: edge já executou
+  };
 
   // Detectar mobile/desktop
   useEffect(() => {
@@ -144,6 +197,11 @@ export default function GerarSenhaDisplay({
   async function gerarNovaSenha() {
     try {
       setLoading(true);
+      const token = await getToken();
+      if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+        showToast('Verificação de segurança falhou. Tente novamente.', 'error');
+        setLoading(false); return;
+      }
 
       const { data: config, error: configError } = await supabase
         .from('fila_configs')
@@ -215,6 +273,16 @@ export default function GerarSenhaDisplay({
 
       setLoading(false);
       showToast('Senha gerada com sucesso!', 'success');
+
+      // Impressão automática — dispara se print_on_queue estiver ativo
+      if (printOnQueue && hasActivePlan) {
+        // posicao e tempoEstimado ainda não foram atualizados no state (async)
+        // usamos os valores calculados em atualizarPosicao via state updates
+        // por isso chamamos com um pequeno delay para garantir que o state atualizou
+        setTimeout(() => {
+          handleAutoPrint(novaSenha, posicao, tempoEstimado);
+        }, 300);
+      }
 
     } catch (error) {
       console.error('Erro ao gerar senha:', error);
@@ -501,6 +569,35 @@ export default function GerarSenhaDisplay({
                       <XCircle className="w-4 h-4" />
                       Cancelar
                     </button>
+
+                    {printOnQueue && (
+                      <button
+                        onClick={() => senha && handleAutoPrint(senha, posicao, tempoEstimado)}
+                        disabled={!hasActivePlan}
+                        style={{
+                          gridColumn: '1 / -1',
+                          background: hasActivePlan ? '#f97316' : '#d1d5db',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: hasActivePlan ? '#fff' : '#9ca3af',
+                          cursor: hasActivePlan ? 'pointer' : 'not-allowed',
+                          opacity: hasActivePlan ? 1 : 0.6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                        }}
+                        title={!hasActivePlan ? 'Impressão disponível apenas para planos ativos' : undefined}
+                      >
+                        <svg style={{ width: 18, height: 18, flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        {!hasActivePlan ? 'Impressão (plano inativo)' : 'Imprimir Senha'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -602,11 +699,41 @@ export default function GerarSenhaDisplay({
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '8px',
+                          marginBottom: printOnQueue ? '12px' : '0',
                         }}
                       >
                         <XCircle className="w-4 h-4" />
                         Cancelar Senha
                       </button>
+
+                      {printOnQueue && (
+                        <button
+                          onClick={() => senha && handleAutoPrint(senha, posicao, tempoEstimado)}
+                          disabled={!hasActivePlan}
+                          style={{
+                            width: '100%',
+                            background: hasActivePlan ? '#f97316' : '#d1d5db',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '16px',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: hasActivePlan ? '#fff' : '#9ca3af',
+                            cursor: hasActivePlan ? 'pointer' : 'not-allowed',
+                            opacity: hasActivePlan ? 1 : 0.6,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                          }}
+                          title={!hasActivePlan ? 'Impressão disponível apenas para planos ativos' : undefined}
+                        >
+                          <svg style={{ width: 18, height: 18, flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                          </svg>
+                          {!hasActivePlan ? 'Impressão (plano inativo)' : 'Imprimir Senha'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -636,5 +763,13 @@ export default function GerarSenhaDisplay({
     </div>
   );
 
-  return createPortal(content, document.body);
+  // Injeta o container do Turnstile no content antes de renderizar
+  const contentWithTurnstile = (
+    <>
+      {content}
+      <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
+    </>
+  );
+
+  return createPortal(contentWithTurnstile, document.body);
 }

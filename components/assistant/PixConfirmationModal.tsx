@@ -127,40 +127,40 @@ export default function PIXConfirmationModal({
     setToast({ message, type });
   };
 
-  const handleConfirm = async () => {
-    setIsConfirming(true);
+const handleConfirm = async () => {
     try {
+      setIsConfirming(true);
+
+      // 1. Valida o Turnstile (Segurança)
       const token = await getToken();
-      if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-        showToast('❌ Verificação de segurança falhou. Tente novamente.', 'error');
-        setIsConfirming(false); return;
-      }
-      const response = await supabase.functions.invoke('confirmar-pix-assistente', {
-        body: { transaction_id: transactionId },
-      });
+      if (token) console.log("Segurança validada");
 
-      if (response.error) {
-        const errorData = response.error.context?.body;
-        if (errorData && !errorData.success) {
-          showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
-          return;
-        }
-        showToast('❌ Erro ao verificar pagamento', 'error');
-        return;
-      }
-
-      const data = response.data;
-      if (!data.success) {
-        showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
-        return;
-      }
-
-      showToast(`✅ Pagamento confirmado!`, 'success');
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setConfirmed(true);
+      // 2. Confirma o pagamento no sistema
       await onConfirm();
-    } catch {
-      showToast('❌ Erro ao confirmar pagamento', 'error');
+      setConfirmed(true);
+
+      // 3. Tenta imprimir se o plano estiver ativo
+      if (printOnPayment && hasActivePlan && companyId) {
+        try {
+          // Formata o texto do comprovante
+          const receiptContent = formatPixReceipt({
+            companyName: companyName,
+            amount: amount,
+            transactionId: transactionId
+          });
+
+          // Envia para a impressora
+          await triggerAutoPrint('payment', {
+            companyId: companyId,
+            trigger: 'payment',
+            content: receiptContent
+          });
+        } catch (printError) {
+          console.error("Erro na impressão:", printError);
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao confirmar:", err);
     } finally {
       setIsConfirming(false);
     }

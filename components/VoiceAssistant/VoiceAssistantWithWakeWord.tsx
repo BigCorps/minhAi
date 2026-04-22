@@ -800,14 +800,12 @@ case 'solicitar_video_chamada':
 
 case 'gerar_senha':
   stopGoogleSpeech();
-  setActiveModal({
-    type: 'GerarSenhaDisplay',
-    data: {
-      companyId,
-      slug,
-      printOnQueue: printConfig.print_on_queue,
-      hasActivePlan: printConfig.hasActivePlan,
-    },
+setActiveModal({
+  type: 'GerarSenhaDisplay',
+  data: {
+    companyId,
+    slug,
+  },
   });
   playText('Gerando sua senha...').catch(() => {});
   break;

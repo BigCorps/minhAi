@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
 import { triggerAutoPrint, formatQueueReceipt } from '@/lib/auto-print';
-import { useTurnstile } from '@/hooks/useTurnstile';
 import { 
   MapPin, 
   Clock, 
@@ -86,7 +85,6 @@ export default function GerarSenhaDisplay({
   const [isMobile, setIsMobile] = useState(false);
 
   const supabase = createClient();
-  const { getToken, containerRef } = useTurnstile();
   
   const [companyNameStr, setCompanyNameStr] = useState('');
 
@@ -181,8 +179,6 @@ export default function GerarSenhaDisplay({
   async function gerarNovaSenha() {
     try {
       setLoading(true);
-const token = await getToken();
-if (token) console.log('Turnstile OK');
 
       const { data: config, error: configError } = await supabase
         .from('fila_configs')
@@ -748,7 +744,6 @@ if (token) console.log('Turnstile OK');
   const contentWithTurnstile = (
     <>
       {content}
-      <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
     </>
   );
 

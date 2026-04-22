@@ -1914,22 +1914,22 @@ setLoading(false); // ← fora do if, dentro do load()
         <div className={`divide-y divide-gray-100 dark:divide-white/5 ${!hasActivePlan ? 'opacity-50 pointer-events-none' : ''}`}>
           {([
             {
-              field: 'print_on_purchase' as const,
+              field: 'print_auto_type_purchase' as const,
               label: 'Imprimir ao finalizar compra',
               descricao: 'Aciona a impressora automaticamente quando o cliente confirma o pagamento no Modo Venda.',
             },
             {
-              field: 'print_on_queue' as const,
+              field: 'print_auto_type_queue' as const,
               label: 'Imprimir senha da fila',
               descricao: 'Imprime a senha automaticamente quando o cliente a retira na fila de atendimento.',
             },
             {
-              field: 'print_on_payment' as const,
+              field: 'print_auto_type_payment' as const,
               label: 'Imprimir ao confirmar PIX',
               descricao: 'Imprime comprovante automaticamente após confirmação de pagamento via PIX.',
             },
           ] as const).map(({ field, label, descricao }) => {
-            const ativo = config[field] ?? false;
+            const ativo = !!config[field];
             return (
               <div key={field} className="flex items-center gap-4 px-5 py-4">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${

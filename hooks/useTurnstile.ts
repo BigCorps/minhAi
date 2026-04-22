@@ -57,9 +57,9 @@ export function useTurnstile() {
     if (widgetIdRef.current) return; // já renderizado
 
     widgetIdRef.current = window.turnstile?.render(containerRef.current, {
-      sitekey: SITE_KEY,
-      size: 'invisible',
-      callback: (token: string) => {
+        sitekey: SITE_KEY,
+        appearance: 'interaction-only',
+        callback: (token: string) => {
         tokenRef.current = token;
       },
       'error-callback': () => {

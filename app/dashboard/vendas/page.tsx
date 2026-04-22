@@ -1527,18 +1527,19 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
 const { data: { user } } = await supabase.auth.getUser();
 if (user) {
   const { data: credits } = await supabase
-    .from('user_credits')       // ✅ tabela correta
+    .from('user_credits')
     .select('has_active_plan, plan_expires_at')
-    .eq('user_id', user.id)     // ✅ filtra pelo usuário logado
+    .eq('user_id', user.id)
     .maybeSingle();
 
   setHasActivePlan(
     credits?.has_active_plan === true &&
     credits?.plan_expires_at != null &&
     new Date(credits.plan_expires_at) > new Date()
-      );
+  );
+} // ← fecha o if
 
-      setLoading(false);
+setLoading(false); // ← fora do if, dentro do load()
     }
     load();
   }, [companyId]);

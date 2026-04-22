@@ -105,7 +105,7 @@ export default function GerarSenhaDisplay({
     });
 
     if (result.useWindowPrint) {
-      printReceiptInIframe(receiptContent);
+      window.print();
     } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
       try {
         const { thermalPrinterService } = await import('@/lib/thermal-printer-service');

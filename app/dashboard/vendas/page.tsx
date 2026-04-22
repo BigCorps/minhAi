@@ -1918,8 +1918,6 @@ async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
           </p>
         </div>
       </div>
-
-    </div>
   );
 }
 

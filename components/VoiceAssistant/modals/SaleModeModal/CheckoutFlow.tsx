@@ -69,17 +69,18 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
         const supabase = createClient();
         const { data } = await supabase
           .from('companies')
-          .select('print_on_purchase, print_auto_type, name')
+          .select('print_auto_type_purchase, print_auto_type, name')
           .eq('id', companyId)
           .maybeSingle();
-        setPrintOnPurchase(data?.print_on_purchase ?? false);
+        setPrintOnPurchase(!!data?.print_auto_type_purchase);
         setPrintAutoType(data?.print_auto_type ?? 'local');
         setCompanyName(data?.name ?? '');
 
-        const { data: credits } = await supabase
-          .from('credits')
+const { data: { user } } = await supabase.auth.getUser();
+const { data: credits } = await supabase
+  .from('user_credits')         // ✅
+  .eq('user_id', user.id) 
           .select('has_active_plan, plan_expires_at')
-          .eq('company_id', companyId)
           .maybeSingle();
         setHasActivePlan(
           credits?.has_active_plan === true &&

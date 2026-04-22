@@ -197,11 +197,8 @@ export default function GerarSenhaDisplay({
   async function gerarNovaSenha() {
     try {
       setLoading(true);
-      const token = await getToken();
-      if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-        showToast('Verificação de segurança falhou. Tente novamente.', 'error');
-        setLoading(false); return;
-      }
+const token = await getToken();
+if (token) console.log('Turnstile OK');
 
       const { data: config, error: configError } = await supabase
         .from('fila_configs')

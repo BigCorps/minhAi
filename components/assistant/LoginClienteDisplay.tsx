@@ -75,7 +75,7 @@ export default function LoginClienteDisplay({
 }: LoginClienteDisplayProps) {
   const C = theme === 'dark' ? DARK : LIGHT;
   const { profile, loading, login, logout, register } = useProfile(data.slug);
-  const { getToken, TurnstileWidget } = useTurnstile();
+  const { getToken, containerRef } = useTurnstile();
 
   type Mode = 'loading' | 'logado' | 'login_cliente' | 'login_colab' | 'cadastro';
   const [mode, setMode]           = useState<Mode>('loading');
@@ -446,7 +446,7 @@ export default function LoginClienteDisplay({
           )}
 
           {/* Turnstile — widget invisível, necessário para getToken() funcionar */}
-          {TurnstileWidget}
+          <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
 
         </div>
       </div>

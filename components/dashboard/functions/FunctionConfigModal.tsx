@@ -3667,6 +3667,62 @@ const TocarMusicaForm = () => (
 );
 
 // ============================================================
+// Seção reutilizável: Impressão Automática (gatilhos por plano)
+// ============================================================
+const PrintAutoSection = ({
+  settings, onChange, printKey, hasActivePlan,
+}: {
+  settings: any;
+  onChange: (key: string, value: any) => void;
+  printKey: 'local' | 'remota' | 'recibo';
+  hasActivePlan: boolean;
+}) => {
+  const TOGGLES = [
+    { key: 'print_on_purchase' as const, label: 'Imprimir ao finalizar compra', description: 'Imprime recibo/comprovante automaticamente ao confirmar um pedido no Modo Venda.', value: settings.print_on_purchase ?? false },
+    { key: 'print_on_queue' as const, label: 'Imprimir senha da fila', description: 'Imprime a senha automaticamente quando o cliente retira uma senha na fila de atendimento.', value: settings.print_on_queue ?? false },
+    { key: 'print_on_payment' as const, label: 'Imprimir ao confirmar PIX', description: 'Imprime comprovante automaticamente após a confirmação de pagamento via PIX.', value: settings.print_on_payment ?? false },
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="border-t border-gray-200 dark:border-white/10 my-2" />
+      <div className="flex items-center gap-2 mb-1">
+        <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">Impressão Automática</p>
+      </div>
+      {!hasActivePlan && (
+        <div className="p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">Requer plano mensal ativo</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+              Esta funcionalidade só dispara automaticamente com um plano ativo.{' '}
+              <a href="/dashboard/credits" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">Contratar Agora →</a>
+            </p>
+          </div>
+        </div>
+      )}
+      <div className={`space-y-3 ${!hasActivePlan ? 'opacity-50 pointer-events-none' : ''}`}>
+        {TOGGLES.map(({ key, label, description, value }) => (
+          <label key={key} className="flex items-center justify-between cursor-pointer gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
+            </div>
+            <div className="relative flex-shrink-0">
+              <input type="checkbox" checked={value} onChange={e => onChange(key, e.target.checked)} className="sr-only peer" disabled={!hasActivePlan} />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500" />
+            </div>
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+        💡 Os toggles acima ativam a impressão automática via esta impressora ({printKey}) nos contextos indicados.
+      </p>
+    </div>
+  );
+};
+
+// ============================================================
 // Formulário de configuração para Impressão Local (Nativa)
 // ============================================================
  
@@ -3746,6 +3802,7 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
         <input type="number" step="1" min="1" max="200" value={maxPages} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-purple-500" />
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Limite de páginas para evitar abusos</p>
       </div>
+      <PrintAutoSection settings={settings} onChange={onChange} printKey="local" hasActivePlan={hasActivePlan} />
     </div>
   );
 };
@@ -3754,7 +3811,7 @@ const NativeConfigForm = ({ settings, onChange }: any) => {
 // Formulário de configuração para Impressão Remota (PrintNode)
 // ============================================================
  
-const PrintNodeConfigForm = ({ settings, onChange }: any) => {
+const PrintNodeConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   const supabase = createClient();
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -3931,6 +3988,7 @@ const handleTestConnection = async () => {
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Máximo de Páginas</label>
         <input type="number" step="1" min="1" max="200" value={settings.print_max_pages_per_job ?? 50} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-indigo-500" />
       </div>
+      <PrintAutoSection settings={settings} onChange={onChange} printKey="remota" hasActivePlan={hasActivePlan} />
     </div>
   );
 };
@@ -3939,7 +3997,7 @@ const handleTestConnection = async () => {
 // Formulário de configuração para Impressão Recibo (Térmica)
 // ============================================================
  
-const ThermalConfigForm = ({ settings, onChange }: any) => {
+const ThermalConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   const [detectingPrinters, setDetectingPrinters] = useState(false);
   const [thermalPrinters, setThermalPrinters] = useState<any[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
@@ -4071,6 +4129,7 @@ const ThermalConfigForm = ({ settings, onChange }: any) => {
         <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Máximo de Páginas</label>
         <input type="number" step="1" min="1" max="200" value={maxPages} onChange={e => onChange('print_max_pages_per_job', parseInt(e.target.value) || 50)} className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-white/10 dark:text-white focus:ring-2 focus:ring-green-500" />
       </div>
+      <PrintAutoSection settings={settings} onChange={onChange} printKey="recibo" hasActivePlan={hasActivePlan} />
     </div>
   );
 };
@@ -4543,16 +4602,33 @@ export default function FunctionConfigModal({
   const supabase = createClient();
   const [settings, setSettings] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+const [isSaving, setIsSaving] = useState(false);
+const [hasActivePlan, setHasActivePlan] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
 
     const fetchSettings = async () => {
       setIsLoading(true);
+
+      try {
+        const { data: creditsData } = await supabase
+          .from('credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('company_id', companyId)
+          .maybeSingle();
+        const active =
+          creditsData?.has_active_plan === true &&
+          creditsData?.plan_expires_at != null &&
+          new Date(creditsData.plan_expires_at) > new Date();
+        setHasActivePlan(active);
+      } catch {
+        setHasActivePlan(false);
+      }
+
       const { data, error } = await supabase
         .from('companies')
-.select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description')        .eq('id', companyId)
+.select('whatsapp_number, instagram_username, website, facebook, email_contato, linkedin, tiktok, twitter, telefone_fixo, receiving_pix_key, receiving_pix_key_type, system_prompt, orcamento_prompt, brand_description, business_hours, business_address, video_instrucoes_url, sequencia_videos_urls, infinitepay_handle, wifi_network_name, wifi_network_password, cardapio_url, cardapio_description, validar_cupom, qrcode_content, qrcode_label, manual_payment_enabled, print_price_per_page, print_max_pages_per_job, print_color_enabled, print_price_bw, print_price_color, printnode_computer_id, printnode_printer_id_bw, printnode_printer_id_color, thermal_printer_id, thermal_connection_type, youtube_channel_url, youtube_channel_name, youtube_channel_description, print_on_purchase, print_on_queue, print_on_payment')        .eq('id', companyId)
         .single();
 
       if (data) {
@@ -4641,6 +4717,7 @@ export default function FunctionConfigModal({
                 onChange={handleSettingChange}
                 companyId={companyId}
                 functionKey={functionData?.function_key}
+                hasActivePlan={hasActivePlan}
               />
             ) : (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">

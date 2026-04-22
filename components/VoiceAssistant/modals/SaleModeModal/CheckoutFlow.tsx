@@ -69,11 +69,11 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
         const supabase = createClient();
         const { data } = await supabase
           .from('companies')
-          .select('print_auto_type_purchase, print_auto_type, name')
+          .select('print_auto_type_purchase, name')
           .eq('id', companyId)
           .maybeSingle();
         setPrintOnPurchase(!!data?.print_auto_type_purchase);
-        setPrintAutoType(data?.print_auto_type ?? 'local');
+        setPrintAutoType((data?.print_auto_type_purchase as any) ?? 'local');
         setCompanyName(data?.name ?? '');
 
 const { data: { user } } = await supabase.auth.getUser();

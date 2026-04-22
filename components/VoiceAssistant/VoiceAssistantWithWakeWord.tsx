@@ -2004,6 +2004,7 @@ const handleTextMessage = async (message: string) => {
           onConfirmPix={handleConfirmPixLocal}
           onCancelPix={handleCancelPixLocal}
           playText={playText}
+          printConfig={printConfig} 
         />
       </div>
     );
@@ -2240,6 +2241,7 @@ const handleTextMessage = async (message: string) => {
         onConfirmPix={handleConfirmPixLocal}
         onCancelPix={handleCancelPixLocal}
         playText={playText}
+        printConfig={printConfig} 
       />
     </div>
   );

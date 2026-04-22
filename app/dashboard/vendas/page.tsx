@@ -1579,19 +1579,37 @@ async function toggleImpressao(
   const novoValor = ativo ? null : (config.print_auto_type ?? 'local');
   await supabase
     .from('companies')
-    .update({ [field]: novoValor })  // ← string ou null
+    .update({ [field]: novoValor })
     .eq('id', companyId);
   setConfig(prev => ({ ...prev, [field]: novoValor }));
 }
 
-  async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
-    if (!hasActivePlan) return;
-    await supabase
-      .from('companies')
-      .update({ print_auto_type: value })
-      .eq('id', companyId);
-    setConfig(prev => ({ ...prev, print_auto_type: value }));
-  }
+async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
+  if (!hasActivePlan) return;
+
+  // Monta o update: muda o tipo nos campos que JÁ estão ativos
+  const updates: Record<string, any> = { print_auto_type: value };
+  
+  const campos = [
+    'print_auto_type_purchase',
+    'print_auto_type_queue', 
+    'print_auto_type_payment'
+  ] as const;
+
+  // Se o campo já tem um valor (está ativo), atualiza para o novo tipo
+  campos.forEach(campo => {
+    if (config[campo]) {
+      updates[campo] = value;
+    }
+  });
+
+  await supabase
+    .from('companies')
+    .update(updates)
+    .eq('id', companyId);
+
+  setConfig(prev => ({ ...prev, ...updates }));
+}
 
   const metodos = [
     {

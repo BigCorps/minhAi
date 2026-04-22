@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { User } from '@supabase/supabase-js';
-import { Check, Zap, Star, TrendingUp, Shield, Clock, Globe, Users, Sparkles, QrCode } from 'lucide-react';
+import { Check, Zap, Star, TrendingUp, Shield, Clock, Globe, Users, Print, Sparkles, QrCode } from 'lucide-react';
 import PaymentModal from '@/components/PaymentModal';
 import { useTheme } from 'next-themes';
 import { useSearchParams } from 'next/navigation';
@@ -346,6 +346,7 @@ export default function CreditsPage() {
                       { icon: Users, label: 'Serviços Meta' },
                       { icon: TrendingUp, label: 'Linha de Produção' },
                       { icon: QrCode, label: 'QR Codes com o seu logo' },
+                      { icon: Print, label: 'Impressão Remota, Bluetooth ou Local' },
                       ...(pkg.has_consultoria ? [
                         { icon: Star, label: 'Subdomínio Próprio' },
                         { icon: Shield, label: 'Consultoria' }

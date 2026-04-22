@@ -50,11 +50,11 @@ export default function PIXConfirmationModal({
     const supabase = createClient();
     supabase
       .from('companies')
-      .select('print_auto_type')
+      .select('print_auto_type_payment')
       .eq('id', companyId)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.print_auto_type) setPrintAutoType(data.print_auto_type);
+        if (data?.print_auto_type_payment) setPrintAutoType(data.print_auto_type_payment);
       })
       .catch(() => {});
   }, [printOnPayment, companyId]);
@@ -150,11 +150,7 @@ const handleConfirm = async () => {
           });
 
           // Envia para a impressora
-          await triggerAutoPrint('payment', {
-            companyId: companyId,
-            trigger: 'payment',
-            content: receiptContent
-          });
+          await triggerAutoPrint({ companyId, trigger: 'payment', content: receiptContent });
         } catch (printError) {
           console.error("Erro na impressão:", printError);
         }

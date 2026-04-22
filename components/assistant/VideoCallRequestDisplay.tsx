@@ -267,7 +267,7 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
       const endDateTime   = new Date(new Date(`${meetDate}T${meetTime}:00`).getTime() + 60 * 60 * 1000).toISOString();
 
       const supabase = createClient();
-      const { error: eventError } = await supabase.functions.invoke('criar-evento-google', {
+      const { error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
         body: {
           company_id:  data.companyId,
           summary:     meetTitle || 'Reunião',

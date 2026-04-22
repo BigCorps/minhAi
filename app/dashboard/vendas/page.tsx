@@ -507,6 +507,7 @@ function ImportarModal({
   const [loading, setLoading] = useState(true);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [importando, setImportando] = useState(false);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -681,6 +682,8 @@ function VisaoGeral({
     receitaHoje: 0,
   });
   const [loading, setLoading] = useState(true);
+  
+  const [hasActivePlan, setHasActivePlan] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -850,6 +853,8 @@ function AbaProducts({ companyId }: { companyId: string }) {
   const [importarAberto, setImportarAberto] = useState(false);
   const [opcionaisProduto, setOpcionaisProduto] = useState<ProdutoVenda | null>(null);
   const [csvAberto, setCsvAberto] = useState(false);
+  
+  const [hasActivePlan, setHasActivePlan] = useState(false);
 
   useEffect(() => { load(); }, [companyId]);
 
@@ -1242,6 +1247,7 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  const [hasActivePlan, setHasActivePlan] = useState(false);
   useEffect(() => {
     load();
   }, [companyId]);
@@ -1505,6 +1511,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
   const [config, setConfig] = useState<Record<string, any>>({});
   const [salvando, setSalvando] = useState<string | null>(null);
 
+  const [hasActivePlan, setHasActivePlan] = useState(false);
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -1517,23 +1524,24 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       setConfig(data ?? {});
 
       // Verificar plano ativo
-      const { data: credits } = await supabase
-        .from('credits')
-        .select('has_active_plan, plan_expires_at')
-        .eq('company_id', companyId)
-        .maybeSingle();
-      setHasActivePlan(
-        credits?.has_active_plan === true &&
-        credits?.plan_expires_at != null &&
-        new Date(credits.plan_expires_at) > new Date()
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+  const { data: credits } = await supabase
+    .from('user_credits')       // ✅ tabela correta
+    .select('has_active_plan, plan_expires_at')
+    .eq('user_id', user.id)     // ✅ filtra pelo usuário logado
+    .maybeSingle();
+
+  setHasActivePlan(
+    credits?.has_active_plan === true &&
+    credits?.plan_expires_at != null &&
+    new Date(credits.plan_expires_at) > new Date()
       );
 
       setLoading(false);
     }
     load();
   }, [companyId]);
-
-  const [hasActivePlan, setHasActivePlan] = useState(false);
 
   const [ativados, setAtivados] = useState<Record<string, boolean>>({});
 

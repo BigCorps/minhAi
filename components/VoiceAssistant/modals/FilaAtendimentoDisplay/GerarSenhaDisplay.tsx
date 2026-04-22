@@ -96,11 +96,11 @@ export default function GerarSenhaDisplay({
     if (!printOnQueue) return;
     supabase
       .from('companies')
-      .select('print_auto_type, name')
+      .select('print_auto_type_queue, name')
       .eq('id', companyId)
       .maybeSingle()
       .then(({ data: co }) => {
-        if (co?.print_auto_type) setPrintAutoType(co.print_auto_type);
+        if (co?.print_auto_type_queue) setPrintAutoType(co.print_auto_type_queue);
         if (co?.name) setCompanyNameStr(co.name);
       })
       .catch(() => {});

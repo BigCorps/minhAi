@@ -60,7 +60,6 @@ export function useTurnstile() {
         sitekey: SITE_KEY,
         appearance: 'interaction-only',
         callback: (token: string) => {
-          console.log("✅ Token gerado com sucesso:", token); // <-- Adicione isso
         tokenRef.current = token;
       },
       'error-callback': () => {

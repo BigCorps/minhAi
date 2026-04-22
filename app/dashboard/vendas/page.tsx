@@ -1571,12 +1571,19 @@ setLoading(false); // ← fora do if, dentro do load()
     setSalvando(null);
   }
 
+const tipoAtual = 
+  config.print_auto_type_purchase || 
+  config.print_auto_type_queue || 
+  config.print_auto_type_payment || 
+  config.print_auto_type || 
+  'local';
+
 async function toggleImpressao(
   field: 'print_auto_type_purchase' | 'print_auto_type_queue' | 'print_auto_type_payment',
   ativo: boolean
 ) {
   if (!hasActivePlan) return;
-  const novoValor = ativo ? null : (config.print_auto_type ?? 'local');
+  const novoValor = ativo ? null : tipoAtual;
   await supabase
     .from('companies')
     .update({ [field]: novoValor })
@@ -1587,20 +1594,17 @@ async function toggleImpressao(
 async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
   if (!hasActivePlan) return;
 
-  // Monta o update: muda o tipo nos campos que JÁ estão ativos
   const updates: Record<string, any> = { print_auto_type: value };
   
+  // Atualiza todos os campos que já estão ativos para o novo tipo
   const campos = [
     'print_auto_type_purchase',
-    'print_auto_type_queue', 
-    'print_auto_type_payment'
+    'print_auto_type_queue',
+    'print_auto_type_payment',
   ] as const;
 
-  // Se o campo já tem um valor (está ativo), atualiza para o novo tipo
   campos.forEach(campo => {
-    if (config[campo]) {
-      updates[campo] = value;
-    }
+    if (config[campo]) updates[campo] = value;
   });
 
   await supabase
@@ -1995,7 +1999,7 @@ async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
               </p>
             </div>
             <select
-              value={config.print_auto_type ?? 'local'}
+              value={tipoAtual}
               disabled={!hasActivePlan}
               onChange={e => savePrintAutoType(e.target.value as 'local' | 'remota' | 'recibo')}
               className="text-sm border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed"

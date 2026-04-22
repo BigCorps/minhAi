@@ -1233,7 +1233,7 @@ function AbaProducts({ companyId }: { companyId: string }) {
 
 // ─── Aba: Pedidos ─────────────────────────────────────────────────────────────
 
-function AbaPedidos({ companyId }: { companyId: string }) {
+function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActivePlan: boolean }) {
   const supabase = createClient();
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1510,7 +1510,8 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
       setLoading(true);
       const { data } = await supabase
         .from('companies')
-        .select('receiving_pix_key, infinitepay_handle, mp_access_token, mp_terminal_id, print_on_purchase, print_on_queue, print_on_payment, print_auto_type')
+        .select('receiving_pix_key, infinitepay_handle, mp_access_token, mp_terminal_id, \
+  print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, print_auto_type')
         .eq('id', companyId)
         .single();
       setConfig(data ?? {});
@@ -1562,7 +1563,10 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
     setSalvando(null);
   }
 
-  async function toggleImpressao(field: 'print_on_purchase' | 'print_on_queue' | 'print_on_payment', atual: boolean) {
+  async function toggleImpressao(
+  field: 'print_auto_type_purchase' | 'print_auto_type_queue' | 'print_auto_type_payment',
+  atual: boolean
+) {
     if (!hasActivePlan) return;
     await supabase
       .from('companies')

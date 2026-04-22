@@ -113,7 +113,8 @@ const { data: credits } = await supabase
       content: receiptContent,
     });
 
-if (result.useWindowPrint) printReceiptInIframe(receiptContent);
+    if (result.useWindowPrint) {
+      printReceiptInIframe(receiptContent);
     } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
       try {
         const { thermalPrinterService } = await import('@/lib/thermal-printer-service');

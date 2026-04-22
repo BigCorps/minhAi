@@ -160,36 +160,49 @@ export function VoiceAssistantWithWakeWord({
   const functionSettings = useFunctionSettings(companyId);
 
   // ── Config de impressão ───────────────────────────────────
-  const [printConfig, setPrintConfig] = useState<{
-    print_on_purchase: boolean;
-    print_on_queue: boolean;
-    print_on_payment: boolean;
-    hasActivePlan: boolean;
-  }>({ print_on_purchase: false, print_on_queue: false, print_on_payment: false, hasActivePlan: false });
+const [printConfig, setPrintConfig] = useState<{
+  print_on_purchase: boolean;
+  print_on_queue: boolean;
+  print_on_payment: boolean;
+  hasActivePlan: boolean;
+}>({ print_on_purchase: false, print_on_queue: false, print_on_payment: false, hasActivePlan: false });
 
-  useEffect(() => {
-    if (!companyId) return;
-    async function loadPrintConfig() {
-      try {
-        const supabase = createClient();
-        const [{ data: company }, { data: credits }] = await Promise.all([
-          supabase.from('companies').select('print_on_purchase, print_on_queue, print_on_payment').eq('id', companyId).maybeSingle(),
-          supabase.from('credits').select('has_active_plan, plan_expires_at').eq('company_id', companyId).maybeSingle(),
-        ]);
-        const active =
+useEffect(() => {
+  if (!companyId) return;
+  async function loadPrintConfig() {
+    try {
+      const supabase = createClient();
+      const { data: company } = await supabase
+        .from('companies')
+        .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')
+        .eq('id', companyId)
+        .maybeSingle();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      let active = false;
+      if (user) {
+        const { data: credits } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        active =
           credits?.has_active_plan === true &&
           credits?.plan_expires_at != null &&
           new Date(credits.plan_expires_at) > new Date();
-        setPrintConfig({
-          print_on_purchase: company?.print_on_purchase ?? false,
-          print_on_queue:    company?.print_on_queue    ?? false,
-          print_on_payment:  company?.print_on_payment  ?? false,
-          hasActivePlan: active,
-        });
-      } catch { /* silencioso */ }
-    }
-    loadPrintConfig();
-  }, [companyId]);
+      }
+
+      setPrintConfig({
+        print_on_purchase: !!company?.print_auto_type_purchase,
+        print_on_queue:    !!company?.print_auto_type_queue,
+        print_on_payment:  !!company?.print_auto_type_payment,
+        hasActivePlan: active,
+      });
+    } catch { /* silencioso */ }
+  }
+  loadPrintConfig();
+}, [companyId]);
+  
   const { noiseWarning, repromptWarning, handleVolumeChange, triggerRepromptWarning } = useNoiseWarning();
   const { wakeWordDetectorRef, endCommands } = useWakeWordDetector(companyWakeWord);
   const { currentAudioRef, feedbackAudioRef, playText: _playText, stopAudioImmediately } = useAudioPlayer(setIsPlayingAudio);

@@ -118,33 +118,6 @@ function ProdutoModal({ companyId, produto, onClose, onSalvo }: ProdutoModalProp
   const [deletando, setDeletando] = useState(false);
   const [confirmarDelete, setConfirmarDelete] = useState(false);
 
-  // Verificação de Plano Ativo
-  useEffect(() => {
-    async function checkPlan() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: creditsData } = await supabase
-          .from('user_credits')
-          .select('has_active_plan, plan_expires_at')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        const active =
-          creditsData?.has_active_plan === true &&
-          creditsData?.plan_expires_at != null &&
-          new Date(creditsData.plan_expires_at) > new Date();
-
-        setHasActivePlan(active);
-        console.log("Plano verificado:", active);
-      } catch (error) {
-        console.error('Erro ao verificar plano:', error);
-      }
-    }
-    checkPlan();
-  }, [supabase]);
-
   function set(key: keyof ProdutoVendaInput, value: any) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -2019,7 +1992,33 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
 function VendasPageContent() {
   const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
   const [aba, setAba] = useState<Aba>('visao_geral');
-  const [hasActivePlan, setHasActivePlan] = useState(false);
+  const supabase = createClient(); // Isso permite que o código fale com o banco
+  const [hasActivePlan, setHasActivePlan] = useState(false); // Criando a variável do plano
+
+  useEffect(() => {
+    async function checkPlan() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: creditsData } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const active =
+          creditsData?.has_active_plan === true &&
+          creditsData?.plan_expires_at != null &&
+          new Date(creditsData.plan_expires_at) > new Date();
+
+        setHasActivePlan(active);
+      } catch (error) {
+        console.error('Erro ao verificar plano:', error);
+      }
+    }
+    checkPlan();
+  }, [supabase]);
 
   const abas: { key: Aba; label: string; icon: any }[] = [
     { key: 'visao_geral', label: 'Visão Geral', icon: BarChart2 },

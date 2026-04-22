@@ -1914,7 +1914,7 @@ async function savePrintAutoType(value: 'local' | 'remota' | 'recibo') {
 
         <div className="px-5 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-slate-800/40">
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            💡 Configure a impressora escolhida em Funções → Impressão Local / Recibo / Remota.
+            💡 Configure a impressão final nas Funções → Impressão Local / Recibo / Remota (Requer plano Mensal).
           </p>
         </div>
       </div>

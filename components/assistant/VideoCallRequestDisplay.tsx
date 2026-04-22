@@ -267,17 +267,17 @@ export default function VideoCallRequestDisplay({ data, onClose, theme = 'dark' 
       const endDateTime   = new Date(new Date(`${meetDate}T${meetTime}:00`).getTime() + 60 * 60 * 1000).toISOString();
 
       const supabase = createClient();
-      const { error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
-        body: {
-          company_id:  data.companyId,
-          summary:     meetTitle || 'Reunião',
-          description: `Reunião via Google Meet\nLink: ${meetData.url}`,
-          start:       { dateTime: startDateTime },
-          end:         { dateTime: endDateTime },
-          attendees:   [{ email: meetEmail }],
-          location:    meetData.url,
-        },
-      });
+const { error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
+  body: {
+    company_id:  data.companyId,
+    summary:     meetTitle || 'Reunião',
+    description: `Reunião via Google Meet\nLink: ${meetData.url}`,
+    start_time:  startDateTime,   // ✅ corrigido
+    end_time:    endDateTime,     // ✅ corrigido
+    attendees:   [{ email: meetEmail }],
+    location:    meetData.url,
+  },
+});
       if (eventError) throw new Error('Erro ao criar evento no calendário');
 
       setMeetSuccess(`Reunião agendada! Convite enviado para ${meetEmail} com o link do Google Meet.`);

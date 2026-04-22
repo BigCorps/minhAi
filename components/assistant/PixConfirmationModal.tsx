@@ -93,13 +93,28 @@ export default function PIXConfirmationModal({
         const response = await supabase.functions.invoke('confirmar-pix-assistente', {
           body: { transaction_id: transactionId },
         });
-        if (!response.error && response.data?.success) {
-          showToast(`✅ Pagamento confirmado!`, 'success');
-          clearInterval(interval);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          setConfirmed(true);
-          await onConfirm();
-        }
+// No useEffect do polling (linha ~107)
+if (!response.error && response.data?.success) {
+  showToast(`✅ Pagamento confirmado!`, 'success');
+  clearInterval(interval);
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // ✅ Imprimir automaticamente no auto-check também
+  if (printOnPayment && hasActivePlan && companyId) {
+    try {
+      const receiptContent = formatPixReceipt({ companyName, amount, transactionId });
+      const result = await triggerAutoPrint({ companyId, trigger: 'payment', content: receiptContent });
+      if (result.useWindowPrint) window.print();
+      else if ((result as any).useThermalPrint) {
+        const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+        await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
+      }
+    } catch { /* silencioso */ }
+  }
+
+  setConfirmed(true);
+  await onConfirm();
+}
       } catch {
         // silencioso
       }
@@ -112,39 +127,46 @@ export default function PIXConfirmationModal({
   };
 
 const handleConfirm = async () => {
-    try {
-      setIsConfirming(true);
+  try {
+    setIsConfirming(true);
 
-      // 1. Valida o Turnstile (Segurança)
-      const token = await getToken();
-      if (token) console.log("Segurança validada");
+    const token = await getToken();
+    if (token) console.log("Segurança validada");
 
-      // 2. Confirma o pagamento no sistema
-      await onConfirm();
-      setConfirmed(true);
-
-      // 3. Tenta imprimir se o plano estiver ativo
-      if (printOnPayment && hasActivePlan && companyId) {
-        try {
-          // Formata o texto do comprovante
-          const receiptContent = formatPixReceipt({
-            companyName: companyName,
-            amount: amount,
-            transactionId: transactionId
-          });
-
-          // Envia para a impressora
-          await triggerAutoPrint({ companyId, trigger: 'payment', content: receiptContent });
-        } catch (printError) {
-          console.error("Erro na impressão:", printError);
+    // 1. Imprime ANTES de confirmar/fechar
+    if (printOnPayment && hasActivePlan && companyId) {
+      try {
+        const receiptContent = formatPixReceipt({
+          companyName,
+          amount,
+          transactionId,
+        });
+        const result = await triggerAutoPrint({
+          companyId,
+          trigger: 'payment',
+          content: receiptContent,
+        });
+        if (result.useWindowPrint) window.print();
+        else if ((result as any).useThermalPrint) {
+          const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+          await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
         }
+      } catch (printError) {
+        console.error('Erro na impressão:', printError);
+        // não bloqueia o fluxo se impressão falhar
       }
-    } catch (err) {
-      console.error("Erro ao confirmar:", err);
-    } finally {
-      setIsConfirming(false);
     }
-  };
+
+    // 2. Confirma e fecha depois
+    await onConfirm();
+    setConfirmed(true);
+
+  } catch (err) {
+    console.error('Erro ao confirmar:', err);
+  } finally {
+    setIsConfirming(false);
+  }
+};
 
   const handleCancel = async () => {
     setIsCancelling(true);

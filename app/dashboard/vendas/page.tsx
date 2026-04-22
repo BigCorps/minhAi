@@ -1247,7 +1247,6 @@ function AbaPedidos({ companyId, hasActivePlan }: { companyId: string; hasActive
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const [hasActivePlan, setHasActivePlan] = useState(false);
   useEffect(() => {
     load();
   }, [companyId]);

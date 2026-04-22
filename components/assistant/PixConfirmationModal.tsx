@@ -42,22 +42,6 @@ export default function PIXConfirmationModal({
   const [autoChecking, setAutoChecking] = useState(false)
   const [confirmed, setConfirmed] = useState(false);
   const { getToken, containerRef } = useTurnstile();
-  const [printAutoType, setPrintAutoType] = useState<'local' | 'remota' | 'recibo'>('local');
-
-  // Busca print_auto_type da company para saber qual motor usar
-  useEffect(() => {
-    if (!printOnPayment || !companyId) return;
-    const supabase = createClient();
-    supabase
-      .from('companies')
-      .select('print_auto_type_payment')
-      .eq('id', companyId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.print_auto_type_payment) setPrintAutoType(data.print_auto_type_payment);
-      })
-      .catch(() => {});
-  }, [printOnPayment, companyId]);
 
   const handleAutoPrint = async () => {
     if (!hasActivePlan || !printOnPayment || !companyId) return;

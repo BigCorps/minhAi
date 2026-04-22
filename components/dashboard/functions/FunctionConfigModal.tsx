@@ -3726,7 +3726,7 @@ const PrintAutoSection = ({
 // Formulário de configuração para Impressão Local (Nativa)
 // ============================================================
  
-const NativeConfigForm = ({ settings, onChange }: any) => {
+const NativeConfigForm = ({ settings, onChange, hasActivePlan }: any) => {
   const manualPaymentEnabled = settings.manual_payment_enabled ?? false;
   const pricePerPage = settings.print_price_per_page ?? 0.50;
   const maxPages = settings.print_max_pages_per_job ?? 50;

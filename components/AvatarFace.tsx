@@ -24,16 +24,10 @@ interface AvatarFaceProps {
     qrCodeUrl: string;
     pixCode: string;
   } | null;
-  /** companyId da empresa — necessário para impressão automática do PIX */
-  companyId?: string;
   onCloseQRCode?: () => void;
   onCopyQRCode?: () => void;
   onConfirmPix?: () => Promise<void>;
   onCancelPix?: () => Promise<void>;
-  avatarType?: 'face' | 'orb';
-  printOnPayment?: boolean;
-  hasActivePlan?: boolean;
-  isWakeWordDetected?: boolean;
 }
 
 // ✅ Novas expressões adicionadas: wink, excited, confused, embarrassed, love, skeptical, starry, nervous, cool
@@ -55,11 +49,6 @@ export function AvatarFace({
   onCopyQRCode,
   onConfirmPix,
   onCancelPix,
-  avatarType = 'face',
-  printOnPayment = false,
-  hasActivePlan = false,
-  isWakeWordDetected = false,
-  companyId = '',
 }: AvatarFaceProps) {
 
   const isDark = theme === 'dark';
@@ -103,7 +92,7 @@ export function AvatarFace({
   const blinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exprTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showFace = avatarType === 'face' && !isProcessing && !isSpeaking;
+  const showFace = !isProcessing && !isSpeaking;
   const isActive = isSpeaking || isProcessing || isListening;
 
   useEffect(() => {
@@ -607,9 +596,6 @@ export function AvatarFace({
             onConfirm={onConfirmPix || (async () => { })}
             onCancel={onCancelPix || (async () => { })}
             theme={theme}
-            printOnPayment={printOnPayment}
-            hasActivePlan={hasActivePlan}
-            companyId={companyId}
           />
         </div>
       )}

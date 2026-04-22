@@ -159,54 +159,58 @@ export default function PrivacyPage() {
                 <li>Acesso restrito a dados pessoais apenas para pessoal autorizado</li>
               </ul>
 
-<h2>4. Integração com Serviços de Terceiros</h2>
+              <h2>4. Integração com Serviços de Terceiros</h2>
 
-<h3>4.1 Google</h3>
-<p>Ao conectar sua conta Google ao minhAi, você nos autoriza a acessar apenas os dados necessários para as funcionalidades que você utilizar:</p>
-<ul>
-  <li><strong>Gmail:</strong> Envio de emails compostos por você via comando de voz</li>
-  <li><strong>Google Calendar:</strong> Criação e visualização de eventos por comando de voz</li>
-  <li><strong>Google Drive:</strong> Leitura de imagens em pastas selecionadas por você para exibição em painéis digitais</li>
-  <li><strong>YouTube:</strong> Busca e reprodução de vídeos solicitados por você</li>
-  <li><strong>Smart Device Management:</strong> Controle de dispositivos Google Nest/Home da sua conta por comando de voz</li>
-</ul>
-<p>O uso dos dados das APIs do Google segue estritamente a <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado. Não utilizamos dados do Google para fins de publicidade ou marketing e não vendemos esses dados a terceiros.</p>
+              <h3>4.1 Google</h3>
+              <p>Ao conectar sua conta Google ao minhAi, você nos autoriza a acessar apenas os dados necessários para as funcionalidades que você utilizar:</p>
+              <ul>
+                <li><strong>Gmail:</strong> Envio de emails compostos por você via comando de voz</li>
+                <li><strong>Google Calendar:</strong> Criação e visualização de eventos por comando de voz</li>
+                <li><strong>Google Drive:</strong> Leitura de imagens em pastas selecionadas por você para exibição em painéis digitais</li>
+                <li><strong>YouTube:</strong> Busca e reprodução de vídeos solicitados por você</li>
+                <li><strong>Smart Device Management:</strong> Controle de dispositivos Google Nest/Home da sua conta por comando de voz</li>
+                <li><strong>Google Meet:</strong> Criação de reuniões agendadas via assistente de voz, com envio de convite por email aos participantes através do Google Calendar</li>
+                <li><strong>Google Business Profile:</strong> Leitura e sincronização de informações da sua empresa (nome, endereço, horários, avaliações) com o assistente, para responder perguntas de clientes e monitorar sua reputação online</li>
+              </ul>
+              <p>O uso dos dados das APIs do Google segue estritamente a <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado. Não utilizamos dados do Google para fins de publicidade ou marketing e não vendemos esses dados a terceiros.</p>
 
-<h3>4.2 Meta (Facebook, Instagram, WhatsApp)</h3>
-<p>Ao conectar suas contas Meta ao minhAi, você nos autoriza a:</p>
-<ul>
-  <li>Acessar e gerenciar mensagens para que o assistente possa responder em seu nome</li>
-  <li>Publicar conteúdo previamente aprovado por você</li>
-</ul>
-<p>Você é responsável por garantir que o uso está em conformidade com os Termos de Serviço da Meta.</p>
+              <h3>4.2 Meta (Facebook, Instagram, WhatsApp)</h3>
+              <p>Ao conectar suas contas Meta ao minhAi, você nos autoriza a:</p>
+              <ul>
+                <li>Acessar e gerenciar mensagens para que o assistente possa responder em seu nome</li>
+                <li>Publicar conteúdo previamente aprovado por você</li>
+              </ul>
+              <p>Você é responsável por garantir que o uso está em conformidade com os Termos de Serviço da Meta.</p>
 
-<h3>4.3 Revogação de Acesso</h3>
-<p>Você pode revogar o acesso do minhAi às suas contas a qualquer momento através das configurações da plataforma ou diretamente nas configurações de aplicativos do Google ou da Meta.</p>
+              <h3>4.3 Revogação de Acesso</h3>
+              <p>Você pode revogar o acesso do minhAi às suas contas a qualquer momento através das configurações da plataforma ou diretamente nas configurações de aplicativos do Google ou da Meta.</p>
 
-<h2>5. Política de Uso Limitado das APIs do Google</h2>
-<div className={`p-4 rounded-lg border my-4 ${
-  theme === 'dark' ? 'bg-green-500/10 border-green-500/20' : 'bg-green-50 border-green-200'
-}`}>
-  <p className="text-sm !mb-2">
-    <strong>Declaração de Uso Limitado (Google API Services User Data Policy):</strong>
-  </p>
-  <p className="text-sm !mb-2">
-    O uso pelo minhAi de informações recebidas das APIs do Google seguirá a{' '}
-    <a href="https://developers.google.com/terms/api-services-user-data-policy" 
-       target="_blank" rel="noopener noreferrer" 
-       className={`underline font-semibold ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
-      Política de Dados do Usuário dos Serviços de API do Google
-    </a>
-    , incluindo os requisitos de Uso Limitado. Especificamente:
-  </p>
-  <ul className="text-sm space-y-1">
-    <li>✅ Usamos dados das APIs do Google apenas para fornecer ou melhorar as funcionalidades voltadas ao usuário descritas nesta política</li>
-    <li>✅ Não usamos dados das APIs do Google para veicular anúncios</li>
-    <li>✅ Não permitimos que humanos leiam dados das APIs do Google, exceto com consentimento explícito do usuário para suporte técnico, ou conforme exigido por lei</li>
-    <li>✅ Não transferimos dados das APIs do Google para terceiros, exceto quando necessário para fornecer o serviço solicitado pelo usuário, em conformidade com a lei, ou como parte de uma fusão, aquisição ou venda de ativos</li>
-    <li>✅ Não usamos dados das APIs do Google para fins de pesquisa de mercado</li>
-  </ul>
-</div>
+              <h2>5. Política de Uso Limitado das APIs do Google</h2>
+              <div className={`p-4 rounded-lg border my-4 ${
+                theme === 'dark' ? 'bg-green-500/10 border-green-500/20' : 'bg-green-50 border-green-200'
+              }`}>
+                <p className="text-sm !mb-2">
+                  <strong>Declaração de Uso Limitado (Google API Services User Data Policy):</strong>
+                </p>
+                <p className="text-sm !mb-2">
+                  O uso pelo minhAi de informações recebidas das APIs do Google seguirá a{' '}
+                  <a href="https://developers.google.com/terms/api-services-user-data-policy" 
+                     target="_blank" rel="noopener noreferrer" 
+                     className={`underline font-semibold ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
+                    Política de Dados do Usuário dos Serviços de API do Google
+                  </a>
+                  , incluindo os requisitos de Uso Limitado. Especificamente:
+                </p>
+                <ul className="text-sm space-y-1">
+                  <li>✅ Usamos dados das APIs do Google apenas para fornecer ou melhorar as funcionalidades voltadas ao usuário descritas nesta política</li>
+                  <li>✅ Não usamos dados das APIs do Google para veicular anúncios</li>
+                  <li>✅ Não permitimos que humanos leiam dados das APIs do Google, exceto com consentimento explícito do usuário para suporte técnico, ou conforme exigido por lei</li>
+                  <li>✅ Não transferimos dados das APIs do Google para terceiros, exceto quando necessário para fornecer o serviço solicitado pelo usuário, em conformidade com a lei, ou como parte de uma fusão, aquisição ou venda de ativos</li>
+                  <li>✅ Não usamos dados das APIs do Google para fins de pesquisa de mercado</li>
+                  <li>✅ Usamos o Google Meet apenas para criar espaços de reunião explicitamente solicitados pelo usuário autenticado</li>
+                  <li>✅ Usamos o Google Business Profile apenas para leitura e sincronização de dados da própria empresa do usuário autenticado, nunca de terceiros</li>
+                </ul>
+              </div>
 
               <h2>6. Exclusão de Dados</h2>
               <div className={`p-4 rounded-lg border my-4 ${
@@ -228,15 +232,15 @@ export default function PrivacyPage() {
                 <p>Envie um email para <strong>contato@bigcorps.com.br</strong> com o assunto "Solicitação de Exclusão de Dados - LGPD".</p>
               </div>
 
-              <h2>6. Seus Direitos (LGPD)</h2>
+              <h2>7. Seus Direitos (LGPD)</h2>
               <p>Conforme a Lei Geral de Proteção de Dados (LGPD), você tem direitos de acesso, correção, exclusão e portabilidade de seus dados. Para exercê-los, entre em contato através do email oficial de suporte.</p>
 
-              <h2>7. Contato e Responsabilidade Legal</h2>
+              <h2>8. Contato e Responsabilidade Legal</h2>
               <div className={`p-4 rounded-lg space-y-2 ${
                 theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'
               }`}>
                 <p>O <strong>minhAi</strong> é um produto desenvolvido e operado por:</p>
-                <p><strong>BigCorps Tecnologia LTDA</strong></p>
+                <p><strong>BigCorps Tecnologia LTA</strong></p>
                 <p><strong>Email de Privacidade:</strong> contato@bigcorps.com.br</p>
                 <p><strong>Endereço:</strong> Rua Saguairu, 925 - São Paulo - SP - 02514-000 - Brasil</p>
               </div>

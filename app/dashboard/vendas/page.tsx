@@ -1551,6 +1551,32 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
     loadAtivados();
   }, [companyId]);
 
+  useEffect(() => {
+    async function checkPlan() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: creditsData } = await supabase
+          .from('user_credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const active =
+          creditsData?.has_active_plan === true &&
+          creditsData?.plan_expires_at != null &&
+          new Date(creditsData.plan_expires_at) > new Date();
+
+        setHasActivePlan(active);
+      } catch (error) {
+        console.error('Erro ao verificar plano:', error);
+        setHasActivePlan(false);
+      }
+    }
+    checkPlan();
+  }, [supabase]);
+
   async function toggleAtivado(functionKey: string, atual: boolean) {
     setSalvando(functionKey);
     await supabase
@@ -1992,6 +2018,7 @@ function AbaPagamentos({ companyId }: { companyId: string }) {
 function VendasPageContent() {
   const { selectedAssistantId: companyId, selectedAssistantName } = useAssistant();
   const [aba, setAba] = useState<Aba>('visao_geral');
+  const [hasActivePlan, setHasActivePlan] = useState(false);
 
   const abas: { key: Aba; label: string; icon: any }[] = [
     { key: 'visao_geral', label: 'Visão Geral', icon: BarChart2 },
@@ -2078,7 +2105,12 @@ function VendasPageContent() {
                     />
                   )}
                   {aba === 'produtos' && <AbaProducts companyId={companyId} />}
-                  {aba === 'pedidos' && <AbaPedidos companyId={companyId} />}
+                  {aba === 'pedidos' && (
+  <AbaPedidos 
+    companyId={companyId} 
+    hasActivePlan={hasActivePlan} 
+  />
+)}
                   {aba === 'pagamentos' && <AbaPagamentos companyId={companyId} />}
                 </div>
               </div>

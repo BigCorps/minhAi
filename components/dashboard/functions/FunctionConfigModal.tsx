@@ -4611,18 +4611,29 @@ const [hasActivePlan, setHasActivePlan] = useState(false);
     const fetchSettings = async () => {
       setIsLoading(true);
 
-      try {
-        const { data: creditsData } = await supabase
-          .from('credits')
-          .select('has_active_plan, plan_expires_at')
-          .eq('company_id', companyId)
-          .maybeSingle();
-        const active =
-          creditsData?.has_active_plan === true &&
-          creditsData?.plan_expires_at != null &&
-          new Date(creditsData.plan_expires_at) > new Date();
-        setHasActivePlan(active);
-      } catch {
+try {
+        // 1. Primeiro pegamos o usuário logado
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // 2. Buscamos na tabela correta (user_credits) pelo ID do usuário
+          const { data: creditsData } = await supabase
+            .from('user_credits')
+            .select('has_active_plan, plan_expires_at')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          const active =
+            creditsData?.has_active_plan === true &&
+            creditsData?.plan_expires_at != null &&
+            new Date(creditsData.plan_expires_at) > new Date();
+            
+          setHasActivePlan(active);
+        } else {
+          setHasActivePlan(false);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar plano:', error);
         setHasActivePlan(false);
       }
 

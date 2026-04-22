@@ -104,7 +104,7 @@ if (!response.error && response.data?.success) {
     try {
       const receiptContent = formatPixReceipt({ companyName, amount, transactionId });
       const result = await triggerAutoPrint({ companyId, trigger: 'payment', content: receiptContent });
-      if (result.useWindowPrint) window.print();
+      if (result.useWindowPrint) printReceiptInIframe(receiptContent);
       else if ((result as any).useThermalPrint) {
         const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
         await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
@@ -146,7 +146,7 @@ const handleConfirm = async () => {
           trigger: 'payment',
           content: receiptContent,
         });
-        if (result.useWindowPrint) window.print();
+        if (result.useWindowPrint) printReceiptInIframe(receiptContent);
         else if ((result as any).useThermalPrint) {
           const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
           await thermalPrinterService.printText((result as any).thermalContent, { cut: true });

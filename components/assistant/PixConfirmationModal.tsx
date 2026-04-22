@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, X, Copy, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
+import { triggerAutoPrint, formatPixReceipt } from '@/lib/auto-print';
+import { useTurnstile } from '@/hooks/useTurnstile';
 
 interface PIXConfirmationModalProps {
   transactionId: string;
@@ -14,6 +16,11 @@ interface PIXConfirmationModalProps {
   onConfirm: () => Promise<void>;
   onCancel: () => Promise<void>;
   theme?: 'dark' | 'light';
+  /** Se true, exibe botão de impressão após confirmação (requer plano ativo) */
+  printOnPayment?: boolean;
+  hasActivePlan?: boolean;
+  /** Necessário para impressão automática via auto-print */
+  companyId?: string;
 }
 
 export default function PIXConfirmationModal({
@@ -25,11 +32,57 @@ export default function PIXConfirmationModal({
   onConfirm,
   onCancel,
   theme = 'dark',
+  printOnPayment = false,
+  hasActivePlan = false,
+  companyId = '',
 }: PIXConfirmationModalProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [copied, setCopied] = useState(false);
   const [autoChecking, setAutoChecking] = useState(false)
+  const [confirmed, setConfirmed] = useState(false);
+  const { getToken, containerRef } = useTurnstile();
+  const [printAutoType, setPrintAutoType] = useState<'local' | 'remota' | 'recibo'>('local');
+
+  // Busca print_auto_type da company para saber qual motor usar
+  useEffect(() => {
+    if (!printOnPayment || !companyId) return;
+    const supabase = createClient();
+    supabase
+      .from('companies')
+      .select('print_auto_type')
+      .eq('id', companyId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.print_auto_type) setPrintAutoType(data.print_auto_type);
+      })
+      .catch(() => {});
+  }, [printOnPayment, companyId]);
+
+  const handleAutoPrint = async () => {
+    if (!hasActivePlan || !printOnPayment || !companyId) return;
+
+    const receiptContent = formatPixReceipt({
+      companyName: companyName || '',
+      amount,
+      transactionId,
+    });
+
+    const result = await triggerAutoPrint({
+      companyId,
+      trigger: 'payment',
+      content: receiptContent,
+    });
+
+    if (result.useWindowPrint) {
+      window.print();
+    } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
+      try {
+        const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+        await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
+      } catch (e) { console.error('Erro impressão térmica:', e); }
+    }
+  };
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'warning' | 'success' } | null>(null);
   const supabase = createClient();
   
@@ -60,6 +113,7 @@ export default function PIXConfirmationModal({
           showToast(`✅ Pagamento confirmado!`, 'success');
           clearInterval(interval);
           await new Promise((resolve) => setTimeout(resolve, 1500));
+          setConfirmed(true);
           await onConfirm();
         }
       } catch {
@@ -76,6 +130,11 @@ export default function PIXConfirmationModal({
   const handleConfirm = async () => {
     setIsConfirming(true);
     try {
+      const token = await getToken();
+      if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+        showToast('❌ Verificação de segurança falhou. Tente novamente.', 'error');
+        setIsConfirming(false); return;
+      }
       const response = await supabase.functions.invoke('confirmar-pix-assistente', {
         body: { transaction_id: transactionId },
       });
@@ -98,6 +157,7 @@ export default function PIXConfirmationModal({
 
       showToast(`✅ Pagamento confirmado!`, 'success');
       await new Promise((resolve) => setTimeout(resolve, 1000));
+      setConfirmed(true);
       await onConfirm();
     } catch {
       showToast('❌ Erro ao confirmar pagamento', 'error');
@@ -238,6 +298,24 @@ export default function PIXConfirmationModal({
                 label="CANCELAR PIX"
                 icon={<X className="w-6 h-6" />}
               />
+              {/* Print — só após confirmação */}
+              {confirmed && printOnPayment && (
+                <button
+                  onClick={handleAutoPrint}
+                  disabled={!hasActivePlan}
+                  className={`flex items-center justify-center gap-2 px-5 py-4 rounded-lg text-sm font-semibold transition-all
+                    ${hasActivePlan
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                      : 'bg-gray-200 dark:bg-white/10 text-gray-400 opacity-50 cursor-not-allowed grayscale'
+                    }`}
+                  title={!hasActivePlan ? 'Impressão disponível apenas para planos ativos' : undefined}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  Imprimir
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -313,9 +391,29 @@ export default function PIXConfirmationModal({
               icon={<X className="w-5 h-5" />}
               fullWidth
             />
+            {/* Print — só após confirmação */}
+            {confirmed && printOnPayment && (
+              <button
+                onClick={handleAutoPrint}
+                disabled={!hasActivePlan}
+                className={`w-full py-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all
+                  ${hasActivePlan
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : 'bg-gray-200 dark:bg-white/10 text-gray-400 opacity-50 cursor-not-allowed grayscale'
+                  }`}
+                title={!hasActivePlan ? 'Impressão disponível apenas para planos ativos' : undefined}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                {!hasActivePlan ? 'Impressão (plano inativo)' : 'Enviar para Impressora'}
+              </button>
+            )}
           </div>
         </div>
       </div>
+      {/* Turnstile — container invisível para verificação de segurança */}
+      <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
     </div>,
     document.body
   );

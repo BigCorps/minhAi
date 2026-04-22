@@ -87,24 +87,8 @@ export default function GerarSenhaDisplay({
 
   const supabase = createClient();
   const { getToken, containerRef } = useTurnstile();
-
-  const [printAutoType, setPrintAutoType] = useState<'local' | 'remota' | 'recibo'>('local');
+  
   const [companyNameStr, setCompanyNameStr] = useState('');
-
-  // Buscar print_auto_type e nome da empresa para impressão automática
-  useEffect(() => {
-    if (!printOnQueue) return;
-    supabase
-      .from('companies')
-      .select('print_auto_type_queue, name')
-      .eq('id', companyId)
-      .maybeSingle()
-      .then(({ data: co }) => {
-        if (co?.print_auto_type_queue) setPrintAutoType(co.print_auto_type_queue);
-        if (co?.name) setCompanyNameStr(co.name);
-      })
-      .catch(() => {});
-  }, [printOnQueue, companyId]);
 
   const handleAutoPrint = async (senhaData: FilaSenha, pos: number, tempo: number) => {
     if (!hasActivePlan || !printOnQueue) return;

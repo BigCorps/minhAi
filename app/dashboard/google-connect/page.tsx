@@ -360,7 +360,6 @@ function GoogleConnectPageContent() {
                       <div className="grid md:grid-cols-2 gap-3 text-left max-w-lg mx-auto">
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
-                          {/* ✅ Removido "receber" — só temos gmail.send */}
                           <span>Enviar emails (Gmail)</span>
                         </div>
                         <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -380,6 +379,22 @@ function GoogleConnectPageContent() {
                             <path d="M12 3C7.58 3 4 6.58 4 11c0 2.83 1.42 5.33 3.57 6.84L6 20h12l-1.57-2.16C18.58 16.33 20 13.83 20 11c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.16-3 5.19V18H9v-1.81C7.21 15.16 6 13.22 6 11c0-3.31 2.69-6 6-6z"/>
                           </svg>
                           <span>Controlar dispositivos Smart Home</span>
+                        </div>
+                        {/* ✅ NOVO — Google Meet */}
+                        <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                            <path d="M21.5 7.5L17 12l4.5 4.5V7.5z" fill="#00832d"/>
+                            <path d="M3 7.5A1.5 1.5 0 014.5 6h9A1.5 1.5 0 0115 7.5v9A1.5 1.5 0 0113.5 18h-9A1.5 1.5 0 013 16.5v-9z" fill="#0066da"/>
+                            <path d="M15 10.5v3L17 15v-6l-2 1.5z" fill="#e94235"/>
+                          </svg>
+                          <span>Criar reuniões (Google Meet)</span>
+                        </div>
+                        {/* ✅ NOVO — Google Business */}
+                        <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                          <span>Gerenciar perfil no Google Business</span>
                         </div>
                       </div>
                     </div>
@@ -457,7 +472,6 @@ function GoogleConnectPageContent() {
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Enviar emails</span>
                         </div>
                       )}
-                      {/* ✅ Bloco gmail.readonly removido */}
                       {googleAccount.scopes.includes('https://www.googleapis.com/auth/calendar') && (
                         <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                           <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -488,6 +502,26 @@ function GoogleConnectPageContent() {
                             <path d="M12 3C7.58 3 4 6.58 4 11c0 2.83 1.42 5.33 3.57 6.84L6 20h12l-1.57-2.16C18.58 16.33 20 13.83 20 11c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.16-3 5.19V18H9v-1.81C7.21 15.16 6 13.22 6 11c0-3.31 2.69-6 6-6z"/>
                           </svg>
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Smart Home</span>
+                        </div>
+                      )}
+                      {/* ✅ NOVO — Google Meet */}
+                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/meetings.space.created') && (
+                        <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                            <path d="M21.5 7.5L17 12l4.5 4.5V7.5z" fill="#00832d"/>
+                            <path d="M3 7.5A1.5 1.5 0 014.5 6h9A1.5 1.5 0 0115 7.5v9A1.5 1.5 0 0113.5 18h-9A1.5 1.5 0 013 16.5v-9z" fill="#0066da"/>
+                            <path d="M15 10.5v3L17 15v-6l-2 1.5z" fill="#e94235"/>
+                          </svg>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Google Meet</span>
+                        </div>
+                      )}
+                      {/* ✅ NOVO — Google Business Profile */}
+                      {googleAccount.scopes.includes('https://www.googleapis.com/auth/business.manage') && (
+                        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Google Business</span>
                         </div>
                       )}
                     </div>

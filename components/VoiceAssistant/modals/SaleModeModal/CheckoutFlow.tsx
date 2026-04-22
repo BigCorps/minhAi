@@ -1,5 +1,5 @@
 // components/VoiceAssistant/modals/SaleModeModal/CheckoutFlow.tsx
-// v5 — link_pagamento InfinitePay adicionado como método de pagamento
+// v5 — link_pagamento InfinitePay adicionado como método de pagamento + Impressão + Link Curto
 
 'use client';
 
@@ -11,6 +11,7 @@ import {
 import { createClient } from '@/lib/supabase-browser';
 import { useCart } from '@/hooks/useCart';
 import { criarPedido, atualizarStatusPedido, formatarPreco } from '@/lib/produtos-venda';
+import { triggerAutoPrint, formatPurchaseReceipt } from '@/lib/auto-print';
 import RegistrationDisplay from '@/components/assistant/RegistrationDisplay';
 
 type Step = 'cliente' | 'pagamento' | 'aguardando' | 'confirmado' | 'erro';
@@ -22,10 +23,10 @@ interface CheckoutFlowProps {
   onClose: () => void;
   playText?: (text: string) => Promise<void>;
   /** Chaves de métodos ativos vindas do banco (company_function_settings).
-   *  Ex: ['pix_generate', 'tef_debito', 'link_pagamento']
-   *  Se undefined, exibe todos (comportamento legado). */
+   * Ex: ['pix_generate', 'tef_debito', 'link_pagamento']
+   * Se undefined, exibe todos (comportamento legado). */
   metodosAtivos?: string[];
-  profile?: { nome: string; email?: string | null; identificador?: string | null; telefone?: string | null; endereco?: string | null } | null; // ← adicionado
+  profile?: { nome: string; email?: string | null; identificador?: string | null; telefone?: string | null; endereco?: string | null } | null;
 }
 
 function usePixTimer(expiresAt: string | null) {
@@ -56,12 +57,79 @@ export default function CheckoutFlow({ companyId, theme, onClose, playText, meto
   const [clienteNome, setClienteNome] = useState('');
   const [clienteTel, setClienteTel] = useState('');
 
+  // Configurações de impressão da company
+  const [printOnPurchase, setPrintOnPurchase] = useState(false);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
+  const [printAutoType, setPrintAutoType] = useState<'local' | 'remota' | 'recibo'>('local');
+  const [companyName, setCompanyName] = useState('');
+
+  useEffect(() => {
+    async function fetchPrintConfig() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('companies')
+          .select('print_on_purchase, print_auto_type, name')
+          .eq('id', companyId)
+          .maybeSingle();
+        setPrintOnPurchase(data?.print_on_purchase ?? false);
+        setPrintAutoType(data?.print_auto_type ?? 'local');
+        setCompanyName(data?.name ?? '');
+
+        const { data: credits } = await supabase
+          .from('credits')
+          .select('has_active_plan, plan_expires_at')
+          .eq('company_id', companyId)
+          .maybeSingle();
+        setHasActivePlan(
+          credits?.has_active_plan === true &&
+          credits?.plan_expires_at != null &&
+          new Date(credits.plan_expires_at) > new Date()
+        );
+      } catch { /* silencioso */ }
+    }
+    fetchPrintConfig();
+  }, [companyId]);
+
+  const handlePrint = async () => {
+    if (!hasActivePlan) return;
+
+    const receiptContent = formatPurchaseReceipt({
+      companyName,
+      clienteNome: clienteNome || undefined,
+      itens: itens.map(i => ({
+        nome_snapshot: i.nome,
+        quantidade: i.quantidade,
+        subtotal: i.preco_venda * i.quantidade,
+      })),
+      total: totalConfirmado,
+      metodo,
+    });
+
+    const result = await triggerAutoPrint({
+      companyId,
+      trigger: 'purchase',
+      content: receiptContent,
+    });
+
+    if (result.useWindowPrint) {
+      window.print();
+    } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
+      try {
+        const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
+        await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
+      } catch (e) { console.error('Erro impressão térmica:', e); }
+    }
+    // remota: edge já executou, nada a fazer no client
+  };
+
   // Pré-preencher com dados do perfil logado
-useEffect(() => {
-  if (!profile) return;
-  if (profile.nome) setClienteNome(profile.nome);
-  if (profile.telefone) setClienteTel(profile.telefone);
-}, [profile]);
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.nome) setClienteNome(profile.nome);
+    if (profile.telefone) setClienteTel(profile.telefone);
+  }, [profile]);
+  
   const [metodo, setMetodo] = useState<MetodoPagamento>('pix');
 
   const [pedidoId, setPedidoId] = useState<string | null>(null);
@@ -312,26 +380,26 @@ useEffect(() => {
         });
         if (cobErr || !cobData?.cobranca_id) throw new Error('Erro ao gerar link de pagamento');
         await atualizarStatusPedido(pedido.id, 'aguardando_pagamento', cobData.cobranca_id);
-        // DEPOIS
-setCobrancaId(cobData.cobranca_id);
+        
+        setCobrancaId(cobData.cobranca_id);
 
-// Gera link curto minhai.app/pay/XXXXXX
-let urlParaExibir = cobData.link_cobranca;
-try {
-  const { createShortLink } = await import('@/lib/short-links');
-  urlParaExibir = await createShortLink(
-    cobData.link_cobranca,
-    companyId,
-    cobData.cobranca_id
-  );
-} catch {
-  // fallback silencioso: usa URL original
-}
+        // Gera link curto minhai.app/pay/XXXXXX
+        let urlParaExibir = cobData.link_cobranca;
+        try {
+          const { createShortLink } = await import('@/lib/short-links');
+          urlParaExibir = await createShortLink(
+            cobData.link_cobranca,
+            companyId,
+            cobData.cobranca_id
+          );
+        } catch {
+          // fallback silencioso: usa URL original
+        }
 
-setLinkCobranca(urlParaExibir);
-setStep('aguardando');
-playText?.('Link de pagamento gerado. Abra o link para o cliente pagar.').catch(() => {});
-return;
+        setLinkCobranca(urlParaExibir);
+        setStep('aguardando');
+        playText?.('Link de pagamento gerado. Abra o link para o cliente pagar.').catch(() => {});
+        return;
       }
 
       if (metodo === 'tef') {
@@ -724,6 +792,24 @@ return;
         {clienteNome && <p className={`text-sm ${textSecondary}`}>Obrigado, {clienteNome}!</p>}
         <p className="text-lg font-bold mt-2 text-emerald-500">{formatarPreco(totalConfirmado)}</p>
       </div>
+      {/* Botão impressão — só aparece se print_on_purchase estiver ativo */}
+      {printOnPurchase && (
+        <button
+          onClick={handlePrint}
+          disabled={!hasActivePlan}
+          className={`w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all
+            ${hasActivePlan
+              ? 'bg-orange-500 hover:bg-orange-600 text-white active:scale-95'
+              : 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-white/30 opacity-50 cursor-not-allowed grayscale'
+            }`}
+          title={!hasActivePlan ? 'Impressão disponível apenas para planos ativos' : undefined}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          {!hasActivePlan ? 'Impressão (plano inativo)' : 'Enviar para Impressora'}
+        </button>
+      )}
       <button onClick={handleFinalizar} className={`${btnPrimary} flex items-center justify-center gap-2`}>
         <Check className="w-4 h-4" />Fechar
       </button>

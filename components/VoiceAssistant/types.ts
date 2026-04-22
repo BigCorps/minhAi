@@ -28,6 +28,8 @@ export interface PixConfirmationData {
   amount: string;
   qrCodeUrl: string;
   pixCode: string;
+  /** Necessário para impressão automática via auto-print */
+  companyId?: string;
 }
 export interface NossaMarcaData {
   companyName: string;
@@ -69,4 +71,6 @@ export interface PIXConfirmationData {
   amount: string;
   qrCodeUrl: string;
   pixCode: string;
+  /** Necessário para impressão automática via auto-print */
+  companyId?: string;
 }

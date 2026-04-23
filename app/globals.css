@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 255, 255, 255;
@@ -11,18 +10,15 @@
   --primary-green-dark: 140, 162, 20;
   --radius: 0.5rem;
 }
-
 .dark {
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 2, 6, 23;
   --background-end-rgb: 15, 23, 42;
 }
-
 body {
   min-height: 100vh;
   font-family: 'Nunito', sans-serif;
 }
-
 /* Fonte adaptativa para telas pequenas */
 @media screen and (max-height: 680px) {
   html { font-size: 14px; }
@@ -33,7 +29,6 @@ body {
 @media screen and (max-width: 360px) {
   html { font-size: 13px; }
 }
-
 /* dvh com fallback para browsers antigos */
 .h-dvh-safe {
   height: 100vh;
@@ -43,12 +38,10 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
 }
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
-
   /* Cores primárias - Backgrounds */
   .bg-primary-blue {
     background-color: rgb(var(--primary-blue));
@@ -59,7 +52,6 @@ body {
   .bg-primary-green-dark {
     background-color: rgb(var(--primary-green-dark));
   }
-
   /* Cores primárias - Text */
   .text-primary-blue {
     color: rgb(var(--primary-blue));
@@ -70,7 +62,6 @@ body {
   .text-primary-green-dark {
     color: rgb(var(--primary-green-dark));
   }
-
   /* Cores primárias - Borders */
   .border-primary-blue {
     border-color: rgb(var(--primary-blue));
@@ -78,7 +69,6 @@ body {
   .border-primary-green {
     border-color: rgb(var(--primary-green));
   }
-
   /* Gradientes */
   .bg-gradient-primary {
     background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(220, 240, 250));
@@ -88,5 +78,28 @@ body {
   }
   .bg-gradient-blue {
     background: linear-gradient(to bottom right, rgb(var(--primary-blue)), rgb(200, 230, 245));
+  }
+}
+
+/* ── Impressão de recibo ─────────────────────────────────────────────────────
+   Esconde toda a página e exibe apenas o div#receipt-print injetado pelos
+   modais (GerarSenhaDisplay, CheckoutFlow, PixConfirmationModal).
+   O window.print() continua funcionando normalmente — o CSS é que filtra
+   o que aparece na folha impressa.
+──────────────────────────────────────────────────────────────────────────── */
+@media print {
+  body > * {
+    display: none !important;
+  }
+  body > #receipt-print {
+    display: block !important;
+  }
+  #receipt-print pre {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    padding: 8px;
   }
 }

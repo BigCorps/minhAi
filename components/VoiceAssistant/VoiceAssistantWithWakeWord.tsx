@@ -172,18 +172,18 @@ useEffect(() => {
   async function loadPrintConfig() {
     try {
       const supabase = createClient();
-// Busca tudo da tabela companies — sem depender de user_credits
-// (evita bloqueio de RLS em contexto público/subdomínio)
+// Busca campos de impressão da company e verifica plano via edge
+// (a edge usa service role e ignora RLS — funciona em subdomínio e slug)
 const { data: company } = await supabase
   .from('companies')
-  .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, has_active_plan, plan_expires_at')
+  .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')
   .eq('id', companyId)
   .maybeSingle();
 
-const active =
-  company?.has_active_plan === true &&
-  company?.plan_expires_at != null &&
-  new Date(company.plan_expires_at) > new Date();
+const { data: planData } = await supabase.functions.invoke('check-plan', {
+  body: { companyId },
+});
+const active = planData?.hasActivePlan === true;
 
 setPrintConfig({
   print_on_purchase: !!company?.print_auto_type_purchase,

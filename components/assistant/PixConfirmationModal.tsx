@@ -42,6 +42,22 @@ export default function PIXConfirmationModal({
   const [autoChecking, setAutoChecking] = useState(false)
   const [confirmed, setConfirmed] = useState(false);
   const { getToken, containerRef } = useTurnstile();
+  const [printAutoType, setPrintAutoType] = useState<'local' | 'remota' | 'recibo'>('local');
+
+  // Busca print_auto_type da company para saber qual motor usar
+  useEffect(() => {
+    if (!printOnPayment || !companyId) return;
+    const supabase = createClient();
+    supabase
+      .from('companies')
+      .select('print_auto_type')
+      .eq('id', companyId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.print_auto_type) setPrintAutoType(data.print_auto_type);
+      })
+      .catch(() => {});
+  }, [printOnPayment, companyId]);
 
   const handleAutoPrint = async () => {
     if (!hasActivePlan || !printOnPayment || !companyId) return;
@@ -93,28 +109,13 @@ export default function PIXConfirmationModal({
         const response = await supabase.functions.invoke('confirmar-pix-assistente', {
           body: { transaction_id: transactionId },
         });
-// No useEffect do polling (linha ~107)
-if (!response.error && response.data?.success) {
-  showToast(`✅ Pagamento confirmado!`, 'success');
-  clearInterval(interval);
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // ✅ Imprimir automaticamente no auto-check também
-  if (printOnPayment && hasActivePlan && companyId) {
-    try {
-      const receiptContent = formatPixReceipt({ companyName, amount, transactionId });
-      const result = await triggerAutoPrint({ companyId, trigger: 'payment', content: receiptContent });
-      if (result.useWindowPrint) window.print();
-      else if ((result as any).useThermalPrint) {
-        const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
-        await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
-      }
-    } catch { /* silencioso */ }
-  }
-
-  setConfirmed(true);
-  await onConfirm();
-}
+        if (!response.error && response.data?.success) {
+          showToast(`✅ Pagamento confirmado!`, 'success');
+          clearInterval(interval);
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          setConfirmed(true);
+          await onConfirm();
+        }
       } catch {
         // silencioso
       }
@@ -126,47 +127,44 @@ if (!response.error && response.data?.success) {
     setToast({ message, type });
   };
 
-const handleConfirm = async () => {
-  try {
+  const handleConfirm = async () => {
     setIsConfirming(true);
-
-    const token = await getToken();
-    if (token) console.log("Segurança validada");
-
-    // 1. Imprime ANTES de confirmar/fechar
-    if (printOnPayment && hasActivePlan && companyId) {
-      try {
-        const receiptContent = formatPixReceipt({
-          companyName,
-          amount,
-          transactionId,
-        });
-        const result = await triggerAutoPrint({
-          companyId,
-          trigger: 'payment',
-          content: receiptContent,
-        });
-        if (result.useWindowPrint) window.print();
-        else if ((result as any).useThermalPrint) {
-          const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
-          await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
-        }
-      } catch (printError) {
-        console.error('Erro na impressão:', printError);
-        // não bloqueia o fluxo se impressão falhar
+    try {
+      const token = await getToken();
+      if (token === null && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+        showToast('❌ Verificação de segurança falhou. Tente novamente.', 'error');
+        setIsConfirming(false); return;
       }
+      const response = await supabase.functions.invoke('confirmar-pix-assistente', {
+        body: { transaction_id: transactionId },
+      });
+
+      if (response.error) {
+        const errorData = response.error.context?.body;
+        if (errorData && !errorData.success) {
+          showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
+          return;
+        }
+        showToast('❌ Erro ao verificar pagamento', 'error');
+        return;
+      }
+
+      const data = response.data;
+      if (!data.success) {
+        showToast('⏳ PIX ainda não foi pago. Aguarde após o pagamento.', 'warning');
+        return;
+      }
+
+      showToast(`✅ Pagamento confirmado!`, 'success');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setConfirmed(true);
+      await onConfirm();
+    } catch {
+      showToast('❌ Erro ao confirmar pagamento', 'error');
+    } finally {
+      setIsConfirming(false);
     }
-
-    // 2. Confirma e fecha depois
-    await onConfirm();
-    setConfirmed(true);
-
-  } catch (err) {
-    console.error('Erro ao confirmar:', err);
-  } finally {
-    setIsConfirming(false);
-  }
-};
+  };
 
   const handleCancel = async () => {
     setIsCancelling(true);

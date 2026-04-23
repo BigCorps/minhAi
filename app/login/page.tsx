@@ -443,7 +443,17 @@ async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
               </div>
             </div>
 
-            <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
+            <div
+  ref={containerRef}
+  style={{
+    position: 'absolute',
+    left: '-9999px',
+    width: '1px',
+    height: '1px',
+    overflow: 'hidden',
+  }}
+  aria-hidden="true"
+/>
 
             <button
               type="submit"

@@ -7,7 +7,7 @@
 //   - Confirmar PIX      (PixConfirmationModal)
 //
 // Delega para a edge function `auto-print` que:
-//   - 'local'  → retorna { useWindowPrint: true } (client chama printReceiptInIframe())
+//   - 'local'  → retorna { useWindowPrint: true } (client chama window.print())
 //   - 'recibo' → envia para impressora térmica Bluetooth/USB (1 crédito)
 //   - 'remota' → envia para PrintNode (3 créditos)
 // ============================================================
@@ -41,7 +41,7 @@ export interface AutoPrintResult {
 /**
  * Dispara impressão automática sem interação do usuário.
  * Retorna { useWindowPrint: true } quando print_auto_type = 'local',
- * sinalizando que o caller deve chamar printReceiptInIframe(content) após este retorno.
+ * sinalizando que o caller deve chamar window.print() após este retorno.
  */
 export async function triggerAutoPrint(options: AutoPrintOptions): Promise<AutoPrintResult> {
   try {
@@ -69,58 +69,6 @@ export async function triggerAutoPrint(options: AutoPrintOptions): Promise<AutoP
     console.error('❌ triggerAutoPrint:', err);
     return { success: false, error: err.message ?? 'Erro ao disparar impressão automática' };
   }
-}
-
-// ── Impressão local via iframe ────────────────────────────────────────────────
-
-/**
- * Imprime `content` em um iframe invisível, sem capturar nada da tela.
- * Use no lugar de window.print() quando result.useWindowPrint === true.
- *
- * Uso nos modais:
- *   // ❌ ANTES
- *   if (result.useWindowPrint) window.print();
- *
- *   // ✅ DEPOIS
- *   if (result.useWindowPrint) printReceiptInIframe(receiptContent);
- */
-export function printReceiptInIframe(content: string): void {
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.top = '-9999px';
-  iframe.style.left = '-9999px';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = 'none';
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentDocument!;
-  doc.open();
-  doc.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          body { margin: 0; padding: 8px; }
-          pre  { font-family: 'Courier New', Courier, monospace;
-                 font-size: 12px;
-                 white-space: pre-wrap;
-                 word-break: break-word; }
-        </style>
-      </head>
-      <body><pre>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></body>
-    </html>
-  `);
-  doc.close();
-
-  iframe.contentWindow!.focus();
-  iframe.contentWindow!.print();
-
-  // Remove o iframe após o diálogo de impressão ser dispensado
-  setTimeout(() => {
-    if (document.body.contains(iframe)) document.body.removeChild(iframe);
-  }, 1000);
 }
 
 // ── Formatadores de conteúdo ──────────────────────────────────────────────────

@@ -62,7 +62,7 @@ interface GBPInsights {
   daily: Record<string, Record<string, number>>;
 }
 
-type ActiveTab = 'calendar' | 'email' | 'drive' | 'smarthome' | 'gbp';
+type ActiveTab = 'calendar' | 'email' | 'drive' | 'smarthome' | 'gbp' | 'meet';
 type GBPSubTab = 'info' | 'reviews' | 'insights';
 
 // ── Stars helper ─────────────────────────────────────────────
@@ -127,6 +127,15 @@ function AgendaPageContent() {
   // GBP — Insights
   const [gbpInsights, setGbpInsights] = useState<GBPInsights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
+
+  // Meet
+  const [meetTitle, setMeetTitle]     = useState('Reunião');
+  const [meetDate, setMeetDate]       = useState('');
+  const [meetTime, setMeetTime]       = useState('');
+  const [meetEmail, setMeetEmail]     = useState('');
+  const [meetLoading, setMeetLoading] = useState(false);
+  const [meetError, setMeetError]     = useState<string | null>(null);
+  const [meetSuccess, setMeetSuccess] = useState<string | null>(null);
 
   // General
   const [loading, setLoading] = useState(false);
@@ -523,6 +532,14 @@ function AgendaPageContent() {
     { key: 'drive',     label: 'Google Drive',     icon: <HardDrive className="w-4 h-4" /> },
     { key: 'smarthome', label: 'Smart Home',       icon: <Home className="w-4 h-4" />,         count: smartDevices.length },
     { key: 'gbp',       label: 'Meu Negócio',      icon: <Star className="w-4 h-4" /> },
+    { key: 'meet',      label: 'Google Meet',      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+          <path d="M21.5 7.5L17 12l4.5 4.5V7.5z" fill="#00832d"/>
+          <path d="M3 7.5A1.5 1.5 0 014.5 6h9A1.5 1.5 0 0115 7.5v9A1.5 1.5 0 0113.5 18h-9A1.5 1.5 0 013 16.5v-9z" fill="#0066da"/>
+          <path d="M15 10.5v3L17 15v-6l-2 1.5z" fill="#e94235"/>
+        </svg>
+      )
+    },
   ];
 
   const isLoading = loadingEvents || loadingEmails || loadingImages || loadingDevices || loadingGbpInfo || loadingReviews || loadingInsights;
@@ -535,7 +552,7 @@ function AgendaPageContent() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Serviços Google</h1>
-            <p className="text-gray-600 dark:text-gray-400">Calendário, emails, Drive, Smart Home e Google Meu Negócio</p>
+            <p className="text-gray-600 dark:text-gray-400">Calendário, emails, Drive, Smart Home, Google Meu Negócio e Meet</p>
           </div>
 
           {loading && selectedCompanyId && (
@@ -596,15 +613,23 @@ function AgendaPageContent() {
                   </div>
                 </div>
 
-                {/* Tabs — 3 por linha mobile, 5 desktop */}
-                <div className="grid grid-cols-3 md:grid-cols-5">
+                {/* Tabs — 2 por linha mobile, 6 desktop */}
+                <div className="grid grid-cols-2 md:grid-cols-6">
                   {tabs.map((tab, i) => (
                     <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                       className={`px-3 py-3 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1.5 border-b-2 ${
                         activeTab === tab.key
                           ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                           : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
-                      } ${i < 4 ? 'border-r border-r-gray-200 dark:border-r-white/10' : ''}`}
+                      } ${
+                        // Borda direita: sempre exceto último de cada linha
+                        // Mobile (2 cols): sem borda no índice 1, 3, 5 (últimos da linha)
+                        // Desktop (6 cols): sem borda no índice 5 (último)
+                        i % 2 !== 1 ? 'border-r border-r-gray-200 dark:border-r-white/10' : ''
+                      } ${
+                        // Borda inferior da primeira linha no mobile
+                        i < 2 ? 'md:border-b-0' : ''
+                      }`}
                     >
                       {tab.icon}
                       <span className="truncate hidden sm:inline">{tab.label}</span>
@@ -1080,6 +1105,161 @@ function AgendaPageContent() {
                   )}
                 </div>
               )}
+              {/* ── GOOGLE MEET ── */}
+              {activeTab === 'meet' && (
+                <div className="max-w-lg mx-auto">
+                  <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 p-6">
+
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                          <path d="M21.5 7.5L17 12l4.5 4.5V7.5z" fill="#00832d"/>
+                          <path d="M3 7.5A1.5 1.5 0 014.5 6h9A1.5 1.5 0 0115 7.5v9A1.5 1.5 0 0113.5 18h-9A1.5 1.5 0 013 16.5v-9z" fill="#0066da"/>
+                          <path d="M15 10.5v3L17 15v-6l-2 1.5z" fill="#e94235"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <h2 className="text-base font-semibold text-gray-900 dark:text-white">Agendar reunião via Google Meet</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">O convite será enviado automaticamente pelo Google Calendar</p>
+                      </div>
+                    </div>
+
+                    {/* Feedback */}
+                    {meetError && (
+                      <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+                        {meetError}
+                      </div>
+                    )}
+
+                    {meetSuccess ? (
+                      <div className="text-center py-6">
+                        <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
+                        </div>
+                        <p className="font-semibold text-gray-900 dark:text-white mb-1">Reunião agendada!</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{meetSuccess}</p>
+                        <button
+                          onClick={() => { setMeetSuccess(null); setMeetError(null); }}
+                          className="px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          Agendar outra reunião
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* Título */}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Título da reunião</label>
+                          <input
+                            type="text"
+                            value={meetTitle}
+                            onChange={e => setMeetTitle(e.target.value)}
+                            placeholder="Ex: Alinhamento semanal"
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                          />
+                        </div>
+
+                        {/* Data + Hora */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Data</label>
+                            <input
+                              type="date"
+                              value={meetDate}
+                              onChange={e => setMeetDate(e.target.value)}
+                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Hora</label>
+                            <input
+                              type="time"
+                              value={meetTime}
+                              onChange={e => setMeetTime(e.target.value)}
+                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Email */}
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Email do participante</label>
+                          <input
+                            type="email"
+                            value={meetEmail}
+                            onChange={e => setMeetEmail(e.target.value)}
+                            placeholder="participante@email.com"
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">O Google Calendar envia o convite com o link automaticamente.</p>
+                        </div>
+
+                        {/* Botão */}
+                        <button
+                          onClick={async () => {
+                            if (!meetDate || !meetTime || !meetEmail) {
+                              setMeetError('Preencha data, hora e email do participante.');
+                              return;
+                            }
+                            setMeetLoading(true);
+                            setMeetError(null);
+                            try {
+                              const meetRes = await fetch(
+                                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-google-meet`,
+                                {
+                                  method: 'POST',
+                                  headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ company_id: selectedCompanyId }),
+                                }
+                              );
+                              const meetData = await meetRes.json();
+                              if (!meetRes.ok) throw new Error(meetData.error ?? 'Erro ao criar Meet');
+
+                              const startDateTime = new Date(`${meetDate}T${meetTime}:00`).toISOString();
+                              const endDateTime   = new Date(new Date(`${meetDate}T${meetTime}:00`).getTime() + 60 * 60 * 1000).toISOString();
+
+                              const { error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
+                                body: {
+                                  company_id:  selectedCompanyId,
+                                  summary:     meetTitle || 'Reunião',
+                                  description: `Reunião via Google Meet\nLink: ${meetData.url}`,
+                                  start_time:  startDateTime,
+                                  end_time:    endDateTime,
+                                  attendees:   [meetEmail],
+                                  location:    meetData.url,
+                                },
+                              });
+                              if (eventError) throw new Error('Erro ao criar evento no calendário');
+
+                              setMeetSuccess(`Convite enviado para ${meetEmail} com o link do Google Meet.`);
+                              // Recarrega o calendário para mostrar o novo evento
+                              if (selectedCompanyId) loadGoogleEvents(selectedCompanyId);
+                            } catch (err: any) {
+                              setMeetError(err.message ?? 'Erro ao agendar reunião');
+                            } finally {
+                              setMeetLoading(false);
+                            }
+                          }}
+                          disabled={meetLoading}
+                          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2"
+                        >
+                          {meetLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                              <path d="M21.5 7.5L17 12l4.5 4.5V7.5z" fill="#fff" opacity=".9"/>
+                              <path d="M3 7.5A1.5 1.5 0 014.5 6h9A1.5 1.5 0 0115 7.5v9A1.5 1.5 0 0113.5 18h-9A1.5 1.5 0 013 16.5v-9z" fill="#fff"/>
+                            </svg>
+                          )}
+                          {meetLoading ? 'Agendando...' : 'Agendar e enviar convite'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </>
           )}
         </div>

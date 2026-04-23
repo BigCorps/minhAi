@@ -82,63 +82,65 @@ export default function LoginPage() {
     return () => clearTimeout(safetyTimeout);
   }, [supabase]);
 
-  async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+async function handleEmailAuth(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
 
-    // Turnstile: valida se disponível, pula silenciosamente se não
+  const form = e.currentTarget; // captura ANTES de qualquer await
+  setLoading(true);
+  setError(null);
+
+  try {
     const token = await getToken();
+
     if (token) {
       const { data: td, error: te } = await supabase.functions.invoke(
         'validate-turnstile',
         { body: { token } }
       );
+
       if (te || !td?.success) {
         setError(td?.error || 'Verificação de segurança falhou. Tente novamente.');
-        setLoading(false);
         return;
       }
     }
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
 
-    try {
-      if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name } },
-        });
+    if (mode === 'signup') {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name } },
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (data.session) {
-          localStorage.setItem('lastLoggedInUser', email);
-          router.push('/dashboard');
-        } else {
-          alert('Cadastro realizado! Verifique seu email para confirmar.');
-          setMode('login');
-        }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
+      if (data.session) {
         localStorage.setItem('lastLoggedInUser', email);
         router.push('/dashboard');
+      } else {
+        alert('Cadastro realizado! Verifique seu email para confirmar.');
+        setMode('login');
       }
-    } catch (error: any) {
-      setError(error.message || 'Erro ao autenticar. Tente novamente.');
-    } finally {
-      setLoading(false);
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      localStorage.setItem('lastLoggedInUser', email);
+      router.push('/dashboard');
     }
+  } catch (error: any) {
+    setError(error.message || 'Erro ao autenticar. Tente novamente.');
+  } finally {
+    setLoading(false);
   }
+}
 
   async function handleBiometricLogin() {
     if (!biometricUserEmail) return;

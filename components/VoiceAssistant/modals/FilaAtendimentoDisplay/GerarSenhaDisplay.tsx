@@ -105,12 +105,7 @@ export default function GerarSenhaDisplay({
     });
 
     if (result.useWindowPrint) {
-const div = document.createElement('div');
-      div.id = 'receipt-print';
-      div.innerHTML = '<pre>' + receiptContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
-      document.body.appendChild(div);
       window.print();
-      document.body.removeChild(div);
     } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
       try {
         const { thermalPrinterService } = await import('@/lib/thermal-printer-service');

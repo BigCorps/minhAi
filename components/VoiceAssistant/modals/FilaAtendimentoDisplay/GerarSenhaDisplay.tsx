@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase-browser';
-import { triggerAutoPrint, formatQueueReceipt } from '@/lib/auto-print';
+import { triggerAutoPrint, formatQueueReceipt, printReceiptInIframe } from '@/lib/auto-print';
 import { 
   MapPin, 
   Clock, 
@@ -105,7 +105,7 @@ export default function GerarSenhaDisplay({
     });
 
     if (result.useWindowPrint) {
-      window.print();
+      printReceiptInIframe(receiptContent);
     } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
       try {
         const { thermalPrinterService } = await import('@/lib/thermal-printer-service');

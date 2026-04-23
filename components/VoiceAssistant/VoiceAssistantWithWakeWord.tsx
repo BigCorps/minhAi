@@ -172,25 +172,18 @@ useEffect(() => {
   async function loadPrintConfig() {
     try {
       const supabase = createClient();
-// Substitui as duas queries por uma só — funciona em qualquer domínio
+// Busca tudo da tabela companies — sem depender de user_credits
+// (evita bloqueio de RLS em contexto público/subdomínio)
 const { data: company } = await supabase
   .from('companies')
-  .select('user_id, print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment')
+  .select('print_auto_type_purchase, print_auto_type_queue, print_auto_type_payment, has_active_plan, plan_expires_at')
   .eq('id', companyId)
   .maybeSingle();
 
-let active = false;
-if (company?.user_id) {
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('has_active_plan, plan_expires_at')
-    .eq('user_id', company.user_id)
-    .maybeSingle();
-  active =
-    credits?.has_active_plan === true &&
-    credits?.plan_expires_at != null &&
-    new Date(credits.plan_expires_at) > new Date();
-}
+const active =
+  company?.has_active_plan === true &&
+  company?.plan_expires_at != null &&
+  new Date(company.plan_expires_at) > new Date();
 
 setPrintConfig({
   print_on_purchase: !!company?.print_auto_type_purchase,

@@ -170,12 +170,12 @@ function AgendaPageContent() {
     }
   }, [gbpSubTab, gbpLinked]);
 
-  // Pré-preencher data/hora do Meet (+30 min)
 useEffect(() => {
   const now = new Date();
   now.setMinutes(now.getMinutes() + 30);
-  setMeetDate(now.toISOString().split('T')[0]);
-  setMeetTime(now.toTimeString().slice(0, 5));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  setMeetDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+  setMeetTime(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
 }, []);
 
   // ── Loaders ───────────────────────────────────────────────

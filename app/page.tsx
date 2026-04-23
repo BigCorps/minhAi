@@ -101,7 +101,7 @@ const RECURSO_IMAGE_SLIDES = [
     label: 'Integrações nativas',
     title: 'Conectado ao que você já usa',
     description:
-      'Google Agenda, Gmail, WhatsApp Business API, Mercado Pago, InfinitePay, YouTube, Maps, Banco Inter — tudo nativo, sem zapier, sem desenvolvimento adicional. O minhAi já vem integrado com as ferramentas que fazem seu negócio funcionar.',
+      'Google Agenda, Meu Negocio, Drive, Gmail, YouTube, Maps, Reuniões no Meet e Video Chamadas, WhatsApp Business, Instagram, Facebook, Mercado Pago, InfinitePay — tudo nativo, sem zapier, sem desenvolvimento adicional. O minhAi já vem integrado com as ferramentas que fazem seu negócio funcionar.',
     imageSrc: '/api.png',
     imageAlt: 'Integrações nativas do minhAi — Google, Meta, Mercado Pago e mais',
     color: 'green' as const,

@@ -9,7 +9,7 @@ import {
   Calendar as CalendarIcon, Mail, Link2, Loader2, AlertCircle,
   ChevronLeft, ChevronRight, Settings, RefreshCw, Clock, User,
   Paperclip, ChevronDown, ChevronUp, Send, HardDrive, Home,
-  Star, TrendingUp, Phone, Globe, MapPin, MessageSquare,
+  Star, TrendingUp, Phone, Globe, MapPin, MessageSquare, PhoneCall,
   CheckCircle, XCircle, BarChart2, Search, Navigation,
 } from 'lucide-react';
 import DrivePickerButton from '@/components/ui/DrivePickerButton';
@@ -532,14 +532,7 @@ function AgendaPageContent() {
     { key: 'drive',     label: 'Google Drive',     icon: <HardDrive className="w-4 h-4" /> },
     { key: 'smarthome', label: 'Smart Home',       icon: <Home className="w-4 h-4" />,         count: smartDevices.length },
     { key: 'gbp',       label: 'Meu Negócio',      icon: <Star className="w-4 h-4" /> },
-    { key: 'meet',      label: 'Google Meet',      icon: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
-          <path d="M21.5 7.5L17 12l4.5 4.5V7.5z" fill="#00832d"/>
-          <path d="M3 7.5A1.5 1.5 0 014.5 6h9A1.5 1.5 0 0115 7.5v9A1.5 1.5 0 0113.5 18h-9A1.5 1.5 0 013 16.5v-9z" fill="#0066da"/>
-          <path d="M15 10.5v3L17 15v-6l-2 1.5z" fill="#e94235"/>
-        </svg>
-      )
-    },
+    { key: 'meet',      label: 'Google Meet',      icon: <PhoneCall className="w-4 h-4" /> },
   ];
 
   const isLoading = loadingEvents || loadingEmails || loadingImages || loadingDevices || loadingGbpInfo || loadingReviews || loadingInsights;

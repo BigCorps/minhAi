@@ -226,7 +226,7 @@ const FUNCAO_PAGES = [
         icon: <BadgeCheck />,
         color: 'green' as const,
         description:
-          'Cadastro de clientes, fila de atendimento com senha digital, reconhecimento facial e videochamada entre colaboradores.',
+          'Cadastro de clientes, fila de atendimento com senha digital, videochamada entre colaboradores e reuniões com Google Meet.',
       },
     ],
   },

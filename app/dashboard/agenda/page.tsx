@@ -170,6 +170,14 @@ function AgendaPageContent() {
     }
   }, [gbpSubTab, gbpLinked]);
 
+  // Pré-preencher data/hora do Meet (+30 min)
+useEffect(() => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 30);
+  setMeetDate(now.toISOString().split('T')[0]);
+  setMeetTime(now.toTimeString().slice(0, 5));
+}, []);
+
   // ── Loaders ───────────────────────────────────────────────
 
   async function loadGoogleAccount(companyId: string) {
@@ -191,30 +199,36 @@ function AgendaPageContent() {
     }
   }
 
-  async function loadGoogleEvents(companyId: string) {
-    try {
-      setLoadingEvents(true);
-      const { data, error } = await supabase.functions.invoke('listar-eventos-google', {
-        body: { company_id: companyId },
-      });
-      if (error) throw error;
-      setEvents((data?.events || []).map((event: any) => ({
-        id: event.id, title: event.summary || 'Sem título',
-        start: event.start.dateTime || event.start.date,
-        end: event.end?.dateTime || event.end?.date,
-        allDay: !event.start.dateTime,
-        backgroundColor: '#4285F4', borderColor: '#4285F4', textColor: '#FFFFFF',
-        extendedProps: {
-          description: event.description, location: event.location,
-          attendees: event.attendees?.map((a: any) => a.email) || [],
-        },
-      })));
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoadingEvents(false);
-    }
+async function loadGoogleEvents(companyId: string) {
+  try {
+    setLoadingEvents(true);
+    const { data, error } = await supabase.functions.invoke('listar-eventos-google', {
+      body: {
+        company_id: companyId,
+        max_results: 500,
+        // 1 ano atrás até 1 ano à frente
+        time_min: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+        time_max: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+    if (error) throw error;
+    setEvents((data?.events || []).map((event: any) => ({
+      id: event.id, title: event.summary || 'Sem título',
+      start: event.start.dateTime || event.start.date,
+      end: event.end?.dateTime || event.end?.date,
+      allDay: !event.start.dateTime,
+      backgroundColor: '#4285F4', borderColor: '#4285F4', textColor: '#FFFFFF',
+      extendedProps: {
+        description: event.description, location: event.location,
+        attendees: event.attendees?.map((a: any) => a.email) || [],
+      },
+    })));
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoadingEvents(false);
   }
+}
 
   async function loadSentEmails(companyId: string) {
     try {

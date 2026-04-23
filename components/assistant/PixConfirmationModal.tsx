@@ -59,7 +59,12 @@ export default function PIXConfirmationModal({
     });
 
     if (result.useWindowPrint) {
+const div = document.createElement('div');
+      div.id = 'receipt-print';
+      div.innerHTML = '<pre>' + receiptContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+      document.body.appendChild(div);
       window.print();
+      document.body.removeChild(div);
     } else if ((result as any).useThermalPrint && (result as any).thermalContent) {
       try {
         const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
@@ -104,8 +109,14 @@ if (!response.error && response.data?.success) {
     try {
       const receiptContent = formatPixReceipt({ companyName, amount, transactionId });
       const result = await triggerAutoPrint({ companyId, trigger: 'payment', content: receiptContent });
-      if (result.useWindowPrint) window.print();
-      else if ((result as any).useThermalPrint) {
+      if (result.useWindowPrint) {
+        const div = document.createElement('div');
+        div.id = 'receipt-print';
+        div.innerHTML = '<pre>' + receiptContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+        document.body.appendChild(div);
+        window.print();
+        document.body.removeChild(div);
+      } else if ((result as any).useThermalPrint) {
         const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
         await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
       }
@@ -146,8 +157,14 @@ const handleConfirm = async () => {
           trigger: 'payment',
           content: receiptContent,
         });
-        if (result.useWindowPrint) window.print();
-        else if ((result as any).useThermalPrint) {
+        if (result.useWindowPrint) {
+          const div = document.createElement('div');
+          div.id = 'receipt-print';
+          div.innerHTML = '<pre>' + receiptContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+          document.body.appendChild(div);
+          window.print();
+          document.body.removeChild(div);
+        } else if ((result as any).useThermalPrint) {
           const { thermalPrinterService } = await import('@/lib/thermal-printer-service');
           await thermalPrinterService.printText((result as any).thermalContent, { cut: true });
         }

@@ -1,6 +1,5 @@
 'use client';
 // ARQUIVO: app/auth/callback/facebook/page.tsx
-// Diferença: usa NEXT_PUBLIC_SUPABASE_URL em vez de VITE_SUPABASE_URL
 
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
@@ -71,8 +70,6 @@ export default function FacebookCallbackPage() {
   const processMetaCallback = async (code: string, state: string | null) => {
     addLog('⚙️ Processando no Supabase...');
 
-    // Extrair company_id do state (formato: user_uuid:company_uuid:random)
-    // O frontend inclui company_id ao gerar o state
     const stateParts = state?.split(':') || [];
     const companyId = stateParts[1] || null;
 
@@ -124,6 +121,7 @@ export default function FacebookCallbackPage() {
     const isPopup = window.opener && !window.opener.closed;
 
     if (isPopup) {
+      // Aberto como popup — envia dados via postMessage e fecha
       addLog('📨 Enviando via postMessage (popup)...');
       window.opener.postMessage(
         { type: 'meta_connection_success', success: true, data: connectionData, state },
@@ -133,23 +131,25 @@ export default function FacebookCallbackPage() {
       addLog('🎉 Sucesso! Fechando popup...');
       setTimeout(() => window.close(), 1000);
     } else {
-      addLog('📨 Salvando no localStorage (aba)...');
+      // Aberto como aba normal — salva no localStorage e redireciona ativamente.
+      // NÃO usar window.close() aqui: browsers bloqueiam close() em abas que
+      // não foram abertas por script — o usuário ficaria preso na tela.
+      addLog('📨 Salvando resultado e redirecionando...');
       localStorage.setItem(
         'meta_connection_result',
         JSON.stringify({ success: true, data: connectionData, state, timestamp: Date.now() })
       );
-      setStatus({ message: 'Conta Meta conectada com sucesso!', type: 'success', canClose: true });
-      addLog('🎉 Sucesso! Pode fechar esta aba.');
+      setStatus({ message: 'Conta Meta conectada! Redirecionando...', type: 'success', canClose: false });
+      addLog('🎉 Sucesso! Voltando para o dashboard...');
       setTimeout(() => {
-        window.close();
-        setTimeout(() => addLog('ℹ️ Feche esta aba e volte para minhAi'), 500);
+        window.location.href = '/dashboard/atendimentos';
       }, 1500);
     }
   };
 
+  // FIX: redirecionar diretamente — window.close() sozinho não funciona em abas normais
   const handleClose = () => {
-    window.close();
-    setTimeout(() => { window.location.href = '/dashboard/atendimentos'; }, 500);
+    window.location.href = '/dashboard/atendimentos';
   };
 
   return (
@@ -173,13 +173,6 @@ export default function FacebookCallbackPage() {
           {status.message}
         </p>
 
-        {status.type === 'success' && status.canClose && (
-          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-5 text-sm text-blue-700 dark:text-blue-300 text-center">
-            💡 <strong>Você pode fechar esta aba agora</strong><br />
-            A conexão foi salva e aparecerá no minhAi
-          </div>
-        )}
-
         {/* Logs de debug */}
         {logs.length > 0 && (
           <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto text-xs font-mono text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10">
@@ -194,16 +187,12 @@ export default function FacebookCallbackPage() {
           </div>
         )}
 
-        {(status.type === 'error' || (status.type === 'success' && status.canClose)) && (
+        {status.type === 'error' && (
           <button
             onClick={handleClose}
-            className={`w-full mt-5 py-2.5 px-4 rounded-lg text-sm font-semibold text-white transition ${
-              status.type === 'error'
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-blue-500 hover:bg-blue-600'
-            }`}
+            className="w-full mt-5 py-2.5 px-4 rounded-lg text-sm font-semibold text-white transition bg-red-500 hover:bg-red-600"
           >
-            {status.type === 'error' ? 'Fechar' : 'Fechar esta aba'}
+            Voltar para o Dashboard
           </button>
         )}
       </div>

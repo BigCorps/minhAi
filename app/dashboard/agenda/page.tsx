@@ -1197,50 +1197,43 @@ function AgendaPageContent() {
 
                         {/* Botão */}
                         <button
-                          onClick={async () => {
-                            if (!meetDate || !meetTime || !meetEmail) {
-                              setMeetError('Preencha data, hora e email do participante.');
-                              return;
-                            }
-                            setMeetLoading(true);
-                            setMeetError(null);
-                            try {
-                              const meetRes = await fetch(
-                                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-google-meet`,
-                                {
-                                  method: 'POST',
-                                  headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ company_id: selectedCompanyId }),
-                                }
-                              );
-                              const meetData = await meetRes.json();
-                              if (!meetRes.ok) throw new Error(meetData.error ?? 'Erro ao criar Meet');
+onClick={async () => {
+  if (!meetDate || !meetTime || !meetEmail) {
+    setMeetError('Preencha data, hora e email do participante.');
+    return;
+  }
+  setMeetLoading(true);
+  setMeetError(null);
+  try {
+    const startDateTime = new Date(`${meetDate}T${meetTime}:00`).toISOString();
+    const endDateTime   = new Date(new Date(`${meetDate}T${meetTime}:00`).getTime() + 60 * 60 * 1000).toISOString();
 
-                              const startDateTime = new Date(`${meetDate}T${meetTime}:00`).toISOString();
-                              const endDateTime   = new Date(new Date(`${meetDate}T${meetTime}:00`).getTime() + 60 * 60 * 1000).toISOString();
+    const { data: eventData, error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
+      body: {
+        company_id:        selectedCompanyId,
+        summary:           meetTitle || 'Reunião',
+        start_time:        startDateTime,
+        end_time:          endDateTime,
+        attendees:         [meetEmail],
+        create_conference: true,   // ← flag nova
+      },
+    });
 
-                              const { error: eventError } = await supabase.functions.invoke('criar-evento-calendario', {
-                                body: {
-                                  company_id:  selectedCompanyId,
-                                  summary:     meetTitle || 'Reunião',
-                                  description: `Reunião via Google Meet\nLink: ${meetData.url}`,
-                                  start_time:  startDateTime,
-                                  end_time:    endDateTime,
-                                  attendees:   [meetEmail],
-                                  location:    meetData.url,
-                                },
-                              });
-                              if (eventError) throw new Error('Erro ao criar evento no calendário');
+    if (eventError || !eventData?.success) {
+      throw new Error(eventData?.error ?? 'Erro ao criar evento no calendário');
+    }
 
-                              setMeetSuccess(`Convite enviado para ${meetEmail} com o link do Google Meet.`);
-                              // Recarrega o calendário para mostrar o novo evento
-                              if (selectedCompanyId) loadGoogleEvents(selectedCompanyId);
-                            } catch (err: any) {
-                              setMeetError(err.message ?? 'Erro ao agendar reunião');
-                            } finally {
-                              setMeetLoading(false);
-                            }
-                          }}
+    const meetUrl = eventData?.meetUrl ?? eventData?.hangoutLink;
+    if (!meetUrl) throw new Error('Link do Meet não retornado');
+
+    setMeetSuccess(`Convite enviado para ${meetEmail}. Link: ${meetUrl}`);
+    if (selectedCompanyId) loadGoogleEvents(selectedCompanyId);
+  } catch (err: any) {
+    setMeetError(err.message ?? 'Erro ao agendar reunião');
+  } finally {
+    setMeetLoading(false);
+  }
+}}
                           disabled={meetLoading}
                           className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2"
                         >

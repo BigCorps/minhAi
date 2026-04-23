@@ -70,7 +70,7 @@ export default function GerarSenhaDisplay({
   theme = 'dark',
   playText,
   printOnQueue = false,
-  hasActivePlan = false,
+  hasActivePlan: hasActivePlanProp = false,
 }: GerarSenhaDisplayProps) {
   const colors = theme === 'dark' ? DARK : LIGHT;
   const { companyId, slug } = data;
@@ -85,8 +85,29 @@ export default function GerarSenhaDisplay({
   const [isMobile, setIsMobile] = useState(false);
 
   const supabase = createClient();
-  
+
   const [companyNameStr, setCompanyNameStr] = useState('');
+  // Plano verificado internamente pela company — funciona via slug e via subdomínio
+  const [hasActivePlan, setHasActivePlan] = useState(hasActivePlanProp);
+
+  useEffect(() => {
+    async function fetchCompanyConfig() {
+      try {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('name, has_active_plan, plan_expires_at')
+          .eq('id', companyId)
+          .maybeSingle();
+        if (company?.name) setCompanyNameStr(company.name);
+        setHasActivePlan(
+          company?.has_active_plan === true &&
+          company?.plan_expires_at != null &&
+          new Date(company.plan_expires_at) > new Date()
+        );
+      } catch { /* silencioso */ }
+    }
+    fetchCompanyConfig();
+  }, [companyId]);
 
   const handleAutoPrint = async (senhaData: FilaSenha, pos: number, tempo: number) => {
     if (!hasActivePlan || !printOnQueue) return;

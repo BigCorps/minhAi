@@ -208,21 +208,19 @@ export default function EmbeddedSignupButton({
     setLoading(true);
     onLoading?.(true);
 
+    // FB.login NÃO aceita callback async — usar função síncrona e
+    // disparar o processamento via Promise separada
     window.FB.login(
-      async (response: any) => {
-        try {
-          if (response.authResponse?.code) {
-            const code = response.authResponse.code;
-            console.log('[EmbeddedSignup] ✅ Code recebido, processando...');
-            await processSignup(code);
-          } else {
-            // Usuário fechou o popup sem completar
-            console.warn('[EmbeddedSignup] ⚠️ Login cancelado ou sem code');
-            onError('Conexão cancelada. Nenhuma alteração foi salva.');
-          }
-        } catch (err: any) {
-          onError(err.message || 'Erro inesperado ao conectar');
-        } finally {
+      (response: any) => {
+        if (response.authResponse?.code) {
+          const code = response.authResponse.code;
+          console.log('[EmbeddedSignup] ✅ Code recebido, processando...');
+          processSignup(code)
+            .catch((err: any) => onError(err.message || 'Erro inesperado ao conectar'))
+            .finally(() => { setLoading(false); onLoading?.(false); });
+        } else {
+          console.warn('[EmbeddedSignup] ⚠️ Login cancelado ou sem code');
+          onError('Conexão cancelada. Nenhuma alteração foi salva.');
           setLoading(false);
           onLoading?.(false);
         }
